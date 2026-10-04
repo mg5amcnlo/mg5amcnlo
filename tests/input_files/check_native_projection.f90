@@ -1,4 +1,142 @@
 ! Check the production native projection independently of Born chart sampling.
+subroutine check_onshell_isr_boost()
+  use fks_phase_space_helpers, only: boost_isr_recoil
+  use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+  implicit none
+  double precision :: born(0:3),realp(0:3),recovered(0:3),mass2,xi,y,phi,tolerance
+  integer :: idir,mass_case,orientation,power,angle
+
+  phi=0.61d0
+  do idir=-1,1,2
+    do mass_case=0,1
+      mass2=0.04d0*mass_case
+      do orientation=-1,1,2
+        born=[1d0,3d-5,4d-5,orientation*sqrt(1d0-mass2-25d-10)]
+        ! The unchanged forward map forms E-|pz|. Its input roundoff
+        ! is amplified by E^2/(m^2+pt^2) on the spectator side; the
+        ! inverse must recover that point while preserving its mass.
+        tolerance=max(5d-9,8d0*epsilon(1d0)/(mass2+sum(born(1:2)**2)))
+        do power=1,11,2
+          xi=1d0-10d0**(-power)
+          do angle=-1,1
+            y=0.9d0*angle
+            call boost_isr_recoil(born,realp,xi,y,phi,idir,.false.)
+            call boost_isr_recoil(realp,recovered,xi,y,phi,idir,.true.,mass2)
+            if(.not.all(ieee_is_finite(recovered)))error stop 'nonfinite on-shell ISR boost'
+            if(maxval(abs(recovered-born)).gt.tolerance)then
+              write(*,*) 'ISR boost round trip',idir,mass_case,orientation,power,angle
+              write(*,*) 'Born/recovered',born,recovered
+              error stop 'on-shell ISR boost round trip'
+            endif
+            if(abs(recovered(0)**2-sum(recovered(1:3)**2)-mass2).gt.1d-12) &
+                 error stop 'on-shell ISR boost mass'
+            ! Production boosts permit input/output aliasing.
+            call boost_isr_recoil(realp,realp,xi,y,phi,idir,.true.,mass2)
+            if(any(realp.ne.recovered))error stop 'on-shell ISR boost aliasing'
+          enddo
+        enddo
+        call boost_isr_recoil(born,recovered,0d0,0.3d0,phi,idir,.true.,mass2)
+        if(any(recovered.ne.born))error stop 'soft ISR boost is not identity'
+        call boost_isr_recoil(born,recovered,0.9d0,1d0,phi,idir,.true.,mass2)
+        if(any(recovered.ne.born))error stop 'collinear ISR boost is not identity'
+      enddo
+    enddo
+    ! The exact spectator-beam null ray has p+=0 and m=pt=0.
+    born=[1d0,0d0,0d0,-dble(idir)]
+    xi=1d0-1d-10
+    call boost_isr_recoil(born,realp,xi,0.3d0,phi,idir,.false.)
+    call boost_isr_recoil(realp,recovered,xi,0.3d0,phi,idir,.true.,0d0)
+    if(.not.all(ieee_is_finite(recovered)).or.maxval(abs(recovered-born)).gt.1d-14) &
+         error stop 'spectator null ray ISR inverse'
+  enddo
+end subroutine
+
+subroutine check_dijet_isr_boundary()
+  use fks_phase_space_data
+  use fks_phase_space, only: generate_native_momenta
+  use mc_native_context, only: native_mapping
+  use FKSParams, only: FKSISRMapping
+  use mcatnlo_delta_scales, only: pythia8_starting_scales,delta_ok
+  use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+  implicit none
+  include 'nexternal.inc'
+  include 'run.inc'
+  double precision :: pmass(nexternal)
+  common/to_mass/pmass
+  integer :: ifks,jfks,config
+  common/fks_indices/ifks,jfks
+  common/to_mconfigs/config
+  logical :: nbody,evpr,fixed_order,nlo_ps
+  common/cnbody/nbody
+  common/to_use_evpr/evpr
+  common/c_fnlo_nlops/fixed_order,nlo_ps
+  double precision :: omx(2)
+  common/to_ee_omx1/omx
+  double precision :: original(0:3,5),lab(0:3,5),out(0:3,5),outlab(0:3,5),cms(0:3,5),jac
+  double precision :: scales(4,4),mass2,residual(0:3)
+  logical :: pass,connected(4,4)
+  integer :: side,i,status
+
+  ! u d > u d, seed 482701: the native beam-2 ISR projection used to
+  ! produce p_4^2=-2.66e-9 and (p_4+p_2)^2=-2.03e-9 GeV^2. This
+  ! tripped the Pythia8 starting-scale guard, despite physical real input.
+  original(:,1)=[169.60230028028022d0,0d0,0d0,169.60230028028022d0]
+  original(:,2)=[2.3379478331029611d0,0d0,0d0,-2.3379478331029611d0]
+  original(:,3)=[4.5693370933264097d-3,4.1505332515925218d-5, &
+       3.9912357784991324d-5,4.5689742594499762d-3]
+  original(:,4)=[4.5145970111160088d0,0.50417273752395886d0, &
+       4.4852320381793174d0,-0.10044693726073906d0]
+  original(:,5)=[167.42108176517380d0,-0.50421424285647387d0, &
+       -4.4852719505370953d0,167.36023041017850d0]
+  native_mapping=.true.
+  fixed_order=.false.
+  nlo_ps=.true.
+  FKSISRMapping=2
+  ebeam=6500d0
+  lpp=1
+  pmass=0d0
+  omx=0d0
+  nbody=.false.
+  evpr=.true.
+  ifks=5
+  config=1
+  tau_Born_lower_bound=0d0
+  tau_lower_bound=0d0
+  tau_lower_bound_resonance=0d0
+  initial_recoil_leg=0
+  resonance_recoil=.false.
+  connected=.true.
+  do i=1,4
+    connected(i,i)=.false.
+  enddo
+  do side=1,2
+    jfks=side
+    lab=original
+    if(side.eq.1)then
+      lab(:,1)=original(:,2)
+      lab(:,2)=original(:,1)
+      lab(3,:)=-lab(3,:)
+    endif
+    call generate_native_momenta(lab,out,outlab,cms,jac,pass)
+    if(.not.pass.or..not.ieee_is_finite(jac).or.jac.le.0d0) &
+         error stop 'dijet native ISR projection failed'
+    do i=1,4
+      mass2=p_born(0,i)**2-sum(p_born(1:3,i)**2)
+      if(abs(mass2).gt.1d-12*p_born(0,i)**2) &
+           error stop 'dijet ISR inverse lost the Born mass shell'
+    enddo
+    residual=sum(p_born(:,1:2),dim=2)-sum(p_born(:,3:4),dim=2)
+    if(maxval(abs(residual)).gt.1d-7*maxval(abs(p_born))) &
+         error stop 'dijet Born momentum conservation'
+    if(maxval(abs(outlab-lab)).gt.1d-7*maxval(abs(lab))) &
+         error stop 'dijet ISR projection changed the real event'
+    call pythia8_starting_scales(4,p_born,pmass(1:4),connected, &
+         4.7682856448980768d0,scales,status)
+    if(status.ne.delta_ok.or..not.all(ieee_is_finite(scales))) &
+         error stop 'dijet Pythia8 starting scales failed'
+  enddo
+end subroutine
+
 subroutine check_native_projection()
   use fks_phase_space_data,only: pb => p_born,pbl => p_born_l,pbe => p_born_ev,isign => isolsign, &
        bound_born => tau_Born_lower_bound,bound_res => tau_lower_bound_resonance, &

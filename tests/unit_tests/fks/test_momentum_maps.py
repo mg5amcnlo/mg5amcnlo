@@ -157,6 +157,7 @@ class TestMomentumMaps(unittest.TestCase):
                    str(TEMPLATE / "genps_fks_helpers.f"),
                    str(work / "native_context.f90"),
                    str(TEMPLATE / "FKSParams.f90"),
+                   str(TEMPLATE / "mcatnlo_delta_scales.f90"),
                    str(TEMPLATE / "genps_fks_radiation.f"),
                    str(work / "fks_phase_space.f"),
                    str(work / "maps.f"), str(TEMPLATE / "boostwdir2.f"),
@@ -180,6 +181,12 @@ class TestMomentumMaps(unittest.TestCase):
 
     def test_native_projection_and_shared_state(self):
         self.check_map("native_projection")
+
+    def test_dijet_native_isr_projection_preserves_mass_shell(self):
+        self.check_map("dijet_isr_boundary")
+
+    def test_onshell_isr_inverse_boost_at_large_rapidity(self):
+        self.check_map("isr_onshell_boost")
 
     def test_wjet_native_projection_near_radiation_boundary(self):
         self.check_map("wjet_boundary")

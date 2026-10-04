@@ -44,6 +44,16 @@ program check_momentum_maps
      write(*,*) 'PASS native_projection'
      stop
   endif
+  if (mode.eq.'dijet_isr_boundary') then
+     call check_dijet_isr_boundary()
+     write(*,*) 'PASS dijet_isr_boundary'
+     stop
+  endif
+  if (mode.eq.'isr_onshell_boost') then
+     call check_onshell_isr_boost()
+     write(*,*) 'PASS isr_onshell_boost'
+     stop
+  endif
   if (mode.eq.'wjet_boundary') then
      call check_wjet_boundary_projection()
      write(*,*) 'PASS wjet_boundary'

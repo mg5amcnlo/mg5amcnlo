@@ -555,15 +555,18 @@ c Also check their on-shell invariants at the actual phase-space point.
         enddo
       end subroutine apply_momentum_permutation
 
-      subroutine boost_isr_recoil(pin,pout,xi,y,phi,idir,inverse)
+      subroutine boost_isr_recoil(pin,pout,xi,y,phi,idir,inverse,
+     $     mass2)
 c A Lorentz transformation preserving the spectator beam's null ray.
 c It maps the Born total momentum to the hard real total in the Born
 c CM. The inverse uses the same radiation variables and frame. Both
 c directions permit pin and pout to alias, as in the FSR boost helpers.
+c An optional on-shell mass stabilizes the inverse at small 1-xi.
       implicit none
       double precision pin(0:3),pout(0:3),xi,y,phi
       integer idir
       logical inverse
+      double precision,optional,intent(in) :: mass2
       double precision z,a,b(2),pplus,pminus,transverse(2)
       if(xi.eq.0d0.or.y.eq.1d0)then
          pout=pin
@@ -576,9 +579,27 @@ c directions permit pin and pout to alias, as in the FSR boost helpers.
       pplus=pin(0)+idir*pin(3)
       pminus=pin(0)-idir*pin(3)
       if(inverse)then
+c Recover a small incoming light-cone component without E-|pz|.
+c The known external mass is needed: reconstructing it from the highly
+c boosted input would retain the roundoff which the inverse amplifies.
+         if(present(mass2))then
+            if(pminus.gt.pplus)
+     $           pplus=(mass2+sum(pin(1:2)**2))/pminus
+         endif
          pplus=pplus/a
          transverse=pin(1:2)-b*pplus
-         pminus=a*pminus-2d0*sum(b*transverse)-sum(b*b)*pplus
+         if(present(mass2))then
+c The direct Lorentz formula subtracts O(1/(1-xi)) terms. Enforce
+c p+ p- = m^2 + pt^2 instead. The exact spectator-beam null ray has
+c p+=pt=m=0 and transforms by rescaling p-; do not divide by zero.
+            if(pplus.gt.0d0)then
+               pminus=(mass2+sum(transverse**2))/pplus
+            else
+               pminus=a*pminus
+            endif
+         else
+            pminus=a*pminus-2d0*sum(b*transverse)-sum(b*b)*pplus
+         endif
       else
          transverse=pin(1:2)+b*pplus
          pminus=(pminus+2d0*sum(b*pin(1:2))+sum(b*b)*pplus)/a

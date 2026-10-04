@@ -1344,6 +1344,8 @@ c Use the same run-level choice for the event and every counterevent.
      $     ,xpswgt,stot,tau,ycm,xbjrk(2),tau_born,ycm_born,xbjrk_born(2)
      $     ,y_lab_to_cms,pred(0:3),z,sqrtborn,xiimax,xiimin,xinorm
      $     ,sstiny,cctiny,pplus,pminus,exp_y
+      double precision pmass(nexternal),transverse_mass2
+      common/to_mass/pmass
       double precision pi,stiny,ctiny
       parameter(pi=3.1415926535897932d0,stiny=1d-6,ctiny=5d-7)
       logical softtest,colltest
@@ -1405,13 +1407,23 @@ c with light-cone components to retain the smaller beam at large y.
          if(i.eq.i_fks)cycle
          iborn=i
          if(i.gt.i_fks)iborn=i-1
-         pplus=(xp(0,i)+xp(3,i))/exp_y
-         pminus=(xp(0,i)-xp(3,i))*exp_y
+         pplus=xp(0,i)+xp(3,i)
+         pminus=xp(0,i)-xp(3,i)
+c Do not amplify cancellation in a nearly beam-collinear lab momentum
+c when undoing a large Born rapidity. Its mass is supplied by the model.
+         transverse_mass2=pmass(i)**2+sum(xp(1:2,i)**2)
+         if(pplus.gt.pminus)then
+            pminus=transverse_mass2/pplus
+         elseif(pminus.gt.0d0)then
+            pplus=transverse_mass2/pminus
+         endif
+         pplus=pplus/exp_y
+         pminus=pminus*exp_y
          pred(0)=(pplus+pminus)/2d0
          pred(1:2)=xp(1:2,i)
          pred(3)=(pplus-pminus)/2d0
          call boost_isr_recoil(pred,p_born(0,iborn),xi_i_fks,
-     &        y_ij_fks,phi_i_fks,idir,.true.)
+     &        y_ij_fks,phi_i_fks,idir,.true.,pmass(i)**2)
       enddo
       p_born(0,1:2)=sqrtborn/2d0
       p_born(1:2,1:2)=0d0
