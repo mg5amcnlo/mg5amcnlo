@@ -182,7 +182,7 @@ c
      $     ,taumin_s(fks_configs,maxchannels),taumin_j(fks_configs
      $     ,maxchannels),stot,xk(-nexternal:nexternal)
       save  taumin,taumin_s,taumin_j,stot
-      integer i,j,k,d1,d2,iFKS,nt
+      integer i,j,k,d1,d2,iFKS,nt,sampling_sector
       double precision xm(-nexternal:nexternal),xm1,xm2,xmi
       double precision xw(-nexternal:nexternal),xw1,xw2,xwi
       integer tsign,i_fks,j_fks
@@ -634,21 +634,43 @@ c
             endif
          enddo
       endif
-      tau_Born_lower_bound=taumin(nFKSprocess,ichan)**2/stot
-      tau_lower_bound=taumin_j(nFKSprocess,ichan)**2/stot
-      tau_lower_bound_resonance=taumin_s(nFKSprocess,ichan)**2/stot
+      sampling_sector=nFKSprocess
+      if (FKSExplicitSum.and.nlo_ps.and..not.native_mapping) then
+c S weights may be combined only at a common Born point. In particular,
+c jet cuts give ISR and FSR different Born thresholds. Use the same
+c sampling chart for all integrated sectors, also during event replay.
+c Choose the widest Born support; radiation and recoil remain local to
+c nFKSprocess. Auxiliary inner matching histories keep their own maps.
+         sampling_sector=0
+         do iFKS=1,fks_integrated
+            if(native_context_ids(iFKS).ne.active_context)cycle
+            if(sampling_sector.eq.0)then
+               sampling_sector=iFKS
+            elseif(taumin(iFKS,ichan).lt.
+     $             taumin(sampling_sector,ichan))then
+               sampling_sector=iFKS
+            endif
+         enddo
+         if(sampling_sector.eq.0)then
+            write(*,*) 'No common Born chart for FKSExplicitSum'
+            stop 1
+         endif
+      endif
+      tau_Born_lower_bound=taumin(sampling_sector,ichan)**2/stot
+      tau_lower_bound=taumin_j(sampling_sector,ichan)**2/stot
+      tau_lower_bound_resonance=taumin_s(sampling_sector,ichan)**2/stot
       do i=-nexternal,-1
-         cBW(i)=cBW_FKS(nFKSprocess,i,ichan)
-         cBW_level(i)=cBW_FKS_level(nFKSprocess,i,ichan)
+         cBW(i)=cBW_FKS(sampling_sector,i,ichan)
+         cBW_level(i)=cBW_FKS_level(sampling_sector,i,ichan)
          do j=-1,1,2
-            cBW_mass(j,i)=cBW_FKS_mass(nFKSprocess,j,i,ichan)
-            cBW_width(j,i)=cBW_FKS_width(nFKSprocess,j,i,ichan)
+            cBW_mass(j,i)=cBW_FKS_mass(sampling_sector,j,i,ichan)
+            cBW_width(j,i)=cBW_FKS_width(sampling_sector,j,i,ichan)
          enddo
       enddo
       do i=-nexternal,nexternal
-         s_mass(i)=s_mass_FKS(nFKSprocess,i,ichan)
+         s_mass(i)=s_mass_FKS(sampling_sector,i,ichan)
       enddo
-      cBW_level_max=cBW_FKS_level_max(nFKSprocess,ichan)
+      cBW_level_max=cBW_FKS_level_max(sampling_sector,ichan)
       call set_granny(nFKSprocess,iconf,mass_min(-nexternal,ichan))
       return
       end
@@ -705,5 +727,4 @@ c
       new_point=.false.
       return
       end
-
 

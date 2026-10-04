@@ -17,6 +17,7 @@ module FKSParams
               QCD_squared_selected
   logical :: separate_flavour_configs,IncludeBornContributions,use_poly_virtual
   logical :: MCExplicitKLSum=.true.
+  logical :: FKSExplicitSum=.false.
   integer :: FKSFinalRecoil=0
   integer :: FKSISRMapping=0
 
@@ -94,6 +95,8 @@ contains
              endif
           else if (buff .eq. '#MCExplicitKLSum') then
              read(68,*,end=999) MCExplicitKLSum
+          else if (buff .eq. '#FKSExplicitSum') then
+             read(68,*,end=999) FKSExplicitSum
           else if (buff .eq. '#UsePolyVirtual') then
              read(68,*,end=999) use_poly_virtual
           else if (buff .eq. '#VetoedContributionTypes') then
@@ -225,6 +228,7 @@ contains
        write(*,*) ' > FKSFinalRecoil            = ',FKSFinalRecoil
        write(*,*) ' > FKSISRMapping             = ',FKSISRMapping
        write(*,*) ' > MCExplicitKLSum           = ',MCExplicitKLSum
+       write(*,*) ' > FKSExplicitSum            = ',FKSExplicitSum
        write(*,*) &
             '==============================================================='
        paramPrinted=.TRUE.
@@ -251,6 +255,7 @@ contains
     FKSFinalRecoil=0
     FKSISRMapping=0
     MCExplicitKLSum=.true.
+    FKSExplicitSum=.false.
     IncludeBornContributions=.true.
     SelectedContributionTypes(0)=0
     VetoedContributionTypes(0)=0

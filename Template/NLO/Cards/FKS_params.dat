@@ -218,6 +218,21 @@
 .true.
 ! Default :: .true.
 !
+! Explicitly sum the outer FKS configurations at each integration point
+! in NLO+PS runs, instead of sampling a group of configurations. The Born
+! contribution is included once; S-event terms are combined before taking
+! absolute values for unweighting. This can reduce negative weights at the
+! cost of more matrix-element evaluations per point. Uses a common Born
+! sampling chart so that the S events have identical underlying momenta.
+! Any separate initial/final-state integration channels remain separate.
+! Independent of MCExplicitKLSum (the inner matching-history sum).
+! Requires event projection. Ignored at fixed order; not supported for
+! UNLOPS (ickkw=4).
+! Rerun integration/grid setup after changing this setting.
+#FKSExplicitSum
+.false.
+! Default :: .false.
+!
 ! ==========================================================================
 ! End of FKS_params.dat file
 ! ==========================================================================

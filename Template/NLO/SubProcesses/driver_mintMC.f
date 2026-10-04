@@ -746,6 +746,8 @@ c
 ! The same flow is used throughout the folds, so keep its draw probability.
       save born_flow_factor
       type(fks_phase_space_point) phase_space
+      logical have_sum_born
+      double precision sum_born(0:3,nexternal-1),sum_xbjrk(2)
       interface
          subroutine repartition_MC_H(first_native,p,p_lab,
      $        p_cms,jacPS,vegas_wgt,sampling_wgt,born_flow_factor,
@@ -761,6 +763,7 @@ c
 c
 c Each fold owns its Born sample; compatible sectors can reuse it.
       phase_space%born%valid=.false.
+      have_sum_born=.false.
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
       endif
@@ -843,6 +846,11 @@ c 1/proc_map(0,0)*vol1)
          p_lab=phase_space%p_lab
          p_cms=phase_space%p_cms
          if (p_born(0,1).lt.0d0) goto 12
+         if (FKSExplicitSum) then
+            sum_born=phase_space%born%p
+            sum_xbjrk=phase_space%born%xbjrk
+            have_sum_born=.true.
+         endif
          call compute_prefactors_nbody(vegas_wgt)
          call set_cms_stuff(izero)
          if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
@@ -911,6 +919,11 @@ c for different nFKSprocess.
             wgt_me_born=0d0
             iFKS=proc_map(proc_map(0,1),i)
             call update_fks_dir(iFKS)
+            if (FKSExplicitSum.and.have_sum_born) then
+c The preceding sector may have rejected its radiation and invalidated
+c the active Born. Starting scales still belong to the shared sample.
+               p_born=sum_born
+            endif
             if (born_flow_picked.gt.0) then
 !     Consider all flows for the shower scale assignment (with
 !     assignements only needed for the dipoles where the fks-mother is
@@ -948,6 +961,28 @@ c for different nFKSprocess.
 c Every contribution has to have a viable set of Born momenta (even if
 c counter-event momenta do not exist).
             if (p_born(0,1).lt.0d0) cycle
+            if (FKSExplicitSum) then
+c All S records in this fold must describe the same underlying event.
+c Check the sampled Born before native H histories change active data.
+               if (.not.phase_space%born%event_projection) then
+                  write(*,*) 'FKSExplicitSum requires event projection'
+                  stop 1
+               endif
+               if (have_sum_born) then
+                  if (maxval(abs(phase_space%born%p-sum_born)).gt.
+     $                1d-10*max(1d0,maxval(abs(sum_born))).or.
+     $                maxval(abs(phase_space%born%xbjrk-sum_xbjrk))
+     $                .gt.1d-10) then
+                     write(*,*) 'Incompatible Born points in ',
+     $                    'FKSExplicitSum',iFKS
+                     stop 1
+                  endif
+               else
+                  sum_born=phase_space%born%p
+                  sum_xbjrk=phase_space%born%xbjrk
+                  have_sum_born=.true.
+               endif
+            endif
 
 ! fill the valid_dipole array and fill the H-event shower scale array            
             call init_process_module_n1body_wrapper(born_flow_picked)
@@ -1478,6 +1513,7 @@ c Sum the contributions that can be summed before taking the ABS value
       subroutine setup_proc_map(sum,proc_map,ini_fin_fks)
 c Determines the proc_map that sets which FKS configuration can be
 c summed explicitly and which by MC-ing.
+      use FKSParams, only: FKSExplicitSum
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1489,6 +1525,7 @@ c summed explicitly and which by MC-ing.
       integer proc_map(0:fks_configs,0:fks_configs)
      $     ,j_fks_proc(fks_configs),i_fks_pdg_proc(fks_configs)
      $     ,j_fks_pdg_proc(fks_configs),i,sum,j,ini_fin_fks
+      integer all_fks(fks_configs),n_all
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
       INTEGER              IPROC
@@ -1503,6 +1540,11 @@ c summed explicitly and which by MC-ing.
       common /c_need_links/need_color_links, need_charge_links
       sum=3
       if (ickkw.eq.4) then
+         if (FKSExplicitSum) then
+            write (*,*) 'FKSExplicitSum is not supported for UNLOPS',
+     $           ' (ickkw=4).'
+            stop 1
+         endif
          sum=0
          write (*,*)'Using ickkw=4, include only 1 FKS dir per'/
      $        /' Born PS point (sum=0)'
@@ -1646,6 +1688,28 @@ c MC over FKS directories (1 FKS directory per nbody PS point)
       else
          write (*,*) 'sum not known in driver_mintMC.f',sum
          stop
+      endif
+      if (FKSExplicitSum) then
+c Collapse the sampled groups into one explicit list. Retain the first
+c soft sector as the Born/event owner and respect ini_fin_fks filtering.
+c With one group get_MC_integer returns unit volume: Born normalization
+c 1/(proc_map(0,0)*vol1) is one and each real sector also has unit weight.
+         n_all=0
+         do i=1,proc_map(0,0)
+            do j=1,proc_map(i,0)
+               n_all=n_all+1
+               all_fks(n_all)=proc_map(i,j)
+            enddo
+         enddo
+         if (n_all.eq.0) then
+            write (*,*) 'No FKS configurations for explicit sum'
+            stop 1
+         endif
+         proc_map=0
+         proc_map(0,0)=1
+         proc_map(1,0)=n_all
+         proc_map(1,1:n_all)=all_fks(1:n_all)
+         sum=1
       endif
       write (*,*) 'FKS process map (sum=',sum,') :'
       do i=1,proc_map(0,0)
