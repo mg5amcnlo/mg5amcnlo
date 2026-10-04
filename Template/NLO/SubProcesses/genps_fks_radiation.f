@@ -59,8 +59,9 @@ c local
      &     ,cosphi_mother_fks,sinphi_mother_fks,recoil(0:3),sumrec
      &     ,sumrec2,betabst,gammabst,shybst,chybst,chybstmo,xdir(3)
      &     ,veckn,veckbarn,xp_mother(0:3),cosphi_i_fks
-     &     ,sinphi_i_fks
+     &     ,sinphi_i_fks,sin_ij_fks
       double complex resAoR0
+      double precision native_delta,native_onepy,native_denom
 c external
       double precision rho
       external rho
@@ -91,15 +92,29 @@ c set-up y_ij_fks
 c
       if(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
          y_ij_fks=dble(sign(1,icountevts))
+         sin_ij_fks=0d0
          if (.not. colltest) then
+            if(native_mapping)then
+               xjac=xjac*pi*sin(pi*min(x(2),1d0-x(2)))
+            else
             xjac=xjac*2d0*x(2)*2d0
+            endif
          else
             continue ! do not include jacobian for y in tests
          endif
       elseif (colltest) then
          y_ij_fks = y_ij_fks_fix
+         sin_ij_fks=sqrt(max(0d0,(1d0-y_ij_fks)*(1d0+y_ij_fks)))
+      elseif(native_mapping)then
+c As in the massive native chart, retain the opening angle itself.
+c The old sqrt((1-y)/2) coordinate loses the transverse component
+c when two hard daughters are antiparallel and the recoil is soft.
+         y_ij_fks=cos(pi*x(2))
+         sin_ij_fks=sin(pi*min(x(2),1d0-x(2)))
+         xjac=xjac*pi*sin_ij_fks
       else
          y_ij_fks = -2d0*(cctiny+(1-cctiny)*x(2)**2)+1d0
+         sin_ij_fks=sqrt(max(0d0,(1d0-y_ij_fks)*(1d0+y_ij_fks)))
          xjac=xjac*2d0*x(2)*2d0
       endif
 
@@ -145,16 +160,34 @@ c Compute costh_i_fks from xi_i_fks et al.
 c
       E_i_fks=xi_i_fks*sqrtshat/2d0
       x3len_i_fks=E_i_fks
+      if(native_mapping)then
+c Both numerator and denominator vanish near xi=1,y=-1. Keep
+c their small remainders from the radiation coordinates themselves.
+         native_delta=xiimax-xi_i_fks
+         if((icountevts.eq.-100.or.abs(icountevts).eq.1)
+     $        .and..not.softtest)
+     $        native_delta=xiimax*(1d0-x(1))*(1d0+x(1))
+         native_onepy=1d0+y_ij_fks
+         if(icountevts.eq.-100.or.icountevts.eq.0)then
+            if(.not.colltest)
+     $           native_onepy=2d0*sin(pi*(1d0-x(2))/2d0)**2
+         endif
+         native_denom=2d0*(xmrec2/shat+native_delta)
+     $        +xi_i_fks*native_onepy
+         x3len_j_fks=sqrtshat*native_delta/native_denom
+      else
       x3len_j_fks=(shat-xmrec2-2*sqrtshat*x3len_i_fks)/
      &             (2*(sqrtshat-x3len_i_fks*(1-y_ij_fks)))
+      endif
 c Resolve the daughter parallel and transverse to the emitted momentum.
 c This avoids subtracting squared momenta when the recoil is nearly at rest.
 c Use this also in the outer map: if j is soft, computing sin(theta) from
 c a rounded cos(theta)=1 makes the daughters spuriously collinear/off shell
 c and the native inverse map cannot recover a positive Jacobian.
       costh_i_fks=x3len_i_fks+x3len_j_fks*y_ij_fks
-      sinth_i_fks=x3len_j_fks*sqrt(max(0d0,
-     $     (1d0-y_ij_fks)*(1d0+y_ij_fks)))
+      if(native_mapping)costh_i_fks=(x3len_i_fks-x3len_j_fks)
+     $     +x3len_j_fks*native_onepy
+      sinth_i_fks=x3len_j_fks*sin_ij_fks
       x3len_fks_mother=sqrt(costh_i_fks**2+sinth_i_fks**2)
       costh_i_fks=costh_i_fks/x3len_fks_mother
       sinth_i_fks=sinth_i_fks/x3len_fks_mother
@@ -332,6 +365,10 @@ c     Phase-space factor for (xii,yij,phii)
       xjac=xjac*2d0*x(1)
 
 !     random number associated with y_ij_fks
+      if(native_mapping)then
+         x(2)=native_fsr_angle(xp(:,i_fks),xp(:,j_fks))
+         xjac=xjac*pi*sin(pi*min(x(2),1d0-x(2)))
+      else
       x(2)=((1d0-y_ij_fks)/2d0-cctiny)/(1d0-cctiny)
       if (x(2).lt.-1d-12.or.x(2).gt.1d0+1d-12) then
          xjac=-33d0
@@ -339,6 +376,7 @@ c     Phase-space factor for (xii,yij,phii)
       endif
       x(2)=sqrt(max(0d0,min(1d0,x(2))))
       xjac=xjac*2d0*x(2)*2d0
+      endif
 
 !     random number associated with phi_i_fks
       x(3)=phi_i_fks/(2d0*pi)

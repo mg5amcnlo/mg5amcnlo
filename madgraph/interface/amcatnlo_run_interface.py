@@ -21,6 +21,7 @@ from __future__ import absolute_import
 import atexit
 import collections
 import glob
+import hashlib
 import logging
 import math
 import optparse
@@ -2085,10 +2086,91 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         return
 
 
+    def get_nlops_integrator(self):
+        """Read the NLO+PS backend; older FKS cards select MINT."""
+        return self._read_nlops_integrator()[0]
+
+    def _read_nlops_integrator(self):
+        """Return the backend and FKS settings used to validate saved grids."""
+        filename = pjoin(self.me_dir, 'Cards', 'FKS_params.dat')
+        try:
+            with open(filename) as card:
+                entries = [' '.join(line.split('!', 1)[0].split())
+                           for line in card]
+        except FileNotFoundError:
+            return 0, ()
+        entries = [line for line in entries if line]
+        backend = 0
+        settings = []
+        found = False
+        index = 0
+        while index < len(entries):
+            if entries[index] == '#NLOPSIntegrator':
+                if found:
+                    raise aMCatNLOError('Duplicate #NLOPSIntegrator in %s' % filename)
+                found = True
+                index += 1
+                try:
+                    backend = int(entries[index])
+                except (IndexError, ValueError):
+                    raise aMCatNLOError('#NLOPSIntegrator in %s must be 0 (MINT) '
+                                        'or 1 (AmpliCol)' % filename)
+                if backend not in (0, 1):
+                    raise aMCatNLOError('#NLOPSIntegrator in %s must be 0 (MINT) '
+                                        'or 1 (AmpliCol)' % filename)
+            else:
+                settings.append(entries[index])
+            index += 1
+        return backend, tuple(settings)
+
+    def _ampli_integrator_config(self, fks_settings):
+        """Identify the target represented by an AmpliCol integration checkpoint.
+
+        Generation budgets and output/reweight controls may change. The first
+        PDF and scale choices define the central rate; subsequent choices are
+        evaluated by reweighting. Bias mode changes the sampled target itself.
+        """
+        generation_settings = {
+            'run_tag', 'nevents', 'req_acc', 'nevt_job', 'time_of_flight',
+            'event_norm', 'iseed', 'seed', 'req_acc_fo', 'npoints_fo_grid',
+            'niters_fo_grid', 'npoints_fo', 'niters_fo', 'reweight_scale',
+            'reweight_pdf', 'rw_rscale_down', 'rw_rscale_up', 'rw_fscale_down',
+            'rw_fscale_up', 'rw_rscale', 'rw_fscale', 'pdf_set_min', 'pdf_set_max',
+            'store_rwgt_info', 'systematics_program', 'systematics_arguments',
+            'pineappl', 'lhe_version', 'fo_lhe_weight_ratio', 'fo_lhe_postprocessing',
+        }
+        central_choices = {'lhaid', 'lhapdfsetname', 'dynamical_scale_choice'}
+        run_settings = {}
+        for key in self.run_card:
+            name = key.lower()
+            if name in generation_settings:
+                continue
+            value = self.run_card[key]
+            if name in central_choices and isinstance(value, (list, tuple)):
+                value = value[:1]
+            run_settings[name] = copy.deepcopy(value)
+        run_settings['bias_mode'] = ('event_norm' in self.run_card and
+                                     self.run_card['event_norm'].lower() == 'bias')
+        try:
+            with open(pjoin(self.me_dir, 'Cards', 'param_card.dat'), 'rb') as card:
+                param_checksum = hashlib.sha256(card.read()).hexdigest()
+        except FileNotFoundError:
+            param_checksum = None
+        return {
+            'version': 1,
+            'run_settings': run_settings,
+            'fks_settings': fks_settings,
+            'param_card_sha256': param_checksum,
+        }
+
     def create_jobs_to_run(self,options,p_dirs,req_acc,run_mode,\
                            integration_step,mode,fixed_order=True):
         """Creates a list of dictionaries with all the jobs to be run"""
         jobs_to_run=[]
+        if not fixed_order:
+            backend, fks_settings = self._read_nlops_integrator()
+            integrator_config = (self._ampli_integrator_config(fks_settings)
+                                 if backend == 1 else None)
         if not options['only_generation']:
             # Fresh, new run. Check all the P*/channels.txt files
             # (created by the 'gensym' executable) to set-up all the
@@ -2147,6 +2229,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         job['mint_mode']=0
                         job['run_mode']=run_mode
                         job['wgt_frac']=1.0
+                        job['nlops_integrator']=backend
+                        job['integrator_config']=integrator_config
                         jobs_to_run.append(job)
             jobs_to_collect=copy.copy(jobs_to_run) # These are all jobs
         else:
@@ -2171,6 +2255,21 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         integration_step=integration_step+1
                 integration_step=integration_step-1
             else:
+                for job in jobs_to_collect:
+                    if job.get('nlops_integrator', 0) != backend:
+                        raise aMCatNLOError('The NLO+PS integrator differs from the '
+                                            'saved integration. Run integration again '
+                                            'before using --only_generation.')
+                    if (backend == 1 and (job['run_mode'] != run_mode or
+                            job.get('integrator_config') != integrator_config)):
+                        raise aMCatNLOError('The physics settings (including folding, '
+                                            'Born spreading, FKS settings, run mode or '
+                                            'param_card.dat) differ from the saved integration. '
+                                            'Run integration again before using '
+                                            '--only_generation.')
+                    # Jobs saved before backend selection was introduced are MINT jobs.
+                    job['nlops_integrator'] = backend
+                    job['integrator_config'] = integrator_config
                 self.append_the_results(jobs_to_collect,integration_step)
         return jobs_to_run,jobs_to_collect,integration_step
 
@@ -2199,7 +2298,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             # link or copy the grids from the base directory to the split directory:
             if not fixed_order:
                 if job['split'] != 0:
-                    files_to_link = ['grid.MC_integer','mint_grids','res_1']
+                    grid_file = ('ampli_grids' if job.get('nlops_integrator', 0) == 1
+                                 else 'mint_grids')
+                    files_to_link = ['grid.MC_integer',grid_file,'res_1']
                     if ('born_spreading' in self.run_card and
                             self.run_card['born_spreading']):
                         files_to_link.append('born_spreading.dat')
@@ -2716,7 +2817,10 @@ RESTART = %(mint_mode)s
             if step+1 == 1 or step+1 == 2 :
                 # determine the req. accuracy for each of the jobs for Mint-step = 1
                 for job in jobs:
-                    accuracy=min(math.sqrt(totABS/(req_acc2_inv*job['resultABS'])),0.2)
+                    if job['resultABS'] == 0. or req_acc2_inv == 0:
+                        accuracy = 0.2
+                    else:
+                        accuracy=min(math.sqrt(totABS/(req_acc2_inv*job['resultABS'])),0.2)
                     job['accuracy']=accuracy
             if step+1 == 2:
                 # Randomly (based on the relative ABS Xsec of the job) determine the 
@@ -2728,17 +2832,19 @@ RESTART = %(mint_mode)s
                 totevts=nevents
                 for job in jobs:
                     job['nevents'] = 0
+                positive_jobs = [job for job in jobs if job['resultABS'] > 0.]
+                if totevts and (not positive_jobs or totABS <= 0.):
+                    raise aMCatNLOError('Cannot generate events: the total absolute '
+                                        'cross section is zero.')
                 while totevts :
                     target = random.random() * totABS
                     crosssum = 0.
-                    i = 0
-                    while i<len(jobs) and crosssum < target:
-                        job = jobs[i]
+                    for job in positive_jobs:
                         crosssum += job['resultABS']
-                        i += 1            
+                        if target < crosssum:
+                            break
                     totevts -= 1
-                    i -= 1
-                    jobs[i]['nevents'] += 1
+                    job['nevents'] += 1
             for job in jobs:
                 job['mint_mode']=step+1 # next step
             return jobs
@@ -2782,7 +2888,9 @@ RESTART = %(mint_mode)s
             job['time_spend']=float(results[6])
             if job['resultABS'] != 0:
                 job['err_percABS'] = job['errorABS']/job['resultABS']*100.
-                job['err_perc'] = job['error']/job['result']*100.
+                job['err_perc'] = (job['error']/job['result']*100.
+                                   if job['result'] != 0. else
+                                   (float('inf') if job['error'] != 0. else 0.))
             else:
                 job['err_percABS'] = 0.
                 job['err_perc'] = 0.
@@ -5217,6 +5325,12 @@ RESTART = %(mint_mode)s
                 required_output.append('%s/log_MINT%s.txt' % (current,args[3]))
             if args[3] in ['0','1']:
                 required_output.append('%s/results.dat' % current)
+                if self.get_nlops_integrator() == 1:
+                    required_output.extend([
+                        '%s/ampli_grids' % current,
+                        '%s/grid.MC_integer' % current,
+                        '%s/res_%s.dat' % (current, args[3]),
+                    ])
             if args[3] == '1':
                 output_files.append('%s/results.dat' % current)
             if args[1] == 'F' and args[3] == '0' and \

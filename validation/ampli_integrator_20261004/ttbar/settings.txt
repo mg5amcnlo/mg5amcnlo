@@ -1,0 +1,13 @@
+nevents = 20
+req_acc = 0.15
+folding = 2, 1, 1
+reweight_scale = False
+reweight_pdf = False
+born_spreading = False
+pdlabel = nn23nlo
+iseed = 19721
+NLOPSIntegrator = 1
+UsePolyVirtual = True
+MCExplicitKLSum = True
+nb_core = 2
+launch aMC@NLO -f -p --name=ampli_ttbar_folded

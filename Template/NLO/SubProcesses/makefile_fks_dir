@@ -94,7 +94,8 @@ RUN= $(FO_ANALYSE) $(FILES) cuts.o dummy_fct.o pythia_unlops.o recluster.o 		\
 MINTFO= $(RUN) driver_mintFO.o handling_lhe_events.o write_event.o BinothLHA.o
 
 # Files for mintMC
-MINTMC= $(RUN) driver_mintMC.o handling_lhe_events.o write_event.o BinothLHA.o
+MINTMC= $(RUN) integrator_helpers.o simple_integrator.o ampli_mint_adapter.o \
+	driver_mintMC.o handling_lhe_events.o write_event.o BinothLHA.o
 
 # Files for check_poles
 POLES= $(RUN) check_poles.o BinothLHA.o write_event.o handling_lhe_events.o
@@ -227,11 +228,16 @@ driver_mintFO.o driver_mintMC.o write_event.o add_write_info.o \
     test_soft_col_limits.o symmetry_fks_v3.o: genps_fks.o
 driver_mintFO.o: process_module.o
 mint_module.o : FKSParams.o
+simple_integrator.o: integrator_helpers.o
+ampli_mint_adapter.o: simple_integrator.o mint_module.o
+# The imported package uses PURE procedures, which forbid implicit SAVE.
+# Keep the legacy flags on prerequisites such as mint_module.o.
+integrator_helpers.o simple_integrator.o ampli_mint_adapter.o: private FFLAGS := $(filter-out -fno-automatic,$(FFLAGS)) -ffree-line-length-none
 BinothLHA_OLP.o: FKSParams.o
 BinothLHA.o: FKSParams.o
 reweight_xsec_events.o: weight_lines.o
 fks_singular.o: weight_lines.o mint_module.o fks_symmetry.inc
-driver_mintMC.o: weight_lines.o mint_module.o genps_fks_helpers.o fks_symmetry.inc mc_histories.inc
+driver_mintMC.o: weight_lines.o mint_module.o ampli_mint_adapter.o genps_fks_helpers.o fks_symmetry.inc mc_histories.inc
 driver_mintFO.o: weight_lines.o mint_module.o FKSParams.o
 chooser_functions.o: weight_lines.o
 cluster.o: weight_lines.o
