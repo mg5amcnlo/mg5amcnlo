@@ -1020,12 +1020,12 @@ c check if event or counter-event passes cuts
             call mc_begin_real_point(p)
 ! The complete H sum below replaces the outer H records. Suppress them
 ! here, preserving the original path if no real point can be repartitioned.
-            mc_S_only=ickkw.ne.4.and.abrv.ne.'real'.and.
+            mc_S_only=MCExplicitKLSum.and.ickkw.ne.4.and.abrv.ne.'real'.and.
      $           p(0,1).gt.0d0.and.jacPS.gt.0d0.and.MC_HIST_COUNT.gt.0
             call compute_native_NLOPS_weights(p,p_lab,p_cms,jacPS,
      $           passcuts_nbody,passcuts_n1body,probne)
             mc_S_only=.false.
-            if (ickkw.ne.4 .and. abrv.ne.'real') then
+            if (MCExplicitKLSum.and.ickkw.ne.4 .and. abrv.ne.'real') then
                call repartition_MC_H(first_native_H,p,p_lab,
      $              p_cms,jacPS,vegas_wgt,1d0/vol1,born_flow_factor,
      $              phase_space)

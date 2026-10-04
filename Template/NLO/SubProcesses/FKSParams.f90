@@ -16,6 +16,7 @@ module FKSParams
               SelectedCouplingOrders(maxCouplingTypes,0:maxCouplingsSelected), &
               QCD_squared_selected
   logical :: separate_flavour_configs,IncludeBornContributions,use_poly_virtual
+  logical :: MCExplicitKLSum
   integer :: FKSFinalRecoil=0
   integer :: FKSISRMapping=0
 
@@ -91,6 +92,8 @@ contains
                 write(*,*) 'FKSFinalRecoil must be 0, 1 or 2.'
                 stop 1
              endif
+          else if (buff .eq. '#MCExplicitKLSum') then
+             read(68,*,end=999) MCExplicitKLSum
           else if (buff .eq. '#UsePolyVirtual') then
              read(68,*,end=999) use_poly_virtual
           else if (buff .eq. '#VetoedContributionTypes') then
@@ -221,6 +224,7 @@ contains
        write(*,*) ' > UsePolyVirtual            = ',use_poly_virtual
        write(*,*) ' > FKSFinalRecoil            = ',FKSFinalRecoil
        write(*,*) ' > FKSISRMapping             = ',FKSISRMapping
+       write(*,*) ' > MCExplicitKLSum           = ',MCExplicitKLSum
        write(*,*) &
             '==============================================================='
        paramPrinted=.TRUE.
@@ -246,6 +250,7 @@ contains
     use_poly_virtual=.true.
     FKSFinalRecoil=0
     FKSISRMapping=0
+    MCExplicitKLSum=.false.
     IncludeBornContributions=.true.
     SelectedContributionTypes(0)=0
     VetoedContributionTypes(0)=0
