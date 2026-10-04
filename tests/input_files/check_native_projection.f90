@@ -170,9 +170,9 @@ contains
   end subroutine
 end subroutine
 
-! W+jet FxFx, seed 33: an ISR point projected onto the massless FSR
-! history has xi~0.999996 and y~-0.999999988. Combine the two leptons
-! into one spectator so the captured point fits the five-leg fixture.
+! W+jet FxFx failures with seeds 33 and 34, including Born spreading.
+! These ISR points approach xi=1, y=-1 in the native massless FSR map.
+! Combine the leptons into one spectator to fit the five-leg fixture.
 subroutine check_wjet_boundary_projection()
   use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
   use mc_native_context, only: native_mapping
@@ -182,11 +182,12 @@ subroutine check_wjet_boundary_projection()
   include 'run.inc'
   double precision :: pmass(nexternal)
   common/to_mass/pmass
-  integer :: ifks,jfks
+  integer :: ifks,jfks,icase
   common/fks_indices/ifks,jfks
   logical :: fixed_order,nlo_ps,pass
   common/c_fnlo_nlops/fixed_order,nlo_ps
   double precision :: lab(0:3,nexternal),out(0:3,nexternal),outlab(0:3,nexternal),cms(0:3,nexternal),jac
+  double precision, parameter :: max_error(3)=[2d-7,3d-6,1d-5]
 
   native_mapping=.true.
   fixed_order=.false.
@@ -195,20 +196,44 @@ subroutine check_wjet_boundary_projection()
   lpp=1
   ifks=5
   jfks=4
-  lab(:,1)=[4.97378848813441863d1,0d0,0d0,4.97378848813441863d1]
-  lab(:,2)=[5.78442699296585943d2,0d0,0d0,-5.78442699296585943d2]
-  lab(:,3)=[7.79721787019871271d-1,1.41351812862392456d-1,2.47042628431951433d-2,-7.66404220729106300d-1] &
-       +[3.49521894148706238d1,6.74629986065035858d0,2.77473019055295526d-2,-3.42949298464129342d1]
-  lab(:,4)=[4.89929574265278063d2,9.48042725279744474d1,7.08861844937025976d-1,-4.80668945496875779d2]
-  lab(:,5)=[1.02519098714858615d2,-1.01691924201487225d2,-7.61313409685750675d-1,-1.29745348553210249d1]
-  pmass=0d0
-  pmass(3)=sqrt(lab(0,3)**2-sum(lab(1:3,3)**2))
+  do icase=1,3
+     select case(icase)
+     case(1)
+        lab(:,1)=[4.97378848813441863d1,0d0,0d0,4.97378848813441863d1]
+        lab(:,2)=[5.78442699296585943d2,0d0,0d0,-5.78442699296585943d2]
+        lab(:,3)=[7.79721787019871271d-1,1.41351812862392456d-1,2.47042628431951433d-2,-7.66404220729106300d-1] &
+             +[3.49521894148706238d1,6.74629986065035858d0,2.77473019055295526d-2,-3.42949298464129342d1]
+        lab(:,4)=[4.89929574265278063d2,9.48042725279744474d1,7.08861844937025976d-1,-4.80668945496875779d2]
+        lab(:,5)=[1.02519098714858615d2,-1.01691924201487225d2,-7.61313409685750675d-1,-1.29745348553210249d1]
+     case(2)
+        lab(:,1)=[2.79685316665763025d2,0d0,0d0,2.79685316665763025d2]
+        lab(:,2)=[1.57595997453356313d3,0d0,0d0,-1.57595997453356313d3]
+        lab(:,3)=[7.94702108421625439d1,9.05590640269074765d-1,1.61699534918292165d0,-7.94485974887583950d1] &
+             +[6.08235144134407051d2,3.11191205504165591d0,1.32552602632878944d1,-6.08082728449770343d2]
+        lab(:,4)=[8.87331714243827491d2,5.15862952689793719d0,1.93499583581557992d1,-8.87105708895975567d2]
+        lab(:,5)=[2.80608221958734418d2,-9.17613222220866831d0,-3.42222139706266120d1,2.78362376986898823d2]
+     case(3)
+        lab(:,1)=[2.37359568100654741d2,0d0,0d0,2.37359568100654741d2]
+        lab(:,2)=[7.23277069457887194d1,0d0,0d0,-7.23277069457887194d1]
+        lab(:,3)=[1.28512259200941870d1,-5.22294127586781842d-1,-3.39813855243778218d-1,-1.28361109000106950d1] &
+             +[5.11000910848290175d1,-1.74546024693960611d0,-8.38989360004154139d-1,-5.10633799729118607d1]
+        lab(:,4)=[8.39693291711085799d0,-3.03041822428878171d-1,-1.57287808907320997d-1,-8.38998859435982602d0]
+        lab(:,5)=[2.37339025127945661d2,2.57079619695526640d0,1.33609102415525349d0,2.37321340618612169d2]
+     end select
+     pmass=0d0
+     pmass(3)=sqrt(lab(0,3)**2-sum(lab(1:3,3)**2))
+     call generate_native_momenta(lab,out,outlab,cms,jac,pass)
+     if(.not.pass.or..not.ieee_is_finite(jac).or.jac.le.0d0) &
+          error stop 'near-boundary W+jet native projection rejected'
+     if(.not.all(ieee_is_finite(outlab)))error stop 'nonfinite W+jet reconstruction'
+     if(maxval(abs(outlab-lab)).gt.max_error(icase)*maxval(abs(lab))) &
+          error stop 'near-boundary W+jet reconstruction changed'
+  enddo
+  ! A larger inconsistency must still fail, leaving invalid output sentinels.
+  lab(0,5)=lab(0,5)+1d-5
   call generate_native_momenta(lab,out,outlab,cms,jac,pass)
-  if(.not.pass.or..not.ieee_is_finite(jac).or.jac.le.0d0) &
-       error stop 'near-boundary W+jet native projection rejected'
-  if(.not.all(ieee_is_finite(outlab)))error stop 'nonfinite W+jet reconstruction'
-  if(maxval(abs(outlab-lab)).gt.2d-7*maxval(abs(lab))) &
-       error stop 'near-boundary W+jet reconstruction changed'
+  if(pass.or.jac.ge.0d0.or.out(0,1).ge.0d0) &
+       error stop 'inconsistent W+jet native projection accepted'
 end subroutine
 
 ! Seed 33 of the single-top acceptance test: an ISR event is projected

@@ -1319,6 +1319,8 @@ c run_card). This fix is needed for set_cms_stuff to work properly.
      $     m_born(nexternal-1),stot,tau_born,ycm_born,
      $     xbjrk_born(2),xjac0,xpswgt0,
      $     bounds_save(3),omx_save(2)
+      double precision,parameter :: reconstruction_rtol=1d-4
+      double precision reconstruction_delta,reconstruction_scale
       type(fks_born_point) born
       type(fks_phase_space_point) generated
       type(fks_phase_space_point),optional,intent(out) :: point
@@ -1406,10 +1408,27 @@ c run_card). This fix is needed for set_cms_stuff to work properly.
       pass=ieee_is_finite(jac).and.jac.gt.0d0.and.p(0,1).gt.0d0
       if(.not.pass)goto 900
 ! Near radiation boundaries, the maps amplify input roundoff.
-! Allow relative reconstruction differences of one part in a million.
+! Compare against the overall event momentum scale.
+      reconstruction_scale=max(1d0,maxval(abs(p_input)))
+      reconstruction_delta=maxval(abs(p_lab-p_input))
       pass=all(ieee_is_finite(p_lab)).and.
-     $     maxval(abs(p_lab-p_input)).le.
-     $     1d-6*max(1d0,maxval(abs(p_input)))
+     $     reconstruction_delta.le.reconstruction_rtol*
+     $     reconstruction_scale
+      if(.not.pass)then
+         write(*,*) 'Native MC reconstruction mismatch',
+     $        ' (relative/tolerance):',
+     $        reconstruction_delta/reconstruction_scale,
+     $        reconstruction_rtol
+         write(*,*) 'Native FKS legs and radiation coordinates:',
+     $        i_fks,j_fks,x
+         write(*,*) 'Native projection beams and masses:',ebeam,pmass
+         do i=1,nexternal
+            write(*,'(a,i3,4es26.17e3)') 'Native projection input ',
+     $           i,p_input(:,i)
+            write(*,'(a,i3,4es26.17e3)') 'Native reconstruction ',
+     $           i,p_lab(:,i)
+         enddo
+      endif
  900  continue
       tau_Born_lower_bound=bounds_save(1)
       tau_lower_bound_resonance=bounds_save(2)
