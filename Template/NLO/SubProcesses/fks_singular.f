@@ -8388,6 +8388,11 @@ c     reset the default dynamical_scale_choice
 ! Return the probability actually used for this draw, q_c=p_c. Keep
 ! this value with the sampled flow: do not recompute its denominator
 ! at another Born point or after changing the couplings.
+! A zero flow signals a numerically invalid Born evaluation. The caller
+! must discard the complete integration point, including earlier folds.
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      use fks_phase_space_data, only: p_born
+      use weight_lines, only: rejected_born_flow_points
       implicit none
       double precision mc_born_flow_weight
       external mc_born_flow_weight
@@ -8395,6 +8400,7 @@ c     reset the default dynamical_scale_choice
       include "born_nhel.inc"
       integer :: flow_picked,i
       double precision :: sumborn,target,sum,born_flow_factor
+      double precision :: flow_weights(max_bcol)
       double precision,external :: ran2
       double Precision :: amp2(ngraphs),jamp2(0:ncolor)
       common/to_amps/  amp2         ,jamp2
@@ -8402,23 +8408,48 @@ c     reset the default dynamical_scale_choice
       integer :: num_leading_cflows
       common/c_leading_cflows/is_leading_cflow,num_leading_cflows
 ! sumborn is the sum of the leading colour flow contributions to the Born.
+      flow_picked=0
+      born_flow_factor=0d0
+      flow_weights=0d0
+      do i=1,max_bcol
+         if(is_leading_cflow(i))flow_weights(i)=mc_born_flow_weight(i)
+      enddo
+      if(.not.all(ieee_is_finite(flow_weights)))goto 900
+      if(any(flow_weights.lt.0d0))goto 900
       sumborn=0.d0
       do i=1,max_bcol
-         if(is_leading_cflow(i)) sumborn=sumborn+mc_born_flow_weight(i)
+         if(is_leading_cflow(i)) sumborn=sumborn+flow_weights(i)
       enddo
+      if(.not.ieee_is_finite(sumborn))goto 900
+      if(sumborn.le.0d0)goto 900
       target=ran2()*sumborn
       sum=0d0
       do i=1,max_bcol
          if (.not.is_leading_cflow(i)) cycle
-         sum=sum+mc_born_flow_weight(i)
+         sum=sum+flow_weights(i)
          if(sum.gt.target) then
             flow_picked=i
-            born_flow_factor=mc_born_flow_weight(flow_picked)/sumborn
+            born_flow_factor=flow_weights(flow_picked)/sumborn
             return
          endif
       enddo
       write (*,*) 'Error #1 in get_born_flow',sum,target,i
       stop 1
+ 900  continue
+      rejected_born_flow_points=rejected_born_flow_points+1
+      if(rejected_born_flow_points.le.5.or.
+     $     mod(rejected_born_flow_points,100).eq.0)then
+         write(*,*) 'Rejecting phase-space point: invalid Born',
+     $        ' colour weights; count =',rejected_born_flow_points
+         write(*,*) 'Leading Born colour weights:',flow_weights
+      endif
+      if(rejected_born_flow_points.eq.1)then
+         do i=1,size(p_born,2)
+            write(*,'(a,i3,4es26.17e3)') 'Rejected Born momentum ',
+     $           i,p_born(:,i)
+         enddo
+      endif
+      return
       end
   
       

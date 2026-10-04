@@ -7,6 +7,7 @@ c**************************************************************************
       use FKSParams
       use process_module
       use scale_module
+      use weight_lines, only: rejected_born_flow_points
       implicit none
 C
 C     CONSTANTS
@@ -311,6 +312,9 @@ c Randomly pick the contribution that will be written in the event file
          close(lunlhe)
       endif
 
+      if(rejected_born_flow_points.gt.0)write(*,*)
+     $     'Total phase-space points rejected for invalid Born flows:',
+     $     rejected_born_flow_points
       if(i_momcmp_count.ne.0)then
         write(*,*)'     '
         write(*,*)'WARNING: genps_fks code 555555'
@@ -703,6 +707,9 @@ c
       include 'fks_info.inc'
       include 'mc_histories.inc'
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
+      logical rejected_point,weights_valid
+      save rejected_point
+      data rejected_point/.false./
       integer i,j,ifl,proc_map(0:fks_configs,0:fks_configs)
      $     ,nFKS_picked_nbody,nFKS_in,nFKS_out,izero,ione,itwo,mohdr
      $     ,iFKS,sum,partner_picked(fks_configs),first_native_H
@@ -751,13 +758,14 @@ c
       interface
          subroutine repartition_MC_H(first_native,p,p_lab,
      $        p_cms,jacPS,vegas_wgt,sampling_wgt,born_flow_factor,
-     $        outer_point)
+     $        outer_point,weights_valid)
             import fks_phase_space_point,nexternal
             integer first_native
             double precision p(0:3,nexternal),
      $           p_lab(0:3,nexternal),p_cms(0:3,nexternal),jacPS,
      $           vegas_wgt,sampling_wgt,born_flow_factor
             type(fks_phase_space_point),intent(in) :: outer_point
+            logical,intent(out) :: weights_valid
          end subroutine
       end interface
 c
@@ -788,11 +796,15 @@ c "npNLO".
 
       if (ifl.eq.0) then
          ifold_counter=1
+         rejected_point=.false.
       elseif(ifl.eq.1) then
          ifold_counter=ifold_counter+1
       endif
 
       fold=ifl
+! A failed colour draw invalidates the entire folded integration point.
+! Keep advancing fold counters, but never retain a later fold by itself.
+      if(rejected_point)goto 900
       if (ifl.eq.0 .or. ifl.eq.1) then
          if (ifl.eq.0) then
             icontr=0
@@ -865,8 +877,10 @@ c 1/proc_map(0,0)*vol1)
             if (abrv.eq.'born') then
                ! Doing only the Born contribution.
                call compute_born
-               if (ifl.eq.0) call get_born_flow(born_flow_picked
-     $              ,born_flow_factor)
+               if (ifl.eq.0) then
+                  call get_born_flow(born_flow_picked,born_flow_factor)
+                  if(born_flow_picked.eq.0)goto 900
+               endif
                call Bornonly_shower_scale(p_born,born_flow_picked)
                call save_shower_scale_nbody(nFKS_picked_nbody,
      $              ifold_counter,fksfather)
@@ -874,8 +888,10 @@ c 1/proc_map(0,0)*vol1)
                ! Doing only the Virtual contribution (could be because
                ! we are generating a virtual event).
                call compute_nbody_noborn
-               if (ifl.eq.0) call get_born_flow(born_flow_picked
-     $              ,born_flow_factor)
+               if (ifl.eq.0) then
+                  call get_born_flow(born_flow_picked,born_flow_factor)
+                  if(born_flow_picked.eq.0)goto 900
+               endif
                call compute_shower_scale_nbody(p_born,born_flow_picked,
      $              mc_shower_scale_mass())
                call save_shower_scale_nbody(nFKS_picked_nbody,
@@ -887,8 +903,10 @@ c 1/proc_map(0,0)*vol1)
                if (abrv.ne.'bovi') call compute_ewsudakov
                call compute_nbody_noborn
                ! only for ifl==0, since we want the same flow for each fold.
-               if (ifl.eq.0) call get_born_flow(born_flow_picked
-     $              ,born_flow_factor)
+               if (ifl.eq.0) then
+                  call get_born_flow(born_flow_picked,born_flow_factor)
+                  if(born_flow_picked.eq.0)goto 900
+               endif
                ! We need to fill emsca_S(iFKS_born) with a value that
                ! will be used if we are in the dead-zone. If we are not
                ! in the dead-zone, this will not be used (or
@@ -901,6 +919,7 @@ c 1/proc_map(0,0)*vol1)
          elseif (ifl.eq.0) then
             call sborn_native(p_born,wgt1)
             call get_born_flow(born_flow_picked,born_flow_factor)
+            if(born_flow_picked.eq.0)goto 900
 ! give it a negative value so that we can keep track of the fact that
 ! this was obtained with momenta that do not pass the cuts.
             born_flow_picked=-born_flow_picked
@@ -1063,7 +1082,11 @@ c check if event or counter-event passes cuts
             if (MCExplicitKLSum.and.ickkw.ne.4 .and. abrv.ne.'real') then
                call repartition_MC_H(first_native_H,p,p_lab,
      $              p_cms,jacPS,vegas_wgt,1d0/vol1,born_flow_factor,
-     $              phase_space)
+     $              phase_space,weights_valid)
+               if(.not.weights_valid)then
+                  call mc_end_real_point()
+                  goto 900
+               endif
             endif
             call mc_end_real_point()
          enddo
@@ -1097,10 +1120,25 @@ c Sum the contributions that can be summed before taking the ABS value
       endif
 
       return
+ 900  continue
+! Nothing from this point may enter integration, unweighting, or the
+! Born-spreading fit, including records made before the invalid draw.
+      rejected_point=.true.
+      icontr=0
+      born_flow_picked=0
+      born_flow_factor=0d0
+      virt_wgt_mint=0d0
+      born_wgt_mint=0d0
+      virtual_over_born=0d0
+      pass_cuts_check=.false.
+      f=0d0
+      if(ifl.eq.2)call fill_MC_integer(1,proc_map(0,1),0d0)
+      return
       end
 
       subroutine repartition_MC_H(first_native,p,p_lab,p_cms,
-     $     jacPS,vegas_wgt,sampling_wgt,born_flow_factor,outer_point)
+     $     jacPS,vegas_wgt,sampling_wgt,born_flow_factor,outer_point,
+     $     weights_valid)
       use fks_phase_space_data,only: p_born,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt,xinorm_ev,
      $     p1_cnt,jac_cnt,ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
 ! At a fixed real point form Hhat_a = S_a sum_b P_b (S_b R - M_b).
@@ -1132,6 +1170,7 @@ c Sum the contributions that can be summed before taking the ABS value
       include 'fks_symmetry.inc'
       include 'mc_histories.inc'
       type(fks_phase_space_point),intent(in) :: outer_point
+      logical,intent(out) :: weights_valid
       type(fks_phase_space_point) saved_point
       integer first_native,last_native,first_alt,owner,iFKS,ii,jj,ihist,
      $     ict,flow_save,called_save,owner_match(nexternal),
@@ -1179,6 +1218,7 @@ c Sum the contributions that can be summed before taking the ABS value
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
 
+      weights_valid=.true.
       if (p(0,1).le.0d0 .or. jacPS.le.0d0) return
       if (MC_HIST_COUNT.eq.0) return
       call set_cms_stuff(-100)
@@ -1315,6 +1355,10 @@ c Sum the contributions that can be summed before taking the ABS value
             calculatedBorn=.false.
             call sborn_native(p_born,born_weight)
             call get_born_flow(born_flow_picked,flow_factor_native)
+            if(born_flow_picked.eq.0)then
+               weights_valid=.false.
+               goto 900
+            endif
             calculatedBorn=.false.
             call include_born_flow_weight(flow_factor_native,
      $           flow_factor_native)
@@ -1351,6 +1395,9 @@ c Sum the contributions that can be summed before taking the ABS value
             enddo
          enddo
       enddo
+ 900  continue
+! Also restore the outer state after a failed native colour draw. The
+! caller then discards every contribution from this integration point.
 ! Restore the outer channel and its generated phase-space point.
 ! The snapshot includes all endpoint and recoil data, so native
 ! histories need not be followed by another radiation generation.
