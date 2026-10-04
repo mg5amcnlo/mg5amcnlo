@@ -213,9 +213,10 @@
 ! Use the refactored MC@NLO construction.  In this mode the complete
 ! explicit sum over native (kl) histories is formed before multiplying
 ! H-event subtraction terms by the outer S_ij function.
+! Set .false. to use the standard native-sector MC@NLO matching.
 #MCExplicitKLSum
-.false.
-! Default :: .false.
+.true.
+! Default :: .true.
 !
 ! ==========================================================================
 ! End of FKS_params.dat file

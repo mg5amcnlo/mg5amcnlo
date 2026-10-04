@@ -16,7 +16,7 @@ module FKSParams
               SelectedCouplingOrders(maxCouplingTypes,0:maxCouplingsSelected), &
               QCD_squared_selected
   logical :: separate_flavour_configs,IncludeBornContributions,use_poly_virtual
-  logical :: MCExplicitKLSum
+  logical :: MCExplicitKLSum=.true.
   integer :: FKSFinalRecoil=0
   integer :: FKSISRMapping=0
 
@@ -250,7 +250,7 @@ contains
     use_poly_virtual=.true.
     FKSFinalRecoil=0
     FKSISRMapping=0
-    MCExplicitKLSum=.false.
+    MCExplicitKLSum=.true.
     IncludeBornContributions=.true.
     SelectedContributionTypes(0)=0
     VetoedContributionTypes(0)=0
