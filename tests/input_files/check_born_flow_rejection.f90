@@ -192,10 +192,11 @@ subroutine include_born_flow_weight(probability,proposal)
   double precision :: probability,proposal
   if(probability.le.0d0.or.proposal.le.0d0)error stop 'invalid flow reached weight evaluation'
 end subroutine
-subroutine compute_native_NLOPS_weights(p,pl,pc,jac,cb,cr,probne)
+subroutine compute_NLOPS_flow_weights(p,pl,pc,jac,cb,cr,probne,valid)
   use flow_fixture
   double precision :: p(0:3,5),pl(0:3,5),pc(0:3,5),jac,probne
-  logical :: cb,cr
+  logical :: cb,cr,valid
+  valid=.true.
   call add_record(3d0)
 end subroutine
 subroutine repartition_MC_H(first,p,pl,pc,jac,vw,sw,bf,point,valid)

@@ -693,6 +693,7 @@ c
       use fks_phase_space, only: fks_phase_space_point,
      $     generate_born_contribution,generate_real_phase_space
       use mc_native_context, only: mc_begin_real_point,mc_end_real_point
+      use FKSParams, only: MCSubtractionAtFixedFlow
       use weight_lines
       use mint_module
       use mc_counterterms, only: fksfather,gfactsf,gfactcl,
@@ -1040,7 +1041,8 @@ c Check the sampled Born before native H histories change active data.
 c Compute the n1-body prefactors
             call compute_prefactors_n1body(vegas_wgt,jac)
 ! This flow was drawn with q_c=p_c at the common outer Born point.
-            call include_born_flow_weight(born_flow_factor,
+            if (MCSubtractionAtFixedFlow)
+     $           call include_born_flow_weight(born_flow_factor,
      $           born_flow_factor)
 c Include the FxFx Sudakovs into the prefactors
             if (ickkw.eq.3) then
@@ -1076,9 +1078,13 @@ c check if event or counter-event passes cuts
 ! here, preserving the original path if no real point can be repartitioned.
             mc_S_only=MCExplicitKLSum.and.ickkw.ne.4.and.abrv.ne.'real'.and.
      $           p(0,1).gt.0d0.and.jacPS.gt.0d0.and.MC_HIST_COUNT.gt.0
-            call compute_native_NLOPS_weights(p,p_lab,p_cms,jacPS,
-     $           passcuts_nbody,passcuts_n1body,probne)
+            call compute_NLOPS_flow_weights(p,p_lab,p_cms,jacPS,
+     $           passcuts_nbody,passcuts_n1body,probne,weights_valid)
             mc_S_only=.false.
+            if(.not.weights_valid)then
+               call mc_end_real_point()
+               goto 900
+            endif
             if (MCExplicitKLSum.and.ickkw.ne.4 .and. abrv.ne.'real') then
                call repartition_MC_H(first_native_H,p,p_lab,
      $              p_cms,jacPS,vegas_wgt,1d0/vol1,born_flow_factor,
@@ -1141,13 +1147,16 @@ c Sum the contributions that can be summed before taking the ABS value
      $     weights_valid)
       use fks_phase_space_data,only: p_born,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt,xinorm_ev,
      $     p1_cnt,jac_cnt,ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      use FKSParams, only: MCSubtractionAtFixedFlow
 ! At a fixed real point form Hhat_a = S_a sum_b P_b (S_b R - M_b).
 ! The ordinary S records have already been made and are not changed.
 ! Each M_b includes its native G replacement, luminosities and Born map.
-! Each inner history samples its OWN colour flow and includes 1/q_b,c.
+! Each inner history uses its OWN Born colour basis. Fixed-flow mode
+! samples a flow with 1/q_b,c; summed mode enumerates that basis.
 ! The outer event colour is only the event owner, not an inner proposal.
 ! Thus the colour-sampled summand is
 ! P_b,c*(p_b,c*S_b*R-M_b,c)/q_b,c, with M_b,c already flow-weighted.
+! Summed mode instead accumulates P_b,c*(p_b,c*S_b*R-M_b,c) over c.
       use fks_phase_space, only: fks_phase_space_point,
      $     initialize_fks_phase_space,capture_fks_phase_space,
      $     restore_fks_phase_space,generate_native_momenta
@@ -1360,7 +1369,8 @@ c Sum the contributions that can be summed before taking the ABS value
                goto 900
             endif
             calculatedBorn=.false.
-            call include_born_flow_weight(flow_factor_native,
+            if (MCSubtractionAtFixedFlow)
+     $           call include_born_flow_weight(flow_factor_native,
      $           flow_factor_native)
             call init_process_module_n1body_wrapper(born_flow_picked)
             call compute_shower_scale_nbody(p_born,-fksfather,
@@ -1372,8 +1382,10 @@ c Sum the contributions that can be summed before taking the ABS value
             if (ickkw.eq.3) call set_FxFx_scale(-3,pn)
             cuts_real=passcuts(pn,rwgt)
             first_alt=icontr+1
-            call compute_native_NLOPS_weights(pn,pn_lab,pn_cms,
-     $           jac_native,cuts_born,cuts_real,probne_native)
+            call compute_NLOPS_flow_weights(pn,pn_lab,pn_cms,
+     $           jac_native,cuts_born,cuts_real,probne_native,
+     $           weights_valid)
+            if(.not.weights_valid)goto 900
             do ict=first_alt,icontr
                if (.not.H_event(ict)) then
                   write (*,*) 'S event entered the inner MC H sum',ihist
@@ -1432,7 +1444,8 @@ c Sum the contributions that can be summed before taking the ABS value
       gfactcl=gfun_save(2)
       gfactazi=gfun_save(3)
       call compute_prefactors_n1body(vegas_wgt,jac_native)
-      call include_born_flow_weight(born_flow_factor,born_flow_factor)
+      if (MCSubtractionAtFixedFlow)
+     $     call include_born_flow_weight(born_flow_factor,born_flow_factor)
       if (ickkw.eq.3) then
          call set_FxFx_scale(0,p)
          call set_cms_stuff(0)
@@ -1492,7 +1505,147 @@ c Sum the contributions that can be summed before taking the ABS value
       end
 
       
+      subroutine compute_NLOPS_flow_weights(p,p_lab,p_cms,jacPS,
+     $     passcuts_nbody,passcuts_n1body,probne,weights_valid)
+! Sum complete native contributions before unweighting, including the
+! flow-dependent G replacement and Delta/real H-S split. The sampled
+! outer flow remains the event colour and shower-scale owner. Native
+! inner histories use their own Born basis, never the outer flow basis.
+      use FKSParams, only: MCSubtractionAtFixedFlow
+      use fks_phase_space_data, only: p_born,p1_cnt
+      use scale_module, only: born_flow_picked,shower_scale_n1body,
+     $     emsca_H,compute_shower_scale_n1body
+      use process_module, only: ndelH,valid_dipole_n1
+      use mc_counterterms, only: mc_shower_scale_mass,
+     $     gfactsf,gfactcl,gfactazi
+      implicit none
+      include 'nexternal.inc'
+      include 'born_nhel.inc'
+      include 'run.inc'
+      double precision p(0:3,nexternal),p_lab(0:3,nexternal),
+     $     p_cms(0:3,nexternal),jacPS,probne,probne_flow,
+     $     flow_weights(max_bcol),sumborn,born_weight,flow_fraction
+      logical passcuts_nbody,passcuts_n1body,weights_valid
+      integer flow,flow_owner,num_leading_cflows
+      logical is_leading_cflow(max_bcol)
+      common/c_leading_cflows/is_leading_cflow,num_leading_cflows
+! Keep the prefactors BEFORE multichannel enhancement; the single-flow
+! evaluator multiplies these in place on each call.
+      double precision factors(9),mc_factors(8),pdf_factors(3),
+     $     factors_save(9),mc_factors_save(8),pdf_factors_save(3)
+      common/factor_n1body/factors
+      common/factor_n1body_NLOPS/mc_factors
+      common/factor_pdfsch/pdf_factors
+      integer nFKSprocess,i_fks,j_fks,fold,ifold_counter,
+     $     MCcntcalled,called_owner
+      common/c_nFKSprocess/nFKSprocess
+      common/fks_indices/i_fks,j_fks
+      common/cfl/fold,ifold_counter
+      common/c_MCcntcalled/MCcntcalled
+      logical calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
+      character*4 abrv
+      common/to_abrv/abrv
+      integer icolup_s(2,nexternal-1),icolup_h(2,nexternal),
+     $     colours_s_owner(2,nexternal-1),colours_h_owner(2,nexternal)
+      common/colour_connections/icolup_s,icolup_h
+      logical dipoles_owner(nexternal,nexternal)
+      double precision scales_owner(nexternal,nexternal),
+     $     emsca_base(ndelH,ndelH),emsca_owner(ndelH,ndelH),
+     $     gfun_owner(3)
+
+      weights_valid=.true.
+      if (MCSubtractionAtFixedFlow.or..not.passcuts_nbody.or.
+     $     abrv.eq.'real'.or.ickkw.eq.4) then
+         call compute_native_NLOPS_weights(p,p_lab,p_cms,jacPS,
+     $        passcuts_nbody,passcuts_n1body,probne)
+         return
+      endif
+
+! The physical partition p_c belongs to this history's underlying Born
+! point and coupling scale. get_mbar supplies its OWN flow fraction in
+! the raw MC Born at the real coupling scale; do not multiply it twice.
+      call set_cms_stuff(0)
+      if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
+      call set_alphaS(p1_cnt(0,1,0))
+      calculatedBorn=.false.
+      call sborn_native(p_born,born_weight)
+      call get_born_flow_weights(flow_weights,sumborn)
+      if (sumborn.le.0d0) then
+         weights_valid=.false.
+         probne=1d0
+         return
+      endif
+      flow_owner=born_flow_picked
+      factors_save=factors
+      mc_factors_save=mc_factors
+      pdf_factors_save=pdf_factors
+      dipoles_owner=valid_dipole_n1
+      scales_owner=shower_scale_n1body
+      emsca_base=emsca_H(nFKSprocess,ifold_counter,:,:)
+      emsca_owner=emsca_base
+      colours_s_owner=icolup_s
+      colours_h_owner=icolup_h
+      called_owner=MCcntcalled
+      gfun_owner=[gfactsf,gfactcl,gfactazi]
+      probne=0d0
+      do flow=1,max_bcol
+         if (.not.is_leading_cflow(flow)) cycle
+! Include even zero-p_c flows: their MC Born fraction can differ at
+! the real coupling scale in processes with mixed Born orders.
+         flow_fraction=flow_weights(flow)/sumborn
+         born_flow_picked=flow
+         factors=factors_save
+         mc_factors=mc_factors_save
+         pdf_factors=pdf_factors_save
+         call include_born_flow_weight(flow_fraction,1d0)
+         MCcntcalled=0
+         calculatedBorn=.false.
+! Reuse the event's colour-insertion variate and the already sampled
+! all-flow Born dipole scales. Internal flows must not overwrite the
+! saved H-event colours or draw a new shower starting scale.
+         call init_process_module_n1body_flow(flow,.true.)
+         call compute_shower_scale_n1body(p,i_fks,j_fks,
+     $        mc_shower_scale_mass())
+         emsca_H(nFKSprocess,ifold_counter,:,:)=emsca_base
+         call compute_native_NLOPS_weights(p,p_lab,p_cms,jacPS,
+     $        passcuts_nbody,passcuts_n1body,probne_flow)
+         probne=probne+flow_fraction*probne_flow
+         if (flow.eq.flow_owner) then
+! Delta replaces the H scale with this owner's stopping scales. Retain
+! that replacement, not the pre-Delta scale or the last flow's scale.
+            emsca_owner=emsca_H(nFKSprocess,ifold_counter,:,:)
+            colours_s_owner=icolup_s
+            colours_h_owner=icolup_h
+            called_owner=MCcntcalled
+            gfun_owner=[gfactsf,gfactcl,gfactazi]
+         endif
+      enddo
+      born_flow_picked=flow_owner
+      factors=factors_save
+      mc_factors=mc_factors_save
+      pdf_factors=pdf_factors_save
+      valid_dipole_n1=dipoles_owner
+      shower_scale_n1body=scales_owner
+      emsca_H(nFKSprocess,ifold_counter,:,:)=emsca_owner
+      icolup_s=colours_s_owner
+      icolup_h=colours_h_owner
+      MCcntcalled=called_owner
+      gfactsf=gfun_owner(1)
+      gfactcl=gfun_owner(2)
+      gfactazi=gfun_owner(3)
+      calculatedBorn=.false.
+      end
+
       subroutine init_process_module_n1body_wrapper(bornflow)
+      implicit none
+      integer bornflow
+      call init_process_module_n1body_flow(bornflow,.false.)
+      end
+
+
+      subroutine init_process_module_n1body_flow(bornflow,
+     $     preserve_event_owner)
       use process_module
       use weight_lines, only: mc_H_only
       use scale_module, only: event_colour_H
@@ -1500,6 +1653,7 @@ c Sum the contributions that can be summed before taking the ABS value
       include 'nexternal.inc'
       include 'genps.inc'
       integer iFKS,colour(1:nexternal),i,j,k,get_color,bornflow
+      logical preserve_event_owner
       double precision mass(1:nexternal),get_mass_from_id
       external get_color
       external get_mass_from_id
@@ -1517,7 +1671,8 @@ c Sum the contributions that can be summed before taking the ABS value
          ! take ABS because bornflow is negative if n-body did not pass the cuts
 ! Keep the same colour-insertion variate throughout the native H sum
 ! and its outer-state restoration; do not redraw the event's colour.
-         call fill_icolor_H(abs(bornflow),jpart,.not.mc_H_only)
+         call fill_icolor_H(abs(bornflow),jpart,
+     $        .not.(mc_H_only.or.preserve_event_owner))
       else
          write (*,*) 'Born-flow not set in n1body_wrapper'
          stop 1
@@ -1528,7 +1683,7 @@ c Sum the contributions that can be summed before taking the ABS value
       enddo
 ! Keep the outer colour assignment with its sector and fold. Inner
 ! histories and their restoration must not overwrite event ownership.
-      if (.not.mc_H_only) then
+      if (.not.(mc_H_only.or.preserve_event_owner)) then
          event_colour_H(:,:,nFKSprocess,ifold_counter)=ICOLUP
       endif
       

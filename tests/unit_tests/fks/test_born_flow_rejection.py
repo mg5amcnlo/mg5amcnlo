@@ -32,6 +32,7 @@ class TestBornFlowRejection(unittest.TestCase):
             (work / name).write_text(''.join('      '+line+'\n' for line in source.splitlines()))
         (work / 'routines.f').write_text(
             fortran_routine(TEMPLATE / 'fks_singular.f', 'get_born_flow') +
+            fortran_routine(TEMPLATE / 'fks_singular.f', 'get_born_flow_weights') +
             fortran_routine(TEMPLATE / 'driver_mintMC.f', 'sigintF'))
         # These operations do not participate in the rejection protocol. The
         # fixture below supplies the Born proposals and contribution records.

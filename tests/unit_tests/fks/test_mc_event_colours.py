@@ -52,6 +52,7 @@ class TestMCEventColours(unittest.TestCase):
                 'module mint_module\ninteger :: imode=0,born_spread_phase=0\n'
                 'integer :: ndim=1,ifold(1)=1\nlogical :: only_virt=.false.\nend module\n')
             routines = [('driver_mintMC.f', 'init_process_module_n1body_wrapper'),
+                        ('driver_mintMC.f', 'init_process_module_n1body_flow'),
                         ('add_write_info.f', 'fill_icolor_H'),
                         ('add_write_info.f', 'fill_icolor_S'),
                         ('fks_singular.f', 'pick_unweight_contr'),

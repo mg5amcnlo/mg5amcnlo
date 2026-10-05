@@ -1,5 +1,6 @@
 module controlled_colour_random
   double precision :: next_random=0.25d0
+  integer :: colour_draws=0
 end module
 
 program check_mc_event_colours
@@ -32,7 +33,7 @@ program check_mc_event_colours
   common /c_split_type/split_type
   integer :: colour_connections(2,nexternal)
   common /colour_connections_to_write/colour_connections
-  integer :: saved(2,nexternal),picked,fold_picked
+  integer :: saved(2,nexternal),picked,fold_picked,draws_before
   integer, parameter :: ntest=257
   integer :: i,j,ii,mode,soft,reference(0:ntest,ntest),provenance(3,ntest)
   integer :: iproc_save(2),eto(1,2),etoi(1,2),maxproc_found
@@ -75,6 +76,13 @@ program check_mc_event_colours
   call init_process_module_n1body_wrapper(1)
   if (any(saved.ne.event_colour_H(:,:,1,1))) error stop 'native overwrote owner'
   mc_H_only=.false.
+
+  ! The explicit flow sum must preserve the event owner even when both
+  ! H and S weights are evaluated. It also reuses the insertion variate.
+  draws_before=colour_draws
+  call init_process_module_n1body_flow(1,.true.)
+  if (any(saved.ne.event_colour_H(:,:,1,1))) error stop 'flow sum overwrote owner'
+  if (colour_draws.ne.draws_before) error stop 'flow sum redrew colour insertion'
 
   call weight_lines_allocated(5,2,1,1)
   icontr=1
@@ -177,6 +185,7 @@ end program
 
 double precision function ran2()
   use controlled_colour_random
+  colour_draws=colour_draws+1
   ran2=next_random
 end function
 

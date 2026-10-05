@@ -218,6 +218,21 @@
 .true.
 ! Default :: .true.
 !
+! Choose how Born colour flows enter the MC@NLO subtraction in both
+! H and S events. With .true., evaluate at a sampled Born flow and apply
+! its sampling weight (the current prescription). With .false., explicitly
+! sum the MC counterterms over Born flows before combining event weights.
+! The flow sum uses this branch's matching kernels and phase-space maps;
+! it does not restore all matching choices of the 3.x series.
+! Event colours and shower scales use this branch's sampled Born owner;
+! the sum includes each flow's soft replacement and MC@NLO-Delta factor.
+! Summed mode costs one native evaluation per leading Born flow.
+! Independent of MCExplicitKLSum and FKSExplicitSum. Ignored at fixed order.
+! Rerun integration/grid setup after changing this setting.
+#MCSubtractionAtFixedFlow
+.true.
+! Default :: .true.
+!
 ! Explicitly sum the outer FKS configurations at each integration point
 ! in NLO+PS runs, instead of sampling a group of configurations. The Born
 ! contribution is included once; S-event terms are combined before taking

@@ -17,6 +17,7 @@ module FKSParams
               QCD_squared_selected
   logical :: separate_flavour_configs,IncludeBornContributions,use_poly_virtual
   logical :: MCExplicitKLSum=.true.
+  logical :: MCSubtractionAtFixedFlow=.true.
   logical :: FKSExplicitSum=.false.
   integer :: FKSFinalRecoil=0
   integer :: FKSISRMapping=0
@@ -95,6 +96,8 @@ contains
              endif
           else if (buff .eq. '#MCExplicitKLSum') then
              read(68,*,end=999) MCExplicitKLSum
+          else if (buff .eq. '#MCSubtractionAtFixedFlow') then
+             read(68,*,end=999) MCSubtractionAtFixedFlow
           else if (buff .eq. '#FKSExplicitSum') then
              read(68,*,end=999) FKSExplicitSum
           else if (buff .eq. '#UsePolyVirtual') then
@@ -228,6 +231,7 @@ contains
        write(*,*) ' > FKSFinalRecoil            = ',FKSFinalRecoil
        write(*,*) ' > FKSISRMapping             = ',FKSISRMapping
        write(*,*) ' > MCExplicitKLSum           = ',MCExplicitKLSum
+       write(*,*) ' > MCSubtractionAtFixedFlow  = ',MCSubtractionAtFixedFlow
        write(*,*) ' > FKSExplicitSum            = ',FKSExplicitSum
        write(*,*) &
             '==============================================================='
@@ -255,6 +259,7 @@ contains
     FKSFinalRecoil=0
     FKSISRMapping=0
     MCExplicitKLSum=.true.
+    MCSubtractionAtFixedFlow=.true.
     FKSExplicitSum=.false.
     IncludeBornContributions=.true.
     SelectedContributionTypes(0)=0
