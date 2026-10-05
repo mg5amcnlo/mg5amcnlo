@@ -284,8 +284,11 @@ c
       double precision      spole(maxinvar),swidth(maxinvar),bwjac
       common/to_brietwigner/spole          ,swidth          ,bwjac
 
-      double precision shat_floor  ! lower end of the s-hat map for pole -25
-      common/to_shat_knee/shat_floor
+c     s-hat map with a knee (pole=-25, see transpole)
+      double precision shat_knee_frac ! fraction of points below the knee
+      parameter (shat_knee_frac=0.03d0)
+      double precision shat_floor, knee_frac, knee_log
+      common/to_shat_knee/shat_floor, knee_frac, knee_log
 
       integer        lbw(0:nexternal)  !Use of B.W.
       common /to_BW/ lbw
@@ -570,7 +573,7 @@ c        Take into account special cuts
 c        already done in smin
 c     Mass scale from the BWs which are not forced: this is not a lower
 c     bound of the phase-space but the knee of the 1/s map (see below)
-         xknee = min(spmass**2/stot, 1d0-1d-8)
+         xknee = spmass**2/stot
          if (swidth(i).eq.0.and.xo.eq.1d0/stot.and.xknee.le.xo) then
             write(*,*) 'Warning: No minimum found for integration'
             write(*,*) '         Setting minimum to ',1d0/stot
@@ -582,11 +585,15 @@ c-----------------------
             if (xo.lt.smin/stot)then
                 xo = 1d0*smin/stot
             endif
-            if (xknee.gt.xo .and. xo.lt.0.5d0) then
+            if (xknee.gt.xo .and. xknee.lt.xo+shat_knee_frac
+     $           .and. xknee.lt.0.5d0) then
 c              1/s map above the knee, log map between xo and the knee
 c              such that the off-shell region below the knee keeps a
-c              fixed fraction of the points (see transpole)
+c              fixed fraction of the points (see transpole). For a knee
+c              far above xo, the 1/s map below already keeps more.
                shat_floor = xo
+               knee_frac = shat_knee_frac
+               knee_log = log(xknee/xo)
                swidth(i) = xknee
                spole(i) = -25d0
                write(*,*) "Transforming s_hat 1/s with knee ",i,xo,
