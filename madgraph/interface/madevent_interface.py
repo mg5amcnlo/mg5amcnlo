@@ -3146,10 +3146,11 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         crossoversig = 0
         inv_sq_err = 0
         nb_event = 0
-        madspin = False
+        run_names = [] # final run of each generation (the decayed one if MadSpin ran)
         for i in range(nb_run):
             self.nb_refine = 0
             self.exec_cmd('generate_events %s_%s -f' % (main_name, i), postcmd=False)
+            run_names.append(self.run_name)
             # Update collected value
             nb_event += int(self.results[self.run_name][-1]['nb_event'])  
             self.results.add_detail('nb_event', nb_event , run=main_name)            
@@ -3159,8 +3160,6 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             inv_sq_err+=1.0/error**2
             self.results[main_name][-1]['cross'] = crossoversig/inv_sq_err
             self.results[main_name][-1]['error'] = math.sqrt(1.0/inv_sq_err)
-            if 'decayed' in self.run_name:
-                madspin = True
         self.results.def_current(main_name)
         self.run_name = main_name
         self.update_status("Merging LHE files", level='parton')
@@ -3169,11 +3168,22 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         except Exception:
             pass
 
-        os.system('%(bin)s/merge.pl %(event)s/%(name)s_*%(madspin)s/unweighted_events.lhe.gz %(event)s/%(name)s/unweighted_events.lhe.gz %(event)s/%(name)s_banner.txt' 
-                  % {'bin': self.dirbin, 'event': pjoin(self.me_dir,'Events'),
-                     'name': self.run_name,
-                     'madspin': '_decayed_*' if madspin else ''
-                     })
+        event_dir = pjoin(self.me_dir, 'Events')
+        output = pjoin(event_dir, self.run_name, 'unweighted_events.lhe.gz')
+        for path in [output, output[:-3]]:
+            if os.path.exists(path):
+                os.remove(path)
+        paths = []
+        for name in run_names:
+            # EventFile falls back on the unzipped file (zip_unweighted_events=False)
+            path = pjoin(event_dir, name, 'unweighted_events.lhe.gz')
+            if os.path.exists(path) or os.path.exists(path[:-3]):
+                paths.append(path)
+            else:
+                logger.warning('No event file for run %s: not merged' % name)
+        nb_event, _ = lhe_parser.MultiEventFile.merge_runs(paths, output,
+                    banner_path=pjoin(event_dir, '%s_banner.txt' % self.run_name))
+        self.results.add_detail('nb_event', nb_event)
 
         eradir = self.options['exrootanalysis_path']
         if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):

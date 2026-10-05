@@ -617,6 +617,88 @@ class EventFile(object):
 
         raise ValueError("Failed to locate event header line in raw event block")
 
+    # entries of <rwgt> that multiply the central weight instead of replacing
+    # it (see correct_bias): they do not follow a change of normalisation
+    rwgt_multiplicative = ('bias',)
+    # on the raw bytes of the events: (<event> line + NUP IDPRUP) XWGTUP
+    _raw_event_wgt_pattern = re.compile(
+        rb'(<event(?:[ \t][^>\n]*)?>[ \t]*\r?\n[ \t]*\S+[ \t]+\S+[ \t]+)(\S+)')
+    # and the <wgt> of <rwgt>: open tag, id, ..., value, close tag
+    _raw_rwgt_wgt_pattern = re.compile(
+        rb'''(<\s*wgt id=['"])([^'"]+)(['"]\s*>\s*)([\ded+-.]+)(\s*</wgt>)''', re.I)
+
+    def _iter_raw_event_chunks(self, size=1<<22):
+        """Yield the events of the file, as raw bytes, by chunks of complete
+        events: the file between the banner and </LesHouchesEvents>, as it is.
+        Raise ValueError if the file ends inside an event."""
+        opener = gzip.open if self.zip_mode else open
+        with opener(self.path, 'rb') as fsock:
+            carry = b''
+            for line in fsock:
+                low = line.lower()
+                if b'<event' in low:
+                    carry = line
+                    break
+                if b'</init>' in low:
+                    break
+            while True:
+                data = fsock.read(size)
+                buf = carry + data
+                carry = buf
+                # cut after the end of the line of the last </event>
+                end = buf.rfind(b'</event>')
+                if end != -1:
+                    newline = buf.find(b'\n', end)
+                    if newline != -1:
+                        carry = buf[newline+1:]
+                        yield buf[:newline+1]
+                    elif not data:
+                        end += len(b'</event>')
+                        carry = buf[end:]
+                        yield buf[:end] + b'\n'
+                if not data:
+                    break
+            if b'<event' in carry:
+                raise ValueError("%s ends inside an event" % self.path)
+
+    def _scan_raw_weights(self):
+        """Number of events and sum of |central weight| of the file, from its
+        raw bytes. Raise ValueError if an event header is not understood."""
+        nb_event, sum_abs = 0, 0.
+        for chunk in self._iter_raw_event_chunks():
+            wgts = [w for _, w in self._raw_event_wgt_pattern.findall(chunk)]
+            if len(wgts) != chunk.count(b'</event>'):
+                raise ValueError("unexpected event format in %s" % self.path)
+            nb_event += len(wgts)
+            sum_abs += math.fsum(abs(float(w)) for w in wgts)
+        return nb_event, sum_abs
+
+    def _write_raw_rescaled_events(self, out, factor):
+        """Write the events of the file to out (binary mode), with the central
+        weight and the weights of <rwgt> (but the multiplicative ones)
+        multiplied by factor; copied as they are for factor 1.
+        Return the number of events."""
+        multiplicative = [key.encode() for key in self.rwgt_multiplicative]
+
+        def rescale(match):
+            return match.group(1) + b'%+13.7e' % (float(match.group(2))*factor)
+        nb_event = 0
+        for chunk in self._iter_raw_event_chunks():
+            nb = chunk.count(b'</event>')
+            if factor != 1:
+                chunk, nb_sub = self._raw_event_wgt_pattern.subn(rescale, chunk)
+                if nb_sub != nb:
+                    raise ValueError("unexpected event format in %s" % self.path)
+                # [text, open, id, ..., value, close, text, open, ...]
+                parts = self._raw_rwgt_wgt_pattern.split(chunk)
+                for i in range(2, len(parts), 6):
+                    if parts[i] not in multiplicative:
+                        parts[i+2] = b'%+.7e' % (float(parts[i+2])*factor)
+                chunk = b''.join(parts)
+            out.write(chunk)
+            nb_event += nb
+        return nb_event
+
     def _iter_raw_events_direct(self):
         """Yield (raw_event, ievent, wgt, header_meta) via one-pass stream scanning.
 
@@ -1885,7 +1967,183 @@ class MultiEventFile(EventFile):
                 lhe.close()
         out.write("</LesHouchesEvents>\n") 
         return nb_event, info
-                            
+
+    @staticmethod
+    def merge_runs(paths, outputpath, banner_path=None):
+        """Merge the event files of independent runs of the same process
+        (multi_run). The events are written in the order of paths, after the
+        header of the first file. banner_path (optional) receives that header.
+        Return the number of events and the cross section (<init>) of the
+        merged file.
+
+        Run i (N_i events) contributes its own cross section sigma_i with the
+        weight lambda_i = N_i/N_tot. All its events are multiplied by the same
+        factor f_i, which keeps their relative weights (overweights of the
+        unweighting, bias, MadSpin, sign) and follows the event_norm of the
+        run_card of the runs:
+          - average (mean weight = sigma_i): f_i = 1, so that the mean weight
+            of the merged file is sum_i lambda_i sigma_i;
+          - sum (sum of the weights = sigma_i): f_i = lambda_i;
+          - unity (sum of |w| = number of events, no normalisation in the
+            weights): f_i = N_i/A_i * |sigma_i|/sum_k lambda_k |sigma_k|, with
+            sigma_i the cross section of the <init> block of the run, so that
+            sum |w| = N_tot.
+        N_i and A_i = sum |w| come from a scan of the events (not from the
+        banner or XMAXUP). f_i also multiplies the absolute weights of <rwgt>
+        (systematics, reweighting) but not the multiplicative 'bias' entry.
+
+        <init>: the first line (beams, PDF, IDWTUP, NPRUP) and the processes
+        (LPRUP) of the runs must agree. XSECUP = sum_i lambda_i XSECUP_i,
+        XERRUP = sqrt(sum_i (lambda_i XERRUP_i)^2), and XMAXUP is the common
+        weight of the merged file, its mean |w| (as the unweighting writes it).
+        """
+
+        runs = []
+        for path in paths:
+            lhe = EventFile(path)
+            banner = lhe.get_banner()
+            try:
+                nb_event, sum_abs = lhe._scan_raw_weights()
+            except ValueError:
+                _, wgt_sum, nb_event = lhe._initialize_unweighting_header_only(0)
+                sum_abs = wgt_sum['abs']
+            if not nb_event:
+                logger.warning("no event in %s: not merged", path)
+                lhe.close()
+                continue
+            init = [l.strip() for l in banner['init'].split('\n') if l.strip()]
+            procs = collections.OrderedDict()
+            for line in init[1:]:
+                split = line.split()
+                if len(split) == 4:
+                    procs[int(split[3])] = [float(v) for v in split[:3]]
+            try:
+                event_norm = banner.get('run_card', 'event_norm').lower()
+            except Exception:
+                event_norm = 'average'
+            cross, error = banner.get_cross(witherror=True)
+            integrated = re.search(r"Integrated\s*weight\s*\(\s*pb\s*\)\s*:\s*([\+\-\d.e]+)",
+                                   banner['mggenerationinfo'] if 'mggenerationinfo' in banner else '', re.I)
+            runs.append({'path': path, 'lhe': lhe, 'banner': banner,
+                         'nb_event': nb_event, 'abs': sum_abs,
+                         'first': [float(v) for v in init[0].split()],
+                         'procs': procs,
+                         'other': [l for l in init[1:] if len(l.split()) != 4],
+                         'event_norm': 'unity' if event_norm == 'unit' else event_norm,
+                         'cross': cross, 'error': error,
+                         'integrated': float(integrated.group(1)) if integrated else cross})
+        if not runs:
+            raise Exception("No event to merge in %s" % ', '.join(paths))
+
+        # the runs have to be the same generation
+        ref = runs[0]
+        for run in runs[1:]:
+            if run['first'] != ref['first'] or set(run['procs']) != set(ref['procs']) \
+                                            or run['other'] != ref['other']:
+                raise Exception("Cannot merge %s with %s: the <init> blocks do not match"
+                                % (run['path'], ref['path']))
+            if run['event_norm'] != ref['event_norm']:
+                raise Exception("Cannot merge %s with %s: different event_norm (%s/%s)"
+                                % (run['path'], ref['path'], run['event_norm'], ref['event_norm']))
+            # as merge.pl: 5% agreement, unless within the statistical error
+            diff = abs(run['cross'] - ref['cross'])
+            if diff > 0.05 * max(abs(run['cross']), abs(ref['cross'])) and \
+                         diff > 5 * math.sqrt(run['error']**2 + ref['error']**2):
+                raise Exception("Cannot merge %s with %s: the cross sections do not agree (%g/%g pb)"
+                                % (run['path'], ref['path'], run['cross'], ref['cross']))
+
+        nb_tot = sum(run['nb_event'] for run in runs)
+        for run in runs:
+            run['lambda'] = run['nb_event'] / nb_tot
+        event_norm = ref['event_norm']
+        if event_norm == 'sum':
+            factors = [run['lambda'] for run in runs]
+        elif event_norm == 'unity':
+            sigma = [abs(run['cross']) for run in runs]
+            if not all(sigma):
+                sigma = [1] * len(runs)
+            mean_sigma = sum(run['lambda'] * s for run, s in zip(runs, sigma))
+            factors = [run['nb_event'] / run['abs'] * s / mean_sigma if run['abs'] else 1
+                       for run, s in zip(runs, sigma)]
+        else:
+            factors = [1] * len(runs)
+        common_wgt = sum(f * run['abs'] for f, run in zip(factors, runs)) / nb_tot
+
+        # combine <init> and <MGGenerationInfo> (in the Banner of the first run)
+        banner = ref['banner']
+        xsecup = dict((pid, sum(run['lambda'] * run['procs'][pid][0] for run in runs))
+                      for pid in ref['procs'])
+        xerrup = dict((pid, math.sqrt(sum((run['lambda'] * run['procs'][pid][1])**2 for run in runs)))
+                      for pid in ref['procs'])
+        banner.modify_init_cross(xsecup, error=xerrup, xmaxup=common_wgt)
+        # (MadSpin keeps there the cross section before the decays)
+        banner.add_generation_info(sum(run['lambda'] * run['integrated'] for run in runs), nb_tot)
+        cross = sum(xsecup.values())
+        # and put them in the header of the first run, which is otherwise
+        # kept as it is (Banner.write would drop the tags it does not know)
+        header = re.sub(r'(<init>[^\n]*\n).*?(</init>)',
+                        lambda m: m.group(1) + banner['init'].strip('\n') + '\n' + m.group(2),
+                        ref['lhe'].banner, count=1, flags=re.S)
+        gen_info = '<MGGenerationInfo>\n%s\n</MGGenerationInfo>' % banner['MGGenerationInfo'].strip('\n')
+        gen_info_pattern = re.compile(r'<MGGenerationInfo>.*?</MGGenerationInfo>', re.S | re.I)
+        if gen_info_pattern.search(header):
+            header = gen_info_pattern.sub(lambda m: gen_info, header, count=1)
+        else:
+            header = header.replace('</header>', '%s\n</header>' % gen_info, 1)
+
+        for run, factor in zip(runs, factors):
+            logger.debug("merge %s: %i events, cross section %g pb, weights x %g",
+                         run['path'], run['nb_event'], run['cross'], factor)
+
+        def write_events(use_raw):
+            # level 6 (as gzip/perl): the python default (9) is ~4 times slower
+            # for a 4% smaller file
+            if outputpath.endswith('.gz'):
+                out = gzip.open(outputpath, 'wb', compresslevel=6)
+            else:
+                out = open(outputpath, 'wb')
+            nb_event = 0
+            try:
+                out.write(header.encode())
+                for run, factor in zip(runs, factors):
+                    lhe = run['lhe']
+                    if use_raw:
+                        nb_event += lhe._write_raw_rescaled_events(out, factor)
+                    else:
+                        lhe.seek(0)
+                        lhe.parsing = 'wgt_only'
+                        for event in lhe:
+                            nb_event += 1
+                            event.wgt *= factor
+                            rwgt = event.parse_reweight()
+                            for key in rwgt:
+                                if key not in EventFile.rwgt_multiplicative:
+                                    rwgt[key] *= factor
+                            out.write(str(event).encode())
+                out.write(b"</LesHouchesEvents>\n")
+            finally:
+                out.close()
+            return nb_event
+
+        try:
+            nb_event = write_events(use_raw=True)
+        except ValueError:
+            # unexpected format: restart with the generic (slower) parser
+            nb_event = write_events(use_raw=False)
+        for run in runs:
+            run['lhe'].close()
+        if nb_event != nb_tot:
+            logger.warning("merged %i events instead of %i", nb_event, nb_tot)
+
+        if banner_path:
+            with open(banner_path, 'w') as fsock:
+                fsock.write(header)
+                fsock.write("</LesHouchesEvents>\n")
+
+        logger.info("merged %i runs: %i events, cross section %g pb (event_norm=%s)",
+                    len(runs), nb_tot, cross, event_norm)
+        return nb_tot, cross
+
     def remove(self):
         """ """
         if self.parsefile:

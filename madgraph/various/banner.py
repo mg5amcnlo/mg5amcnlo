@@ -344,8 +344,10 @@ class Banner(dict):
         self['init'] = '\n'.join(all_lines)
 
 
-    def modify_init_cross(self, cross, allow_zero=False):
-        """modify the init information with the associate cross-section"""
+    def modify_init_cross(self, cross, allow_zero=False, error=None, xmaxup=None):
+        """modify the init information with the associate cross-section.
+        XERRUP and XMAXUP are rescaled with XSECUP, unless error (dict with
+        the keys of cross) or xmaxup (one value for every process) is given"""
         assert isinstance(cross, dict)
 #        assert "all" in cross
         assert "init" in self
@@ -377,8 +379,10 @@ class Banner(dict):
                 ratio = cross[pid]/float(xsec)
             else:
                 ratio = 0
+            xerr = error[pid] if error is not None else ratio*float(xerr)
+            xmax = xmaxup if xmaxup is not None else ratio*float(xmax)
             line = "   %+13.7e %+13.7e %+13.7e %i" % \
-                (float(cross[pid]), ratio* float(xerr), ratio*float(xmax), pid)
+                (float(cross[pid]), xerr, xmax, pid)
             new_data.append(line)
         self['init'] = '\n'.join(new_data)
                 

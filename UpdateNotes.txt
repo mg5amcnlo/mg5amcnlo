@@ -8,6 +8,10 @@ ANNOUNCEMENT:
     OM: LO: the final unweighting no longer truncates the events above the maximum
         weight; they keep the weight w/w_max in units of the common weight
         (part of the under-population of the tails).
+    OM: multi_run: the merge of the runs (merge.pl) is now done in python. Fix the
+        normalisation for event_norm=sum (the merged sample was N_run times too large)
+        and the <rwgt> weights (systematics/reweighting), which were not rescaled
+        with the central weight. The relative weights of the events are kept.
 
 3.8.0 (15/09/26):
     OM+SA+VD: MadSpin2 (2609.02794)
