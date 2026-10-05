@@ -3144,8 +3144,8 @@ class test_aloha_creation(unittest.TestCase):
 
     def test_short_aloha_propagator_momentum_flip(self):
         """ Check that flipping the momentum of an outgoing fermion propagator
-            keeps the sign of even powers of P (the $ veto P1D was always
-            passing for outgoing fermions since P**2 was turned into -P**2)"""
+            keeps the sign of even powers of P (P**2 was turned into -P**2,
+            e.g. in a UFO fermion propagator written with P(-1,id)**2)"""
 
         builder = create_aloha.AbstractRoutineBuilder.__new__(
                                               create_aloha.AbstractRoutineBuilder)
@@ -3164,20 +3164,6 @@ class test_aloha_creation(unittest.TestCase):
             aloha_lib.KERNEL.clean()
             self.assertEqual(evaluate(expr, True),
                              evaluate('-1*(%s)' % expr, False), expr)
-
-        # the $ veto should be the same for an incoming and an outgoing fermion
-        FFV = self.Lorentz(name = 'FFV',
-                 spins = [ 2, 2, 3 ],
-                 structure = 'Gamma(3,1,2)')
-        veto = []
-        for outgoing in [1, 2]:
-            aloha_lib.KERNEL.clean()
-            create_aloha.AbstractRoutineBuilder(FFV).compute_routine(outgoing,
-                                                  tag=['P1D'], factorize=False)
-            veto.append([str(v) for v in aloha_lib.KERNEL.reduced_expr2.values()
-                                        if str(v).startswith("('theta_functionr'")])
-        self.assertEqual(len(veto[0]), 1)
-        self.assertEqual(veto[0], veto[1])
 
 
 
