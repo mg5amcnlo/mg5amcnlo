@@ -4,6 +4,10 @@ ANNOUNCEMENT:
    The 2.9.X LONG TERM STABLE version is now at end of life for bug fixing/support since December 2025.
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
+3.8.1 (XX/XX/XX):
+    OM: LO: setting mmnl without mmnlmax (default -1) silently removed the
+        mmllmax upper cut for processes with exactly two leptons/neutrinos.
+
 3.8.0 (15/09/26):
     OM+SA+VD: MadSpin2 (2609.02794)
         - Arbitrary decay, support for loop-induced processes, interference, Pole Approximation mode, polarization weights, ...
