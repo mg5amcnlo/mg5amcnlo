@@ -231,7 +231,7 @@ c
       double precision x1,x2,xk(nexternal)
       double precision dr,mtot,etot,xqfact
       double precision spmass
-      double precision stot ! technically the min with dsqrt_shatmax**2 with the physical one
+      double precision shat_max ! largest allowed shat: min(stot, dsqrt_shatmax**2)
       integer i, iconfig, l1, l2, j, nt, nbw, iproc, k
       integer iden_part(-nexternal+1:nexternal)
 
@@ -286,12 +286,12 @@ c
       integer        lbw(0:nexternal)  !Use of B.W.
       common /to_BW/ lbw
 
-      double precision real_stot,m1,m2
-      common/to_stot/real_stot,m1,m2
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
 c     unit of the s-hat variable: only GENCMS samples it up to dsqrt_shatmax
-      double precision sshat
-      double precision gencms_smax
-      external gencms_smax
+      double precision shat_unit
+      double precision get_shat_max
+      external get_shat_max
 
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       include 'cuts.inc'
@@ -315,15 +315,11 @@ c
 c-----
 c  Begin Code
 c-----     
-      if (dsqrt_shatmax.ne.-1)then
-        stot = min(real_stot, dsqrt_shatmax**2)
-      else
-        stot = real_stot
-      endif
-      sshat = real_stot
+      shat_max = get_shat_max(stot)
+      shat_unit = stot
       if (abs(lpp(1)).ge.1.and.abs(lpp(2)).ge.1.and.abs(lpp(1)).ne.9
      $     .and.abs(lpp(2)).ne.9.and.pdlabel.ne.'dressed')
-     $     sshat = gencms_smax(real_stot)
+     $     shat_unit = shat_max
 
       iconfig = this_config
 c     needs to be initialise to avoid segfault
@@ -426,7 +422,7 @@ c     Or: required offshell and forced
             if(prwidth_tmp(i,iconfig) .gt. 0.and.
      $         (lbw(nbw).eq.1.and.
      $          (prmass(i,iconfig)+bwcut_for_PS(i)*prwidth_tmp(i,iconfig).lt.xm(i)
-     $           .or.prmass(i,iconfig)-bwcut_for_PS(i)*prwidth_tmp(i,iconfig).gt.dsqrt(stot))
+     $           .or.prmass(i,iconfig)-bwcut_for_PS(i)*prwidth_tmp(i,iconfig).gt.dsqrt(shat_max))
      $          .or.gforcebw(i,iconfig).eq.1.and.
      $              prmass(i,iconfig)+bwcutoff*prwidth_tmp(i,iconfig).lt.xm(i)
      $          .or.lbw(nbw).eq.2.and.gforcebw(i,iconfig).eq.1))
@@ -443,25 +439,25 @@ c tjs 11/2008 if require BW then force even if worried about energy
 c JA 8/2011 don't use BW if mass is > CM energy
 c----
                   if(prmass(i,iconfig).ge.xm(i).and.iden_part(i).eq.0.and.
-     $                 prmass(i,iconfig).lt.sqrt(stot)
+     $                 prmass(i,iconfig).lt.sqrt(shat_max)
      $                 .or. lbw(nbw).eq.1) then
                      write(*,*) 'Setting PDF BW',j,nbw,prmass(i,iconfig)
-                     spole(j)=prmass(i,iconfig)*prmass(i,iconfig)/sshat
-                     swidth(j) = prwidth(i,iconfig)*prmass(i,iconfig)/sshat ! keep the real width here (important for the jacobian)
+                     spole(j)=prmass(i,iconfig)*prmass(i,iconfig)/shat_unit
+                     swidth(j) = prwidth(i,iconfig)*prmass(i,iconfig)/shat_unit ! keep the real width here (important for the jacobian)
                   endif
                else if((prmass(i,iconfig)+bwcut_for_PS(i)*prwidth_tmp(i,iconfig)).ge.xm(i)
      $                  .and. iden_part(i).eq.0 .or. lbw(nbw).eq.1) then
 c              JA 02/13 Only allow BW if xm below M+5*Gamma
                   write(*,*) 'Setting BW',i,nbw,prmass(i,iconfig)
-                  spole(-i)=prmass(i,iconfig)*prmass(i,iconfig)/real_stot
-                  swidth(-i) = prwidth(i,iconfig)*prmass(i,iconfig)/real_stot ! keep the real width here (important for the jacobian)
+                  spole(-i)=prmass(i,iconfig)*prmass(i,iconfig)/stot
+                  swidth(-i) = prwidth(i,iconfig)*prmass(i,iconfig)/stot ! keep the real width here (important for the jacobian)
                endif
 c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
                if (swidth(-i) .eq. 0d0 .and.
      $              i.ne.-(nexternal-(nincoming+1)))then
-                  a=prmass(i,iconfig)**2/real_stot
-                  xo = min(xm(i)**2/real_stot, 1-1d-8)
-                  if (xo.eq.0d0) xo=MIN(10d0/real_stot, real_stot/50d0, 0.5)
+                  a=prmass(i,iconfig)**2/stot
+                  xo = min(xm(i)**2/stot, 1-1d-8)
+                  if (xo.eq.0d0) xo=MIN(10d0/stot, stot/50d0, 0.5)
                   call setgrid(-i,xo,a,1)
                endif
 c     Set spmass for BWs
@@ -469,9 +465,9 @@ c     Set spmass for BWs
      $              spmass=spmass-xm(i) +
      $              max(xm(i),prmass(i,iconfig)-bwcut_for_PS(i)*prwidth_tmp(i,iconfig))
             else                                  !1/x^pow
-              a=prmass(i,iconfig)**2/real_stot
+              a=prmass(i,iconfig)**2/stot
 c     JA 4/1/2011 always set grid
-              xo = min(xm(i)**2/real_stot, 1-1d-8)
+              xo = min(xm(i)**2/stot, 1-1d-8)
 
 c     OM 7/27/2013 use MMJJ in order to set the mass in a appropriate way
               if (xo.eq.0d0.and.MMJJ.gt.0d0) then
@@ -482,12 +478,12 @@ c     OM 7/27/2013 use MMJJ in order to set the mass in a appropriate way
                     endif
                  enddo
                  if (njet.eq.1) then
-                    xo = (MMJJ/1d2)**2/real_stot
+                    xo = (MMJJ/1d2)**2/stot
                  else if (njet.eq.2) then
-                    xo = (MMJJ * 0.8)**2/real_stot
+                    xo = (MMJJ * 0.8)**2/stot
                  endif
               endif
-              if (xo.eq.0d0) xo=MIN(10d0/real_stot, real_stot/50d0, 0.5)
+              if (xo.eq.0d0) xo=MIN(10d0/stot, stot/50d0, 0.5)
 c              if (prwidth_tmp(i, iconfig) .eq. 0d0.or.iden_part(i).gt.0) then 
               if (tsgn .ne. 1d0.or.i .ne. -(nexternal-(nincoming+1))) then !s channel for shat
                   call setgrid(-i,xo,a,1)
@@ -532,13 +528,13 @@ c            write(*,*) 'Using 2',l2,x2
             xo = min(x1,x2)
 
 c           Use 1/10000 of sqrt(s) as minimum, to always get integration
-            xo = xo*xo/real_stot
+            xo = xo*xo/stot
             if (xo.eq.0d0)then
                xo=1/10000d0
                write(*,*) 'Warning: No cutoff for shat integral found'
                write(*,*) '         Minimum set to ', xo
             endif
-            a=-prmass(i,iconfig)**2/real_stot
+            a=-prmass(i,iconfig)**2/stot
 c            call setgrid(-i,xo,a,pow(i,iconfig))
 
 c               write(*,*) 'Enter minimum for ',-i, xo
@@ -550,41 +546,41 @@ c     Perform setting for shat (PDF BW or 1/s)
       if (abs(lpp(1)) .ge. 1 .or. abs(lpp(2)) .ge. 1) then
 c     Set minimum based on: 1) required energy 2) resonances 3) 1/10000 of sqrt(s)
          i = max(1,3*(nexternal-2) - 4 + 1)
-         xo = max(min(etot**2/sshat, 1d0-1d-8),1d0/sshat)
-         if (xo.eq.1d0/sshat) then
+         xo = max(min(etot**2/shat_unit, 1d0-1d-8),1d0/shat_unit)
+         if (xo.eq.1d0/shat_unit) then
              dynscale_cut =  (dynamical_scale_choice.eq.-1.and.
      $        .not.(FIXED_REN_SCALE.and.FIXED_FAC_SCALE1.and.FIXED_FAC_SCALE2))
              if (dynscale_cut.and.Smin.gt.0)then
-                 xo = max(4d0/sshat, Smin/sshat)
+                 xo = max(4d0/shat_unit, Smin/shat_unit)
              elseif (dynscale_cut)then
-                 xo = 4d0/sshat
+                 xo = 4d0/shat_unit
              elseif (Smin.gt.0) then
-                xo = .5*min(Smin/sshat,xo)
+                xo = .5*min(Smin/shat_unit,xo)
              endif
          endif
 
 c        Take into account special cuts
 c        already done in smin
 c     Include mass scale from BWs
-         xo = max(xo, spmass**2/sshat)
-         if (swidth(i).eq.0.and.xo.eq.1d0/sshat) then
+         xo = max(xo, spmass**2/shat_unit)
+         if (swidth(i).eq.0.and.xo.eq.1d0/shat_unit) then
             write(*,*) 'Warning: No minimum found for integration'
-            write(*,*) '         Setting minimum to ',1d0/sshat
+            write(*,*) '         Setting minimum to ',1d0/shat_unit
          endif
 c-----------------------
 c     tjs  4/29/2008 use analytic transform for s-hat
 c-----------------------
          if (swidth(i) .eq. 0d0) then
-            if (xo.lt.smin/sshat)then
-                xo = 1d0*smin/sshat
+            if (xo.lt.smin/shat_unit)then
+                xo = 1d0*smin/shat_unit
             endif
             swidth(i) = xo
             spole(i)= -2.0d0    ! 1/s pole
-            write(*,*) "Transforming s_hat 1/s ",i,xo, smin, sshat
-        else if(smin/sshat.gt.spole(i)+bwcutoff*max(swidth(i),  spole(i)*small_width_treatment)) then 
-            swidth(i) = smin/sshat
+            write(*,*) "Transforming s_hat 1/s ",i,xo, smin, shat_unit
+        else if(smin/shat_unit.gt.spole(i)+bwcutoff*max(swidth(i),  spole(i)*small_width_treatment)) then 
+            swidth(i) = smin/shat_unit
             spole(i) = -2d0
-            write(*,*) "Transforming s_hat 1/s ",i,xo, smin, sshat
+            write(*,*) "Transforming s_hat 1/s ",i,xo, smin, shat_unit
         else    
             write(*,*) "Transforming s_hat BW ",spole(i), max(swidth(i), spole(i)*small_width_treatment)
          endif

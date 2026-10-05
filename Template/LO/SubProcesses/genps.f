@@ -119,8 +119,8 @@ c
       double precision jac,sjac,pswgt,pwgt(maxconfigs),flux
       double precision tprb, mtot
       double precision xtau, dum
-      double precision gencms_smax
-      external gencms_smax
+      double precision get_shat_max
+      external get_shat_max
       double precision pi1(0:3),pi2(0:3),p0,p3
       save m
 
@@ -336,9 +336,9 @@ c-------
            call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)               
            xtau = x(ndim-1)
             if(nexternal .eq. 3) then
-c              GENCMS takes x(ndim-1) in units of gencms_smax(stot)
-               x(ndim-1) = pmass(3)*pmass(3)/gencms_smax(stot)
-               sjac=1 / gencms_smax(stot)    !for delta function in d_tau
+c              GENCMS takes x(ndim-1) in units of get_shat_max(stot)
+               x(ndim-1) = pmass(3)*pmass(3)/get_shat_max(stot)
+               sjac=1 / get_shat_max(stot)    !for delta function in d_tau
             endif
 
             call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
@@ -1638,8 +1638,8 @@ C     LOCAL
 
       DOUBLE PRECISION TAU,TAUMIN,TAUMAX
       DOUBLE PRECISION ETA,ETAMIN,ETAMAX
-      DOUBLE PRECISION GENCMS_SMAX
-      EXTERNAL GENCMS_SMAX
+      DOUBLE PRECISION GET_SHAT_MAX
+      EXTERNAL GET_SHAT_MAX
       logical warned
       data warned/.false./
       include 'maxparticles.inc'
@@ -1662,7 +1662,7 @@ C     &     X(1),TAU,SJACOBI)
 C     IF THERE IS NO S CHANNEL POLE USE BELOW:
 
       TAUMIN = 0d0 !SMIN/S !keep scale fix
-      TAUMAX = GENCMS_SMAX(S)/S
+      TAUMAX = GET_SHAT_MAX(S)/S
       TAU    = (TAUMAX-TAUMIN)*X(1)+TAUMIN
       SJACOBI=  sjacobi*(TAUMAX-TAUMIN)
 
@@ -1683,9 +1683,10 @@ c      eta = 0d0
 
       END
 
-      DOUBLE PRECISION FUNCTION GENCMS_SMAX(S)
+      DOUBLE PRECISION FUNCTION GET_SHAT_MAX(S)
 C***********************************************************************
-C     LARGEST SHAT SAMPLED BY GENCMS, THE UNIT OF ITS TAU VARIABLE
+C     LARGEST ALLOWED SHAT: MIN(S, DSQRT_SHATMAX**2)
+C     ALSO THE UNIT OF THE TAU VARIABLE SAMPLED BY GENCMS
 C***********************************************************************
       IMPLICIT NONE
       DOUBLE PRECISION S
@@ -1694,8 +1695,8 @@ C***********************************************************************
       include 'run.inc'
       include 'cuts.inc'
 
-      GENCMS_SMAX = S
-      if (dsqrt_shatmax.ne.-1d0) GENCMS_SMAX = min(S, dsqrt_shatmax**2)
+      GET_SHAT_MAX = S
+      if (dsqrt_shatmax.ne.-1d0) GET_SHAT_MAX = min(S, dsqrt_shatmax**2)
       END
 
       SUBROUTINE GENCMS_EE(S,X1,X2,X,SMIN,SJACOBI)
