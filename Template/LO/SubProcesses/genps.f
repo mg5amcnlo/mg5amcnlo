@@ -119,8 +119,11 @@ c
       double precision jac,sjac,pswgt,pwgt(maxconfigs),flux
       double precision tprb, mtot
       double precision xtau, dum
-      double precision get_shat_max
-      external get_shat_max
+      double precision shat_unit
+      double precision get_shat_unit
+      external get_shat_unit
+      logical shat_from_gencms
+      external shat_from_gencms
       double precision pi1(0:3),pi2(0:3),p0,p3
       save m
 
@@ -252,7 +255,28 @@ c
       xbk(2)   = 1d0
       sjac = 1d0
       if (abs(lpp(1)) .ge. 1 .and. abs(lpp(2)) .ge. 1) then
-         if (abs(lpp(1)).eq.9.or.abs(lpp(2)).eq.9)then
+         if (shat_from_gencms()) then
+c-----
+c tjs 5/24/2010 for 2->1 process
+c-------
+            shat_unit = get_shat_unit(stot)
+           call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)               
+           xtau = x(ndim-1)
+            if(nexternal .eq. 3) then
+c              GENCMS takes x(ndim-1) in units of shat_unit
+               x(ndim-1) = pmass(3)*pmass(3)/shat_unit
+               sjac=1 / shat_unit    !for delta function in d_tau
+            endif
+
+            call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
+            CALL GENCMS(STOT,Xbk(1),Xbk(2),X(ndim-1), SMIN,SJAC)
+            x(ndim-1) = xtau    !Fix for 2->1 process
+c           Set CM rapidity for use in the rap() function
+            cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
+            set_cm_rap=.true.
+c           Set shat
+            s(-nbranch) = xbk(1)*xbk(2)*stot
+         else if (abs(lpp(1)).eq.9.or.abs(lpp(2)).eq.9)then
             call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
             call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)
             call get_dummy_x1_x2(sjac, Xbk(1), x(ndim-1),pi1, pi2, stot, s(-nbranch))
@@ -330,25 +354,9 @@ c               endif
 
 
          else
-c-----
-c tjs 5/24/2010 for 2->1 process
-c-------
-           call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)               
-           xtau = x(ndim-1)
-            if(nexternal .eq. 3) then
-c              GENCMS takes x(ndim-1) in units of get_shat_max(stot)
-               x(ndim-1) = pmass(3)*pmass(3)/get_shat_max(stot)
-               sjac=1 / get_shat_max(stot)    !for delta function in d_tau
-            endif
-
-            call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
-            CALL GENCMS(STOT,Xbk(1),Xbk(2),X(ndim-1), SMIN,SJAC)
-            x(ndim-1) = xtau    !Fix for 2->1 process
-c           Set CM rapidity for use in the rap() function
-            cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
-            set_cm_rap=.true.
-c           Set shat
-            s(-nbranch) = xbk(1)*xbk(2)*stot
+            write(*,*) 'ERROR: no s-hat sampling for lpp=',lpp,
+     &           ' pdlabel=',pdlabel
+            stop 1
          endif
       elseif (lpp(1).eq.9.or.lpp(2).eq.9) then
          call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
@@ -1697,6 +1705,38 @@ C***********************************************************************
 
       GET_SHAT_MAX = S
       if (dsqrt_shatmax.ne.-1d0) GET_SHAT_MAX = min(S, dsqrt_shatmax**2)
+      END
+
+      LOGICAL FUNCTION SHAT_FROM_GENCMS()
+C***********************************************************************
+C     TRUE IF GEN_MOM SAMPLES SHAT WITH GENCMS (TWO PDF BEAMS, NOT
+C     LPP=9 AND NOT DRESSED). GEN_MOM DISPATCHES ON THIS FUNCTION, SO
+C     A NEW BEAM SETUP WITH ITS OWN SAMPLING MUST BE EXCLUDED HERE.
+C***********************************************************************
+      IMPLICIT NONE
+      include 'maxparticles.inc'
+      include '../../Source/vector.inc'
+      include 'run.inc'
+      include '../../Source/PDF/pdf.inc'
+
+      SHAT_FROM_GENCMS = abs(lpp(1)).ge.1 .and. abs(lpp(2)).ge.1
+     &     .and. abs(lpp(1)).ne.9 .and. abs(lpp(2)).ne.9
+     &     .and. pdlabel.ne.'dressed'
+      END
+
+      DOUBLE PRECISION FUNCTION GET_SHAT_UNIT(S)
+C***********************************************************************
+C     UNIT OF THE S-HAT VARIABLE SAMPLED BY GEN_MOM: GENCMS SAMPLES IT
+C     UP TO GET_SHAT_MAX(S), EVERY OTHER BEAM SETUP UP TO S
+C***********************************************************************
+      IMPLICIT NONE
+      DOUBLE PRECISION S
+      DOUBLE PRECISION GET_SHAT_MAX
+      LOGICAL SHAT_FROM_GENCMS
+      EXTERNAL GET_SHAT_MAX, SHAT_FROM_GENCMS
+
+      GET_SHAT_UNIT = S
+      IF (SHAT_FROM_GENCMS()) GET_SHAT_UNIT = GET_SHAT_MAX(S)
       END
 
       SUBROUTINE GENCMS_EE(S,X1,X2,X,SMIN,SJACOBI)

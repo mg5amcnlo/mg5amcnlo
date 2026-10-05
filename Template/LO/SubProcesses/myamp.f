@@ -288,14 +288,13 @@ c
 
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
-c     unit of the s-hat variable: only GENCMS samples it up to dsqrt_shatmax
+c     unit of the s-hat variable, as sampled by gen_mom
       double precision shat_unit
-      double precision get_shat_max
-      external get_shat_max
+      double precision get_shat_max, get_shat_unit
+      external get_shat_max, get_shat_unit
 
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       include 'cuts.inc'
-      include '../../Source/PDF/pdf.inc'
 C
 C     SPECIAL CUTS
 C
@@ -316,10 +315,7 @@ c-----
 c  Begin Code
 c-----     
       shat_max = get_shat_max(stot)
-      shat_unit = stot
-      if (abs(lpp(1)).ge.1.and.abs(lpp(2)).ge.1.and.abs(lpp(1)).ne.9
-     $     .and.abs(lpp(2)).ne.9.and.pdlabel.ne.'dressed')
-     $     shat_unit = shat_max
+      shat_unit = get_shat_unit(stot)
 
       iconfig = this_config
 c     needs to be initialise to avoid segfault
