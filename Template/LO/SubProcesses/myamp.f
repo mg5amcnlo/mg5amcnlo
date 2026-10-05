@@ -444,15 +444,15 @@ c----
      $                  .and. iden_part(i).eq.0 .or. lbw(nbw).eq.1) then
 c              JA 02/13 Only allow BW if xm below M+5*Gamma
                   write(*,*) 'Setting BW',i,nbw,prmass(i,iconfig)
-                  spole(-i)=prmass(i,iconfig)*prmass(i,iconfig)/stot
-                  swidth(-i) = prwidth(i,iconfig)*prmass(i,iconfig)/stot ! keep the real width here (important for the jacobian)
+                  spole(-i)=prmass(i,iconfig)*prmass(i,iconfig)/real_stot
+                  swidth(-i) = prwidth(i,iconfig)*prmass(i,iconfig)/real_stot ! keep the real width here (important for the jacobian)
                endif
 c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
                if (swidth(-i) .eq. 0d0 .and.
      $              i.ne.-(nexternal-(nincoming+1)))then
-                  a=prmass(i,iconfig)**2/stot
-                  xo = min(xm(i)**2/stot, 1-1d-8)
-                  if (xo.eq.0d0) xo=MIN(10d0/stot, stot/50d0, 0.5)
+                  a=prmass(i,iconfig)**2/real_stot
+                  xo = min(xm(i)**2/real_stot, 1-1d-8)
+                  if (xo.eq.0d0) xo=MIN(10d0/real_stot, real_stot/50d0, 0.5)
                   call setgrid(-i,xo,a,1)
                endif
 c     Set spmass for BWs
@@ -460,9 +460,9 @@ c     Set spmass for BWs
      $              spmass=spmass-xm(i) +
      $              max(xm(i),prmass(i,iconfig)-bwcut_for_PS(i)*prwidth_tmp(i,iconfig))
             else                                  !1/x^pow
-              a=prmass(i,iconfig)**2/stot
+              a=prmass(i,iconfig)**2/real_stot
 c     JA 4/1/2011 always set grid
-              xo = min(xm(i)**2/stot, 1-1d-8)
+              xo = min(xm(i)**2/real_stot, 1-1d-8)
 
 c     OM 7/27/2013 use MMJJ in order to set the mass in a appropriate way
               if (xo.eq.0d0.and.MMJJ.gt.0d0) then
@@ -473,12 +473,12 @@ c     OM 7/27/2013 use MMJJ in order to set the mass in a appropriate way
                     endif
                  enddo
                  if (njet.eq.1) then
-                    xo = (MMJJ/1d2)**2/stot
+                    xo = (MMJJ/1d2)**2/real_stot
                  else if (njet.eq.2) then
-                    xo = (MMJJ * 0.8)**2/stot
+                    xo = (MMJJ * 0.8)**2/real_stot
                  endif
               endif
-              if (xo.eq.0d0) xo=MIN(10d0/stot, stot/50d0, 0.5)
+              if (xo.eq.0d0) xo=MIN(10d0/real_stot, real_stot/50d0, 0.5)
 c              if (prwidth_tmp(i, iconfig) .eq. 0d0.or.iden_part(i).gt.0) then 
               if (tsgn .ne. 1d0.or.i .ne. -(nexternal-(nincoming+1))) then !s channel for shat
                   call setgrid(-i,xo,a,1)
@@ -523,13 +523,13 @@ c            write(*,*) 'Using 2',l2,x2
             xo = min(x1,x2)
 
 c           Use 1/10000 of sqrt(s) as minimum, to always get integration
-            xo = xo*xo/stot
+            xo = xo*xo/real_stot
             if (xo.eq.0d0)then
                xo=1/10000d0
                write(*,*) 'Warning: No cutoff for shat integral found'
                write(*,*) '         Minimum set to ', xo
             endif
-            a=-prmass(i,iconfig)**2/stot
+            a=-prmass(i,iconfig)**2/real_stot
 c            call setgrid(-i,xo,a,pow(i,iconfig))
 
 c               write(*,*) 'Enter minimum for ',-i, xo
