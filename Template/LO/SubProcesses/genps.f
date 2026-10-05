@@ -119,6 +119,8 @@ c
       double precision jac,sjac,pswgt,pwgt(maxconfigs),flux
       double precision tprb, mtot
       double precision xtau, dum
+      double precision gencms_smax
+      external gencms_smax
       double precision pi1(0:3),pi2(0:3),p0,p3
       save m
 
@@ -334,8 +336,9 @@ c-------
            call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)               
            xtau = x(ndim-1)
             if(nexternal .eq. 3) then
-               x(ndim-1) = pmass(3)*pmass(3)/stot
-               sjac=1 / stot    !for delta function in d_tau
+c              GENCMS takes x(ndim-1) in units of gencms_smax(stot)
+               x(ndim-1) = pmass(3)*pmass(3)/gencms_smax(stot)
+               sjac=1 / gencms_smax(stot)    !for delta function in d_tau
             endif
 
             call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
@@ -1635,6 +1638,8 @@ C     LOCAL
 
       DOUBLE PRECISION TAU,TAUMIN,TAUMAX
       DOUBLE PRECISION ETA,ETAMIN,ETAMAX
+      DOUBLE PRECISION GENCMS_SMAX
+      EXTERNAL GENCMS_SMAX
       logical warned
       data warned/.false./
       include 'maxparticles.inc'
@@ -1657,11 +1662,7 @@ C     &     X(1),TAU,SJACOBI)
 C     IF THERE IS NO S CHANNEL POLE USE BELOW:
 
       TAUMIN = 0d0 !SMIN/S !keep scale fix
-      if (dsqrt_shatmax.ne.-1d0)then
-          TAUMAX=dsqrt_shatmax**2/S
-      else
-        TAUMAX = 1D0
-      endif
+      TAUMAX = GENCMS_SMAX(S)/S
       TAU    = (TAUMAX-TAUMIN)*X(1)+TAUMIN
       SJACOBI=  sjacobi*(TAUMAX-TAUMIN)
 
@@ -1680,6 +1681,21 @@ c      eta = 0d0
       X1 = SQRT(TAU)*EXP(ETA)
       X2 = SQRT(TAU)*EXP(-ETA)
 
+      END
+
+      DOUBLE PRECISION FUNCTION GENCMS_SMAX(S)
+C***********************************************************************
+C     LARGEST SHAT SAMPLED BY GENCMS, THE UNIT OF ITS TAU VARIABLE
+C***********************************************************************
+      IMPLICIT NONE
+      DOUBLE PRECISION S
+      include 'maxparticles.inc'
+      include '../../Source/vector.inc'
+      include 'run.inc'
+      include 'cuts.inc'
+
+      GENCMS_SMAX = S
+      if (dsqrt_shatmax.ne.-1d0) GENCMS_SMAX = min(S, dsqrt_shatmax**2)
       END
 
       SUBROUTINE GENCMS_EE(S,X1,X2,X,SMIN,SJACOBI)

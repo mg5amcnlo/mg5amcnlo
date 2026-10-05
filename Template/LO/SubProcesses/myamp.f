@@ -288,9 +288,14 @@ c
 
       double precision real_stot,m1,m2
       common/to_stot/real_stot,m1,m2
+c     unit of the s-hat variable: only GENCMS samples it up to dsqrt_shatmax
+      double precision sshat
+      double precision gencms_smax
+      external gencms_smax
 
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       include 'cuts.inc'
+      include '../../Source/PDF/pdf.inc'
 C
 C     SPECIAL CUTS
 C
@@ -315,6 +320,10 @@ c-----
       else
         stot = real_stot
       endif
+      sshat = real_stot
+      if (abs(lpp(1)).ge.1.and.abs(lpp(2)).ge.1.and.abs(lpp(1)).ne.9
+     $     .and.abs(lpp(2)).ne.9.and.pdlabel.ne.'dressed')
+     $     sshat = gencms_smax(real_stot)
 
       iconfig = this_config
 c     needs to be initialise to avoid segfault
@@ -437,8 +446,8 @@ c----
      $                 prmass(i,iconfig).lt.sqrt(stot)
      $                 .or. lbw(nbw).eq.1) then
                      write(*,*) 'Setting PDF BW',j,nbw,prmass(i,iconfig)
-                     spole(j)=prmass(i,iconfig)*prmass(i,iconfig)/stot
-                     swidth(j) = prwidth(i,iconfig)*prmass(i,iconfig)/stot ! keep the real width here (important for the jacobian)
+                     spole(j)=prmass(i,iconfig)*prmass(i,iconfig)/sshat
+                     swidth(j) = prwidth(i,iconfig)*prmass(i,iconfig)/sshat ! keep the real width here (important for the jacobian)
                   endif
                else if((prmass(i,iconfig)+bwcut_for_PS(i)*prwidth_tmp(i,iconfig)).ge.xm(i)
      $                  .and. iden_part(i).eq.0 .or. lbw(nbw).eq.1) then
@@ -541,41 +550,41 @@ c     Perform setting for shat (PDF BW or 1/s)
       if (abs(lpp(1)) .ge. 1 .or. abs(lpp(2)) .ge. 1) then
 c     Set minimum based on: 1) required energy 2) resonances 3) 1/10000 of sqrt(s)
          i = max(1,3*(nexternal-2) - 4 + 1)
-         xo = max(min(etot**2/stot, 1d0-1d-8),1d0/stot)
-         if (xo.eq.1d0/stot) then
+         xo = max(min(etot**2/sshat, 1d0-1d-8),1d0/sshat)
+         if (xo.eq.1d0/sshat) then
              dynscale_cut =  (dynamical_scale_choice.eq.-1.and.
      $        .not.(FIXED_REN_SCALE.and.FIXED_FAC_SCALE1.and.FIXED_FAC_SCALE2))
              if (dynscale_cut.and.Smin.gt.0)then
-                 xo = max(4d0/stot, Smin/stot)
+                 xo = max(4d0/sshat, Smin/sshat)
              elseif (dynscale_cut)then
-                 xo = 4d0/stot
+                 xo = 4d0/sshat
              elseif (Smin.gt.0) then
-                xo = .5*min(Smin/stot,xo)
+                xo = .5*min(Smin/sshat,xo)
              endif
          endif
 
 c        Take into account special cuts
 c        already done in smin
 c     Include mass scale from BWs
-         xo = max(xo, spmass**2/stot)
-         if (swidth(i).eq.0.and.xo.eq.1d0/stot) then
+         xo = max(xo, spmass**2/sshat)
+         if (swidth(i).eq.0.and.xo.eq.1d0/sshat) then
             write(*,*) 'Warning: No minimum found for integration'
-            write(*,*) '         Setting minimum to ',1d0/stot
+            write(*,*) '         Setting minimum to ',1d0/sshat
          endif
 c-----------------------
 c     tjs  4/29/2008 use analytic transform for s-hat
 c-----------------------
          if (swidth(i) .eq. 0d0) then
-            if (xo.lt.smin/stot)then
-                xo = 1d0*smin/stot
+            if (xo.lt.smin/sshat)then
+                xo = 1d0*smin/sshat
             endif
             swidth(i) = xo
             spole(i)= -2.0d0    ! 1/s pole
-            write(*,*) "Transforming s_hat 1/s ",i,xo, smin, stot
-        else if(smin/stot.gt.spole(i)+bwcutoff*max(swidth(i),  spole(i)*small_width_treatment)) then 
-            swidth(i) = smin/stot
+            write(*,*) "Transforming s_hat 1/s ",i,xo, smin, sshat
+        else if(smin/sshat.gt.spole(i)+bwcutoff*max(swidth(i),  spole(i)*small_width_treatment)) then 
+            swidth(i) = smin/sshat
             spole(i) = -2d0
-            write(*,*) "Transforming s_hat 1/s ",i,xo, smin, stot
+            write(*,*) "Transforming s_hat 1/s ",i,xo, smin, sshat
         else    
             write(*,*) "Transforming s_hat BW ",spole(i), max(swidth(i), spole(i)*small_width_treatment)
          endif
