@@ -111,8 +111,10 @@ class TestOneSlotAssignment(unittest.TestCase):
             self.assertIn(leg, (pid, -pid),
                           'particle %d (pid %d) put on a leg %d'
                           % (i, part.pid, leg))
-            signs.add(leg == pid)
-        # a charge-reversed order reverses every leg, never only some
+            if pid not in (21, 22, 23, 25):
+                signs.add(leg == pid)
+        # a charge-reversed order reverses every leg (but the self-conjugate
+        # ones), never only some
         self.assertEqual(len(signs), 1)
 
         momenta = event.get_momenta(order)
@@ -165,6 +167,18 @@ class TestOneSlotAssignment(unittest.TestCase):
         self.assertOneAssignment(_event([-24], [11, -12]), [(24,), (-11, 12)])
         self.assertOneAssignment(_event([2, -2], [-6, -6, 6, 6]),
                                  [(-2, 2), (6, -6, 6, -6)])
+
+    def test_a_charge_reversed_order_with_self_conjugate_particles(self):
+        """charge conjugation keeps g, a, z, h: the retry must not look for a
+        -21 or a -23 the event cannot carry"""
+        self.assertOneAssignment(_event([-2, 1], [-24, 23]),
+                                 [(2, -1), (24, 23)])
+        self.assertOneAssignment(_event([-6], [-24, -5, 21]),
+                                 [(6,), (24, 5, 21)])
+        self.assertOneAssignment(_event([21, 21], [-6, 6, 25]),
+                                 [(21, 21), (-6, 6, 25)])
+        self.assertOneAssignment(_event([-1, 2], [25, -24, 22]),
+                                 [(1, -2), (25, 24, 22)])
 
 
 class TestIdenticalParticleTieBreak(unittest.TestCase):

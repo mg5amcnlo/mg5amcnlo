@@ -3789,7 +3789,8 @@ class Event(list):
         (|status| == 1) particles to the slot in get_order (initial state
         first), and back. The k-th particle of a pdg in the event takes the
         k-th slot of that pdg. With allow_reversed, an event that only matches
-        the charge-conjugated order is mapped onto that one.
+        the charge-conjugated order is mapped onto that one (self-conjugate
+        particles keep their id).
 
         get_momenta, get_helicity and get_all_momenta all take their slots from
         here, so they cannot disagree on which particle sits where. They used
@@ -3819,7 +3820,14 @@ class Event(list):
             except ValueError as error:
                 if not allow_reversed:
                     raise error
-                order = [[-i for i in get_order[0]], [-i for i in get_order[1]]]
+                # charge conjugation leaves a self-conjugate particle (g, a,
+                # z, h, ...) as it is. Without the model, an id the event
+                # carries while it never carries its negative is taken as one;
+                # negating it could only fail (no slot of the event fits it).
+                pids = set(p.pid for p in self if abs(p.status) == 1)
+                conj = lambda i: i if (i in pids and -i not in pids) else -i
+                order = [[conj(i) for i in get_order[0]],
+                         [conj(i) for i in get_order[1]]]
                 try:
                     return self.get_mapping(order, False, decay_chain)
                 except ValueError:

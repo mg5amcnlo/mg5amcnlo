@@ -3180,11 +3180,14 @@ class test_aloha_creation(unittest.TestCase):
 
         for expr in ['P(-1,3)**2', 'P(-1,3) ** 2', 'P(-1,3)**2.0',
                      'P(-1,3)*P(-1,3)', 'Mass(3)**2/P(-1,3)**2',
-                     '2*P(-1,3)**2 - Mass(3)**2', 'P(0,3)**4']:
+                     '2*P(-1,3)**2 - Mass(3)**2', 'P(0,3)**4',
+                     'P(-1,3)**(2)', 'P(-1,3) ** ( 2 )', 'P(-1,3)**2e0',
+                     'P(-1,3)**2.0E+00']:
             aloha_lib.KERNEL.clean()
             self.assertEqual(evaluate(expr, True), evaluate(expr, False), expr)
 
-        for expr in ['P(0,3)', 'P(0,3)**3']:
+        for expr in ['P(0,3)', 'P(0,3)**3', 'P(0,3)**(3)', 'P(0,3)**3e0',
+                     'P(0,3)**(2*1+1)']:
             aloha_lib.KERNEL.clean()
             self.assertEqual(evaluate(expr, True),
                              evaluate('-1*(%s)' % expr, False), expr)
