@@ -3169,21 +3169,27 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             pass
 
         event_dir = pjoin(self.me_dir, 'Events')
-        output = pjoin(event_dir, self.run_name, 'unweighted_events.lhe.gz')
-        for path in [output, output[:-3]]:
-            if os.path.exists(path):
-                os.remove(path)
-        paths = []
+        paths, missing = [], []
         for name in run_names:
-            # EventFile falls back on the unzipped file (zip_unweighted_events=False)
-            path = pjoin(event_dir, name, 'unweighted_events.lhe.gz')
-            if os.path.exists(path) or os.path.exists(path[:-3]):
-                paths.append(path)
+            # unweighted_events.lhe if zip_unweighted_events=False: the newest
+            # one if both exist
+            candidates = [pjoin(event_dir, name, 'unweighted_events.lhe%s' % ext)
+                          for ext in ['.gz', '']]
+            candidates = [p for p in candidates if os.path.exists(p)]
+            if candidates:
+                paths.append(max(candidates, key=os.path.getmtime))
             else:
-                logger.warning('No event file for run %s: not merged' % name)
+                missing.append(name)
+        if missing:
+            raise MadEventError('No event file for the run(s) %s: the runs of %s are not merged'
+                                % (', '.join(missing), self.run_name))
+        output = pjoin(event_dir, self.run_name, 'unweighted_events.lhe.gz')
         nb_event, _ = lhe_parser.MultiEventFile.merge_runs(paths, output,
                     banner_path=pjoin(event_dir, '%s_banner.txt' % self.run_name))
         self.results.add_detail('nb_event', nb_event)
+        # a stale unzipped file would hide the merged one below
+        if os.path.exists(output[:-3]):
+            os.remove(output[:-3])
 
         eradir = self.options['exrootanalysis_path']
         if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):

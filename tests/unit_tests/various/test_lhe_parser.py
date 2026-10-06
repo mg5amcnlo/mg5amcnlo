@@ -1795,6 +1795,32 @@ class TestMergeRuns(unittest.TestCase):
                 lhe_parser.MultiEventFile.merge_runs(paths, output)
             self.assertEqual(open(output, 'rb').read(), ref)
 
+    def test_merge_runs_failure_keeps_output(self):
+        """a merge that fails leaves the previous output and banner as they
+        were, and no temporary file"""
+
+        paths = [self.write_run(irun, self.make_weights(irun, 20, 10., 'sum'), 'sum')
+                 for irun in range(2)]
+        output = pjoin(self.path, 'merged', 'unweighted_events.lhe.gz')
+        banner_path = pjoin(self.path, 'merged', 'banner.txt')
+        os.makedirs(os.path.dirname(output))
+        lhe_parser.MultiEventFile.merge_runs(paths, output, banner_path)
+        ref = [open(p, 'rb').read() for p in [output, banner_path]]
+
+        def fail(self, out, factor):
+            out.write(b'<event>\n')
+            raise RuntimeError('disk full')
+        with misc.TMP_variable(lhe_parser.EventFile, '_write_raw_rescaled_events', fail):
+            with self.assertRaisesRegex(RuntimeError, 'disk full'):
+                lhe_parser.MultiEventFile.merge_runs(paths, output, banner_path)
+        # an incompatible run
+        other = self.write_run(2, self.make_weights(2, 20, 10., 'average'), 'average')
+        with self.assertRaisesRegex(Exception, 'Cannot merge'):
+            lhe_parser.MultiEventFile.merge_runs(paths + [other], output, banner_path)
+        self.assertEqual([open(p, 'rb').read() for p in [output, banner_path]], ref)
+        self.assertEqual(sorted(os.listdir(os.path.dirname(output))),
+                         ['banner.txt', 'unweighted_events.lhe.gz'])
+
     def test_merge_runs_mismatch(self):
         """runs of different generations are not merged"""
 
@@ -1814,9 +1840,11 @@ class TestMergeRuns(unittest.TestCase):
             # ... but compatible within the errors
             ({'procs': [(1, 12., 1.)]}, True),
             ({'procs': [(1, 10.3, 0.1)]}, True),
+            # a run without event
+            ({'procs': [(1, 10., 0.1)], 'wgts': []}, False),
             ]
         for i, (opts, valid) in enumerate(cases):
-            path = self.write_run(i+1, wgts, **opts)
+            path = self.write_run(i+1, opts.pop('wgts', wgts), **opts)
             if valid:
                 nb_event, _ = lhe_parser.MultiEventFile.merge_runs([ref, path], output)
                 self.assertEqual(nb_event, 40)

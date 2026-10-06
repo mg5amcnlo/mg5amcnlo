@@ -1973,6 +1973,8 @@ class MultiEventFile(EventFile):
         """Merge the event files of independent runs of the same process
         (multi_run). The events are written in the order of paths, after the
         header of the first file. banner_path (optional) receives that header.
+        Both are replaced only if the merge succeeds; a run without event or
+        not compatible with the first one raises an error.
         Return the number of events and the cross section (<init>) of the
         merged file.
 
@@ -2008,9 +2010,8 @@ class MultiEventFile(EventFile):
                 _, wgt_sum, nb_event = lhe._initialize_unweighting_header_only(0)
                 sum_abs = wgt_sum['abs']
             if not nb_event:
-                logger.warning("no event in %s: not merged", path)
                 lhe.close()
-                continue
+                raise Exception("Cannot merge %s: no event" % path)
             init = [l.strip() for l in banner['init'].split('\n') if l.strip()]
             procs = collections.OrderedDict()
             for line in init[1:]:
@@ -2095,13 +2096,17 @@ class MultiEventFile(EventFile):
             logger.debug("merge %s: %i events, cross section %g pb, weights x %g",
                          run['path'], run['nb_event'], run['cross'], factor)
 
+        # written next to outputpath/banner_path, replaced only once complete
+        tmppath = pjoin(os.path.dirname(outputpath), '.merge_tmp_' + os.path.basename(outputpath))
+        banner_tmppath = banner_path + '.merge_tmp' if banner_path else None
+
         def write_events(use_raw):
             # level 6 (as gzip/perl): the python default (9) is ~4 times slower
             # for a 4% smaller file
             if outputpath.endswith('.gz'):
-                out = gzip.open(outputpath, 'wb', compresslevel=6)
+                out = gzip.open(tmppath, 'wb', compresslevel=6)
             else:
-                out = open(outputpath, 'wb')
+                out = open(tmppath, 'wb')
             nb_event = 0
             try:
                 out.write(header.encode())
@@ -2126,19 +2131,28 @@ class MultiEventFile(EventFile):
             return nb_event
 
         try:
-            nb_event = write_events(use_raw=True)
-        except ValueError:
-            # unexpected format: restart with the generic (slower) parser
-            nb_event = write_events(use_raw=False)
-        for run in runs:
-            run['lhe'].close()
+            try:
+                nb_event = write_events(use_raw=True)
+            except ValueError:
+                # unexpected format: restart with the generic (slower) parser
+                nb_event = write_events(use_raw=False)
+            if banner_path:
+                with open(banner_tmppath, 'w') as fsock:
+                    fsock.write(header)
+                    fsock.write("</LesHouchesEvents>\n")
+        except BaseException:
+            for path in [tmppath, banner_tmppath]:
+                if path and os.path.exists(path):
+                    os.remove(path)
+            raise
+        finally:
+            for run in runs:
+                run['lhe'].close()
+        os.replace(tmppath, outputpath)
+        if banner_path:
+            os.replace(banner_tmppath, banner_path)
         if nb_event != nb_tot:
             logger.warning("merged %i events instead of %i", nb_event, nb_tot)
-
-        if banner_path:
-            with open(banner_path, 'w') as fsock:
-                fsock.write(header)
-                fsock.write("</LesHouchesEvents>\n")
 
         logger.info("merged %i runs: %i events, cross section %g pb (event_norm=%s)",
                     len(runs), nb_tot, cross, event_norm)
