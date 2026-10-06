@@ -12,6 +12,10 @@ ANNOUNCEMENT:
         normalisation for event_norm=sum (the merged sample was N_run times too large)
         and the <rwgt> weights (systematics/reweighting), which were not rescaled
         with the central weight. The relative weights of the events are kept.
+    OM: LO: fix dsqrt_shatmax: the phase-space grids were set in the wrong units, giving a zero
+        cross-section for 2>1 processes (e.g. p p > z) and a crash (Bjorken x > 1) when
+        dsqrt_shatmax was above the collider energy. dsqrt_shatmax <= 0 now means no cut
+        (was a zero cross-section).
 
 3.8.0 (15/09/26):
     OM+SA+VD: MadSpin2 (2609.02794)
