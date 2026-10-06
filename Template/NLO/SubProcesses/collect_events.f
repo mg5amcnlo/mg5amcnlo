@@ -210,7 +210,6 @@ c
       stop
       end
 
-
       subroutine collect_all_evfiles(ioutput,numoffiles,junit,imaxevt
      $     ,evwgt)
       use extra_weights
@@ -447,9 +446,7 @@ c reweighting
            endif
            if (do_rwgt_pdf) then
               do nn=1,lhaPDFid(0)
-                if (lpdfvar(nn)) then
-                
-!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.              
                 if (nn.eq.1) then    
                         jmax=1
                   else if (nn.ne.1.and.asymm_choice.eqv..true.) then
@@ -457,8 +454,10 @@ c reweighting
                   else if (nn.ne.1.and.asymm_choice.eqv..false.) then
                         jmax=1
                 endif
-                    
-                    
+              
+                if (lpdfvar(nn)) then
+                
+                   
                 do l=1,jmax
                   do n=0,nmemPDF(nn)
 
@@ -477,9 +476,25 @@ c reweighting
                   endif
                   enddo
                 enddo
-!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
                  else
-                    wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)*evwgt_sign/XWGTUP
+                    !wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)*evwgt_sign/XWGTUP
+                    
+               do l=1,jmax
+                  if (l==1) then !pp
+
+                  	wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)*evwgt_sign/XWGTUP
+
+                  else if (l==2) then !pA
+
+                  	wgtxsecPDF1(0,nn)=wgtxsecPDF1(0,nn)*evwgt_sign/XWGTUP
+
+                  else if (l==3) then !pA
+
+                  	wgtxsecPDF2(0,nn)=wgtxsecPDF2(0,nn)*evwgt_sign/XWGTUP
+
+                  endif
+                enddo                    
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.                    
                  endif
               enddo
            endif
@@ -534,6 +549,7 @@ c
       enddo
       return
       end
+
 
 
       FUNCTION FK88RANDOM(SEED)

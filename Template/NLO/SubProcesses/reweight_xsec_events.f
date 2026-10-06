@@ -244,15 +244,17 @@ c as XWGTUP
          endif
          if (do_rwgt_pdf) then
             do nn=1,lhaPDFid(0)
-               if (lpdfvar(nn)) then
-!###############################################################AntonS.               
-                 if (nn.eq.1) then    
+!###############################################################AntonS.                       
+            	 if (nn.eq.1) then    
                         jmax=1
                  else if (nn.ne.1.and.asymm_choice.eqv..true.) then
                         jmax=3
                  else if (nn.ne.1.and.asymm_choice.eqv..false.) then
                         jmax=1
                  endif
+                 
+                 
+               if (lpdfvar(nn)) then              
                                    
                  do n=0,nmemPDF(nn)
                   do l=1,jmax
@@ -265,10 +267,19 @@ c as XWGTUP
                     endif
                   enddo
                  enddo
-!###############################################################AntonS.                 
-                 
+
                else
-                  wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)/wgtref*XWGTUP
+                  !wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)/wgtref*XWGTUP
+                do l=1,jmax
+                    if (l==1) then !pp
+                     wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)/wgtref*XWGTUP
+                    else if (l==2) then !pA
+                     wgtxsecPDF1(0,nn)=wgtxsecPDF1(0,nn)/wgtref*XWGTUP
+                    else if (l==3) then !Ap
+                     wgtxsecPDF2(0,nn)=wgtxsecPDF2(0,nn)/wgtref*XWGTUP
+                    endif
+                enddo
+!###############################################################AntonS.                  
                endif
             enddo
          endif
@@ -627,6 +638,7 @@ c add the weights to the array
               
               xlum_mod2=xlum_mod2*f1_pp(i)
         wgts(iwgt,i)=xlum_mod2*(wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
+
      &              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
               wgts(iwgt,i)=wgts(iwgt,i)
      &              *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),wgtcpower)
@@ -723,8 +735,8 @@ c reset to the 0th member of the 1st set
          endif
          if (do_rwgt_pdf) then
             do nn=1,lhaPDFid(0)
-               if (lpdfvar(nn)) then
-!##############################################################AntonS.               
+!##############################################################AntonS.            
+            
                 if (nn.eq.1) then    
                     jmax=1
                 else if (nn.ne.1.and.asymm_choice.eqv..true.) then
@@ -732,6 +744,9 @@ c reset to the 0th member of the 1st set
                 else if (nn.ne.1.and.asymm_choice.eqv..false.) then
                     jmax=1
                 endif
+                
+                
+               if (lpdfvar(nn)) then
                 
                   do n=0,nmemPDF(nn)
                    do j=1,jmax
@@ -747,10 +762,23 @@ c reset to the 0th member of the 1st set
                      endif
                    enddo
                   enddo
-!##############################################################AntonS.
                else
-                  wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)+wgts(iw,i)
-                  iw=iw+1
+                  !wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)+wgts(iw,i)
+                  !iw=iw+1
+                  
+                  do j=1,jmax
+                     if (j==1) then !pp
+                     wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)+wgts(iw,i)
+                     iw=iw+1
+                     else if (j==2) then !pA
+                     wgtxsecPDF1(0,nn)=wgtxsecPDF1(0,nn)+wgts(iw,i)
+                     iw=iw+1
+                     else if (j==3) then !Ap
+                     wgtxsecPDF2(0,nn)=wgtxsecPDF2(0,nn)+wgts(iw,i)
+                     iw=iw+1
+                     endif
+                   enddo
+!##############################################################AntonS.                  
                endif
             enddo
          endif

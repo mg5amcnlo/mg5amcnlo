@@ -13,6 +13,7 @@ c Utility routines for LHEF. Originally taken from collect_events.f
       use extra_weights
       implicit none 
       include 'run.inc'
+      integer j,jmax
       integer idwgt,kk,ii,jj,nn,n
       integer ifile,nevents
       character*10 MonteCarlo
@@ -69,27 +70,145 @@ c
          endif
          if (do_rwgt_pdf) then
             do nn=1,lhaPDFid(0)
+           	if (nn.eq.1) then    
+                    jmax=1
+                else if (nn.ne.1.and.asymm_choice.eqv..true.) then
+                    jmax=3
+                else if (nn.ne.1.and.asymm_choice.eqv..false.) then
+                    jmax=1
+                endif
+            
+            
+                        
                if (lpdfvar(nn)) then
+               do j=1,jmax 
+c=========================================================
+c pp (standard PDF)
+c=========================================================
+               if (j == 1) then
                   write(ifile,'(a)') "    <weightgroup "/
      &                 /"name='PDF_variation "/
      &                 /trim(adjustl(lhaPDFsetname(nn)))/
      &                 /"' combine='unknown'>"
+     
                   do n=0,nmemPDF(nn)
+
                      idwgt=idwgt+1
                      write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)+n
                      write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
      $                    ,"'> "//trim(adjustl(temp))//' '
      $                    //trim(adjustl(lhaPDFsetname(nn)))/
      $                    /" </weight>"
-                  enddo
-               else
+		  enddo
+		  write(ifile,'(a)') "    </weightgroup>"
+c=========================================================
+c pA (proton–nucleus)
+c=========================================================
+	else if (j == 2) then
                   write(ifile,'(a)') "    <weightgroup "/
-     &                 /"name='PDF_variation' combine='none'>"
-                  idwgt=idwgt+1
-                  write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)
-                  write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
-     $                 ,"'> "//trim(adjustl(temp))//' '
-     $                 //trim(adjustl(lhaPDFsetname(nn)))//" </weight>"
+     &                 /"name='pA_PDF_variation "/
+     &                 /trim(adjustl(lhaPDFsetname(nn)))/
+     &                 /"' combine='unknown'>"
+     
+                  do n=0,nmemPDF(nn)
+                     write(temp,'(a4,i8)') "pA=",lhaPDFid(nn)+n
+                     write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+     $                 ,"'> "//trim(adjustl(temp))/
+     $                 /'  '//trim(adjustl(lhaPDFsetname(1)))//' with '/
+     $                 /trim(adjustl(lhaPDFsetname(nn)))//" </weight>"
+!                     write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+!     $                    ,"'> "//trim(adjustl(temp))//' '
+!     $                    //trim(adjustl(lhaPDFsetname(nn)))/
+!     $                    /" </weight>"
+                  enddo
+                  write(ifile,'(a)') "    </weightgroup>"
+c=========================================================
+c Ap (nucleus–proton)
+c=========================================================
+	else if (j == 3) then
+	write(ifile,'(a)') "    <weightgroup "/
+     &                 /"name='Ap_PDF_variation "/
+     &                 /trim(adjustl(lhaPDFsetname(nn)))/
+     &                 /"' combine='unknown'>"
+     
+                  do n=0,nmemPDF(nn)
+                     write(temp,'(a4,i8)') "Ap=",lhaPDFid(nn)+n
+                     write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+     $                 ,"'> "//trim(adjustl(temp))/
+     $                 /'  '//trim(adjustl(lhaPDFsetname(nn)))//' with '/
+     $                 /trim(adjustl(lhaPDFsetname(1)))//" </weight>"
+!     $                    ,"'> "//trim(adjustl(temp))//' '
+!     $                    //trim(adjustl(lhaPDFsetname(nn)))/
+!     $                    /" </weight>"
+	          enddo   		
+	endif
+	enddo
+c=========================================================
+c=========================================================
+               else
+c=========================================================
+c===========for no reweighting============================
+	       do j=1,jmax 
+c=========================================================
+c pp (standard PDF)
+c=========================================================
+               if (j == 1) then
+                     write(ifile,'(a)') "    <weightgroup "/
+     &                 /"name='PDF_variation "/
+     &                 /trim(adjustl(lhaPDFsetname(nn)))/
+     &                 /"' combine='none'>"
+                     idwgt=idwgt+1
+                     write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)+n
+                     write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+     $                    ,"'> "//trim(adjustl(temp))//' '
+     $                    //trim(adjustl(lhaPDFsetname(nn)))/
+     $                    /" </weight>"
+		     write(ifile,'(a)') "    </weightgroup>"
+c=========================================================
+c pA (proton–nucleus)
+c=========================================================
+               else if (j == 2) then
+                     write(ifile,'(a)') "    <weightgroup "/
+     &                 /"name='pA_PDF_variation "/
+     &                 /trim(adjustl(lhaPDFsetname(nn)))/
+     &                 /"' combine='none'>"
+                     write(temp,'(a4,i8)') "pA=",lhaPDFid(nn)+n
+                     write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+     $                 ,"'> "//trim(adjustl(temp))/
+     $                 /'  '//trim(adjustl(lhaPDFsetname(1)))//' with '/
+     $                 /trim(adjustl(lhaPDFsetname(nn)))//" </weight>"
+                     write(ifile,'(a)') "    </weightgroup>"
+c=========================================================
+c Ap (nucleus–proton)
+c=========================================================
+               else if (j == 3) then
+		     write(ifile,'(a)') "    <weightgroup "/
+     &                 /"name='Ap_PDF_variation "/
+     &                 /trim(adjustl(lhaPDFsetname(nn)))/
+     &                 /"' combine='none'>"
+     		     write(temp,'(a4,i8)') "Ap=",lhaPDFid(nn)+n
+                     write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+     $                 ,"'> "//trim(adjustl(temp))/
+     $                 /'  '//trim(adjustl(lhaPDFsetname(nn)))//' with '/
+     $                 /trim(adjustl(lhaPDFsetname(1)))//" </weight>"
+!     $                    ,"'> "//trim(adjustl(temp))//' '
+!     $                    //trim(adjustl(lhaPDFsetname(nn)))/
+!     $                    /" </weight>"		
+               endif
+		   enddo
+               
+!                  write(ifile,'(a)') "    <weightgroup "/
+!     &                 /"name='PDF_variation' combine='none'>"
+!                  idwgt=idwgt+1
+!                  write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)
+!                  write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+!     $                 ,"'> "//trim(adjustl(temp))//' '
+!     $                 //trim(adjustl(lhaPDFsetname(nn)))//" </weight>"
+     
+!=========================================================
+!=========================================================
+!=========================================================
+!=========================================================
                endif
                write(ifile,'(a)') "    </weightgroup>"
             enddo
@@ -120,6 +239,7 @@ c
       use extra_weights
       implicit none 
       integer ifile, i, idwgt, nevents,iseed,ii,jj,kk,nn,n
+      integer j,jmax
       double precision mcmass(-16:21)
 c     parameter to allow to include run_card.inc 
       include './run.inc'
@@ -267,7 +387,25 @@ c Write here the reweight information if need be
          endif
          if (do_rwgt_pdf) then
             do nn=1,lhaPDFid(0)
+          
+               
+                if (nn.eq.1) then    
+                    jmax=1
+                else if (nn.ne.1.and.asymm_choice.eqv..true.) then
+                    jmax=3
+                else if (nn.ne.1.and.asymm_choice.eqv..false.) then
+                    jmax=1
+                endif        
+        
+        
+        
                if (lpdfvar(nn)) then
+
+               do j=1,jmax 
+c=========================================================
+c pp (standard PDF)
+c=========================================================
+               if (j == 1) then
                   write(ifile,'(a)') "    <weightgroup "/
      &                 /"name='PDF_variation "/
      &                 /trim(adjustl(lhaPDFsetname(nn)))/
@@ -280,14 +418,147 @@ c Write here the reweight information if need be
      $                    //trim(adjustl(lhaPDFsetname(nn)))/
      $                    /" </weight>"
                   enddo
-               else
+c=========================================================
+c pA (proton–nucleus)
+c=========================================================                  
+               else if (j == 2) then
                   write(ifile,'(a)') "    <weightgroup "/
-     &                 /"name='PDF_variation' combine='none'>"
-                  idwgt=idwgt+1
-                  write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)
-                  write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
-     $                 ,"'> "//trim(adjustl(temp))//' '
-     $                 //trim(adjustl(lhaPDFsetname(nn)))//" </weight>"
+     &                 /"name='pA_PDF_variation "/
+     &                 /trim(adjustl(lhaPDFsetname(nn)))/
+     &                 /"' combine='unknown'>"
+                  do n=0,nmemPDF(nn)
+                     idwgt=idwgt+1
+                     write(temp,'(a4,i8)') "pA=",lhaPDFid(nn)+n
+                     write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+     $                 ,"'> "//trim(adjustl(temp))/
+     $                 /'  '//trim(adjustl(lhaPDFsetname(1)))//' with '/
+     $                 /trim(adjustl(lhaPDFsetname(nn)))//" </weight>"
+     
+     
+     
+     
+!                     write(temp,'(a4,i8)') "pA=",lhaPDFid(nn)+n
+!                     write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+!     $                    ,"'> "//trim(adjustl(temp))//' '
+!     $                    //trim(adjustl(lhaPDFsetname(nn)))/
+!     $                    /" </weight>"           
+
+
+
+
+                     
+!	write(temp,'(a4,i8)') "pA=",lhaPDFid(nn)+n
+!	write(ifile,'(a,i0,a)') "      <weight id='", idwgt, "'> "
+!	write(ifile,'(a)') trim(adjustl(temp))/
+!     $                 /'  '//trim(adjustl(lhaPDFsetname(1)))//' with '/
+!     $                 /trim(adjustl(lhaPDFsetname(nn)))
+                  enddo                  
+c=========================================================
+c Ap (nucleus-proton)
+c=========================================================                   
+               else if (j == 3) then
+                  write(ifile,'(a)') "    <weightgroup "/
+     &                 /"name='Ap_PDF_variation "/
+     &                 /trim(adjustl(lhaPDFsetname(nn)))/
+     &                 /"' combine='unknown'>"
+                  do n=0,nmemPDF(nn)
+                     idwgt=idwgt+1
+                     write(temp,'(a4,i8)') "Ap=",lhaPDFid(nn)+n
+                     write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+     $                 ,"'> "//trim(adjustl(temp))/
+     $                 /'  '//trim(adjustl(lhaPDFsetname(nn)))//' with '/
+     $                 /trim(adjustl(lhaPDFsetname(1)))//" </weight>"
+                     
+                     
+                     
+                     
+!                  write(temp,'(a4,i8)') "Ap=",lhaPDFid(nn)+n
+!                  write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+!     $                    ,"'> "//trim(adjustl(temp))//' '
+!     $                    //trim(adjustl(lhaPDFsetname(nn)))/
+!     $                    /" </weight>" 
+
+
+
+
+!        write(temp,'(a4,i8)') "Ap=",lhaPDFid(nn)+n 
+!	write(ifile,'(a,i0,a)') "      <weight id='", idwgt, "'> "
+!	write(ifile,'(a)') trim(adjustl(temp))/
+!     $                 /'  '//trim(adjustl(lhaPDFsetname(nn)))//' with '/
+!     $                 /trim(adjustl(lhaPDFsetname(1)))
+                  enddo
+               endif
+               enddo
+c=========================================================
+c=========================================================
+c===========for a no-reweighting==========================
+c=========================================================
+c=========================================================
+               else
+c=========================================================
+c=========================================================
+c===========for a no-reweighting==========================
+c=========================================================
+               do j=1,jmax 
+c=========================================================
+c pp (standard PDF)
+c=========================================================
+               if (j == 1) then
+                  write(ifile,'(a)') "    <weightgroup "/
+     &                 /"name='PDF_variation "/
+     &                 /trim(adjustl(lhaPDFsetname(nn)))/
+     &                 /"' combine='none'>"
+
+                     idwgt=idwgt+1
+                     write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)
+                     write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+     $                    ,"'> "//trim(adjustl(temp))//' '
+     $                    //trim(adjustl(lhaPDFsetname(nn)))/
+     $                    /" </weight>"
+
+               
+!                 write(ifile,'(a)') "    <weightgroup "/
+!     &                 /"name='PDF_variation' combine='none'>"
+!                  idwgt=idwgt+1
+!                  write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)
+!                  write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+!     $                 ,"'> "//trim(adjustl(temp))//' '
+!     $                 //trim(adjustl(lhaPDFsetname(nn)))//" </weight>"
+
+c=========================================================
+c pA (proton–nucleus)
+c=========================================================                  
+               else if (j == 2) then
+                  write(ifile,'(a)') "    <weightgroup "/
+     &                 /"name='pA_PDF_variation "/
+     &                 /trim(adjustl(lhaPDFsetname(nn)))/
+     &                 /"' combine='none'>"
+
+                     idwgt=idwgt+1
+                     write(temp,'(a4,i8)') "pA=",lhaPDFid(nn)
+                     write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+     $                 ,"'> "//trim(adjustl(temp))/
+     $                 /'  '//trim(adjustl(lhaPDFsetname(1)))//' with '/
+     $                 /trim(adjustl(lhaPDFsetname(nn)))//" </weight>"
+c=========================================================
+c Ap (nucleus-proton)
+c=========================================================                   
+               else if (j == 3) then
+                  write(ifile,'(a)') "    <weightgroup "/
+     &                 /"name='Ap_PDF_variation "/
+     &                 /trim(adjustl(lhaPDFsetname(nn)))/
+     &                 /"' combine='none'>"
+                     idwgt=idwgt+1
+                     write(temp,'(a4,i8)') "Ap=",lhaPDFid(nn)
+                     write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+     $                 ,"'> "//trim(adjustl(temp))/
+     $                 /'  '//trim(adjustl(lhaPDFsetname(nn)))//' with '/
+     $                 /trim(adjustl(lhaPDFsetname(1)))//" </weight>"
+c========================================================= 
+c========================================================= 
+c========================================================= 
+               endif
+               enddo
                endif
                write(ifile,'(a)') "    </weightgroup>"
             enddo
@@ -403,16 +674,67 @@ c     find the start of a weightgroup
                  else
                     lscalevar(dyn_scale(0))=.false.
                  endif
-              elseif (index(string,"name='PDF_variation").ne.0) then
-                 do_rwgt_pdf=.true.
-                 lhaPDFid(0)=lhaPDFid(0)+1
-                 nmemPDF(lhaPDFid(0))=-1
+c=========================================================
+c pp (standard PDF)
+c=========================================================
+                 elseif (index(string,"name='PDF_variation").ne.0) then
+   		do_rwgt_pdf=.true.
+                lhaPDFid(0)=lhaPDFid(0)+1
+                nmemPDF(lhaPDFid(0))=-1
                  do 
                     read(ifile,'(a)')string
                     if (index(string,'</weightgroup>').ne.0) exit
                     nmemPDF(lhaPDFid(0))=nmemPDF(lhaPDFid(0))+1
                     if (nmemPDF(lhaPDFid(0)).eq.0) then
                        read(string(index(string,'PDF=')+4:),*)
+     $                      lhaPDFid(lhaPDFid(0))
+     $                      ,lhaPDFsetname(lhaPDFid(0))
+                       lhaPDFsetname(lhaPDFid(0))
+     $                      =trim(adjustl(lhaPDFsetname(lhaPDFid(0))))
+                    endif
+                 enddo
+                 if (nmemPDF(lhaPDFid(0)).gt.0) then
+                    lpdfvar(lhaPDFid(0))=.true.
+                 else
+                    lpdfvar(lhaPDFid(0))=.false.
+                 endif
+c=========================================================
+c pA (proton–nucleus)
+c=========================================================                 
+                 elseif (index(string,"name='pA_PDF_variation").ne.0) then
+                 do_rwgt_pdf=.true.
+                 lhaPDFid(0)=lhaPDFid(0)
+                 nmemPDF(lhaPDFid(0))=-1
+                 do 
+                    read(ifile,'(a)')string
+                    if (index(string,'</weightgroup>').ne.0) exit
+                    nmemPDF(lhaPDFid(0))=nmemPDF(lhaPDFid(0))+1
+                    if (nmemPDF(lhaPDFid(0)).eq.0) then
+                       read(string(index(string,'pA=')+4:),*)
+     $                      lhaPDFid(lhaPDFid(0))
+     $                      ,lhaPDFsetname(lhaPDFid(0))
+                       lhaPDFsetname(lhaPDFid(0))
+     $                      =trim(adjustl(lhaPDFsetname(lhaPDFid(0))))
+                    endif
+                 enddo
+                 if (nmemPDF(lhaPDFid(0)).gt.0) then
+                    lpdfvar(lhaPDFid(0))=.true.
+                 else
+                    lpdfvar(lhaPDFid(0))=.false.
+                 endif
+c=========================================================
+c Ap (nucleus-proton)
+c========================================================= 
+                 elseif (index(string,"name='Ap_PDF_variation").ne.0) then
+                 do_rwgt_pdf=.true.
+                 lhaPDFid(0)=lhaPDFid(0)
+                 nmemPDF(lhaPDFid(0))=-1
+                 do 
+                    read(ifile,'(a)')string
+                    if (index(string,'</weightgroup>').ne.0) exit
+                    nmemPDF(lhaPDFid(0))=nmemPDF(lhaPDFid(0))+1
+                    if (nmemPDF(lhaPDFid(0)).eq.0) then
+                       read(string(index(string,'Ap=')+4:),*)
      $                      lhaPDFid(lhaPDFid(0))
      $                      ,lhaPDFsetname(lhaPDFid(0))
                        lhaPDFsetname(lhaPDFid(0))
@@ -567,10 +889,13 @@ c     find the start of a weightgroup
                  else
                     lscalevar(dyn_scale(0))=.false.
                  endif
-              elseif (index(string,"name='PDF_variation").ne.0) then
-                 do_rwgt_pdf=.true.
-                 lhaPDFid(0)=lhaPDFid(0)+1
-                 nmemPDF(lhaPDFid(0))=-1
+c=========================================================
+c pp (standard PDF)
+c=========================================================
+                 elseif (index(string,"name='PDF_variation").ne.0) then
+                do_rwgt_pdf=.true.
+                lhaPDFid(0)=lhaPDFid(0)+1
+                nmemPDF(lhaPDFid(0))=-1
                  do 
                     read(ifile,'(a)')string
                     if (index(string,'</weightgroup>').ne.0) exit
@@ -588,6 +913,57 @@ c     find the start of a weightgroup
                  else
                     lpdfvar(lhaPDFid(0))=.false.
                  endif
+c=========================================================
+c pA (proton–nucleus)
+c=========================================================                 
+                 elseif (index(string,"name='pA_PDF_variation").ne.0) then
+                 do_rwgt_pdf=.true.
+                 lhaPDFid(0)=lhaPDFid(0)
+                 nmemPDF(lhaPDFid(0))=-1
+                 do 
+                    read(ifile,'(a)')string
+                    if (index(string,'</weightgroup>').ne.0) exit
+                    nmemPDF(lhaPDFid(0))=nmemPDF(lhaPDFid(0))+1
+                    if (nmemPDF(lhaPDFid(0)).eq.0) then
+                       read(string(index(string,'pA=')+4:),*)
+     $                      lhaPDFid(lhaPDFid(0))
+     $                      ,lhaPDFsetname(lhaPDFid(0))
+                       lhaPDFsetname(lhaPDFid(0))
+     $                      =trim(adjustl(lhaPDFsetname(lhaPDFid(0))))
+                    endif
+                 enddo
+                 if (nmemPDF(lhaPDFid(0)).gt.0) then
+                    lpdfvar(lhaPDFid(0))=.true.
+                 else
+                    lpdfvar(lhaPDFid(0))=.false.
+                 endif
+c=========================================================
+c Ap (nucleus-proton)
+c========================================================= 
+                 elseif (index(string,"name='Ap_PDF_variation").ne.0) then
+                 do_rwgt_pdf=.true.
+                 lhaPDFid(0)=lhaPDFid(0)
+                 nmemPDF(lhaPDFid(0))=-1
+                 do 
+                    read(ifile,'(a)')string
+                    if (index(string,'</weightgroup>').ne.0) exit
+                    nmemPDF(lhaPDFid(0))=nmemPDF(lhaPDFid(0))+1
+                    if (nmemPDF(lhaPDFid(0)).eq.0) then
+                       read(string(index(string,'Ap=')+4:),*)
+     $                      lhaPDFid(lhaPDFid(0))
+     $                      ,lhaPDFsetname(lhaPDFid(0))
+                       lhaPDFsetname(lhaPDFid(0))
+     $                      =trim(adjustl(lhaPDFsetname(lhaPDFid(0))))
+                    endif
+                 enddo
+                 if (nmemPDF(lhaPDFid(0)).gt.0) then
+                    lpdfvar(lhaPDFid(0))=.true.
+                 else
+                    lpdfvar(lhaPDFid(0))=.false.
+                 endif
+c=========================================================
+c=========================================================
+c=========================================================
               elseif (index(string,'</initrwgt').ne.0) then
                  exit
               endif
@@ -830,9 +1206,9 @@ c
                endif
                 if (do_rwgt_pdf) then
                   do j=1,lhaPDFid(0)
-                     if (lpdfvar(j)) then
-!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
-                        if (j.eq.1) then    
+                  
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.                 
+                  	if (j.eq.1) then    
                             jmax=1
                         else if (j.ne.1.and.asymm_choice.eqv..true.) then
                             jmax=3
@@ -840,6 +1216,9 @@ c
                             jmax=1
                         endif
                         
+                        
+                     if (lpdfvar(j)) then
+                       
                         do l=1,jmax
                           do i=0,nmemPDF(j)
 
@@ -855,14 +1234,40 @@ c
                             idwgt=idwgt+1
                             write(ifile,601) "   <wgt id='",idwgt,"'>"
      $                          ,wgtxsecPDF2(i,j)," </wgt>"
-                            endif
-!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.                            
+                            endif                            
                           enddo
                         enddo
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS. 
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS. 
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS. 
                      else
-                        idwgt=idwgt+1
-                        write(ifile,601) "   <wgt id='",idwgt,"'>"
-     $                       ,wgtxsecPDF(0,j)," </wgt>"
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS. 
+!<<<<<<<<<<<<<<<<<<<no reweighting<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS. 
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS. 
+                     do l=1,jmax
+
+                            if (l==1) then !pp
+                            idwgt=idwgt+1
+                            write(ifile,601) "   <wgt id='",idwgt,"'>"
+     $                          ,wgtxsecPDF(0,j)," </wgt>"
+                            else if (l==2) then !pA
+                            idwgt=idwgt+1
+                            write(ifile,601) "   <wgt id='",idwgt,"'>"
+     $                          ,wgtxsecPDF1(0,j)," </wgt>"
+                            else if (l==3) then !pA
+                            idwgt=idwgt+1
+                            write(ifile,601) "   <wgt id='",idwgt,"'>"
+     $                          ,wgtxsecPDF2(0,j)," </wgt>"
+                            endif
+                     
+  		     enddo
+                        !idwgt=idwgt+1
+                        !write(ifile,601) "   <wgt id='",idwgt,"'>"
+!     $                       ,wgtxsecPDF(0,j)," </wgt>"
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
                      endif
                   enddo
                endif
@@ -1045,9 +1450,10 @@ c
                endif
                if (do_rwgt_pdf) then
                   do j=1,lhaPDFid(0)
-                     if (lpdfvar(j)) then
-!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.                                          
-                        if (j.eq.1) then    
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+                  	if (j.eq.1) then    
                             jmax=1
                         else if (j.ne.1.and.asymm_choice.eqv..true.) then
                             jmax=3
@@ -1055,6 +1461,8 @@ c
                             jmax=1
                         endif
                         
+                     if (lpdfvar(j)) then
+                      
                         do l=1,jmax
                           do i=0,nmemPDF(j)
 
@@ -1071,9 +1479,27 @@ c
                            
                           enddo
                         enddo
-!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.                        
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<<<no-reweighting<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
                      else
-                        call read_rwgt_line(ifile,idwgt,wgtxsecPDF(0,j))
+                     
+			do l=1,jmax
+                           if (l==1) then !pp
+                           call read_rwgt_line(ifile,idwgt,wgtxsecPDF(0
+     $                          ,j))
+                           else if (l==2) then !pA
+                           call read_rwgt_line(ifile,idwgt,wgtxsecPDF1(0
+     $                          ,j))
+                           else if (l==3) then !pA
+                           call read_rwgt_line(ifile,idwgt,wgtxsecPDF2(0
+     $                          ,j))
+                           endif 
+                        enddo 
+                        !call read_rwgt_line(ifile,idwgt,wgtxsecPDF(0,j))
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
                      endif
                   enddo
                endif
@@ -1156,6 +1582,7 @@ c Same as read_lhef_event, except for the end-of-file catch
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
       integer ii,j,nps,nng,iFKS,idwgt
+      integer l,jmax !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< varibles for the pA hadronization<<<AntonS.
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
       integer i_process
       common/c_i_process/i_process
@@ -1269,13 +1696,58 @@ c
                endif
                if (do_rwgt_pdf) then
                   do j=1,lhaPDFid(0)
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+                	if (j.eq.1) then    
+                            jmax=1
+                        else if (j.ne.1.and.asymm_choice.eqv..true.) then
+                            jmax=3
+                        else if (j.ne.1.and.asymm_choice.eqv..false.) then
+                            jmax=1
+                        endif
                      if (lpdfvar(j)) then
-                        do i=0,nmemPDF(j)
+                        
+                        do l=1,jmax
+                          do i=0,nmemPDF(j)
+
+                           if (l==1) then !pp
                            call read_rwgt_line(ifile,idwgt,wgtxsecPDF(i
      $                          ,j))
+                           else if (l==2) then !pA
+                           call read_rwgt_line(ifile,idwgt,wgtxsecPDF1(i
+     $                          ,j))
+                           else if (l==3) then !pA
+                           call read_rwgt_line(ifile,idwgt,wgtxsecPDF2(i
+     $                          ,j))
+                           endif
+                           
+                          enddo
                         enddo
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
                      else
-                        call read_rwgt_line(ifile,idwgt,wgtxsecPDF(0,j))
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<no-reweigthing<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+                      do l=1,jmax
+                           if (l==1) then !pp
+                           call read_rwgt_line(ifile,idwgt,wgtxsecPDF(0
+     $                          ,j))
+                           else if (l==2) then !pA
+                           call read_rwgt_line(ifile,idwgt,wgtxsecPDF1(0
+     $                          ,j))
+                           else if (l==3) then !pA
+                           call read_rwgt_line(ifile,idwgt,wgtxsecPDF2(0
+     $                          ,j))
+                           endif
+                           
+                      enddo
+                        !call read_rwgt_line(ifile,idwgt,wgtxsecPDF(0,j))
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
+!<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<AntonS.
                      endif
                   enddo
                endif
@@ -1470,4 +1942,5 @@ c independent (char(62)=">", char(61)="=", char(39)="'")
       read (buff(wgt_start:100),*) wgt
       return
       end
+
 

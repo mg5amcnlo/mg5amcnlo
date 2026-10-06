@@ -3782,13 +3782,352 @@ r'%s dynamical\_scale\_choice=%s' % (title,mu[j])))
             gnuplot_out.append(',\\\n'.join(plot_lines))
 
         # We finish here when no ratio plot are asked for.
-        if len(self)-n_histograms==0:
-            # Now add the tail for this group
-            gnuplot_out.extend(['','unset label','',
-'################################################################################'])
-            # Return the starting data_block position for the next histogram group
-            return block_position+len(self)
+       
+        
+####################################################################################################
+####################################################################################################
+####################################################################################################
+######################################################################for LHE based-code##A.Safronov
 
+        import numpy as np
+        Reg=0
+        sqrtS=0
+        Energy1=0
+        Energy2=0
+        #if os.path.exists('Cards/run_card.dat'):
+            #path_to_card = os.path.abspath('Cards/run_card.dat')
+            #sub_string = 'True = asymm_choice'
+            #with open(str(path_to_card)) as file:
+                #lines = file.readlines()
+                #for line in lines:
+                    #if sub_string in line:
+                        #Reg=Reg+1
+                    #else:
+                        #Reg=Reg+0
+                        
+                        
+        # try to find regular expression
+        pattern = re.compile(r'^\s*True\s*=\s*asymm_choice\b', re.IGNORECASE)
+        pattern2 = re.compile(r'^\s*True\s*=\s*asymm_events\b', re.IGNORECASE)
+
+        if os.path.exists('Cards/run_card.dat'):
+            path_to_card = os.path.abspath('Cards/run_card.dat')
+            with open(path_to_card) as file:
+                for line in file:
+                    # remove comments — everything after "!" or "#"
+                    clean_line = re.split(r'[!#]', line)[0].strip()
+                    # check
+                    if pattern.match(clean_line):
+                        Reg += 1
+                    if pattern2.match(clean_line):
+                        Reg += 1
+            
+        #import numpy as np
+        if os.path.exists('Cards/run_card.dat'):
+            path_to_card = os.path.abspath('Cards/run_card.dat')
+            sub_string = 'ebeam1'
+            with open(str(path_to_card)) as file:
+                lines = file.readlines()
+                for line in lines:
+                    if sub_string in line:
+                        s=line
+            word_list = s.split()
+            Energy1=float(word_list[0])
+	
+            sub_string = 'ebeam2'
+            with open(str(path_to_card)) as file:
+                lines = file.readlines()
+                for line in lines:
+                    if sub_string in line:
+                        s=line
+            word_list = s.split()
+            Energy2=float(word_list[0])
+        
+        
+            if (Energy1<=0.938 or Energy2<=0.938):
+                sqrtS=float(np.sqrt(2*Energy2*Energy1)/1000)
+            else: 
+                sqrtS=float(np.sqrt(4*Energy2*Energy1)/1000)
+
+        
+        
+        if (Reg<1):        
+                if len(self)-n_histograms==0:
+                    # Now add the tail for this group
+                    gnuplot_out.extend(['','unset label','',
+'################################################################################'])
+                    # Return the starting data_block position for the next histogram group
+                    return block_position+len(self)
+        elif Reg == 2:    
+                if len(self)-n_histograms==0:
+                    # Now add the tail for this group
+                    gnuplot_out.extend(['','unset label','unset multiplot','',
+'################################################################################'])
+
+
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+        if Reg == 2:
+                PDFs=['']*len(pdf)
+                PDFL=['']*len(pdf)
+                for i in range(len(pdf)):
+                    if pdf[i].find("N1")!=-1 or pdf[i].find("1_1")!=-1 or pdf[i].find("proton")!=-1:
+                        PDFs[i]='p'
+                        PDFL[i]='p'
+                    elif pdf[i].find("JAM")!=-1:
+                        PDFs[i]='pion'
+                        PDFL[i]='pion'
+                    elif pdf[i].find("D2")!=-1 or pdf[i].find("2_1")!=-1:
+                        PDFs[i]='D'
+                        PDFL[i]='D'
+                    elif pdf[i].find("He3")!=-1 or pdf[i].find("3_2")!=-1:
+                        PDFs[i]='He-3'
+                        PDFL[i]='He-3'
+                    elif pdf[i].find("He4")!=-1 or pdf[i].find("4_2")!=-1:
+                        PDFs[i]='He-4'
+                        PDFL[i]='He-4'
+                    elif pdf[i].find("Li6")!=-1 or pdf[i].find("6_3")!=-1:
+                        PDFs[i]='Li-6'
+                        PDFL[i]='Li-6'
+                    elif pdf[i].find("Li7")!=-1 or pdf[i].find("7_3")!=-1:
+                        PDFs[i]='Li-7'
+                        PDFL[i]='Li-7'
+                    elif pdf[i].find("Be9")!=-1 or pdf[i].find("9_4")!=-1:
+                        PDFs[i]='Be'
+                        PDFL[i]='Be'
+                    elif pdf[i].find("C12")!=-1 or pdf[i].find("12_6")!=-1:
+                        PDFs[i]='C'
+                        PDFL[i]='C'
+                    elif pdf[i].find("O16")!=-1 or pdf[i].find("16_8")!=-1:
+                        PDFs[i]='O'
+                        PDFL[i]='O'
+                    elif pdf[i].find("Al27")!=-1 or pdf[i].find("27_13")!=-1:
+                        PDFs[i]='Al'
+                        PDFL[i]='Al'
+                    elif pdf[i].find("Ne20")!=-1 or pdf[i].find("20_10")!=-1:
+                        PDFs[i]='Ne'
+                        PDFL[i]='Ne'
+                    elif pdf[i].find("Ar40")!=-1 or pdf[i].find("40_18")!=-1:
+                        PDFs[i]='Ar'
+                        PDFL[i]='Ar'
+                    elif pdf[i].find("Ca40")!=-1 or pdf[i].find("40_20")!=-1:
+                        PDFs[i]='Ca'
+                        PDFL[i]='Ca'
+                    elif pdf[i].find("Fe56")!=-1 or pdf[i].find("56_26")!=-1:
+                        PDFs[i]='Fe'
+                        PDFL[i]='Fe'
+                    elif pdf[i].find("Cu64")!=-1 or pdf[i].find("64_32")!=-1:
+                        PDFs[i]='Cu'
+                        PDFL[i]='Cu'
+                    elif pdf[i].find("Kr84")!=-1 or pdf[i].find("84_42")!=-1 or pdf[i].find("84_36")!=-1:
+                        PDFs[i]='Kr'
+                        PDFL[i]='Kr'
+                    elif pdf[i].find("Ag108")!=-1 or pdf[i].find("108_54")!=-1 or pdf[i].find("108_47")!=-1:
+                        PDFs[i]='Ag'
+                        PDFL[i]='Ag'  
+                    elif pdf[i].find("Sn119")!=-1 or pdf[i].find("119_50")!=-1 or pdf[i].find("119_59")!=-1:
+                        PDFs[i]='Sn'
+                        PDFL[i]='Sn'  
+                    elif pdf[i].find("Xe131")!=-1 or pdf[i].find("131_54")!=-1:
+                        PDFs[i]='Xe'
+                        PDFL[i]='Xe'
+                    elif pdf[i].find("W194")!=-1 or pdf[i].find("184_74")!=-1:
+                        PDFs[i]='W'
+                        PDFL[i]='W'
+                    elif pdf[i].find("Au197")!=-1 or pdf[i].find("197_79")!=-1:
+                        PDFs[i]='Au'
+                        PDFL[i]='Au'
+                    elif pdf[i].find("Pb208")!=-1 or pdf[i].find("208_82")!=-1:
+                        PDFs[i]='Pb'
+                        PDFL[i]='Pb'
+                    elif pdf[i].find("CT18")!=-1 or pdf[i].find("CT14")!=-1:
+                        PDFs[i]='p'
+                        PDFL[i]='p'
+                    else:
+                        PDFs[i]='X'
+                        PDFL[i]='X'
+
+                for numb_pdf in range (1,len(pdf)):
+                    # We can finally add the last subhistograms for the ratios.
+                    for i, histo in enumerate(self[:n_histograms]):
+                        if i==0: continue
+                        
+                    if numb_pdf==1:
+                                replacement_dic['unset label'] = 'unset label'
+                                gnuplot_out.extend(['unset multiplot'])
+                                gnuplot_out.extend(['set multiplot'])
+
+                    #replacement_dic['unset label'] = 'unset label'
+                    
+                    if numb_pdf>1:
+                        if numb_pdf%2!=0:
+                                replacement_dic['unset label'] = 'unset label'
+                                gnuplot_out.extend(['unset multiplot'])
+                                gnuplot_out.extend(['set multiplot'])                        
+                        else:       
+                                replacement_dic['unset label'] = 'unset label'
+                    
+                    #gnuplot_out.extend(['unset multiplot'])
+                    #gnuplot_out.extend(['set multiplot'])
+
+                    for numb_of_canv in range(0,2):
+                        value_of_shift_x=0.0+(0.5*(numb_of_canv%2))
+                        if numb_pdf%2!=0:
+                            if numb_of_canv<=1:
+                                value_of_shift_y=0.8
+                            #value_of_shift_y=0.86-(0.28*(numb_of_canv%2))
+                            else:
+                                value_of_shift_y=0.8
+                        else:
+                            if numb_of_canv<=1:
+                                value_of_shift_y=0.3
+                            #value_of_shift_y=0.86-(0.28*(numb_of_canv%2))
+                            else:
+                                value_of_shift_y=0.3
+                            #value_of_shift_y=0.3-(0.28*(numb_of_canv%2))
+                        
+                        replacement_dic['origin_x'] = value_of_shift_x
+                        replacement_dic['origin_y'] = value_of_shift_y
+                        replacement_dic['size_y'] = 0.2
+                        replacement_dic['size_x'] = 0.45
+                        replacement_dic['mytics'] = 5
+                        replacement_dic['mxtics'] = 5
+                        
+                        #if s.find("total")!=-1 :
+                            #gnuplot_out.extend(['set offsets 0 ,0 , 0.1, 0.1'])
+                        #else:
+                            #gnuplot_out.extend(['set yrange [0.0:2.0]']) 
+                            
+                        replacement_dic['set_ytics'] = 'set ytics auto'
+                        replacement_dic['set_format_x'] = "set format x"
+                        replacement_dic['set_yscale'] = "unset logscale y"
+                        replacement_dic['set_format_y'] = 'unset format'
+                        if numb_of_canv<1:
+                            replacement_dic['set_ylabel'] = 'set ylabel "R_{%s%s}"'%(PDFL[0], PDFL[numb_pdf])
+                        elif numb_of_canv>=1:
+                            replacement_dic['set_ylabel'] = 'set ylabel "R_{%s%s}"'%(PDFL[numb_pdf], PDFL[0])
+
+                        s=self[0].get_HwU_histogram_name(format='human-no_type')
+                        ylab='y'
+                        ptlab='p_{T}, [GeV/c^{2}]'
+
+                        if s.find("rap")!=-1 or s.find("y")!=-1:
+                            gnuplot_out.extend(['set xlabel "%s"'%(ylab)])
+                        if s.find("pt")!=-1:
+                            gnuplot_out.extend(['set xlabel "%s"'%(ptlab)])
+
+                        #replacement_dic['set_histo_label'] = 'set label "%s + %s, {/Symbol=\\\%d}s = %.2f TeV, PDFs=%s, %s" font ",9" at graph 0, graph 1.07'%(PDFs[0],PDFs[numb_pdf],326,sqrtS, pdf[0].replace('_','\\\_'), pdf[numb_pdf].replace('_','\\\\_'))
+                        if numb_of_canv<1:
+                            replacement_dic['set_histo_label'] = 'set label "%s + %s, {/Symbol=\\\%d}s_{NN} = %.2f TeV, %s" font ",9" at graph 0, graph 1.07'%(PDFs[0],PDFs[numb_pdf],326,sqrtS, pdf[numb_pdf].replace('_','\\\_'))
+                        elif numb_of_canv>=1:
+                            replacement_dic['set_histo_label'] = 'set label "%s + %s, {/Symbol=\\\%d}s_{NN} = %.2f TeV, %s" font ",9" at graph 0, graph 1.07'%(PDFL[numb_pdf], PDFL[0],326,sqrtS, pdf[numb_pdf].replace('_','\\\_'))
+                                                        
+                        replacement_dic['subhistogram_type'] = 'R_{%s%s}'%(PDFL[0],PDFL[numb_pdf])
+                        
+                        if s.find("total")!=-1 :
+                            gnuplot_out.append(subhistogram_header2%replacement_dic)
+                        else:
+                            gnuplot_out.append(subhistogram_header1%replacement_dic)
+                        #gnuplot_out.append(subhistogram_header1%replacement_dic)
+
+                        uncertainty_plot_lines = []
+                        plot_lines = []
+
+                        # Some crap to get the colors right I suppose...
+                        copy_swap_re = r"perl -pe 's/^\s*(?<x1>[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?)\s*(?<x2>[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?)(?<rest>.*)\n/ $+{x1} $+{x2} $+{rest}\n$+{x2} $+{x1} $+{rest}\n/g'"
+                        # Gnuplot escapes the antislash, so we must esacape then once more O_o.
+                        # Gnuplot doesn't have raw strings, what a shame...
+                        copy_swap_re = copy_swap_re.replace('\\','\\\\')
+                        
+                        if numb_of_canv==0: #pA
+                                if not RPA_var_pos is None:
+                                            elem_pdf=RPA_var_pos[numb_pdf-1]
+                                            if not mu_var_pa_pos is None:
+                                                elem_mu=mu_var_pa_pos[numb_pdf-1]
+                                            if j>0 or rpa[j]!='none':
+                                                    plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)):(safe($%d,$3,1.0))+((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)):(safe($%d,$3,1.0))-((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)) t 'MC unc.' w yerrorbars ls 1 pt 7 ps 0.01 lc rgb 'red'"%(HwU_name,block_position,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3))
+                                                    if not mu_var_pa_pos is None:
+                                                        plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+3,52))
+                                                        plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+4,522))
+                                                        plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+5,522))
+                                                
+                                                    plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+3,51))
+                                                    plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+4,51))
+                                                    plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+5,51))
+                                                    if not mu_var_pa_pos is None:
+                                                        #plot_lines.append(' "<%s %s" index %d using ($1):(safe($%d,$6,1.0)):(safe($%d,$7,1.0)) with filledcurve ls %d fs transparent pattern 2 title "R_{%s%s} central value + scale uncertainties, LO"'%(copy_swap_re,HwU_name,block_position+1,elem_mu+4,elem_mu+5,52,PDFL[0],PDFL[numb_pdf]))
+                                                        plot_lines.append(' "<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 4 title "scale unc."'%(copy_swap_re,HwU_name,block_position,elem_mu+4,elem_mu+5,52))#PDFL[0],PDFL[numb_pdf]))
+                                                    
+                                                    plot_lines.append(' "<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 5 title "PDF unc."'%(copy_swap_re,HwU_name,block_position,elem_pdf+4,elem_pdf+5,51))#,PDFL[0],PDFL[numb_pdf]))
+                                                    
+                        elif numb_of_canv==1: #Ap
+                                if not RAP_var_pos is None:
+                                            elem_pdf=RAP_var_pos[numb_pdf-1]
+                                            if not mu_var_ap_pos is None:
+                                                elem_mu=mu_var_ap_pos[numb_pdf-1]
+                                            if j>0 or rap[j]!='none':
+                                                    plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)):(safe($%d,$3,1.0))+((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)):(safe($%d,$3,1.0))-((sqrt(2)*($4)*(safe($%d,$3,1.0)))/($3)) t 'MC unc.' w yerrorbars ls 1 pt 7 ps 0.01 lc rgb 'red'"%(HwU_name,block_position,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3,elem_pdf+3))
+                                                    if not mu_var_ap_pos is None:
+                                                        plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+3,52))
+                                                        plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+4,522))
+                                                        plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_mu+5,522))  
+                                                    
+                                                    plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+3,51))
+                                                    plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+4,51))
+                                                    plot_lines.append("'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)) ls %d title ''"%(HwU_name,block_position,elem_pdf+5,51))
+                                                    
+                                                    if not mu_var_ap_pos is None:                                      
+                                                        plot_lines.append('"<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 4 title "scale unc."'%(copy_swap_re,HwU_name,block_position,elem_mu+4,elem_mu+5,52))#,PDFL[numb_pdf],PDFL[0]))
+                                                    
+                                                    plot_lines.append('"<%s %s" index %d using ($1):(safe($%d,$3,1.0)):(safe($%d,$3,1.0)) with filledcurve ls %d fs transparent pattern 5 title "PDF unc."'%(copy_swap_re,HwU_name,block_position,elem_pdf+4,elem_pdf+5,51))#,PDFL[numb_pdf],PDFL[0]))
+                                                  
+
+                        # Reverse so that bands appear first
+                        plot_lines.reverse()
+                        # Add the plot lines
+                        if not no_uncertainties:
+                            gnuplot_out.append(',\\\n'.join(plot_lines))
+                            # We finish here when no ratio plot are asked for.
+                        #if len(self)-n_histograms==0:
+                        # Now add the tail for this group                    
+                        gnuplot_out.extend(['','unset label','','################################################################################'])
+                        # Return the starting data_block position for the next histogram group
+                        #return block_position+len(self)        
+                # Reverse so that bands appear first
+                #plot_lines.reverse()
+                # Add the plot lines
+                #gnuplot_out.append(',\\\n'.join(plot_lines))
+                
+                # Now add the tail for this group
+                gnuplot_out.extend(['','unset label','unset multiplot','unset xlabel','set key spacing 1','','################################################################################'])
+
+                # Return the starting data_block position for the next histogram group
+                return block_position+len(self)
+########################################################################################################  
+################################################################################################################
+################################################################################################################
+################################################################################################################
+################################################################################################################
+
+####################################################################################################
+####################################################################################################
+####################################################################################################
+####################################################################################################
+####################################################################################################
+####################################################################################################
+####################################################################################################
+        
+        #if len(self)-n_histograms==0:
+            # Now add the tail for this group
+            #gnuplot_out.extend(['','unset label','',
+#'################################################################################'])
+            # Return the starting data_block position for the next histogram group
+            #return block_position+len(self)
+   
+               
+        
         # We can finally add the last subhistograms for the ratios.
         ratio_name_long='('
         for i, histo in enumerate(self[:n_histograms]):
@@ -3829,7 +4168,7 @@ r'%s dynamical\_scale\_choice=%s' % (title,mu[j])))
 
         uncertainty_plot_lines = []
         plot_lines = []
-
+        
         # Some crap to get the colors right I suppose...
         n=-1
         n=n+1
@@ -4002,23 +4341,6 @@ r'%s dynamical\_scale\_choice=%s' % (title,mu[j])))
 
 
 
-        #Reg=0
-        #sqrtS = 0
-        #if os.path.exists('Cards/run_card.dat'):
-        #path_to_card = os.path.abspath('Cards/run_card.dat')
-        #sub_string = 'True = asymm_choice'
-        #with open(str(path_to_card)) as file:
-                #lines = file.readlines()
-                #for line in lines:
-                    #if sub_string in line:
-                        #Reg=Reg+1
-                    #else:
-                        #Reg=Reg+0
-
-
-
-
-
         import numpy as np
         Reg=0
         sqrtS=0
@@ -4076,7 +4398,7 @@ r'%s dynamical\_scale\_choice=%s' % (title,mu[j])))
                 sqrtS=float(np.sqrt(2*Energy2*Energy1)/1000)
             else: 
                 sqrtS=float(np.sqrt(4*Energy2*Energy1)/1000) 
-
+        
         if (Reg!=1):        
         # Now add the tail for this group
             gnuplot_out.extend(['','unset label','unset multiplot','unset xlabel','set key spacing 1','',
