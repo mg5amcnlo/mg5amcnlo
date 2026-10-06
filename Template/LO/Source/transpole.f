@@ -33,11 +33,20 @@ c     small width treatment
 c
       double precision small_width_treatment
       common/narrow_width/small_width_treatment
+c
+c     s-hat map with a knee (pole=-25), parameters set in set_peaks:
+c     lower end of the log region, fraction of the points in it and
+c     log(width/shat_floor)
+c
+      double precision shat_floor, knee_frac, knee_log
+      common/to_shat_knee/shat_floor, knee_frac, knee_log
+      double precision xb, x2
 c-----
 c  Begin Code
 c-----
       pole=pole1
       width=width1
+      if (pole.eq.-25d0.and.shat_floor.le.0d0) pole=-2d0 !knee not set
 
       x = x1
       if (pole .gt. 0d0) then
@@ -95,6 +104,26 @@ c         if (x .lt. width) then      !No transformation below cutoff
 c            write(*,*) "trans",x,y,z
          endif
 c         write(*,*) 'Transpole called',x,y
+         return
+      elseif(pole .eq. -25d0 .and. width .gt. 0d0) then !1/x^2 above knee
+c-------
+c     s-hat with a knee at width coming from non-forced BW: 1/x^2 above
+c     the knee (as for pole=-2), log between shat_floor and the knee
+c     with a fraction knee_frac of the points, identity below shat_floor
+c-------
+         xc = shat_floor
+         xb = width
+         x2 = xc + knee_frac
+         if (x .lt. xc) then
+            y = x
+         elseif (x .lt. x2) then
+            y = xc*exp(knee_log*(x-xc)/knee_frac)
+            jac = jac * y * knee_log/knee_frac
+         else
+            z = 1d0 - (x-x2)*(1d0-xb)/(1d0-x2)
+            y = xb/z
+            jac = jac * xb/(z*z) * (1d0-xb)/(1d0-x2)
+         endif
          return
       elseif(pole .ge. -2d0 .and. width .gt. 0d0) then !1/x^2   limit of width
          if (x .lt. width) then      !No transformation below cutoff
@@ -199,11 +228,20 @@ c
       double precision a,b
       double precision xgmin,xgmax       ! these should be identical 
       parameter (xgmin=-1d0, xgmax=1d0)  ! to the ones in genps.inc
+c
+c     s-hat map with a knee (pole=-25), parameters set in set_peaks:
+c     lower end of the log region, fraction of the points in it and
+c     log(width/shat_floor)
+c
+      double precision shat_floor, knee_frac, knee_log
+      common/to_shat_knee/shat_floor, knee_frac, knee_log
+      double precision xb, x2
 c-----
 c  Begin Code
 c-----
       pole=pole1
       width=width1
+      if (pole.eq.-25d0.and.shat_floor.le.0d0) pole=-2d0 !knee not set
       y = y1
       if (pole .gt. 0d0) then                   !BW 
          if (width.lt.pole*small_width_treatment)then
@@ -257,6 +295,21 @@ c         xc = width
             z = 1d0-log(y)/log(width)
             x = z*(1d0-xc) + xc
 c            write(*,*) "untrans",x,y,z
+         endif
+         return
+      elseif(pole .eq. -25d0 .and. width .gt. 0d0) then !inverse of transpole
+         xc = shat_floor
+         xb = width
+         x2 = xc + knee_frac
+         if (y .lt. xc) then
+            x = y
+         elseif (y .lt. xb) then
+            x = xc + knee_frac*log(y/xc)/knee_log
+            jac = jac * y * knee_log/knee_frac
+         else
+            z = xb/y
+            x = x2 + (1d0-z)*(1d0-x2)/(1d0-xb)
+            jac = jac * xb/(z*z) * (1d0-xb)/(1d0-x2)
          endif
          return
       elseif(pole .gt. -1d0) then !1/sqrt((.5-x)^2+width^2)  t-channel
