@@ -886,8 +886,14 @@ class EventFile(object):
             unwgt_name = get_wgt.__name__
 
         # check which weight to write
+        # An accepted event is written with weight x = sign(w)*max(|w|, max_wgt).
+        # With self.written_weight (the common weight of the final sample) x is
+        # expressed in units of max_wgt: an overweight event (|w| > max_wgt)
+        # keeps |w|/max_wgt units of the common weight instead of being
+        # truncated to one. The normalisation of the sample is fixed once all
+        # the events are written (see below).
         if hasattr(self, "written_weight"):
-            written_weight = lambda x: math.copysign(self.written_weight,float(x))
+            written_weight = lambda x: math.copysign(self.written_weight * (abs(float(x))/max_wgt), float(x))
         else: 
             written_weight = lambda x: x
                     
@@ -944,6 +950,12 @@ class EventFile(object):
                 banner = self.banner
             if banner_module:
                 # modify the lha strategy
+                # 'unit'/'sum' keep 3 even if overweight events (weight above
+                # the common one) are written: 4 means that the cross section
+                # is the average weight, wrong for those normalisations. A
+                # reader applying IDWTUP=3 strictly (weight +-1, e.g. Pythia6)
+                # sees those events with the common weight, as when they were
+                # truncated; XWGTUP keeps the correct weight for the others.
                 curr_strategy = banner.get_lha_strategy()
                 if normalization in ['unit', 'sum']:
                     strategy = 3
@@ -992,7 +1004,9 @@ class EventFile(object):
 
             # scan the file
             nb_keep = 0
-            trunc_cross = 0
+            trunc_cross = 0 # excess weight sum(|w| - max_wgt) of the overweight events
+            nb_over = 0 # number of overweight events (|w| > max_wgt)
+            sum_written = 0 # sum of the |weight| written in the output
             if use_fast_second_pass:
                 for raw_event, _ievent, wgt, header_meta in self._iter_raw_events_for_unweight():
                     r = random.random()
@@ -1002,8 +1016,10 @@ class EventFile(object):
                         nb_keep += 1
                         if abs(wgt) > max_wgt:
                             trunc_cross += abs(wgt) - max_wgt
+                            nb_over += 1
                         if outputpath and (event_target == 0 or keep_overshoot or nb_keep <= event_target):
                             final_wgt = written_weight(max(wgt, max_wgt))
+                            sum_written += abs(final_wgt)
                             try:
                                 outfiles[nb_keep % nb_output].write(self._rewrite_raw_event_weight(raw_event, final_wgt, header_meta))
                             except Exception:
@@ -1015,8 +1031,10 @@ class EventFile(object):
                         nb_keep += 1
                         if abs(wgt) > max_wgt:
                             trunc_cross += abs(wgt) - max_wgt
+                            nb_over += 1
                         if outputpath and (event_target == 0 or keep_overshoot or nb_keep <= event_target):
                             final_wgt = -1 * written_weight(max(abs(wgt), max_wgt))
+                            sum_written += abs(final_wgt)
                             try:
                                 outfiles[nb_keep % nb_output].write(self._rewrite_raw_event_weight(raw_event, final_wgt, header_meta))
                             except Exception:
@@ -1035,8 +1053,10 @@ class EventFile(object):
                         event.wgt = written_weight(max(wgt, max_wgt))
                         if abs(wgt) > max_wgt:
                             trunc_cross += abs(wgt) - max_wgt 
+                            nb_over += 1
                         if event_target ==0 or keep_overshoot or nb_keep <= event_target:
                             if outputpath:                         
+                                sum_written += abs(event.wgt)
                                 outfiles[nb_keep % nb_output].write(str(event))
 
                     elif wgt < 0:
@@ -1044,7 +1064,9 @@ class EventFile(object):
                         event.wgt =     -1* written_weight(max(abs(wgt), max_wgt))
                         if abs(wgt) > max_wgt:
                             trunc_cross += abs(wgt) - max_wgt
+                            nb_over += 1
                         if outputpath and (event_target ==0 or keep_overshoot or nb_keep <= event_target):
+                            sum_written += abs(event.wgt)
                             outfiles[nb_keep % nb_output].write(str(event))
             
             if event_target and nb_keep > event_target:
@@ -1087,24 +1109,22 @@ class EventFile(object):
         else:
             nb_events_unweighted = nb_keep
 
-        logger.log(log_level, "write %i event (efficiency %.2g %%, truncation %.2g %%) after %i iteration(s)", 
-          nb_keep, nb_events_unweighted/nb_event*100, trunc_cross/cross['abs']*100, i)
+        logger.log(log_level, "write %i event (efficiency %.2g %%, %i overweight event(s) kept with their weight: excess of %.2g %% of the cross section) after %i iteration(s)", 
+          nb_keep, nb_events_unweighted/nb_event*100, nb_over, trunc_cross/cross['abs']*100, i)
      
-        #correct the weight in the file if not the correct number of event
-        if nb_keep != event_target and hasattr(self, "written_weight") and strategy !=4:
-            written_weight = lambda x: math.copysign(self.written_weight*event_target/nb_keep, float(x))
-            for path in outpaths:
-                startfile = EventFile(path)
-                tmpname = pjoin(os.path.dirname(path), "wgtcorrected_"+ os.path.basename(path))
-                outfile = EventFile(tmpname, "w")
-                outfile.write(startfile.banner)
-                for event in startfile:
-                    event.wgt = written_weight(event.wgt)
-                    outfile.write(str(event))
-                outfile.write("</LesHouchesEvents>\n")
-                startfile.close()
-                outfile.close()
-                shutil.move(tmpname, path)
+        # normalise the written sample: the sum of |weight| has to be
+        # written_weight*event_target for 'sum'/'unit' and written_weight*nb_keep
+        # (i.e. average |weight| = written_weight) for 'average'. This absorbs
+        # both the difference between nb_keep and event_target and the extra
+        # weight carried by the overweight events.
+        if hasattr(self, "written_weight") and outputpath and sum_written:
+            if normalization in ['unit', 'sum'] and event_target:
+                factor = self.written_weight * event_target / sum_written
+            else:
+                factor = self.written_weight * nb_keep / sum_written
+            if abs(factor - 1) > 1e-9:
+                for path in outpaths:
+                    self._rescale_event_weights(path, factor)
             
         
         
@@ -1112,6 +1132,33 @@ class EventFile(object):
         self.max_wgt = max_wgt
         return nb_keep
     
+    @staticmethod
+    def _rescale_event_weights(path, factor):
+        """multiply the central weight of every event of the file by factor
+        (the file is rewritten in place)"""
+
+        tmpname = pjoin(os.path.dirname(path), "wgtcorrected_"+ os.path.basename(path))
+        startfile = EventFile(path)
+        outfile = EventFile(tmpname, "w")
+        outfile.write(startfile.banner)
+        try:
+            for raw_event, _ievent, wgt, header_meta in startfile._iter_raw_events_direct():
+                outfile.write(EventFile._rewrite_raw_event_weight(raw_event, wgt*factor, header_meta))
+        except ValueError:
+            # malformed block: restart with the generic (slower) parser
+            startfile.close()
+            outfile.close()
+            startfile = EventFile(path)
+            outfile = EventFile(tmpname, "w")
+            outfile.write(startfile.banner)
+            for event in startfile:
+                event.wgt *= factor
+                outfile.write(str(event))
+        outfile.write("</LesHouchesEvents>\n")
+        startfile.close()
+        outfile.close()
+        shutil.move(tmpname, path)
+
     def apply_fct_on_event(self, *fcts, **opts):
         """ apply one or more fct on all event. """
         
