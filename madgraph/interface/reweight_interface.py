@@ -1332,15 +1332,17 @@ class ReweightInterface(extended_cmd.Cmd):
             frame_id = int(self.banner.run_card['frame_id'])
             selected = [n for n in range(1, len(all_p[0]) + 1)
                         if frame_id >> n & 1]
-            if not selected:
-                return all_p
-            # each assignment of the identical particles is its own guess of
-            # which particle is leg n: its frame is built from its own legs
-            return [self.boost_momenta_to_me_frame(p, len(orig_order[0]),
-                                                   selected)
-                    for p in all_p]
+            if selected:
+                # each assignment of the identical particles is its own guess
+                # of which particle is leg n: its frame is built from its own legs
+                return [self.boost_momenta_to_me_frame(p, len(orig_order[0]),
+                                                       selected)
+                        for p in all_p]
+            # no leg selected (e.g. me_frame = [0]): madevent's boost_to_frame
+            # then boosts by a null vector, i.e. stays in the partonic CM --
+            # the default frame below, not the lab
 
-        elif (hypp_id == 1 and self.boost_event):
+        if (hypp_id == 1 and self.boost_event):
             if self.boost_event is not True:
                 import copy
                 new_event = copy.deepcopy(event)
