@@ -20,6 +20,13 @@ ANNOUNCEMENT:
   OM: Fix lhe_parser crash (or wrong output) when an event only matches the charge-conjugated process
   OM: Fix FourMomentum.boost when the boost vector is at rest (e.g. partonic frame of a lepton collider)
   OM: ALOHA: fix the sign of even power of the momentum for outgoing fermion in custom propagator
+  OM: LO: the s-hat sampling starved the region below M-5*Gamma of every resonance not in a decay chain
+      (e.g. p p > e+ ve j with mmnlmax=40 was 25% too low) and nested resonances (t > b w+, w+ > e+ ve)
+      were counted twice (single top p p > e+ ve b j a few percent too low).
+  OM: LO: fix the propagator denominators of the multi-channel weights of sde_strategy=2 (mass and mass
+      squared were mixed and the width entered as Re(1/D^2) instead of 1/|D|^2). The weights did not follow
+      the resonances, leading to slow integration and biased results (e.g. p p > e+ e- j 3.5% too low,
+      single top 1% too low).
 
 
 3.5.16 (3/7/26):
