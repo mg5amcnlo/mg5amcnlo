@@ -582,3 +582,16 @@ jobs:
             ./tests/test_manager.py test_level_with_flipping_triangle test_loop_convert_diagram testIO_UnitProcOutputIOTests test_loadingLoopToyModel test_get_aloha_input test_get_analytic_info test_helas_diagrams_ddx_uux test_helas_diagrams_dxd_gz test_helas_diagrams_gd_gd test_helas_diagrams_gd_ggd test_helas_diagrams_gg_gg test_helas_diagrams_gg_ggg test_helas_diagrams_gg_wpwmttx test_helas_diagrams_ud_ggdu -t0
 
 
+
+  unittest_ordering:
+    # event-leg mapping (lhe_parser.get_mapping), me_frame boost of the
+    # reweighting and FourMomentum.boost at rest (3.8.1 backports)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: test lhe_parser/reweight ordering and boost
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_lhe_ordering test_reweight_ordering test_boost_by_a_momentum_at_rest test_nested_identical_children -t0

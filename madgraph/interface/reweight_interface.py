@@ -1258,6 +1258,114 @@ class ReweightInterface(extended_cmd.Cmd):
             open(pjoin(Pdir, 'matrix%spy.so' % tag),'w').write(open(pjoin(Pdir, 'matrix2py.so')
                                         ).read().replace('matrix2py', 'matrix%spy' % tag))
     
+    @staticmethod
+    def boost_momenta_to_rest_frame(momenta, pboost, rest_leg=None):
+        """``momenta`` -- (E, px, py, pz) in the matrix element's leg order --
+        boosted into the rest frame of ``pboost``; the convention of
+        ``Event.boost``. ``rest_leg`` (0-based) is forced to exactly zero
+        three-momentum: HELAS picks the frame's z axis as quantisation axis
+        only for a momentum that is exactly at rest, and the boost arithmetic
+        leaves ~1e-14 (see boost_to_frame in Template/LO/SubProcesses/genps.f).
+        """
+        if pboost.mass_sqr <= 1e-10 * pboost.E ** 2:
+            # a light-like (e.g. a single massless leg) system has no rest
+            # frame: FourMomentum.boost would divide by its zero mass
+            raise madgraph.InvalidCmd(
+                "The frame asked for (me_frame / boost choice) is the rest "
+                "frame of a massless system (m^2 = %g GeV^2): it does not "
+                "exist. Select massive legs, or several legs." % pboost.mass_sqr)
+        neg = lhe_parser.FourMomentum(pboost.E, -pboost.px, -pboost.py,
+                                      -pboost.pz)
+        out = []
+        for mom in momenta:
+            new = lhe_parser.FourMomentum(mom).boost(neg)
+            out.append((new.E, new.px, new.py, new.pz))
+        if rest_leg is not None:
+            out[rest_leg] = (out[rest_leg][0], 0., 0., 0.)
+        return out
+
+    @classmethod
+    def boost_momenta_to_me_frame(cls, momenta, nb_initial, selected):
+        """madevent's ``boost_to_frame``: ``momenta`` (lab frame, matrix
+        element's leg order) in the rest frame of the legs ``selected``
+        (counted from 1), a single one exactly at rest.
+
+        madevent applies that boost to momenta that are in the partonic CM
+        frame -- genps.f builds them there and unwgt.f boosts them to the lab
+        only when it writes the event -- so the event is first taken back to
+        the rest frame of its initial state (the z boost the default frame
+        does below). Boosting to the selected legs straight from the lab is
+        not the same frame: two boosts along different directions compose to
+        a boost *and* a rotation (Wigner), and the quantisation axis of a
+        single leg at rest turns with it. Only a frame that is the partonic
+        CM itself (e.g. the whole final state) is unaffected.
+        """
+        pinit = lhe_parser.FourMomentum()
+        for i in range(nb_initial):
+            pinit += lhe_parser.FourMomentum(momenta[i])
+        cm = cls.boost_momenta_to_rest_frame(momenta, pinit)
+        pboost = lhe_parser.FourMomentum()
+        for n in selected:
+            pboost += lhe_parser.FourMomentum(cm[n - 1])
+        rest_leg = selected[0] - 1 if len(selected) == 1 else None
+        return cls.boost_momenta_to_rest_frame(cm, pboost, rest_leg)
+
+    def method_boost_event(self, event, all_p, orig_order, hypp_id):
+        # For 2>N pass in the center of mass frame
+        #   - required for helicity by helicity re-weighitng
+        #   - Speed-up loop computation 
+
+        if ('frame_id' in self.banner.run_card and self.banner.run_card['frame_id'] !=6) \
+                and not (hypp_id == 1 and self.boost_event):
+            # frame_id = sum(2**n for n in me_frame): bit n selects leg n,
+            # counted from 1 in the *matrix element's* order -- the order all_p
+            # is already in. Walking the event's own lines instead, as this
+            # did, picks whatever particle the LHE wrote at that place; it
+            # never got that far, since it also died on FourMomenta (no such
+            # name) and on str.reverse.
+            # Both matrix elements are evaluated in that frame: the weight is
+            # w_new/w_orig, and a ratio of two helicity-dependent matrix
+            # elements taken in two frames means nothing (this used to be
+            # restricted to hypp_id == 0, leaving the new one in the partonic
+            # CM). A boost set explicitly for the new one ('change boost')
+            # still takes precedence.
+            frame_id = int(self.banner.run_card['frame_id'])
+            selected = [n for n in range(1, len(all_p[0]) + 1)
+                        if frame_id >> n & 1]
+            if selected:
+                # each assignment of the identical particles is its own guess
+                # of which particle is leg n: its frame is built from its own legs
+                return [self.boost_momenta_to_me_frame(p, len(orig_order[0]),
+                                                       selected)
+                        for p in all_p]
+            # no leg selected (e.g. me_frame = [0]): madevent's boost_to_frame
+            # then boosts by a null vector, i.e. stays in the partonic CM --
+            # the default frame below, not the lab
+
+        if (hypp_id == 1 and self.boost_event):
+            if self.boost_event is not True:
+                import copy
+                new_event = copy.deepcopy(event)
+                new_event.boost(self.boost_event)
+                if self.keep_ordering:
+                    return [new_event.get_momenta(orig_order)]
+                else:     
+                    return new_event.get_all_momenta(orig_order)
+            return all_p
+
+        elif (hasattr(event[1], 'status') and event[1].status == -1) or \
+           (event[1].px == event[1].py == 0.):
+            p = all_p[0]
+            pboost = lhe_parser.FourMomentum(p[0]) + lhe_parser.FourMomentum(p[1])
+            for p in all_p:
+                for i,thisp in enumerate(p):
+                    p[i] = lhe_parser.FourMomentum(thisp).zboost(pboost).get_tuple()
+                assert p[0][1] == p[0][2] == 0 == p[1][2] == p[1][2] == 0 
+            return all_p
+
+        else:
+            return all_p
+
     def calculate_matrix_element(self, event, hypp_id, scale2=0):
         """routine to return the matrix element"""
         
@@ -1315,46 +1423,7 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             nhel = -1
             
-        # For 2>N pass in the center of mass frame
-        #   - required for helicity by helicity re-weighitng
-        #   - Speed-up loop computation 
-        if (hypp_id == 0 and ('frame_id' in self.banner.run_card and self.banner.run_card['frame_id'] !=6)):
-            import copy
-            new_event = copy.deepcopy(event)
-            pboost = FourMomenta()
-            to_inc = bin(self.banner.run_card['frame_id'])[2:]
-            to_inc.reverse()
-            nb_ext = 0
-            for p in new_event:
-                if p.status in [-1,1]:
-                    nb_ext += 1
-                    if to_inc[nb_ext]:
-                        pboost += p                    
-            new_event.boost(pboost)
-            if self.keep_ordering:
-                all_p = [new_event.get_momenta(orig_order)]
-            else:
-                all_p = new_event.get_all_momenta(orig_order)
-            if len(all_p) > 1:
-                logger.critical("due to ordering ambiguity, the boost used might not be consistent. please ensure that this is not an issue")
-        elif (hypp_id == 1 and self.boost_event):
-            if self.boost_event is not True:
-                import copy
-                new_event = copy.deepcopy(event)
-                new_event.boost(self.boost_event)
-                if self.keep_ordering:
-                    all_p = [new_event.get_momenta(orig_order)]
-                else:     
-                    all_p = new_event.get_all_momenta(orig_order)        
-        elif (hasattr(event[1], 'status') and event[1].status == -1) or \
-           (event[1].px == event[1].py == 0.):
-            p = all_p[0]
-            pboost = lhe_parser.FourMomentum(p[0]) + lhe_parser.FourMomentum(p[1])
-            for p in all_p:
-                for i,thisp in enumerate(p):
-                    p[i] = lhe_parser.FourMomentum(thisp).zboost(pboost).get_tuple()
-                assert p[0][1] == p[0][2] == 0 == p[1][2] == p[1][2] == 0 
-        
+        all_p = self.method_boost_event(event, all_p, orig_order, hypp_id)
 
         if self.options['identical_particle_in_prod_and_decay'] == 'crash':
             if len(all_p) > 1:
