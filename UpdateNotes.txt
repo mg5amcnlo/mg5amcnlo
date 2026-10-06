@@ -11,7 +11,7 @@ ANNOUNCEMENT:
       (e.g. "ve{L} d > e- u" was twice too large with polbeam1=-100) [bug #2148181]
   OM: (NLO) Fix the truncation of long run_card lines (e.g. systematics_arguments) in the LHE banner [bug #2046152]
   OM: MadSpin: fix decay branches assigned in reverse order to identical particles with different decays
-      (e.g. p p > z z with "decay z > e+ e-" and "decay z > u u~"). Cross-section unchanged but decay
+      (e.g. p p > z z with "decay z > e+ e-" and "decay z > u u~", also within a decay chain). Cross-section unchanged but decay
       angular distributions were wrong.
   OM: Reweighting: fix the crash when a non-default me_frame was used. The frame is now built as in madevent
       (from the partonic center of mass) and used for both the original and the new matrix-element.

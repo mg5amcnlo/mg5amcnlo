@@ -459,7 +459,11 @@ class dc_branch_from_me(dict):
                     child_propa_id -= 1
                     self["tree"][propa_id]["d%s" % c_nb]["index"] = child_propa_id
                     self.nb_decays += 1
-                    child_propa_id = add_decay(to_decay[c_pid].pop(), child_propa_id)
+                    # FIFO, as in get_full_process_structure: the n-th child of
+                    # a given pid takes the n-th sub-decay written for it, which
+                    # is how MG orders the legs of the full matrix element
+                    # (h > z z, z > e+ e-, z > u u~ has e+ e- before u u~).
+                    child_propa_id = add_decay(to_decay[c_pid].pop(0), child_propa_id)
                 else:
                     self.nexternal += 1
                     self["tree"][propa_id]["d%s" % c_nb]["index"] = self.nexternal
@@ -638,6 +642,11 @@ class dc_branch_from_me(dict):
                     to_decay[pid] = [dec]
 
             # loop over the child
+            # resonances are numbered as in __init__: a decaying child takes
+            # the next free id after the whole subtree of its previous
+            # sibling (propa_id-1 for every child sent two decaying z's of
+            # h > z z to the same resonance)
+            child_propa_id = propa_id
             for c_nb,leg in enumerate(proc.get('legs')):
                 if c_nb == 0:
                     continue
@@ -645,7 +654,10 @@ class dc_branch_from_me(dict):
                 c_pid = leg.get('id')
                 self["tree"][propa_id]["d%s" % c_nb]["labels"].append(c_pid)
                 if c_pid in to_decay:
-                    add_decay(to_decay[c_pid].pop(), propa_id-1)
+                    child_propa_id -= 1
+                    # FIFO, same pairing as in __init__
+                    child_propa_id = add_decay(to_decay[c_pid].pop(0), child_propa_id)
+            return child_propa_id
         
         # launch the recursive loop
         for proc in proc_list:

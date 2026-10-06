@@ -594,4 +594,4 @@ jobs:
       - name: test lhe_parser/reweight ordering and boost
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_lhe_ordering test_reweight_ordering test_boost_by_a_momentum_at_rest -t0
+            ./tests/test_manager.py test_lhe_ordering test_reweight_ordering test_boost_by_a_momentum_at_rest test_nested_identical_children -t0
