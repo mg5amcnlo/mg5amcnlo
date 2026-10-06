@@ -265,14 +265,19 @@ in presence of majorana particle/flow violation"""
             # raised to an even integer power is left unsigned. Before this,
             # p^2 changed sign in the $ veto (P1D) of every outgoing fermion
             # propagator, which switched the veto off.
+            # An even exponent is recognised as a number, bare or in
+            # parentheses (2, 2.0, 2e0, (2)); any other exponent (an
+            # expression, an odd number) gets the sign. ALOHA's parser has no
+            # signed exponent.
             def flip_sign(match):
-                power = match.group(3)
+                power = match.group(3) or match.group(4)
                 if power is not None and float(power).is_integer() \
                                      and int(float(power)) % 2 == 0:
                     return match.group(0)
                 return '-' + match.group(0)
-            expr = re.sub(r'\b(P|PSlash)\(([^()]*)\)(?:\s*\*\*\s*(\d+(?:\.\d*)?)(?![\w.]))?',
-                          flip_sign, expr)
+            number = r'\d+(?:\.\d*)?(?:[eE][+-]?\d+)?'
+            expr = re.sub(r'\b(P|PSlash)\(([^()]*)\)(?:\s*\*\*\s*(?:\(\s*(%s)\s*\)|(%s)(?![\w.])))?'
+                          % (number, number), flip_sign, expr)
 
         calc = aloha_parsers.ALOHAExpressionParser()
         lorentz_expr = calc.parse(expr)

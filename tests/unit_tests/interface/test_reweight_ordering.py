@@ -321,6 +321,18 @@ class TestMeFrameConvention(unittest.TestCase):
         all_p = [event.get_momenta(WZ_ORDER)]
         self.assertIs(stub.method_boost_event(event, all_p, WZ_ORDER, 1), all_p)
 
+    def test_no_selected_leg_is_the_partonic_cm(self):
+        """me_frame = [0] selects no leg: madevent's boost_to_frame boosts by a
+        null vector and evaluates in the partonic CM. The reweighting returned
+        the lab momenta instead, skipping the default z boost."""
+        lab = _wz_event(WZ_LAYOUTS[0]).get_momenta(WZ_ORDER)
+        pcm = lhe_parser.FourMomentum(lab[0]) + lhe_parser.FourMomentum(lab[1])
+        ref = [lhe_parser.FourMomentum(p).zboost(pcm).get_tuple() for p in lab]
+        out = self._boosted([0])
+        self.assertMomentaEqual(out, ref)
+        # the beams are back to back with no net momentum
+        self.assertAlmostEqual(out[0][3] + out[1][3], 0., places=8)
+
     def test_a_massless_frame_is_refused(self):
         """a single massless leg has no rest frame: this used to be a
         ZeroDivisionError deep inside FourMomentum.boost"""

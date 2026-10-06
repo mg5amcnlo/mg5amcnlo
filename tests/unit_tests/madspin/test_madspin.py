@@ -879,6 +879,46 @@ class TestOnshellProductionNorm(unittest.TestCase):
         self.assertEqual(str(production), before)
 
 
+class TestDecayBranchPairing(unittest.TestCase):
+    """The decay tree MadSpin builds must give each decaying leg the decay
+    branch MG attached to it in the full matrix element."""
+
+    def get_full_process(self, line):
+        import madgraph.core.helas_objects as helas_objects
+        cmd = Cmd.MasterCmd()
+        cmd.exec_cmd('import model sm')
+        cmd.exec_cmd('generate %s' % line)
+        mes = helas_objects.HelasDecayChainProcess(
+                        cmd._curr_amps[0]).combine_decay_chain_processes()
+        return mes[0].get('processes')[0]
+
+    def test_nested_identical_children(self):
+        """h > z z with two different z decays: MG puts the products of the
+        first decay line first, and the dc_branch tree (whose products are
+        numbered in the same walk as generate_configs_file) has to agree. It
+        dealt the decays LIFO, i.e. reversed."""
+
+        for zdecays, expected in [('(z > mu+ mu-), (z > u u~)', [-13, 13, 2, -2]),
+                                  ('(z > u u~), (z > mu+ mu-)', [2, -2, -13, 13])]:
+            proc = self.get_full_process(
+                        'e+ e- > z h, (h > z z, %s)' % zdecays)
+            self.assertEqual([l.get('id') for l in proc.get_legs_with_decays()][3:],
+                             expected)
+
+            tree = madspin.dc_branch_from_me(proc.get('decay_chains')[0])['tree']
+            products = [tree[res][d]['label']
+                        for res in range(-1, -len(tree)-1, -1)
+                        for d in ('d1', 'd2') if tree[res][d]['index'] > 0]
+            self.assertEqual(products, expected)
+
+            # the labels of the identical processes are dealt the same way
+            tree = madspin.dc_branch_from_me(proc.get('decay_chains')[0])
+            tree.add_decay_ids([proc.get('decay_chains')[0]])
+            self.assertEqual([tree['tree'][-2]['d1']['labels'],
+                              tree['tree'][-3]['d1']['labels']],
+                             [[expected[0]] * 2, [expected[2]] * 2])
+
+
 class TestEvent(unittest.TestCase):
     """Test class for the reading of the lhe input file"""
     

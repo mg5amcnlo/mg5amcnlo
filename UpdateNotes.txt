@@ -12,6 +12,7 @@ ANNOUNCEMENT:
         cross-section for 2>1 processes (e.g. p p > z) and a crash (Bjorken x > 1) when
         dsqrt_shatmax was above the collider energy. dsqrt_shatmax <= 0 now means no cut
         (was a zero cross-section).
+    ALL: Include all bug fixes from LTS 3.5.17 (see below)
 
 3.8.0 (15/09/26):
     OM+SA+VD: MadSpin2 (2609.02794)
@@ -209,6 +210,31 @@ ANNOUNCEMENT:
           Those modes need to install the cudacpp plugin (can be done via the command "install cudacpp")
           This feature also add OpenMP support for LO process (deactivated by default and which does not need the plugin).
       OM+JK+KM+KH+YJZ: implementation of the FD gauge via "set gauge FD" [2203.10440, 2405.01256]
+
+
+3.5.17 (XX/XX/26):
+  RF: Fixed a bug in FxFx merging: MG side used inclusive-kT measure, PY side used exclusive.  This mismatch resulted in an
+      underrepresentation of events in DRjj<1.0, particularly visibile in boosted configurations. Thanks, Sihyun Jeon.
+  OM: LO: setting mmnl without mmnlmax (default -1) silently removed the mmllmax upper cut
+      for processes with exactly two leptons/neutrinos.
+  OM: Fix beam polarization being applied twice when the helicity is fixed in the process definition
+      (e.g. "ve{L} d > e- u" was twice too large with polbeam1=-100) [bug #2148181]
+  OM: (NLO) Fix the truncation of long run_card lines (e.g. systematics_arguments) in the LHE banner [bug #2046152]
+  OM: MadSpin: fix decay branches assigned in reverse order to identical particles with different decays
+      (e.g. p p > z z with "decay z > e+ e-" and "decay z > u u~", also within a decay chain). Cross-section unchanged but decay
+      angular distributions were wrong.
+  OM: Reweighting: fix the crash when a non-default me_frame was used. The frame is now built as in madevent
+      (from the partonic center of mass) and used for both the original and the new matrix-element.
+  OM: Fix lhe_parser crash (or wrong output) when an event only matches the charge-conjugated process
+  OM: Fix FourMomentum.boost when the boost vector is at rest (e.g. partonic frame of a lepton collider)
+  OM: ALOHA: fix the sign of even power of the momentum for outgoing fermion in custom propagator
+  OM: LO: the s-hat sampling starved the region below M-5*Gamma of every resonance not in a decay chain
+      (e.g. p p > e+ ve j with mmnlmax=40 was 25% too low) and nested resonances (t > b w+, w+ > e+ ve)
+      were counted twice (single top p p > e+ ve b j a few percent too low).
+  OM: LO: fix the propagator denominators of the multi-channel weights of sde_strategy=2 (mass and mass
+      squared were mixed and the width entered as Re(1/D^2) instead of 1/|D|^2). The weights did not follow
+      the resonances, leading to slow integration and biased results (e.g. p p > e+ e- j 3.5% too low,
+      single top 1% too low).
 
 
 3.5.16 (3/7/26):

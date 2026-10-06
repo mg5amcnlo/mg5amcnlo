@@ -690,3 +690,18 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_write_model -t0
+
+
+  unittest_ordering:
+    # event-leg mapping (lhe_parser.get_mapping), me_frame boost of the
+    # reweighting and FourMomentum.boost at rest
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: test lhe_parser/reweight ordering and boost
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_lhe_ordering test_reweight_ordering test_boost_by_a_momentum_at_rest test_nested_identical_children -t0
