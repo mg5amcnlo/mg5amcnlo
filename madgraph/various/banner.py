@@ -4730,7 +4730,12 @@ class RunCardLO(RunCard):
                 logger.warning('draj cut discarded since photon isolation is used')
                 self['draj'] = 0.0   
         
-        # special treatment for gridpack use the gseed instead of the iseed        
+        # the fortran code only knows -1 as "no cut": any other value is a cap
+        # and 0 would give a NaN phase-space (TAUMAX=0) and a zero cross-section
+        if self['dsqrt_shatmax'] <= 0 and self['dsqrt_shatmax'] != -1:
+            self['dsqrt_shatmax'] = -1.0
+
+        # special treatment for gridpack use the gseed instead of the iseed
         if self['gridrun']:
             self['iseed'] = self['gseed']
         
