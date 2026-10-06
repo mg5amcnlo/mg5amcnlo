@@ -421,7 +421,15 @@ c     detect if mmnl is used for exactly 2 lepton
                      do j = i+1, nexternal
                         if (is_a_l(j).or.is_a_nu(j)) then
                              s_min(j,i) = max(s_min(j,i), mmnl*dabs(mmnl))
-                             s_max(j,i) = min(s_max(j,i), mmnlmax*dabs(mmnlmax))
+                             ! s_max < 0 means no upper bound: a plain min()
+                             ! would let mmnlmax=-1 erase e.g. mmllmax
+                             if (mmnlmax.ge.0d0) then
+                                if (s_max(j,i).lt.0d0) then
+                                   s_max(j,i) = mmnlmax**2
+                                else
+                                   s_max(j,i) = min(s_max(j,i), mmnlmax**2)
+                                endif
+                             endif
                              exit
                         endif
                      enddo
