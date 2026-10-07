@@ -101,7 +101,12 @@ c#endif
             im = (3-nh)/2
             sfomeg(1) = sf(1)*omega(ip)
             sfomeg(2) = sf(2)*omega(im)
-            pp3 = max(pp+p(3),rZero)
+c           Light-cone identity avoids the |p|+p3 cancellation.
+            if ( p(3).lt.rZero ) then
+               pp3 = max((p(1)**2+p(2)**2)/(pp-p(3)),rZero)
+            else
+               pp3 = max(pp+p(3),rZero)
+            endif
             chi(1) = dcmplx( dsqrt(pp3*rHalf/pp) )
             if ( pp3.eq.rZero ) then
                chi(2) = dcmplx(-nh )
@@ -121,7 +126,12 @@ c#endif
          if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
             sqp0p3 = 0d0
          else
-            sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
+c           Light-cone identity avoids the E+p3 cancellation.
+            if ( p(3).lt.rZero .and. p(0)-p(3).gt.rZero ) then
+               sqp0p3 = dsqrt((p(1)**2+p(2)**2)/(p(0)-p(3)))*nsf
+            else
+               sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
+            endif
          end if
          chi(1) = dcmplx( sqp0p3 )
          if ( sqp0p3.eq.rZero ) then
@@ -225,7 +235,12 @@ c$$$      fi(2) = dcmplx(p(1),p(2))*nsf*-1
             im = (3-nh)/2
             sfomeg(1) = sf(1)*omega(ip)
             sfomeg(2) = sf(2)*omega(im)
-            pp3 = max(pp+p(3),rZero)
+c           Light-cone identity avoids the |p|+p3 cancellation.
+            if ( p(3).lt.rZero ) then
+               pp3 = max((p(1)**2+p(2)**2)/(pp-p(3)),rZero)
+            else
+               pp3 = max(pp+p(3),rZero)
+            endif
             chi(1) = dcmplx( dsqrt(pp3*rHalf/pp) )
             if ( pp3.eq.rZero ) then
                chi(2) = dcmplx(-nh )
@@ -245,7 +260,12 @@ c$$$      fi(2) = dcmplx(p(1),p(2))*nsf*-1
          if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
             sqp0p3 = 0d0
          else
-            sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
+c           Light-cone identity avoids the E+p3 cancellation.
+            if ( p(3).lt.rZero .and. p(0)-p(3).gt.rZero ) then
+               sqp0p3 = dsqrt((p(1)**2+p(2)**2)/(p(0)-p(3)))*nsf
+            else
+               sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
+            endif
          end if
          chi(1) = dcmplx( sqp0p3 )
          if ( sqp0p3.eq.rZero ) then
@@ -360,7 +380,12 @@ c#endif
             im = (3-nh)/2
             sfomeg(1) = sf(1)*omega(ip)
             sfomeg(2) = sf(2)*omega(im)
-            pp3 = max(pp+p(3),rZero)
+c           Light-cone identity avoids the |p|+p3 cancellation.
+            if ( p(3).lt.rZero ) then
+               pp3 = max((p(1)**2+p(2)**2)/(pp-p(3)),rZero)
+            else
+               pp3 = max(pp+p(3),rZero)
+            endif
             chi(1) = dcmplx( dsqrt(pp3*rHalf/pp) )
             if ( pp3.eq.rZero ) then
                chi(2) = dcmplx(-nh )
@@ -380,7 +405,12 @@ c#endif
          if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
             sqp0p3 = 0d0
          else
-            sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
+c           Light-cone identity avoids the E+p3 cancellation.
+            if ( p(3).lt.rZero .and. p(0)-p(3).gt.rZero ) then
+               sqp0p3 = dsqrt((p(1)**2+p(2)**2)/(p(0)-p(3)))*nsf
+            else
+               sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
+            endif
          end if
          chi(1) = dcmplx( sqp0p3 )
          if ( sqp0p3.eq.rZero ) then
@@ -485,7 +515,12 @@ c$$$      fo(2) = dcmplx(p(1),p(2))*nsf
             im = (3-nh)/2
             sfomeg(1) = sf(1)*omega(ip)
             sfomeg(2) = sf(2)*omega(im)
-            pp3 = max(pp+p(3),rZero)
+c           Light-cone identity avoids the |p|+p3 cancellation.
+            if ( p(3).lt.rZero ) then
+               pp3 = max((p(1)**2+p(2)**2)/(pp-p(3)),rZero)
+            else
+               pp3 = max(pp+p(3),rZero)
+            endif
             chi(1) = dcmplx( dsqrt(pp3*rHalf/pp) )
             if ( pp3.eq.rZero ) then
                chi(2) = dcmplx(-nh )
@@ -505,7 +540,12 @@ c$$$      fo(2) = dcmplx(p(1),p(2))*nsf
          if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
             sqp0p3 = 0d0
          else
-            sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
+c           Light-cone identity avoids the E+p3 cancellation.
+            if ( p(3).lt.rZero .and. p(0)-p(3).gt.rZero ) then
+               sqp0p3 = dsqrt((p(1)**2+p(2)**2)/(p(0)-p(3)))*nsf
+            else
+               sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
+            endif
          end if
          chi(1) = dcmplx( sqp0p3 )
          if ( sqp0p3.eq.rZero ) then
