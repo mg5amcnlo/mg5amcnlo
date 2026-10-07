@@ -210,6 +210,10 @@
 0
 ! Default :: 0
 !
+! ==========================================================================
+! MC@NLO construction
+! ==========================================================================
+!
 ! Use the refactored MC@NLO construction.  In this mode the complete
 ! explicit sum over native (kl) histories is formed before multiplying
 ! H-event subtraction terms by the outer S_ij function.
