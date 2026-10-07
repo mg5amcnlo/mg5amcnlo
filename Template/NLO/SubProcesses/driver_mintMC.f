@@ -1071,8 +1071,9 @@ c check if event or counter-event passes cuts
             if (.not.(passcuts_nbody.or.passcuts_n1body) .and.
      $           (ickkw.eq.4 .or. abrv.eq.'real')) cycle
             first_native_H=icontr+1
-! Share only full real amplitudes at this physical point. Each native
-! history retains its own counterevents, scales and regulated factors.
+! Share full real amplitudes at this physical point. Each native
+! history retains its own counterevents and regulated factors; FxFx H
+! weights and scales below are taken from the common outer real state.
             call mc_begin_real_point(p)
 ! The complete H sum below replaces the outer H records. Suppress them
 ! here, preserving the original path if no real point can be repartitioned.
@@ -1183,7 +1184,7 @@ c Sum the contributions that can be summed before taking the ABS value
       type(fks_phase_space_point) saved_point
       integer first_native,last_native,first_alt,owner,iFKS,ii,jj,ihist,
      $     ict,flow_save,called_save,owner_match(nexternal),
-     $     outer_config
+     $     outer_config,i,j
       integer n_recoil_groups,recoil_group,
      $     recoil_configs(lmaxconfigs),recoil_group_of(lmaxconfigs)
       integer this_config
@@ -1199,6 +1200,11 @@ c Sum the contributions that can be summed before taking the ABS value
       double precision nbody_scales_save(nexternal-1,nexternal-1,3),
      $     n1body_scales_save(nexternal,nexternal),
      $     emsca_save(fks_configs,ndelH,ndelH),hard_scale_save
+      double precision factors(9),mc_factors(8),pdf_factors(3),
+     $     factors_save(9),mc_factors_save(8),pdf_factors_save(3)
+      common/factor_n1body/factors
+      common/factor_n1body_NLOPS/mc_factors
+      common/factor_pdfsch/pdf_factors
       logical cuts_born,cuts_real,passcuts,native_valid
       double precision fks_Sij
       external fks_Sij,passcuts
@@ -1278,6 +1284,9 @@ c Sum the contributions that can be summed before taking the ABS value
       nbody_scales_save(:,:,3)=shower_scale_nbody_max
       n1body_scales_save=shower_scale_n1body
       emsca_save=emsca_H(:,ifold_counter,:,:)
+      factors_save=factors
+      mc_factors_save=mc_factors
+      pdf_factors_save=pdf_factors
 ! Matching refreshes some active phase-space data, including the FSR
 ! momentum factors. Preserve their current values with the original
 ! generated momenta and measure before visiting the native histories.
@@ -1349,14 +1358,14 @@ c Sum the contributions that can be summed before taking the ABS value
      $           call include_native_recoil_weights(recoil_group,
      $           recoil_group_of)
             if (ickkw.eq.3) then
-               call set_FxFx_scale(0,pn)
-               call set_cms_stuff(0)
-               call set_FxFx_scale(2,p1_cnt(0,1,0))
-               call set_cms_stuff(-100)
-               call set_FxFx_scale(3,pn)
+! All kl terms describe the same n+1-body H event. Reuse its outer ij
+! FxFx Sudakov and scales; only the particle labels need permuting.
+! No native Born clustering belongs in this H-only sum, including G.
+               need_matching_H=owner_match(MC_HIST_PERM(:,ihist))
+               call set_FxFx_scale(4,pn)
             endif
             call set_cms_stuff(0)
-            if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
+            if (ickkw.eq.3) call set_FxFx_scale(-3,pn)
 ! Sample in this history's own Born basis. Reusing the outer label
 ! would require a flow map and support at a different Born point.
 ! q_b,c=p_b,c here; no additional outer 1/q_a,c belongs on this term.
@@ -1373,10 +1382,28 @@ c Sum the contributions that can be summed before taking the ABS value
      $           call include_born_flow_weight(flow_factor_native,
      $           flow_factor_native)
             call init_process_module_n1body_wrapper(born_flow_picked)
-            call compute_shower_scale_nbody(p_born,-fksfather,
-     $           mc_shower_scale_mass())
-            call compute_shower_scale_n1body(pn,i_fks,j_fks,
-     $           mc_shower_scale_mass())
+            if (ickkw.eq.3) then
+! Approximation: use the outer ij shower scale for every kl term rather
+! than reclustering each native underlying Born. FxFx Born damping
+! bounds are scalar, so their matrices need no relabelling. Preserve
+! the outer H dipole scales with the real-state particle permutation.
+! This makes the kl sum independent of the FxFx clustering work.
+               shower_scale_hard=hard_scale_save
+               shower_scale_nbody=nbody_scales_save(:,:,1)
+               shower_scale_nbody_min=nbody_scales_save(:,:,2)
+               shower_scale_nbody_max=nbody_scales_save(:,:,3)
+               do j=1,nexternal
+                  do i=1,nexternal
+                     shower_scale_n1body(i,j)=n1body_scales_save(
+     $                    MC_HIST_PERM(i,ihist),MC_HIST_PERM(j,ihist))
+                  enddo
+               enddo
+            else
+               call compute_shower_scale_nbody(p_born,-fksfather,
+     $              mc_shower_scale_mass())
+               call compute_shower_scale_n1body(pn,i_fks,j_fks,
+     $              mc_shower_scale_mass())
+            endif
             cuts_born=passcuts(p1_cnt(0,1,0),rwgt)
             call set_cms_stuff(-100)
             if (ickkw.eq.3) call set_FxFx_scale(-3,pn)
@@ -1443,21 +1470,24 @@ c Sum the contributions that can be summed before taking the ABS value
       gfactsf=gfun_save(1)
       gfactcl=gfun_save(2)
       gfactazi=gfun_save(3)
-      call compute_prefactors_n1body(vegas_wgt,jac_native)
-      if (MCSubtractionAtFixedFlow)
-     $     call include_born_flow_weight(born_flow_factor,born_flow_factor)
+      need_matching_S=matching_save(:,1)
+      need_matching_H=matching_save(:,2)
       if (ickkw.eq.3) then
-         call set_FxFx_scale(0,p)
-         call set_cms_stuff(0)
-         call set_FxFx_scale(2,p1_cnt(0,1,0))
-         call set_cms_stuff(-100)
-         call set_FxFx_scale(3,p)
+! The outer Born/real FxFx cache was never replaced by a native one.
+! Restore prefactors without another clustering or Sudakov evaluation.
+         factors=factors_save
+         mc_factors=mc_factors_save
+         pdf_factors=pdf_factors_save
+         call set_FxFx_scale(-3,p)
+      else
+         call compute_prefactors_n1body(vegas_wgt,jac_native)
+         if (MCSubtractionAtFixedFlow)
+     $        call include_born_flow_weight(born_flow_factor,
+     $        born_flow_factor)
       endif
       call set_cms_stuff(-100)
       call set_alphaS(p)
       calculatedBorn=.false.
-      need_matching_S=matching_save(:,1)
-      need_matching_H=matching_save(:,2)
       need_matching_cuts=matching_save(:,3)
       mc_H_only=.false.
       end
@@ -1515,6 +1545,7 @@ c Sum the contributions that can be summed before taking the ABS value
       use fks_phase_space_data, only: p_born,p1_cnt
       use scale_module, only: born_flow_picked,shower_scale_n1body,
      $     emsca_H,compute_shower_scale_n1body
+      use weight_lines, only: mc_H_only
       use process_module, only: ndelH,valid_dipole_n1
       use mc_counterterms, only: mc_shower_scale_mass,
      $     gfactsf,gfactcl,gfactazi
@@ -1566,7 +1597,13 @@ c Sum the contributions that can be summed before taking the ABS value
 ! point and coupling scale. get_mbar supplies its OWN flow fraction in
 ! the raw MC Born at the real coupling scale; do not multiply it twice.
       call set_cms_stuff(0)
-      if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
+      if (ickkw.eq.3) then
+         if (mc_H_only) then
+            call set_FxFx_scale(-3,p)
+         else
+            call set_FxFx_scale(-2,p1_cnt(0,1,0))
+         endif
+      endif
       call set_alphaS(p1_cnt(0,1,0))
       calculatedBorn=.false.
       call sborn_native(p_born,born_weight)
@@ -1605,7 +1642,10 @@ c Sum the contributions that can be summed before taking the ABS value
 ! all-flow Born dipole scales. Internal flows must not overwrite the
 ! saved H-event colours or draw a new shower starting scale.
          call init_process_module_n1body_flow(flow,.true.)
-         call compute_shower_scale_n1body(p,i_fks,j_fks,
+! Native FxFx H histories keep the outer ij shower scales, also when
+! summing their Born flows. Recomputing here would recluster per flow.
+         if (.not.(ickkw.eq.3.and.mc_H_only))
+     $        call compute_shower_scale_n1body(p,i_fks,j_fks,
      $        mc_shower_scale_mass())
          emsca_H(nFKSprocess,ifold_counter,:,:)=emsca_base
          call compute_native_NLOPS_weights(p,p_lab,p_cms,jacPS,
