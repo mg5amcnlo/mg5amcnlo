@@ -7,7 +7,8 @@ c**************************************************************************
       use FKSParams
       use process_module
       use scale_module
-      use weight_lines, only: rejected_born_flow_points
+      use weight_lines, only: rejected_born_flow_points,
+     $     rejected_mc_kinematics_points
       implicit none
 C
 C     CONSTANTS
@@ -315,6 +316,9 @@ c Randomly pick the contribution that will be written in the event file
       if(rejected_born_flow_points.gt.0)write(*,*)
      $     'Total phase-space points rejected for invalid Born flows:',
      $     rejected_born_flow_points
+      if(rejected_mc_kinematics_points.gt.0)write(*,*)
+     $     'Total phase-space points rejected for invalid MC kinematics:',
+     $     rejected_mc_kinematics_points
       if(i_momcmp_count.ne.0)then
         write(*,*)'     '
         write(*,*)'WARNING: genps_fks code 555555'
@@ -803,7 +807,7 @@ c "npNLO".
       endif
 
       fold=ifl
-! A failed colour draw invalidates the entire folded integration point.
+! A failed colour draw or MC map invalidates the entire folded point.
 ! Keep advancing fold counters, but never retain a later fold by itself.
       if(rejected_point)goto 900
       if (ifl.eq.0 .or. ifl.eq.1) then
@@ -1129,7 +1133,7 @@ c Sum the contributions that can be summed before taking the ABS value
       return
  900  continue
 ! Nothing from this point may enter integration, unweighting, or the
-! Born-spreading fit, including records made before the invalid draw.
+! Born-spreading fit, including records made before the failure.
       rejected_point=.true.
       icontr=0
       born_flow_picked=0
@@ -1146,6 +1150,7 @@ c Sum the contributions that can be summed before taking the ABS value
       subroutine repartition_MC_H(first_native,p,p_lab,p_cms,
      $     jacPS,vegas_wgt,sampling_wgt,born_flow_factor,outer_point,
      $     weights_valid)
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       use fks_phase_space_data,only: p_born,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt,xinorm_ev,
      $     p1_cnt,jac_cnt,ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
       use FKSParams, only: MCSubtractionAtFixedFlow
@@ -1164,7 +1169,8 @@ c Sum the contributions that can be summed before taking the ABS value
       use mc_native_context, only: set_native_history,
      $     native_mapping
       use weight_lines, only: icontr,H_event,wgt,event_nFKS,momenta,
-     $     momenta_m,y_bst,need_match,mc_H_only
+     $     momenta_m,y_bst,need_match,mc_H_only,
+     $     rejected_mc_kinematics_points
       use mint_module, only: iconfig
       use process_module, only: ndelH
       use fks_phase_space_helpers, only: apply_momentum_permutation,
@@ -1206,6 +1212,7 @@ c Sum the contributions that can be summed before taking the ABS value
       common/factor_n1body_NLOPS/mc_factors
       common/factor_pdfsch/pdf_factors
       logical cuts_born,cuts_real,passcuts,native_valid
+      character(len=48) rejection_reason
       double precision fks_Sij
       external fks_Sij,passcuts
       double precision born_weight
@@ -1316,7 +1323,11 @@ c Sum the contributions that can be summed before taking the ABS value
             stop 1
          endif
          call apply_momentum_permutation(MC_HIST_PERM(:,ihist),
-     $        p_lab,p_flipped)
+     $        p_lab,p_flipped,native_valid)
+         if (.not.native_valid) then
+            rejection_reason='invalid native MC momentum permutation'
+            goto 890
+         endif
 ! Sum the recoil histories as well as the FKS histories. A native FKS
 ! sector may have both production and decay Born diagrams; its own
 ! diagram partition supplies their weights at their Born projections.
@@ -1332,16 +1343,15 @@ c Sum the contributions that can be summed before taking the ABS value
      $           jac_native,native_valid)
             this_config=iconfig
             if (.not.native_valid) then
-               write (*,*) 'Invalid native MC H radiation projection',
-     $              owner,iFKS,ii,jj
-               stop 1
+               rejection_reason='invalid native MC H radiation projection'
+               goto 890
             endif
             native_measure=xinorm_ev*xi_i_fks_ev*jac_native*
      $           fkssymmetryfactor
-            if (native_measure.le.0d0) then
-               write (*,*) 'Invalid native MC H measure',
-     $              owner,iFKS,ii,jj,native_measure
-               stop 1
+            if (.not.ieee_is_finite(native_measure).or.
+     $           native_measure.le.0d0) then
+               rejection_reason='invalid native MC H measure'
+               goto 890
             endif
 
 ! Divide out the native real measure of the COMPLETE generated H weight
@@ -1434,8 +1444,28 @@ c Sum the contributions that can be summed before taking the ABS value
             enddo
          enddo
       enddo
+      goto 900
+ 890  continue
+! Drop the COMPLETE folded point, including earlier S and H records.
+! Do not keep a partial history sum when a native map is unreliable.
+      weights_valid=.false.
+      rejected_mc_kinematics_points=rejected_mc_kinematics_points+1
+      if(rejected_mc_kinematics_points.le.5.or.
+     $     mod(rejected_mc_kinematics_points,100).eq.0)then
+         write(*,*) 'Rejecting phase-space point: ',
+     $        trim(rejection_reason),'; count =',
+     $        rejected_mc_kinematics_points
+         write(*,*) 'Outer sector, history, native sector, i, j:',
+     $        owner,ihist,iFKS,ii,jj
+      endif
+      if(rejected_mc_kinematics_points.eq.1)then
+         write(*,*) 'Rejected outer lab momenta (E, px, py, pz):'
+         do i=1,nexternal
+            write(*,'(i4,4es26.17e3)') i,p_lab(:,i)
+         enddo
+      endif
  900  continue
-! Also restore the outer state after a failed native colour draw. The
+! Also restore the outer state after a failed native colour draw/map. The
 ! caller then discards every contribution from this integration point.
 ! Restore the outer channel and its generated phase-space point.
 ! The snapshot includes all endpoint and recoil data, so native

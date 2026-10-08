@@ -4,6 +4,7 @@ module flow_fixture
   double precision :: values(3)=[1d0,3d0,0d0],uniform=0.5d0,last_grid_weight=-1d0
   integer :: draws=0,born_calls=0,fail_native_fold=0
   logical :: real_point_active=.false.,born_cuts=.true.
+  logical :: fail_kinematics=.false.
 contains
   subroutine add_record(value)
     double precision :: value

@@ -66,9 +66,10 @@ program check_born_flow_rejection
     abrv='all'
     x=0.5d0
     call weight_lines_allocated(5,32,1,1)
-    if(trim(mode).eq.'native'.or.trim(mode).eq.'explicit')then
+    fail_kinematics=index(mode,'kinematics').eq.1
+    if(trim(mode).eq.'native'.or.trim(mode).eq.'explicit'.or.fail_kinematics)then
       fail_native_fold=2
-      if(trim(mode).eq.'explicit')FKSExplicitSum=.true.
+      if(trim(mode).eq.'explicit'.or.trim(mode).eq.'kinematics_exp')FKSExplicitSum=.true.
     else
       values(2)=nan
       select case(trim(mode))
@@ -98,7 +99,9 @@ program check_born_flow_rejection
     if(pass_cuts_check.or.real_point_active)error stop 'retained point/cache flags'
     if(last_grid_weight.ne.0d0)error stop 'nonzero adaptive weight after rejection'
     if(ifold_counter.ne.3)error stop 'lost folding position'
-    if(rejected_born_flow_points.ne.1)error stop 'counted rejected point more than once'
+    if(rejected_born_flow_points.ne.merge(0,1,fail_kinematics).or. &
+         rejected_mc_kinematics_points.ne.merge(1,0,fail_kinematics)) &
+         error stop 'counted rejected point more than once'
     ! The next point must be evaluated normally, with no stale records.
     values=[1d0,3d0,0d0]
     fail_native_fold=0
@@ -210,6 +213,11 @@ subroutine repartition_MC_H(first,p,pl,pc,jac,vw,sw,bf,point,valid)
   type(fks_phase_space_point),intent(in) :: point
   logical,intent(out) :: valid
   call add_record(4d0)
+  if(ifold_counter.eq.fail_native_fold.and.fail_kinematics)then
+    valid=.false.
+    rejected_mc_kinematics_points=rejected_mc_kinematics_points+1
+    return
+  endif
   if(ifold_counter.eq.fail_native_fold)values(2)=ieee_value(0d0,ieee_quiet_nan)
   call get_born_flow(flow,factor)
   valid=flow.ne.0

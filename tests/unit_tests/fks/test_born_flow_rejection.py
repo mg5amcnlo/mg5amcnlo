@@ -1,4 +1,4 @@
-"""Reject invalid colour proposals without retaining part of a folded point."""
+"""Reject invalid colours/kinematics without retaining part of a folded point."""
 
 from pathlib import Path
 import shutil
@@ -73,6 +73,12 @@ class TestBornFlowRejection(unittest.TestCase):
 
     def test_later_native_failure_discards_earlier_folds(self):
         self.check_mode('native')
+
+    def test_later_kinematic_failure_discards_earlier_folds(self):
+        self.check_mode('kinematics')
+
+    def test_kinematic_failure_with_explicit_outer_sum(self):
+        self.check_mode('kinematics_exp')
 
     def test_born_only_rejection(self):
         self.check_mode('born')

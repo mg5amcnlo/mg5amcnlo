@@ -9,6 +9,7 @@
          logical :: mc_H_only=.false.
          logical :: mc_S_only=.false.
          integer :: rejected_born_flow_points=0
+         integer :: rejected_mc_kinematics_points=0
          logical, allocatable :: H_event(:)
          integer, allocatable :: itype(:),nFKS(:),QCDpower(:),pdg(:,:)
      $        ,pdg_uborn(:,:),parton_pdg_uborn(:,:,:),parton_pdg(:,:,:)
