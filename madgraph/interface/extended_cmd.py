@@ -2032,7 +2032,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 to_write.remove(key)
             except Exception:
                 pass
-            if '_path' in key:       
+            if '_path' in key or '-config' in key or key in ['fastjet', 'lhapdf', 'lhapdf_py3', 'f2py_compiler', 'f2py_compiler_py3']:       
                 # special case need to update path
                 # check if absolute path
                 if not os.path.isabs(value):

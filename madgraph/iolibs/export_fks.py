@@ -281,6 +281,16 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                  'Source','make_opts.inc')).read()  
         replace_dict={}
         replace_dict['link_tir_libs']=' '.join(link_tir_libs)
+        if 'collier' in replace_dict['link_tir_libs']:
+            collierpath = ''
+            for lib in link_tir_libs:
+                if '-lcollier' in lib:
+                    collierpath = lib.split()[0][2:]
+                    break
+            if collierpath:
+                replace_dict['link_tir_libs'] = ' -Wl,-rpath,%s %s ' % (collierpath, replace_dict['link_tir_libs'])
+        #raise Exception
+
         replace_dict['tir_libs']=' '.join(tir_libs)
         replace_dict['dotf']='%.f'
         replace_dict['doto']='%.o'

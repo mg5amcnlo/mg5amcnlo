@@ -205,7 +205,7 @@ class TestMadSpin(unittest.TestCase):
         nb_dec = 0
         nb_notdec = 0 
         nb_muon = 0
-        pol = {0:0, -1:0,1:0}
+        pol = {0:0, -1:0,1:0, 9:9}
         for event in lhe:
             muon_in = 0
             self.assertEqual(event.nexternal, len(event))

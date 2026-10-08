@@ -928,6 +928,7 @@ class AbstractALOHAModel(dict):
         
         for lor in lorentzlist:
             if not hasattr(self.model.lorentz, lor.name):
+                self.model.all_lorentz.append(lor)
                 setattr(self.model.lorentz, lor.name, lor)
     
     def compute_subset(self, data):

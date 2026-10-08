@@ -474,8 +474,8 @@ c-----
       write(outUnit,*) '<n_evals>'//trim(toStr_int(N_EVALS))//'</n_evals>'   
       write(outUnit,*) '</run_statistics>'
       
-33    FORMAT( a15,i12,',',i12',',i12',',i12',',i12',
-     &        ',i12',',i12',',i12',',i12',',i12,a16)
+33    FORMAT( a15,i12,',',i12,',',i12,',',i12,',',i12,',
+     &        ',i12,',',i12,',',i12,',',i12,',',i12,a16)
 
       end subroutine
 

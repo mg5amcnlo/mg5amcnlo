@@ -674,7 +674,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'cluster_status_update': (600, 30),
                        'cluster_nb_retry':1,
                        'cluster_local_path': None,
-                       'cluster_retry_wait':300}
+                       'cluster_retry_wait':300,
+                       'heptools_install_dir': pjoin(root_path,'HEPTools'),}
 
     options_madgraph= {'stdout_level':None}
 
@@ -708,7 +709,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             self.me_dir = pjoin(os.getcwd(),me_dir)
             
-        self.options = options
+        self.options = dict(options)
         
         self.param_card_iterator = [] #an placeholder containing a generator of paramcard for scanning
 
@@ -749,8 +750,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             self.ninitial = self.proc_characteristics['ninitial']
 
-    def make_make_all_html_results(self, folder_names = [], jobs=[]):
-        return sum_html.make_all_html_results(self, folder_names, jobs)
+    def make_make_all_html_results(self, folder_names = [], jobs=[], get_attr=None):
+        return sum_html.make_all_html_results(self, folder_names, jobs, get_attr)
 
 
     def write_RunWeb(self, me_dir):
@@ -7328,7 +7329,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if card in self.modified_card:
                 self.write_card(card)
                 self.modified_card.discard(card)
-                
+            elif os.path.basename(card.replace('_card.dat','')) in self.modified_card:
+                self.write_card(os.path.basename(card.replace('_card.dat','')))
+                self.modified_card.discard(os.path.basename(card.replace('_card.dat','')))
+                card = os.path.basename(card.replace('_card.dat',''))
+
             if card in self.paths:
                 path = self.paths[card]
             elif os.path.exists(card):
@@ -7355,6 +7360,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(pos, newline)
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:BOLD')
                 self.last_editline_pos = pos
             elif args[1].startswith('--line_position='):
@@ -7366,6 +7372,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(pos, newline)
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,2)[2] ),'$MG:BOLD')
                 self.last_editline_pos = pos
                 
@@ -7373,12 +7380,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 # write the line at the first not commented line
                 text = open(path).read()
                 split = text.split('\n')
+                posline = -1
                 for posline,l in  enumerate(split):
                     if not l.startswith('#'):
                         break
                 split.insert(posline, line.split(None,2)[2])
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
                 logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:BOLD')
                 self.last_editline_pos = posline
                 
@@ -7389,6 +7398,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split = text.split('\n')
                 search_pattern=r'''replace_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = r'^\s*' + re.search(search_pattern, line).group()[14:-1]
+                posline = -1
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break
@@ -7401,13 +7411,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 # need to check if the a fail savety is present
                 new_line = re.split(search_pattern,line)[-1].strip()
                 if new_line.startswith(('--before_line=','--after_line')):
-                    search_pattern=r'''(?:before|after)_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
+                    search_pattern=r'''(?:before|after)_line=(?P<quote>["']?)(?:(?=(\\?))\2.)*?\1'''
                     new_line = re.split(search_pattern,new_line)[-1]
                 # overwrite the previous line
                 old_line = split[posline]
                 split[posline] = new_line
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
                 logger.info("Replacing the line \"%s\" [line %d of %s] by \"%s\"" %
                          (old_line, posline, card, new_line ),'$MG:BOLD') 
                 self.last_editline_pos = posline               
@@ -7420,6 +7431,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 search_pattern=r'''comment_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = r'^\s*' + re.search(search_pattern, line).group()[14:-1]
                 nb_mod = 0
+                posline = -1
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         split[posline] = '#%s' % l
@@ -7431,6 +7443,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.warning('no line commented (no line matching)')
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
 
                 self.last_editline_pos = posline               
 
@@ -7441,6 +7454,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split = text.split('\n')
                 search_pattern=r'''before_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = r'^\s*' + re.search(search_pattern, line).group()[13:-1]
+                posline = -1
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break
@@ -7449,7 +7463,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline, re.split(search_pattern,line)[-1])
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,2)[2] ),'$MG:BOLD')                
+                ff.close()
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, re.split(search_pattern,line)[-1] ),'$MG:BOLD')                
                 self.last_editline_pos = posline
                                 
             elif args[1].startswith('--after_line='):
@@ -7458,6 +7473,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split = text.split('\n')
                 search_pattern = r'''after_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
                 pattern = r'^\s*' + re.search(search_pattern, line).group()[12:-1]
+                posline = -1
                 for posline,l in enumerate(split):
                     if re.search(pattern, l):
                         break
@@ -7466,8 +7482,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline+1, re.split(search_pattern,line)[-1])
                 ff = open(path,'w')
                 ff.write('\n'.join(split))
+                ff.close()
 
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline+1, card, line.split(None,2)[2] ),'$MG:BOLD')                                 
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline+1, card, re.split(search_pattern,line)[-1] ),'$MG:BOLD')                                 
                 self.last_editline_pos = posline+1
                                                  
             else:

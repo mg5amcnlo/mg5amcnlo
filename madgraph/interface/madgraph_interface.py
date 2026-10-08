@@ -172,7 +172,7 @@ class CmdExtended(cmd.Cmd):
         "*                                                          *\n" + \
         "%s" + \
         "*                                                          *\n" + \
-        "*                based on default MG5 (3.5.7)              *\n" + \
+        "*                based on default MG5 (3.5.16)             *\n" + \
         "*                                                          *\n" + \
         "*                                                          *\n" + \
         "*              http://madgraph.phys.ucl.ac.be/             *\n" + \
@@ -1483,6 +1483,8 @@ This will take effect only in a NEW terminal
                         config_dir = legacy_config_dir
                     else:
                         config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+                        if not os.path.exists(config_dir):
+                            os.makedirs(config_dir)
 
                     config_file = os.path.join(config_dir, 'mg5_configuration.txt')
                     args.remove('global')
@@ -3000,6 +3002,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'auto_convert_model': True,
                        'acknowledged_v3.1_syntax': False,
                        'auto_update':7,
+                       'heptools_install_dir': './HEPTools',
                        }
 
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -6029,7 +6032,7 @@ This implies that with decay chains:
             compiler_options.append('--fortran_compiler=%s'%
                                                self.options['fortran_compiler'])
 
-        if 'heptools_install_dir' in self.options:
+        if  self.options['heptools_install_dir']:
             prefix = self.options['heptools_install_dir']
             legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
 
@@ -6037,6 +6040,8 @@ This implies that with decay chains:
                 config_dir = legacy_config_dir
             else:
                 config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
+                if not os.path.exists(config_dir):
+                    os.makedirs(config_dir)
 
             config_file = os.path.join(config_dir, 'mg5_configuration.txt')
         else:
@@ -6056,7 +6061,7 @@ This implies that with decay chains:
                 logger.warning("==========")
             if self.options['pythia8_path']:
                 add_options.append(
-                               '--with_pythia8=%s'%self.options['pythia8_path'])
+                               '--with_pythia8=%s'%os.path.abspath(self.options['pythia8_path']))
 
         # Special rules for certain tools
         if tool in ['madanalysis5', 'rivet']:
@@ -6074,7 +6079,7 @@ This implies that with decay chains:
                 add_options.append('--with_delphes3=%s'%\
                    os.path.normpath(pjoin(MG5DIR,self.options['delphes_path'])))
 
-        if tool=='pythia8':
+        if tool in ['pythia8','eMELA']:
             # All what's below is to handle the lhapdf dependency of Pythia8
             lhapdf_config  = misc.which(self.options['lhapdf'])
             lhapdf_version = None
@@ -6107,11 +6112,11 @@ This implies that with decay chains:
                 lhapdf_path = os.path.abspath(pjoin(os.path.dirname(\
                                                  lhapdf_config),os.path.pardir))
             if lhapdf_version is None:
-                logger.warning('You decided not to link the Pythia8 installation'+
+                logger.warning('You decided not to link the '+ tool + ' installation'+
                   ' to LHAPDF. Beware that only built-in PDF sets can be used then.')
             else:
-                logger.info('Pythia8 will be linked to LHAPDF v%d.'%lhapdf_version)
-            logger.info('Now installing Pythia8. Be patient...','$MG:color:GREEN')
+                logger.info(tool + 'will be linked to LHAPDF v%d.'%lhapdf_version)
+            logger.info('Now installing' + tool + '. Be patient...','$MG:color:GREEN')
             lhapdf_option = []
             if lhapdf_version is None:
                 lhapdf_option.append('--with_lhapdf6=OFF')
@@ -6131,7 +6136,7 @@ This implies that with decay chains:
             add_options = [opt for opt in add_options if opt!='--force']+\
                         (['--force'] if '--force' in add_options else [])
             return_code = misc.call([sys.executable, pjoin(MG5DIR,'HEPTools',
-             'HEPToolsInstallers','HEPToolInstaller.py'),'pythia8',
+             'HEPToolsInstallers','HEPToolInstaller.py'), tool,
              '--prefix=%s' % prefix]
                         + lhapdf_option + compiler_options + add_options)
         else:
@@ -6206,7 +6211,7 @@ This implies that with decay chains:
                 self.exec_cmd('save options %s lhapdf_py2' % config_file)
                 self.options['lhapdf'] = self.options['lhapdf_py2']
         elif tool == 'eMELA':
-            self.options['eMELA'] = pjoin(prefix,'EMELA','bin', 'eMELA-config')
+            self.options['eMELA'] = pjoin(prefix,'bin', 'eMELA-config')
             self.exec_cmd('save options %s eMELA' % config_file)
         elif tool == 'lhapdf5':
             self.options['lhapdf'] = pjoin(prefix,'lhapdf5','bin', 'lhapdf-config')
@@ -7218,7 +7223,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 if os.path.exists(legacy_config_dir):
                     config_dir = legacy_config_dir
                 else:
-                    config_dir = os.getenv('XDG_STATE_HOME', os.path.join(os.environ['HOME'], '.local', 'state'))
+                    config_dir = os.getenv('XDG_STATE_HOME', os.path.join(os.environ['HOME'], '.config'))
 
                 config_path = os.path.join(config_dir, "mg5_configuration.txt")
 
@@ -7722,7 +7727,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 filepath = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
             
             basedir = MG5DIR
-            if partial_save:
+            if partial_save and os.path.exists(filepath):
                 basefile = filepath
             else:
                 basefile = pjoin(MG5DIR, 'input', '.mg5_configuration_default.txt')
@@ -8123,6 +8128,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if not self.history or self.history[-1].split() != line.split():
                 self.history.append('set %s' % line)
                 self.avoid_history_duplicate('set %s' % args[0], ['define', 'set'])
+
         return stop
 
     def do_open(self, line):
@@ -8866,8 +8872,12 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 me_cmd.exec_cmd('survey decay -f %s' % (
                        " ".join(['--%s=%s' % val for val in me_opts])),
                       postcmd=False)
-                me_cmd.exec_cmd('combine_events', postcmd=False)
-                #me_cmd.exec_cmd('store_events', postcmd=False)
+                try:
+                    me_cmd.exec_cmd('combine_events', postcmd=False)
+                    me_cmd.exec_cmd('store_events', postcmd=False)
+                except Exception as err:
+                    logger.debug(str(err))
+
                 me_cmd.collect_decay_widths()
                 me_cmd.do_quit('')
                 # cleaning

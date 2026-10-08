@@ -7,8 +7,9 @@
 # Check for ../make_opts
 ifeq ($(wildcard ../make_opts), ../make_opts)
   include ../make_opts
+  FFLAGS+= -fPIC
 else
-  FFLAGS+= -ffixed-line-length-132
+  FFLAGS+= -fPIC -ffixed-line-length-132
   FC=gfortran
 endif
 
@@ -16,6 +17,7 @@ include makeinc.inc
 
 LIBDIR=../../lib/
 LIBRARY=libmodel.$(libext)
+LIBRARY_SHARED=libmodel.$(dylibext)
 
 all: $(LIBDIR)$(LIBRARY)
 
@@ -32,6 +34,10 @@ $(LIBRARY): $(MODEL)
 $(LIBDIR)$(LIBRARY): $(MODEL)
 	$(call CREATELIB, $@, $^)
 
+$(LIBDIR)$(LIBRARY_SHARED): $(MODEL)
+	$(FC) -shared -o $@ $^ $(LDFLAGS)
+
+shared: $(LIBDIR)$(LIBRARY_SHARED)
 clean: 
 	$(RM) *.o $(LIBDIR)$(LIBRARY)
 

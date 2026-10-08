@@ -631,13 +631,22 @@ class MadSpinInterface(extended_cmd.Cmd):
     
         args = self.split_arg(line)
         self.check_launch(args)
-        for part in self.list_branches.keys():
+        for part in list(self.list_branches.keys()):
             if part in self.mg5cmd._multiparticles:
-            
                 if any(pid in self.final_state for pid in self.mg5cmd._multiparticles[part]):
                     break
             else:
-                pid = self.mg5cmd._curr_model.get('name2pdg')[part]
+                try:
+                    pid = self.mg5cmd._curr_model.get('name2pdg')[part]
+                except KeyError:
+                    pid = self.mg5cmd._curr_model.get('name2pdg')[part.lower()]
+                    self.list_branches[part.lower()] = self.list_branches[part]
+                    del self.list_branches[part]
+                    particle = self.mg5cmd._curr_model.get_particle(pid)
+                    if particle.get('antiname').upper() in self.list_branches:
+                        self.list_branches[particle.get('antiname').lower()] = \
+                            self.list_branches[particle.get('antiname').upper()]
+                        del self.list_branches[particle.get('antiname').upper()]
                 if pid in self.final_state:
                     break
         else:
@@ -1466,7 +1475,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 #check if a splitting is needed
                 if nb_needed == nb_event:
                     nb_needed = int(efficiency*nb_needed) + nevents_for_max   
-                    evt_decayfile[pdg], pwidth = self.generate_events(pdg, nb_needed, mg5, output_width=True)
+                    evt_decayfile[pdg], pwidth = self.generate_events(pdg, nb_needed, mg5, output_width=True, cumul=True)
                     if pwidth > 1.01*totwidth:
                         logger.warning('partial width (%s) larger than total width (%s) --from param_card--', pwidth, totwidth)
                     elif pwidth > totwidth:
@@ -1746,7 +1755,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if event[0].color1 == 599 and event.aqcd==0:
                     new_value = self.all_f2py[pdir](p, 0.113, 0)
                 else:
-                    new_value = self.all_f2py[pdir](p, event.aqcd, 0)
+                    new_value = self.all_f2py[pdir](p, event.aqcd, event.scale, -1)
                 if self.options['identical_particle_in_prod_and_decay'] == "average":
                     out += new_value
                 else:
@@ -1761,22 +1770,37 @@ class MadSpinInterface(extended_cmd.Cmd):
         else:
             if sys.path[0] != pjoin(self.path_me, 'madspin_me', 'SubProcesses'):
                 sys.path.insert(0, pjoin(self.path_me, 'madspin_me', 'SubProcesses'))
-            
-            mymod = __import__("%s.matrix2py" % (pdir))
-            if six.PY3:
-                from importlib import reload
-            else:
-                from imp import reload
-            reload(mymod)
-            mymod = getattr(mymod, 'matrix2py')  
+
+            mymod = __import__('all_matrix2py')
+            #if mymod.__path__[0] != pjoin(self.path_me, 'madspin_me', 'SubProcesses'):
+            #    from importlib import reload
+            #    mymod = reload(mymod)
+
+            #if Rpath linking is not working the below code can be an alternative:
+            #import ctypes
+            #exts = ['so','dylib','dll'] 
+            #for ext in exts:
+            #    me_library = pjoin(self.path_me, 'madspin_me', 'SubProcesses', pdir, 'libme%s.%s' % (pdir, ext))
+            #    if os.path.exists(me_library):
+            #        break
+            # ctypes.CDLL(me_library)
+
+            #with misc.chdir(pjoin(self.path_me, 'madspin_me', 'SubProcesses')):
+            #    #misc.compile(['matrix2py.so'], cwd=pdir)                
+            #    mymod = __import__("%s.allmatrix2py" % pdir)
+            #    from importlib import reload
+            #    reload(mymod)
+
+            #mymod = getattr(mymod, 'matrix2py')  
             with misc.chdir(pjoin(self.path_me, 'madspin_me', 'SubProcesses', pdir)):
                 with misc.stdchannel_redirected(sys.stdout, os.devnull):
                     if not os.path.exists(pjoin(self.path_me, 'Cards','param_card.dat')) and \
                             os.path.exists(pjoin(self.path_me,'param_card.dat')):
-                        mymod.initialisemodel(pjoin(self.path_me,'param_card.dat'))
+                        mymod.initialise(pjoin(self.path_me,'param_card.dat'))
                     else:
-                        mymod.initialisemodel(pjoin(self.path_me, 'Cards','param_card.dat'))
-            self.all_f2py[pdir] = mymod.get_value 
+                        mymod.initialise(pjoin(self.path_me, 'Cards','param_card.dat'))
+            pdg = list(orig_order[0]) + list(orig_order[1])
+            self.all_f2py[pdir] = lambda *args : mymod.smatrixhel(pdg, 0, *args)
             return self.calculate_matrix_element(event)
         
         

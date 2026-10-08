@@ -383,7 +383,6 @@ c
       fopened=.false.
       tempname=filename 	 
       fine=index(tempname,' ') 	 
-      fine2=index(path,' ')-1	 
       if(fine.eq.0) fine=len(tempname)
       open(unit=lun,file=tempname,status='old',ERR=20)
       fopened=.true.

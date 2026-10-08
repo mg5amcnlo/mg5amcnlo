@@ -41,13 +41,13 @@ c$$$      write (*,'(a)') 'Enter "0" for local run, "1" for condor cluster'
                write (*,*) mode(1:lmode),graph
                call open_bash_file(26)
                if (graph .lt. 10) then
-                  write(26,'(i1$)') graph
+                  write(26,'(i1,$)') graph
                elseif (graph .lt. 100) then
-                  write(26,'(i2$)') graph
+                  write(26,'(i2,$)') graph
                elseif (graph .lt. 1000) then
-                  write(26,'(i3$)') graph
+                  write(26,'(i3,$)') graph
                elseif (graph .lt. 10000) then
-                  write(26,'(i4$)') graph
+                  write(26,'(i4,$)') graph
                endif
                call close_bash_file(26)
             endif
@@ -112,7 +112,7 @@ c-----
          write(lun,15) 'rm -f wait.$script >& /dev/null'
          write(lun,15) 'touch run.$script'
          write(lun,15) 'echo $script'
-         write(lun,'(a$)') 'for i in '
+         write(lun,'(a,$)') 'for i in '
       elseif(run_cluster.eq.1) then
          write(lun,15) '#!/bin/bash'
          write(lun,15) 'if [ -n "$_CONDOR_SCRATCH_DIR" ]; then'
@@ -148,7 +148,7 @@ c         write(lun,15) 'cd ../../'
          write(lun,15) "fi"
 
          write(lun,15) 'cd SubProcesses'
-         write(lun,'(a$)') 'for i in '
+         write(lun,'(a,$)') 'for i in '
       endif
 
       if (run_cluster.eq.1) then

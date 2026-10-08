@@ -1,17 +1,8 @@
-
 from __future__ import absolute_import
+from __future__ import print_function
 from six.moves import range
 __date__ = "3 june 2010"
 __author__ = 'olivier.mattelaer@uclouvain.be'
-
-if __name__ == '__main__':
-    import os, sys
-    sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-    print(os.path.basename(os.path.dirname(__file__)))
-    __package__ = os.path.basename(os.path.dirname(__file__))
-
-
-from .function_library import *
 
 class ParamCardWriter(object):
     
@@ -24,7 +15,7 @@ class ParamCardWriter(object):
         """write a valid param_card.dat"""
         
         if not list_of_parameters:
-            from .parameters import all_parameters
+            from parameters import all_parameters
             list_of_parameters = [param for param in all_parameters if \
                                                        param.nature=='external']
         
@@ -41,7 +32,7 @@ class ParamCardWriter(object):
     def define_not_dep_param(self, list_of_parameters):
         """define self.dep_mass and self.dep_width in case that they are 
         requested in the param_card.dat"""
-        from .particles import all_particles
+        from particles import all_particles
         
         self.dep_mass = [(part, part.mass) for part in all_particles \
                             if part.pdg_code > 0 and \
@@ -120,18 +111,18 @@ class ParamCardWriter(object):
         else:
             text = '''DECAY %s %e \n''' % (lhacode, complex(param.value).real)
         self.fsock.write(text) 
-                    
-
-
-    
+        
     def write_dep_param_block(self, lhablock):
         import cmath
-        from .parameters import all_parameters
+        from parameters import all_parameters
+        
+        local_vars = {}
         for parameter in all_parameters:
             try:
-                exec("%s = %s" % (parameter.name, parameter.value))
+                exec("%s = %s" % (parameter.name, parameter.value), {"cmath": cmath}, local_vars)
             except Exception:
                 pass
+        
         text = "##  Not dependent paramater.\n"
         text += "## Those values should be edited following analytical the \n"
         text += "## analytical expression. Some generator could simply ignore \n"
@@ -143,15 +134,16 @@ class ParamCardWriter(object):
         else:
             data = self.dep_width
             prefix = "DECAY "
+        
         for part, param in data:
             if isinstance(param.value, str):
-                value = complex(eval(param.value)).real
+                value = complex(eval(param.value, {"cmath": cmath}, local_vars)).real
             else:
                 value = param.value
             
-            text += """%s %s %f # %s : %s \n""" %(prefix, part.pdg_code, 
+            text += """%s %s %f # %s : %s \n""" % (prefix, part.pdg_code,
                         value, part.name, param.value)
-        self.fsock.write(text)    
+        self.fsock.write(text) 
     
     sm_pdg = [1,2,3,4,5,6,11,12,13,13,14,15,16,21,22,23,24,25]
     data="""Block QNUMBERS %(pdg)d  # %(name)s 
@@ -162,7 +154,7 @@ class ParamCardWriter(object):
     
     def write_qnumber(self):
         """ write qnumber """
-        from .particles import all_particles
+        from particles import all_particles
         
         text="""#===========================================================\n"""
         text += """# QUANTUM NUMBERS OF NEW STATE(S) (NON SM PDG CODE)\n"""

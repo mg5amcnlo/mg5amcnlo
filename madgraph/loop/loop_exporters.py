@@ -293,104 +293,16 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         os.chmod(output_path, os.stat(output_path).st_mode | stat.S_IEXEC)
        
     
+    f2py_matrix_splitter_template = pjoin(os.pardir,"loop", "f2py_wrapper_subproccesses.f")
+    all_matrix_template = pjoin(os.pardir, "loop", "all_matrix.f")
     def write_f2py_splitter(self):
         """write a function to call the correct matrix element"""
-        
-        template = """
-%(python_information)s
 
-      SUBROUTINE INITIALISE(PATH)
-C     ROUTINE FOR F2PY to read the benchmark point.
-      IMPLICIT NONE
-      CHARACTER*512 PATH
-CF2PY INTENT(IN) :: PATH
-      CALL SETPARA(PATH)  !first call to setup the paramaters
-      RETURN
-      END
+        template_matrix = open(os.path.join(self.template_dir,
+                                            self.all_matrix_template)).read()
+        template_f2py = open(os.path.join(self.template_dir,
+                                         self.f2py_matrix_splitter_template)).read()
 
-      subroutine CHANGE_PARA(name, value)
-      implicit none
-CF2PY intent(in) :: name
-CF2PY intent(in) :: value
-
-      character*512 name
-      double precision value
-
-      include '../Source/MODEL/input.inc'
-      include '../Source/MODEL/coupl.inc'
-      include '../Source/MODEL/mp_coupl.inc'
-      include '../Source/MODEL/mp_input.inc'
-      
-      SELECT CASE (name)   
-         %(parameter_setup)s
-         CASE DEFAULT
-            write(*,*) 'no parameter matching', name
-      END SELECT
-
-      return
-      end
-      
-    subroutine update_all_coup()
-    implicit none
-     call coup()
-     call printout()
-    return 
-    end
-
-
-      SUBROUTINE SET_MADLOOP_PATH(PATH)
-C     Routine to set the path of the folder 'MadLoop5_resources' to MadLoop
-        CHARACTER(512) PATH
-CF2PY intent(in)::path
-        CALL SETMADLOOPPATH(PATH)
-      END
-
-  subroutine smatrixhel(pdgs, procid, npdg, p, ALPHAS, SCALES2, nhel, ANS, RETURNCODE)
-  IMPLICIT NONE
-
-CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
-CF2PY integer, intent(in), dimension(npdg) :: pdgs
-CF2PY integer, intent(in):: procid
-CF2PY integer, intent(in) :: npdg
-CF2PY double precision, intent(out) :: ANS
-CF2PY integer, intent(out) :: RETURNCODE
-CF2PY double precision, intent(in) :: ALPHAS
-CF2PY double precision, intent(in) :: SCALES2
-
-  integer pdgs(*)
-  integer npdg, nhel, RETURNCODE, procid
-  double precision p(*)
-  double precision ANS, ALPHAS, PI,SCALES2
- 1 continue
-%(smatrixhel)s
-
-      return
-      end
-  
-  subroutine get_pdg_order(OUT, ALLPROC)
-  IMPLICIT NONE
-CF2PY INTEGER, intent(out) :: OUT(%(nb_me)i,%(maxpart)i)  
-CF2PY INTEGER, intent(out) :: ALLPROC(%(nb_me)i)
-  INTEGER OUT(%(nb_me)i,%(maxpart)i), PDGS(%(nb_me)i,%(maxpart)i)
-  INTEGER ALLPROC(%(nb_me)i),PIDs(%(nb_me)i)
-  DATA PDGS/ %(pdgs)s /
-  DATA PIDS/ %(pids)s /
-  OUT=PDGS
-  ALLPROC = PIDS
-  RETURN
-  END
-  
-  subroutine get_prefix(PREFIX)
-  IMPLICIT NONE
-CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
-  character*20 PREFIX(%(nb_me)i),PREF(%(nb_me)i)
-  DATA PREF / '%(prefix)s'/
-  PREFIX = PREF
-  RETURN
-  END 
-  
-        """
-         
         allids = list(self.prefix_info.keys())
         allprefix = [self.prefix_info[key][0] for key in allids]
         min_nexternal = min([len(ids[0]) for ids in allids])
@@ -450,12 +362,15 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
                       }
     
     
-        text = template % formatting
+        text = template_matrix % formatting
         fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'all_matrix.f'),'w')
         fsock.writelines(text)
         fsock.close()
         
-    
+        text = template_f2py % formatting
+        fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'f2py_wrapper.f'),'w')
+        fsock.writelines(text)
+        fsock.close()
     
     def loop_additional_template_setup(self, copy_Source_makefile = True):
         """ Perform additional actions specific for this class when setting
@@ -547,11 +462,20 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         replace_dict={}
         replace_dict['link_tir_libs']=' '.join(link_tir_libs)
         replace_dict['tir_libs']=' '.join(tir_libs)
+        tir_libs = tir_libs[:]
+        tir_libs = [lib for lib in tir_libs if 'iregi' not in lib.lower()]
+        dylibs =' '.join(tir_libs).replace('ninja.$(libext)', 'ninja.$(dylibext)') 
+        dylibs = dylibs.replace('collier.$(libext)', 'collier.$(dylibext)')
+        replace_dict['tir_dylibs'] = dylibs
         replace_dict['dotf']='%.f'
-        replace_dict['prefix']= self.SubProc_prefix
-        replace_dict['doto']='%.o'
-        replace_dict['tir_include']=' '.join(tir_include)
-        file=file%replace_dict
+        replace_dict['prefix'] = self.SubProc_prefix
+        replace_dict['doto'] = '%.o'
+        replace_dict['tir_include'] = ' '.join(tir_include)
+        replace_dict['rpaths_libs'] = ''
+        for lib in tir_libs:
+            replace_dict['rpaths_libs'] += '-Wl,-rpath,%s '%os.path.dirname(lib)    
+
+        file = file % replace_dict
         if writer:
             writer.writelines(file)
         else:

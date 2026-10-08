@@ -1265,9 +1265,9 @@ class AskRunNLO(cmd.ControlSwitch):
             return
          
         if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
-            self.switch['shower'] = self.run_card['parton_shower']  
-            #self.switch['shower'] = 'ON'
-            self.switch['fixed_order'] = "OFF"
+            if 'OFF' in self.get_allowed_fixed_order():
+                self.switch['shower'] = self.run_card['parton_shower']  
+                self.switch['fixed_order'] = "OFF"
 
 
     def consistency_shower_madanalysis(self, vshower, vma5):
@@ -2803,8 +2803,8 @@ RESTART = %(mint_mode)s
             err+= math.pow(job['error'],2)*job['wgt_frac']
         if jobs:
             content.append('\nTotal ABS and \nTotal: \n                      %10.8e +- %6.4e  (%6.4e%%)\n                      %10.8e +- %6.4e  (%6.4e%%) \n' %\
-                           (totABS, math.sqrt(errABS), math.sqrt(errABS)/totABS *100.,\
-                            tot, math.sqrt(err), math.sqrt(err)/tot *100.))
+                           (totABS, math.sqrt(errABS), math.sqrt(errABS)/totABS *100.  if totABS !=0. else 100.,\
+                            tot, math.sqrt(err), math.sqrt(err)/tot *100. if tot !=0. else 100.))
         with open(pjoin(self.me_dir,'SubProcesses','res_%s.txt' % integration_step),'w') as res_file:
             res_file.write('\n'.join(content))
         randinit=self.get_randinit_seed()
@@ -4018,6 +4018,8 @@ RESTART = %(mint_mode)s
                 files.ln(pjoin(self.options['pythia8_path'], 'xmldoc'), rundir)
             else: # this is PY8.2xxx
                 files.ln(pjoin(self.options['pythia8_path'], 'share/Pythia8/xmldoc'), rundir)
+                files.ln(pjoin(self.options['pythia8_path'], 'share/Pythia8/tunes'), rundir)
+
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
@@ -5021,6 +5023,8 @@ RESTART = %(mint_mode)s
                     input_files.append(pjoin(self.options['pythia8_path'], 'xmldoc'))
                 else:
                     input_files.append(pjoin(self.options['pythia8_path'], 'share/Pythia8/xmldoc'))
+                if os.path.exists(pjoin(self.options['pythia8_path'], 'share', 'Pythia8', 'tunes')):
+                    input_files.append(pjoin(self.options['pythia8_path'], 'share', 'Pythia8', 'tunes'))
             else:
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_EXE' % shower))
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_input' % shower))
@@ -5342,7 +5346,7 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
                 logger.warning('https://answers.launchpad.net/mg5amcnlo/+faq/3324')
 
                 # this is if the PDFs from ePDF/eMELA are employed
-                self.make_opts_var['epdf'] = self.options['eMELA']
+                self.make_opts_var['epdf'] = os.path.abspath(self.options['eMELA'])
                 self.update_make_opts()
                 # link the LHAPDF libraries, but unset the corresponding keys in make_opts
                 self.link_lhapdf(libdir)

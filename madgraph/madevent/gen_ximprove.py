@@ -1468,6 +1468,7 @@ class gen_ximprove_v4(gen_ximprove):
                     'precision': yerr/math.sqrt(nb_split)/(C.get('xsec')+ yerr),
                     'nhel': self.run_card['nhel'],
                     'channel': C.name.replace('G',''),
+                    #'base_directory': C.name if self.keep_grid_for_refine else '',  
                     'grid_refinment' : 1
                     }
 

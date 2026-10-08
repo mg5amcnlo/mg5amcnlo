@@ -829,8 +829,8 @@ class TestRunCard(unittest.TestCase):
         f.write("c .   this is a comment to test feature of missing end line ")
         run_card.write_autodef(None,output_file=f)
         self.assertIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
-        self.assertIn("C START USER COMMON BLOCK", f.getvalue())
-        self.assertIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     START USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     STOP USER COMMON BLOCK", f.getvalue())
         self.assertIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
         self.assertIn("COMMON/USER_CUSTOM_RUN/include_pdf", f.getvalue()) #no automatic formatting due to iostring for unittest
 
@@ -839,8 +839,8 @@ class TestRunCard(unittest.TestCase):
         run_card.write_autodef(None,output_file=f)
         self.assertIn("CHARACTER INCLUDE_PDF(0:100)", f.getvalue())
         self.assertIn("LOGICAL INCLUDE_PDF2", f.getvalue())
-        self.assertIn("C START USER COMMON BLOCK", f.getvalue())
-        self.assertIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     START USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     STOP USER COMMON BLOCK", f.getvalue())
         self.assertIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
         # order of the two variable within the common block is not important
         if "COMMON/USER_CUSTOM_RUN/include_pdf," in f.getvalue():
@@ -857,8 +857,8 @@ class TestRunCard(unittest.TestCase):
         self.assertIn("LOGICAL INCLUDE_PDF2", f.getvalue())
         self.assertIn("INTEGER TEST_LIST(0:5)", f.getvalue())
         # check common block part
-        self.assertIn("C START USER COMMON BLOCK", f.getvalue())
-        self.assertIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     START USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     STOP USER COMMON BLOCK", f.getvalue())
         self.assertIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
         if "COMMON/USER_CUSTOM_RUN/include_pdf2," in f.getvalue():
             self.assertIn("COMMON/USER_CUSTOM_RUN/include_pdf2,test_list", f.getvalue())
@@ -873,8 +873,8 @@ class TestRunCard(unittest.TestCase):
         self.assertNotIn("INTEGER TEST_LIST(0:5)", f.getvalue())
         self.assertIn("INTEGER TEST_LIST(0:7)", f.getvalue())
         # check common block part
-        self.assertIn("C START USER COMMON BLOCK", f.getvalue())
-        self.assertIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     START USER COMMON BLOCK", f.getvalue())
+        self.assertIn("C     STOP USER COMMON BLOCK", f.getvalue())
         self.assertIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
         if "COMMON/USER_CUSTOM_RUN/include_pdf2," in f.getvalue():
             self.assertIn("COMMON/USER_CUSTOM_RUN/include_pdf2,test_list", f.getvalue())
@@ -889,8 +889,8 @@ class TestRunCard(unittest.TestCase):
         self.assertNotIn("INTEGER TEST_LIST(0:5)", f.getvalue())
         self.assertNotIn("INTEGER TEST_LIST(0:7)", f.getvalue())
         # check common block part
-        self.assertNotIn("C START USER COMMON BLOCK", f.getvalue())
-        self.assertNotIn("C STOP USER COMMON BLOCK", f.getvalue())
+        self.assertNotIn("C     START USER COMMON BLOCK", f.getvalue())
+        self.assertNotIn("C     STOP USER COMMON BLOCK", f.getvalue())
         self.assertNotIn("COMMON/USER_CUSTOM_RUN/", f.getvalue())
 
     def test_autodef_nomissmatch(self):
@@ -1110,16 +1110,60 @@ c
         run_card = bannermod.RunCardLO()
         run_card['dsqrt_q2fact1'] = 10
         run_card['dsqrt_q2fact2'] = 20
+        self.assertNotIn('fixed_fact_scale', run_card.display_block)
+        self.assertTrue(bannermod.fixedfacscale.status(run_card))
+
 
         run_card.set('fixed_fac_scale', True, user=True)
-        #self.assertNotIn('fixed_fact_scale', run_card.display_block)
-        self.assertEqual(run_card['fixed_fac_scale2'], False) #check that this is default value
+        self.assertEqual(run_card['fixed_fac_scale1'], True)
+        self.assertEqual(run_card['fixed_fac_scale2'], True)
+        self.assertIn('fixed_fac_scale', run_card.user_set)
+        self.assertNotIn('fixed_fac_scale1', run_card.user_set)
+        self.assertNotIn('fixed_fac_scale2', run_card.user_set)
+        self.assertTrue(bannermod.fixedfacscale.status(run_card))
+        f = StringIO.StringIO()
+        run_card.write(output_file=f)
+        self.assertIn("True = fixed_fac_scale ", f.getvalue())
+
+
+        f = StringIO.StringIO()
+        run_card.write_include_file(None,output_file=f)
+        self.assertIn("fixed_fac_scale1 = .true.", f.getvalue())
+        self.assertIn("fixed_fac_scale2 = .true.", f.getvalue())
+
+
 
         run_card.set('fixed_fac_scale1', False, user=True)
-        #self.assertIn('fixed_fact_scale', run_card.display_)
-        self.assertEqual(run_card['fixed_fac_scale2'], True)
+        self.assertFalse(bannermod.fixedfacscale.status(run_card))
         self.assertNotIn('fixed_fac_scale', run_card.user_set)
         self.assertNotIn('fixed_fac_scale2', run_card.user_set)    
+        self.assertNotIn('fixed_fact_scale', run_card.display_block)
+
+        f = StringIO.StringIO()
+        run_card.write(output_file=f)
+        self.assertNotIn("True = fixed_fac_scale ", f.getvalue())
+        self.assertIn("False = fixed_fac_scale1", f.getvalue())
+        self.assertIn("True = fixed_fac_scale2", f.getvalue())
+
+        # check that if  'fixed_fact_scale' is set within display_block
+        # the mode is to keep the value of fixed_fac_scale1/2 within the card even if
+        # both are identical
+        run_card.display_block.append('fixed_fact_scale')
+        self.assertFalse(bannermod.fixedfacscale.status(run_card))
+        run_card.set('fixed_fac_scale', True, user=True)
+        self.assertFalse(bannermod.fixedfacscale.status(run_card)) 
+
+        f = StringIO.StringIO()
+        run_card.write_include_file(None,output_file=f)
+        self.assertIn("fixed_fac_scale1 = .true.", f.getvalue())
+        self.assertIn("fixed_fac_scale2 = .true.", f.getvalue())
+
+        f = StringIO.StringIO()
+        run_card.write(output_file=f)
+        self.assertNotIn("True = fixed_fac_scale ", f.getvalue())
+        self.assertIn("True = fixed_fac_scale1", f.getvalue())
+        self.assertIn("True = fixed_fac_scale2", f.getvalue())
+
 
 MadLoopParam = bannermod.MadLoopParam
 class TestMadLoopParam(unittest.TestCase):

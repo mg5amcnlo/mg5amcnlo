@@ -1,7 +1,14 @@
 Update notes for Asymmetric Collisions Mode (in reverse time order)
 
+
+3.5.16.RPA.1.1.0 (08/10/2026)
+      AS: Updated based version of the MG5 to the 3.5.16
+      AS: Fixed the maximum of the PDF members
+      AS: Added support for LHE generation and PY8 analysis for asymmetric collisions. It requires the additional flag in the run_card.dat to be turned on: **True = asymm_events**. In this case, additional blocks of data will be generated inside the LHE files. In addition, if the analysis is performed through PY8, HwU files will be generated similarly to the files in the FO mode. Currently, only PDF variation (True, False) works.
+
+
 3.5.7.RPA.1.0.0 (22/01/2025)
-      AS: Introduced the Asymmetric Collisions Mode: it allows to use two distinct LHAPDF_IDs for both incoming beams (for more information see arXiv:xxxx.xxxx).
+      AS: Introduced the Asymmetric Collisions Mode: it allows to use two distinct LHAPDF_IDs for both incoming beams (for more information see arXiv:2501.14487).
       AS: The Nuclear Modification Factors for every histogram in the analysis file is now the part of the gnuplot output if the Asymmetric Collisions Mode flag is active.  
       AS: Included the calculation of the Cross Sections with or without the PDF- and scale- reweighting flags.
       AS: Included the calculations of scale variation for all of the PDFs in the PDF list in the run_card.dat.
@@ -24,6 +31,65 @@ Update notes for Asymmetric Collisions Mode (in reverse time order)
 
 
     Update notes for MadGraph5_aMC@NLO (in reverse time order)
+ANNOUNCEMENT: 
+   2.9.X version has a LONG TERM STABLE IS now an end of life for bug fixing/support since december 2025.
+   A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
+
+3.5.16 (3/6/26):
+  OM: fix a crash with systematics when original pdf was not detected
+  OM: fix some loop-induced compilation issue
+  OM: avoid new Python syntax warning
+
+3.5.15 (17/4/26):
+  OM: revert a change of 3.5.14 on the grid handling to be more secure on the change
+  OM: Additional fix related to the matchbox template
+
+3.5.14 (10/4/26):
+  OM: Fix issue on how Sextet where written within lhef output
+  OM: Small change in the way default value are taken if some parameter are not present within the run_card
+      Now the default value will be taken first from the run_card_default.dat (which is process specific) 
+      rather than using the an hardcoded default. This is required to correctly takes sde_strategy=1 when
+      a process uses $ syntax (which is not compatible with sde_strategy=2). Note that 3.7.1, do change the
+      "$" handling to avoid such type of issue in a cleaner way.
+  OM: Fixing various small issue related to linking to HEPTools
+  OM: Change some API for the matchbox output (for intereference case)
+  OM: Handle UFO model which are not python3.13 compatible (in the write_param_card.py script)
+  OM: Change in how madgraph setup the grid for shat to better handle process at high energy and very soft cut
+      This also better handle p p case since the grid is now aware of the implicit cut related to the CKKW merging scheme
+
+3.5.13 (05/01/26):
+  VD: fixing issue with custom functions that moving back to no custom functions was not correctly recompiling the code.
+  OM: change f2py interface to make madspin/reweighting compatible both above and below python3.12
+  OM: merge with the lastest version of the 2.9.x LTS (2.9.27) 
+      in particular fix a bug for event with discarded overweight (with RF)
+
+3.5.12 (30/10/25):
+  OM: Change in gensym to better determine which channel have impossible BW configuration. This removes many spurious warning.
+  OM: include bug fixing from LTS (2.9.26) --see below --
+
+3.5.11 (19/9/25):
+  RF: Fixed critical bug in FxFx merging, introduced in version 3.3.1. This resulted in too many negatively weighted events,
+      and too many high-pT jets. Particularly relevant for merging with up to 2 or 3 jets at NLO. Thanks to Lenart Jerala
+	  for pointing this out and testing the fixes.
+
+3.5.10 (13/9/25):
+  All: propagate bug fixing from 2.9.x version (up to 2.9.25)
+
+3.5.9 (4/6/25):
+  OM: Fixed an issue in fixed_fact_scale when set to T where sometimes some beam where kept on False (in assymetric beam context)
+  OM: Fixed a wrong scale assignment when beam#2 was dynamic but beam#1 was static (at LO)
+  ALL: Include fix from 2.9.24 (including support to GCC15 + bug in madspin with GCC13) 
+  OM: (thanks to SungBeom Cho) crash when running  multi_run during the merging of multiple lhe file if 
+      MadSpin was activated (if the BR was different of one). If the BR=1, the merging was going trough but 
+      the merged sample will contains both decay and undecay sample making that file pointless.
+
+3.5.8:
+  OM: Fix a quite serious bug introduced in 3.2.0:
+      The scale choice can in some cases be assigned in a assymetric way in precessence of mirror process
+      This was leading to an assymetric z -> -z production for LHC process.
+  OM: Fixing a gridpack issue that cross-section was wrongly reported in the comment of the banner
+      Thanks to Joon-Bin-Lee and the CMS validation team to have identified those two bugs.
+  OM: Include fix from LTS 2.9.23
 
 3.5.7 (29/11/24)
   OM: Include fix from LTS 2.9.22
@@ -220,6 +286,36 @@ Update notes for Asymmetric Collisions Mode (in reverse time order)
 
                         ** Long Term Stable Update **
 
+
+2.9.27 (05/01/26): LAST Bug fix for that LTS version
+   OM+RF: Fix an issue where overweight were discarded leading to some under-estimation 
+          of the tail (and of the error) 
+   OM: fix madspin onshell in the computation of the BR when multiple decay was present
+   OM: correct an issue with exrootanalysis when event file was deleted due to an unhandle flag on how file was unzip
+   OM: add warning message for python37,3.8,3.9
+   Alexander Puck Neuwirth: Fix quotes and permissions in PYTHIA8 script
+
+2.9.26 (30/10/25):
+  OM: setup the code to not print the python3.12 syntax warning anymore (still printed in debug mode)
+  OM: fix card edition issue when combining "set" and "edit" command
+  OM: fix some additional issue related to GCC15
+
+
+2.9.25 (11/9/25):
+  OM: (thanks to SungBeom Cho) crash when running  multi_run during the merging of multiple lhe file if 
+      MadSpin was activated (if the BR was different of one). If the BR=1, the merging was going trough but 
+      the merged sample will contains both decay and undecay sample making that file pointless.
+      (fixed first in 3.5.9)
+  OM (thanks to Julien for the help) fixing wrong color computation in presence of sextet where the color matrix
+     was wrong starting at 2>4
+
+2.9.24 (23/05/25)
+    OM: Fix Some compilation issue with GCC15 compiler
+    OM: Fix a serious bug in MadSpin where the benchmark use to generate the sample was ignored by MadSpin and it was using the default of the benchmark instead. This was clearly indicated by warning stating the fact that the default benchmark was used.
+        This bug is more compiler specific than madgraph specific, so this bug is likely present since MG5aMC v2.0.0 if you use a recent version of GCC (like GCC13 or GCC14)
+
+2.9.23 (14/03/25)
+    MZ:fix in pseudorapidity function in lhe_parser FourMomentum class (super minor issue) 
 
 2.9.22 (29/11/24):
     OM: Fix a (NLO) issue if the environment variable was setting FFLAGS

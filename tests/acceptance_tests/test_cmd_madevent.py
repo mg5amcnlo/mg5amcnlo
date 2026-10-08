@@ -479,8 +479,8 @@ class TestMECmdShell(unittest.TestCase):
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
-        
-        target = 3978.0
+        # 100k value is 3933.1 +- 3 
+        target = 3933.1
         self.assertLess(
             abs(val1 - target) / err1,
             1.,
@@ -654,12 +654,15 @@ C
         self.assertIn('mue_ref_fixed', run_card.user_set)
         self.assertIn('mue_over_ref', run_card.user_set)
 
+        run_card['nevents'] = 100000
+        run_card.write('%s/Cards/run_card.dat' % self.run_dir)
         
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
 
-        target = 166.36114
+        # 100k value is 165.84 +- 0.05
+        target = 165.84
         self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
 
@@ -672,7 +675,8 @@ C
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
-        target = 165.7
+        # 100k value is  165.71 +- 0.06
+        target = 165.71
         self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
 

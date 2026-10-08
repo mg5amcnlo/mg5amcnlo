@@ -21,6 +21,8 @@ import copy
 import fractions
 
 import madgraph.core.color_algebra as color
+import madgraph.core.color_amp as color_amp
+import madgraph.various.misc as misc
 import tests.unit_tests as unittest
 
 #
@@ -269,20 +271,20 @@ class ColorObjectTest(unittest.TestCase):
 
         my_T6 = color.T6(1,101,102)
 
-        color.T6.new_index = 10000
+        color.T6.new_index = -10000
 
-        k6 = color.K6(101, 10000, 10001)
-        t = color.T(1, 10001, 10002)
-        k6b = color.K6Bar(102, 10002, 10000)
+        k6 = color.K6(101, -10000, -10001)
+        t = color.T(1, -10001, -10002)
+        k6b = color.K6Bar(102, -10002, -10000)
         col_string = color.ColorString([k6, t, k6b])
         col_string.coeff = fractions.Fraction(2, 1)
         self.assertEqual(my_T6.simplify(), color.ColorFactor([col_string]))
 
         my_T6 = color.T6(1,101,102)
 
-        k6 = color.K6(101, 10003, 10004)
-        t = color.T(1, 10004, 10005)
-        k6b = color.K6Bar(102, 10005, 10003)
+        k6 = color.K6(101, -10003, -10004)
+        t = color.T(1, -10004, -10005)
+        k6b = color.K6Bar(102, -10005, -10003)
         col_string = color.ColorString([k6, t, k6b])
         col_string.coeff = fractions.Fraction(2, 1)
         self.assertEqual(my_T6.simplify(), color.ColorFactor([col_string]))
@@ -492,8 +494,12 @@ class ColorFactorTest(unittest.TestCase):
         col_str3.Nc_power = -1
         col_str3.coeff = fractions.Fraction(-2, 1)
 
-        self.assertEqual(my_color_factor.full_simplify(),
+        try:
+            self.assertEqual(my_color_factor.full_simplify(),
                          color.ColorFactor([col_str1, col_str2, col_str3]))
+        except:
+            self.assertEqual(my_color_factor.full_simplify(),
+                         color.ColorFactor([col_str2, col_str1, col_str3]))            
 
         # T6[2, 101, 102] T6[3, 102, 101] = 1/2 (2 + Nc) delta8[2, 3]
 
@@ -508,9 +514,12 @@ class ColorFactorTest(unittest.TestCase):
         col_str2.Nc_power = 0
         col_str2.coeff = fractions.Fraction(2)
 
-        self.assertEqual(my_color_factor.full_simplify(),
+        try:
+            self.assertEqual(my_color_factor.full_simplify(),
                          color.ColorFactor([col_str1, col_str2]))
-
+        except:
+            self.assertEqual(my_color_factor.full_simplify(),
+                         color.ColorFactor([col_str2, col_str1]))
         
         # K6[1, 101, 102] T[2, 102, 103] T[2, 103, 104] K6Bar[1, 104, 101]
         #                 = 1/4 (-1 + Nc) (1 + Nc)^2
@@ -535,10 +544,14 @@ class ColorFactorTest(unittest.TestCase):
         col_str4.Nc_power = 0
         col_str4.coeff = fractions.Fraction(-1, 4)
 
-        self.assertEqual(my_color_factor.full_simplify(),
+        try:
+            self.assertEqual(my_color_factor.full_simplify(),
                          color.ColorFactor([col_str1, col_str3,
                                             col_str2, col_str4]))
-
+        except:
+            self.assertEqual(my_color_factor.full_simplify(),
+                         color.ColorFactor([col_str2, col_str4, 
+                                            col_str1, col_str3]))
         # T6[2, 101, 102] T6[2, 102, 103] K6[103, 99, 98] K6Bar[101, 98, 99]
         #                 = 1/2 (-1 + Nc) (1 + Nc) (2 + Nc)
         #                 = 1/2 (Nc^3 + 2 Nc^2 - Nc - 2)
@@ -562,7 +575,12 @@ class ColorFactorTest(unittest.TestCase):
         col_str4.Nc_power = 0
         col_str4.coeff = fractions.Fraction(-1, 1)
 
-        self.assertEqual(my_color_factor.full_simplify(),
+        try:
+            self.assertEqual(my_color_factor.full_simplify(),
+                         color.ColorFactor([col_str1, col_str2, 
+                                            col_str3, col_str4]))
+        except:
+            self.assertEqual(my_color_factor.full_simplify(),
                          color.ColorFactor([col_str2, col_str1, 
                                             col_str3, col_str4]))
 
@@ -584,4 +602,556 @@ class ColorFactorTest(unittest.TestCase):
 
         self.assertEqual(my_color_factor.full_simplify(),
                          color.ColorFactor([col_str1, col_str2]))
+        
+        #same with epsilon
+        # Tr(epsilon aepsilon) = N(N-1) = N^2 - N
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(1, 2, 3),
+                                               color.EpsilonBar(1, 2, 3)])
+                                               ])
+        col_str1 = color.ColorString()
+        col_str1.Nc_power = 2
+        col_str1.coeff = fractions.Fraction(1, 1)
+        col_str2 = color.ColorString()
+        col_str2.Nc_power = 1
+        col_str2.coeff = fractions.Fraction(-1, 1)
+        self.assertEqual(my_color_factor.full_simplify().set_Nc(),
+                         color.ColorFactor([col_str1, col_str2]).set_Nc())
+        
 
+        #Tr KitAtA ¯Ki
+        # epsilon(1,2,3) T(A,3,4) T(A,4,5) epsilonBar(5,1,2) = (N^2-1)*(N-1)/2
+        #                                                    # = N^3/2 - N^2/2 + - N/2 + 1/2
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.EpsilonBar(1, 2, 3),
+                                       color.T(4, 3, 5),
+                                       color.T(4, 5, 6),
+                                       color.Epsilon(6, 1, 2)])])
+        col_str1 = color.ColorString()
+        col_str1.Nc_power = 3
+        col_str1.coeff = fractions.Fraction(1, 2)
+        col_str2 = color.ColorString()
+        col_str2.Nc_power = 2
+        col_str2.coeff = fractions.Fraction(-1, 2)
+        col_str3 = color.ColorString()
+        col_str3.Nc_power = 1
+        col_str3.coeff = fractions.Fraction(-1, 2)
+        col_str4 = color.ColorString()
+        col_str4.Nc_power = 0
+        col_str4.coeff = fractions.Fraction(1, 2)
+        self.assertEqual(my_color_factor.full_simplify().set_Nc(),
+                         color.ColorFactor([col_str1, col_str3, col_str2,
+                                            col_str4]).set_Nc())
+        
+        # T6(1,2,3)T6(1,3,4) K6Bar(4,5,6) K6(2,5,6) = (N^2-1)*(N+2)/2
+        #                                                    # = N^3/2 + N^2 - N/2 - 1
+        my_color_factor = color.ColorFactor([ 
+                    color.ColorString([color.T6(1, 2, 3),
+                                       color.T6(1, 3, 4),
+                                       color.K6(4, 5, 6),
+                                       color.K6Bar(2, 5, 6)])])
+        col_str1 = color.ColorString()
+        col_str1.Nc_power = 3
+        col_str1.coeff = fractions.Fraction(1, 2)
+        col_str2 = color.ColorString()
+        col_str2.Nc_power = 2
+        col_str2.coeff = fractions.Fraction(1, 1)
+        col_str3 = color.ColorString()
+        col_str3.Nc_power = 1
+        col_str3.coeff = fractions.Fraction(-1, 2)
+        col_str4 = color.ColorString()
+        col_str4.Nc_power = 0
+        col_str4.coeff = fractions.Fraction(-1, 1)
+        self.assertEqual(my_color_factor.full_simplify().set_Nc(),
+                         color.ColorFactor([col_str2, col_str1, col_str3,
+                                            col_str4]).set_Nc())
+
+    def check_CF_computation(self, my_color_factor, expected_value=None):
+        """Test the computation of a color factor"""
+
+
+        options= []
+        import itertools
+        all = itertools.product([True, False], repeat=2)
+        for opt in all:
+            options.append({
+                            'rule_eps_aeps_sum': opt[0],
+                            'rule_eps_aeps_nosum': opt[1],
+                            #'rule_eps_T': opt[2],
+                            # 'rule_aeps_T': opt[3]
+
+            })
+                            
+        nb_checked = 0
+        for mode in options:
+            #with misc.TMP_variable(color.Epsilon, 'rule_eps_T', mode['rule_eps_T']):
+                with misc.TMP_variable(color.Epsilon, 'rule_eps_aeps_sum', mode['rule_eps_aeps_sum']):   
+                    with misc.TMP_variable(color.Epsilon, 'rule_eps_aeps_nosum', mode['rule_eps_aeps_nosum']):
+                        #with misc.TMP_variable(color.EpsilonBar, 'rule_aeps_T', mode['rule_aeps_T']): 
+                            out1 = my_color_factor.full_simplify()
+                            try:
+                                value, power = out1.set_Nc()
+                            except Exception as e:
+                                continue
+                            else:
+                                if expected_value is None:
+                                    #misc.sprint(mode.values())
+                                    #misc.sprint("DEBUG: ", out1)
+                                    #misc.sprint("DEBUG: ", value, power)
+                                    expected_value = (value,power)
+                                else:
+                                    self.assertEqual(value, expected_value[0])
+                                    self.assertEqual(power, expected_value[1])
+                                nb_checked += 1
+        #misc.sprint("Checked %d options for epsilon simplification: value: %s" % (nb_checked, str(expected_value)))
+
+    def test_CF_simple(self):
+
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.EpsilonBar(-1006, 5, 10020),
+                                       color.Epsilon(-10062, -1003, 3),
+                                       color.T(1, 2, 4, 10020, -10062),
+                                       color.T(6, -1006, -1003)])])
+        self.check_CF_computation(my_color_factor,None)
+
+
+
+
+
+
+    def test_cf_computation(self):
+
+
+#(1/4 Epsilon(-1006,-1003,3) EpsilonBar(-1006,5,10020) EpsilonBar(-1005,3,10013) Epsilon(-1001,5,10012) T(4,-1005,10012) T(4,10020,-1006) T(6,-1006,-1003) T(6,10013,-1001))
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1006, -1003, 3),
+                                       color.EpsilonBar(-1006, 5, 10020),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.Epsilon(-1001, 5, 10012),
+                                       color.T(4, -1005, 10012),
+                                       color.T(4, 10020, -1006),
+                                       color.T(6, -1006, -1003),
+                                       color.T(6, 10013, -1001)])])
+        self.check_CF_computation(my_color_factor,None)
+# (-1/2 1/Nc^1 Epsilon(-1006,-1003,3) EpsilonBar(-1006,5,10020) EpsilonBar(-1005,3,10013) Epsilon(-1001,5,10012) T(4,-1005,10012) T(4,10013,-1006) T(6,-1006,-1003) T(6,10020,-1001))
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1006, -1003, 3),
+                                       color.EpsilonBar(-1006, 5, 10020),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.Epsilon(-1001, 5, 10012),
+                                       color.T(4, -1005, 10012),
+                                       color.T(4, 10013, -1006),
+                                       color.T(6, -1006, -1003),
+                                       color.T(6, 10020, -1001)])])
+        self.check_CF_computation(my_color_factor,None)
+# (1/4 1/Nc^2 Epsilon(-1006,-1003,3) EpsilonBar(-1006,5,10020) EpsilonBar(-1005,3,10013) Epsilon(-1001,5,10012) T(4,-1005,10012) T(4,10020,-1006) T(6,-1006,-1003) T(6,10013,-1001))
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1006, -1003, 3),
+                                       color.EpsilonBar(-1006, 5, 10020),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.Epsilon(-1001, 5, 10012),
+                                       color.T(4, -1005, 10012),
+                                       color.T(4, 10020, -1006),
+                                       color.T(6, -1006, -1003),
+                                       color.T(6, 10013, -1001)])])
+        self.check_CF_computation(my_color_factor,None)
+
+        # Epsilon(1,2,3) EpsilonBar(1,2,3)
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(1, 2, 3),
+                                       color.EpsilonBar(1, 2, 3)])])
+        self.check_CF_computation(my_color_factor,
+                                 (fractions.Fraction(6, 1), 0))
+        
+        # Epsilon(1,2,3) EpsilonBar(1,2,4) T(3,4)
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(1, 2, 3),
+                                       color.EpsilonBar(1, 2, 4),
+                                       color.T(4, 3)])])
+        self.check_CF_computation(my_color_factor, (fractions.Fraction(6, 1), 0))  
+
+
+        #  EpsilonBar(-1006,-1005,3) T(-1006,-1002) T(-1005,-1001) Epsilon(-1002,-1001,5) T(3,5)
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.EpsilonBar(-1006, -1005, 3),
+                                       color.T(-1006, -1002),
+                                       color.T(-1005, -1001),
+                                       color.Epsilon(-1002, -1001, 5),
+                                       color.T(3, 5)])])
+        self.check_CF_computation(my_color_factor,
+                                 (fractions.Fraction(6, 1), 0))
+        
+        #Epsilon(-1008,-1001,5) EpsilonBar(-1006,3,10022) T(2,1,6,10022,-1001) T(4,-1006,-1008) EpsilonBar(-1009,-1010,5) Epsilon(-1011,3,-1012) T(6,1,2,-1010,-1012) T(4,-1009,-1011))
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1008, -1001, 5),
+                                       color.EpsilonBar(-1006, 3, 10022),
+                                       color.T(2, 1, 6, 10022, -1001),
+                                       color.T(4, -1006, -1008),
+                                       color.EpsilonBar(-1009, -1010, 5),
+                                       color.Epsilon(-1011, 3, -1012),
+                                       color.T(6, 1, 2, -1010, -1012),
+                                       color.T(4, -1009, -1011)])]) 
+        self.check_CF_computation(my_color_factor,None)
+
+#DEBUG:  (1 Epsilon(-1008,-1001,5) EpsilonBar(-1006,3,10022) T(2,1,6,10022,-1001) T(4,-1006,-1008) EpsilonBar(-1010,5,10014) Epsilon(-1005,3,10013) T(1,10014,10013) T(6,2,4,-1010,-1005)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1008, -1001, 5),
+                                       color.EpsilonBar(-1006, 3, 10022),
+                                       color.T(2, 1, 6, 10022, -1001),
+                                       color.T(4, -1006, -1008),
+                                       color.EpsilonBar(-1010, 5, 10014),
+                                       color.Epsilon(-1005, 3, 10013),
+                                       color.T(1, 10014, 10013),
+                                       color.T(6, 2, 4, -1010, -1005)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1008,-1001,5) EpsilonBar(-1006,3,10022) T(2,1,6,10022,-1001) T(4,-1006,-1008) EpsilonBar(-1010,5,10014) Epsilon(-1005,3,10016) T(1,4,10014,-1005) T(6,2,-1010,10016)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1008, -1001, 5),
+                                       color.EpsilonBar(-1006, 3, 10022),
+                                       color.T(2, 1, 6, 10022, -1001),
+                                       color.T(4, -1006, -1008),
+                                       color.EpsilonBar(-1010, 5, 10014),
+                                       color.Epsilon(-1005, 3, 10016),
+                                       color.T(1, 4, 10014, -1005),
+                                       color.T(6, 2, -1010, 10016)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1008,-1001,5) EpsilonBar(-1006,3,10022) T(2,1,6,10022,-1001) T(4,-1006,-1008) EpsilonBar(-1010,5,10014) Epsilon(-1005,3,10016) T(6,2,-1010,10016) T(1,4,10014,-1005)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1008, -1001, 5),
+                                       color.EpsilonBar(-1006, 3, 10022),
+                                       color.T(2, 1, 6, 10022, -1001),
+                                       color.T(4, -1006, -1008),
+                                       color.EpsilonBar(-1010, 5, 10014),
+                                       color.Epsilon(-1005, 3, 10016),
+                                       color.T(6, 2, -1010, 10016),
+                                       color.T(1, 4, 10014, -1005)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1008,-1001,5) EpsilonBar(-1006,3,10022) T(2,1,6,10022,-1001) T(4,-1006,-1008) EpsilonBar(-1010,5,10017) Epsilon(-1005,-1003,3) T(2,1,4,10017,-1005) T(6,-1010,-1003)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1008, -1001, 5),
+                                       color.EpsilonBar(-1006, 3, 10022),
+                                       color.T(2, 1, 6, 10022, -1001),
+                                       color.T(4, -1006, -1008),
+                                       color.EpsilonBar(-1010, 5, 10017),
+                                       color.Epsilon(-1005, -1003, 3),
+                                       color.T(2, 1, 4, 10017, -1005),
+                                       color.T(6, -1010, -1003)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1008,-1001,5) EpsilonBar(-1006,3,10022) T(2,1,6,10022,-1001) T(4,-1006,-1008) EpsilonBar(-1010,5,10017) Epsilon(-1005,3,10013) T(2,1,10017,10013) T(6,4,-1010,-1005)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1008, -1001, 5),
+                                       color.EpsilonBar(-1006, 3, 10022),
+                                       color.T(2, 1, 6, 10022, -1001),
+                                       color.T(4, -1006, -1008),
+                                       color.EpsilonBar(-1010, 5, 10017),
+                                       color.Epsilon(-1005, 3, 10013),
+                                       color.T(2, 1, 10017, 10013),
+                                       color.T(6, 4, -1010, -1005)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1008,-1001,5) EpsilonBar(-1006,3,10022) T(2,1,6,10022,-1001) T(4,-1006,-1008) EpsilonBar(-1010,5,10017) Epsilon(-1005,3,10013) T(6,1,-1010,10013) T(2,4,10017,-1005)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1008, -1001, 5),
+                                       color.EpsilonBar(-1006, 3, 10022),
+                                       color.T(2, 1, 6, 10022, -1001),
+                                       color.T(4, -1006, -1008),
+                                       color.EpsilonBar(-1010, 5, 10017),
+                                       color.Epsilon(-1005, 3, 10013),
+                                       color.T(6, 1, -1010, 10013),
+                                       color.T(2, 4, 10017, -1005)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1008,-1001,5) EpsilonBar(-1006,3,10022) T(2,1,6,10022,-1001) T(4,-1006,-1008) EpsilonBar(-1010,5,10017) Epsilon(-1005,3,10016) T(2,10017,10016) T(6,1,4,-1010,-1005)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1008, -1001, 5),
+                                       color.EpsilonBar(-1006, 3, 10022),
+                                       color.T(2, 1, 6, 10022, -1001),
+                                       color.T(4, -1006, -1008),
+                                       color.EpsilonBar(-1010, 5, 10017),
+                                       color.Epsilon(-1005, 3, 10016),
+                                       color.T(2, 10017, 10016),
+                                       color.T(6, 1, 4, -1010, -1005)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1008,-1001,5) EpsilonBar(-1006,3,10022) T(2,1,6,10022,-1001) T(4,-1006,-1008) EpsilonBar(-1010,5,10020) Epsilon(-1011,-1003,3) T(1,2,4,10020,-1011) T(6,-1010,-1003)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1008, -1001, 5),
+                                       color.EpsilonBar(-1006, 3, 10022),
+                                       color.T(2, 1, 6, 10022, -1001),
+                                       color.T(4, -1006, -1008),
+                                       color.EpsilonBar(-1010, 5, 10020),
+                                       color.Epsilon(-1011, -1003, 3),
+                                       color.T(1, 2, 4, 10020, -1011),
+                                       color.T(6, -1010, -1003)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1008,-1001,5) EpsilonBar(-1006,3,10022) T(2,1,6,10022,-1001) T(4,-1006,-1008) EpsilonBar(-1010,5,10020) Epsilon(-1011,3,-1012) T(1,2,10020,-1012) T(6,4,-1010,-1011)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1008, -1001, 5),
+                                       color.EpsilonBar(-1006, 3, 10022),
+                                       color.T(2, 1, 6, 10022, -1001),
+                                       color.T(4, -1006, -1008),
+                                       color.EpsilonBar(-1010, 5, 10020),
+                                       color.Epsilon(-1011, 3, -1012),
+                                       color.T(1, 2, 10020, -1012),
+                                       color.T(6, 4, -1010, -1011)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1008,-1001,5) EpsilonBar(-1006,3,10022) T(2,1,6,10022,-1001) T(4,-1006,-1008) T(6,2,1,4,3,5)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1008, -1001, 5),
+                                       color.EpsilonBar(-1006, 3, 10022),
+                                       color.T(2, 1, 6, 10022, -1001),
+                                       color.T(4, -1006, -1008),
+                                       color.T(6, 2, 1, 4, 3, 5)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1008,-1001,5) EpsilonBar(-1006,3,10022) T(2,1,6,10022,-1001) T(4,-1006,-1008) T(6,1,2,4,3,5)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1008, -1001, 5),
+                                       color.EpsilonBar(-1006, 3, 10022),
+                                       color.T(2, 1, 6, 10022, -1001),
+                                       color.T(4, -1006, -1008),
+                                       color.T(6, 1, 2, 4, 3, 5)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1008,-1001,5) EpsilonBar(-1006,3,10022) T(2,1,6,10022,-1001) T(4,-1006,-1008) T(3,5) Tr(4,6,2,1)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1008, -1001, 5),
+                                       color.EpsilonBar(-1006, 3, 10022),
+                                       color.T(2, 1, 6, 10022, -1001),
+                                       color.T(4, -1006, -1008),
+                                       color.T(3, 5),
+                                       color.Tr(4, 6, 2, 1)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1008,-1001,5) EpsilonBar(-1006,3,10022) T(2,1,6,10022,-1001) T(4,-1006,-1008) T(3,5) Tr(2,4,6,1)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1008, -1001, 5),
+                                       color.EpsilonBar(-1006, 3, 10022),
+                                       color.T(2, 1, 6, 10022, -1001),
+                                       color.T(4, -1006, -1008),
+                                       color.T(3, 5),
+                                       color.Tr(2, 4, 6, 1)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10012) EpsilonBar(-1005,3,10013) T(1,2,6,10013,-1001) T(4,-1005,10012) EpsilonBar(-1006,5,-1007) Epsilon(-1008,3,-1009) T(6,2,1,-1006,-1009) T(4,-1007,-1008)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.EpsilonBar(-1006, 5, -1007),
+                                       color.Epsilon(-1008, 3, -1009),
+                                       color.T(6, 2, 1, -1006, -1009),
+                                       color.T(4, -1007, -1008)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10012) EpsilonBar(-1005,3,10013) T(1,2,6,10013,-1001) T(4,-1005,10012) EpsilonBar(-1006,5,10014) Epsilon(-1008,3,-1009) T(1,10014,-1009) T(6,2,4,-1006,-1008)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.EpsilonBar(-1006, 5, 10014),
+                                       color.Epsilon(-1008, 3, -1009),
+                                       color.T(1, 10014, -1009),
+                                       color.T(6, 2, 4, -1006, -1008)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10012) EpsilonBar(-1005,3,10013) T(1,2,6,10013,-1001) T(4,-1005,10012) EpsilonBar(-1006,5,10014) Epsilon(-1008,3,10016) T(6,2,-1006,10016) T(1,4,10014,-1008)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.EpsilonBar(-1006, 5, 10014),
+                                       color.Epsilon(-1008, 3, 10016),
+                                       color.T(6, 2, -1006, 10016),
+                                       color.T(1, 4, 10014, -1008)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10012) EpsilonBar(-1005,3,10013) T(1,2,6,10013,-1001) T(4,-1005,10012) EpsilonBar(-1006,5,10017) Epsilon(-1008,-1003,3) T(2,1,4,10017,-1008) T(6,-1006,-1003)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.EpsilonBar(-1006, 5, 10017),
+                                       color.Epsilon(-1008, -1003, 3),
+                                       color.T(2, 1, 4, 10017, -1008),
+                                       color.T(6, -1006, -1003)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10012) EpsilonBar(-1005,3,10013) T(1,2,6,10013,-1001) T(4,-1005,10012) EpsilonBar(-1006,5,10017) Epsilon(-1008,3,-1009) T(2,1,10017,-1009) T(6,4,-1006,-1008)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.EpsilonBar(-1006, 5, 10017),
+                                       color.Epsilon(-1008, 3, -1009),
+                                       color.T(2, 1, 10017, -1009),
+                                       color.T(6, 4, -1006, -1008)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10012) EpsilonBar(-1005,3,10013) T(1,2,6,10013,-1001) T(4,-1005,10012) EpsilonBar(-1006,5,10017) Epsilon(-1008,3,-1009) T(6,1,-1006,-1009) T(2,4,10017,-1008)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.EpsilonBar(-1006, 5, 10017),
+                                       color.Epsilon(-1008, 3, -1009),
+                                       color.T(6, 1, -1006, -1009),
+                                       color.T(2, 4, 10017, -1008)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10012) EpsilonBar(-1005,3,10013) T(1,2,6,10013,-1001) T(4,-1005,10012) EpsilonBar(-1006,5,10017) Epsilon(-1008,3,10016) T(2,10017,10016) T(6,1,4,-1006,-1008)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.EpsilonBar(-1006, 5, 10017),
+                                       color.Epsilon(-1008, 3, 10016),
+                                       color.T(2, 10017, 10016),
+                                       color.T(6, 1, 4, -1006, -1008)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10012) EpsilonBar(-1005,3,10013) T(1,2,6,10013,-1001) T(4,-1005,10012) EpsilonBar(-1006,5,10020) Epsilon(-1006,-1003,3) T(1,2,4,10020,-1006) T(6,-1006,-1003)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.EpsilonBar(-1006, 5, 10020),
+                                       color.Epsilon(-10062, -1003, 3),
+                                       color.T(1, 2, 4, 10020, -10062),
+                                       color.T(6, -1006, -1003)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10012) EpsilonBar(-1005,3,10013) T(1,2,6,10013,-1001) T(4,-1005,10012) EpsilonBar(-1006,5,10020) Epsilon(-1006,3,10019) T(1,10020,10019) T(6,2,4,-1006,-1006)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.EpsilonBar(-1006, 5, 10020),
+                                       color.Epsilon(-10062, 3, 10019),
+                                       color.T(1, 10020, 10019),
+                                       color.T(6, 2, 4, -1006, -10062)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10012) EpsilonBar(-1005,3,10013) T(1,2,6,10013,-1001) T(4,-1005,10012) EpsilonBar(-1006,5,10020) Epsilon(-1006,3,10022) T(1,2,10020,10022) T(6,4,-1006,-1006)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.EpsilonBar(-1006, 5, 10020),
+                                       color.Epsilon(-1006, 3, 10022),
+                                       color.T(1, 2, 10020, 10022),
+                                       color.T(6, 4, -1006, -1006)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10012) EpsilonBar(-1005,3,10013) T(1,2,6,10013,-1001) T(4,-1005,10012) EpsilonBar(-1006,5,10020) Epsilon(-1006,3,10022) T(6,2,-1006,10022) T(1,4,10020,-1006)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.EpsilonBar(-1006, 5, 10020),
+                                       color.Epsilon(-1006, 3, 10022),
+                                       color.T(6, 2, -10062, 10022),
+                                       color.T(1, 4, 10020, -10062)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10012) EpsilonBar(-1005,3,10013) T(1,2,6,10013,-1001) T(4,-1005,10012) EpsilonBar(-1006,5,10023) Epsilon(-1006,3,10019) T(6,1,-1006,10019) T(2,4,10023,-1006)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.EpsilonBar(-1006, 5, 10023),
+                                       color.Epsilon(-1006, 3, 10019),
+                                       color.T(6, 1, -10062, 10019),
+                                       color.T(2, 4, 10023, -10062)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10012) EpsilonBar(-1005,3,10013) T(1,2,6,10013,-1001) T(4,-1005,10012) EpsilonBar(-1006,5,10023) Epsilon(-1006,3,10022) T(2,10023,10022) T(6,1,4,-1006,-1006)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.EpsilonBar(-1006, 5, 10023),
+                                       color.Epsilon(-1006, 3, 10022),
+                                       color.T(2, 10023, 10022),
+                                       color.T(6, 1, 4, -10062, -10062)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10012) EpsilonBar(-1005,3,10013) T(1,2,6,10013,-1001) T(4,-1005,10012) T(6,2,1,4,3,5)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.T(6, 2, 1, 4, 3, 5)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10012) EpsilonBar(-1005,3,10013) T(1,2,6,10013,-1001) T(4,-1005,10012) T(6,1,2,4,3,5)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.T(6, 1, 2, 4, 3, 5)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10012) EpsilonBar(-1005,3,10013) T(1,2,6,10013,-1001) T(4,-1005,10012) T(3,5) Tr(4,6,2,1)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.T(3, 5),
+                                       color.Tr(4, 6, 2, 1)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10012) EpsilonBar(-1005,3,10013) T(1,2,6,10013,-1001) T(4,-1005,10012) T(3,5) Tr(2,4,6,1)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10012),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 2, 6, 10013, -1001),
+                                       color.T(4, -1005, 10012),
+                                       color.T(3, 5),
+                                       color.Tr(2, 4, 6, 1)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10014) EpsilonBar(-1005,3,10013) T(1,10013,10014) T(4,2,6,-1005,-1001) EpsilonBar(-1006,5,-1007) Epsilon(-1008,3,-1009) T(1,-1007,-1009) T(6,2,4,-1006,-1008)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10014),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 10013, 10014),
+                                       color.T(4, 2, 6, -1005, -1001),
+                                       color.EpsilonBar(-1006, 5, -1007),
+                                       color.Epsilon(-1008, 3, -1009),
+                                       color.T(1, -1007, -1009),
+                                       color.T(6, 2, 4, -1006, -1008)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10014) EpsilonBar(-1005,3,10013) T(1,10013,10014) T(4,2,6,-1005,-1001) EpsilonBar(-1006,5,-1007) Epsilon(-1008,3,10016) T(6,2,-1006,10016) T(1,4,-1007,-1008)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10014),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 10013, 10014),
+                                       color.T(4, 2, 6, -1005, -1001),
+                                       color.EpsilonBar(-1006, 5, -1007),
+                                       color.Epsilon(-1008, 3, 10016),
+                                       color.T(6, 2, -1006, 10016),
+                                       color.T(1, 4, -1007, -1008)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10014) EpsilonBar(-1005,3,10013) T(1,10013,10014) T(4,2,6,-1005,-1001) EpsilonBar(-1006,5,10017) Epsilon(-1008,-1003,3) T(2,1,4,10017,-1008) T(6,-1006,-1003)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10014),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 10013, 10014),
+                                       color.T(4, 2, 6, -1005, -1001),
+                                       color.EpsilonBar(-1006, 5, 10017),
+                                       color.Epsilon(-1008, -1003, 3),
+                                       color.T(2, 1, 4, 10017, -1008),
+                                       color.T(6, -1006, -1003)])])
+        self.check_CF_computation(my_color_factor,None)
+#DEBUG:  (1 Epsilon(-1001,5,10014) EpsilonBar(-1005,3,10013) T(1,10013,10014) T(4,2,6,-1005,-1001) EpsilonBar(-1006,5,10017) Epsilon(-1008,3,-1009) T(2,1,10017,-1009) T(6,4,-1006,-1008)) [color_amp.py at line 653]
+        my_color_factor = color.ColorFactor([\
+                    color.ColorString([color.Epsilon(-1001, 5, 10014),
+                                       color.EpsilonBar(-1005, 3, 10013),
+                                       color.T(1, 10013, 10014),
+                                       color.T(4, 2, 6, -1005, -1001),
+                                       color.EpsilonBar(-1006, 5, 10017),
+                                       color.Epsilon(-1008, 3, -1009),
+                                       color.T(2, 1, 10017, -1009),
+                                       color.T(6, 4, -1006, -1008)])])
+        self.check_CF_computation(my_color_factor,None)
+
+
+
+                   

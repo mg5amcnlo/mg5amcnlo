@@ -224,6 +224,7 @@ class TestCmdShell1(unittest.TestCase):
                     'yoda_path':'./HEPTools/yoda',
                     'eMELA': 'eMELA-config',
                     'cluster_walltime': None,
+                    'heptools_install_dir': './HEPTools',
                     }
 
         self.assertEqual(config, expected)

@@ -1,0 +1,35 @@
+name: Restore pythia8 cache (if exists and in any case configure even if they do not)
+description: Restores lhapdf from cache and sets MG5 accordingly
+
+inputs:
+  setup_only:
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+
+    # Call previous cache to ensure that environment is setup correctly
+    - name: restore lhapdf
+      uses: ./.github/actions/restore_heptools_lhapdf
+      with:
+        setup_only: ${{ inputs.setup_only }}
+
+    - name: Set cache key
+      run: echo "CACHE_KEY=pythia8-$ImageOS" >> $GITHUB_ENV
+      shell: bash
+
+    # check if the cache exists (if not an higher level will be called)  
+    - uses: actions/cache/restore@v5
+      if: ${{ inputs.setup_only != 'true' }}
+      with:
+        path: ~/.cache/HEPtools
+        key: ${{ env.CACHE_KEY }}
+
+    - run: |
+        cd $GITHUB_WORKSPACE
+        echo "pythia8_path = /home/runner/.cache/HEPtools/pythia8" >>  input/mg5_configuration.txt
+        echo "hepmc_path = /home/runner/.cache/HEPtools/hepmc" >>  input/mg5_configuration.txt
+        echo " mg5amc_py8_interface_path = /home/runner/.cache/HEPtools/MG5aMC_PY8_interface" >>  input/mg5_configuration.txt
+      shell: bash

@@ -1,0 +1,21 @@
+name: Restore pip cache
+description: Restores numpy from cache and sets PYTHONPATH
+
+runs:
+  using: composite
+  steps:
+    - name: Set cache key
+      run: echo "CACHE_KEY=pip-numpy-$ImageOS" >> $GITHUB_ENV
+      shell: bash
+
+    - uses: actions/cache/restore@v5
+      with:
+        path: ~/.cache/pip-packages
+        key: ${{ env.CACHE_KEY }}
+
+    - run: |
+        echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/pip-packages" >> $GITHUB_ENV
+        echo "$HOME/.cache/pip-packages/bin" >> $GITHUB_PATH
+        cd $GITHUB_WORKSPACE
+        echo "f2py_compiler = $(which f2py)" >> input/mg5_configuration.txt
+      shell: bash

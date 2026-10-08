@@ -1779,7 +1779,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                         if subproc_group:
                             pdf_lines = pdf_lines + \
                                         ("%s%d=PDG2PDF(LPP(IB(%d)),%d, IB(%d)," + \
-                                         "XBK(IB(%d)),DSQRT(Q2FACT(IB(%d))))\n") % \
+                                         "XBK(IB(%d)),DSQRT(Q2FACT(%d)))\n") % \
                                          (pdf_codes[initial_state],
                                           i + 1, i + 1, pdgtopdf[initial_state],i+1,
                                           i + 1, i + 1)
@@ -2212,6 +2212,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     MadGraph v4 StandAlone format."""
 
     matrix_template = "matrix_standalone_v4.inc"
+    f2py_template = "matrix_standalone_f2py.inc"
+    f2py_wrapper_all ="f2py_wrapper_all.inc"
+    f2py_matrix_splitter = "f2py_splitter.py"
     jamp_optim = True
 
     def __init__(self, *args,**opts):
@@ -2397,204 +2400,23 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             ff = open(pjoin(self.dir_path, 'SubProcesses', 'makefile'),'a')
             ff.write(text)
             ff.close()
-                    
+    
+
     def write_f2py_splitter(self):
         """write a function to call the correct matrix element"""
-        
-        template = """
-%(python_information)s
-  subroutine smatrixhel(pdgs, procid, npdg, p, ALPHAS, SCALE2, nhel, ANS)
-  IMPLICIT NONE
-C ALPHAS is given at scale2 (SHOULD be different of 0 for loop induced, ignore for LO)  
-
-CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
-CF2PY integer, intent(in), dimension(npdg) :: pdgs
-CF2PY integer, intent(in):: procid
-CF2PY integer, intent(in) :: npdg
-CF2PY double precision, intent(out) :: ANS
-CF2PY double precision, intent(in) :: ALPHAS
-CF2PY double precision, intent(in) :: SCALE2
-  integer pdgs(*)
-  integer npdg, nhel, procid
-  double precision p(*)
-  double precision ANS, ALPHAS, PI,SCALE2
-  include 'coupl.inc'
-  
-  
-  if (scale2.eq.0)then
-       PI = 3.141592653589793D0
-       G = 2* DSQRT(ALPHAS*PI)
-       CALL UPDATE_AS_PARAM()
-  else
-       CALL UPDATE_AS_PARAM2(scale2, ALPHAS)
-  endif
-
-%(smatrixhel)s
-
-      return
-      end
-  
-      SUBROUTINE INITIALISE(PATH)
-C     ROUTINE FOR F2PY to read the benchmark point.
-      IMPLICIT NONE
-      CHARACTER*512 PATH
-CF2PY INTENT(IN) :: PATH
-      CALL SETPARA(PATH)  !first call to setup the paramaters
-      RETURN
-      END
-      
-      
-      subroutine CHANGE_PARA(name, value)
-      implicit none
-CF2PY intent(in) :: name
-CF2PY intent(in) :: value
-
-      character*512 name
-      double precision value
-      
-      %(helreset_def)s
-
-      include '../Source/MODEL/input.inc'
-      include '../Source/MODEL/coupl.inc'
-
-      %(helreset_setup)s
-
-      SELECT CASE (name)
-         %(parameter_setup)s
-         CASE DEFAULT
-            write(*,*) 'no parameter matching', name, value
-      END SELECT
-
-      return
-      end
-      
-    subroutine update_all_coup()
-    implicit none
-     call coup()
-    return 
-    end
-      
-
-    subroutine get_pdg_order(PDG, ALLPROC)
-  IMPLICIT NONE
-CF2PY INTEGER, intent(out) :: PDG(%(nb_me)i,%(maxpart)i)  
-CF2PY INTEGER, intent(out) :: ALLPROC(%(nb_me)i)
-  INTEGER PDG(%(nb_me)i,%(maxpart)i), PDGS(%(nb_me)i,%(maxpart)i)
-  INTEGER ALLPROC(%(nb_me)i),PIDs(%(nb_me)i)
-  DATA PDGS/ %(pdgs)s /
-  DATA PIDS/ %(pids)s /
-  PDG = PDGS
-  ALLPROC = PIDS
-  RETURN
-  END 
-
-    subroutine get_prefix(PREFIX)
-  IMPLICIT NONE
-CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
-  character*20 PREFIX(%(nb_me)i),PREF(%(nb_me)i)
-  DATA PREF / '%(prefix)s'/
-  PREFIX = PREF
-  RETURN
-  END 
- 
 
 
-    subroutine set_fixed_extra_scale(new_value)
-    implicit none
-CF2PY logical, intent(in) :: new_value
-    logical new_value
-                logical fixed_extra_scale
-            integer maxjetflavor
-            double precision mue_over_ref
-            double precision mue_ref_fixed
-            common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
-  
-        fixed_extra_scale = new_value
-        return 
-        end
+        template = open(pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files', self.f2py_matrix_splitter)).read()
+        template2 = open(pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files', self.f2py_wrapper_all)).read()
 
-    subroutine set_mue_over_ref(new_value)
-    implicit none
-CF2PY double precision, intent(in) :: new_value
-    double precision new_value
-    logical fixed_extra_scale
-    integer maxjetflavor
-    double precision mue_over_ref
-    double precision mue_ref_fixed
-    common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
-  
-    mue_over_ref = new_value
-        
-    return 
-    end
-
-    subroutine set_mue_ref_fixed(new_value)
-    implicit none
-CF2PY double precision, intent(in) :: new_value
-    double precision new_value
-    logical fixed_extra_scale
-    integer maxjetflavor
-    double precision mue_over_ref
-    double precision mue_ref_fixed
-    common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
-  
-    mue_ref_fixed = new_value
-        
-    return 
-    end
-
-
-    subroutine set_maxjetflavor(new_value)
-    implicit none
-CF2PY integer, intent(in) :: new_value
-    integer new_value
-    logical fixed_extra_scale
-    integer maxjetflavor
-    double precision mue_over_ref
-    double precision mue_ref_fixed
-    common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
-  
-    maxjetflavor = new_value
-        
-    return 
-    end
-
-
-    subroutine set_asmz(new_value)
-    implicit none
-CF2PY double precision, intent(in) :: new_value
-    double precision new_value
-          integer nloop
-      double precision asmz
-      common/a_block/asmz,nloop
-    asmz = new_value
-    write(*,*) "asmz is set to ", new_value
-        
-    return 
-    end
-
-    subroutine set_nloop(new_value)
-    implicit none
-CF2PY integer, intent(in) :: new_value
-    integer new_value
-          integer nloop
-      double precision asmz
-      common/a_block/asmz,nloop
-    nloop = new_value
-     write(*,*) "nloop is set to ", new_value
-        
-    return 
-    end
-
-        """
-        
         allids = list(self.prefix_info.keys())
         allprefix = [self.prefix_info[key][0] for key in allids]
+        allncomb = [self.prefix_info[key][2] for key in allids]
         min_nexternal = min([len(ids[0]) for ids in allids])
         max_nexternal = max([len(ids[0]) for ids in allids])
 
         info = []
-        for (key, pid), (prefix, tag) in self.prefix_info.items():
+        for (key, pid), (prefix, tag, ncomb) in self.prefix_info.items():
             info.append('#PY %s : %s # %s %s' % (tag, key, prefix, pid))
             
 
@@ -2635,6 +2457,39 @@ CF2PY integer, intent(in) :: new_value
             helreset_setup.append(' %shelreset = .true. ' % prefix)
             helreset_def.append(' logical %shelreset \n common /%shelreset/ %shelreset' % (prefix, prefix, prefix))
         
+        #nhel
+        all_nhel_f2py = ' '
+        all_nhel = ''
+        nhel_template_f2py = """
+        subroutine %(f2py_prefix)s%(prefix)sget_nhel_entry()
+        integer %(prefix)snhel(%(next)s,%(ncombs)s)
+        common/%(f2py_prefix)s%(prefix)sPROCESS_NHEL/%(prefix)sNHEL
+        call %(f2py_prefix)sf77_%(prefix)sget_nhel_entry(%(prefix)sNHEL)
+
+        return
+        end 
+"""
+        nhel_template = """subroutine %(f2py_prefix)sf77_%(prefix)sget_nhel_entry(NHEL)
+        integer %(prefix)snhel(%(next)s,%(ncombs)s), NHEL(%(next)s,%(ncombs)s)
+        common/%(prefix)sPROCESS_NHEL/%(prefix)sNHEL
+        NHEL(:,:) = %(prefix)snhel(:,:)
+        return
+        end 
+"""
+
+        f2py_prefix = ''
+        if self.opt['output_options'] and 'prefixf2py' in self.opt['output_options']:
+            f2py_prefix = 'f%s_' % self.opt['output_options']['prefixf2py']
+
+        done_prefix = set()
+        for prefix, ids, ncomb in zip(allprefix, allids, allncomb):
+            if prefix in done_prefix:
+                continue
+            done_prefix.add(prefix)
+            all_nhel += nhel_template % {'prefix': prefix, 'next': len(ids[0]), 'ncombs': ncomb,
+                                          'f2py_prefix': f2py_prefix}
+            all_nhel_f2py += nhel_template_f2py % {'prefix': prefix, 'next': len(ids[0]), 
+                                                   'ncombs': ncomb, 'f2py_prefix': f2py_prefix}
 
         formatting = {'python_information':'\n'.join(info), 
                           'smatrixhel': '\n'.join(text),
@@ -2647,13 +2502,20 @@ CF2PY integer, intent(in) :: new_value
                           'parameter_setup': '\n'.join(parameter_setup),
                           'helreset_def' : '\n'.join(helreset_def),
                           'helreset_setup' : '\n'.join(helreset_setup),
+                          'nhel': all_nhel,
+                          'f2py_prefix': f2py_prefix
                           }
         formatting['lenprefix'] = len(formatting['prefix'])
         text = template % formatting
         fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'all_matrix.f'),'w')
         fsock.writelines(text)
         fsock.close()
-    
+        formatting['nhel'] = all_nhel_f2py
+        text = template2 % formatting
+        fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'f2py_wrapper.f'),'w')
+        fsock.writelines(text)
+        fsock.close()    
+
     def get_model_parameter(self, model):
         """ returns all the model parameter
         """
@@ -2682,8 +2544,13 @@ CF2PY integer, intent(in) :: new_value
 
         return params                      
                                         
-        
-        
+    def write_f2py_matrix_wrapper(self, writer, replace_dict):
+        """ Write the f2py wrapper for matrix element."""
+
+        path =pjoin(_file_path, 'iolibs', 'template_files', self.f2py_template)
+        template = open(path).read()
+        writer.write(template % replace_dict)
+
     def write_f2py_check_sa(self, matrix_element, writer):
         """ Write the general check_sa.py in SubProcesses that calls all processes successively."""
         # To be implemented. It is just an example file, i.e. not crucial.
@@ -2780,15 +2647,23 @@ CF2PY integer, intent(in) :: new_value
                 proc_prefix = matrix_element.get('processes')[0].shell_string().split('_',1)[1]
             else:
                 raise Exception('--prefix options supports only \'int\' and \'proc\'')
+            ncomb = matrix_element.get_helicity_combinations()
             for proc in matrix_element.get('processes'):
                 ids = [l.get('id') for l in proc.get('legs_with_decays')]
-                self.prefix_info[(tuple(ids), proc.get('id'))] = [proc_prefix, proc.get_tag()] 
+                self.prefix_info[(tuple(ids), proc.get('id'))] = [proc_prefix, proc.get_tag(), ncomb]
                 
-        calls = self.write_matrix_element_v4(
+        replace_dict = self.write_matrix_element_v4(
             writers.FortranWriter(filename),
             matrix_element,
             fortran_model,
-            proc_prefix=proc_prefix)
+            proc_prefix=proc_prefix,
+            return_replace_dict=True)
+        calls = replace_dict.get('return_value', 0)
+
+        self.write_f2py_matrix_wrapper(
+            writers.FortranWriter(pjoin(dirpath, 'f2py_matrix_wrapper.f')),
+                                  replace_dict=replace_dict)
+        
 
         if self.opt['export_format'] == 'standalone_msP':
             filename =  pjoin(dirpath,'configs_production.inc')
@@ -2890,7 +2765,7 @@ CF2PY integer, intent(in) :: new_value
     # write_matrix_element_v4
     #===========================================================================
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
-                                write=True, proc_prefix=''):
+                                write=True, proc_prefix='', return_replace_dict=False):
         """Export a matrix element to a matrix.f file in MG4 standalone format
         if write is on False, just return the replace_dict and not write anything."""
 
@@ -3037,7 +2912,7 @@ CF2PY integer, intent(in) :: new_value
                 logger.debug("Warning: The export format %s is not "+\
                   " available for individual ME evaluation of given coupl. orders."+\
                   " Only the total ME will be computed.", self.opt['export_format'])
-            elif  self.opt['export_format'] in ['madloop_matchbox']:
+            elif  self.opt['export_format'] in ['madloop_matchbox', 'matchbox']:
                 replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
                 matrix_template = "matrix_standalone_matchbox_splitOrders_v4.inc"
             else:
@@ -3057,7 +2932,11 @@ CF2PY integer, intent(in) :: new_value
                 content = '\n' + open(replace_dict['template_file2'])\
                                    .read()%replace_dict
                 writer.writelines(content)
-            return len([call for call in helas_calls if call.find('#') != 0])
+            if return_replace_dict:
+                replace_dict['return_value'] = len([call for call in helas_calls if call.find('#') != 0])
+                return replace_dict
+            else:
+                return len([call for call in helas_calls if call.find('#') != 0])
         else:
             replace_dict['return_value'] = len([call for call in helas_calls if call.find('#') != 0])
             return replace_dict # for subclass update
@@ -4626,9 +4505,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         replace_dict['fake_width_declaration'] += \
             ('  save fk_%s \n' * len(width_list)) % tuple(width_list)
         fk_w_defs = []
-        one_def = ' IF(%(w)s.ne.0d0) fk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s)'     
+        one_def = ' IF(%(w)s.ne.0d0) then \nfk_%(w)s = SIGN(MAX(ABS(%(w)s), ABS(%(m)s*small_width_treatment)), %(w)s) \n else \n fk_%(w)s = 0d0\n endif\n'     
         for m, w in mass_width:
-            if w == 'zero':
+            if w.lower() == 'zero':
                 if ' fk_zero = 0d0' not in fk_w_defs: 
                     fk_w_defs.append(' fk_zero = 0d0')
                 continue    

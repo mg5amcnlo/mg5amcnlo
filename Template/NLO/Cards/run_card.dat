@@ -77,12 +77,16 @@
 # as a baseline (hadron h1). The remaining PDFs (starting from the second
 # LHAID in the list) will be used as a PDF for the hadron h2.
 #
-# For details see: arXiv:XXXX
+# For details see: arXiv:2501.14487
 #  
 # Works only with:
 #
 #    lhapdf = pdlabel
 #
+#Oct.2026:
+#	Added the support of the LHE generation to the asymmetric collisions.
+#	with additional flag **True = asymm_events** set of the additional weights will
+#	be generated inside LHE file. By default this flag is False.
 #***********************************************************************
  %(asymm_choice)s = asymm_choice ! choice of the collision system  
 #***********************************************************************

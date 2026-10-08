@@ -1025,12 +1025,12 @@ class MultiEventFile(EventFile):
                 from_init = True
 
             if not from_init:
-                if group in grouped_cross:
-                    grouped_cross[group] += self.allcross[i]
-                    grouped_error[group] += self.error[i]**2 
+                if int(group) in grouped_cross:
+                    grouped_cross[int(group)] += self.allcross[i]
+                    grouped_error[int(group)] += self.error[i]**2 
                 else:
-                    grouped_cross[group] = self.allcross[i]
-                    grouped_error[group] = self.error[i]**2
+                    grouped_cross[int(group)] = self.allcross[i]
+                    grouped_error[int(group)] = self.error[i]**2
             else:
                 ban = banner_mod.Banner(ff.banner)
                 for line in  ban['init'].split('\n'):
@@ -1038,11 +1038,11 @@ class MultiEventFile(EventFile):
                     if len(splitline)==4:
                         cross, error, _, group = splitline
                         if int(group) in grouped_cross:
-                            grouped_cross[group] += float(cross)
-                            grouped_error[group] += float(error)**2                        
+                            grouped_cross[int(group)] += float(cross)
+                            grouped_error[int(group)] += float(error)**2                        
                         else:
-                            grouped_cross[group] = float(cross)
-                            grouped_error[group] = float(error)**2                             
+                            grouped_cross[int(group)] = float(cross)
+                            grouped_error[int(group)] = float(error)**2                             
         nb_group = len(grouped_cross)
         
         # compute the information for the first line 
@@ -1057,6 +1057,8 @@ class MultiEventFile(EventFile):
             #special case for 1>N
             init_information = run_card.get_banner_init_information()
             event = next(self)
+            if not len(event): #if parse-momenta was false we have to parse the first event
+                event = Event(str(event))
             init_information["idbmup1"] = event[0].pdg
             init_information["ebmup1"] = event[0].mass
             init_information["idbmup2"] = 0 
@@ -1066,12 +1068,16 @@ class MultiEventFile(EventFile):
             # check special case without PDF for one (or both) beam
             if init_information["idbmup1"] in [0,9]:
                 event = next(self)
+                if len(event) == 0:
+                    event = Event(str(event))
                 init_information["idbmup1"]= event[0].pdg
                 if init_information["idbmup2"] == 0:
                     init_information["idbmup2"]= event[1].pdg
                 self.seek(0)
             if init_information["idbmup2"] in [0,9]:
                 event = next(self)
+                if len(event) == 0:
+                    event = Event(str(event))
                 init_information["idbmup2"] = event[1].pdg
                 self.seek(0)
         
@@ -1742,7 +1748,10 @@ class Event(list):
             if particle.pdg in pdg_to_decay and pdg_to_decay[particle.pdg]:
                 one_decay = pdg_to_decay[particle.pdg].pop()
                 self.add_decay_to_particle(i, one_decay)
+                particle.helicity = 9
                 return self.add_decays(pdg_to_decay)
+            
+            
         return self
                 
 
@@ -1882,10 +1891,13 @@ class Event(list):
             abspz += abs(particle.pz)
             # check mass
             fourmass = FourMomentum(particle).mass
-            
-            if particle.mass and (abs(particle.mass) - fourmass)/ abs(particle.mass) > threshold:
-                raise Exception( "Do not have correct mass lhe: %s momentum: %s (error at %s" % (particle.mass, fourmass, (abs(particle.mass) - fourmass)/ abs(particle.mass)))
-                
+            if particle.mass:
+                expected = (particle.E - math.sqrt(particle.E**2 -particle.mass**2))/particle.E
+                if expected > 1e-8:
+                    mass_threshold = particle.E**2 - (particle.E-threshold)**2
+                    if  (abs(particle.mass) - fourmass)/ mass_threshold > 5:
+                        raise Exception( "Do not have correct mass lhe: %s momentum: %s (error at %s" % (particle.mass, fourmass, (abs(particle.mass) - fourmass)/ abs(particle.mass)))
+                    
 
         if E/absE > threshold:
             logger.critical(self)
@@ -2614,8 +2626,8 @@ class FourMomentum(object):
     
     @property
     def pseudorapidity(self):
-        norm = math.sqrt(self.px**2 + self.py**2+self.pz**2)
-        return  0.5* math.log((norm - self.pz) / (norm + self.pz))
+        norm = math.sqrt(self.px**2 + self.py**2 + self.pz**2)
+        return  0.5* math.log((norm + self.pz) / (norm - self.pz))
     
     @property
     def rapidity(self):
