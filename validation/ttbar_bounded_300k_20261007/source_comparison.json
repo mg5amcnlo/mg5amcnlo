@@ -1,0 +1,19 @@
+{
+  "different_sources_from_stopped_run": [
+    "Template/NLO/SubProcesses/simple_integrator.f90"
+  ],
+  "cards": {
+    "ampli_run_card.dat": {
+      "new": "2dfced29c64eec85a42c470a58b9bbd99b50b04e8f2de16501eaa1955e629a3f",
+      "stopped": "2dfced29c64eec85a42c470a58b9bbd99b50b04e8f2de16501eaa1955e629a3f"
+    },
+    "ampli_param_card.dat": {
+      "new": "e0b5b7c21e5331a5df9ddededb6ece6ff9f65c9de79838f4fc0ab816704ff170",
+      "stopped": "e0b5b7c21e5331a5df9ddededb6ece6ff9f65c9de79838f4fc0ab816704ff170"
+    },
+    "ampli_FKS_params.dat": {
+      "new": "f74a5310ab7edc424c305f6f63f3865e5e511b454475dc1eb590b8a8e1bed380",
+      "stopped": "f74a5310ab7edc424c305f6f63f3865e5e511b454475dc1eb590b8a8e1bed380"
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "backend": "ampli",
+  "run_name": "benchmark_300k",
+  "work_directory": "/tmp/mg5-ttbar-two-stage-300k-ts9qfx5j",
+  "cores": 5,
+  "previous_benchmark": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_300k_20261007",
+  "fresh_export": true,
+  "fresh_survey": true,
+  "expected_events": 300000,
+  "req_acc": -1,
+  "folding": [
+    1,
+    1,
+    1
+  ],
+  "seed": 19727,
+  "started": "2026-10-07T09:17:00.024232+00:00",
+  "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+  "source_branch": "MCcntRefactor_Sfun_Granny_AmpliColIntegrator",
+  "source_sha256": {
+    "Template/NLO/SubProcesses/ampli_mint_adapter.f90": "62e3f8b3d74410b6616a6d4ff842cc729b111bc7a01a514f7a9167d31f295625",
+    "Template/NLO/SubProcesses/simple_integrator.f90": "fe30eb12d23bc3ce3ff0ed138af4eb57fe02a97fb832a0042a9b0abe4f0c8d80",
+    "Template/NLO/SubProcesses/driver_mintMC.f": "b6f2882fcf601b259007ebc7de76010e667656c8ad2004af878bb5dea2705160",
+    "Template/NLO/SubProcesses/mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+    "Template/NLO/SubProcesses/integrator_helpers.f90": "ccdc363fd95481fb4e2aa03faeb286a4c22afe4656c2af4a79e969662d8afc61",
+    "Template/NLO/SubProcesses/genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+    "madgraph/interface/amcatnlo_run_interface.py": "72a59f37881194e4677ec64da753ecce3938ae9d1de83fa10b28325240a3888b",
+    "madgraph/various/ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462",
+    "madgraph/iolibs/export_fks.py": "b55166cd3dad199c84f5e4060380e82c646d91b08e58260420ff46ace96dd343"
+  },
+  "exported_source_sha256": {
+    "SubProcesses/ampli_mint_adapter.f90": "62e3f8b3d74410b6616a6d4ff842cc729b111bc7a01a514f7a9167d31f295625",
+    "SubProcesses/simple_integrator.f90": "fe30eb12d23bc3ce3ff0ed138af4eb57fe02a97fb832a0042a9b0abe4f0c8d80",
+    "SubProcesses/driver_mintMC.f": "b6f2882fcf601b259007ebc7de76010e667656c8ad2004af878bb5dea2705160",
+    "SubProcesses/mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+    "SubProcesses/integrator_helpers.f90": "ccdc363fd95481fb4e2aa03faeb286a4c22afe4656c2af4a79e969662d8afc61",
+    "SubProcesses/genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+    "bin/internal/amcatnlo_run_interface.py": "72a59f37881194e4677ec64da753ecce3938ae9d1de83fa10b28325240a3888b",
+    "bin/internal/ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+  },
+  "cards_sha256": {
+    "run_card.dat": "2dfced29c64eec85a42c470a58b9bbd99b50b04e8f2de16501eaa1955e629a3f",
+    "FKS_params.dat": "f74a5310ab7edc424c305f6f63f3865e5e511b454475dc1eb590b8a8e1bed380",
+    "param_card.dat": "e0b5b7c21e5331a5df9ddededb6ece6ff9f65c9de79838f4fc0ab816704ff170"
+  }
+}

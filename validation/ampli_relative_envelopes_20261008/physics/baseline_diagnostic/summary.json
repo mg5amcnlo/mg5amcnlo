@@ -1,0 +1,77 @@
+{
+  "2500": {
+    "worker": "/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/SubProcesses/P0_gg_ttx/GF3.0_baseline_diagnostic_gf3_small",
+    "exit_code": 0,
+    "wall_seconds": 19.128931827959605,
+    "timing": {
+      "Born": 0.0537224188,
+      "PS_Generation": 0.354053348,
+      "Reals_evaluation": 3.1387217,
+      "MCsubtraction": 1.65040255,
+      "Counter_terms": 1.24452353,
+      "Integrated_CT": 0.671693087,
+      "Virtuals": 0.0811470449,
+      "FxFx_cluster": 0.0,
+      "Nbody_prefactor": 1.77750993,
+      "N1body_prefactor": 0.178001076,
+      "Adding_alphas_pdf": 0.479557604,
+      "Reweight_scale": 0.0,
+      "Reweight_pdf": 0.0,
+      "Filling_plots": 0.0,
+      "Applying_cuts": 0.377350211,
+      "Sum_ident_contr": 0.0555614904,
+      "Pick_unwgt": 0.0122417137,
+      "Write_events": 0.868099153,
+      "AlphaS_dependencies": 1.01735759,
+      "Other_tasks": 7.11614704,
+      "Total": 19.076088
+    },
+    "trials": 18294,
+    "candidates": 5318,
+    "quota": 2242,
+    "reserve": 2467,
+    "mean_signed": 263.67329955314915,
+    "mean_abs": 462.37343112448053,
+    "pooled_trial_error_signed": 3.083413690971435,
+    "pooled_trial_error_abs": 3.739237157172792,
+    "active_trials": 18294,
+    "expired_trial_fraction": 0.0,
+    "epochs": 4,
+    "eligible_epochs": 4,
+    "adaptation": {
+      "mode": "adaptive_unfolded",
+      "ndim": 7,
+      "mask": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "updates": 3,
+      "completed_iterations": 4,
+      "schedule": "nonzero_trials",
+      "proposals": 4,
+      "history": "last_eight_event_proposals"
+    },
+    "tails": {
+      "full_trial_tail": 0.0069046451118608375,
+      "reserve_tail": 0.007759275894976637,
+      "worst_subset_tail": 0.008536524972017605
+    },
+    "validator_passed": true,
+    "published_rate": {
+      "absolute": 462.37343112448053,
+      "error_abs": 3.7391349573188015,
+      "signed": 263.67329955314915,
+      "error_signed": 3.0833294159132443
+    },
+    "res_dat": "462.37343112448053        3.7391349573188015        263.67329955314915        3.0833294159132443                4       18294   19.0760880",
+    "numerical_artifact_sha256": {
+      "ampli_pool.dat": "c3eec61a5c13d2351aaa4ab066919bb7de780cb66ad18000ff4fb40873325921",
+      "ampli_candidates.lhe": "cbba4fd00f219b5009acec4a376f7a9e62af04c66da016461d79a278cab87197"
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "variant": "quantile",
+  "replica": 13,
+  "seed": 14270569,
+  "quota": 30000,
+  "trials": 312310,
+  "nonzero": 124767,
+  "epochs": 28,
+  "updates": 11,
+  "proposals": 12,
+  "skipped_adaptations": 16,
+  "eligible_epochs": 24,
+  "active_trials": 307427,
+  "means": [
+    0.08333349820710019,
+    0.003571870435016688
+  ],
+  "quoted_errors": [
+    0.00023258411628879642,
+    4.716668256796556e-05
+  ],
+  "reserve_shapes": [
+    0.2911865904695579,
+    0.0745053882099711,
+    0.04116004437753918
+  ],
+  "final_shapes": [
+    0.29073999408343815,
+    0.07355165934388991,
+    0.041745378732994665
+  ],
+  "tail_checks": {
+    "available": 33000,
+    "reserve": 33000,
+    "selected": 30000,
+    "full_trial_tail": 0.0029286270341222233,
+    "reserve_tail": 0.0022389971308976755,
+    "worst_subset_tail": 0.002462875251811349,
+    "max_correction": 1.113109382929654,
+    "overweight": 0.0029286270341222233
+  },
+  "selected_tail": 0.0023248603806539326,
+  "wall_seconds": 10.433621686999686
+}

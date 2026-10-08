@@ -1,0 +1,271 @@
+{
+  "integration": {
+    "signed_pb": 683.1833248921388,
+    "signed_error_pb": 3.5274104264956465,
+    "absolute_pb": 1153.0057756964131,
+    "absolute_error_pb": 4.1967312901797715,
+    "channels": 5,
+    "expected_channels": 5,
+    "complete": true,
+    "relative_signed_error": 0.005163197487369229,
+    "estimator": "Survey once plus all native production iterations, including top-ups",
+    "rate_estimation_trials": 103054
+  },
+  "production": {
+    "logged_workers": 5,
+    "workers_with_trial_counters": 5,
+    "counter_events": 7477,
+    "trials": 62094,
+    "efficiency": 0.03220923116565207,
+    "events_per_cpu_second_completed_workers": 35.705167169295954,
+    "upper_bound_failures": 0,
+    "zero_trials": 0,
+    "ampli_envelope_failure_workers": 0,
+    "all_logged_workers_finished": true,
+    "all_assigned_workers_finished": true,
+    "stored_candidates": 7477,
+    "candidate_retention_efficiency": 0.12041421071279028,
+    "cpu_seconds": 56.01430153,
+    "survey_cpu_seconds": 61.4317656,
+    "final_events": 2000,
+    "events_per_total_cpu_second": 17.029093003056612,
+    "native_iterations": 8,
+    "grid_updates": 3,
+    "nonzero_trials": 62094,
+    "native_reserve_target": 2203,
+    "total_nominal_worker_quota": 2000,
+    "collection_available": 2203,
+    "collection_rounds": 1,
+    "rethresholded_workers": 0,
+    "max_channel_quota_change": 5
+  },
+  "surveys": [
+    {
+      "channel": "P0_gg_ttx/3.0",
+      "iterations": 4,
+      "relative_absolute_error": 0.011963229047374731,
+      "retained_points": 8192,
+      "total_survey_points": 15360,
+      "initial_envelope": 6141.964104567681
+    },
+    {
+      "channel": "P0_gg_ttx/2.0",
+      "iterations": 4,
+      "relative_absolute_error": 0.011290344152556532,
+      "retained_points": 8192,
+      "total_survey_points": 15360,
+      "initial_envelope": 7409.749301495986
+    },
+    {
+      "channel": "P0_gg_ttx/1.0",
+      "iterations": 4,
+      "relative_absolute_error": 0.010530905395921929,
+      "retained_points": 8192,
+      "total_survey_points": 15360,
+      "initial_envelope": 1302.409514347791
+    },
+    {
+      "channel": "P0_uux_ttx/1.0",
+      "iterations": 4,
+      "relative_absolute_error": 0.009261029160665525,
+      "retained_points": 8192,
+      "total_survey_points": 15360,
+      "initial_envelope": 798.0865303768594
+    },
+    {
+      "channel": "P0_uxu_ttx/1.0",
+      "iterations": 4,
+      "relative_absolute_error": 0.009025976658209608,
+      "retained_points": 8192,
+      "total_survey_points": 15360,
+      "initial_envelope": 1130.1420052544456
+    }
+  ],
+  "native_validation": {
+    "collector_source": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ampli_two_stage_20261007/ttbar/sources/madgraph/various/ampli_pool.py",
+    "collector_sha256": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462",
+    "rates_recomputed_from_survey_once_and_all_iterations": true,
+    "initial_and_updated_quotas_reproduced": true,
+    "deterministic_collection_reproduced": true,
+    "final_lhe_magnitudes_reproduced": true,
+    "all_native_and_collected_tail_fractions_below_one_percent": true,
+    "collected_tail_fraction": 0.0012654982643240046,
+    "maximum_native_tail_fraction": 0.005818711704418256,
+    "maximum_final_channel_tail_bound": 0.005786925774463936,
+    "workers": [
+      {
+        "directory": "SubProcesses/P0_gg_ttx/GF3.0_1",
+        "trials": 34290,
+        "nonzero_trials": 34290,
+        "iterations": 2,
+        "stored_candidates": 5678,
+        "reserve_target": 883,
+        "nominal_quota": 802,
+        "available": 883,
+        "native_tails": {
+          "full_trial_tail": 0.0,
+          "reserve_tail": 0.0,
+          "worst_subset_tail": 0.0
+        },
+        "rethresholded": false,
+        "adaptation": {
+          "mode": "adaptive_unfolded",
+          "ndim": 7,
+          "mask": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "updates": 1,
+          "completed_iterations": 2,
+          "schedule": "nonzero_trials"
+        }
+      },
+      {
+        "directory": "SubProcesses/P0_gg_ttx/GF2.0_1",
+        "trials": 14358,
+        "nonzero_trials": 14358,
+        "iterations": 1,
+        "stored_candidates": 909,
+        "reserve_target": 897,
+        "nominal_quota": 815,
+        "available": 897,
+        "native_tails": {
+          "full_trial_tail": 0.0016486422129448487,
+          "reserve_tail": 0.0016410446910956257,
+          "worst_subset_tail": 0.0018060602082669804
+        },
+        "rethresholded": false,
+        "adaptation": {
+          "mode": "adaptive_unfolded",
+          "ndim": 7,
+          "mask": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "updates": 0,
+          "completed_iterations": 1,
+          "schedule": "nonzero_trials"
+        }
+      },
+      {
+        "directory": "SubProcesses/P0_gg_ttx/GF1.0_1",
+        "trials": 2571,
+        "nonzero_trials": 2571,
+        "iterations": 1,
+        "stored_candidates": 229,
+        "reserve_target": 201,
+        "nominal_quota": 182,
+        "available": 201,
+        "native_tails": {
+          "full_trial_tail": 0.005623021666118934,
+          "reserve_tail": 0.005268846592935738,
+          "worst_subset_tail": 0.005818711704418256
+        },
+        "rethresholded": false,
+        "adaptation": {
+          "mode": "adaptive_unfolded",
+          "ndim": 7,
+          "mask": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "updates": 0,
+          "completed_iterations": 1,
+          "schedule": "nonzero_trials"
+        }
+      },
+      {
+        "directory": "SubProcesses/P0_uux_ttx/GF1.0_1",
+        "trials": 4914,
+        "nonzero_trials": 4914,
+        "iterations": 2,
+        "stored_candidates": 345,
+        "reserve_target": 121,
+        "nominal_quota": 110,
+        "available": 121,
+        "native_tails": {
+          "full_trial_tail": 0.0,
+          "reserve_tail": 0.0,
+          "worst_subset_tail": 0.0
+        },
+        "rethresholded": false,
+        "adaptation": {
+          "mode": "adaptive_unfolded",
+          "ndim": 7,
+          "mask": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "updates": 1,
+          "completed_iterations": 2,
+          "schedule": "nonzero_trials"
+        }
+      },
+      {
+        "directory": "SubProcesses/P0_uxu_ttx/GF1.0_1",
+        "trials": 5961,
+        "nonzero_trials": 5961,
+        "iterations": 2,
+        "stored_candidates": 316,
+        "reserve_target": 101,
+        "nominal_quota": 91,
+        "available": 101,
+        "native_tails": {
+          "full_trial_tail": 0.0,
+          "reserve_tail": 0.0,
+          "worst_subset_tail": 0.0
+        },
+        "rethresholded": false,
+        "adaptation": {
+          "mode": "adaptive_unfolded",
+          "ndim": 7,
+          "mask": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "updates": 1,
+          "completed_iterations": 2,
+          "schedule": "nonzero_trials"
+        }
+      }
+    ],
+    "production_counters": {
+      "native_iterations": 8,
+      "grid_updates": 3,
+      "nonzero_trials": 62094,
+      "zero_trials": 0,
+      "stored_candidates": 7477,
+      "native_reserve_target": 2203,
+      "total_nominal_worker_quota": 2000,
+      "collection_available": 2203,
+      "collection_rounds": 1,
+      "rethresholded_workers": 0,
+      "max_channel_quota_change": 5
+    }
+  }
+}

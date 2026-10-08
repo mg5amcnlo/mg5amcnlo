@@ -1,0 +1,6 @@
+set automatic_html_opening False --no_save
+set notification_center False --no_save
+set run_mode 2 --no_save
+set nb_core 2 --no_save
+launch aMC@NLO -f -p --only_generation --name=bounded2000
+quit

@@ -1,0 +1,82 @@
+{
+  "baseline": {
+    "2500": {
+      "diagnostics": {
+        "available": 2467,
+        "reserve": 2467,
+        "selected": 2242,
+        "full_trial_tail": 0.0069046451118608375,
+        "reserve_tail": 0.007759275894976637,
+        "worst_subset_tail": 0.008536524972017605,
+        "max_correction": 1.9544423268891504,
+        "overweight": 0.008536524972017605,
+        "selected_tail": 0.006856224879008305,
+        "sum_corrections": 2241.6018143825236,
+        "max_worker_selected_tail": 0.006856224879008305
+      },
+      "events": 2242,
+      "destination": "/tmp/mg5-ampli-stable-history-djk1m74v/ampli/SubProcesses/P0_gg_ttx/GF3.0_baseline2500/diagnostic_collected.lhe",
+      "passed": true,
+      "note": "Diagnostic worker-only collection with unit normalization, not a complete physics sample."
+    },
+    "30000": {
+      "diagnostics": {
+        "available": 27121,
+        "reserve": 27121,
+        "selected": 24655,
+        "full_trial_tail": 0.005869735339048386,
+        "reserve_tail": 0.009080641782832116,
+        "worst_subset_tail": 0.00998717301338001,
+        "max_correction": 3.861086544585178,
+        "overweight": 0.00998717301338001,
+        "selected_tail": 0.009474444529099263,
+        "sum_corrections": 24657.560648286842,
+        "max_worker_selected_tail": 0.009474444529099263
+      },
+      "events": 24655,
+      "destination": "/tmp/mg5-ampli-stable-history-djk1m74v/ampli/SubProcesses/P0_gg_ttx/GF3.0_baseline30000/diagnostic_collected.lhe",
+      "passed": true,
+      "note": "Diagnostic worker-only collection with unit normalization, not a complete physics sample."
+    }
+  },
+  "candidate": {
+    "2500": {
+      "diagnostics": {
+        "available": 2467,
+        "reserve": 2467,
+        "selected": 2242,
+        "full_trial_tail": 0.0069046451118608375,
+        "reserve_tail": 0.007759275894976637,
+        "worst_subset_tail": 0.008536524972017605,
+        "max_correction": 1.9544423268891504,
+        "overweight": 0.008536524972017605,
+        "selected_tail": 0.006856224879008305,
+        "sum_corrections": 2241.6018143825236,
+        "max_worker_selected_tail": 0.006856224879008305
+      },
+      "events": 2242,
+      "destination": "/tmp/mg5-ampli-stable-history-djk1m74v/ampli/SubProcesses/P0_gg_ttx/GF3.0_candidate2500/diagnostic_collected.lhe",
+      "passed": true,
+      "note": "Diagnostic worker-only collection with unit normalization, not a complete physics sample."
+    },
+    "30000": {
+      "diagnostics": {
+        "available": 27121,
+        "reserve": 27121,
+        "selected": 24655,
+        "full_trial_tail": 0.003974733675912594,
+        "reserve_tail": 0.004963415558338973,
+        "worst_subset_tail": 0.005459198695257182,
+        "max_correction": 3.833263549829296,
+        "overweight": 0.005459198695257182,
+        "selected_tail": 0.005019812010126912,
+        "sum_corrections": 24656.121981125667,
+        "max_worker_selected_tail": 0.005019812010126912
+      },
+      "events": 24655,
+      "destination": "/tmp/mg5-ampli-stable-history-djk1m74v/ampli/SubProcesses/P0_gg_ttx/GF3.0_candidate30000/diagnostic_collected.lhe",
+      "passed": true,
+      "note": "Diagnostic worker-only collection with unit normalization, not a complete physics sample."
+    }
+  }
+}

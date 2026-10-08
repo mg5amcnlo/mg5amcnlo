@@ -1,0 +1,298 @@
+{
+  "all_comparability_checks_passed": true,
+  "checks": {
+    "both_samples_complete": true,
+    "new_invocation_reuses_survey": true,
+    "restart_restored_saved_allocation_order": true,
+    "same_seed_cores_request_and_folding": true,
+    "run_cards_differ_only_by_job_limit": true,
+    "prelaunch_cards_differ_only_by_job_limit": true,
+    "prelaunch_and_actual_seeds_confirmed": true,
+    "fks_cards_identical": true,
+    "parameter_and_fks_files_identical": true,
+    "template_and_exported_source_fingerprints_identical": true,
+    "source_snapshots_and_exports_match_fingerprints": true,
+    "all_twenty_survey_files_byte_identical": true,
+    "survey_statistics_identical": true,
+    "initial_channel_quotas_and_allocation_order_identical": true,
+    "both_follow_two_stage_workflow": true,
+    "native_tail_and_collection_replays_passed": true,
+    "each_batch_honors_its_job_limit": true,
+    "saved_survey_cpu_confirmed": true
+  },
+  "new_30000_per_job": {
+    "nevt_job": 30000,
+    "integration": {
+      "signed_pb": 683.2121722183794,
+      "signed_error_pb": 0.5735517928912756,
+      "absolute_pb": 1159.0102280121869,
+      "absolute_error_pb": 0.6791434659750719,
+      "channels": 5,
+      "expected_channels": 5,
+      "complete": true,
+      "relative_signed_error": 0.0008394929367680347,
+      "estimator": "Survey once plus all native production iterations, including top-ups",
+      "rate_estimation_trials": 3105012
+    },
+    "generation_cpu_seconds": 2941.3711080000003,
+    "survey_cpu_seconds_for_equivalent_workflow": 59.93562422,
+    "survey_was_inherited": true,
+    "actual_worker_cpu_seconds": 2941.3711080000003,
+    "equivalent_full_workflow_worker_cpu_seconds": 3001.3067322200004,
+    "invocation_wall_seconds": 684.9690384200076,
+    "invocation_wall_scope": "generation-only invocation including coordination and collection",
+    "generation_phase_span_seconds_estimate": 657.4094293117523,
+    "generation_phase_span_note": "Span inferred from completed worker log modification times and integer wall durations; valid only when logs have not subsequently been copied/touched. In-progress workers are excluded.",
+    "generation_trials": 3064052,
+    "nonzero_generation_trials": 3063972,
+    "final_events": 300000,
+    "final_events_per_generation_trial": 0.09790956550345752,
+    "final_events_per_generation_cpu_second": 101.99325042122497,
+    "production_workers": 13,
+    "native_iterations": 117,
+    "grid_updates": 104,
+    "retained_candidates": 804297,
+    "generated_reserve_target": 330006,
+    "collection_rounds": 1,
+    "signed_weight_effective_events": 104264.78856328416,
+    "absolute_weight_effective_events": 299395.9226997264,
+    "negative_event_fraction": 0.20451,
+    "negative_absolute_weight_fraction": 0.204936223274369,
+    "signed_effective_events_per_generation_cpu_second": 35.447682300170385,
+    "signed_effective_events_per_equivalent_total_cpu_second": 34.73979765012615,
+    "overweight": {
+      "collected_tail_fraction": 0.004000891265154718,
+      "maximum_native_tail_fraction": 0.007910478270787811,
+      "maximum_final_channel_tail_bound": 0.007198110017360938
+    }
+  },
+  "saved_2500_per_job": {
+    "nevt_job": 2500,
+    "integration": {
+      "signed_pb": 680.8822922498574,
+      "signed_error_pb": 0.5713253387411997,
+      "absolute_pb": 1156.0086359162265,
+      "absolute_error_pb": 0.6785708599714495,
+      "channels": 5,
+      "expected_channels": 5,
+      "complete": true,
+      "relative_signed_error": 0.0008390956046945416,
+      "estimator": "Survey once plus all native production iterations, including top-ups",
+      "rate_estimation_trials": 3115366
+    },
+    "generation_cpu_seconds": 3093.4968044600005,
+    "survey_cpu_seconds_for_equivalent_workflow": 59.93562422,
+    "survey_was_inherited": false,
+    "actual_worker_cpu_seconds": 3153.4324286800006,
+    "equivalent_full_workflow_worker_cpu_seconds": 3153.4324286800006,
+    "invocation_wall_seconds": 696.770680882968,
+    "invocation_wall_scope": "full invocation including compilation, survey, generation and collection",
+    "generation_phase_span_seconds_estimate": 622.4258875846863,
+    "generation_phase_span_note": "Span inferred from completed worker log modification times and integer wall durations; valid only when logs have not subsequently been copied/touched. In-progress workers are excluded.",
+    "generation_trials": 3074406,
+    "nonzero_generation_trials": 3074351,
+    "final_events": 300000,
+    "final_events_per_generation_trial": 0.09757982517598522,
+    "final_events_per_generation_cpu_second": 96.97763371453293,
+    "production_workers": 135,
+    "native_iterations": 965,
+    "grid_updates": 830,
+    "retained_candidates": 892555,
+    "generated_reserve_target": 330092,
+    "collection_rounds": 1,
+    "signed_weight_effective_events": 103912.25853748422,
+    "absolute_weight_effective_events": 299518.4609504789,
+    "negative_event_fraction": 0.20502666666666666,
+    "negative_absolute_weight_fraction": 0.20549572811169753,
+    "signed_effective_events_per_generation_cpu_second": 33.5905498229933,
+    "signed_effective_events_per_equivalent_total_cpu_second": 32.952111988326635,
+    "overweight": {
+      "collected_tail_fraction": 0.00576486000403541,
+      "maximum_native_tail_fraction": 0.009807477408590243,
+      "maximum_final_channel_tail_bound": 0.008511082377243344
+    }
+  },
+  "new_over_reference_ratios": {
+    "generation_cpu_seconds": 0.9508240331004463,
+    "equivalent_full_workflow_worker_cpu_seconds": 0.9517586947237431,
+    "generation_trials": 0.9966321949670929,
+    "final_events_per_generation_trial": 1.0033791854707426,
+    "final_events_per_generation_cpu_second": 1.0517193141818268,
+    "production_workers": 0.0962962962962963,
+    "native_iterations": 0.12124352331606218,
+    "grid_updates": 0.12530120481927712,
+    "signed_weight_effective_events": 1.0033925739923435,
+    "absolute_weight_effective_events": 0.9995908824772816,
+    "signed_effective_events_per_generation_cpu_second": 1.0552873497743656,
+    "signed_effective_events_per_equivalent_total_cpu_second": 1.054251019249777
+  },
+  "generation_cpu_reduction_percent": 4.9175966899553725,
+  "generation_speedup": 1.0517193141818268,
+  "equivalent_full_workflow_cpu_reduction_percent": 4.824130527625692,
+  "signed_rate": {
+    "difference_pb": 2.3298799685219365,
+    "quadrature_error_pb": 0.8095519142195535,
+    "difference_over_quadrature_error": 2.877987103233585,
+    "uncertainty_ratio": 1.0038969987835327
+  },
+  "absolute_rate": {
+    "difference_pb": 3.0015920959604045,
+    "quadrature_error_pb": 0.9600490921713463,
+    "difference_over_quadrature_error": 3.1264985514143797,
+    "uncertainty_ratio": 1.0008438411334766
+  },
+  "initial_allocation": [
+    {
+      "subprocess": "P0_gg_ttx",
+      "channel": "1.0",
+      "allocation_order": 0,
+      "initial_quota": 25985
+    },
+    {
+      "subprocess": "P0_gg_ttx",
+      "channel": "2.0",
+      "allocation_order": 1,
+      "initial_quota": 120627
+    },
+    {
+      "subprocess": "P0_gg_ttx",
+      "channel": "3.0",
+      "allocation_order": 2,
+      "initial_quota": 123274
+    },
+    {
+      "subprocess": "P0_uux_ttx",
+      "channel": "1.0",
+      "allocation_order": 3,
+      "initial_quota": 14925
+    },
+    {
+      "subprocess": "P0_uxu_ttx",
+      "channel": "1.0",
+      "allocation_order": 4,
+      "initial_quota": 15189
+    }
+  ],
+  "survey_file_comparison": [
+    {
+      "path": "SubProcesses/P0_gg_ttx/GF3.0/ampli_grids",
+      "new_sha256": "79c2e44fd111d499574e9dd5819a7b914bdc22fc6dac8e0c148465b8ca47adb4",
+      "reference_sha256": "79c2e44fd111d499574e9dd5819a7b914bdc22fc6dac8e0c148465b8ca47adb4"
+    },
+    {
+      "path": "SubProcesses/P0_gg_ttx/GF3.0/grid.MC_integer",
+      "new_sha256": "ed9937859a7cb69814d3a9c54d27c4e84194480fe4d50f71651fa68d7b2e9afc",
+      "reference_sha256": "ed9937859a7cb69814d3a9c54d27c4e84194480fe4d50f71651fa68d7b2e9afc"
+    },
+    {
+      "path": "SubProcesses/P0_gg_ttx/GF3.0/res_1.dat",
+      "new_sha256": "2e7d6c2761bc9fe33b0a4d9515ab5354588bb6d6a5e24b2be3bcea9cecd1c047",
+      "reference_sha256": "2e7d6c2761bc9fe33b0a4d9515ab5354588bb6d6a5e24b2be3bcea9cecd1c047"
+    },
+    {
+      "path": "SubProcesses/P0_gg_ttx/GF3.0/log_MINT1.txt",
+      "new_sha256": "25ee88731e9dc0b01ee1f416a06f667883f20cddeb461723a97a4d6d616a86da",
+      "reference_sha256": "25ee88731e9dc0b01ee1f416a06f667883f20cddeb461723a97a4d6d616a86da"
+    },
+    {
+      "path": "SubProcesses/P0_gg_ttx/GF2.0/ampli_grids",
+      "new_sha256": "5ef555d8302c34fd8f202d5ac9db1e33e9378aa65ca0ed027c0445ca66f859e7",
+      "reference_sha256": "5ef555d8302c34fd8f202d5ac9db1e33e9378aa65ca0ed027c0445ca66f859e7"
+    },
+    {
+      "path": "SubProcesses/P0_gg_ttx/GF2.0/grid.MC_integer",
+      "new_sha256": "0f0173bd51a45ed8501a6a23341b635b293ebadcd4b68eae0062c3778eec99a3",
+      "reference_sha256": "0f0173bd51a45ed8501a6a23341b635b293ebadcd4b68eae0062c3778eec99a3"
+    },
+    {
+      "path": "SubProcesses/P0_gg_ttx/GF2.0/res_1.dat",
+      "new_sha256": "7c007d55d0d44cedde3218a1d4bbab392a4a4258ddd9b3677105acb42a3b8516",
+      "reference_sha256": "7c007d55d0d44cedde3218a1d4bbab392a4a4258ddd9b3677105acb42a3b8516"
+    },
+    {
+      "path": "SubProcesses/P0_gg_ttx/GF2.0/log_MINT1.txt",
+      "new_sha256": "a6be731ebb45ff9c6362e2ce88e7de27e2be46ffaacffc8e539f83312d6008c4",
+      "reference_sha256": "a6be731ebb45ff9c6362e2ce88e7de27e2be46ffaacffc8e539f83312d6008c4"
+    },
+    {
+      "path": "SubProcesses/P0_gg_ttx/GF1.0/ampli_grids",
+      "new_sha256": "dba84372d5a32dd3d80f4233407633d6ebe07b37f1684986dfabc90f3e27ed1b",
+      "reference_sha256": "dba84372d5a32dd3d80f4233407633d6ebe07b37f1684986dfabc90f3e27ed1b"
+    },
+    {
+      "path": "SubProcesses/P0_gg_ttx/GF1.0/grid.MC_integer",
+      "new_sha256": "e03524447b8c0382f93a682238e2b66acd06d1984a49fd468dc481878b49d127",
+      "reference_sha256": "e03524447b8c0382f93a682238e2b66acd06d1984a49fd468dc481878b49d127"
+    },
+    {
+      "path": "SubProcesses/P0_gg_ttx/GF1.0/res_1.dat",
+      "new_sha256": "e65e71cb3824c0a1e6e4796e3da2921390bcd91b1b5bb038ba94d15ae820d544",
+      "reference_sha256": "e65e71cb3824c0a1e6e4796e3da2921390bcd91b1b5bb038ba94d15ae820d544"
+    },
+    {
+      "path": "SubProcesses/P0_gg_ttx/GF1.0/log_MINT1.txt",
+      "new_sha256": "69567a9b6cdaaf1ab80cc92dd0ca74294378ebda2af88b82029be9244279fb45",
+      "reference_sha256": "69567a9b6cdaaf1ab80cc92dd0ca74294378ebda2af88b82029be9244279fb45"
+    },
+    {
+      "path": "SubProcesses/P0_uxu_ttx/GF1.0/ampli_grids",
+      "new_sha256": "0a59b353156aa4e63fd0ef7cc6b15957978dc7d35726af76b762e641442f98c8",
+      "reference_sha256": "0a59b353156aa4e63fd0ef7cc6b15957978dc7d35726af76b762e641442f98c8"
+    },
+    {
+      "path": "SubProcesses/P0_uxu_ttx/GF1.0/grid.MC_integer",
+      "new_sha256": "0a55f8b1038f2482964ee0e1834dfc5cbcd1af93b9a3c6ae72481da110b19c3b",
+      "reference_sha256": "0a55f8b1038f2482964ee0e1834dfc5cbcd1af93b9a3c6ae72481da110b19c3b"
+    },
+    {
+      "path": "SubProcesses/P0_uxu_ttx/GF1.0/res_1.dat",
+      "new_sha256": "c083a007fe39e758c7985d3c1ccca8ad8e3b60fb29a0248f706c5ad08131fae1",
+      "reference_sha256": "c083a007fe39e758c7985d3c1ccca8ad8e3b60fb29a0248f706c5ad08131fae1"
+    },
+    {
+      "path": "SubProcesses/P0_uxu_ttx/GF1.0/log_MINT1.txt",
+      "new_sha256": "051599204c506c48d1c305e0d00bff6f0e4ccb72adc3e91d3ed1ded17aebc40e",
+      "reference_sha256": "051599204c506c48d1c305e0d00bff6f0e4ccb72adc3e91d3ed1ded17aebc40e"
+    },
+    {
+      "path": "SubProcesses/P0_uux_ttx/GF1.0/ampli_grids",
+      "new_sha256": "342e34355e904e9ef9939a798f6d95ac48a90f4a200db737013061e3157a3e94",
+      "reference_sha256": "342e34355e904e9ef9939a798f6d95ac48a90f4a200db737013061e3157a3e94"
+    },
+    {
+      "path": "SubProcesses/P0_uux_ttx/GF1.0/grid.MC_integer",
+      "new_sha256": "3a06def83c2f4227f1fe5e0a517d731bd7ff7145a5dcd2142aeb6219f040d95f",
+      "reference_sha256": "3a06def83c2f4227f1fe5e0a517d731bd7ff7145a5dcd2142aeb6219f040d95f"
+    },
+    {
+      "path": "SubProcesses/P0_uux_ttx/GF1.0/res_1.dat",
+      "new_sha256": "1873bda335e5ad978dcfc5a61c9bd38fb7fe372b5c2106e270db65cab993d618",
+      "reference_sha256": "1873bda335e5ad978dcfc5a61c9bd38fb7fe372b5c2106e270db65cab993d618"
+    },
+    {
+      "path": "SubProcesses/P0_uux_ttx/GF1.0/log_MINT1.txt",
+      "new_sha256": "4fea972d5344e3a0461e46240ca19e56ff59e6c041555db683675f4b6d1cc3d5",
+      "reference_sha256": "4fea972d5344e3a0461e46240ca19e56ff59e6c041555db683675f4b6d1cc3d5"
+    }
+  ],
+  "reference_hashes": {
+    "ttbar_30k_jobs_300k_20261007/metrics.json": "de0cb299fb98b2c5a05deddf0232b994848f684b47376e0e5e059fa3eb61cf21",
+    "ttbar_bounded_300k_20261007/metrics.json": "338aafd33092e6bfd7bb52128f04a4afa95e64f3ab3dca58386a586b23a7b2f5",
+    "ttbar_30k_jobs_300k_20261007/ampli_started.json": "c39a5acee0067e774d52e272cab162131cc810700471edfb008a19afdd9027e7",
+    "ttbar_bounded_300k_20261007/ampli_started.json": "62d6716f8844186c7ebaec309c8f604449c5adb176bd58ee25a517f15123eb07"
+  },
+  "interpretation": [
+    "Only AmpliCol generation with nevt_job=30000 was rerun. The nevt_job=2500 reference is the saved completed 300K run.",
+    "Both runs use the exact same saved survey grids, maxima and statistics, the same source code, seed, physics cards and five-core setting.",
+    "The copied restart job list was restored to its saved original allocation order, preserving the original initial channel quotas exactly before applying the new job-size limit.",
+    "Generation CPU and trial counts are directly comparable. Single-run CPU timing remains subject to host variation.",
+    "The new execution did not repeat the survey. Equivalent full-workflow CPU adds the inherited 59.93562422-second survey to generation; this is not newly measured survey time.",
+    "Whole-invocation wall times have different scope: the reference includes compilation and survey, while the new invocation restarts generation. No wall-time ratio is reported.",
+    "Generation-phase spans are estimates from worker log timestamps and integer wall counters, and require preserved timestamps; they exclude compilation, survey and final collection.",
+    "nevt_job limits reserve events per worker, including the 10% overhead. Native correction weights are retained in both LHE samples.",
+    "Final-event efficiency includes all production trials, reserve generation and any top-ups. Rates use the survey once plus all generation iterations.",
+    "The two allocations change sampling histories and achieved precision; the CPU comparison is at fixed requested sample size, not fixed rate uncertainty.",
+    "Quadrature rate-error diagnostics are descriptive scales, not calibrated significances: the runs share survey data and a seed, so independent errors are not established.",
+    "The signed-rate shift is about 2.88 nominal quadrature errors, and the absolute-rate shift about 3.13. This single shared-survey comparison does not establish compatibility or bias; multiple independent seeds are needed to assess the variation."
+  ]
+}

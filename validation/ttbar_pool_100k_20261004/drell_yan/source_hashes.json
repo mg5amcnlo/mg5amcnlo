@@ -1,0 +1,7 @@
+{
+  "Template/NLO/SubProcesses/simple_integrator.f90": "b27978982ac6c7138188708640af87e64e02b49ea0689f513eb082903b00bba8",
+  "Template/NLO/SubProcesses/ampli_mint_adapter.f90": "265b49848984a4f438b50215b22a4021fd4912c3d6154a8c7d1448a507e327be",
+  "Template/NLO/SubProcesses/driver_mintMC.f": "d9a4ae21ab610b0745d869272c5e5087d0b605435dae62d18c576250805f6d97",
+  "madgraph/interface/amcatnlo_run_interface.py": "ee343793657122ece709a700d71fa827b504beda10a06d2111008a0ab98d43c4",
+  "madgraph/various/ampli_pool.py": "8e4b14f68f6a5df4de9690e3529329dba0cfcff8692585f605eb15ed9bc03df7"
+}

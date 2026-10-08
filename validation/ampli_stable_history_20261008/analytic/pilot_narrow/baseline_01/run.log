@@ -1,0 +1,27 @@
+ AmpliCol native surveyed maximum, initial storage cutoff:   3.5000000000000000        8.3133333333331533E-002
+ AmpliCol native iteration, nonzero target, storage envelope:           1                 8192   8.3133333333331533E-002
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:           1                20621                 8192   8.3594353821210485E-002   3.8106251572644261E-003
+ AmpliCol native full-trial, reserve, worst-collected tails:   1.0000000000000000        1.0000000000000000        1.0000000000000000     
+ AmpliCol native effective events, remaining, nonzero acceptance:   55.000000000000000        10945.000000000000        6.7138671875000000E-003
+ AmpliCol native iteration, nonzero target, storage envelope:           2                16384  0.47473770005520743     
+ AmpliCol native completion check, iteration, trials, nonzero, target:           2                61841                16384                16384
+ AmpliCol native full-trial, reserve, worst-collected tails:   1.0000000000000000        1.0000000000000000        1.0000000000000000     
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:           2                41220                16384   8.3331295911938510E-002   3.8647435972150351E-003
+ AmpliCol native full-trial, reserve, worst-collected tails:   1.0000000000000000        1.0000000000000000        1.0000000000000000     
+ AmpliCol native effective events, remaining, nonzero acceptance:   572.00000000000000        10428.000000000000        3.1555175781250000E-002
+ AmpliCol native iteration, nonzero target, storage envelope:           3                32768  0.68916011026748669     
+ AmpliCol native completion check, iteration, trials, nonzero, target:           3               144291                32768                32768
+ AmpliCol native full-trial, reserve, worst-collected tails:   8.5946118736616894E-002   8.6299209346554162E-002   9.4411269902965736E-002
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:           3                82450                32768   8.2613215124459946E-002   3.7020124477062477E-003
+ AmpliCol native full-trial, reserve, worst-collected tails:   8.5946118736616894E-002   8.6299209346554162E-002   9.4411269902965736E-002
+ AmpliCol native effective events, remaining, nonzero acceptance:   2494.0000000000000        8506.0000000000000        5.8563232421875000E-002
+ AmpliCol native iteration, nonzero target, storage envelope:           4                65536  0.64393906225629494     
+ AmpliCol native completion check, iteration, trials, nonzero, target:           4               308081                65536                65536
+ AmpliCol native full-trial, reserve, worst-collected tails:   6.5340111924572716E-002   6.3329556851078911E-002   6.9448486863962405E-002
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:           4               163790                65536   8.2671064508078151E-002   3.6764221862881433E-003
+ AmpliCol native full-trial, reserve, worst-collected tails:   6.5340111924572716E-002   6.3329556851078911E-002   6.9448486863962405E-002
+ AmpliCol native effective events, remaining, nonzero acceptance:   5503.0000000000000        5497.0000000000000        4.5272827148437500E-002
+ AmpliCol native iteration, nonzero target, storage envelope:           5               131072  0.61234156695547837     
+ AmpliCol native completion check, iteration, trials, nonzero, target:           5               609722               120396               131072
+ AmpliCol native full-trial, reserve, worst-collected tails:   0.0000000000000000        0.0000000000000000        0.0000000000000000     
+ ANALYTIC_RESULT               609722       82226           5           4   8.2977287458880375E-002   3.6889441582380039E-003   2.9438282370453529E-004   5.3782508061597575E-005

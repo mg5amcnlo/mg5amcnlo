@@ -1,0 +1,66 @@
+{
+  "case": "/tmp/mg5-ttbar-100k-rd5zxvbr/ampli/SubProcesses/P0_gg_ttx/GF1.0_2",
+  "diagnostic": "/tmp/mg5-ttbar-bound-diagnostic-w0qufy10/ampli/SubProcesses/P0_gg_ttx/GF1.0_2",
+  "input_checks": {
+    "input_app.txt": {
+      "identical_bytes": true,
+      "sha256": "efc5ebc41bb3cd0a7011bbb06d838ed0a15751e21c20e56109bbd5babe4db37a",
+      "bytes": 811
+    },
+    "moffset.dat": {
+      "identical_bytes": true,
+      "sha256": "53c234e5e8472b6ac51c1ae1cab3fe06fad053beb8ebfd8977b010655bfdd3c3",
+      "bytes": 2
+    },
+    "randinit": {
+      "identical_bytes": true,
+      "sha256": "ed0313d83a55bffe645b6a9699dd53b60f8e2386d9f271e110cdacdda88b1eaf",
+      "bytes": 7
+    },
+    "ampli_grids": {
+      "identical_bytes": true,
+      "sha256": "c11dceb79d1a01326e8155e8cd9c215c10bd435bb190864b98f77a55ed735b79",
+      "bytes": 889432
+    },
+    "grid.MC_integer": {
+      "identical_bytes": true,
+      "sha256": "70d35da2a6c2558f81f452211a4f63c281389dfce9aad7aa6a2a0466317a1e6d",
+      "bytes": 1654
+    },
+    "ampli_candidates.lhe": {
+      "identical_bytes": true,
+      "sha256": "72edcf92d205933e2dc9a09ff75e2e6bbd41c1ba5e8a450c77b1308a9e5da26b",
+      "bytes": 223444
+    }
+  },
+  "seed_printed": 529264,
+  "stream": "novi",
+  "trial_at_failure": 4031,
+  "candidates_at_failure": 224,
+  "quota": 2224,
+  "virtual_probability": 0.00797515198335242,
+  "chosen_stream_probability": 0.9920248480166476,
+  "virtual_fraction": 0.005,
+  "stage1_stream_max": [
+    794.8097144169,
+    5.810094125591984
+  ],
+  "stage1_trials": 15360,
+  "stage1_absolute_rate": 96.25189485717043,
+  "stage1_relative_error": 0.006526298735009047,
+  "stream_envelopes_before_factor2": [
+    801.1994014121327,
+    728.5245645123949
+  ],
+  "failing_raw_abs_weight": 1921.941950645095,
+  "failing_signed_weight": 1916.9762725971414,
+  "failing_corrected_target": 1937.392953903955,
+  "production_envelope": 1602.3988028242654,
+  "target_over_envelope": 1.2090579139782522,
+  "raw_weight_over_survey_max": 2.4181158279565045,
+  "failing_virtual_components": [
+    0,
+    0
+  ],
+  "interpretation": "The same checkpoint/seed reproduced the original 224-event candidate spool byte-for-byte. The first observed violation is a nonvirtual raw weight 2.4181158279565044 times the survey maximum. Both survey envelope and production weight carry the same 1/(1-p_virtual) factor, so the excess is present before that conversion. This case is consistent with an insufficient finite-survey bound; it does not by itself establish absence of other mapping/state errors."
+}

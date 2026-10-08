@@ -1,0 +1,860 @@
+{
+  "path": "/tmp/mg5-epvej-unfolded-10k-cv7t_d8h/mint",
+  "backend": "mint",
+  "run_card": {
+    "run_tag": "tag_1",
+    "nevents": "10000",
+    "req_acc": "0.01",
+    "nevt_job": "2500",
+    "time_of_flight": "-1.0",
+    "event_norm": "average",
+    "req_acc_fo": "0.01",
+    "npoints_fo_grid": "5000",
+    "niters_fo_grid": "4",
+    "npoints_fo": "10000",
+    "niters_fo": "6",
+    "iseed": "0",
+    "lpp1": "1",
+    "lpp2": "1",
+    "ebeam1": "6500.0",
+    "ebeam2": "6500.0",
+    "pdlabel": "nn23nlo",
+    "lhaid": "244600",
+    "pdfscheme": "0",
+    "photons_from_lepton": "True",
+    "parton_shower": "PYTHIA8",
+    "shower_scale_factor": "1.0",
+    "mcatnlo_delta": "False",
+    "fixed_ren_scale": "False",
+    "fixed_fac_scale": "False",
+    "mur_ref_fixed": "91.118",
+    "muf_ref_fixed": "91.118",
+    "dynamical_scale_choice": "-1",
+    "mur_over_ref": "1.0",
+    "muf_over_ref": "1.0",
+    "rw_rscale": "1.0, 2.0, 0.5",
+    "rw_fscale": "1.0, 2.0, 0.5",
+    "reweight_scale": "False",
+    "reweight_pdf": "False",
+    "store_rwgt_info": "False",
+    "custom_fcts": "",
+    "ickkw": "0",
+    "bwcutoff": "15.0",
+    "jetalgo": "1.0",
+    "jetradius": "0.7",
+    "ptj": "10.0",
+    "etaj": "-1.0",
+    "gamma_is_j": "False",
+    "ptl": "0.0",
+    "etal": "-1.0",
+    "drll": "0.0",
+    "drll_sf": "0.0",
+    "mll": "0.0",
+    "mll_sf": "30.0",
+    "rphreco": "0.1",
+    "etaphreco": "-1.0",
+    "lepphreco": "False",
+    "quarkphreco": "False",
+    "ptgmin": "20.0",
+    "etagamma": "-1.0",
+    "r0gamma": "0.4",
+    "xn": "1.0",
+    "epsgamma": "1.0",
+    "isoem": "True",
+    "pt_min_pdg": "{}",
+    "pt_max_pdg": "{}",
+    "mxx_min_pdg": "{}",
+    "pineappl": "False",
+    "born_spreading": "False",
+    "folding": "1, 1, 1"
+  },
+  "fks_card": {
+    "IRPoleCheckThreshold": "1.0d-5",
+    "PrecisionVirtualAtRunTime": "1.0d-3",
+    "QCD^2==": "-1",
+    "QED^2==": "-1",
+    "SelectedCouplingOrders": "0",
+    "VetoedContributionTypes": "0",
+    "SelectedContributionTypes": "0",
+    "NLOPSIntegrator": "0",
+    "NHelForMCoverHels": "4",
+    "VirtualFraction": "1.0d0",
+    "MinVirtualFraction": "0.005d0",
+    "UsePolyVirtual": ".True.",
+    "SeparateFlavourConfigurations": ".false.",
+    "FKSISRMapping": "0",
+    "FKSFinalRecoil": "0",
+    "MCExplicitKLSum": ".true.",
+    "FKSExplicitSum": ".false."
+  },
+  "cards_sha256": {
+    "run_card.dat": "9eae7ee335b4414e28a65b2603d6613f2d7a3715f9e51857a429693aea4759cd",
+    "param_card.dat": "ccbf142ec9dfb368c4a5ea80bc6d7c5dc60951384b470c308896c56da66b70ba",
+    "FKS_params.dat": "568e302cd0a449b95b75533d345ec0cc50fd60ec85a9fbdec758e301d167f527"
+  },
+  "stage_cpu_seconds": {
+    "0": 286.63867740000006,
+    "1": 484.98642340000004,
+    "2": 223.97252405
+  },
+  "stage_cpu_complete_workers": {
+    "0": 12,
+    "1": 12,
+    "2": 12
+  },
+  "stage_wall_seconds_estimates": {
+    "0": {
+      "workers_with_wall_counters": 12,
+      "sum_worker_seconds": 286,
+      "phase_span_seconds": 75.27324080467224,
+      "note": "Span inferred from completed worker log modification times and integer wall durations; valid only when logs have not subsequently been copied/touched. In-progress workers are excluded."
+    },
+    "1": {
+      "workers_with_wall_counters": 12,
+      "sum_worker_seconds": 484,
+      "phase_span_seconds": 113.67390203475952,
+      "note": "Span inferred from completed worker log modification times and integer wall durations; valid only when logs have not subsequently been copied/touched. In-progress workers are excluded."
+    },
+    "2": {
+      "workers_with_wall_counters": 12,
+      "sum_worker_seconds": 226,
+      "phase_span_seconds": 56.621866941452026,
+      "note": "Span inferred from completed worker log modification times and integer wall durations; valid only when logs have not subsequently been copied/touched. In-progress workers are excluded."
+    }
+  },
+  "stage_logs": {
+    "0": 12,
+    "1": 12,
+    "2": 12
+  },
+  "integration_channels": [
+    {
+      "absolute_pb": 159.50269106929323,
+      "absolute_error_pb": 1.5723354328199461,
+      "signed_pb": 83.12226743797527,
+      "signed_error_pb": 1.1023013523830847,
+      "iterations": 2.0,
+      "points_or_quota": 25600.0,
+      "cpu_seconds": 42.7950249,
+      "channel": "P0_dxg_veuxep/GF1.0",
+      "result_path": "SubProcesses/P0_dxg_veuxep/GF1.0/res_1.dat"
+    },
+    {
+      "absolute_pb": 1169.5563155490079,
+      "absolute_error_pb": 12.948540700829337,
+      "signed_pb": 507.0719628282854,
+      "signed_error_pb": 10.854936791098522,
+      "iterations": 2.0,
+      "points_or_quota": 25600.0,
+      "cpu_seconds": 40.9318771,
+      "channel": "P0_dxg_veuxep/GF2.0",
+      "result_path": "SubProcesses/P0_dxg_veuxep/GF2.0/res_1.dat"
+    },
+    {
+      "absolute_pb": 1027.0727962838732,
+      "absolute_error_pb": 13.263291208902851,
+      "signed_pb": 458.76924340338707,
+      "signed_error_pb": 13.598671542467992,
+      "iterations": 2.0,
+      "points_or_quota": 25600.0,
+      "cpu_seconds": 34.3953972,
+      "channel": "P0_dxu_veepg/GF1.0",
+      "result_path": "SubProcesses/P0_dxu_veepg/GF1.0/res_1.dat"
+    },
+    {
+      "absolute_pb": 1017.3663273730324,
+      "absolute_error_pb": 13.395639102326456,
+      "signed_pb": 457.6670595918674,
+      "signed_error_pb": 16.19206642167153,
+      "iterations": 2.0,
+      "points_or_quota": 25600.0,
+      "cpu_seconds": 34.9730644,
+      "channel": "P0_dxu_veepg/GF2.0",
+      "result_path": "SubProcesses/P0_dxu_veepg/GF2.0/res_1.dat"
+    },
+    {
+      "absolute_pb": 162.51975371044767,
+      "absolute_error_pb": 1.6419080678084874,
+      "signed_pb": 82.67544346866447,
+      "signed_error_pb": 1.0424042325594316,
+      "iterations": 2.0,
+      "points_or_quota": 25600.0,
+      "cpu_seconds": 43.3836555,
+      "channel": "P0_gdx_veuxep/GF1.0",
+      "result_path": "SubProcesses/P0_gdx_veuxep/GF1.0/res_1.dat"
+    },
+    {
+      "absolute_pb": 1172.2060113328,
+      "absolute_error_pb": 14.117114907127222,
+      "signed_pb": 490.19866989904995,
+      "signed_error_pb": 12.177481978776719,
+      "iterations": 2.0,
+      "points_or_quota": 25600.0,
+      "cpu_seconds": 42.5810699,
+      "channel": "P0_gdx_veuxep/GF2.0",
+      "result_path": "SubProcesses/P0_gdx_veuxep/GF2.0/res_1.dat"
+    },
+    {
+      "absolute_pb": 390.98212716273287,
+      "absolute_error_pb": 3.64597920049352,
+      "signed_pb": 188.54190301941878,
+      "signed_error_pb": 2.7798403513532834,
+      "iterations": 2.0,
+      "points_or_quota": 25600.0,
+      "cpu_seconds": 44.8081436,
+      "channel": "P0_gu_vedep/GF1.0",
+      "result_path": "SubProcesses/P0_gu_vedep/GF1.0/res_1.dat"
+    },
+    {
+      "absolute_pb": 2863.4203386020895,
+      "absolute_error_pb": 41.13087841054914,
+      "signed_pb": 1173.8708997338442,
+      "signed_error_pb": 33.7318982178136,
+      "iterations": 2.0,
+      "points_or_quota": 25600.0,
+      "cpu_seconds": 42.9071999,
+      "channel": "P0_gu_vedep/GF2.0",
+      "result_path": "SubProcesses/P0_gu_vedep/GF2.0/res_1.dat"
+    },
+    {
+      "absolute_pb": 1016.8096426458433,
+      "absolute_error_pb": 11.870963541073106,
+      "signed_pb": 448.68814379154645,
+      "signed_error_pb": 10.863173482807632,
+      "iterations": 2.0,
+      "points_or_quota": 25600.0,
+      "cpu_seconds": 35.5585365,
+      "channel": "P0_udx_veepg/GF1.0",
+      "result_path": "SubProcesses/P0_udx_veepg/GF1.0/res_1.dat"
+    },
+    {
+      "absolute_pb": 1051.7397698559632,
+      "absolute_error_pb": 14.98841127444192,
+      "signed_pb": 457.9327004482373,
+      "signed_error_pb": 14.311307712833079,
+      "iterations": 2.0,
+      "points_or_quota": 25600.0,
+      "cpu_seconds": 35.0830498,
+      "channel": "P0_udx_veepg/GF2.0",
+      "result_path": "SubProcesses/P0_udx_veepg/GF2.0/res_1.dat"
+    },
+    {
+      "absolute_pb": 387.93468337437224,
+      "absolute_error_pb": 4.011649948270812,
+      "signed_pb": 186.71104047810513,
+      "signed_error_pb": 2.84460689121696,
+      "iterations": 2.0,
+      "points_or_quota": 25600.0,
+      "cpu_seconds": 45.0592422,
+      "channel": "P0_ug_vedep/GF1.0",
+      "result_path": "SubProcesses/P0_ug_vedep/GF1.0/res_1.dat"
+    },
+    {
+      "absolute_pb": 2737.3542044186706,
+      "absolute_error_pb": 37.289972300675316,
+      "signed_pb": 1124.979116163515,
+      "signed_error_pb": 29.8266919212311,
+      "iterations": 2.0,
+      "points_or_quota": 25600.0,
+      "cpu_seconds": 42.5101624,
+      "channel": "P0_ug_vedep/GF2.0",
+      "result_path": "SubProcesses/P0_ug_vedep/GF2.0/res_1.dat"
+    }
+  ],
+  "production_workers": [
+    {
+      "channel": "P0_dxg_veuxep/GF1.0",
+      "log": "SubProcesses/P0_dxg_veuxep/GF1.0/log_MINT2.txt",
+      "cpu_seconds": 2.18867493,
+      "wall_seconds": 2,
+      "trials": 2506,
+      "generated_events": 113,
+      "quota": 113,
+      "upper_bound_failures": 3,
+      "fatal": false,
+      "zero_trials": 127,
+      "nonvirtual_efficiency": 0.044985555096987206,
+      "virtual_efficiency": 0.04819277108433735,
+      "efficiency": 0.045091779728651235
+    },
+    {
+      "channel": "P0_dxg_veuxep/GF2.0",
+      "log": "SubProcesses/P0_dxg_veuxep/GF2.0/log_MINT2.txt",
+      "cpu_seconds": 18.8583736,
+      "wall_seconds": 19,
+      "trials": 22512,
+      "generated_events": 883,
+      "quota": 883,
+      "upper_bound_failures": 24,
+      "fatal": false,
+      "zero_trials": 3215,
+      "nonvirtual_efficiency": 0.03905346499421759,
+      "virtual_efficiency": 0.16666666666666666,
+      "efficiency": 0.03922352523098792
+    },
+    {
+      "channel": "P0_dxu_veepg/GF1.0",
+      "log": "SubProcesses/P0_dxu_veepg/GF1.0/log_MINT2.txt",
+      "cpu_seconds": 14.7018681,
+      "wall_seconds": 15,
+      "trials": 21008,
+      "generated_events": 773,
+      "quota": 773,
+      "upper_bound_failures": 20,
+      "fatal": false,
+      "zero_trials": 3824,
+      "nonvirtual_efficiency": 0.03672005737508965,
+      "virtual_efficiency": 0.053763440860215055,
+      "efficiency": 0.036795506473724295
+    },
+    {
+      "channel": "P0_dxu_veepg/GF2.0",
+      "log": "SubProcesses/P0_dxu_veepg/GF2.0/log_MINT2.txt",
+      "cpu_seconds": 16.6425266,
+      "wall_seconds": 17,
+      "trials": 24450,
+      "generated_events": 767,
+      "quota": 767,
+      "upper_bound_failures": 12,
+      "fatal": false,
+      "zero_trials": 4312,
+      "nonvirtual_efficiency": 0.03275697280389261,
+      "virtual_efficiency": 0.009078212290502794,
+      "efficiency": 0.031370143149284255
+    },
+    {
+      "channel": "P0_gdx_veuxep/GF1.0",
+      "log": "SubProcesses/P0_gdx_veuxep/GF1.0/log_MINT2.txt",
+      "cpu_seconds": 3.47706604,
+      "wall_seconds": 3,
+      "trials": 3718,
+      "generated_events": 136,
+      "quota": 136,
+      "upper_bound_failures": 3,
+      "fatal": false,
+      "zero_trials": 198,
+      "nonvirtual_efficiency": 0.03624560454422505,
+      "virtual_efficiency": 0.09523809523809523,
+      "efficiency": 0.03657880580957504
+    },
+    {
+      "channel": "P0_gdx_veuxep/GF2.0",
+      "log": "SubProcesses/P0_gdx_veuxep/GF2.0/log_MINT2.txt",
+      "cpu_seconds": 19.4784565,
+      "wall_seconds": 20,
+      "trials": 23021,
+      "generated_events": 880,
+      "quota": 880,
+      "upper_bound_failures": 27,
+      "fatal": false,
+      "zero_trials": 2919,
+      "nonvirtual_efficiency": 0.03792006276424182,
+      "virtual_efficiency": 0.1282051282051282,
+      "efficiency": 0.03822596759480475
+    },
+    {
+      "channel": "P0_gu_vedep/GF1.0",
+      "log": "SubProcesses/P0_gu_vedep/GF1.0/log_MINT2.txt",
+      "cpu_seconds": 6.88108492,
+      "wall_seconds": 7,
+      "trials": 7402,
+      "generated_events": 314,
+      "quota": 314,
+      "upper_bound_failures": 2,
+      "fatal": false,
+      "zero_trials": 344,
+      "nonvirtual_efficiency": 0.042348802597754025,
+      "virtual_efficiency": 0.09090909090909091,
+      "efficiency": 0.04242096730613348
+    },
+    {
+      "channel": "P0_gu_vedep/GF2.0",
+      "log": "SubProcesses/P0_gu_vedep/GF2.0/log_MINT2.txt",
+      "cpu_seconds": 55.9694786,
+      "wall_seconds": 56,
+      "trials": 66864,
+      "generated_events": 2164,
+      "quota": 2164,
+      "upper_bound_failures": 47,
+      "fatal": false,
+      "zero_trials": 9451,
+      "nonvirtual_efficiency": 0.03220592456079397,
+      "virtual_efficiency": 0.0481203007518797,
+      "efficiency": 0.03236420196219191
+    },
+    {
+      "channel": "P0_udx_veepg/GF1.0",
+      "log": "SubProcesses/P0_udx_veepg/GF1.0/log_MINT2.txt",
+      "cpu_seconds": 15.072484,
+      "wall_seconds": 15,
+      "trials": 20969,
+      "generated_events": 787,
+      "quota": 787,
+      "upper_bound_failures": 16,
+      "fatal": false,
+      "zero_trials": 3705,
+      "nonvirtual_efficiency": 0.037267080745341616,
+      "virtual_efficiency": 0.065,
+      "efficiency": 0.037531594258190665
+    },
+    {
+      "channel": "P0_udx_veepg/GF2.0",
+      "log": "SubProcesses/P0_udx_veepg/GF2.0/log_MINT2.txt",
+      "cpu_seconds": 17.3579597,
+      "wall_seconds": 18,
+      "trials": 24438,
+      "generated_events": 825,
+      "quota": 825,
+      "upper_bound_failures": 27,
+      "fatal": false,
+      "zero_trials": 4154,
+      "nonvirtual_efficiency": 0.03363965237639819,
+      "virtual_efficiency": 0.04113110539845758,
+      "efficiency": 0.033758900073655784
+    },
+    {
+      "channel": "P0_ug_vedep/GF1.0",
+      "log": "SubProcesses/P0_ug_vedep/GF1.0/log_MINT2.txt",
+      "cpu_seconds": 5.98073196,
+      "wall_seconds": 6,
+      "trials": 6743,
+      "generated_events": 282,
+      "quota": 282,
+      "upper_bound_failures": 4,
+      "fatal": false,
+      "zero_trials": 315,
+      "nonvirtual_efficiency": 0.04221474457020496,
+      "virtual_efficiency": 0.02926829268292683,
+      "efficiency": 0.04182114785703693
+    },
+    {
+      "channel": "P0_ug_vedep/GF2.0",
+      "log": "SubProcesses/P0_ug_vedep/GF2.0/log_MINT2.txt",
+      "cpu_seconds": 47.3638191,
+      "wall_seconds": 48,
+      "trials": 56001,
+      "generated_events": 2076,
+      "quota": 2076,
+      "upper_bound_failures": 58,
+      "fatal": false,
+      "zero_trials": 7858,
+      "nonvirtual_efficiency": 0.03715192612898572,
+      "virtual_efficiency": 0.028933092224231464,
+      "efficiency": 0.03707076659345369
+    }
+  ],
+  "fatal_logs": [],
+  "warnings": [],
+  "integration": {
+    "signed_pb": 5660.228450263897,
+    "signed_error_pb": 55.51254951194334,
+    "absolute_pb": 13156.464661378126,
+    "absolute_error_pb": 64.84391815445876,
+    "channels": 12,
+    "relative_signed_error": 0.009807475086867771,
+    "expected_channels": 12,
+    "complete": true
+  },
+  "integration_complete": true,
+  "production": {
+    "logged_workers": 12,
+    "workers_with_trial_counters": 12,
+    "counter_events": 10000,
+    "trials": 279632,
+    "efficiency": 0.03576128626194427,
+    "events_per_cpu_second_completed_workers": 44.64833372939791,
+    "upper_bound_failures": 243,
+    "zero_trials": 40422,
+    "ampli_envelope_failure_workers": 0,
+    "all_logged_workers_finished": true,
+    "all_assigned_workers_finished": true,
+    "stored_candidates": 10000,
+    "candidate_retention_efficiency": 0.03576128626194427,
+    "cpu_seconds": 223.97252405,
+    "survey_cpu_seconds": 771.6251008000002,
+    "final_events": 10000,
+    "events_per_total_cpu_second": 10.044218417562648
+  },
+  "total_cpu_seconds_completed_workers": 995.5976248500001,
+  "cpu_note": "Sum of worker CPU times from phase logs/results; incomplete workers without final CPU counters are excluded. Compilation and Python coordination are excluded.",
+  "assignments": [
+    {
+      "file": "P0_gu_vedep/GF2.0/events.lhe",
+      "quota": 2164,
+      "allocated_absolute_pb": 2863.42,
+      "weight_fraction": 1.0
+    },
+    {
+      "file": "P0_ug_vedep/GF2.0/events.lhe",
+      "quota": 2076,
+      "allocated_absolute_pb": 2737.354,
+      "weight_fraction": 1.0
+    },
+    {
+      "file": "P0_udx_veepg/GF2.0/events.lhe",
+      "quota": 825,
+      "allocated_absolute_pb": 1051.74,
+      "weight_fraction": 1.0
+    },
+    {
+      "file": "P0_gdx_veuxep/GF2.0/events.lhe",
+      "quota": 880,
+      "allocated_absolute_pb": 1172.206,
+      "weight_fraction": 1.0
+    },
+    {
+      "file": "P0_dxu_veepg/GF2.0/events.lhe",
+      "quota": 767,
+      "allocated_absolute_pb": 1017.366,
+      "weight_fraction": 1.0
+    },
+    {
+      "file": "P0_dxu_veepg/GF1.0/events.lhe",
+      "quota": 773,
+      "allocated_absolute_pb": 1027.073,
+      "weight_fraction": 1.0
+    },
+    {
+      "file": "P0_dxg_veuxep/GF2.0/events.lhe",
+      "quota": 883,
+      "allocated_absolute_pb": 1169.556,
+      "weight_fraction": 1.0
+    },
+    {
+      "file": "P0_udx_veepg/GF1.0/events.lhe",
+      "quota": 787,
+      "allocated_absolute_pb": 1016.81,
+      "weight_fraction": 1.0
+    },
+    {
+      "file": "P0_ug_vedep/GF1.0/events.lhe",
+      "quota": 282,
+      "allocated_absolute_pb": 387.9347,
+      "weight_fraction": 1.0
+    },
+    {
+      "file": "P0_gu_vedep/GF1.0/events.lhe",
+      "quota": 314,
+      "allocated_absolute_pb": 390.9821,
+      "weight_fraction": 1.0
+    },
+    {
+      "file": "P0_gdx_veuxep/GF1.0/events.lhe",
+      "quota": 136,
+      "allocated_absolute_pb": 162.5198,
+      "weight_fraction": 1.0
+    },
+    {
+      "file": "P0_dxg_veuxep/GF1.0/events.lhe",
+      "quota": 113,
+      "allocated_absolute_pb": 159.5027,
+      "weight_fraction": 1.0
+    }
+  ],
+  "assigned_events": 10000,
+  "lhe": {
+    "path": "/tmp/mg5-epvej-unfolded-10k-cv7t_d8h/mint/Events/benchmark_10k/events.lhe.gz",
+    "events": 10000,
+    "positive": 7197,
+    "negative": 2803,
+    "zero": 0,
+    "all_weights_finite": true,
+    "sum_weights": 57809507.210006244,
+    "sum_squared_weights": 1730925712962.0466,
+    "sum_absolute_weights": 131564650.00002629,
+    "minimum_absolute_weight": 13156.465,
+    "maximum_absolute_weight": 13156.465,
+    "closed_document": true,
+    "truncated_event_header": false,
+    "init": [
+      {
+        "signed_pb": 5660.2284,
+        "signed_error_pb": 55.513,
+        "maximum_weight": 13156.465,
+        "process": 0
+      }
+    ],
+    "negative_absolute_weight": 36877571.395000555,
+    "rwgt_blocks": 0,
+    "mgrwgt_blocks": 0,
+    "idwtup": -4,
+    "init_processes": 1,
+    "negative_fraction": 0.2803,
+    "mean_sign": 0.4394,
+    "sign_effective_events": 1930.7236,
+    "signed_weight_effective_events": 1930.723600000644,
+    "absolute_weight_effective_events": 10000.00000000517,
+    "weighted_negative_fraction": 0.2802999999999482,
+    "rate_from_signs_pb": 5780.950572209549,
+    "sign_sampling_error_pb": 118.18340529353583,
+    "sign_error_note": "Binomial sign fluctuation conditional on the integrated absolute normalization; excludes its integration uncertainty.",
+    "rate_from_weights_pb": 5780.950721000624,
+    "weighted_event_sampling_error_pb": 118.1893179489772,
+    "sha256": "6e08ddfac6db3ada067ded0f99a25b2a29d66a393f445938b1905e2d44b9a64f",
+    "event_sampling_error_note": "Sample variance of finalized signed event weights; conditional on the global absolute rate and neglecting finite-pool correlations. Not an independent integration uncertainty.",
+    "rate_minus_integration_pb": 120.7222707367273,
+    "diagnostic_pull": 0.9245292254864491,
+    "signed_weight_effective_events_per_generation_cpu_second": 8.62035916320533,
+    "signed_weight_effective_events_per_total_cpu_second": 1.9392609542349328,
+    "absolute_weight_effective_events_per_generation_cpu_second": 44.64833372942099,
+    "absolute_weight_effective_events_per_total_cpu_second": 10.044218417567842
+  },
+  "summary": "\n   --------------------------------------------------------------\n      Summary:\n      Process p p > e+ ve j [QCD]\n      Run at p-p collider (6500.0 + 6500.0 GeV)\n      Number of events generated: 10000\n      Total cross section: 5.660e+03 +- 5.6e+01 pb\n   --------------------------------------------------------------\n",
+  "complete_expected_sample": true,
+  "exported_source_sha256": {
+    "SubProcesses/mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+    "SubProcesses/ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de",
+    "SubProcesses/simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+    "SubProcesses/integrator_helpers.f90": "ccdc363fd95481fb4e2aa03faeb286a4c22afe4656c2af4a79e969662d8afc61",
+    "SubProcesses/driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+    "SubProcesses/genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+    "bin/internal/amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+    "bin/internal/ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+  },
+  "wrapper_metadata": {
+    "/tmp/mg5-epvej-unfolded-10k-cv7t_d8h/ampli_started.json": {
+      "backend": "ampli",
+      "settings": {
+        "nevents": 10000,
+        "req_acc": 0.01,
+        "nevt_job": 2500,
+        "iseed": 19727,
+        "ebeam1": 6500.0,
+        "ebeam2": 6500.0,
+        "pdlabel": "nn23nlo",
+        "parton_shower": "PYTHIA8",
+        "folding": [
+          1,
+          1,
+          1
+        ],
+        "born_spreading": false,
+        "reweight_scale": [
+          false
+        ],
+        "reweight_pdf": [
+          false
+        ],
+        "store_rwgt_info": false,
+        "event_norm": "average",
+        "fixed_ren_scale": false,
+        "fixed_fac_scale": false,
+        "dynamical_scale_choice": [
+          -1
+        ]
+      },
+      "cores": 5,
+      "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+      "started": "2026-10-07T07:46:13.527314+00:00",
+      "source_sha256": {
+        "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+        "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+        "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+        "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+        "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+      },
+      "python_source_sha256": {
+        "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+        "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+      }
+    },
+    "/tmp/mg5-epvej-unfolded-10k-cv7t_d8h/mint_finished.json": {
+      "backend": "mint",
+      "settings": {
+        "nevents": 10000,
+        "req_acc": 0.01,
+        "nevt_job": 2500,
+        "iseed": 19727,
+        "ebeam1": 6500.0,
+        "ebeam2": 6500.0,
+        "pdlabel": "nn23nlo",
+        "parton_shower": "PYTHIA8",
+        "folding": [
+          1,
+          1,
+          1
+        ],
+        "born_spreading": false,
+        "reweight_scale": [
+          false
+        ],
+        "reweight_pdf": [
+          false
+        ],
+        "store_rwgt_info": false,
+        "event_norm": "average",
+        "fixed_ren_scale": false,
+        "fixed_fac_scale": false,
+        "dynamical_scale_choice": [
+          -1
+        ]
+      },
+      "cores": 5,
+      "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+      "started": "2026-10-07T07:41:01.757834+00:00",
+      "source_sha256": {
+        "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+        "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+        "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+        "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+        "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+      },
+      "python_source_sha256": {
+        "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+        "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+      },
+      "finished": "2026-10-07T07:46:13.342742+00:00",
+      "wall_seconds": 311.5828043849906,
+      "child_user_cpu_seconds": 954.728568,
+      "child_system_cpu_seconds": 220.69319,
+      "cli_returncode": 0,
+      "summary_exists": true,
+      "events_exist": true
+    },
+    "/tmp/mg5-epvej-unfolded-10k-cv7t_d8h/mint_started.json": {
+      "backend": "mint",
+      "settings": {
+        "nevents": 10000,
+        "req_acc": 0.01,
+        "nevt_job": 2500,
+        "iseed": 19727,
+        "ebeam1": 6500.0,
+        "ebeam2": 6500.0,
+        "pdlabel": "nn23nlo",
+        "parton_shower": "PYTHIA8",
+        "folding": [
+          1,
+          1,
+          1
+        ],
+        "born_spreading": false,
+        "reweight_scale": [
+          false
+        ],
+        "reweight_pdf": [
+          false
+        ],
+        "store_rwgt_info": false,
+        "event_norm": "average",
+        "fixed_ren_scale": false,
+        "fixed_fac_scale": false,
+        "dynamical_scale_choice": [
+          -1
+        ]
+      },
+      "cores": 5,
+      "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+      "started": "2026-10-07T07:41:01.757834+00:00",
+      "source_sha256": {
+        "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+        "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+        "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+        "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+        "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+      },
+      "python_source_sha256": {
+        "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+        "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+      }
+    }
+  },
+  "wrapper_started": {
+    "backend": "mint",
+    "settings": {
+      "nevents": 10000,
+      "req_acc": 0.01,
+      "nevt_job": 2500,
+      "iseed": 19727,
+      "ebeam1": 6500.0,
+      "ebeam2": 6500.0,
+      "pdlabel": "nn23nlo",
+      "parton_shower": "PYTHIA8",
+      "folding": [
+        1,
+        1,
+        1
+      ],
+      "born_spreading": false,
+      "reweight_scale": [
+        false
+      ],
+      "reweight_pdf": [
+        false
+      ],
+      "store_rwgt_info": false,
+      "event_norm": "average",
+      "fixed_ren_scale": false,
+      "fixed_fac_scale": false,
+      "dynamical_scale_choice": [
+        -1
+      ]
+    },
+    "cores": 5,
+    "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+    "started": "2026-10-07T07:41:01.757834+00:00",
+    "source_sha256": {
+      "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+      "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+      "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+      "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+      "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+    },
+    "python_source_sha256": {
+      "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+      "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+    }
+  },
+  "wrapper_finished": {
+    "backend": "mint",
+    "settings": {
+      "nevents": 10000,
+      "req_acc": 0.01,
+      "nevt_job": 2500,
+      "iseed": 19727,
+      "ebeam1": 6500.0,
+      "ebeam2": 6500.0,
+      "pdlabel": "nn23nlo",
+      "parton_shower": "PYTHIA8",
+      "folding": [
+        1,
+        1,
+        1
+      ],
+      "born_spreading": false,
+      "reweight_scale": [
+        false
+      ],
+      "reweight_pdf": [
+        false
+      ],
+      "store_rwgt_info": false,
+      "event_norm": "average",
+      "fixed_ren_scale": false,
+      "fixed_fac_scale": false,
+      "dynamical_scale_choice": [
+        -1
+      ]
+    },
+    "cores": 5,
+    "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+    "started": "2026-10-07T07:41:01.757834+00:00",
+    "source_sha256": {
+      "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+      "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+      "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+      "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+      "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+    },
+    "python_source_sha256": {
+      "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+      "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+    },
+    "finished": "2026-10-07T07:46:13.342742+00:00",
+    "wall_seconds": 311.5828043849906,
+    "child_user_cpu_seconds": 954.728568,
+    "child_system_cpu_seconds": 220.69319,
+    "cli_returncode": 0,
+    "summary_exists": true,
+    "events_exist": true
+  }
+}

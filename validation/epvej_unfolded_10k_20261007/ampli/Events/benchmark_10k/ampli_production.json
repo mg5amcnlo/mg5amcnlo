@@ -1,0 +1,998 @@
+{
+  "absolute_cross_section": 13246.24166431655,
+  "allowed_overweight_factor": 0.01,
+  "channels": [
+    {
+      "absolute": 2808.8193292339924,
+      "allocation_order": 5,
+      "available_candidates": 2372,
+      "batches": [
+        {
+          "adaptation": {
+            "completed_iterations": 7,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "mode": "adaptive_unfolded",
+            "ndim": 10,
+            "schedule": "nonzero_trials",
+            "updates": 6
+          },
+          "available": 2372,
+          "collection_log_z": -1.1097408420565742,
+          "directory": "SubProcesses/P0_ug_vedep/GF2.0_1",
+          "generated_target": 2372,
+          "native_log_z": -1.1097408420565742,
+          "nominal_final_quota": 2156,
+          "pool_protocol": 4,
+          "trials": 374059
+        }
+      ],
+      "channel": "2.0",
+      "error_abs": 12.697970499610195,
+      "error_signed": 11.065292659582967,
+      "generated_target": 2372,
+      "generation_cpu_seconds": 308.217072,
+      "generation_trials": 374059,
+      "initial_quota": 2156,
+      "quota": 2152,
+      "selection": {
+        "available": 2372,
+        "full_trial_tail": 0.004413011039242186,
+        "max_correction": 3.0268562546123357,
+        "max_worker_selected_tail": 0.004757368999358417,
+        "overweight": 0.004757368999358417,
+        "reserve": 2372,
+        "reserve_tail": 0.004317105879202106,
+        "selected": 2152,
+        "selected_tail": 0.004757368999358417,
+        "sum_corrections": 2152.4870462746962,
+        "worst_subset_tail": 0.004757368999358417
+      },
+      "signed": 1144.5552886987668,
+      "subprocess": "P0_ug_vedep",
+      "survey_absolute": 2831.9848072511836,
+      "survey_points": 15360,
+      "survey_signed": 1142.0873049951936,
+      "updated_rates": {
+        "absolute": 2808.8193292339924,
+        "error_abs": 12.697970499610195,
+        "error_signed": 11.065292659582967,
+        "production_iterations": 7,
+        "production_trials": 374059,
+        "signed": 1144.5552886987668,
+        "survey_trials": 15360,
+        "trials": 389419
+      }
+    },
+    {
+      "absolute": 2807.5898509840467,
+      "allocation_order": 1,
+      "available_candidates": 2340,
+      "batches": [
+        {
+          "adaptation": {
+            "completed_iterations": 7,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "mode": "adaptive_unfolded",
+            "ndim": 10,
+            "schedule": "nonzero_trials",
+            "updates": 6
+          },
+          "available": 2340,
+          "collection_log_z": -0.7051835902751673,
+          "directory": "SubProcesses/P0_gu_vedep/GF2.0_1",
+          "generated_target": 2340,
+          "native_log_z": -0.7051835902751673,
+          "nominal_final_quota": 2127,
+          "pool_protocol": 4,
+          "trials": 373005
+        }
+      ],
+      "channel": "2.0",
+      "error_abs": 12.218161675805202,
+      "error_signed": 10.552409585057546,
+      "generated_target": 2340,
+      "generation_cpu_seconds": 315.514221,
+      "generation_trials": 373005,
+      "initial_quota": 2127,
+      "quota": 2121,
+      "selection": {
+        "available": 2340,
+        "full_trial_tail": 0.002418848506595857,
+        "max_correction": 2.0218163533651805,
+        "max_worker_selected_tail": 0.0023838496811347263,
+        "overweight": 0.0031923869933908043,
+        "reserve": 2340,
+        "reserve_tail": 0.0028939668373314286,
+        "selected": 2121,
+        "selected_tail": 0.0023838496811347263,
+        "sum_corrections": 2120.541847990313,
+        "worst_subset_tail": 0.0031923869933908043
+      },
+      "signed": 1146.1136688805955,
+      "subprocess": "P0_gu_vedep",
+      "survey_absolute": 2826.9380893492944,
+      "survey_points": 15360,
+      "survey_signed": 1193.0422634357385,
+      "updated_rates": {
+        "absolute": 2807.5898509840467,
+        "error_abs": 12.218161675805202,
+        "error_signed": 10.552409585057546,
+        "production_iterations": 7,
+        "production_trials": 373005,
+        "signed": 1146.1136688805955,
+        "survey_trials": 15360,
+        "trials": 388365
+      }
+    },
+    {
+      "absolute": 1024.3702219050388,
+      "allocation_order": 11,
+      "available_candidates": 834,
+      "batches": [
+        {
+          "adaptation": {
+            "completed_iterations": 7,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "mode": "adaptive_unfolded",
+            "ndim": 10,
+            "schedule": "nonzero_trials",
+            "updates": 6
+          },
+          "available": 834,
+          "collection_log_z": -1.2141247312684502,
+          "directory": "SubProcesses/P0_dxu_veepg/GF2.0_1",
+          "generated_target": 834,
+          "native_log_z": -1.2141247312684502,
+          "nominal_final_quota": 758,
+          "pool_protocol": 4,
+          "trials": 167463
+        }
+      ],
+      "channel": "2.0",
+      "error_abs": 7.198300075336744,
+      "error_signed": 6.919598062641682,
+      "generated_target": 834,
+      "generation_cpu_seconds": 118.430145,
+      "generation_trials": 167463,
+      "initial_quota": 758,
+      "quota": 745,
+      "selection": {
+        "available": 834,
+        "full_trial_tail": 0.004999525072517064,
+        "max_correction": 3.3559252972889713,
+        "max_worker_selected_tail": 0.006469428224396047,
+        "overweight": 0.006469428224396047,
+        "reserve": 834,
+        "reserve_tail": 0.005781386986287488,
+        "selected": 745,
+        "selected_tail": 0.006469428224396047,
+        "sum_corrections": 745.301838017358,
+        "worst_subset_tail": 0.006469428224396047
+      },
+      "signed": 453.21960922447397,
+      "subprocess": "P0_dxu_veepg",
+      "survey_absolute": 1049.5069029169126,
+      "survey_points": 15360,
+      "survey_signed": 449.48878918751484,
+      "updated_rates": {
+        "absolute": 1024.3702219050388,
+        "error_abs": 7.198300075336744,
+        "error_signed": 6.919598062641682,
+        "production_iterations": 7,
+        "production_trials": 167463,
+        "signed": 453.21960922447397,
+        "survey_trials": 15360,
+        "trials": 182823
+      }
+    },
+    {
+      "absolute": 1189.8244847828905,
+      "allocation_order": 9,
+      "available_candidates": 979,
+      "batches": [
+        {
+          "adaptation": {
+            "completed_iterations": 7,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "mode": "adaptive_unfolded",
+            "ndim": 10,
+            "schedule": "nonzero_trials",
+            "updates": 6
+          },
+          "available": 979,
+          "collection_log_z": -0.3925874854871356,
+          "directory": "SubProcesses/P0_dxg_veuxep/GF2.0_1",
+          "generated_target": 979,
+          "native_log_z": -0.3925874854871356,
+          "nominal_final_quota": 890,
+          "pool_protocol": 4,
+          "trials": 160102
+        }
+      ],
+      "channel": "2.0",
+      "error_abs": 7.22691399147406,
+      "error_signed": 6.3621312825594245,
+      "generated_target": 979,
+      "generation_cpu_seconds": 130.784988,
+      "generation_trials": 160102,
+      "initial_quota": 890,
+      "quota": 905,
+      "selection": {
+        "available": 979,
+        "full_trial_tail": 0.0025456789476355182,
+        "max_correction": 1.4798944467063693,
+        "max_worker_selected_tail": 0.0028753796051356026,
+        "overweight": 0.0028753796051356026,
+        "reserve": 979,
+        "reserve_tail": 0.0026581713245208255,
+        "selected": 905,
+        "selected_tail": 0.0028753796051356026,
+        "sum_corrections": 905.0456232136751,
+        "worst_subset_tail": 0.0028753796051356026
+      },
+      "signed": 511.69015174338006,
+      "subprocess": "P0_dxg_veuxep",
+      "survey_absolute": 1175.5083294767742,
+      "survey_points": 15360,
+      "survey_signed": 542.0321905169146,
+      "updated_rates": {
+        "absolute": 1189.8244847828905,
+        "error_abs": 7.22691399147406,
+        "error_signed": 6.3621312825594245,
+        "production_iterations": 7,
+        "production_trials": 160102,
+        "signed": 511.69015174338006,
+        "survey_trials": 15360,
+        "trials": 175462
+      }
+    },
+    {
+      "absolute": 1050.9606847134587,
+      "allocation_order": 7,
+      "available_candidates": 850,
+      "batches": [
+        {
+          "adaptation": {
+            "completed_iterations": 7,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "mode": "adaptive_unfolded",
+            "ndim": 10,
+            "schedule": "nonzero_trials",
+            "updates": 6
+          },
+          "available": 850,
+          "collection_log_z": -0.6646063085167295,
+          "directory": "SubProcesses/P0_udx_veepg/GF2.0_1",
+          "generated_target": 850,
+          "native_log_z": -0.6646063085167295,
+          "nominal_final_quota": 772,
+          "pool_protocol": 4,
+          "trials": 183925
+        }
+      ],
+      "channel": "2.0",
+      "error_abs": 7.1412788383803365,
+      "error_signed": 6.779464315642573,
+      "generated_target": 850,
+      "generation_cpu_seconds": 128.338364,
+      "generation_trials": 183925,
+      "initial_quota": 772,
+      "quota": 761,
+      "selection": {
+        "available": 850,
+        "full_trial_tail": 0.006737740515822338,
+        "max_correction": 1.939783677879513,
+        "max_worker_selected_tail": 0.007508744416063776,
+        "overweight": 0.007508744416063776,
+        "reserve": 850,
+        "reserve_tail": 0.006724128974142156,
+        "selected": 761,
+        "selected_tail": 0.007508744416063776,
+        "sum_corrections": 761.1804732351076,
+        "worst_subset_tail": 0.007508744416063776
+      },
+      "signed": 472.54875338286973,
+      "subprocess": "P0_udx_veepg",
+      "survey_absolute": 1071.0413617039103,
+      "survey_points": 15360,
+      "survey_signed": 491.66456556878967,
+      "updated_rates": {
+        "absolute": 1050.9606847134587,
+        "error_abs": 7.1412788383803365,
+        "error_signed": 6.779464315642573,
+        "production_iterations": 7,
+        "production_trials": 183925,
+        "signed": 472.54875338286973,
+        "survey_trials": 15360,
+        "trials": 199285
+      }
+    },
+    {
+      "absolute": 1185.6294295318032,
+      "allocation_order": 3,
+      "available_candidates": 924,
+      "batches": [
+        {
+          "adaptation": {
+            "completed_iterations": 6,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "mode": "adaptive_unfolded",
+            "ndim": 10,
+            "schedule": "nonzero_trials",
+            "updates": 5
+          },
+          "available": 924,
+          "collection_log_z": -0.18602662677556836,
+          "directory": "SubProcesses/P0_gdx_veuxep/GF2.0_1",
+          "generated_target": 924,
+          "native_log_z": -0.18602662677556836,
+          "nominal_final_quota": 840,
+          "pool_protocol": 4,
+          "trials": 80438
+        }
+      ],
+      "channel": "2.0",
+      "error_abs": 9.40844401346391,
+      "error_signed": 7.9905960317679705,
+      "generated_target": 924,
+      "generation_cpu_seconds": 65.4056625,
+      "generation_trials": 80438,
+      "initial_quota": 840,
+      "quota": 853,
+      "selection": {
+        "available": 924,
+        "full_trial_tail": 0.00114118146437781,
+        "max_correction": 1.2041878789252223,
+        "max_worker_selected_tail": 0.0014116831253895275,
+        "overweight": 0.0014116831253895275,
+        "reserve": 924,
+        "reserve_tail": 0.0013032336352004294,
+        "selected": 853,
+        "selected_tail": 0.0014116831253895275,
+        "sum_corrections": 853.0157067599354,
+        "worst_subset_tail": 0.0014116831253895275
+      },
+      "signed": 512.3601704680834,
+      "subprocess": "P0_gdx_veuxep",
+      "survey_absolute": 1165.9588859493213,
+      "survey_points": 15360,
+      "survey_signed": 507.39373520989756,
+      "updated_rates": {
+        "absolute": 1185.6294295318032,
+        "error_abs": 9.40844401346391,
+        "error_signed": 7.9905960317679705,
+        "production_iterations": 6,
+        "production_trials": 80438,
+        "signed": 512.3601704680834,
+        "survey_trials": 15360,
+        "trials": 95798
+      }
+    },
+    {
+      "absolute": 1051.820588864402,
+      "allocation_order": 10,
+      "available_candidates": 895,
+      "batches": [
+        {
+          "adaptation": {
+            "completed_iterations": 6,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "mode": "adaptive_unfolded",
+            "ndim": 10,
+            "schedule": "nonzero_trials",
+            "updates": 5
+          },
+          "available": 895,
+          "collection_log_z": -0.7206462811367036,
+          "directory": "SubProcesses/P0_dxu_veepg/GF1.0_1",
+          "generated_target": 895,
+          "native_log_z": -0.7206462811367036,
+          "nominal_final_quota": 813,
+          "pool_protocol": 4,
+          "trials": 82330
+        }
+      ],
+      "channel": "1.0",
+      "error_abs": 11.524719730268354,
+      "error_signed": 11.33294459710049,
+      "generated_target": 895,
+      "generation_cpu_seconds": 59.4777679,
+      "generation_trials": 82330,
+      "initial_quota": 813,
+      "quota": 802,
+      "selection": {
+        "available": 895,
+        "full_trial_tail": 0.005851949983504066,
+        "max_correction": 2.0503441455552873,
+        "max_worker_selected_tail": 0.00791269050732318,
+        "overweight": 0.00791269050732318,
+        "reserve": 895,
+        "reserve_tail": 0.007092644625938969,
+        "selected": 802,
+        "selected_tail": 0.00791269050732318,
+        "sum_corrections": 802.2450687715307,
+        "worst_subset_tail": 0.00791269050732318
+      },
+      "signed": 479.08589354920235,
+      "subprocess": "P0_dxu_veepg",
+      "survey_absolute": 1063.6815155744512,
+      "survey_points": 64512,
+      "survey_signed": 461.4025911729281,
+      "updated_rates": {
+        "absolute": 1051.820588864402,
+        "error_abs": 11.524719730268354,
+        "error_signed": 11.33294459710049,
+        "production_iterations": 6,
+        "production_trials": 82330,
+        "signed": 479.08589354920235,
+        "survey_trials": 64512,
+        "trials": 146842
+      }
+    },
+    {
+      "absolute": 1018.4831508422973,
+      "allocation_order": 6,
+      "available_candidates": 873,
+      "batches": [
+        {
+          "adaptation": {
+            "completed_iterations": 7,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "mode": "adaptive_unfolded",
+            "ndim": 10,
+            "schedule": "nonzero_trials",
+            "updates": 6
+          },
+          "available": 873,
+          "collection_log_z": -0.3616649070920914,
+          "directory": "SubProcesses/P0_udx_veepg/GF1.0_1",
+          "generated_target": 873,
+          "native_log_z": -0.3616649070920914,
+          "nominal_final_quota": 793,
+          "pool_protocol": 4,
+          "trials": 169481
+        }
+      ],
+      "channel": "1.0",
+      "error_abs": 6.253461980829165,
+      "error_signed": 5.888738780490482,
+      "generated_target": 873,
+      "generation_cpu_seconds": 120.537315,
+      "generation_trials": 169481,
+      "initial_quota": 793,
+      "quota": 796,
+      "selection": {
+        "available": 873,
+        "full_trial_tail": 0.0016924498632941475,
+        "max_correction": 1.435001547541051,
+        "max_worker_selected_tail": 0.0018026787730445514,
+        "overweight": 0.0018026787730445514,
+        "reserve": 873,
+        "reserve_tail": 0.0016437589318912575,
+        "selected": 796,
+        "selected_tail": 0.0018026787730445514,
+        "sum_corrections": 796.0384118338903,
+        "worst_subset_tail": 0.0018026787730445514
+      },
+      "signed": 454.80165368088706,
+      "subprocess": "P0_udx_veepg",
+      "survey_absolute": 1010.5228570423167,
+      "survey_points": 15360,
+      "survey_signed": 452.09960221926497,
+      "updated_rates": {
+        "absolute": 1018.4831508422973,
+        "error_abs": 6.253461980829165,
+        "error_signed": 5.888738780490482,
+        "production_iterations": 7,
+        "production_trials": 169481,
+        "signed": 454.80165368088706,
+        "survey_trials": 15360,
+        "trials": 184841
+      }
+    },
+    {
+      "absolute": 399.47614529444616,
+      "allocation_order": 4,
+      "available_candidates": 349,
+      "batches": [
+        {
+          "adaptation": {
+            "completed_iterations": 4,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "mode": "adaptive_unfolded",
+            "ndim": 10,
+            "schedule": "nonzero_trials",
+            "updates": 3
+          },
+          "available": 349,
+          "collection_log_z": 0.14454931578802643,
+          "directory": "SubProcesses/P0_ug_vedep/GF1.0_1",
+          "generated_target": 349,
+          "native_log_z": 0.14454931578802643,
+          "nominal_final_quota": 317,
+          "pool_protocol": 4,
+          "trials": 16325
+        }
+      ],
+      "channel": "1.0",
+      "error_abs": 5.940309904444999,
+      "error_signed": 4.2885615724902335,
+      "generated_target": 349,
+      "generation_cpu_seconds": 14.6269512,
+      "generation_trials": 16325,
+      "initial_quota": 317,
+      "quota": 317,
+      "selection": {
+        "available": 349,
+        "full_trial_tail": 0.0,
+        "max_correction": 1.0,
+        "max_worker_selected_tail": 0.0,
+        "overweight": 0.0,
+        "reserve": 349,
+        "reserve_tail": 0.0,
+        "selected": 317,
+        "selected_tail": 0.0,
+        "sum_corrections": 317.0,
+        "worst_subset_tail": 0.0
+      },
+      "signed": 185.9072191700246,
+      "subprocess": "P0_ug_vedep",
+      "survey_absolute": 408.27234684216126,
+      "survey_points": 15360,
+      "survey_signed": 187.43299468029565,
+      "updated_rates": {
+        "absolute": 399.47614529444616,
+        "error_abs": 5.940309904444999,
+        "error_signed": 4.2885615724902335,
+        "production_iterations": 4,
+        "production_trials": 16325,
+        "signed": 185.9072191700246,
+        "survey_trials": 15360,
+        "trials": 31685
+      }
+    },
+    {
+      "absolute": 387.87003986355285,
+      "allocation_order": 0,
+      "available_candidates": 324,
+      "batches": [
+        {
+          "adaptation": {
+            "completed_iterations": 5,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "mode": "adaptive_unfolded",
+            "ndim": 10,
+            "schedule": "nonzero_trials",
+            "updates": 4
+          },
+          "available": 324,
+          "collection_log_z": -0.26487447147359156,
+          "directory": "SubProcesses/P0_gu_vedep/GF1.0_1",
+          "generated_target": 324,
+          "native_log_z": -0.26487447147359156,
+          "nominal_final_quota": 294,
+          "pool_protocol": 4,
+          "trials": 34094
+        }
+      ],
+      "channel": "1.0",
+      "error_abs": 4.454569849748929,
+      "error_signed": 3.52926073176549,
+      "generated_target": 324,
+      "generation_cpu_seconds": 31.7449799,
+      "generation_trials": 34094,
+      "initial_quota": 294,
+      "quota": 296,
+      "selection": {
+        "available": 324,
+        "full_trial_tail": 0.008749027847748636,
+        "max_correction": 1.3013057880155188,
+        "max_worker_selected_tail": 0.008392893700338458,
+        "overweight": 0.008749027847748636,
+        "reserve": 324,
+        "reserve_tail": 0.007668673583979717,
+        "selected": 296,
+        "selected_tail": 0.008392893700338458,
+        "sum_corrections": 296.0421434992345,
+        "worst_subset_tail": 0.008392893700338458
+      },
+      "signed": 185.320588114561,
+      "subprocess": "P0_gu_vedep",
+      "survey_absolute": 386.5755395810781,
+      "survey_points": 15360,
+      "survey_signed": 186.75933667742586,
+      "updated_rates": {
+        "absolute": 387.87003986355285,
+        "error_abs": 4.454569849748929,
+        "error_signed": 3.52926073176549,
+        "production_iterations": 5,
+        "production_trials": 34094,
+        "signed": 185.320588114561,
+        "survey_trials": 15360,
+        "trials": 49454
+      }
+    },
+    {
+      "absolute": 160.42314830989903,
+      "allocation_order": 2,
+      "available_candidates": 142,
+      "batches": [
+        {
+          "adaptation": {
+            "completed_iterations": 4,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "mode": "adaptive_unfolded",
+            "ndim": 10,
+            "schedule": "nonzero_trials",
+            "updates": 3
+          },
+          "available": 142,
+          "collection_log_z": 0.7766039086672656,
+          "directory": "SubProcesses/P0_gdx_veuxep/GF1.0_1",
+          "generated_target": 142,
+          "native_log_z": 0.7766039086672656,
+          "nominal_final_quota": 129,
+          "pool_protocol": 4,
+          "trials": 16448
+        }
+      ],
+      "channel": "1.0",
+      "error_abs": 1.9576886109083471,
+      "error_signed": 1.5705877424912247,
+      "generated_target": 142,
+      "generation_cpu_seconds": 14.8725491,
+      "generation_trials": 16448,
+      "initial_quota": 129,
+      "quota": 133,
+      "selection": {
+        "available": 142,
+        "full_trial_tail": 0.0,
+        "max_correction": 1.0,
+        "max_worker_selected_tail": 0.0,
+        "overweight": 0.0,
+        "reserve": 142,
+        "reserve_tail": 0.0,
+        "selected": 133,
+        "selected_tail": 0.0,
+        "sum_corrections": 133.0,
+        "worst_subset_tail": 0.0
+      },
+      "signed": 82.85069310641283,
+      "subprocess": "P0_gdx_veuxep",
+      "survey_absolute": 158.26372962324746,
+      "survey_points": 15360,
+      "survey_signed": 80.57476191133267,
+      "updated_rates": {
+        "absolute": 160.42314830989903,
+        "error_abs": 1.9576886109083471,
+        "error_signed": 1.5705877424912247,
+        "production_iterations": 4,
+        "production_trials": 16448,
+        "signed": 82.85069310641283,
+        "survey_trials": 15360,
+        "trials": 31808
+      }
+    },
+    {
+      "absolute": 160.97458999072222,
+      "allocation_order": 8,
+      "available_candidates": 123,
+      "batches": [
+        {
+          "adaptation": {
+            "completed_iterations": 4,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "mode": "adaptive_unfolded",
+            "ndim": 10,
+            "schedule": "nonzero_trials",
+            "updates": 3
+          },
+          "available": 123,
+          "collection_log_z": 0.6052931876079484,
+          "directory": "SubProcesses/P0_dxg_veuxep/GF1.0_1",
+          "generated_target": 123,
+          "native_log_z": 0.6052931876079484,
+          "nominal_final_quota": 111,
+          "pool_protocol": 4,
+          "trials": 16558
+        }
+      ],
+      "channel": "1.0",
+      "error_abs": 1.9954512879287216,
+      "error_signed": 1.4309229984506115,
+      "generated_target": 123,
+      "generation_cpu_seconds": 14.8664446,
+      "generation_trials": 16558,
+      "initial_quota": 111,
+      "quota": 119,
+      "selection": {
+        "available": 123,
+        "full_trial_tail": 0.0,
+        "max_correction": 1.0,
+        "max_worker_selected_tail": 0.0,
+        "overweight": 0.0,
+        "reserve": 123,
+        "reserve_tail": 0.0,
+        "selected": 119,
+        "selected_tail": 0.0,
+        "sum_corrections": 119.0,
+        "worst_subset_tail": 0.0
+      },
+      "signed": 81.47862977905001,
+      "subprocess": "P0_dxg_veuxep",
+      "survey_absolute": 159.08657224287833,
+      "survey_points": 15360,
+      "survey_signed": 78.71018009020727,
+      "updated_rates": {
+        "absolute": 160.97458999072222,
+        "error_abs": 1.9954512879287216,
+        "error_signed": 1.4309229984506115,
+        "production_iterations": 4,
+        "production_trials": 16558,
+        "signed": 81.47862977905001,
+        "survey_trials": 15360,
+        "trials": 31918
+      }
+    }
+  ],
+  "cross_section": 5709.932319798308,
+  "generation_cpu_seconds": 1322.8164602,
+  "generation_trials": 1674228,
+  "overweight_definition": "full absolute cross section belonging to weights above their iteration threshold",
+  "rate_source": "survey_plus_production",
+  "requested_events": 10000,
+  "rounds": [
+    {
+      "channels": [
+        {
+          "absolute": 2808.8193292339924,
+          "additional_quota": 0,
+          "available": 2372,
+          "channel": "2.0",
+          "quota": 2152,
+          "signed": 1144.5552886987668,
+          "subprocess": "P0_ug_vedep"
+        },
+        {
+          "absolute": 2807.5898509840467,
+          "additional_quota": 0,
+          "available": 2340,
+          "channel": "2.0",
+          "quota": 2121,
+          "signed": 1146.1136688805955,
+          "subprocess": "P0_gu_vedep"
+        },
+        {
+          "absolute": 1024.3702219050388,
+          "additional_quota": 0,
+          "available": 834,
+          "channel": "2.0",
+          "quota": 745,
+          "signed": 453.21960922447397,
+          "subprocess": "P0_dxu_veepg"
+        },
+        {
+          "absolute": 1189.8244847828905,
+          "additional_quota": 0,
+          "available": 979,
+          "channel": "2.0",
+          "quota": 905,
+          "signed": 511.69015174338006,
+          "subprocess": "P0_dxg_veuxep"
+        },
+        {
+          "absolute": 1050.9606847134587,
+          "additional_quota": 0,
+          "available": 850,
+          "channel": "2.0",
+          "quota": 761,
+          "signed": 472.54875338286973,
+          "subprocess": "P0_udx_veepg"
+        },
+        {
+          "absolute": 1185.6294295318032,
+          "additional_quota": 0,
+          "available": 924,
+          "channel": "2.0",
+          "quota": 853,
+          "signed": 512.3601704680834,
+          "subprocess": "P0_gdx_veuxep"
+        },
+        {
+          "absolute": 1051.820588864402,
+          "additional_quota": 0,
+          "available": 895,
+          "channel": "1.0",
+          "quota": 802,
+          "signed": 479.08589354920235,
+          "subprocess": "P0_dxu_veepg"
+        },
+        {
+          "absolute": 1018.4831508422973,
+          "additional_quota": 0,
+          "available": 873,
+          "channel": "1.0",
+          "quota": 796,
+          "signed": 454.80165368088706,
+          "subprocess": "P0_udx_veepg"
+        },
+        {
+          "absolute": 399.47614529444616,
+          "additional_quota": 0,
+          "available": 349,
+          "channel": "1.0",
+          "quota": 317,
+          "signed": 185.9072191700246,
+          "subprocess": "P0_ug_vedep"
+        },
+        {
+          "absolute": 387.87003986355285,
+          "additional_quota": 0,
+          "available": 324,
+          "channel": "1.0",
+          "quota": 296,
+          "signed": 185.320588114561,
+          "subprocess": "P0_gu_vedep"
+        },
+        {
+          "absolute": 160.42314830989903,
+          "additional_quota": 0,
+          "available": 142,
+          "channel": "1.0",
+          "quota": 133,
+          "signed": 82.85069310641283,
+          "subprocess": "P0_gdx_veuxep"
+        },
+        {
+          "absolute": 160.97458999072222,
+          "additional_quota": 0,
+          "available": 123,
+          "channel": "1.0",
+          "quota": 119,
+          "signed": 81.47862977905001,
+          "subprocess": "P0_dxg_veuxep"
+        }
+      ],
+      "round": 1
+    }
+  ],
+  "sampling": "native_adaptive_unfolded",
+  "seed": 19727,
+  "survey_relative_accuracy": 0.03,
+  "uncertainty": 25.108503911464535,
+  "uncertainty_convention": "native_trial_weighted_iteration_errors",
+  "version": 4,
+  "weight_convention": "native_iteration_envelopes"
+}

@@ -1,0 +1,4 @@
+python -m unittest tests.unit_tests.fks.test_ampli_integrator tests.unit_tests.fks.test_ampli_adapter tests.unit_tests.various.test_ampli_pool tests.unit_tests.interface.test_ampli_orchestration tests.unit_tests.fks.test_ampli_lhe tests.unit_tests.fks.test_nlops_integrator_selection -q
+
+Ran 116 tests in 13.522s
+OK

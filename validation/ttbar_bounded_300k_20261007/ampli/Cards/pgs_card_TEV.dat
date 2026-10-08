@@ -1,0 +1,23 @@
+CDF                 ! parameter set name
+80                  ! eta cells in calorimeter
+24                  ! phi cells in calorimeter
+0.1                 ! eta width of calorimeter cells
+0.261799388         ! phi width of calorimeter cells
+0.01                ! electromagnetic calorimeter resolution  const
+0.2                 ! electromagnetic calorimeter resolution * sqrt(E)
+0.8                 ! hadronic calolrimeter resolution * sqrt(E)
+0.2                 ! MET resolution
+0.05                ! calorimeter cell edge crack fraction
+cone                ! jet finding algorithm (cone or ktjet)
+3.0                 ! calorimeter cluster finding seed threshold (GeV)
+0.5                 ! calorimeter cluster finding shoulder threshold (GeV)
+0.4                 ! calorimeter cluster finder cone size (delta R)
+1.0                 ! outer radius of tracker (m)
+1.4                 ! magnetic field (T)
+0.000040            ! sagitta resolution (m)
+0.98                ! track finding efficiency
+0.30                ! minimum track pt (GeV/c)
+2.0                 ! tracking eta coverage
+2.0                 ! e/gamma eta coverage
+2.0                 ! muon eta coverage
+2.0                 ! tau eta coverage

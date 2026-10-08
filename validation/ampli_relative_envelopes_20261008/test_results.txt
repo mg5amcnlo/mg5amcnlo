@@ -1,0 +1,33 @@
+Relative proposal envelope validation
+
+python -m unittest tests.unit_tests.fks.test_ampli_integrator
+  59 tests passed (8.906s).
+
+python -m unittest tests.unit_tests.fks.test_ampli_adapter
+  20 tests passed against final quantile core and restored rate-mixture adapter.
+
+python -m unittest tests.unit_tests.various.test_ampli_pool tests.unit_tests.interface.test_ampli_orchestration tests.unit_tests.fks.test_ampli_lhe
+  74 tests passed (0.798s): pool41, orchestration27, LHE6.
+  Existing unclosed-file ResourceWarning messages in banner.py and
+  amcatnlo_run_interface.py did not cause failures.
+
+Production total: 153 passing tests.
+git diff --check: passed.
+
+Analytic source comparisons:
+  16 independent seeds each for baseline and quantile.
+  16 paired quantile reruns with the baseline seeds.
+  16 paired observed-maximum-only reruns with the baseline seeds.
+  All native/collected-tail and folded-map checks passed.
+  Quantile has a documented 3.30% paired trial-count regression on this target.
+  See analytic/findings.md for rates, shapes, uncertainty limitations and commands.
+
+Physics experiments:
+  Every completed worker passed strict full-trial/reserve/worst-subset checks.
+  All18 actual LHE collections passed exact quotas and strict selected tails.
+  Final adopted source matches the q95 prototype's small-worker pool/LHE byte for byte.
+  See physics/findings.txt and physics/collection_validation.json.
+
+Withdrawn mixture prototype (not deployed):
+  24 prototype adapter tests passed; 32 analytic replicas passed tail/folding checks.
+  See streams/findings.md and experiments/stream_mixture/.

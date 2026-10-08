@@ -1,0 +1,154 @@
+--- stopped-300k/Template/NLO/SubProcesses/simple_integrator.f90
++++ Template/NLO/SubProcesses/simple_integrator.f90
+@@ -2226,7 +2226,7 @@
+     integer(kind=8),intent(in) :: max_trials
+     integer,intent(in),optional :: max_iterations
+     integer(kind=8),intent(in),optional :: initial_nonzero
+-    real(kind=8) :: expected_trials
++    real(kind=8) :: storage_cutoff
+     integer :: i
+     if (.not.ieee_is_finite(survey_absolute).or..not.ieee_is_finite(initial_envelope)) &
+          error stop 'native integrator: invalid survey estimate or envelope'
+@@ -2246,31 +2246,32 @@
+     this%adaptation_mask=ifold.eq.1
+     if (quota.eq.0) return
+     this%native_iteration=1
+-    ! The survey predicts rejection acceptance. As in the native integrator,
+-    ! the iteration requests NONZERO points; assume unit nonzero fraction for
+-    ! this initial conservative prediction, then use observed efficiency.
+-    expected_trials=dble(quota)*max(1d0,initial_envelope/survey_absolute)
+-    if (.not.ieee_is_finite(expected_trials)) error stop 'native integrator: initial point request overflow'
+-    if (expected_trials.ge.dble(max_trials)) then
+-       this%native_target_nonzero=max_trials
+-    else
+-       this%native_target_nonzero=max(1024_8,ceiling(expected_trials,kind=8))
+-    endif
++    ! Start with a modest batch so a rare survey maximum cannot postpone
++    ! grid and envelope updates for the entire event sample. Subsequent
++    ! nonzero budgets use the observed generation efficiency.
++    this%native_target_nonzero=min(max_trials,max(1024_8,min(8192_8,int(quota,8))))
+     if (present(initial_nonzero)) then
+        if (initial_nonzero.lt.1_8) error stop 'native integrator: invalid nonzero point target'
+        this%native_target_nonzero=initial_nonzero
+     endif
+     if (this%native_target_nonzero.gt.max_trials) error stop 'native integrator: point request exceeds safety limit'
+     this%native_epochs(1)%target_nonzero=this%native_target_nonzero
+-    this%native_epochs(1)%cutoff=initial_envelope
++    ! The surveyed maximum seeds the first envelope estimate. Candidate
++    ! storage deliberately uses a lower cutoff: it may safely retain extra
++    ! observations, while an excessive storage floor would constrain all
++    ! historical unweighting thresholds until this epoch expired.
++    storage_cutoff=max(min(initial_envelope,survey_absolute),tiny(1d0))
++    this%native_epochs(1)%envelope=initial_envelope
++    this%native_epochs(1)%cutoff=storage_cutoff
+     allocate(this%native_epochs(1)%maps(this%ndim))
+     this%native_epochs(1)%maps=this%maps
+     do i=1,this%ndim
+        this%maps(i)%accum=0d0
+        this%maps(i)%nhits=0
+     enddo
++    write(*,*) 'AmpliCol native surveyed maximum, initial storage cutoff:',initial_envelope,storage_cutoff
+     write(*,*) 'AmpliCol native iteration, nonzero target, storage envelope:', &
+-         this%native_iteration,this%native_target_nonzero,initial_envelope
++         this%native_iteration,this%native_target_nonzero,storage_cutoff
+   end subroutine start_native_production
+ 
+   function native_log_jacobian(this,x,epoch) result(logjac)
+@@ -2383,6 +2384,10 @@
+           remaining=remaining-1
+        endif
+        this%native_epochs(k)%envelope=0d0
++       ! The first proposal is exactly the surveyed grid. Its observed survey
++       ! maximum remains valid information for this epoch even if production
++       ! has not sampled that point again. Later proposals get fresh estimates.
++       if (k.eq.1) this%native_epochs(k)%envelope=this%envelope
+        do i=1,this%ncandidates
+           value=this%native_reweighted_value(i,k)
+           this%native_epochs(k)%envelope=max(this%native_epochs(k)%envelope,value)
+@@ -2516,12 +2521,21 @@
+   function native_next_cutoff(this) result(cutoff)
+     use topk_heap_mod,only: topk_largest
+     class(staged_integrator),intent(inout) :: this
+-    real(kind=8) :: cutoff
++    real(kind=8) :: cutoff,nonzero_mean
+     real(kind=8),allocatable :: values(:),top(:)
+     integer,allocatable :: indices(:)
+     integer :: i,k
+     cutoff=this%native_epochs(this%native_iteration)%cutoff
+-    if (this%ncandidates.le.200) return
++    if (this%ncandidates.le.200) then
++       ! A sparse retained pool is precisely when an excessive storage cutoff
++       ! needs to recover. Use all trials, including rejected observations,
++       ! rather than keeping the same cutoff until 200 candidates exist.
++       k=this%native_iteration
++       nonzero_mean=this%native_epochs(k)%mean(1)* &
++            (dble(this%native_epochs(k)%trials)/dble(max(1_8,this%native_epochs(k)%nonzero)))
++       if (nonzero_mean.gt.0d0) cutoff=max(min(cutoff,2d0*nonzero_mean),tiny(1d0))
++       return
++    endif
+     allocate(values(this%ncandidates))
+     do i=1,this%ncandidates
+        values(i)=this%native_reweighted_value(i,0)
+@@ -2536,9 +2550,9 @@
+   subroutine finish_native_iteration(this,done)
+     class(staged_integrator),intent(inout) :: this
+     logical,intent(out) :: done
+-    integer(kind=8) :: next_target,remaining_trials
++    integer(kind=8) :: next_target,remaining_trials,growth_limit
+     real(kind=8) :: cutoff,estimate,priority
+-    integer :: i,k,birth,available,current_available
++    integer :: i,k,birth,available,current_available,expiring,expiring_available
+     if (.not.this%native_mode.or..not.this%native_iteration_done.or.this%production_done) &
+          error stop 'native integrator: incomplete or already finalized iteration'
+     k=this%native_iteration
+@@ -2561,6 +2575,19 @@
+     ! When the tail fails, use AmpliCol's reduction of effective completion.
+     available=0
+     current_available=0
++    expiring=0
++    expiring_available=0
++    ! The next event-producing epoch displaces the oldest one once the
++    ! eight-epoch history is full. Budget its replacement now, otherwise
++    ! near-quota forecasts can repeatedly lose as many events as they add.
++    if (count(this%native_epochs(1:k)%eligible).ge.final_n_iters_for_evnt_gen) then
++       do i=1,k
++          if (this%native_epochs(i)%eligible) then
++             expiring=i
++             exit
++          endif
++       enddo
++    endif
+     do i=1,this%ncandidates
+        birth=this%native_birth_epoch(i)
+        if (.not.this%native_epochs(birth)%eligible) cycle
+@@ -2568,16 +2595,23 @@
+        if (priority.lt.this%native_log_z) cycle
+        available=available+1
+        if (birth.eq.k) current_available=current_available+1
+-    enddo
+-    this%native_effective_generated=dble(min(this%quota,available))
+-    if (this%quota_complete) this%native_effective_generated=min(0.8d0*dble(this%quota), &
+-         dble(this%quota)*this%overweight_tolerance/this%overweight)
++       if (birth.eq.expiring) expiring_available=expiring_available+1
++    enddo
++    this%native_effective_generated=dble(min(this%quota,available-expiring_available))
++    if (this%quota_complete) this%native_effective_generated=min(this%native_effective_generated, &
++         0.8d0*dble(this%quota),dble(this%quota)*this%overweight_tolerance/this%overweight)
+     this%native_expected_remaining=max(1d0,dble(this%quota)-this%native_effective_generated)
+     this%native_generation_efficiency=dble(current_available)/dble(max(1_8,this%native_epochs(k)%nonzero))
+-    next_target=min(2_8*this%native_target_nonzero,remaining_trials)
++    ! Doubling is a growth ceiling, not a compulsory minimum. There is no
++    ! fixed upper batch cap: large quotas must still fit in the finite event
++    ! history. The small floor prevents noisy tiny adaptation iterations.
++    growth_limit=min(this%native_target_nonzero,remaining_trials)
++    growth_limit=growth_limit+min(growth_limit,remaining_trials-growth_limit)
++    next_target=growth_limit
+     if (this%native_generation_efficiency.gt.0d0) then
+-       estimate=this%native_expected_remaining/this%native_generation_efficiency
+-       if (estimate.lt.dble(remaining_trials)) next_target=max(next_target,ceiling(estimate,kind=8))
++       estimate=1.1d0*this%native_expected_remaining/this%native_generation_efficiency
++       if (estimate.lt.dble(growth_limit)) &
++            next_target=max(min(1024_8,growth_limit),ceiling(estimate,kind=8))
+     endif
+     write(*,*) 'AmpliCol native effective events, remaining, nonzero acceptance:', &
+          this%native_effective_generated,this%native_expected_remaining,this%native_generation_efficiency

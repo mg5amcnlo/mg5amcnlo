@@ -1,0 +1,32 @@
+[
+  {
+    "channel": "SubProcesses/P0_gg_ttx/GF1.0",
+    "relative_absolute_error": 0.01095941727877328,
+    "iterations": 4.0,
+    "cpu_seconds": 14.4656601
+  },
+  {
+    "channel": "SubProcesses/P0_gg_ttx/GF2.0",
+    "relative_absolute_error": 0.01229131816808315,
+    "iterations": 4.0,
+    "cpu_seconds": 14.5135489
+  },
+  {
+    "channel": "SubProcesses/P0_gg_ttx/GF3.0",
+    "relative_absolute_error": 0.0145641493206004,
+    "iterations": 4.0,
+    "cpu_seconds": 14.6087809
+  },
+  {
+    "channel": "SubProcesses/P0_uux_ttx/GF1.0",
+    "relative_absolute_error": 0.008837839522355503,
+    "iterations": 4.0,
+    "cpu_seconds": 8.27959633
+  },
+  {
+    "channel": "SubProcesses/P0_uxu_ttx/GF1.0",
+    "relative_absolute_error": 0.00888992561997654,
+    "iterations": 4.0,
+    "cpu_seconds": 8.06803799
+  }
+]

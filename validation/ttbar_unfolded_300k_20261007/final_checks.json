@@ -1,0 +1,31 @@
+{
+  "checks": {
+    "both_integrations_complete": true,
+    "both_300000_event_samples_complete": true,
+    "cards_identical_except_backend": true,
+    "automatic_accuracy": true,
+    "folding_disabled": true,
+    "only_intended_card_changes_from_10k": true,
+    "sources_unchanged_from_10k": true,
+    "pristine_backend_sources_identical": true,
+    "current_sources_match_saved_provenance": true,
+    "mint_diagnostic_worker_event_sequences_identical": true,
+    "mint_diagnostic_final_event_sequence_identical": true,
+    "mint_diagnostic_cards_identical": true,
+    "mint_diagnostic_uses_saved_instrumentation": true,
+    "mint_diagnostic_other_exported_sources_unchanged": true,
+    "mint_all_parent_channels_and_positive_streams_covered": true,
+    "ampli_all_coordinates_adaptive": true,
+    "ampli_native_and_collected_tails_below_one_percent": true,
+    "ampli_rate_and_collection_replay_passed": true,
+    "archived_benchmark_analysis_matches": true,
+    "archived_tail_analysis_matches": true,
+    "archived_independent_audits_match": true,
+    "independent_native_audit_agrees": true,
+    "independent_mint_audit_agrees": true,
+    "all_launches_successful": true
+  },
+  "all_passed": true,
+  "scope": "Consistency checks, not a requirement that MINT passes the 1% tail limit.",
+  "mint_full_tail_above_one_percent": false
+}

@@ -1,0 +1,8 @@
+......................................../export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/madgraph/various/banner.py:2953: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/Template/Common/Source/PDF/lep_densities/isrbetmll/info' mode='r' encoding='UTF-8'>
+  for line in open(pjoin(check_dir, name, 'info')):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+..........................................................
+----------------------------------------------------------------------
+Ran 98 tests in 22.424s
+
+OK

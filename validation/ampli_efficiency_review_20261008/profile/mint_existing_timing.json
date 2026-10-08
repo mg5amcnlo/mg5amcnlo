@@ -1,0 +1,26 @@
+{
+  "workers": 122,
+  "total_timing": {
+    "Born": 6.506709910700001,
+    "PS_Generation": 41.240946843,
+    "Reals_evaluation": 369.8903908389998,
+    "MCsubtraction": 200.2887630599999,
+    "Counter_terms": 151.7984879590001,
+    "Integrated_CT": 83.70910784300003,
+    "Virtuals": 65.71220036750002,
+    "FxFx_cluster": 0.0,
+    "Nbody_prefactor": 216.82597671099995,
+    "N1body_prefactor": 22.257644572199997,
+    "Adding_alphas_pdf": 58.823828356999975,
+    "Reweight_scale": 0.0,
+    "Reweight_pdf": 0.0,
+    "Filling_plots": 0.0,
+    "Applying_cuts": 46.331567076999995,
+    "Sum_ident_contr": 7.015288501600002,
+    "Pick_unwgt": 0.6353014335399999,
+    "Write_events": 58.664207814,
+    "AlphaS_dependencies": 123.75367240500003,
+    "Other_tasks": 753.44801899,
+    "Total": 2206.90211643
+  }
+}

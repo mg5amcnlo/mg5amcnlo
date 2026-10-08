@@ -146,3 +146,71 @@ class TestAmpliLHE(unittest.TestCase):
                 result, unused = self.rewrite(content, [1.0], 1)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn(diagnostic, result.stdout + result.stderr)
+
+    def test_candidate_factor_matches_emitted_lhe_rounding(self):
+        source = (TEMPLATE / 'driver_mintMC.f').read_text()
+        routine = source[source.rindex('      subroutine write_current_mcatnlo_event('):]
+        writer = self.work / 'writer.f'
+        writer.write_text('      module writer_under_test\n'
+                          '      implicit none\n      contains\n' + routine +
+                          '\n      end module writer_under_test\n')
+        stub = self.work / 'writer_stub.f90'
+        stub.write_text("""
+module mint_module
+  implicit none
+  integer,parameter :: ndimmax=2,max_fold=1
+  double precision :: recorded_absolute
+end module
+subroutine pick_unweight_contr(i,j)
+  integer i,j
+  i=1
+  j=1
+end subroutine
+subroutine update_fks_dir(i)
+  integer i
+end subroutine
+subroutine include_inverse_bias_wgt(w)
+  double precision w
+  w=1.234567896d0
+end subroutine
+subroutine fill_rwgt_lines
+end subroutine
+subroutine finalize_event(x,w,unit,shell,label)
+  use mint_module
+  double precision x(*),w
+  integer unit,label
+  logical shell
+  character(14) line
+  write(line,'(e14.8)') w
+  read(line,*) recorded_absolute
+  recorded_absolute=abs(recorded_absolute)
+end subroutine
+""")
+        driver = self.work / 'writer_driver.f90'
+        driver.write_text("""
+program test_writer
+  use mint_module
+  use writer_under_test
+  implicit none
+  double precision factor,x_save(ndimmax,max_fold)
+  integer ifold_picked
+  character(7) event_norm
+  common /c_vegas_x_fold/ x_save,ifold_picked
+  common /event_normalisation/ event_norm
+  event_norm='bias'
+  x_save=0d0
+  call write_current_mcatnlo_event(98,1,-1d0,.true.,factor)
+  if (factor.ne.recorded_absolute) error stop 'factor differs from emitted LHE'
+  if (factor.eq.1.234567896d0) error stop 'test did not exercise rounding'
+  call write_current_mcatnlo_event(98,1,1d0,.true.)
+end program
+""")
+        executable = self.work / 'check_writer'
+        result = subprocess.run([
+            shutil.which('gfortran'), '-O1', '-fcheck=all',
+            '-ffixed-line-length-none', str(stub), str(writer), str(driver),
+            '-o', str(executable)], cwd=self.work, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        result = subprocess.run([str(executable)], cwd=self.work,
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

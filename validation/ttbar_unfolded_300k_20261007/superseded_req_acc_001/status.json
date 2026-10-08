@@ -1,0 +1,6 @@
+{
+  "status": "stopped",
+  "reason": "User requested automatic accuracy rather than req_acc=0.01; not used for benchmark results.",
+  "stopped_at": "2026-10-07T08:14:12.462764+00:00",
+  "work_directory": "/tmp/mg5-ttbar-unfolded-300k-c8xc2d63"
+}

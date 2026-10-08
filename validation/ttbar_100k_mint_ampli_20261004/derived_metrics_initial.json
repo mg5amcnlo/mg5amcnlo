@@ -1,0 +1,21 @@
+{
+  "mint": {
+    "integration_cpu_seconds": 285.96581503000004,
+    "relative_error_percent": 0.3967548886815205,
+    "cpu_times_relative_variance": 0.0045015149116141295,
+    "negative_fraction": 0.19014,
+    "effective_events": 38405.287840000005,
+    "effective_events_per_generation_cpu_second": 34.36176193033876,
+    "bound_exceedance_fraction_trials": 0.0009271473959978447,
+    "bound_exceedance_fraction_events": 0.00499
+  },
+  "ampli": {
+    "integration_cpu_seconds": 414.87478040999997,
+    "relative_error_percent": 0.3255979055921949,
+    "cpu_times_relative_variance": 0.004398253336317074
+  },
+  "comparison": {
+    "ampli_over_mint_integration_cpu": 1.450784529495165,
+    "ampli_over_mint_relative_variance_cost": 0.9770607057125069
+  }
+}

@@ -1,0 +1,557 @@
+     1116448
+ ===============================================================
+ INFO: MadFKS read these parameters from FKS_params.dat                                                  
+ ===============================================================
+  > IRPoleCheckThreshold      =    1.0000000000000001E-005
+  > PrecisionVirtualAtRunTime =    1.0000000000000000E-003
+  > SelectedContributionTypes = All
+  > VetoedContributionTypes   = None
+  > QCD_squared_selected      = All
+  > QED_squared_selected      = All
+  > SelectedCouplingOrders    = All
+  > NHelForMCoverHels         =            4
+  > VirtualFraction           =    1.0000000000000000     
+  > MinVirtualFraction        =    5.0000000000000001E-003
+  > SeparateFlavourConfigs    =  F
+  > UsePolyVirtual            =  T
+  > FKSFinalRecoil            =            0
+  > FKSISRMapping             =            0
+  > NLOPSIntegrator           =            1
+  > MCExplicitKLSum           =  T
+  > FKSExplicitSum            =  F
+ ===============================================================
+ SPLIT TYPE USED: T F
+ A PDF is used, so alpha_s(MZ) is going to be modified
+ Old value of alpha_s from param_card:   0.11799999999999999     
+  ****************************************
+ 
+       NNPDFDriver version 1.0.3
+   Grid: NNPDF23nlo_as_0119_qed_mem0.grid
+  ****************************************
+ New value of alpha_s from PDF nn23nlo:  0.11899999999999999     
+ FKS ISR mapping: asymmetric
+ *****************************************************
+ *               MadGraph/MadEvent                   *
+ *        --------------------------------           *
+ *          http://madgraph.hep.uiuc.edu             *
+ *          http://madgraph.phys.ucl.ac.be           *
+ *          http://madgraph.roma2.infn.it            *
+ *        --------------------------------           *
+ *                                                   *
+ *          PARAMETER AND COUPLING VALUES            *
+ *                                                   *
+ *****************************************************
+
+  External Params
+  ---------------------------------
+  
+ MU_R =    91.188000000000002     
+ mdl_MB =    4.7000000000000002     
+ mdl_MT =    173.00000000000000     
+ mdl_MTA =    1.7769999999999999     
+ mdl_MZ =    91.188000000000002     
+ mdl_MH =    125.00000000000000     
+ aEWM1 =    132.50700000000001     
+ mdl_Gf =    1.1663900000000000E-005
+ aS =   0.11799999999999999     
+ mdl_ymb =    4.7000000000000002     
+ mdl_ymt =    173.00000000000000     
+ mdl_ymtau =    1.7769999999999999     
+ mdl_WT =    0.0000000000000000     
+ mdl_WZ =    2.4414039999999999     
+ mdl_WW =    2.0476000000000001     
+ mdl_WH =    6.3823389999999999E-003
+  Internal Params
+  ---------------------------------
+  
+ mdl_lhv =    1.0000000000000000     
+ mdl_conjg__CKM3x3 =    1.0000000000000000     
+ mdl_conjg__CKM22 =    1.0000000000000000     
+ mdl_CKM3x3 =    1.0000000000000000     
+ mdl_CKM33 =    1.0000000000000000     
+ mdl_CKM22 =    1.0000000000000000     
+ mdl_Ncol =    3.0000000000000000     
+ mdl_CA =    3.0000000000000000     
+ mdl_TF =   0.50000000000000000     
+ mdl_CF =    1.3333333333333333     
+ mdl_complexi =                (0.0000000000000000,1.0000000000000000)
+ mdl_MZ__exp__2 =    8315.2513440000002     
+ mdl_MZ__exp__4 =    69143404.913893804     
+ mdl_sqrt__2 =    1.4142135623730951     
+ mdl_MH__exp__2 =    15625.000000000000     
+ mdl_Ncol__exp__2 =    9.0000000000000000     
+ mdl_MB__exp__2 =    22.090000000000003     
+ mdl_MT__exp__2 =    29929.000000000000     
+ mdl_aEW =    7.5467711139788835E-003
+ mdl_MW =    80.419002445756163     
+ mdl_sqrt__aEW =    8.6872153846781555E-002
+ mdl_ee =   0.30795376724436879     
+ mdl_MW__exp__2 =    6467.2159543705357     
+ mdl_sw2 =   0.22224648578577766     
+ mdl_cw =   0.88190334743339216     
+ mdl_sqrt__sw2 =   0.47143025548407230     
+ mdl_sw =   0.47143025548407230     
+ mdl_g1 =   0.34919219678733299     
+ mdl_gw =   0.65323293034757990     
+ mdl_v =    246.21845810181637     
+ mdl_v__exp__2 =    60623.529110035903     
+ mdl_lam =   0.12886910601690263     
+ mdl_yb =    2.6995554250465490E-002
+ mdl_yt =   0.99366614581500623     
+ mdl_ytau =    1.0206617000654717E-002
+ mdl_muH =    88.388347648318430     
+ mdl_AxialZUp =  -0.18517701861793787     
+ mdl_AxialZDown =   0.18517701861793787     
+ mdl_VectorZUp =    7.5430507588273299E-002
+ mdl_VectorZDown =  -0.13030376310310560     
+ mdl_VectorAUp =   0.20530251149624587     
+ mdl_VectorADown =  -0.10265125574812294     
+ mdl_VectorWmDxU =   0.23095271737156670     
+ mdl_AxialWmDxU =  -0.23095271737156670     
+ mdl_VectorWpUxD =   0.23095271737156670     
+ mdl_AxialWpUxD =  -0.23095271737156670     
+ mdl_I1x33 =          (2.69955542504654901E-002,0.0000000000000000)
+ mdl_I2x33 =               (0.99366614581500623,0.0000000000000000)
+ mdl_I3x33 =               (0.99366614581500623,0.0000000000000000)
+ mdl_I4x33 =          (2.69955542504654901E-002,0.0000000000000000)
+ mdl_Vector_tbGp =              (-0.96667059156454072,0.0000000000000000)
+ mdl_Axial_tbGp =              (-1.0206617000654716,-0.0000000000000000)
+ mdl_Vector_tbGm =               (0.96667059156454072,0.0000000000000000)
+ mdl_Axial_tbGm =              (-1.0206617000654716,-0.0000000000000000)
+ mdl_gw__exp__2 =   0.42671326129048615     
+ mdl_cw__exp__2 =   0.77775351421422245     
+ mdl_ee__exp__2 =    9.4835522759998875E-002
+ mdl_sw__exp__2 =   0.22224648578577769     
+ mdl_yb__exp__2 =    7.2875994928982540E-004
+ mdl_yt__exp__2 =   0.98737240933884918     
+  Internal Params evaluated point by point
+  ----------------------------------------
+  
+ mdl_sqrt__aS =   0.34351128074635334     
+ mdl_G__exp__4 =    2.1987899468922913     
+ mdl_G__exp__2 =    1.4828317324943823     
+ mdl_G_UVg_1EPS_ =   -5.1645779033320030E-002
+ mdl_G_UVb_1EPS_ =    3.1300472141406080E-003
+ mdl_tMass_UV_1EPS_ =                (0.0000000000000000,6.4979780165559031)
+ mdl_G__exp__3 =    1.8056676068262196     
+ mdl_MU_R__exp__2 =    8315.2513440000002     
+ mdl_G_UVb_FIN_ =    1.8563438626678915E-002
+ mdl_G_UVt_FIN_ =   -4.0087659331150384E-003
+ mdl_tMass_UV_FIN_ =               (0.0000000000000000,0.34177261159438416)
+  Couplings of loop_sm
+  ---------------------------------
+  
+         GC_4 =  -0.12177E+01   0.00000E+00
+         GC_5 =   0.00000E+00   0.12177E+01
+         GC_6 =   0.00000E+00   0.14828E+01
+       R2_3Gq =   0.76230E-02   0.00000E+00
+       R2_3Gg =   0.31445E-01   0.00000E+00
+       R2_GQQ =  -0.00000E+00  -0.30492E-01
+       R2_GGq =   0.00000E+00   0.62601E-02
+       R2_GGb =  -0.00000E+00  -0.82971E+00
+       R2_GGt =  -0.00000E+00  -0.11242E+04
+     R2_GGg_1 =   0.00000E+00   0.28170E-01
+     R2_GGg_2 =  -0.00000E+00  -0.18780E-01
+       R2_QQq =   0.00000E+00   0.12520E-01
+       R2_QQt =   0.00000E+00   0.43320E+01
+  UV_3Gg_1eps =   0.62890E-01   0.00000E+00
+  UV_3Gb_1eps =  -0.38115E-02   0.00000E+00
+ UV_GQQg_1eps =   0.00000E+00  -0.62890E-01
+ UV_GQQb_1eps =   0.00000E+00   0.38115E-02
+ UV_tMass_1eps =  0.00000E+00   0.64980E+01
+ UVWfct_b_0_1eps -0.18780E-01   0.00000E+00
+ UVWfct_G_1_1eps -0.31300E-02   0.00000E+00
+       UV_3Gb =  -0.22605E-01   0.00000E+00
+       UV_3Gt =   0.48815E-02   0.00000E+00
+      UV_GQQb =   0.00000E+00   0.22605E-01
+      UV_GQQt =   0.00000E+00  -0.48815E-02
+     UV_tMass =   0.00000E+00   0.34177E+00
+   UVWfct_t_0 =  -0.98778E-03  -0.00000E+00
+   UVWfct_G_1 =  -0.18563E-01   0.00000E+00
+   UVWfct_G_2 =   0.40088E-02   0.00000E+00
+
+ Collider parameters:
+ --------------------
+
+ Running at P P   machine @    13000.000000000000       GeV
+ PDF set = nn23nlo
+ alpha_s(Mz)= 0.1190 running at 2 loops.
+ alpha_s(Mz)= 0.1190 running at 2 loops.
+ Renormalization scale set on event-by-event basis
+ Factorization   scale set on event-by-event basis
+
+
+INFO: orders_tag_plot is computed as:         + QCD *        1         + QED *      100
+ orders_tag_plot=            4  for QCD,QED, =            4 ,           0 ,
+ AMP_SPLIT:            1 correspond to S.O.           4           0
+ orders_tag_plot=            6  for QCD,QED, =            6 ,           0 ,
+ AMP_SPLIT:            2 correspond to S.O.           6           0
+ getting user params
+Enter number of events and iterations: 
+ Number of events and iterations           -1          12
+Enter desired fractional accuracy: 
+ Desired fractional accuracy:    2.9999999999999999E-002
+ Enter alpha, beta for G_soft
+   Enter alpha<0 to set G_soft=1 (no ME soft)
+ for G_soft: alpha=   1.0000000000000000      , beta= -0.10000000000000001     
+ Enter alpha, beta for G_azi
+   Enter alpha>0 to set G_azi=0 (no azi corr)
+ for G_azi: alpha=  -1.0000000000000000      , beta= -0.10000000000000001     
+ Doing the S and H events together
+ Suppress amplitude (0 no, 1 yes)? 
+ Using suppressed amplitude.
+ Exact helicity sum (0 yes, n = number/event)? 
+ Do MC over helicities for the virtuals
+Enter Configuration Number: 
+ Running Configuration Number:            3           0
+Enter running mode for MINT:
+0 to set-up grids, 1 to integrate, 2 to generate events
+ MINT running mode:           2
+ Generating events, doing only one iteration
+Set the three folding parameters for MINT
+xi_i, y_ij, phi_i
+           1           1           1
+ 'all ', 'born', 'real', 'virt', 'novi' or 'grid'?
+ Enter 'born0' or 'virt0' to perform
+  a pure n-body integration (no S functions)
+ doing the all  of this channel
+ Normal integration (Sfunction != 1)
+ about to integrate            7          -1           1           3
+ Generating         2466  events
+ Generating virt :: novi approx.          15        2451
+ imode is            2
+ AmpliCol saved survey stream maxima, initial production envelope:   35632.797998851100        29.838141550808995        35859.613952212509     
+ AmpliCol native surveyed maximum, initial storage cutoff:   35859.613952212509        476.46819191732783     
+ AmpliCol native iteration, nonzero target, storage envelope:           1                 2466   476.46819191732783     
+ Got moffset          41
+Using random seed offsets:     3 ,      1 , 129437
+  with seed                19727
+ Ranmar initialization seeds       14299        8932
+ Total number of FKS directories is          12
+ FKS process map (sum=           3 ) :
+           1 -->           3 :           1           5           6
+           2 -->           3 :           2           7           8
+           3 -->           1 :           3
+           4 -->           1 :           4
+ ================================
+ process combination map (specified per FKS dir):
+  1 map        1
+  1 inv. map   1
+  2 map        1
+  2 inv. map   1
+  3 map        1
+  3 inv. map   1
+  4 map        1
+  4 inv. map   1
+  5 map        1   1   1   1
+  5 inv. map   4
+  6 map        1   1   1   1
+  6 inv. map   4
+  7 map        1   1   1   1
+  7 inv. map   4
+  8 map        1   1   1   1
+  8 inv. map   4
+ ================================
+tau_min   1     1 : 0.34600E+03      --       0.34600E+03
+tau_min   2     1 : 0.34600E+03      --       0.34600E+03
+tau_min   3     1 : 0.34600E+03  0.34600E+03  0.34600E+03
+tau_min   4     1 : 0.34600E+03  0.34600E+03  0.34600E+03
+tau_min   5     1 : 0.34600E+03      --       0.34600E+03
+tau_min   6     1 : 0.34600E+03      --       0.34600E+03
+tau_min   7     1 : 0.34600E+03      --       0.34600E+03
+tau_min   8     1 : 0.34600E+03      --       0.34600E+03
+ Filling grid for alpha_S computation ... 
+ done... 
+ Scale values (may change event by event):
+ muR,  muR_reference:  0.175630D+03 0.175630D+03  1.00
+ muF1, muF1_reference: 0.175630D+03 0.175630D+03  1.00
+ muF2, muF2_reference: 0.175630D+03 0.175630D+03  1.00
+ QES,  QES_reference:  0.175630D+03 0.175630D+03  1.00
+  
+ muR_reference [functional form]:
+    H_T/2 := sum_i mT(i)/2, i=final state
+ muF1_reference [functional form]:
+    H_T/2 := sum_i mT(i)/2, i=final state
+ muF2_reference [functional form]:
+    H_T/2 := sum_i mT(i)/2, i=final state
+ QES_reference [functional form]: 
+    H_T/2 := sum_i mT(i)/2, i=final state
+  
+ alpha_s=  0.10823102687923353     
+ counterterm S.O           1 QCD
+ BORN: keeping split order           1
+ counterterm S.O           2 QED
+ BORN: not keeping split order           1
+ Charge-linked born are not used
+ Color-linked born are used
+ Parameters related to the different treatment of alpha in ME and PDFs
+ alphascheme           0
+ nlep_run             -1
+ nupq_run             -1
+ ndnq_run             -1
+ w_run                 1
+ REAL 1: keeping split order            1
+ SPLIT TYPE USED: T F
+ A PDF is used, so alpha_s(MZ) is going to be modified
+ Old value of alpha_s from param_card:   0.11799999999999999     
+  ****************************************
+ 
+       NNPDFDriver version 1.0.3
+   Grid: NNPDF23nlo_as_0119_qed_mem0.grid
+  ****************************************
+ New value of alpha_s from PDF nn23nlo:  0.11899999999999999     
+ PDFscheme           0
+ REAL 4: keeping split order            1
+tau_min   9     1 : 0.34600E+03      --       0.34600E+03
+tau_min  10     1 : 0.34600E+03      --       0.34600E+03
+ counterterm S.O           1 QCD
+ BORN: keeping split order           1
+ counterterm S.O           2 QED
+ BORN: not keeping split order           1
+ REAL 5: keeping split order            1
+tau_min  11     1 : 0.34600E+03      --       0.34600E+03
+tau_min  12     1 : 0.34600E+03      --       0.34600E+03
+ counterterm S.O           1 QCD
+ BORN: keeping split order           1
+ counterterm S.O           2 QED
+ BORN: not keeping split order           1
+ REAL 2: keeping split order            1
+ REAL 3: keeping split order            1
+ alpha_s value used for the virtuals is (for the first PS point):    9.8683271284477195E-002
+  ========================================================================================== 
+ {                                                                                          }
+ {       [32m                                                                            [0m       }
+ {       [32m                               ,,                                           [0m       }
+ {       [32m`7MMM.     ,MMF'             `7MM  `7MMF'                                   [0m       }
+ {       [32m  MMMb    dPMM                 MM    MM                                     [0m       }
+ {       [32m  M YM   ,M MM   ,6"Yb.   ,M""bMM    MM         ,pW"Wq.   ,pW"Wq.`7MMpdMAo. [0m       }
+ {       [32m  M  Mb  M' MM  8)   MM ,AP    MM    MM        6W'   `Wb 6W'   `Wb MM   `Wb [0m       }
+ {       [32m  M  YM.P'  MM   ,pm9MM 8MI    MM    MM      , 8M     M8 8M     M8 MM    M8 [0m       }
+ {       [32m  M  `YM'   MM  8M   MM `Mb    MM    MM     ,M YA.   ,A9 YA.   ,A9 MM   ,AP [0m       }
+ {       [32m.JML. `'  .JMML.`Moo9^Yo.`Wbmd"MML..JMMmmmmMMM  `Ybmd9'   `Ybmd9'  MMbmmd'  [0m       }
+ {       [32m                                                                   MM       [0m       }
+ {       [32m                                                                 .JMML.     [0m       }
+ {       [32m[0mv3.8.0 (2026-09-15), Ref: arXiv:1103.0621v2, arXiv:1405.0301[32m                [0m       }
+ {       [32m                                                                            [0m       }
+ {                                                                                          }
+  ========================================================================================== 
+ ===============================================================
+ INFO: MadLoop read these parameters from ../MadLoop5_resources/MadLoopParams.dat                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+ ===============================================================
+  > MLReductionLib            = 6|7|1
+  > CTModeRun                 =           -1
+  > MLStabThres               =    1.0000000000000000E-003
+  > NRotations_DP             =            0
+  > NRotations_QP             =            0
+  > CTStabThres               =    1.0000000000000000E-002
+  > CTLoopLibrary             =            2
+  > CTModeInit                =            1
+  > CheckCycle                =            3
+
+  +----------------------------------------------------------------+
+  |                                                                |
+  |  Ninja - version 1.2.0                                         |
+  |                                                                |
+  |  Author: Tiziano Peraro                                        |
+  |                                                                |
+  |  Based on:                                                     |
+  |                                                                |
+  |      P. Mastrolia, E. Mirabella and T. Peraro,                 |
+  |      "Integrand reduction of one-loop scattering amplitudes    |
+  |      through Laurent series expansion,"                        |
+  |      JHEP 1206 (2012) 095  [arXiv:1203.0291 [hep-ph]].         |
+  |                                                                |
+  |      T. Peraro,                                                |
+  |      "Ninja: Automated Integrand Reduction via Laurent         |
+  |      Expansion for One-Loop Amplitudes,"                       |
+  |      Comput.Phys.Commun. 185 (2014) [arXiv:1403.1229 [hep-ph]] |
+  |                                                                |
+  +----------------------------------------------------------------+
+
+
+  > MaxAttempts               =           10
+  > UseLoopFilter             =  F
+  > HelicityFilterLevel       =            2
+  > ImprovePSPoint            =            2
+  > DoubleCheckHelicityFilter =  T
+  > LoopInitStartOver         =  F
+  > HelInitStartOver          =  F
+  > ZeroThres                 =    1.0000000000000001E-009
+  > OSThres                   =    1.0000000000000000E-008
+  > WriteOutFilters           =  T
+  > UseQPIntegrandForNinja    =  T
+  > UseQPIntegrandForCutTools =  T
+  > IREGIMODE                 =            2
+  > IREGIRECY                 =  T
+  > COLLIERMode               =            1
+  > COLLIERRequiredAccuracy   =    1.0000000000000000E-008
+  > COLLIERCanOutput          =  F
+  > COLLIERComputeUVpoles     =  T
+  > COLLIERComputeIRpoles     =  T
+  > COLLIERGlobalCache        =           -1
+  > COLLIERUseCacheForPoles   =  F
+  > COLLIERUseInternalStabilityTest =  T
+ ===============================================================
+  
+------------------------------------------------------------------------
+|              You are using CutTools - Version 1.9.3                  |
+|              Authors: G. Ossola, C. Papadopoulos, R. Pittau          |
+|              Published in JHEP 0803:042,2008                         |
+|              http://www.ugr.es/~pittau/CutTools                      |
+|                                                                      |
+|              Compiler with  34  significant digits detetected        |
+ ---------------------------------------------------------------------- 
+   
+########################################################################
+#                                                                      #
+#                      You are using OneLOop-3.6                       #
+#                                                                      #
+# for the evaluation of 1-loop scalar 1-, 2-, 3- and 4-point functions #
+#                                                                      #
+# author: Andreas van Hameren <hamerenREMOVETHIS@ifj.edu.pl>           #
+#   date: 18-02-2015                                                   #
+#                                                                      #
+# Please cite                                                          #
+#    A. van Hameren,                                                   #
+#      Comput.Phys.Commun. 182 (2011) 2427-2438, arXiv:1007.4716       #
+#    A. van Hameren, C.G. Papadopoulos and R. Pittau,                  #
+#      JHEP 0909:106,2009, arXiv:0903.4665                             #
+# in publications with results obtained with the help of this program. #
+#                                                                      #
+########################################################################
+########################################################################
+#                                                                      #
+#                      You are using OneLOop-3.6                       #
+#                                                                      #
+# for the evaluation of 1-loop scalar 1-, 2-, 3- and 4-point functions #
+#                                                                      #
+# author: Andreas van Hameren <hamerenREMOVETHIS@ifj.edu.pl>           #
+#   date: 18-02-2015                                                   #
+#                                                                      #
+# Please cite                                                          #
+#    A. van Hameren,                                                   #
+#      Comput.Phys.Commun. 182 (2011) 2427-2438, arXiv:1007.4716       #
+#    A. van Hameren, C.G. Papadopoulos and R. Pittau,                  #
+#      JHEP 0909:106,2009, arXiv:0903.4665                             #
+# in publications with results obtained with the help of this program. #
+#                                                                      #
+########################################################################
+ VIRT: keeping split order            1
+ 
+ Splitorders           2
+       QCD:           6
+       QED:           0
+ ---- POLES CANCELLED ----
+  COEFFICIENT DOUBLE POLE:
+        MadFKS:   -3.6899359236618599E-002           OLP:   -3.6899359236618579E-002
+  COEFFICIENT SINGLE POLE:
+        MadFKS:    6.3040509080250573E-003           OLP:    6.3040509080251727E-003
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:           1                 2466                 2466   463.64290860358750        274.67557188079678     
+ AmpliCol native full-trial, reserve, worst-collected tails:   1.0000000000000000        1.0000000000000000        1.0000000000000000     
+ AmpliCol native effective events, remaining, nonzero acceptance:   1447.0000000000000        1019.0000000000000       0.58678021086780208     
+ AmpliCol native iteration, nonzero target, storage envelope:           2                 1911   1634.7589137665911     
+ AmpliCol native production iteration, trials, ABS, signed, errors:           2                 2466   463.64290860358750        274.67557188079678        10.138122422600025        8.4602789466587360     
+ AmpliCol native grid updates, next nonzero target:           1                 1911
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:           2                 1911                 1911   463.89603371099372        273.70757044662810     
+ AmpliCol native full-trial, reserve, worst-collected tails:   1.0000000000000000        1.0000000000000000        1.0000000000000000     
+ AmpliCol native effective events, remaining, nonzero acceptance:   622.00000000000000        1844.0000000000000       0.27943485086342229     
+ AmpliCol native iteration, nonzero target, storage envelope:           3                 3822   1744.4042301715949     
+ AmpliCol native production iteration, trials, ABS, signed, errors:           3                 4377   463.89603371099372        273.70757044662810        7.5996689802273458        6.3393531963170417     
+ AmpliCol native grid updates, next nonzero target:           2                 3822
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:           3                 3822                 3822   474.34906286640893        273.19560293387349     
+ AmpliCol native full-trial, reserve, worst-collected tails:   1.0000000000000000        1.0000000000000000        1.0000000000000000     
+ AmpliCol native effective events, remaining, nonzero acceptance:   1529.0000000000000        937.00000000000000       0.23731030873888018     
+ AmpliCol native iteration, nonzero target, storage envelope:           4                 4344   1895.6021270923616     
+ AmpliCol native production iteration, trials, ABS, signed, errors:           4                 8199   474.34906286640893        273.19560293387349        5.5763395615904363        4.6227157683401252     
+ AmpliCol native grid updates, next nonzero target:           3                 4344
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:           4                 4344                 4344   474.43076810442182        273.47889967908134     
+ AmpliCol native full-trial, reserve, worst-collected tails:   4.1761430925061752E-002   4.4827708121775958E-002   4.9267205228631344E-002
+ AmpliCol native effective events, remaining, nonzero acceptance:   500.53580034755021        1965.4641996524497       0.20234806629834254     
+ AmpliCol native iteration, nonzero target, storage envelope:           5                 8688   2491.8199400430199     
+ AmpliCol native production iteration, trials, ABS, signed, errors:           5                12543   474.43076810442182        273.47889967908134        4.9413338252690284        4.2513586139798614     
+ AmpliCol native grid updates, next nonzero target:           4                 8688
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:           5                 8688                 8688   475.29876669745244        271.89437976627607     
+ AmpliCol native full-trial, reserve, worst-collected tails:   1.0000000000000000        1.0000000000000000        1.0000000000000000     
+ AmpliCol native effective events, remaining, nonzero acceptance:   2142.0000000000000        324.00000000000000       0.19578729281767956     
+ AmpliCol native iteration, nonzero target, storage envelope:           6                 1821   2033.2355991864554     
+ AmpliCol native production iteration, trials, ABS, signed, errors:           6                21231   475.29876669745244        271.89437976627607        3.8244437098116828        3.2102850265920644     
+ AmpliCol native grid updates, next nonzero target:           5                 1821
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:           6                 1822                 1821   474.46902450348466        271.04150684069253     
+ AmpliCol native full-trial, reserve, worst-collected tails:   1.0000000000000000        1.0000000000000000        1.0000000000000000     
+ AmpliCol native effective events, remaining, nonzero acceptance:   2321.0000000000000        145.00000000000000        9.8297638660076875E-002
+ AmpliCol native iteration, nonzero target, storage envelope:           7                 1623   1924.6685118585667     
+ AmpliCol native production iteration, trials, ABS, signed, errors:           7                23053   474.46902450348466        271.04150684069253        3.6442913278480886        3.0610061347697277     
+ AmpliCol native grid updates, next nonzero target:           6                 1623
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:           7                 1623                 1623   474.08134907594956        271.03479634442101     
+ AmpliCol native full-trial, reserve, worst-collected tails:   1.0000000000000000        1.0000000000000000        1.0000000000000000     
+ AmpliCol native effective events, remaining, nonzero acceptance:   2436.0000000000000        30.000000000000000        5.1756007393715345E-002
+ AmpliCol native iteration, nonzero target, storage envelope:           8                 1024   1978.2744854339510     
+ AmpliCol native production iteration, trials, ABS, signed, errors:           8                24676   474.08134907594956        271.03479634442101        3.4897345533385389        2.9378331198553163     
+ AmpliCol native grid updates, next nonzero target:           7                 1024
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:           8                 1025                 1024   474.30991296650780        271.45976539152213     
+ AmpliCol native full-trial, reserve, worst-collected tails:   2.3965819197291714E-002   4.3401559916105392E-002   4.7720807730564890E-002
+ AmpliCol native effective events, remaining, nonzero acceptance:   516.75571250243991        1949.2442874975600        6.0546875000000000E-002
+ AmpliCol native iteration, nonzero target, storage envelope:           9                 2048   2119.8887846379939     
+ AmpliCol native production iteration, trials, ABS, signed, errors:           9                25701   474.30991296650780        271.45976539152213        3.4027609216507497        2.8620264664843544     
+ AmpliCol native grid updates, next nonzero target:           8                 2048
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:           9                 2048                 2048   473.46067972798636        271.33294399451455     
+ AmpliCol native full-trial, reserve, worst-collected tails:   2.3725046697230308E-002   4.2037554840241770E-002   4.6221814176141608E-002
+ AmpliCol native effective events, remaining, nonzero acceptance:   533.51432520640424        1932.4856747935958        3.1250000000000000E-002
+ AmpliCol native iteration, nonzero target, storage envelope:          10                 4096   2015.8049798608897     
+ AmpliCol native production iteration, trials, ABS, signed, errors:          10                27749   473.46067972798636        271.33294399451455        3.2471160260797469        2.7307122740561707     
+ AmpliCol native grid updates, next nonzero target:           9                 4096
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:          10                 4096                 4096   472.19192558787637        270.87695941944531     
+ AmpliCol native full-trial, reserve, worst-collected tails:   1.9504182217832129E-002   3.5782316278857078E-002   3.9349758816569790E-002
+ AmpliCol native effective events, remaining, nonzero acceptance:   626.68744972373042        1839.3125502762696        4.0039062500000000E-002
+ AmpliCol native iteration, nonzero target, storage envelope:          11                 8192   1998.0851236313420     
+ AmpliCol native production iteration, trials, ABS, signed, errors:          11                31845   472.19192558787637        270.87695941944531        2.9689934752968901        2.5016994316298997     
+ AmpliCol native grid updates, next nonzero target:          10                 8192
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:          11                 8192                 8192   471.80566971754132        271.18136194792606     
+ AmpliCol native full-trial, reserve, worst-collected tails:   1.3108678133287990E-002   2.5485193655057702E-002   2.8031302544182839E-002
+ AmpliCol native effective events, remaining, nonzero acceptance:   879.73079242860717        1586.2692075713928        3.6743164062500000E-002
+ AmpliCol native iteration, nonzero target, storage envelope:          12                16384   2079.3553780897792     
+ AmpliCol native production iteration, trials, ABS, signed, errors:          12                40037   471.80566971754132        271.18136194792606        2.5938052126568016        2.1886276016011728     
+ AmpliCol native grid updates, next nonzero target:          11                16384
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:          12                16384                16384   470.46870952818472        271.08639947990901     
+ AmpliCol native full-trial, reserve, worst-collected tails:   2.5756313237584655E-003   6.1811846552820866E-003   6.8011611902781231E-003
+ AmpliCol native production iteration, trials, ABS, signed, errors:          12                56421   470.46870952818472        271.08639947990901        2.1479238558020470        1.8095557327877003     
+ AmpliCol native grid updates, next nonzero target:          11                16384
+ AmpliCol generation trials, candidates, requested events:                56421       13768        2466
+ AmpliCol full-trial, reserve, worst-collected tail fractions:   2.5756313237584655E-003   6.1811846552820866E-003   6.8011611902781231E-003
+ AmpliCol production adaptation dimensions, updates:           7          11
+ Satistics from MadLoop:
+   Total points tried:                                       355
+   Stability unknown:                                          0
+   Stable PS point:                                          355
+   Unstable PS point (and rescued):                            0
+   Exceptional PS point (unstable and not rescued):            0
+   Double precision used:                                    355
+   Quadruple precision used:                                   0
+   Initialization phase-space points:                          0
+   Unknown return code (100):                                  0
+   Unknown return code (10):                                   0
+   Unit return code distribution (1):               
+ #Unit            6  =          355
+ counter for the diverging MC subtraction           0
+ Time spent in Born :   0.163453758    
+ Time spent in PS_Generation :    1.05506289    
+ Time spent in Reals_evaluation:    9.49948120    
+ Time spent in MCsubtraction :    5.01580858    
+ Time spent in Counter_terms :    3.86974669    
+ Time spent in Integrated_CT :    2.07078767    
+ Time spent in Virtuals :   0.208101466    
+ Time spent in FxFx_cluster :    0.00000000    
+ Time spent in Nbody_prefactor :    5.45557070    
+ Time spent in N1body_prefactor :   0.574857652    
+ Time spent in Adding_alphas_pdf :    1.45952845    
+ Time spent in Reweight_scale :    0.00000000    
+ Time spent in Reweight_pdf :    0.00000000    
+ Time spent in Filling_plots :    0.00000000    
+ Time spent in Applying_cuts :    1.14757967    
+ Time spent in Sum_ident_contr :   0.171712816    
+ Time spent in Pick_unwgt :    2.95472071E-02
+ Time spent in Write_events :    2.57525778    
+ Time spent in AlphaS_dependencies :    3.06049538    
+ Time spent in Other_tasks :    20.9327316    
+ Time spent in Total :    57.2897186    
+Time in seconds: 57

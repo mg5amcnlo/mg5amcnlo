@@ -1,0 +1,137 @@
+************************************************************
+*                                                          *
+*                     W E L C O M E to                     *
+*              M A D G R A P H 5 _ a M C @ N L O           *
+*                                                          *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 3.8.0                 2026-09-15         *
+*         GIT r996-202-g7fa5120a4  MCcntRefactor_Sfun_Granny_AmpliColIntegrator         *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*              http://madgraph.phys.ucl.ac.be/             *
+*                            and                           *
+*            http://amcatnlo.web.cern.ch/amcatnlo/         *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*           Type 'tutorial' to learn how MG5 works         *
+*    Type 'tutorial aMCatNLO' to learn how aMC@NLO works   *
+*    Type 'tutorial MadLoop' to learn how MadLoop works    *
+*                                                          *
+************************************************************
+load MG5 configuration from /nfs/home/rikkert/.mg5/mg5_configuration.txt 
+load MG5 configuration from input/mg5_configuration.txt 
+fastjet-config does not seem to correspond to a valid fastjet-config executable (v3+). We will use fjcore instead.
+ Please set the 'fastjet'variable to the full (absolute) /PATH/TO/fastjet-config (including fastjet-config).
+ MG5_aMC> set fastjet /PATH/TO/fastjet-config
+
+eMELA-config does not seem to correspond to a valid eMELA-config executable.
+ Please set the 'fastjet'variable to the full (absolute) /PATH/TO/eMELA-config (including eMELA-config).
+ MG5_aMC> set eMELA /PATH/TO/eMELA-config
+
+set ninja to /export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/HEPTools/lib
+set collier to /export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/HEPTools/lib
+set lhapdf to lhapdf-config
+Using default eps viewer "evince". Set another one in ./input/mg5_configuration.txt
+Using default web browser "firefox". Set another one in ./input/mg5_configuration.txt
+Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
+import /tmp/mg5-ampli-two-stage-dy-ovcj8baq/generate.cmd
+The import format was not given, so we guess it as command
+set automatic_html_opening False
+This option will be the default in any output that you are going to create in this session.
+In order to keep this changes permanent please run 'save options'
+import model loop_sm
+INFO: Restrict model loop_sm with file models/loop_sm/restrict_default.dat . 
+INFO: Run "set stdout_level DEBUG" before import for more information. 
+INFO: Change particles name to pass to MG5 convention 
+Defined multiparticle p = g u c d s u~ c~ d~ s~
+Defined multiparticle j = g u c d s u~ c~ d~ s~
+Defined multiparticle l+ = e+ mu+
+Defined multiparticle l- = e- mu-
+Defined multiparticle vl = ve vm vt
+Defined multiparticle vl~ = ve~ vm~ vt~
+Defined multiparticle all = g gh gh~ d u s c d~ u~ s~ c~ a ve vm vt e- mu- ve~ vm~ vt~ e+ mu+ b t b~ t~ z w+ h w- ta- ta+
+generate p p > e+ e- [QCD]
+INFO: Checking for minimal orders which gives processes. 
+INFO: Please specify coupling orders to bypass this step. 
+INFO: Trying coupling order WEIGHTED<=4: WEIGTHED IS QCD+2*QED 
+[1mSetting the born squared orders automatically in the process definition to QED^2<=4 QCD=0.
+If this is not what you need, please regenerate with the correct orders.[0m
+[1;34mWARNING: Use of multiparticles is non-trivial for NLO process generation and depends on the orders included, the process considered, as well as the PDF set chosen. See appendix D of arXiv:1804.10017 [hep-ph] for some guidance. [0m
+INFO: Generating FKS-subtracted matrix elements for born process: u u~ > e+ e- QCD^2=2 QED^2=4 (1 / 8) 
+INFO: Generating FKS-subtracted matrix elements for born process: c c~ > e+ e- QCD^2=2 QED^2=4 (2 / 8) 
+INFO: Generating FKS-subtracted matrix elements for born process: d d~ > e+ e- QCD^2=2 QED^2=4 (3 / 8) 
+INFO: Generating FKS-subtracted matrix elements for born process: s s~ > e+ e- QCD^2=2 QED^2=4 (4 / 8) 
+INFO: Generating FKS-subtracted matrix elements for born process: u~ u > e+ e- QCD^2=2 QED^2=4 (5 / 8) 
+INFO: Generating FKS-subtracted matrix elements for born process: c~ c > e+ e- QCD^2=2 QED^2=4 (6 / 8) 
+INFO: Generating FKS-subtracted matrix elements for born process: d~ d > e+ e- QCD^2=2 QED^2=4 (7 / 8) 
+INFO: Generating FKS-subtracted matrix elements for born process: s~ s > e+ e- QCD^2=2 QED^2=4 (8 / 8) 
+INFO: Generating virtual matrix element with MadLoop for process: u u~ > e- e+ QCD^2=2 QED^2=4 (1 / 8) 
+INFO: Generating virtual matrix element with MadLoop for process: c c~ > e- e+ QCD^2=2 QED^2=4 (2 / 8) 
+INFO: Generating virtual matrix element with MadLoop for process: d d~ > e- e+ QCD^2=2 QED^2=4 (3 / 8) 
+INFO: Generating virtual matrix element with MadLoop for process: s s~ > e- e+ QCD^2=2 QED^2=4 (4 / 8) 
+INFO: Generating virtual matrix element with MadLoop for process: u~ u > e- e+ QCD^2=2 QED^2=4 (5 / 8) 
+INFO: Generating virtual matrix element with MadLoop for process: c~ c > e- e+ QCD^2=2 QED^2=4 (6 / 8) 
+INFO: Generating virtual matrix element with MadLoop for process: d~ d > e- e+ QCD^2=2 QED^2=4 (7 / 8) 
+INFO: Generating virtual matrix element with MadLoop for process: s~ s > e- e+ QCD^2=2 QED^2=4 (8 / 8) 
+INFO: Generated 8 subprocesses with 96 real emission diagrams, 16 born diagrams and 16 virtual diagrams 
+output /tmp/mg5-ampli-two-stage-dy-ovcj8baq/drell_yan -f
+INFO: Writing out the aMC@NLO code, using optimized Loops 
+INFO: initialize a new directory: drell_yan 
+INFO: remove old information in drell_yan 
+INFO: Generating real emission matrix-elements... 
+INFO: Generating Helas calls for FKS process: u u~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 (1 / 8) 
+INFO: Processing color information for process: u u~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating Helas calls for FKS process: c c~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 (2 / 8) 
+INFO: Generating Helas calls for FKS process: d d~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 (3 / 8) 
+INFO: Reusing existing color information for process: d d~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating Helas calls for FKS process: s s~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 (4 / 8) 
+INFO: Generating Helas calls for FKS process: u~ u > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 (5 / 8) 
+INFO: Processing color information for process: u~ u > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating Helas calls for FKS process: c~ c > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 (6 / 8) 
+INFO: Generating Helas calls for FKS process: d~ d > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 (7 / 8) 
+INFO: Reusing existing color information for process: d~ d > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating Helas calls for FKS process: s~ s > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 (8 / 8) 
+INFO: ... Done 
+INFO: Writing files in P0_uux_emep (1 / 4) 
+INFO: Creating files in directory V0_uux_emep 
+INFO: Computing diagram color coefficients 
+INFO: Particles with .true. are generated off-shell: ['.false.', '.false.', '.false.', '.false.'] 
+INFO: Drawing loop Feynman diagrams for Process: u u~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating born Feynman diagrams for Process: u u~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Writing files in P0_ddx_emep (2 / 4) 
+INFO: Creating files in directory V0_ddx_emep 
+INFO: Computing diagram color coefficients 
+INFO: Particles with .true. are generated off-shell: ['.false.', '.false.', '.false.', '.false.'] 
+INFO: Drawing loop Feynman diagrams for Process: d d~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating born Feynman diagrams for Process: d d~ > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Writing files in P0_uxu_emep (3 / 4) 
+INFO: Creating files in directory V0_uxu_emep 
+INFO: Computing diagram color coefficients 
+INFO: Particles with .true. are generated off-shell: ['.false.', '.false.', '.false.', '.false.'] 
+INFO: Drawing loop Feynman diagrams for Process: u~ u > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating born Feynman diagrams for Process: u~ u > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Writing files in P0_dxd_emep (4 / 4) 
+INFO: Creating files in directory V0_dxd_emep 
+INFO: Computing diagram color coefficients 
+INFO: Particles with .true. are generated off-shell: ['.false.', '.false.', '.false.', '.false.'] 
+INFO: Drawing loop Feynman diagrams for Process: d~ d > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+INFO: Generating born Feynman diagrams for Process: d~ d > e- e+ [ all = QCD QED ] QCD^2=2 QED^2=4 
+History written to /tmp/mg5-ampli-two-stage-dy-ovcj8baq/drell_yan/Cards/proc_card_mg5.dat
+ALOHA: aloha starts to compute helicity amplitudes
+ALOHA: aloha creates 20 routines in  0.382 s
+save configuration file to /tmp/mg5-ampli-two-stage-dy-ovcj8baq/drell_yan/Cards/amcatnlo_configuration.txt
+INFO: Use Fortran compiler gfortran 
+INFO: Use c++ compiler g++ 
+INFO: Generate jpeg diagrams 
+INFO: Generate web pages 
+Type "launch" to generate events from this process, or see
+/tmp/mg5-ampli-two-stage-dy-ovcj8baq/drell_yan/README
+Run "open index.html" to see more information about this process.
+quit
+quit

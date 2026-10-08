@@ -1,0 +1,2171 @@
+{
+  "expected_events_per_backend": 100000,
+  "mint": {
+    "path": "/tmp/mg5-ttbar-100k-rd5zxvbr/mint",
+    "backend": "mint",
+    "run_card": {
+      "run_tag": "tag_1",
+      "nevents": "100000",
+      "req_acc": "0.003",
+      "nevt_job": "2500",
+      "time_of_flight": "-1.0",
+      "event_norm": "average",
+      "req_acc_fo": "0.01",
+      "npoints_fo_grid": "5000",
+      "niters_fo_grid": "4",
+      "npoints_fo": "10000",
+      "niters_fo": "6",
+      "iseed": "0",
+      "lpp1": "1",
+      "lpp2": "1",
+      "ebeam1": "6500.0",
+      "ebeam2": "6500.0",
+      "pdlabel": "nn23nlo",
+      "lhaid": "244600",
+      "pdfscheme": "0",
+      "photons_from_lepton": "True",
+      "parton_shower": "PYTHIA8",
+      "shower_scale_factor": "1.0",
+      "mcatnlo_delta": "False",
+      "fixed_ren_scale": "False",
+      "fixed_fac_scale": "False",
+      "mur_ref_fixed": "91.118",
+      "muf_ref_fixed": "91.118",
+      "dynamical_scale_choice": "-1",
+      "mur_over_ref": "1.0",
+      "muf_over_ref": "1.0",
+      "rw_rscale": "1.0, 2.0, 0.5",
+      "rw_fscale": "1.0, 2.0, 0.5",
+      "reweight_scale": "False",
+      "reweight_pdf": "False",
+      "store_rwgt_info": "False",
+      "custom_fcts": "",
+      "ickkw": "0",
+      "bwcutoff": "15.0",
+      "jetalgo": "1.0",
+      "jetradius": "0.7",
+      "ptj": "10.0",
+      "etaj": "-1.0",
+      "gamma_is_j": "False",
+      "ptl": "0.0",
+      "etal": "-1.0",
+      "drll": "0.0",
+      "drll_sf": "0.0",
+      "mll": "0.0",
+      "mll_sf": "30.0",
+      "rphreco": "0.1",
+      "etaphreco": "-1.0",
+      "lepphreco": "False",
+      "quarkphreco": "False",
+      "ptgmin": "20.0",
+      "etagamma": "-1.0",
+      "r0gamma": "0.4",
+      "xn": "1.0",
+      "epsgamma": "1.0",
+      "isoem": "True",
+      "pt_min_pdg": "{}",
+      "pt_max_pdg": "{}",
+      "mxx_min_pdg": "{}",
+      "pineappl": "False",
+      "born_spreading": "False",
+      "folding": "2, 1, 1"
+    },
+    "cards_sha256": {
+      "run_card.dat": "aa75716c70450ea14869fc5f289d1f543d7e3bd4be17a5bd734c24d60bea2138",
+      "param_card.dat": "ccbf142ec9dfb368c4a5ea80bc6d7c5dc60951384b470c308896c56da66b70ba",
+      "FKS_params.dat": "568e302cd0a449b95b75533d345ec0cc50fd60ec85a9fbdec758e301d167f527"
+    },
+    "stage_cpu_seconds": {
+      "0": 45.15613033,
+      "1": 240.80968470000002,
+      "2": 1117.6751622299998
+    },
+    "stage_cpu_complete_workers": {
+      "0": 5,
+      "1": 5,
+      "2": 43
+    },
+    "stage_wall_seconds_estimates": {
+      "0": {
+        "workers_with_wall_counters": 5,
+        "sum_worker_seconds": 44,
+        "phase_span_seconds": 12.682758331298828,
+        "note": "Span inferred from completed worker log modification times and integer wall durations; valid only when logs have not subsequently been copied/touched. In-progress workers are excluded."
+      },
+      "1": {
+        "workers_with_wall_counters": 5,
+        "sum_worker_seconds": 243,
+        "phase_span_seconds": 77.0,
+        "note": "Span inferred from completed worker log modification times and integer wall durations; valid only when logs have not subsequently been copied/touched. In-progress workers are excluded."
+      },
+      "2": {
+        "workers_with_wall_counters": 43,
+        "sum_worker_seconds": 1116,
+        "phase_span_seconds": 225.79897809028625,
+        "note": "Span inferred from completed worker log modification times and integer wall durations; valid only when logs have not subsequently been copied/touched. In-progress workers are excluded."
+      }
+    },
+    "stage_logs": {
+      "0": 5,
+      "1": 5,
+      "2": 43
+    },
+    "integration_channels": [
+      {
+        "absolute_pb": 98.08220153280031,
+        "absolute_error_pb": 0.4982033567512046,
+        "signed_pb": 63.57401828204902,
+        "signed_error_pb": 0.48651388869440354,
+        "iterations": 2.0,
+        "points_or_quota": 8960.0,
+        "cpu_seconds": 43.3349266,
+        "channel": "P0_gg_ttx/GF1.0",
+        "result_path": "SubProcesses/P0_gg_ttx/GF1.0/res_1.dat"
+      },
+      {
+        "absolute_pb": 444.80120009197725,
+        "absolute_error_pb": 1.9228866107876628,
+        "signed_pb": 268.6606351424351,
+        "signed_error_pb": 1.8379364047904527,
+        "iterations": 2.0,
+        "points_or_quota": 17920.0,
+        "cpu_seconds": 65.6782455,
+        "channel": "P0_gg_ttx/GF2.0",
+        "result_path": "SubProcesses/P0_gg_ttx/GF2.0/res_1.dat"
+      },
+      {
+        "absolute_pb": 450.1532641151003,
+        "absolute_error_pb": 1.948587469472632,
+        "signed_pb": 271.8324999010066,
+        "signed_error_pb": 1.89802270214023,
+        "iterations": 2.0,
+        "points_or_quota": 17920.0,
+        "cpu_seconds": 76.2849655,
+        "channel": "P0_gg_ttx/GF3.0",
+        "result_path": "SubProcesses/P0_gg_ttx/GF3.0/res_1.dat"
+      },
+      {
+        "absolute_pb": 58.16230082552596,
+        "absolute_error_pb": 0.2825080477469778,
+        "signed_pb": 40.18763155224438,
+        "signed_error_pb": 0.26440102590608855,
+        "iterations": 2.0,
+        "points_or_quota": 8960.0,
+        "cpu_seconds": 25.5771198,
+        "channel": "P0_uux_ttx/GF1.0",
+        "result_path": "SubProcesses/P0_uux_ttx/GF1.0/res_1.dat"
+      },
+      {
+        "absolute_pb": 57.26217968183448,
+        "absolute_error_pb": 0.2702034923404935,
+        "signed_pb": 39.44874038118419,
+        "signed_error_pb": 0.26691204521615164,
+        "iterations": 2.0,
+        "points_or_quota": 8960.0,
+        "cpu_seconds": 29.9344273,
+        "channel": "P0_uxu_ttx/GF1.0",
+        "result_path": "SubProcesses/P0_uxu_ttx/GF1.0/res_1.dat"
+      }
+    ],
+    "production_workers": [
+      {
+        "channel": "P0_gg_ttx/GF1.0_1",
+        "log": "SubProcesses/P0_gg_ttx/GF1.0_1/log_MINT2.txt",
+        "cpu_seconds": 17.2313519,
+        "wall_seconds": 17,
+        "trials": 8890,
+        "generated_events": 2253,
+        "quota": 2253,
+        "upper_bound_failures": 16,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.25479950017039643,
+        "virtual_efficiency": 0.11494252873563218,
+        "efficiency": 0.2534308211473566
+      },
+      {
+        "channel": "P0_gg_ttx/GF1.0_2",
+        "log": "SubProcesses/P0_gg_ttx/GF1.0_2/log_MINT2.txt",
+        "cpu_seconds": 17.0284672,
+        "wall_seconds": 17,
+        "trials": 8793,
+        "generated_events": 2253,
+        "quota": 2253,
+        "upper_bound_failures": 16,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.2594782608695652,
+        "virtual_efficiency": 0.08928571428571429,
+        "efficiency": 0.25622654384169224
+      },
+      {
+        "channel": "P0_gg_ttx/GF1.0_3",
+        "log": "SubProcesses/P0_gg_ttx/GF1.0_3/log_MINT2.txt",
+        "cpu_seconds": 29.0774479,
+        "wall_seconds": 29,
+        "trials": 8489,
+        "generated_events": 2252,
+        "quota": 2252,
+        "upper_bound_failures": 15,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.26649264356905555,
+        "virtual_efficiency": 0.09836065573770492,
+        "efficiency": 0.2652844858051596
+      },
+      {
+        "channel": "P0_gg_ttx/GF1.0_4",
+        "log": "SubProcesses/P0_gg_ttx/GF1.0_4/log_MINT2.txt",
+        "cpu_seconds": 29.6938839,
+        "wall_seconds": 29,
+        "trials": 8819,
+        "generated_events": 2252,
+        "quota": 2252,
+        "upper_bound_failures": 9,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.2559387848332572,
+        "virtual_efficiency": 0.1746031746031746,
+        "efficiency": 0.2553577503118267
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_1",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_1/log_MINT2.txt",
+        "cpu_seconds": 28.0459747,
+        "wall_seconds": 28,
+        "trials": 14630,
+        "generated_events": 2492,
+        "quota": 2492,
+        "upper_bound_failures": 7,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17582729725891208,
+        "virtual_efficiency": 0.029197080291970802,
+        "efficiency": 0.17033492822966506
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_10",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_10/log_MINT2.txt",
+        "cpu_seconds": 32.318985,
+        "wall_seconds": 33,
+        "trials": 14039,
+        "generated_events": 2491,
+        "quota": 2491,
+        "upper_bound_failures": 14,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.18181818181818182,
+        "virtual_efficiency": 0.04288939051918736,
+        "efficiency": 0.17743429019160908
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_11",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_11/log_MINT2.txt",
+        "cpu_seconds": 31.805582,
+        "wall_seconds": 32,
+        "trials": 14332,
+        "generated_events": 2491,
+        "quota": 2491,
+        "upper_bound_failures": 15,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.18098586391269317,
+        "virtual_efficiency": 0.029455081001472753,
+        "efficiency": 0.17380686575495394
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_12",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_12/log_MINT2.txt",
+        "cpu_seconds": 29.9714985,
+        "wall_seconds": 30,
+        "trials": 14676,
+        "generated_events": 2491,
+        "quota": 2491,
+        "upper_bound_failures": 11,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17657567528940973,
+        "virtual_efficiency": 0.02932551319648094,
+        "efficiency": 0.16973289724720633
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_13",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_13/log_MINT2.txt",
+        "cpu_seconds": 26.97015,
+        "wall_seconds": 27,
+        "trials": 14450,
+        "generated_events": 2491,
+        "quota": 2491,
+        "upper_bound_failures": 11,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17944061024337088,
+        "virtual_efficiency": 0.030656934306569343,
+        "efficiency": 0.17238754325259514
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_14",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_14/log_MINT2.txt",
+        "cpu_seconds": 26.8017673,
+        "wall_seconds": 27,
+        "trials": 14310,
+        "generated_events": 2491,
+        "quota": 2491,
+        "upper_bound_failures": 19,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17819359481827995,
+        "virtual_efficiency": 0.03614457831325301,
+        "efficiency": 0.17407407407407408
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_15",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_15/log_MINT2.txt",
+        "cpu_seconds": 26.3697414,
+        "wall_seconds": 26,
+        "trials": 14178,
+        "generated_events": 2491,
+        "quota": 2491,
+        "upper_bound_failures": 13,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.1790936730852758,
+        "virtual_efficiency": 0.046703296703296704,
+        "efficiency": 0.17569473832698548
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_16",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_16/log_MINT2.txt",
+        "cpu_seconds": 26.5945683,
+        "wall_seconds": 27,
+        "trials": 14313,
+        "generated_events": 2491,
+        "quota": 2491,
+        "upper_bound_failures": 11,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.1800436999271668,
+        "virtual_efficiency": 0.032590051457975985,
+        "efficiency": 0.17403758820652554
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_2",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_2/log_MINT2.txt",
+        "cpu_seconds": 27.4924946,
+        "wall_seconds": 27,
+        "trials": 14812,
+        "generated_events": 2492,
+        "quota": 2492,
+        "upper_bound_failures": 11,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17532651902328222,
+        "virtual_efficiency": 0.03038674033149171,
+        "efficiency": 0.16824196597353497
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_3",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_3/log_MINT2.txt",
+        "cpu_seconds": 27.503931,
+        "wall_seconds": 27,
+        "trials": 14646,
+        "generated_events": 2491,
+        "quota": 2491,
+        "upper_bound_failures": 15,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17374517374517376,
+        "virtual_efficiency": 0.0399002493765586,
+        "efficiency": 0.17008056807319405
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_4",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_4/log_MINT2.txt",
+        "cpu_seconds": 27.5526466,
+        "wall_seconds": 27,
+        "trials": 14305,
+        "generated_events": 2491,
+        "quota": 2491,
+        "upper_bound_failures": 12,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17811759638164978,
+        "virtual_efficiency": 0.026595744680851064,
+        "efficiency": 0.1741349178608878
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_5",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_5/log_MINT2.txt",
+        "cpu_seconds": 39.939827,
+        "wall_seconds": 40,
+        "trials": 14175,
+        "generated_events": 2491,
+        "quota": 2491,
+        "upper_bound_failures": 16,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17850453825097248,
+        "virtual_efficiency": 0.04436860068259386,
+        "efficiency": 0.17573192239858906
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_6",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_6/log_MINT2.txt",
+        "cpu_seconds": 27.1584682,
+        "wall_seconds": 27,
+        "trials": 14423,
+        "generated_events": 2491,
+        "quota": 2491,
+        "upper_bound_failures": 18,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17647477913935594,
+        "virtual_efficiency": 0.03617571059431524,
+        "efficiency": 0.17271025445469043
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_7",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_7/log_MINT2.txt",
+        "cpu_seconds": 26.5599575,
+        "wall_seconds": 27,
+        "trials": 14224,
+        "generated_events": 2491,
+        "quota": 2491,
+        "upper_bound_failures": 11,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.179121753599074,
+        "virtual_efficiency": 0.03740648379052369,
+        "efficiency": 0.1751265466816648
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_8",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_8/log_MINT2.txt",
+        "cpu_seconds": 26.6495152,
+        "wall_seconds": 27,
+        "trials": 14219,
+        "generated_events": 2491,
+        "quota": 2491,
+        "upper_bound_failures": 14,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.1787467513716431,
+        "virtual_efficiency": 0.04087193460490463,
+        "efficiency": 0.17518812856037697
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_9",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_9/log_MINT2.txt",
+        "cpu_seconds": 29.0506973,
+        "wall_seconds": 29,
+        "trials": 13956,
+        "generated_events": 2491,
+        "quota": 2491,
+        "upper_bound_failures": 19,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.18252155331220987,
+        "virtual_efficiency": 0.03636363636363636,
+        "efficiency": 0.1784895385497277
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_1",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_1/log_MINT2.txt",
+        "cpu_seconds": 26.1782074,
+        "wall_seconds": 26,
+        "trials": 14099,
+        "generated_events": 2395,
+        "quota": 2395,
+        "upper_bound_failures": 13,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17159976898642795,
+        "virtual_efficiency": 0.0728744939271255,
+        "efficiency": 0.1698702035605362
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_10",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_10/log_MINT2.txt",
+        "cpu_seconds": 34.341362,
+        "wall_seconds": 34,
+        "trials": 13758,
+        "generated_events": 2394,
+        "quota": 2394,
+        "upper_bound_failures": 12,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.1750073594347954,
+        "virtual_efficiency": 0.09411764705882353,
+        "efficiency": 0.17400784997819452
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_11",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_11/log_MINT2.txt",
+        "cpu_seconds": 29.0356121,
+        "wall_seconds": 29,
+        "trials": 13913,
+        "generated_events": 2394,
+        "quota": 2394,
+        "upper_bound_failures": 8,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17350964348334308,
+        "virtual_efficiency": 0.08444444444444445,
+        "efficiency": 0.1720692877165241
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_12",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_12/log_MINT2.txt",
+        "cpu_seconds": 30.7397041,
+        "wall_seconds": 31,
+        "trials": 13861,
+        "generated_events": 2394,
+        "quota": 2394,
+        "upper_bound_failures": 8,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.1744705796145673,
+        "virtual_efficiency": 0.06074766355140187,
+        "efficiency": 0.17271481134117309
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_13",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_13/log_MINT2.txt",
+        "cpu_seconds": 37.543335,
+        "wall_seconds": 38,
+        "trials": 13365,
+        "generated_events": 2394,
+        "quota": 2394,
+        "upper_bound_failures": 10,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17999244998112496,
+        "virtual_efficiency": 0.08333333333333333,
+        "efficiency": 0.17912457912457913
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_14",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_14/log_MINT2.txt",
+        "cpu_seconds": 27.6037445,
+        "wall_seconds": 27,
+        "trials": 13891,
+        "generated_events": 2394,
+        "quota": 2394,
+        "upper_bound_failures": 11,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17376353526485222,
+        "virtual_efficiency": 0.08520179372197309,
+        "efficiency": 0.17234180404578503
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_15",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_15/log_MINT2.txt",
+        "cpu_seconds": 33.1640511,
+        "wall_seconds": 33,
+        "trials": 13807,
+        "generated_events": 2394,
+        "quota": 2394,
+        "upper_bound_failures": 13,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.1752524135898003,
+        "virtual_efficiency": 0.06722689075630252,
+        "efficiency": 0.17339030926341711
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_16",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_16/log_MINT2.txt",
+        "cpu_seconds": 41.8761749,
+        "wall_seconds": 41,
+        "trials": 13971,
+        "generated_events": 2394,
+        "quota": 2394,
+        "upper_bound_failures": 12,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17320713505642518,
+        "virtual_efficiency": 0.0635593220338983,
+        "efficiency": 0.1713549495383294
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_17",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_17/log_MINT2.txt",
+        "cpu_seconds": 36.9169922,
+        "wall_seconds": 37,
+        "trials": 14260,
+        "generated_events": 2394,
+        "quota": 2394,
+        "upper_bound_failures": 14,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17191563132042761,
+        "virtual_efficiency": 0.03365384615384615,
+        "efficiency": 0.1678821879382889
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_2",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_2/log_MINT2.txt",
+        "cpu_seconds": 25.6788769,
+        "wall_seconds": 25,
+        "trials": 13570,
+        "generated_events": 2395,
+        "quota": 2395,
+        "upper_bound_failures": 15,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17759725741541213,
+        "virtual_efficiency": 0.07894736842105263,
+        "efficiency": 0.17649226234340457
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_3",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_3/log_MINT2.txt",
+        "cpu_seconds": 25.8292522,
+        "wall_seconds": 26,
+        "trials": 13796,
+        "generated_events": 2395,
+        "quota": 2395,
+        "upper_bound_failures": 3,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.1770181709859994,
+        "virtual_efficiency": 0.04891304347826087,
+        "efficiency": 0.17360104378080604
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_4",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_4/log_MINT2.txt",
+        "cpu_seconds": 25.8455505,
+        "wall_seconds": 26,
+        "trials": 13488,
+        "generated_events": 2394,
+        "quota": 2394,
+        "upper_bound_failures": 6,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.1778971718528468,
+        "virtual_efficiency": 0.11494252873563218,
+        "efficiency": 0.17749110320284697
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_5",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_5/log_MINT2.txt",
+        "cpu_seconds": 26.1922207,
+        "wall_seconds": 26,
+        "trials": 13434,
+        "generated_events": 2394,
+        "quota": 2394,
+        "upper_bound_failures": 9,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17877808672127452,
+        "virtual_efficiency": 0.11811023622047244,
+        "efficiency": 0.1782045556051809
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_6",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_6/log_MINT2.txt",
+        "cpu_seconds": 26.2988491,
+        "wall_seconds": 27,
+        "trials": 13703,
+        "generated_events": 2394,
+        "quota": 2394,
+        "upper_bound_failures": 10,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17699180938198064,
+        "virtual_efficiency": 0.06227106227106227,
+        "efficiency": 0.1747062687002846
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_7",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_7/log_MINT2.txt",
+        "cpu_seconds": 25.7800026,
+        "wall_seconds": 26,
+        "trials": 13543,
+        "generated_events": 2394,
+        "quota": 2394,
+        "upper_bound_failures": 7,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17917420132610007,
+        "virtual_efficiency": 0.05904059040590406,
+        "efficiency": 0.17677028723325702
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_8",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_8/log_MINT2.txt",
+        "cpu_seconds": 29.3239555,
+        "wall_seconds": 29,
+        "trials": 13590,
+        "generated_events": 2394,
+        "quota": 2394,
+        "upper_bound_failures": 15,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17930878015578916,
+        "virtual_efficiency": 0.06267029972752043,
+        "efficiency": 0.176158940397351
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_9",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_9/log_MINT2.txt",
+        "cpu_seconds": 29.6335297,
+        "wall_seconds": 30,
+        "trials": 13750,
+        "generated_events": 2394,
+        "quota": 2394,
+        "upper_bound_failures": 7,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.17580144777662876,
+        "virtual_efficiency": 0.0660377358490566,
+        "efficiency": 0.1741090909090909
+      },
+      {
+        "channel": "P0_uux_ttx/GF1.0_1",
+        "log": "SubProcesses/P0_uux_ttx/GF1.0_1/log_MINT2.txt",
+        "cpu_seconds": 7.60585499,
+        "wall_seconds": 8,
+        "trials": 6901,
+        "generated_events": 1768,
+        "quota": 1768,
+        "upper_bound_failures": 11,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.26003852422581125,
+        "virtual_efficiency": 0.08552631578947369,
+        "efficiency": 0.2561947543834227
+      },
+      {
+        "channel": "P0_uux_ttx/GF1.0_2",
+        "log": "SubProcesses/P0_uux_ttx/GF1.0_2/log_MINT2.txt",
+        "cpu_seconds": 7.79574776,
+        "wall_seconds": 8,
+        "trials": 7069,
+        "generated_events": 1768,
+        "quota": 1768,
+        "upper_bound_failures": 8,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.25375939849624063,
+        "virtual_efficiency": 0.08496732026143791,
+        "efficiency": 0.25010609704342907
+      },
+      {
+        "channel": "P0_uux_ttx/GF1.0_3",
+        "log": "SubProcesses/P0_uux_ttx/GF1.0_3/log_MINT2.txt",
+        "cpu_seconds": 9.15901947,
+        "wall_seconds": 9,
+        "trials": 6822,
+        "generated_events": 1767,
+        "quota": 1767,
+        "upper_bound_failures": 4,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.26510574018126887,
+        "virtual_efficiency": 0.0594059405940594,
+        "efficiency": 0.2590149516270888
+      },
+      {
+        "channel": "P0_uxu_ttx/GF1.0_1",
+        "log": "SubProcesses/P0_uxu_ttx/GF1.0_1/log_MINT2.txt",
+        "cpu_seconds": 7.34788513,
+        "wall_seconds": 7,
+        "trials": 6399,
+        "generated_events": 1710,
+        "quota": 1710,
+        "upper_bound_failures": 10,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.26833885470894464,
+        "virtual_efficiency": 0.15,
+        "efficiency": 0.2672292545710267
+      },
+      {
+        "channel": "P0_uxu_ttx/GF1.0_2",
+        "log": "SubProcesses/P0_uxu_ttx/GF1.0_2/log_MINT2.txt",
+        "cpu_seconds": 10.0230093,
+        "wall_seconds": 10,
+        "trials": 6342,
+        "generated_events": 1709,
+        "quota": 1709,
+        "upper_bound_failures": 10,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.27189751801441153,
+        "virtual_efficiency": 0.1134020618556701,
+        "efficiency": 0.26947335225480923
+      },
+      {
+        "channel": "P0_uxu_ttx/GF1.0_3",
+        "log": "SubProcesses/P0_uxu_ttx/GF1.0_3/log_MINT2.txt",
+        "cpu_seconds": 9.94526958,
+        "wall_seconds": 10,
+        "trials": 6199,
+        "generated_events": 1709,
+        "quota": 1709,
+        "upper_bound_failures": 10,
+        "fatal": false,
+        "nonvirtual_efficiency": 0.27682054616384916,
+        "virtual_efficiency": 0.1276595744680851,
+        "efficiency": 0.2756896273592515
+      }
+    ],
+    "fatal_logs": [],
+    "warnings": [],
+    "integration": {
+      "signed_pb": 683.7035252589193,
+      "signed_error_pb": 2.7126271605526564,
+      "absolute_pb": 1108.4611462472383,
+      "absolute_error_pb": 2.8098956124961645,
+      "channels": 5,
+      "relative_signed_error": 0.003967548886815205,
+      "expected_channels": 5,
+      "complete": true
+    },
+    "integration_complete": true,
+    "production": {
+      "logged_workers": 43,
+      "workers_with_trial_counters": 43,
+      "counter_events": 100000,
+      "trials": 538210,
+      "efficiency": 0.18580108136229354,
+      "events_per_cpu_second_completed_workers": 89.47143443760412,
+      "upper_bound_failures": 499,
+      "ampli_envelope_failure_workers": 0,
+      "all_logged_workers_finished": true,
+      "all_assigned_workers_finished": true
+    },
+    "total_cpu_seconds_completed_workers": 1403.6409772599998,
+    "cpu_note": "Sum of worker CPU times from phase logs/results; incomplete workers without final CPU counters are excluded. Compilation and Python coordination are excluded.",
+    "assignments": [
+      {
+        "file": "P0_gg_ttx/GF1.0_1/events.lhe",
+        "quota": 2253,
+        "allocated_absolute_pb": 24.52599,
+        "weight_fraction": 0.2500555
+      },
+      {
+        "file": "P0_gg_ttx/GF1.0_2/events.lhe",
+        "quota": 2253,
+        "allocated_absolute_pb": 24.52599,
+        "weight_fraction": 0.2500555
+      },
+      {
+        "file": "P0_gg_ttx/GF1.0_3/events.lhe",
+        "quota": 2252,
+        "allocated_absolute_pb": 24.51511,
+        "weight_fraction": 0.2499445
+      },
+      {
+        "file": "P0_gg_ttx/GF1.0_4/events.lhe",
+        "quota": 2252,
+        "allocated_absolute_pb": 24.51511,
+        "weight_fraction": 0.2499445
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_1/events.lhe",
+        "quota": 2492,
+        "allocated_absolute_pb": 27.80984,
+        "weight_fraction": 0.06252195
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_2/events.lhe",
+        "quota": 2492,
+        "allocated_absolute_pb": 27.80984,
+        "weight_fraction": 0.06252195
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_3/events.lhe",
+        "quota": 2491,
+        "allocated_absolute_pb": 27.79868,
+        "weight_fraction": 0.06249686
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_4/events.lhe",
+        "quota": 2491,
+        "allocated_absolute_pb": 27.79868,
+        "weight_fraction": 0.06249686
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_5/events.lhe",
+        "quota": 2491,
+        "allocated_absolute_pb": 27.79868,
+        "weight_fraction": 0.06249686
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_6/events.lhe",
+        "quota": 2491,
+        "allocated_absolute_pb": 27.79868,
+        "weight_fraction": 0.06249686
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_7/events.lhe",
+        "quota": 2491,
+        "allocated_absolute_pb": 27.79868,
+        "weight_fraction": 0.06249686
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_8/events.lhe",
+        "quota": 2491,
+        "allocated_absolute_pb": 27.79868,
+        "weight_fraction": 0.06249686
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_9/events.lhe",
+        "quota": 2491,
+        "allocated_absolute_pb": 27.79868,
+        "weight_fraction": 0.06249686
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_10/events.lhe",
+        "quota": 2491,
+        "allocated_absolute_pb": 27.79868,
+        "weight_fraction": 0.06249686
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_11/events.lhe",
+        "quota": 2491,
+        "allocated_absolute_pb": 27.79868,
+        "weight_fraction": 0.06249686
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_12/events.lhe",
+        "quota": 2491,
+        "allocated_absolute_pb": 27.79868,
+        "weight_fraction": 0.06249686
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_13/events.lhe",
+        "quota": 2491,
+        "allocated_absolute_pb": 27.79868,
+        "weight_fraction": 0.06249686
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_14/events.lhe",
+        "quota": 2491,
+        "allocated_absolute_pb": 27.79868,
+        "weight_fraction": 0.06249686
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_15/events.lhe",
+        "quota": 2491,
+        "allocated_absolute_pb": 27.79868,
+        "weight_fraction": 0.06249686
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_16/events.lhe",
+        "quota": 2491,
+        "allocated_absolute_pb": 27.79868,
+        "weight_fraction": 0.06249686
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_1/events.lhe",
+        "quota": 2395,
+        "allocated_absolute_pb": 26.48871,
+        "weight_fraction": 0.05884376
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_2/events.lhe",
+        "quota": 2395,
+        "allocated_absolute_pb": 26.48871,
+        "weight_fraction": 0.05884376
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_3/events.lhe",
+        "quota": 2395,
+        "allocated_absolute_pb": 26.48871,
+        "weight_fraction": 0.05884376
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_4/events.lhe",
+        "quota": 2394,
+        "allocated_absolute_pb": 26.47765,
+        "weight_fraction": 0.05881919
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_5/events.lhe",
+        "quota": 2394,
+        "allocated_absolute_pb": 26.47765,
+        "weight_fraction": 0.05881919
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_6/events.lhe",
+        "quota": 2394,
+        "allocated_absolute_pb": 26.47765,
+        "weight_fraction": 0.05881919
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_7/events.lhe",
+        "quota": 2394,
+        "allocated_absolute_pb": 26.47765,
+        "weight_fraction": 0.05881919
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_8/events.lhe",
+        "quota": 2394,
+        "allocated_absolute_pb": 26.47765,
+        "weight_fraction": 0.05881919
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_9/events.lhe",
+        "quota": 2394,
+        "allocated_absolute_pb": 26.47765,
+        "weight_fraction": 0.05881919
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_10/events.lhe",
+        "quota": 2394,
+        "allocated_absolute_pb": 26.47765,
+        "weight_fraction": 0.05881919
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_11/events.lhe",
+        "quota": 2394,
+        "allocated_absolute_pb": 26.47765,
+        "weight_fraction": 0.05881919
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_12/events.lhe",
+        "quota": 2394,
+        "allocated_absolute_pb": 26.47765,
+        "weight_fraction": 0.05881919
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_13/events.lhe",
+        "quota": 2394,
+        "allocated_absolute_pb": 26.47765,
+        "weight_fraction": 0.05881919
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_14/events.lhe",
+        "quota": 2394,
+        "allocated_absolute_pb": 26.47765,
+        "weight_fraction": 0.05881919
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_15/events.lhe",
+        "quota": 2394,
+        "allocated_absolute_pb": 26.47765,
+        "weight_fraction": 0.05881919
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_16/events.lhe",
+        "quota": 2394,
+        "allocated_absolute_pb": 26.47765,
+        "weight_fraction": 0.05881919
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_17/events.lhe",
+        "quota": 2394,
+        "allocated_absolute_pb": 26.47765,
+        "weight_fraction": 0.05881919
+      },
+      {
+        "file": "P0_uux_ttx/GF1.0_1/events.lhe",
+        "quota": 1768,
+        "allocated_absolute_pb": 19.39109,
+        "weight_fraction": 0.3333962
+      },
+      {
+        "file": "P0_uux_ttx/GF1.0_2/events.lhe",
+        "quota": 1768,
+        "allocated_absolute_pb": 19.39109,
+        "weight_fraction": 0.3333962
+      },
+      {
+        "file": "P0_uux_ttx/GF1.0_3/events.lhe",
+        "quota": 1767,
+        "allocated_absolute_pb": 19.38012,
+        "weight_fraction": 0.3332076
+      },
+      {
+        "file": "P0_uxu_ttx/GF1.0_1/events.lhe",
+        "quota": 1710,
+        "allocated_absolute_pb": 19.09484,
+        "weight_fraction": 0.3334633
+      },
+      {
+        "file": "P0_uxu_ttx/GF1.0_2/events.lhe",
+        "quota": 1709,
+        "allocated_absolute_pb": 19.08367,
+        "weight_fraction": 0.3332683
+      },
+      {
+        "file": "P0_uxu_ttx/GF1.0_3/events.lhe",
+        "quota": 1709,
+        "allocated_absolute_pb": 19.08367,
+        "weight_fraction": 0.3332683
+      }
+    ],
+    "assigned_events": 100000,
+    "lhe": {
+      "path": "/tmp/mg5-ttbar-100k-rd5zxvbr/mint/Events/benchmark_100k/events.lhe.gz",
+      "events": 100000,
+      "positive": 80986,
+      "negative": 19014,
+      "zero": 0,
+      "all_weights_finite": true,
+      "sum_weights": 68693557.48635067,
+      "sum_squared_weights": 122868623190.38928,
+      "sum_absolute_weights": 110846119.99990715,
+      "minimum_absolute_weight": 1108.4612,
+      "maximum_absolute_weight": 1108.4612,
+      "closed_document": true,
+      "truncated_event_header": false,
+      "negative_fraction": 0.19014,
+      "mean_sign": 0.61972,
+      "sign_effective_events": 38405.287840000005,
+      "signed_weight_effective_events": 38405.2878399932,
+      "rate_from_signs_pb": 686.9355415523386,
+      "sign_sampling_error_pb": 2.751010131736953,
+      "sign_error_note": "Binomial sign fluctuation conditional on the integrated absolute normalization; excludes its integration uncertainty.",
+      "rate_from_weights_pb": 686.9355748635068
+    },
+    "summary": "\n   --------------------------------------------------------------\n      Summary:\n      Process p p > t t~ [QCD]\n      Run at p-p collider (6500.0 + 6500.0 GeV)\n      Number of events generated: 100000\n      Total cross section: 6.837e+02 +- 2.7e+00 pb\n   --------------------------------------------------------------\n",
+    "complete_expected_sample": true,
+    "wrapper_metadata": {
+      "/tmp/mg5-ttbar-100k-rd5zxvbr/ampli_finished.json": {
+        "backend": "ampli",
+        "settings": {
+          "nevents": 100000,
+          "req_acc": 0.003,
+          "nevt_job": 2500,
+          "iseed": 19721,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            2,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-04T12:14:05.581979+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "df8c115a1644ca33ee282bae60187a0b40a3e16823ea34b04e58eb37f2c3b890",
+          "driver_mintMC.f": "c1bdf5ecd3726859f0c537de1263a4ef2f54b2b190f54438fd917277f47fe597",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "7e54ed1dec6005cc773c468ff7cfc0d0dbff91fe54939c84e91f603bf8c25395"
+        },
+        "finished": "2026-10-04T12:17:36.738984+00:00",
+        "wall_seconds": 211.15584817505442,
+        "child_user_cpu_seconds": 475.316072,
+        "child_system_cpu_seconds": 60.261645,
+        "cli_returncode": 0,
+        "summary_exists": false,
+        "events_exist": false
+      },
+      "/tmp/mg5-ttbar-100k-rd5zxvbr/ampli_started.json": {
+        "backend": "ampli",
+        "settings": {
+          "nevents": 100000,
+          "req_acc": 0.003,
+          "nevt_job": 2500,
+          "iseed": 19721,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            2,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-04T12:14:05.581979+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "df8c115a1644ca33ee282bae60187a0b40a3e16823ea34b04e58eb37f2c3b890",
+          "driver_mintMC.f": "c1bdf5ecd3726859f0c537de1263a4ef2f54b2b190f54438fd917277f47fe597",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "7e54ed1dec6005cc773c468ff7cfc0d0dbff91fe54939c84e91f603bf8c25395"
+        }
+      },
+      "/tmp/mg5-ttbar-100k-rd5zxvbr/ampli_tight_finished.json": {
+        "backend": "ampli_tight",
+        "settings": {
+          "nevents": 100000,
+          "req_acc": 0.001,
+          "nevt_job": 2500,
+          "iseed": 19721,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            2,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-04T12:18:30.455392+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "df8c115a1644ca33ee282bae60187a0b40a3e16823ea34b04e58eb37f2c3b890",
+          "driver_mintMC.f": "c1bdf5ecd3726859f0c537de1263a4ef2f54b2b190f54438fd917277f47fe597",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "7e54ed1dec6005cc773c468ff7cfc0d0dbff91fe54939c84e91f603bf8c25395"
+        },
+        "finished": "2026-10-04T12:35:30.890297+00:00",
+        "wall_seconds": 1020.4336813110276,
+        "child_user_cpu_seconds": 2026.113458,
+        "child_system_cpu_seconds": 291.022101,
+        "cli_returncode": 0,
+        "summary_exists": false,
+        "events_exist": false
+      },
+      "/tmp/mg5-ttbar-100k-rd5zxvbr/ampli_tight_started.json": {
+        "backend": "ampli_tight",
+        "settings": {
+          "nevents": 100000,
+          "req_acc": 0.001,
+          "nevt_job": 2500,
+          "iseed": 19721,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            2,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-04T12:18:30.455392+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "df8c115a1644ca33ee282bae60187a0b40a3e16823ea34b04e58eb37f2c3b890",
+          "driver_mintMC.f": "c1bdf5ecd3726859f0c537de1263a4ef2f54b2b190f54438fd917277f47fe597",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "7e54ed1dec6005cc773c468ff7cfc0d0dbff91fe54939c84e91f603bf8c25395"
+        }
+      },
+      "/tmp/mg5-ttbar-100k-rd5zxvbr/mint_finished.json": {
+        "backend": "mint",
+        "settings": {
+          "nevents": 100000,
+          "req_acc": 0.003,
+          "nevt_job": 2500,
+          "iseed": 19721,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            2,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-04T12:14:05.579753+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "df8c115a1644ca33ee282bae60187a0b40a3e16823ea34b04e58eb37f2c3b890",
+          "driver_mintMC.f": "c1bdf5ecd3726859f0c537de1263a4ef2f54b2b190f54438fd917277f47fe597",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "7e54ed1dec6005cc773c468ff7cfc0d0dbff91fe54939c84e91f603bf8c25395"
+        },
+        "finished": "2026-10-04T12:20:03.706958+00:00",
+        "wall_seconds": 358.12605496298056,
+        "child_user_cpu_seconds": 1331.968036,
+        "child_system_cpu_seconds": 169.455579,
+        "cli_returncode": 0,
+        "summary_exists": true,
+        "events_exist": true
+      },
+      "/tmp/mg5-ttbar-100k-rd5zxvbr/mint_started.json": {
+        "backend": "mint",
+        "settings": {
+          "nevents": 100000,
+          "req_acc": 0.003,
+          "nevt_job": 2500,
+          "iseed": 19721,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            2,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-04T12:14:05.579753+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "df8c115a1644ca33ee282bae60187a0b40a3e16823ea34b04e58eb37f2c3b890",
+          "driver_mintMC.f": "c1bdf5ecd3726859f0c537de1263a4ef2f54b2b190f54438fd917277f47fe597",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "7e54ed1dec6005cc773c468ff7cfc0d0dbff91fe54939c84e91f603bf8c25395"
+        }
+      }
+    }
+  },
+  "ampli": {
+    "path": "/tmp/mg5-ttbar-100k-rd5zxvbr/ampli_tight",
+    "backend": "ampli",
+    "run_card": {
+      "run_tag": "tag_1",
+      "nevents": "100000",
+      "req_acc": "0.001",
+      "nevt_job": "2500",
+      "time_of_flight": "-1.0",
+      "event_norm": "average",
+      "req_acc_fo": "0.01",
+      "npoints_fo_grid": "5000",
+      "niters_fo_grid": "4",
+      "npoints_fo": "10000",
+      "niters_fo": "6",
+      "iseed": "0",
+      "lpp1": "1",
+      "lpp2": "1",
+      "ebeam1": "6500.0",
+      "ebeam2": "6500.0",
+      "pdlabel": "nn23nlo",
+      "lhaid": "244600",
+      "pdfscheme": "0",
+      "photons_from_lepton": "True",
+      "parton_shower": "PYTHIA8",
+      "shower_scale_factor": "1.0",
+      "mcatnlo_delta": "False",
+      "fixed_ren_scale": "False",
+      "fixed_fac_scale": "False",
+      "mur_ref_fixed": "91.118",
+      "muf_ref_fixed": "91.118",
+      "dynamical_scale_choice": "-1",
+      "mur_over_ref": "1.0",
+      "muf_over_ref": "1.0",
+      "rw_rscale": "1.0, 2.0, 0.5",
+      "rw_fscale": "1.0, 2.0, 0.5",
+      "reweight_scale": "False",
+      "reweight_pdf": "False",
+      "store_rwgt_info": "False",
+      "custom_fcts": "",
+      "ickkw": "0",
+      "bwcutoff": "15.0",
+      "jetalgo": "1.0",
+      "jetradius": "0.7",
+      "ptj": "10.0",
+      "etaj": "-1.0",
+      "gamma_is_j": "False",
+      "ptl": "0.0",
+      "etal": "-1.0",
+      "drll": "0.0",
+      "drll_sf": "0.0",
+      "mll": "0.0",
+      "mll_sf": "30.0",
+      "rphreco": "0.1",
+      "etaphreco": "-1.0",
+      "lepphreco": "False",
+      "quarkphreco": "False",
+      "ptgmin": "20.0",
+      "etagamma": "-1.0",
+      "r0gamma": "0.4",
+      "xn": "1.0",
+      "epsgamma": "1.0",
+      "isoem": "True",
+      "pt_min_pdg": "{}",
+      "pt_max_pdg": "{}",
+      "mxx_min_pdg": "{}",
+      "pineappl": "False",
+      "born_spreading": "False",
+      "folding": "2, 1, 1"
+    },
+    "cards_sha256": {
+      "run_card.dat": "10eba0fa2ec5e27eafb153cb9a72a2a14f0226c7c498c6619ddcdc4048922d10",
+      "param_card.dat": "ccbf142ec9dfb368c4a5ea80bc6d7c5dc60951384b470c308896c56da66b70ba",
+      "FKS_params.dat": "f74a5310ab7edc424c305f6f63f3865e5e511b454475dc1eb590b8a8e1bed380"
+    },
+    "stage_cpu_seconds": {
+      "0": 89.3944596,
+      "1": 2026.012157,
+      "2": 0.0
+    },
+    "stage_cpu_complete_workers": {
+      "0": 5,
+      "1": 5,
+      "2": 0
+    },
+    "stage_wall_seconds_estimates": {
+      "0": {
+        "workers_with_wall_counters": 5,
+        "sum_worker_seconds": 91,
+        "phase_span_seconds": 24.772226810455322,
+        "note": "Span inferred from completed worker log modification times and integer wall durations; valid only when logs have not subsequently been copied/touched. In-progress workers are excluded."
+      },
+      "1": {
+        "workers_with_wall_counters": 5,
+        "sum_worker_seconds": 2028,
+        "phase_span_seconds": 901.4740469455719,
+        "note": "Span inferred from completed worker log modification times and integer wall durations; valid only when logs have not subsequently been copied/touched. In-progress workers are excluded."
+      },
+      "2": {
+        "workers_with_wall_counters": 2,
+        "sum_worker_seconds": 86,
+        "phase_span_seconds": 43.06714630126953,
+        "note": "Span inferred from completed worker log modification times and integer wall durations; valid only when logs have not subsequently been copied/touched. In-progress workers are excluded."
+      }
+    },
+    "stage_logs": {
+      "0": 5,
+      "1": 5,
+      "2": 2
+    },
+    "integration_channels": [
+      {
+        "absolute_pb": 96.47050998743799,
+        "absolute_error_pb": 0.3055340800528702,
+        "signed_pb": 62.45435149714665,
+        "signed_error_pb": 0.2848273201865904,
+        "iterations": 6.0,
+        "points_or_quota": 64512.0,
+        "cpu_seconds": 116.994659,
+        "channel": "P0_gg_ttx/GF1.0",
+        "result_path": "SubProcesses/P0_gg_ttx/GF1.0/res_1.dat"
+      },
+      {
+        "absolute_pb": 442.7550531287262,
+        "absolute_error_pb": 0.5727235215137423,
+        "signed_pb": 269.1201694254109,
+        "signed_error_pb": 0.504058804289227,
+        "iterations": 9.0,
+        "points_or_quota": 523264.0,
+        "cpu_seconds": 900.6427,
+        "channel": "P0_gg_ttx/GF2.0",
+        "result_path": "SubProcesses/P0_gg_ttx/GF2.0/res_1.dat"
+      },
+      {
+        "absolute_pb": 443.11266108695764,
+        "absolute_error_pb": 0.5759036286715462,
+        "signed_pb": 269.8714678824559,
+        "signed_error_pb": 0.4975433618710292,
+        "iterations": 9.0,
+        "points_or_quota": 523264.0,
+        "cpu_seconds": 900.209778,
+        "channel": "P0_gg_ttx/GF3.0",
+        "result_path": "SubProcesses/P0_gg_ttx/GF3.0/res_1.dat"
+      },
+      {
+        "absolute_pb": 57.65482661496959,
+        "absolute_error_pb": 0.24506122686900006,
+        "signed_pb": 39.73262716255352,
+        "signed_error_pb": 0.201504090049099,
+        "iterations": 5.0,
+        "points_or_quota": 31744.0,
+        "cpu_seconds": 37.905323,
+        "channel": "P0_uux_ttx/GF1.0",
+        "result_path": "SubProcesses/P0_uux_ttx/GF1.0/res_1.dat"
+      },
+      {
+        "absolute_pb": 58.17225584722944,
+        "absolute_error_pb": 0.19116690041402426,
+        "signed_pb": 39.64952834564032,
+        "signed_error_pb": 0.16219942822532726,
+        "iterations": 6.0,
+        "points_or_quota": 64512.0,
+        "cpu_seconds": 70.259697,
+        "channel": "P0_uxu_ttx/GF1.0",
+        "result_path": "SubProcesses/P0_uxu_ttx/GF1.0/res_1.dat"
+      }
+    ],
+    "production_workers": [
+      {
+        "channel": "P0_gg_ttx/GF1.0_4",
+        "log": "SubProcesses/P0_gg_ttx/GF1.0_4/log_MINT2.txt",
+        "cpu_seconds": null,
+        "wall_seconds": 43,
+        "trials": null,
+        "generated_events": null,
+        "quota": 2233,
+        "upper_bound_failures": 0,
+        "fatal": true,
+        "envelope_exceeded": true
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_1",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_1/log_MINT2.txt",
+        "cpu_seconds": null,
+        "wall_seconds": 43,
+        "trials": null,
+        "generated_events": null,
+        "quota": 2357,
+        "upper_bound_failures": 0,
+        "fatal": false,
+        "envelope_exceeded": false
+      }
+    ],
+    "fatal_logs": [
+      {
+        "log": "SubProcesses/P0_gg_ttx/GF1.0_4/log_MINT2.txt",
+        "lines": [
+          "ERROR STOP AmpliCol production envelope exceeded; repeat integration with more statistics"
+        ]
+      }
+    ],
+    "warnings": [],
+    "integration": {
+      "signed_pb": 680.8281443132073,
+      "signed_error_pb": 0.806017264251346,
+      "absolute_pb": 1098.165306665321,
+      "absolute_error_pb": 0.9217527241155054,
+      "channels": 5,
+      "relative_signed_error": 0.0011838777097918367,
+      "expected_channels": 5,
+      "complete": true
+    },
+    "integration_complete": true,
+    "production": {
+      "logged_workers": 2,
+      "workers_with_trial_counters": 0,
+      "counter_events": 0,
+      "trials": 0,
+      "efficiency": null,
+      "events_per_cpu_second_completed_workers": null,
+      "upper_bound_failures": 0,
+      "ampli_envelope_failure_workers": 1,
+      "all_logged_workers_finished": false,
+      "all_assigned_workers_finished": false
+    },
+    "total_cpu_seconds_completed_workers": 2115.4066166,
+    "cpu_note": "Sum of worker CPU times from phase logs/results; incomplete workers without final CPU counters are excluded. Compilation and Python coordination are excluded.",
+    "assignments": [
+      {
+        "file": "P0_gg_ttx/GF1.0_1/events.lhe",
+        "quota": 2234,
+        "allocated_absolute_pb": 24.12033,
+        "weight_fraction": 0.250028
+      },
+      {
+        "file": "P0_gg_ttx/GF1.0_2/events.lhe",
+        "quota": 2234,
+        "allocated_absolute_pb": 24.12033,
+        "weight_fraction": 0.250028
+      },
+      {
+        "file": "P0_gg_ttx/GF1.0_3/events.lhe",
+        "quota": 2234,
+        "allocated_absolute_pb": 24.12033,
+        "weight_fraction": 0.250028
+      },
+      {
+        "file": "P0_gg_ttx/GF1.0_4/events.lhe",
+        "quota": 2233,
+        "allocated_absolute_pb": 24.10953,
+        "weight_fraction": 0.2499161
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_1/events.lhe",
+        "quota": 2357,
+        "allocated_absolute_pb": 26.05027,
+        "weight_fraction": 0.05883674
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_2/events.lhe",
+        "quota": 2357,
+        "allocated_absolute_pb": 26.05027,
+        "weight_fraction": 0.05883674
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_3/events.lhe",
+        "quota": 2357,
+        "allocated_absolute_pb": 26.05027,
+        "weight_fraction": 0.05883674
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_4/events.lhe",
+        "quota": 2357,
+        "allocated_absolute_pb": 26.05027,
+        "weight_fraction": 0.05883674
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_5/events.lhe",
+        "quota": 2357,
+        "allocated_absolute_pb": 26.05027,
+        "weight_fraction": 0.05883674
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_6/events.lhe",
+        "quota": 2357,
+        "allocated_absolute_pb": 26.05027,
+        "weight_fraction": 0.05883674
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_7/events.lhe",
+        "quota": 2357,
+        "allocated_absolute_pb": 26.05027,
+        "weight_fraction": 0.05883674
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_8/events.lhe",
+        "quota": 2357,
+        "allocated_absolute_pb": 26.05027,
+        "weight_fraction": 0.05883674
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_9/events.lhe",
+        "quota": 2356,
+        "allocated_absolute_pb": 26.03921,
+        "weight_fraction": 0.05881178
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_10/events.lhe",
+        "quota": 2356,
+        "allocated_absolute_pb": 26.03921,
+        "weight_fraction": 0.05881178
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_11/events.lhe",
+        "quota": 2356,
+        "allocated_absolute_pb": 26.03921,
+        "weight_fraction": 0.05881178
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_12/events.lhe",
+        "quota": 2356,
+        "allocated_absolute_pb": 26.03921,
+        "weight_fraction": 0.05881178
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_13/events.lhe",
+        "quota": 2356,
+        "allocated_absolute_pb": 26.03921,
+        "weight_fraction": 0.05881178
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_14/events.lhe",
+        "quota": 2356,
+        "allocated_absolute_pb": 26.03921,
+        "weight_fraction": 0.05881178
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_15/events.lhe",
+        "quota": 2356,
+        "allocated_absolute_pb": 26.03921,
+        "weight_fraction": 0.05881178
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_16/events.lhe",
+        "quota": 2356,
+        "allocated_absolute_pb": 26.03921,
+        "weight_fraction": 0.05881178
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_17/events.lhe",
+        "quota": 2356,
+        "allocated_absolute_pb": 26.03921,
+        "weight_fraction": 0.05881178
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_1/events.lhe",
+        "quota": 2380,
+        "allocated_absolute_pb": 26.06803,
+        "weight_fraction": 0.05882935
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_2/events.lhe",
+        "quota": 2380,
+        "allocated_absolute_pb": 26.06803,
+        "weight_fraction": 0.05882935
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_3/events.lhe",
+        "quota": 2380,
+        "allocated_absolute_pb": 26.06803,
+        "weight_fraction": 0.05882935
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_4/events.lhe",
+        "quota": 2380,
+        "allocated_absolute_pb": 26.06803,
+        "weight_fraction": 0.05882935
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_5/events.lhe",
+        "quota": 2380,
+        "allocated_absolute_pb": 26.06803,
+        "weight_fraction": 0.05882935
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_6/events.lhe",
+        "quota": 2380,
+        "allocated_absolute_pb": 26.06803,
+        "weight_fraction": 0.05882935
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_7/events.lhe",
+        "quota": 2380,
+        "allocated_absolute_pb": 26.06803,
+        "weight_fraction": 0.05882935
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_8/events.lhe",
+        "quota": 2380,
+        "allocated_absolute_pb": 26.06803,
+        "weight_fraction": 0.05882935
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_9/events.lhe",
+        "quota": 2380,
+        "allocated_absolute_pb": 26.06803,
+        "weight_fraction": 0.05882935
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_10/events.lhe",
+        "quota": 2380,
+        "allocated_absolute_pb": 26.06803,
+        "weight_fraction": 0.05882935
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_11/events.lhe",
+        "quota": 2380,
+        "allocated_absolute_pb": 26.06803,
+        "weight_fraction": 0.05882935
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_12/events.lhe",
+        "quota": 2380,
+        "allocated_absolute_pb": 26.06803,
+        "weight_fraction": 0.05882935
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_13/events.lhe",
+        "quota": 2380,
+        "allocated_absolute_pb": 26.06803,
+        "weight_fraction": 0.05882935
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_14/events.lhe",
+        "quota": 2379,
+        "allocated_absolute_pb": 26.05707,
+        "weight_fraction": 0.05880463
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_15/events.lhe",
+        "quota": 2379,
+        "allocated_absolute_pb": 26.05707,
+        "weight_fraction": 0.05880463
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_16/events.lhe",
+        "quota": 2379,
+        "allocated_absolute_pb": 26.05707,
+        "weight_fraction": 0.05880463
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_17/events.lhe",
+        "quota": 2379,
+        "allocated_absolute_pb": 26.05707,
+        "weight_fraction": 0.05880463
+      },
+      {
+        "file": "P0_uux_ttx/GF1.0_1/events.lhe",
+        "quota": 1757,
+        "allocated_absolute_pb": 19.22192,
+        "weight_fraction": 0.3333966
+      },
+      {
+        "file": "P0_uux_ttx/GF1.0_2/events.lhe",
+        "quota": 1757,
+        "allocated_absolute_pb": 19.22192,
+        "weight_fraction": 0.3333966
+      },
+      {
+        "file": "P0_uux_ttx/GF1.0_3/events.lhe",
+        "quota": 1756,
+        "allocated_absolute_pb": 19.21098,
+        "weight_fraction": 0.3332068
+      },
+      {
+        "file": "P0_uxu_ttx/GF1.0_1/events.lhe",
+        "quota": 1760,
+        "allocated_absolute_pb": 19.39443,
+        "weight_fraction": 0.3333965
+      },
+      {
+        "file": "P0_uxu_ttx/GF1.0_2/events.lhe",
+        "quota": 1760,
+        "allocated_absolute_pb": 19.39443,
+        "weight_fraction": 0.3333965
+      },
+      {
+        "file": "P0_uxu_ttx/GF1.0_3/events.lhe",
+        "quota": 1759,
+        "allocated_absolute_pb": 19.38341,
+        "weight_fraction": 0.333207
+      }
+    ],
+    "assigned_events": 100000,
+    "lhe": null,
+    "complete_expected_sample": false,
+    "partial_worker_files": [
+      {
+        "path": "SubProcesses/P0_gg_ttx/GF1.0_1/ampli_candidates.lhe",
+        "events": 1064,
+        "closed_document": false
+      },
+      {
+        "path": "SubProcesses/P0_gg_ttx/GF1.0_2/ampli_candidates.lhe",
+        "events": 1016,
+        "closed_document": false
+      },
+      {
+        "path": "SubProcesses/P0_gg_ttx/GF1.0_3/ampli_candidates.lhe",
+        "events": 1068,
+        "closed_document": false
+      },
+      {
+        "path": "SubProcesses/P0_gg_ttx/GF1.0_4/ampli_candidates.lhe",
+        "events": 1091,
+        "closed_document": false
+      },
+      {
+        "path": "SubProcesses/P0_gg_ttx/GF2.0_1/ampli_candidates.lhe",
+        "events": 148,
+        "closed_document": false
+      }
+    ],
+    "wrapper_metadata": {
+      "/tmp/mg5-ttbar-100k-rd5zxvbr/ampli_finished.json": {
+        "backend": "ampli",
+        "settings": {
+          "nevents": 100000,
+          "req_acc": 0.003,
+          "nevt_job": 2500,
+          "iseed": 19721,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            2,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-04T12:14:05.581979+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "df8c115a1644ca33ee282bae60187a0b40a3e16823ea34b04e58eb37f2c3b890",
+          "driver_mintMC.f": "c1bdf5ecd3726859f0c537de1263a4ef2f54b2b190f54438fd917277f47fe597",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "7e54ed1dec6005cc773c468ff7cfc0d0dbff91fe54939c84e91f603bf8c25395"
+        },
+        "finished": "2026-10-04T12:17:36.738984+00:00",
+        "wall_seconds": 211.15584817505442,
+        "child_user_cpu_seconds": 475.316072,
+        "child_system_cpu_seconds": 60.261645,
+        "cli_returncode": 0,
+        "summary_exists": false,
+        "events_exist": false
+      },
+      "/tmp/mg5-ttbar-100k-rd5zxvbr/ampli_started.json": {
+        "backend": "ampli",
+        "settings": {
+          "nevents": 100000,
+          "req_acc": 0.003,
+          "nevt_job": 2500,
+          "iseed": 19721,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            2,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-04T12:14:05.581979+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "df8c115a1644ca33ee282bae60187a0b40a3e16823ea34b04e58eb37f2c3b890",
+          "driver_mintMC.f": "c1bdf5ecd3726859f0c537de1263a4ef2f54b2b190f54438fd917277f47fe597",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "7e54ed1dec6005cc773c468ff7cfc0d0dbff91fe54939c84e91f603bf8c25395"
+        }
+      },
+      "/tmp/mg5-ttbar-100k-rd5zxvbr/ampli_tight_finished.json": {
+        "backend": "ampli_tight",
+        "settings": {
+          "nevents": 100000,
+          "req_acc": 0.001,
+          "nevt_job": 2500,
+          "iseed": 19721,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            2,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-04T12:18:30.455392+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "df8c115a1644ca33ee282bae60187a0b40a3e16823ea34b04e58eb37f2c3b890",
+          "driver_mintMC.f": "c1bdf5ecd3726859f0c537de1263a4ef2f54b2b190f54438fd917277f47fe597",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "7e54ed1dec6005cc773c468ff7cfc0d0dbff91fe54939c84e91f603bf8c25395"
+        },
+        "finished": "2026-10-04T12:35:30.890297+00:00",
+        "wall_seconds": 1020.4336813110276,
+        "child_user_cpu_seconds": 2026.113458,
+        "child_system_cpu_seconds": 291.022101,
+        "cli_returncode": 0,
+        "summary_exists": false,
+        "events_exist": false
+      },
+      "/tmp/mg5-ttbar-100k-rd5zxvbr/ampli_tight_started.json": {
+        "backend": "ampli_tight",
+        "settings": {
+          "nevents": 100000,
+          "req_acc": 0.001,
+          "nevt_job": 2500,
+          "iseed": 19721,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            2,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-04T12:18:30.455392+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "df8c115a1644ca33ee282bae60187a0b40a3e16823ea34b04e58eb37f2c3b890",
+          "driver_mintMC.f": "c1bdf5ecd3726859f0c537de1263a4ef2f54b2b190f54438fd917277f47fe597",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "7e54ed1dec6005cc773c468ff7cfc0d0dbff91fe54939c84e91f603bf8c25395"
+        }
+      },
+      "/tmp/mg5-ttbar-100k-rd5zxvbr/mint_finished.json": {
+        "backend": "mint",
+        "settings": {
+          "nevents": 100000,
+          "req_acc": 0.003,
+          "nevt_job": 2500,
+          "iseed": 19721,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            2,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-04T12:14:05.579753+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "df8c115a1644ca33ee282bae60187a0b40a3e16823ea34b04e58eb37f2c3b890",
+          "driver_mintMC.f": "c1bdf5ecd3726859f0c537de1263a4ef2f54b2b190f54438fd917277f47fe597",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "7e54ed1dec6005cc773c468ff7cfc0d0dbff91fe54939c84e91f603bf8c25395"
+        },
+        "finished": "2026-10-04T12:20:03.706958+00:00",
+        "wall_seconds": 358.12605496298056,
+        "child_user_cpu_seconds": 1331.968036,
+        "child_system_cpu_seconds": 169.455579,
+        "cli_returncode": 0,
+        "summary_exists": true,
+        "events_exist": true
+      },
+      "/tmp/mg5-ttbar-100k-rd5zxvbr/mint_started.json": {
+        "backend": "mint",
+        "settings": {
+          "nevents": 100000,
+          "req_acc": 0.003,
+          "nevt_job": 2500,
+          "iseed": 19721,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            2,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-04T12:14:05.579753+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "df8c115a1644ca33ee282bae60187a0b40a3e16823ea34b04e58eb37f2c3b890",
+          "driver_mintMC.f": "c1bdf5ecd3726859f0c537de1263a4ef2f54b2b190f54438fd917277f47fe597",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "7e54ed1dec6005cc773c468ff7cfc0d0dbff91fe54939c84e91f603bf8c25395"
+        }
+      }
+    }
+  },
+  "comparison": {
+    "both_integrations_complete": true,
+    "ampli_minus_mint_pb": -2.8753809457119814,
+    "combined_signed_integration_error_pb": 2.8298427416446996,
+    "integration_pull": -1.0160921323991365,
+    "uncertainty_ratio_ampli_over_mint": 0.29713529229985747,
+    "both_samples_complete": false,
+    "interpretation": "Integration errors are Monte Carlo integration uncertainties, not scale/PDF theory uncertainties. Generation efficiencies use accepted events divided by attempted folded phase-space points. Ratios from incomplete worker subsets are diagnostic only."
+  }
+}

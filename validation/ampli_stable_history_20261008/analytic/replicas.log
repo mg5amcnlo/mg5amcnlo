@@ -1,0 +1,166 @@
+{"variant": "baseline", "replica": 1, "trials": 267744, "epochs": 11, "updates": 10, "proposals": 11, "skipped_adaptations": 0}
+{"variant": "baseline", "replica": 2, "trials": 261963, "epochs": 10, "updates": 9, "proposals": 10, "skipped_adaptations": 0}
+{"variant": "baseline", "replica": 3, "trials": 230767, "epochs": 10, "updates": 9, "proposals": 10, "skipped_adaptations": 0}
+{"variant": "baseline", "replica": 4, "trials": 309878, "epochs": 10, "updates": 9, "proposals": 10, "skipped_adaptations": 0}
+{"variant": "baseline", "replica": 5, "trials": 457786, "epochs": 11, "updates": 10, "proposals": 11, "skipped_adaptations": 0}
+{"variant": "baseline", "replica": 6, "trials": 242350, "epochs": 10, "updates": 9, "proposals": 10, "skipped_adaptations": 0}
+{"variant": "baseline", "replica": 7, "trials": 417694, "epochs": 11, "updates": 10, "proposals": 11, "skipped_adaptations": 0}
+{"variant": "baseline", "replica": 8, "trials": 416534, "epochs": 11, "updates": 10, "proposals": 11, "skipped_adaptations": 0}
+{"variant": "baseline", "replica": 9, "trials": 254301, "epochs": 10, "updates": 9, "proposals": 10, "skipped_adaptations": 0}
+{"variant": "baseline", "replica": 10, "trials": 417085, "epochs": 11, "updates": 10, "proposals": 11, "skipped_adaptations": 0}
+{"variant": "baseline", "replica": 11, "trials": 256800, "epochs": 13, "updates": 12, "proposals": 13, "skipped_adaptations": 0}
+{"variant": "baseline", "replica": 12, "trials": 344212, "epochs": 11, "updates": 10, "proposals": 11, "skipped_adaptations": 0}
+{"variant": "baseline", "replica": 13, "trials": 512528, "epochs": 11, "updates": 10, "proposals": 11, "skipped_adaptations": 0}
+{"variant": "baseline", "replica": 14, "trials": 215282, "epochs": 11, "updates": 10, "proposals": 11, "skipped_adaptations": 0}
+{"variant": "baseline", "replica": 15, "trials": 327375, "epochs": 10, "updates": 9, "proposals": 10, "skipped_adaptations": 0}
+{"variant": "baseline", "replica": 16, "trials": 326620, "epochs": 10, "updates": 9, "proposals": 10, "skipped_adaptations": 0}
+{"variant": "candidate", "replica": 1, "trials": 239445, "epochs": 11, "updates": 9, "proposals": 10, "skipped_adaptations": 1}
+{"variant": "candidate", "replica": 2, "trials": 327985, "epochs": 10, "updates": 9, "proposals": 10, "skipped_adaptations": 0}
+{"variant": "candidate", "replica": 3, "trials": 328617, "epochs": 10, "updates": 9, "proposals": 10, "skipped_adaptations": 0}
+{"variant": "candidate", "replica": 4, "trials": 276524, "epochs": 10, "updates": 9, "proposals": 10, "skipped_adaptations": 0}
+{"variant": "candidate", "replica": 5, "trials": 303979, "epochs": 10, "updates": 9, "proposals": 10, "skipped_adaptations": 0}
+{"variant": "candidate", "replica": 6, "trials": 248871, "epochs": 11, "updates": 9, "proposals": 10, "skipped_adaptations": 1}
+{"variant": "candidate", "replica": 7, "trials": 357857, "epochs": 12, "updates": 10, "proposals": 11, "skipped_adaptations": 1}
+{"variant": "candidate", "replica": 8, "trials": 511885, "epochs": 11, "updates": 10, "proposals": 11, "skipped_adaptations": 0}
+{"variant": "candidate", "replica": 9, "trials": 327682, "epochs": 10, "updates": 9, "proposals": 10, "skipped_adaptations": 0}
+{"variant": "candidate", "replica": 10, "trials": 327327, "epochs": 10, "updates": 9, "proposals": 10, "skipped_adaptations": 0}
+{"variant": "candidate", "replica": 11, "trials": 356439, "epochs": 11, "updates": 10, "proposals": 11, "skipped_adaptations": 0}
+{"variant": "candidate", "replica": 12, "trials": 274645, "epochs": 12, "updates": 10, "proposals": 11, "skipped_adaptations": 1}
+{"variant": "candidate", "replica": 13, "trials": 236847, "epochs": 10, "updates": 9, "proposals": 10, "skipped_adaptations": 0}
+{"variant": "candidate", "replica": 14, "trials": 303461, "epochs": 11, "updates": 10, "proposals": 11, "skipped_adaptations": 0}
+{"variant": "candidate", "replica": 15, "trials": 364127, "epochs": 11, "updates": 10, "proposals": 11, "skipped_adaptations": 0}
+{"variant": "candidate", "replica": 16, "trials": 450868, "epochs": 11, "updates": 10, "proposals": 11, "skipped_adaptations": 0}
+{
+  "seeds_per_variant": 16,
+  "final_quota": 30000,
+  "tail_width": 0.005,
+  "initial_nonzero": 128,
+  "seed_offset": 100,
+  "truth": [
+    0.08313333333333153,
+    0.003583333333333256
+  ],
+  "shape_truth": [
+    0.2907471934028287,
+    0.07325581396697017,
+    0.04310344827586207
+  ],
+  "provenance": {
+    "baseline": {
+      "validation/ampli_stable_history_20261008/physics/baseline_sources/Template/NLO/SubProcesses/integrator_helpers.f90": "ccdc363fd95481fb4e2aa03faeb286a4c22afe4656c2af4a79e969662d8afc61",
+      "validation/ampli_stable_history_20261008/physics/baseline_sources/Template/NLO/SubProcesses/simple_integrator.f90": "cc3dff89e60548049c7eec9103a8768d5609678c31f10004f0bf95ea596c28de",
+      "validation/ampli_stable_history_20261008/analytic/replicas/driver.f90": "da9373f47beaa36f300de9ded43b3a2d3a7ee92cedbf38e0e3ac072aaaf9a264"
+    },
+    "candidate": {
+      "validation/ampli_stable_history_20261008/physics/candidate_sources/Template/NLO/SubProcesses/integrator_helpers.f90": "ccdc363fd95481fb4e2aa03faeb286a4c22afe4656c2af4a79e969662d8afc61",
+      "validation/ampli_stable_history_20261008/physics/candidate_sources/Template/NLO/SubProcesses/simple_integrator.f90": "ce266c253b42c60eec6d72a5874ae729a1676346763c5f119f35889c59a3153f",
+      "validation/ampli_stable_history_20261008/analytic/replicas/driver.f90": "da9373f47beaa36f300de9ded43b3a2d3a7ee92cedbf38e0e3ac072aaaf9a264"
+    }
+  },
+  "variants": {
+    "baseline": {
+      "total_trials": 5258919,
+      "mean_trials": 328682.4375,
+      "total_skipped": 0,
+      "replicas_with_skips": 0,
+      "mean_epochs": 10.6875,
+      "mean_updates": 9.6875,
+      "mean_eligible_epochs": 8,
+      "expired_trials": 34544,
+      "max_tail": 0.009666177149543652,
+      "max_selected_tail": 0.008998575264701093,
+      "rates": [
+        {
+          "mean": 0.08309310871051534,
+          "truth": 0.08313333333333153,
+          "empirical_scatter": 0.00020203040198695361,
+          "empirical_mean_error": 5.0507600496738403e-05,
+          "mean_bias_z": -0.7964073212860396,
+          "rms_quoted_error": 0.00023910253438861356,
+          "scatter_over_rms_quote": 0.8449529926713091
+        },
+        {
+          "mean": 0.00359410350790139,
+          "truth": 0.003583333333333256,
+          "empirical_scatter": 4.95751875483884e-05,
+          "empirical_mean_error": 1.23937968870971e-05,
+          "mean_bias_z": 0.8689971819165947,
+          "rms_quoted_error": 4.8179966358347625e-05,
+          "scatter_over_rms_quote": 1.0289585339197531
+        }
+      ],
+      "shapes": [
+        {
+          "mean": 0.29048809214571486,
+          "truth": 0.2907471934028287,
+          "empirical_mean_error": 0.00053981828556211,
+          "mean_bias_z": -0.47997865956691926
+        },
+        {
+          "mean": 0.07249571222029005,
+          "truth": 0.07325581396697017,
+          "empirical_mean_error": 0.0003824593293323495,
+          "mean_bias_z": -1.9874054268907804
+        },
+        {
+          "mean": 0.04234269142668404,
+          "truth": 0.04310344827586207,
+          "empirical_mean_error": 0.001517435516305284,
+          "mean_bias_z": -0.5013437744164296
+        }
+      ]
+    },
+    "candidate": {
+      "total_trials": 5236559,
+      "mean_trials": 327284.9375,
+      "total_skipped": 4,
+      "replicas_with_skips": 4,
+      "mean_epochs": 10.6875,
+      "mean_updates": 9.4375,
+      "mean_eligible_epochs": 8.25,
+      "expired_trials": 24350,
+      "max_tail": 0.009817391017946046,
+      "max_selected_tail": 0.008556479010380504,
+      "rates": [
+        {
+          "mean": 0.08304560742378098,
+          "truth": 0.08313333333333153,
+          "empirical_scatter": 0.00016033782997156812,
+          "empirical_mean_error": 4.008445749289203e-05,
+          "mean_bias_z": -2.188526801594176,
+          "rms_quoted_error": 0.00023875766399738483,
+          "scatter_over_rms_quote": 0.6715505055926679
+        },
+        {
+          "mean": 0.003577520289664495,
+          "truth": 0.003583333333333256,
+          "empirical_scatter": 4.671131211322565e-05,
+          "empirical_mean_error": 1.1677828028306413e-05,
+          "mean_bias_z": -0.4977846612118905,
+          "rms_quoted_error": 4.7996176442996816e-05,
+          "scatter_over_rms_quote": 0.9732298606890666
+        }
+      ],
+      "shapes": [
+        {
+          "mean": 0.2912411218730663,
+          "truth": 0.2907471934028287,
+          "empirical_mean_error": 0.0006966168918395452,
+          "mean_bias_z": 0.7090388935779239
+        },
+        {
+          "mean": 0.07298172593741074,
+          "truth": 0.07325581396697017,
+          "empirical_mean_error": 0.000524525982779314,
+          "mean_bias_z": -0.5225442371931998
+        },
+        {
+          "mean": 0.042937353439623446,
+          "truth": 0.04310344827586207,
+          "empirical_mean_error": 0.0008956852860899489,
+          "mean_bias_z": -0.18543883528968177
+        }
+      ]
+    }
+  }
+}

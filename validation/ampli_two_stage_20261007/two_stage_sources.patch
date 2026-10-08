@@ -1,0 +1,398 @@
+--- a/Template/NLO/SubProcesses/ampli_mint_adapter.f90
++++ b/Template/NLO/SubProcesses/ampli_mint_adapter.f90
+@@ -13,24 +13,30 @@
+   type(staged_integrator),save :: sampler
+   double precision,save :: stream_max(2)=0d0,virtual_probability=0d0
+   integer,save :: checkpoint_stage=-1
+-  integer,parameter :: checkpoint_version=2
++  integer,parameter :: checkpoint_version=3
+   character(len=4),save :: generation_mode
+   integer(kind=8),save :: production_points=0_8
+ contains
+-  subroutine ampli_evaluate(fun,values,xfirst)
++  subroutine ampli_evaluate(fun,values,xfirst,fold_points)
+     double precision,external :: fun
+     double precision,intent(out) :: values(nintegrals),xfirst(ndimmax)
++    double precision,intent(out),optional :: fold_points(:,:)
+     double precision :: base(ndim),x(ndimmax),vol,dummy,tmp(ndim),unused
+-    integer :: folds(ndimmax),iret,ifl
++    integer :: folds(ndimmax),iret,ifl,ipoint
+     call sampler%sample(tmp,unused,base)
+     folds=1
+     ifl=0
++    ipoint=0
+     x=0d0
+     new_point=.true.
+     do
+        call sampler%map_fold(base,folds(1:ndim),ifold(1:ndim),x(1:ndim),vol)
+        call nlops_prepare_point(x)
+        if (ifl.eq.0) xfirst=x
++       if (present(fold_points)) then
++          ipoint=ipoint+1
++          fold_points(:,ipoint)=x(1:ndim)
++       endif
+        values=0d0
+        dummy=fun(x,vol,ifl,values)
+        ifl=1
+@@ -53,92 +59,101 @@
+   subroutine ampli_integrate(fun)
+     double precision,external :: fun
+     double precision :: values(nintegrals),x(ndimmax),r(nintegrals),e(nintegrals)
+-    double precision :: sums(nintegrals),variance(nintegrals),target,relerr
+-    double precision :: target_mean,target_m2,delta,target_variance
+-    integer :: iteration,ipoint,points,limit,total,phase
+-    logical :: adapt,converged
+-    if (imode.ne.0.and.imode.ne.1) error stop 'Invalid AmpliCol integration stage'
+-    if (imode.eq.0) then
+-       if (any(ifold(1:ndim).ne.1)) error stop 'AmpliCol adaptation requires unfolded stage 0'
+-       call sampler%init(ndim,nintegrals)
+-       call nlops_init_auxiliary(.true.)
+-    else
+-       call ampli_read_checkpoint(0)
+-       call nlops_init_auxiliary(.false.)
+-    endif
+-    adapt=imode.eq.0
++    double precision :: fold_points(ndim,product(ifold(1:ndim)))
++    double precision :: target,relerr,target_mean,target_m2,delta
++    integer :: iteration,ipoint,points,limit,total,phase,saved_folds(ndimmax),auxiliary_unit
++    logical :: converged,calibrate
++    if (imode.ne.1) error stop 'AmpliCol requires survey stage 1 or generation stage 2'
++    call sampler%init(ndim,nintegrals)
++    call nlops_init_auxiliary(.true.)
+     limit=max(itmax,4)
+     points=1024
+     if (ncalls0.gt.0) points=ncalls0
+-    ! Born-spreading calibration changes the target. Discard the previous
+-    ! estimates and repeat adaptation after the normalized table is fitted.
++    total=0
++    ! The virtual control variate and Born spreading change the absolute
++    ! target. Each survey iteration therefore estimates its current target
++    ! independently. Never average estimates of different absolute targets.
+     do phase=1,2
+-       sums=0d0
+-       variance=0d0
+-       target_variance=0d0
+-       total=0
+-       stream_max=0d0
+        converged=.false.
+        do iteration=1,limit
+-          call sampler%begin_iteration(adapt)
++          ! Training observations are appended while evaluating the iteration.
++          ! Preserve its initial fit: the final checkpoint must not refit using
++          ! these observations and thereby change the measured ABS target.
++          open(newunit=auxiliary_unit,status='scratch',form='formatted')
++          call nlops_save_auxiliary(auxiliary_unit)
++          call sampler%begin_iteration(.true.)
+           target_mean=0d0
+           target_m2=0d0
++          stream_max=0d0
+           do ipoint=1,points
+-             call ampli_evaluate(fun,values,x)
+-             if (adapt) call nlops_train_virtual(x,values)
++             call ampli_evaluate(fun,values,x,fold_points)
++             call nlops_train_virtual(x,values)
+              target=values(1)
+-             if (.not.adapt.and..not.only_virt) target=target+values(5)
++             if (.not.only_virt) target=target+values(5)
+              delta=target-target_mean
+              target_mean=target_mean+delta/dble(ipoint)
+              target_m2=target_m2+delta*(target-target_mean)
+-             call sampler%observe(x(1:ndim),values,target)
++             call sampler%observe(x(1:ndim),values,target,fold_points)
+              stream_max(1)=max(stream_max(1),values(1))
+              stream_max(2)=max(stream_max(2),values(5)*virtual_fraction(1))
+           enddo
+-          call sampler%finish_iteration(r,e)
+-          sums=sums+r*dble(points)
+-          variance=variance+(e*dble(points))**2
+-          if (points.gt.1) target_variance=target_variance+ &
+-               max(target_m2,0d0)*dble(points)/dble(points-1)
+           total=total+points
+-          ans(:,1)=sums/dble(total)
+-          unc(:,1)=sqrt(variance)/dble(total)
+-          ampli_absolute_uncertainty=sqrt(target_variance)/dble(total)
++          ampli_absolute_uncertainty=0d0
++          if (points.gt.1) ampli_absolute_uncertainty= &
++               sqrt(max(target_m2,0d0)/dble(points)/dble(points-1))
++          relerr=ampli_absolute_uncertainty
++          if (target_mean.gt.0d0) relerr=relerr/target_mean
++          converged=iteration.ge.4.and.(target_mean.eq.0d0.or. &
++               (accuracy.gt.0d0.and.relerr.le.min(accuracy,0.03d0)))
++          calibrate=born_spread_active.and..not.born_spread_ready.and.iteration.ge.4
++          ! Keep the successful iteration's proposal and auxiliary physics:
++          ! its measured maxima must refer to the grids saved for generation.
++          call sampler%finish_iteration(r,e,adapt=.not.converged.or.calibrate)
++          ans(:,1)=r
++          unc(:,1)=e
+           ans(:,0)=ans(:,1)
+           unc(:,0)=unc(:,1)
+-          if (adapt) call nlops_update_auxiliary(e)
+-          target=ans(1,1)
+-          relerr=ampli_absolute_uncertainty
+-          if (.not.adapt.and..not.only_virt) then
+-             target=target+ans(5,1)
++          write(*,*) 'AmpliCol survey iteration, cumulative trials, ABS, signed, relative error:', &
++               iteration,total,target_mean,ans(2,1),relerr
++          if (converged.and..not.calibrate) then
++             rewind(auxiliary_unit)
++             call nlops_load_auxiliary(auxiliary_unit)
++             close(auxiliary_unit)
++             exit
+           endif
+-          if (target.gt.0d0) relerr=relerr/target
+-          write(*,*) 'AmpliCol iteration, trials, ABS, signed, relative error:', &
+-               iteration,total,target,ans(2,1),relerr
+-          converged=iteration.ge.4.and.(target.eq.0d0.or.(accuracy.gt.0d0.and.relerr.lt.accuracy))
+-          if (converged) exit
++          close(auxiliary_unit)
++          call nlops_update_auxiliary(e)
++          if (calibrate) exit
+           if (ncalls0.le.0) points=min(2*points,1048576)
+        enddo
+-       if (imode.ne.0.or..not.born_spread_active.or.born_spread_ready) exit
++       if (.not.calibrate) exit
++       ! The shared calibration callback uses one unfolded observation. Its
++       ! MINT folding helper must not be mixed with AmpliCol's saved maps.
++       saved_folds=ifold
++       ifold(1:ndim)=1
++       imode=0
+        call calibrate_born_spreading(fun,ampli_calibration_point)
++       imode=1
++       ifold=saved_folds
+        call born_spread_write_table
+        born_spread_ready=.true.
+        born_spread_phase=3
+        call reset_MC_grid
+        points=1024
++       if (ncalls0.gt.0) points=ncalls0
+     enddo
+-    if (.not.converged) then
+-       if (imode.eq.1) error stop 'AmpliCol survey failed to reach requested channel accuracy'
+-       write(*,*) 'AmpliCol adaptation iteration limit reached; continuing to survey'
+-    endif
+-    if (only_virt.and.imode.eq.1) then
++    if (.not.converged) error stop 'AmpliCol survey failed to reach requested channel accuracy'
++    if (only_virt) then
+        ans(3,1)=0d0
+        ans(5,1)=0d0
+        ans(:,0)=ans(:,1)
+     endif
+-    ncalls0=total
+-    itmax=min(iteration,limit)
+-    checkpoint_stage=imode
++    ! Only the final iteration estimates the frozen production target. Python
++    ! combines these observations with the production statistics exactly once.
++    ncalls0=points
++    itmax=iteration
++    write(*,*) 'AmpliCol survey retained statistical points, total evaluations:',points,total
++    checkpoint_stage=1
+     call ampli_write_checkpoint
+     call nlops_write_results(ampli_absolute_uncertainty)
+   end subroutine ampli_integrate
+@@ -198,7 +213,7 @@
+     integer,intent(in) :: quota
+     character(len=4) :: abrv
+     character(len=32) :: tag
+-    double precision :: total
++    double precision :: total,initial_envelope
+     integer :: iu,ios,version,generated_target,final_quota
+     integer(kind=8) :: safety_limit
+     logical :: exists
+@@ -232,8 +247,13 @@
+     if (quota.eq.0) safety_limit=0_8
+     ! A complete folded evaluation is one observation. Only coordinates that
+     ! are not folded may adapt; all MC@NLO auxiliary physics stays surveyed.
++    initial_envelope=stream_max(1)
++    if (virtual_probability.gt.0d0) initial_envelope= &
++         max(stream_max(1)/(1d0-virtual_probability),stream_max(2)/virtual_probability)
++    write(*,*) 'AmpliCol saved survey stream maxima, initial production envelope:', &
++         stream_max,initial_envelope
+     call sampler%start_native_production(quota,final_quota,ifold(1:ndim),total, &
+-         max(total,tiny(1d0)),safety_limit)
++         max(initial_envelope,tiny(1d0)),safety_limit)
+   end subroutine ampli_start_generation
+ 
+   subroutine ampli_next_candidate(fun,to_write,done)
+--- a/Template/NLO/SubProcesses/driver_mintMC.f
++++ b/Template/NLO/SubProcesses/driver_mintMC.f
+@@ -164,7 +164,7 @@
+          only_virt=.false.
+       endif
+ 
+-      if(imode.eq.0)then
++      if(imode.eq.0.or.(NLOPSIntegrator.eq.1.and.imode.eq.1))then
+         flat_grid=.true.
+       else
+         flat_grid=.false.
+@@ -176,7 +176,8 @@
+       call born_spread_configure(born_spreading.and..not.only_virt
+      $     .and.(abrv.eq.'all'.or.abrv.eq.'novi'),nexternal,
+      $     nincoming,fks_configs,ndim)
+-      if (born_spread_active.and.imode.gt.0)
++      if (born_spread_active.and.imode.gt.0.and.
++     $     .not.(NLOPSIntegrator.eq.1.and.imode.eq.1))
+      $     call born_spread_load_table
+ c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
+ c at the NLO)
+@@ -232,7 +233,7 @@
+          write(58,*) ans(1,1),unc(2,1),0d0,0,0,0,0,0d0,0d0,ans(2,1)
+          close(58)
+ c*************************************************************
+-c     computation of upper bounding envelope
++c     MINT envelope construction or the single adaptive AmpliCol survey
+ c*************************************************************
+       elseif(imode.eq.1) then
+          write (*,*) 'imode is ',imode
+--- a/Template/NLO/SubProcesses/simple_integrator.f90
++++ b/Template/NLO/SubProcesses/simple_integrator.f90
+@@ -1685,13 +1685,13 @@
+     enddo
+   end subroutine staged_map_fold
+ 
+-  subroutine staged_observe(this,x,values,adapt_target)
++  subroutine staged_observe(this,x,values,adapt_target,fold_points)
+     use,intrinsic :: ieee_arithmetic,only: ieee_is_finite
+     class(staged_integrator),intent(inout) :: this
+     real(kind=8),intent(in) :: x(:),values(:)
+-    real(kind=8),intent(in),optional :: adapt_target
++    real(kind=8),intent(in),optional :: adapt_target,fold_points(:,:)
+     real(kind=8) :: target,delta(this%nvalues)
+-    integer :: i
++    integer :: i,j
+     if (.not.this%iteration_active) error stop 'staged integrator: observe outside iteration'
+     if (size(x).ne.this%ndim.or.size(values).ne.this%nvalues) &
+          error stop 'staged integrator: observation dimension mismatch'
+@@ -1707,9 +1707,23 @@
+     this%m2=this%m2+delta*(values-this%mean)
+     this%max_weight=max(this%max_weight,target)
+     if (this%adapt_iteration) then
+-       do i=1,this%ndim
+-          call this%maps(i)%add_point(x(i),target)
+-       enddo
++       if (present(fold_points)) then
++          if (size(fold_points,1).ne.this%ndim.or.size(fold_points,2).lt.1.or. &
++               any(.not.ieee_is_finite(fold_points)).or.any(fold_points.lt.0d0).or.any(fold_points.gt.1d0)) &
++               error stop 'staged integrator: invalid folded adaptation coordinates'
++          ! A folded observation is one statistical sample. Deposit its full
++          ! target at every fold image so folded coordinates cover their whole
++          ! domain, not just the first image used to identify the observation.
++          do i=1,this%ndim
++             do j=1,size(fold_points,2)
++                call this%maps(i)%add_point(fold_points(i,j),target)
++             enddo
++          enddo
++       else
++          do i=1,this%ndim
++             call this%maps(i)%add_point(x(i),target)
++          enddo
++       endif
+     endif
+   end subroutine staged_observe
+ 
+--- a/madgraph/interface/amcatnlo_run_interface.py
++++ b/madgraph/interface/amcatnlo_run_interface.py
+@@ -1938,7 +1938,9 @@
+         #Clean previous results
+         self.clean_previous_results(options,p_dirs,folder_names[mode])
+ 
+-        mcatnlo_status = ['Setting up grids', 'Computing upper envelope', 'Generating events']
++        mcatnlo_steps = [(0, 'Setting up grids'),
++                         (1, 'Computing upper envelope'),
++                         (2, 'Generating events')]
+ 
+ 
+         if options['reweightonly']:
+@@ -2019,8 +2021,10 @@
+             jobs_to_run,jobs_to_collect,integration_step = self.create_jobs_to_run(options,p_dirs, \
+                                             req_acc,mode_dict[mode],1,mode,fixed_order=False)
+             if jobs_to_run and jobs_to_run[0].get('nlops_integrator', 0) == 1:
+-                mcatnlo_status = ['Adapting integration grids', 'Surveying channel rates',
+-                                  'Generating channel event samples']
++                # The survey trains its own grids and envelope. Retain IDs 1/2
++                # for the saved-survey and generation-only restart contracts.
++                mcatnlo_steps = [(1, 'Surveying channel rates and adapting grids'),
++                                 (2, 'Generating channel event samples')]
+             # Make sure to update all the jobs to be ready for the event generation step
+             if options['only_generation']:
+                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
+@@ -2029,8 +2033,8 @@
+                 self.prepare_directories(jobs_to_run,mode,fixed_order=False)
+ 
+ 
+-            # Main loop over the three MINT generation steps:
+-            for mint_step, status in enumerate(mcatnlo_status):
++            # MINT has three stages; AmpliCol surveys then generates directly.
++            for mint_step, status in mcatnlo_steps:
+                 if options['only_generation'] and mint_step < 2:
+                     continue
+                 self.update_status(status, level='parton')
+@@ -2233,7 +2237,7 @@
+                         job['accuracy']=0.03
+                         job['niters']=12
+                         job['npoints']=-1
+-                        job['mint_mode']=0
++                        job['mint_mode']=(1 if backend == 1 else 0)
+                         job['run_mode']=run_mode
+                         job['wgt_frac']=1.0
+                         job['nlops_integrator']=backend
+@@ -2393,6 +2397,9 @@
+         name_suffix={'born' :'B', 'all':'F'}
+         if fixed_order:
+             run_type="Fixed order integration step %s" % integration_step
++        elif jobs_to_run and jobs_to_run[0].get('nlops_integrator', 0) == 1:
++            run_type = ('AmpliCol survey' if integration_step == 1
++                        else 'AmpliCol event generation')
+         else:
+             run_type="MINT step %s" % integration_step
+         self.njobs=len(jobs_to_run)            
+@@ -2843,7 +2850,7 @@
+             if step+1 == 1 or step+1 == 2 :
+                 # determine the req. accuracy for each of the jobs for Mint-step = 1
+                 for job in jobs:
+-                    if (job.get('nlops_integrator', 0) == 1 and nevents > 0):
++                    if job.get('nlops_integrator', 0) == 1:
+                         # Each channel is surveyed independently before quotas
+                         # are assigned, including channels with small rates.
+                         accuracy = 0.03
+@@ -2905,6 +2912,12 @@
+                     'accuracy in %s channel %s (rate=%g, error=%g). '
+                     'Run the survey again before generating events.' %
+                     (job.get('p_dir', '?'), job.get('channel', '?'), rate, error))
++            if job.get('niters_done', 0) < 4:
++                raise aMCatNLOError('AmpliCol survey requires at least 4 iterations '
++                    'in %s channel %s (completed=%s). Run the survey again '
++                    'before generating events.' %
++                    (job.get('p_dir', '?'), job.get('channel', '?'),
++                     job.get('niters_done', 0)))
+         if absolute <= 0. or not any(job['resultABS'] > 0. for job in jobs):
+             raise aMCatNLOError('Cannot generate events: the total absolute '
+                                 'cross section is zero.')
+@@ -3078,7 +3091,9 @@
+         selection_rng = random.Random(self.get_randinit_seed() ^ 0x504F4F4C)
+         manifest = dict(version=4, requested_events=self.run_card['nevents'],
+             seed=self.get_randinit_seed(), rate_source='survey_plus_production',
+-            survey_relative_accuracy=.03, sampling='native_adaptive_unfolded',
++            integration_stages=['survey', 'generation'],
++            survey_relative_accuracy=.03, survey_min_iterations=4,
++            sampling='native_adaptive_unfolded',
+             weight_convention='native_iteration_envelopes',
+             uncertainty_convention='native_trial_weighted_iteration_errors',
+             allowed_overweight_factor=ampli_pool.ALLOWED_OVERWEIGHT_FACTOR,
+@@ -3113,6 +3128,7 @@
+                 absolute=channel['resultABS'], signed=channel['result'],
+                 error_abs=channel['errorABS'], error_signed=channel['error'],
+                 survey_points=surveys[dirname]['npoints_done'],
++                survey_iterations=surveys[dirname]['niters_done'],
+                 survey_absolute=surveys[dirname]['resultABS'], survey_signed=surveys[dirname]['result'],
+                 updated_rates=channel['ampli_updated_rates'],
+                 batches=[dict(directory=os.path.relpath(job['dirname'], self.me_dir),
+@@ -5769,7 +5785,8 @@
+                 ])
+             if args[3] == '1':
+                 output_files.append('%s/results.dat' % current)
+-            if args[1] == 'F' and args[3] == '0' and \
++            survey_step = '1' if self.get_nlops_integrator() == 1 else '0'
++            if args[1] == 'F' and args[3] == survey_step and \
+                     'born_spreading' in self.run_card and \
+                     self.run_card['born_spreading']:
+                 required_output.append('%s/born_spreading.dat' % current)

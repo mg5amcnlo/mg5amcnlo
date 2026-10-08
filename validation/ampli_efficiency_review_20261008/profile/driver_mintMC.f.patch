@@ -1,0 +1,36 @@
+--- driver_mintMC.f
++++ driver_mintMC.f
+@@ -25,6 +25,8 @@
+ C
+       integer i,j,k,l,l1,l2,nndim,nevts,p_label
+       logical ampli_write,ampli_done
++      double precision prof_write,prof_pool,prof_t0,prof_t1
++      data prof_write,prof_pool/0d0,0d0/
+       double precision ampli_candidate_factor
+       interface
+          subroutine write_current_mcatnlo_event(lunlhe,p_label,
+@@ -307,16 +309,24 @@
+             do while (.not.ampli_done)
+                call ampli_next_candidate(sigintF,ampli_write,ampli_done)
+                if (ampli_write) then
++                  call cpu_time(prof_t0)
+                   call write_current_mcatnlo_event(
+      $                 lunlhe,p_label,1d0,putonshell,
+      $                 ampli_candidate_factor)
++                  call cpu_time(prof_t1)
++                  prof_write=prof_write+prof_t1-prof_t0
+                   call ampli_record_candidate_factor(
+      $                 ampli_candidate_factor,ampli_done)
+                endif
+             enddo
+             write(lunlhe,'(a)') '</LesHouchesEvents>'
+             close(lunlhe)
++            call cpu_time(prof_t0)
+             call ampli_finish_pool
++            call cpu_time(prof_t1)
++            prof_pool=prof_pool+prof_t1-prof_t0
++            write(*,*) 'PROFILE full_event_write,pool_output:',
++     $           prof_write,prof_pool
+             call deallocate_weight_lines
+          else
+          vn=-1

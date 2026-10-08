@@ -1,0 +1,25 @@
+{
+  "base_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+  "files": {
+    "Template/NLO/SubProcesses/simple_integrator.f90": "9de030ac7974cf82bfbe33dba24768d255914ffeb9ae1122ac99a7029b63dadd",
+    "madgraph/interface/amcatnlo_run_interface.py": "f163c65da2e60eae5aa0dda27bb049c8d41ddf0b66dd47698bbd6e9b153032a5",
+    "madgraph/various/ampli_pool.py": "20faaec66060e5d4ef71c7ea1c993f72fb7772ea0daee796d0b8fa45afb923cf",
+    "tests/unit_tests/interface/test_ampli_orchestration.py": "5ee30f57a4931a6faa0a36cfa43df20acad0320af611a4e0c645189b57dec323",
+    "tests/unit_tests/various/test_ampli_pool.py": "b3c9f70a0d81675fe1056b68237084b64a1c226b967fb6ac1205e524aa530467",
+    "docs/ampli_integrator.md": "6e00b98785da4059f897ff1824a0b86ae1b84cb26c9b700caa6aa29748b23deb"
+  },
+  "previous_implementation_hashes": {
+    "Template/NLO/SubProcesses/simple_integrator.f90": "b27978982ac6c7138188708640af87e64e02b49ea0689f513eb082903b00bba8",
+    "madgraph/interface/amcatnlo_run_interface.py": "ee343793657122ece709a700d71fa827b504beda10a06d2111008a0ab98d43c4",
+    "madgraph/various/ampli_pool.py": "8e4b14f68f6a5df4de9690e3529329dba0cfcff8692585f605eb15ed9bc03df7",
+    "tests/unit_tests/interface/test_ampli_orchestration.py": "8016e451fe273bfd4c38308db7d6244c90f14c5e4afdb8d3acb6ef4e37f4044c",
+    "tests/unit_tests/various/test_ampli_pool.py": "9c1f963486d3109f0e0f09a397aa22d1e449ce9da282d207f5ebb50f98daeafc",
+    "docs/ampli_integrator.md": "ba690b95053d5146f5ece2234c37684dfaffc158f8620d207994cf7ce71f1df6"
+  },
+  "allowed_overweight_factor": 0.01,
+  "focused_tests": {
+    "numeric_adapter_lhe": 35,
+    "pool_helper": 16,
+    "orchestration": 18
+  }
+}

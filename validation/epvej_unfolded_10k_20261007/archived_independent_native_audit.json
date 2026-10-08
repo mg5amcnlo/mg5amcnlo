@@ -1,0 +1,26 @@
+{
+  "all_raw_checks_passed": true,
+  "channels": 12,
+  "dimensions": [
+    10
+  ],
+  "counts": {
+    "workers": 12,
+    "trials": 1674228,
+    "nonzero": 1334464,
+    "iterations": 71,
+    "updates": 59,
+    "candidates": 114984,
+    "reserves": 11005,
+    "rethresholded": 0,
+    "tail_events": 24
+  },
+  "absolute_pb": 13246.24166431655,
+  "signed_pb": 5709.932319798308,
+  "error_signed_pb": 25.10850391146454,
+  "max_tail_check": 0.008749027847748636,
+  "collected_tail_fraction": 0.003990293694224256,
+  "negative_events": 2902,
+  "minimum_weight": 13201.317851716061,
+  "maximum_weight": 44453.397495283076
+}

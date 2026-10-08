@@ -1,0 +1,20 @@
+{
+  "work_directory": "/tmp/mg5-ttbar-unfolded-10k-9spzck42",
+  "matrix_element_base": "/tmp/mg5-ttbar-native-10k-i2y8wskw/base",
+  "process": "p p > t t~ [QCD]",
+  "events": 10000,
+  "folding": [
+    1,
+    1,
+    1
+  ],
+  "seed": 19727,
+  "cores": 5,
+  "launch_order": [
+    "mint",
+    "ampli",
+    "mint_tail"
+  ],
+  "run_name": "benchmark_10k",
+  "notes": "Fresh full integrations from identical matrix-element sources, no saved grids reused. MINT timing is uninstrumented; separate diagnostic replay measures proposal-corrected full tail and checks identical events. Physics and options match folding(2,1,1) benchmark except folding."
+}

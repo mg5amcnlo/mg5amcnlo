@@ -1,0 +1,16 @@
+{
+  "completed_workers": 66,
+  "trials": 5876966,
+  "iterations": 95,
+  "grid_updates": 29,
+  "worker_cpu_seconds": 5494.183476699999,
+  "maximum_finished_worker_tail": 0.0055477736773128835,
+  "elapsed_wall_seconds": 1550.605817,
+  "completed_by_channel": {
+    "P0_gg_ttx/GF1.0": 12,
+    "P0_gg_ttx/GF2.0": 54
+  },
+  "generation_status": [
+    "INFO:  Idle: 64,  Running: 5,  Completed: 66 [  19m 15s  ] "
+  ]
+}

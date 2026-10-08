@@ -1,0 +1,8 @@
+{
+  "full_event_preparation_and_write_cpu": 2.6043769999999746,
+  "full_event_preparation_and_write_fraction": 0.10785411903359184,
+  "pool_output_cpu": 0.014582999999998236,
+  "total_cpu": 24.1472187,
+  "event_and_pool_byte_identical": true,
+  "res_dat_numerical_fields_identical": true
+}

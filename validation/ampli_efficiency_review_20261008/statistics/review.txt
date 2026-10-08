@@ -1,0 +1,100 @@
+Statistics and correctness review, 2026-10-08
+
+Scope
+Read-only inspection of the current native sampler and saved 300K ttbar runs
+with nevt_job=2500 and 30000. No physics run or production source change.
+Reproduce the saved worker/epoch diagnostics with statistics/analyze.py.
+
+Rate algebra
+simple_integrator.f90 native_consider records every attempted contribution,
+including rejected and zero points, in per-epoch and total first/second
+moments. native_rates reports sqrt(M2)/N. ampli_pool.combine_native_rates
+combines the survey once plus every epoch from every worker, weighting by
+trial counts and including between-epoch differences. The result is the
+pooled-trial moment identity (apart from the already summarized survey).
+There is no apparent lost probability factor or dropped-production-epoch
+mistake in this path. Never estimate rates only from retained event candidates.
+
+With a fixed number of draws, predictable proposal adaptation preserves the
+importance-sampling mean when the exact sampling density is used and support
+is preserved. This fact alone does not establish unbiasedness or calibrated
+errors after data-dependent quota/tail stopping. The production comments
+already state that nonzero-count stopping is not claimed unbiased. Blindly
+inverse-variance-weighting noisy epoch estimates would introduce another
+data-dependent weighting issue; it is not a safe drop-in improvement.
+
+What the saved discrepancy does and does not show
+Published signed rates differ by 2.329880 pb, 2.87799 nominal quadrature errors.
+Absolute rates differ by 3.001592 pb, 3.12650 nominal errors. The gg contributions
+account for the signed shift: GF3 +1.03034 pb, GF2 +1.21407 pb, GF1 +0.29845 pb;
+the other two channels each move by about -0.106 pb. Their individual nominal
+signed significances are 1.99, 2.30, 1.20, -0.72, and -0.69 respectively.
+
+The shared survey induces approximately 0.004769 pb^2 signed covariance
+through its direct rate contribution. Subtracting twice this from the naive
+difference variance changes its standard deviation from 0.809552 to 0.803639
+pb. This direct covariance is small, but reuse of generation seeds and related
+adaptive histories produces additional covariance not determined here.
+One pair of runs cannot establish bias or validate a quoted confidence level.
+
+Nonzero stopping is an unlikely explanation specific to this ttbar sample:
+only 55 out of 3,074,406 and 80 out of 3,064,052 attempted draws were zero.
+Most epochs therefore effectively have predetermined trial counts once they
+start. The number and sizes of epochs, and termination on the overweight
+criterion, are nevertheless data dependent.
+
+Within-channel independent-worker diagnostics do not show broad undercoverage
+in the old run's dominant channels. For gg/GF3 (55 workers), worker-scatter
+error is 0.38216 pb versus pooled-moment 0.36279 pb; nominal chi-square scatter
+p=0.24370. For gg/GF2 (54 workers), 0.33552 versus 0.37007 pb; p=0.72378.
+The small ux_u channel has p=0.01084 with seven workers, and the larger-job
+gg/GF3 has p=0.04135 with five workers. These isolated diagnostics warrant
+calibration, not a conclusion of bias, especially with several comparisons.
+Cluster estimates from only one or five workers are themselves very noisy.
+There is no common monotone early-to-late mean drift across the gg channels.
+
+Selection and adaptation constraints
+Native weights are f/q_birth; historical envelope reevaluation multiplies
+by the ratio of proposal Jacobians at the saved physical coordinates.
+Changing only unfolded coordinate maps preserves the current reweighting
+contract. Changing discrete MC choices, real/virtual stream probabilities,
+folding, or other physics sampling also requires recording and accounting
+for those likelihood ratios. Their current frozen status cannot simply be
+removed while keeping a coordinate-only history representation.
+
+The storage cutoff does not itself impose an integrand-weight cap: every
+weight above it is retained, and smaller weights have known random acceptance.
+Final thresholds must remain at least that cutoff. Raising an envelope after
+observing a tail requires reconsidering earlier selected events and preserving
+the native correction factors, as done now. Clipping large weights, deleting
+rare tail points, or certifying from accepted events alone would be wrong.
+
+The <1% checks bound observed full tail mass, reserve mass, and worst collected
+subset mass under their recorded thresholds. They do not constitute a 99%
+statistical guarantee that unseen phase space contains less than 1% mass.
+The source explicitly describes positive-tolerance rank selection as a finite
+quota approximation. Improvements should keep this limitation explicit and
+validate event distributions as well as inclusive cross sections. The saved
+LHE correction factors barely reduce absolute effective event count:
+299,518/300,000 for 2500/job and 299,396/300,000 for 30000/job. Hence optimizing
+these tiny correction factors alone cannot materially improve sample power.
+
+Recommended validation before adopting a large efficiency improvement
+1. Compare changed and current methods over independently seeded analytic
+   targets covering signed cancellations, sparse support, narrow/heavy tails,
+   folded coordinates, and quota/top-up boundaries. Measure rate bias,
+   empirical RMS versus reported error, 68/95% coverage, and weighted shape
+   moments. Unit-test identities and a single high-statistics shape check do
+   not calibrate adaptive stopping.
+2. Run several independent physics seeds, preferably 10-20 moderate samples,
+   with fresh surveys. Compare means and empirical dispersion, and rerun both
+   job sizes or algorithms per seed. Paired common-random-number comparisons
+   should use measured paired differences, not assume independent errors.
+3. Include a fixed-trial diagnostic integration against the same known or
+   high-statistics reference. This is a validation control, not a required
+   third production stage. It separates estimator/stopping behavior from
+   unweighting/collection effects.
+4. Judge useful efficiency using final signed effective events per CPU and
+   per wall time, as well as requested events per matrix-element evaluation;
+   do not trade a purported speedup for changed shape, corrections, or hidden
+   error undercoverage. Preserve every attempted point in the rate estimator.

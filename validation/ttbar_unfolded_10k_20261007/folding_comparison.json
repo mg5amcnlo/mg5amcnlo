@@ -1,0 +1,22 @@
+{
+  "mint": {
+    "trial_ratio_unfolded_over_folded": 1.1664448745866602,
+    "generation_cpu_ratio_unfolded_over_folded": 0.6005685593183168,
+    "total_cpu_ratio_unfolded_over_folded": 0.5970561727071148,
+    "signed_effective_count_ratio_unfolded_over_folded": 0.8866960747152062,
+    "signed_effective_events_per_generation_cpu_ratio_unfolded_over_folded": 1.476427729952534,
+    "signed_effective_events_per_total_cpu_ratio_unfolded_over_folded": 1.4851133197314317,
+    "signed_rate_difference_pb": -3.83589032843156,
+    "nominal_signed_rate_pull": -0.6969568403381865
+  },
+  "ampli": {
+    "trial_ratio_unfolded_over_folded": 1.2403915015516829,
+    "generation_cpu_ratio_unfolded_over_folded": 0.6401106127714632,
+    "total_cpu_ratio_unfolded_over_folded": 0.6610188302642086,
+    "signed_effective_count_ratio_unfolded_over_folded": 0.8625333668906326,
+    "signed_effective_events_per_generation_cpu_ratio_unfolded_over_folded": 1.3474754982676416,
+    "signed_effective_events_per_total_cpu_ratio_unfolded_over_folded": 1.3048544570899425,
+    "signed_rate_difference_pb": -7.517848103438041,
+    "nominal_signed_rate_pull": -2.126427786825119
+  }
+}

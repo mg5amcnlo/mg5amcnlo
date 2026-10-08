@@ -1,0 +1,79 @@
+--- a/Template/NLO/SubProcesses/mint_module.f90
++++ b/Template/NLO/SubProcesses/mint_module.f90
+@@ -166,6 +166,10 @@
+   integer, dimension(maxchannels), private :: nhits_in_grids
+   integer, dimension(nintervals_virt,ndimmax,0:n_ave_virt,maxchannels), private :: nvirt,nvirt_acc
+   integer, dimension(13), private :: gen_counters
++  ! Benchmark-only diagnostics: no sampling, acceptance or RNG changes.
++  integer, private :: mint_tail_unit
++  double precision, private :: mint_tail_norm(3)
++  private :: record_mint_tail_trial
+   logical, private :: double_events,reset,even_rn,firsttime
+   logical, dimension(maxchannels), private :: regridded
+   double precision, dimension(0:nintervals,ndimmax,maxchannels), private :: xgrid,xacc
+@@ -2496,6 +2500,8 @@
+     implicit none
+     logical :: found_point
+     integer :: vn
++    double precision :: diagnostic_bound
++    diagnostic_bound=upper_bound
+     if (f(1).gt.upper_bound) then
+        if (vn.eq.2) then
+           gen_counters(7)=gen_counters(7)+1
+@@ -2512,7 +2518,26 @@
+     else
+        found_point=.true.
+     endif
++    call record_mint_tail_trial(vn,found_point,diagnostic_bound)
+   end subroutine check_upper_bound
++
++  subroutine record_mint_tail_trial(vn,accepted,bound)
++    integer,intent(in) :: vn
++    logical,intent(in) :: accepted
++    double precision,intent(in) :: bound
++    double precision :: absolute_observation
++    integer :: event_id
++    if (bound.le.0d0.or.mint_tail_norm(vn).le.0d0) &
++         error stop 'Invalid positive envelope in MINT tail diagnostic'
++    ! f already includes the Vegas/folding Jacobian. Nonvirtual cell
++    ! proposals additionally have density bound/Z; virtual proposals are flat.
++    absolute_observation=f(1)*(mint_tail_norm(vn)/bound)
++    event_id=0
++    if (accepted) event_id=sum(gen_counters(11:13))+1
++    write(mint_tail_unit,'(4(i12,1x),5(es26.17e3,1x))') &
++         gen_counters(3),vn,merge(1,0,accepted),event_id, &
++         f(1),f(2),bound,mint_tail_norm(vn),absolute_observation
++  end subroutine record_mint_tail_trial
+   
+   subroutine get_random_cell_flat(x,vol)
+     implicit none
+@@ -2572,6 +2597,19 @@
+        enddo
+     enddo
+     gen_counters(1:13)=0
++    ! Each weighted-cell proposal is normalized independently per direction.
++    mint_tail_norm(1)=ymax_virt(1)
++    mint_tail_norm(2)=1d0
++    do kdim=1,ndim
++       nintcurr=nintervals/ifold(kdim)
++       mint_tail_norm(2)=mint_tail_norm(2)*sum(ymax(1:nintcurr,kdim,1))/dble(nintcurr)
++    enddo
++    mint_tail_norm(3)=mint_tail_norm(2)
++    open(newunit=mint_tail_unit,file='mint_overweight_trials.dat',status='replace',action='write')
++    write(mint_tail_unit,'(a)') 'MG5_MINT_TAIL 1'
++    write(mint_tail_unit,*) ndim,iconfig,nchans
++    write(mint_tail_unit,'(3(es26.17e3,1x))') ans(1,1),ans(5,1),ans(2,1)
++    write(mint_tail_unit,'(3(es26.17e3,1x))') mint_tail_norm
+   end subroutine initialise_mint_gen
+ 
+   subroutine print_gen_counters
+@@ -2597,6 +2635,9 @@
+        unwgt_eff_virt=-1d0
+     endif
+     write (*,*) 'Generation efficiencies:',unwgt_eff,unwgt_eff_virt
++    write(mint_tail_unit,'(a,3(i12,1x))') '# END ',gen_counters(3), &
++         sum(gen_counters(11:13)),sum(gen_counters(7:9))
++    close(mint_tail_unit)
+   end subroutine print_gen_counters
+ 
+   

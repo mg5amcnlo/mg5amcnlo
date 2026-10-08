@@ -1,0 +1,426 @@
+{
+  "absolute_cross_section": 1153.0057756964131,
+  "allowed_overweight_factor": 0.01,
+  "channels": [
+    {
+      "absolute": 469.8088103449199,
+      "allocation_order": 2,
+      "available_candidates": 883,
+      "batches": [
+        {
+          "adaptation": {
+            "completed_iterations": 2,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "mode": "adaptive_unfolded",
+            "ndim": 7,
+            "schedule": "nonzero_trials",
+            "updates": 1
+          },
+          "available": 883,
+          "collection_log_z": 0.8263980828929824,
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_1",
+          "generated_target": 883,
+          "native_log_z": 0.8263980828929824,
+          "nominal_final_quota": 802,
+          "pool_protocol": 4,
+          "trials": 34290
+        }
+      ],
+      "channel": "3.0",
+      "error_abs": 2.5092806051745784,
+      "error_signed": 2.064173475578611,
+      "generated_target": 883,
+      "generation_cpu_seconds": 33.4922409,
+      "generation_trials": 34290,
+      "initial_quota": 802,
+      "quota": 797,
+      "selection": {
+        "available": 883,
+        "full_trial_tail": 0.0,
+        "max_correction": 1.0,
+        "max_worker_selected_tail": 0.0,
+        "overweight": 0.0,
+        "reserve": 883,
+        "reserve_tail": 0.0,
+        "selected": 797,
+        "selected_tail": 0.0,
+        "sum_corrections": 797.0,
+        "worst_subset_tail": 0.0
+      },
+      "signed": 273.0398694337104,
+      "subprocess": "P0_gg_ttx",
+      "survey_absolute": 474.5142859906106,
+      "survey_iterations": 4,
+      "survey_points": 8192,
+      "survey_signed": 266.31357581073115,
+      "updated_rates": {
+        "absolute": 469.8088103449199,
+        "error_abs": 2.5092806051745784,
+        "error_signed": 2.064173475578611,
+        "production_iterations": 2,
+        "production_trials": 34290,
+        "signed": 273.0398694337104,
+        "survey_trials": 8192,
+        "trials": 42482
+      }
+    },
+    {
+      "absolute": 464.42621809746,
+      "allocation_order": 1,
+      "available_candidates": 897,
+      "batches": [
+        {
+          "adaptation": {
+            "completed_iterations": 1,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "mode": "adaptive_unfolded",
+            "ndim": 7,
+            "schedule": "nonzero_trials",
+            "updates": 0
+          },
+          "available": 897,
+          "collection_log_z": -0.38716057247172664,
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_1",
+          "generated_target": 897,
+          "native_log_z": -0.38716057247172664,
+          "nominal_final_quota": 815,
+          "pool_protocol": 4,
+          "trials": 14358
+        }
+      ],
+      "channel": "2.0",
+      "error_abs": 3.1748793391540384,
+      "error_signed": 2.692746392808206,
+      "generated_target": 897,
+      "generation_cpu_seconds": 13.6803236,
+      "generation_trials": 14358,
+      "initial_quota": 815,
+      "quota": 819,
+      "selection": {
+        "available": 897,
+        "full_trial_tail": 0.001648642212944849,
+        "max_correction": 1.4720170879127763,
+        "max_worker_selected_tail": 0.0017972444905334695,
+        "overweight": 0.0017972444905334695,
+        "reserve": 897,
+        "reserve_tail": 0.0016410446910956494,
+        "selected": 819,
+        "selected_tail": 0.0017972444905334695,
+        "sum_corrections": 819.0410907732664,
+        "worst_subset_tail": 0.0017972444905334695
+      },
+      "signed": 269.22342037588146,
+      "subprocess": "P0_gg_ttx",
+      "survey_absolute": 462.93686855532684,
+      "survey_iterations": 4,
+      "survey_points": 8192,
+      "survey_signed": 269.7695040913694,
+      "updated_rates": {
+        "absolute": 464.42621809746,
+        "error_abs": 3.1748793391540384,
+        "error_signed": 2.692746392808206,
+        "production_iterations": 1,
+        "production_trials": 14358,
+        "signed": 269.22342037588146,
+        "survey_trials": 8192,
+        "trials": 22550
+      }
+    },
+    {
+      "absolute": 102.33325867161669,
+      "allocation_order": 0,
+      "available_candidates": 201,
+      "batches": [
+        {
+          "adaptation": {
+            "completed_iterations": 1,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "mode": "adaptive_unfolded",
+            "ndim": 7,
+            "schedule": "nonzero_trials",
+            "updates": 0
+          },
+          "available": 201,
+          "collection_log_z": -0.05765633925898772,
+          "directory": "SubProcesses/P0_gg_ttx/GF1.0_1",
+          "generated_target": 201,
+          "native_log_z": -0.05765633925898772,
+          "nominal_final_quota": 182,
+          "pool_protocol": 4,
+          "trials": 2571
+        }
+      ],
+      "channel": "1.0",
+      "error_abs": 0.9494086210970993,
+      "error_signed": 0.8458810090360875,
+      "generated_target": 201,
+      "generation_cpu_seconds": 2.64793801,
+      "generation_trials": 2571,
+      "initial_quota": 182,
+      "quota": 183,
+      "selection": {
+        "available": 201,
+        "full_trial_tail": 0.005623021666118934,
+        "max_correction": 1.0590381651800833,
+        "max_worker_selected_tail": 0.005786925774463936,
+        "overweight": 0.005786925774463936,
+        "reserve": 201,
+        "reserve_tail": 0.005268846592935713,
+        "selected": 183,
+        "selected_tail": 0.005786925774463936,
+        "sum_corrections": 183.00531343486708,
+        "worst_subset_tail": 0.005786925774463936
+      },
+      "signed": 62.22475565288788,
+      "subprocess": "P0_gg_ttx",
+      "survey_absolute": 101.82464354336852,
+      "survey_iterations": 4,
+      "survey_points": 8192,
+      "survey_signed": 61.87194391039335,
+      "updated_rates": {
+        "absolute": 102.33325867161669,
+        "error_abs": 0.9494086210970993,
+        "error_signed": 0.8458810090360875,
+        "production_iterations": 1,
+        "production_trials": 2571,
+        "signed": 62.22475565288788,
+        "survey_trials": 8192,
+        "trials": 10763
+      }
+    },
+    {
+      "absolute": 58.600763378553715,
+      "allocation_order": 3,
+      "available_candidates": 121,
+      "batches": [
+        {
+          "adaptation": {
+            "completed_iterations": 2,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "mode": "adaptive_unfolded",
+            "ndim": 7,
+            "schedule": "nonzero_trials",
+            "updates": 1
+          },
+          "available": 121,
+          "collection_log_z": 1.8189325791058026,
+          "directory": "SubProcesses/P0_uux_ttx/GF1.0_1",
+          "generated_target": 121,
+          "native_log_z": 1.8189325791058026,
+          "nominal_final_quota": 110,
+          "pool_protocol": 4,
+          "trials": 4914
+        }
+      ],
+      "channel": "1.0",
+      "error_abs": 0.4222083092047619,
+      "error_signed": 0.33768383431017307,
+      "generated_target": 121,
+      "generation_cpu_seconds": 2.81913996,
+      "generation_trials": 4914,
+      "initial_quota": 110,
+      "quota": 106,
+      "selection": {
+        "available": 121,
+        "full_trial_tail": 0.0,
+        "max_correction": 1.0,
+        "max_worker_selected_tail": 0.0,
+        "overweight": 0.0,
+        "reserve": 121,
+        "reserve_tail": 0.0,
+        "selected": 106,
+        "selected_tail": 0.0,
+        "sum_corrections": 106.0,
+        "worst_subset_tail": 0.0
+      },
+      "signed": 39.848861428109906,
+      "subprocess": "P0_uux_ttx",
+      "survey_absolute": 58.958112373557725,
+      "survey_iterations": 4,
+      "survey_points": 8192,
+      "survey_signed": 40.12737558378398,
+      "updated_rates": {
+        "absolute": 58.600763378553715,
+        "error_abs": 0.4222083092047619,
+        "error_signed": 0.33768383431017307,
+        "production_iterations": 2,
+        "production_trials": 4914,
+        "signed": 39.848861428109906,
+        "survey_trials": 8192,
+        "trials": 13106
+      }
+    },
+    {
+      "absolute": 57.83672520386287,
+      "allocation_order": 4,
+      "available_candidates": 101,
+      "batches": [
+        {
+          "adaptation": {
+            "completed_iterations": 2,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "mode": "adaptive_unfolded",
+            "ndim": 7,
+            "schedule": "nonzero_trials",
+            "updates": 1
+          },
+          "available": 101,
+          "collection_log_z": 2.4495511366630565,
+          "directory": "SubProcesses/P0_uxu_ttx/GF1.0_1",
+          "generated_target": 101,
+          "native_log_z": 2.4495511366630565,
+          "nominal_final_quota": 91,
+          "pool_protocol": 4,
+          "trials": 5961
+        }
+      ],
+      "channel": "1.0",
+      "error_abs": 0.39568796052754424,
+      "error_signed": 0.31840852734181135,
+      "generated_target": 101,
+      "generation_cpu_seconds": 3.37465906,
+      "generation_trials": 5961,
+      "initial_quota": 91,
+      "quota": 95,
+      "selection": {
+        "available": 101,
+        "full_trial_tail": 0.0,
+        "max_correction": 1.0,
+        "max_worker_selected_tail": 0.0,
+        "overweight": 0.0,
+        "reserve": 101,
+        "reserve_tail": 0.0,
+        "selected": 95,
+        "selected_tail": 0.0,
+        "sum_corrections": 95.0,
+        "worst_subset_tail": 0.0
+      },
+      "signed": 38.84641800154912,
+      "subprocess": "P0_uxu_ttx",
+      "survey_absolute": 57.46047789758838,
+      "survey_iterations": 4,
+      "survey_points": 8192,
+      "survey_signed": 38.5077566098014,
+      "updated_rates": {
+        "absolute": 57.83672520386287,
+        "error_abs": 0.39568796052754424,
+        "error_signed": 0.31840852734181135,
+        "production_iterations": 2,
+        "production_trials": 5961,
+        "signed": 38.84641800154912,
+        "survey_trials": 8192,
+        "trials": 14153
+      }
+    }
+  ],
+  "cross_section": 683.1833248921388,
+  "generation_cpu_seconds": 56.01430153,
+  "generation_trials": 62094,
+  "integration_stages": [
+    "survey",
+    "generation"
+  ],
+  "overweight_definition": "full absolute cross section belonging to weights above their iteration threshold",
+  "rate_source": "survey_plus_production",
+  "requested_events": 2000,
+  "rounds": [
+    {
+      "channels": [
+        {
+          "absolute": 469.8088103449199,
+          "additional_quota": 0,
+          "available": 883,
+          "channel": "3.0",
+          "quota": 797,
+          "signed": 273.0398694337104,
+          "subprocess": "P0_gg_ttx"
+        },
+        {
+          "absolute": 464.42621809746,
+          "additional_quota": 0,
+          "available": 897,
+          "channel": "2.0",
+          "quota": 819,
+          "signed": 269.22342037588146,
+          "subprocess": "P0_gg_ttx"
+        },
+        {
+          "absolute": 102.33325867161669,
+          "additional_quota": 0,
+          "available": 201,
+          "channel": "1.0",
+          "quota": 183,
+          "signed": 62.22475565288788,
+          "subprocess": "P0_gg_ttx"
+        },
+        {
+          "absolute": 58.600763378553715,
+          "additional_quota": 0,
+          "available": 121,
+          "channel": "1.0",
+          "quota": 106,
+          "signed": 39.848861428109906,
+          "subprocess": "P0_uux_ttx"
+        },
+        {
+          "absolute": 57.83672520386287,
+          "additional_quota": 0,
+          "available": 101,
+          "channel": "1.0",
+          "quota": 95,
+          "signed": 38.84641800154912,
+          "subprocess": "P0_uxu_ttx"
+        }
+      ],
+      "round": 1
+    }
+  ],
+  "sampling": "native_adaptive_unfolded",
+  "seed": 19728,
+  "survey_min_iterations": 4,
+  "survey_relative_accuracy": 0.03,
+  "uncertainty": 3.5274104264956465,
+  "uncertainty_convention": "native_trial_weighted_iteration_errors",
+  "version": 4,
+  "weight_convention": "native_iteration_envelopes"
+}

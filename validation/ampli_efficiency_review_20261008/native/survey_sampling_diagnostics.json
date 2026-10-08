@@ -1,0 +1,210 @@
+{
+  "note": "Read-only analysis of saved common 300K survey. Fill bins count learned statistics; 2048 sampling bins are PCHIP interpolation. Stream maxima describe first-epoch initialization, not final threshold or demonstrated gain.",
+  "channels": [
+    {
+      "channel": "P0_gg_ttx/GF1.0",
+      "source": "validation/ttbar_30k_jobs_300k_20261007/ampli/SubProcesses/P0_gg_ttx/GF1.0/ampli_grids",
+      "grid_sizes": [
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ]
+      ],
+      "absolute_nonvirtual": 100.51913200526616,
+      "absolute_virtual": 0.6815775155136659,
+      "virtual_probability": 0.006734908467946221,
+      "nonvirtual_survey_maximum": 1061.7553056704328,
+      "virtual_survey_maximum": 23.299091753257507,
+      "probability_adjusted_nonvirtual_maximum": 1068.9546171734846,
+      "probability_adjusted_virtual_maximum": 3459.4518788408204
+    },
+    {
+      "channel": "P0_gg_ttx/GF2.0",
+      "source": "validation/ttbar_30k_jobs_300k_20261007/ampli/SubProcesses/P0_gg_ttx/GF2.0/ampli_grids",
+      "grid_sizes": [
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ]
+      ],
+      "absolute_nonvirtual": 464.8911796129711,
+      "absolute_virtual": 2.6544065438817266,
+      "virtual_probability": 0.00567732136175321,
+      "nonvirtual_survey_maximum": 4121.597204375824,
+      "virtual_survey_maximum": 44.904854344638764,
+      "probability_adjusted_nonvirtual_maximum": 4145.130441981338,
+      "probability_adjusted_virtual_maximum": 7909.514273254337
+    },
+    {
+      "channel": "P0_gg_ttx/GF3.0",
+      "source": "validation/ttbar_30k_jobs_300k_20261007/ampli/SubProcesses/P0_gg_ttx/GF3.0/ampli_grids",
+      "grid_sizes": [
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ]
+      ],
+      "absolute_nonvirtual": 473.45447884891234,
+      "absolute_virtual": 3.013713068415494,
+      "virtual_probability": 0.006325108621182428,
+      "nonvirtual_survey_maximum": 35632.7979988511,
+      "virtual_survey_maximum": 29.838141550808995,
+      "probability_adjusted_nonvirtual_maximum": 35859.61395221251,
+      "probability_adjusted_virtual_maximum": 4717.411721734353
+    },
+    {
+      "channel": "P0_uux_ttx/GF1.0",
+      "source": "validation/ttbar_30k_jobs_300k_20261007/ampli/SubProcesses/P0_uux_ttx/GF1.0/ampli_grids",
+      "grid_sizes": [
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ]
+      ],
+      "absolute_nonvirtual": 57.13039120926212,
+      "absolute_virtual": 0.40277832948769526,
+      "virtual_probability": 0.007000802019371025,
+      "nonvirtual_survey_maximum": 504.6095195966684,
+      "virtual_survey_maximum": 7.090248739050769,
+      "probability_adjusted_nonvirtual_maximum": 508.1670968343643,
+      "probability_adjusted_virtual_maximum": 1012.7766389382598
+    },
+    {
+      "channel": "P0_uxu_ttx/GF1.0",
+      "source": "validation/ttbar_30k_jobs_300k_20261007/ampli/SubProcesses/P0_uxu_ttx/GF1.0/ampli_grids",
+      "grid_sizes": [
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ],
+        [
+          2048,
+          8
+        ]
+      ],
+      "absolute_nonvirtual": 57.814592511799155,
+      "absolute_virtual": 0.48113736167884624,
+      "virtual_probability": 0.008253389445900781,
+      "nonvirtual_survey_maximum": 416.81305005183526,
+      "virtual_survey_maximum": 4.3343754490589514,
+      "probability_adjusted_nonvirtual_maximum": 420.2817994194681,
+      "probability_adjusted_virtual_maximum": 525.163083296852
+    }
+  ]
+}

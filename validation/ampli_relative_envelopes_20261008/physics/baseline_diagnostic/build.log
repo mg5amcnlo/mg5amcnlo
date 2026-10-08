@@ -1,0 +1,112 @@
+gfortran -O -ffixed-line-length-132 -fno-automatic -c -I. -I/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ genps_fks_radiation.f
+gfortran -O -ffixed-line-length-132 -fno-automatic -c -I. -I/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ genps_fks.f
+gfortran -O -ffixed-line-length-132 -fno-automatic -c -I. -I/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ resonance_recoil.f
+gfortran -O -ffixed-line-length-132 -fno-automatic -c -I. -I/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ initial_recoil.f
+gfortran -O -ffixed-line-length-132 -fno-automatic -c -I. -I/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ mint_module.f90
+gfortran -O -ffixed-line-length-132 -fno-automatic -c -I. -I/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ resonance_histories.f
+gfortran -O -ffixed-line-length-132 -fno-automatic -c -I. -I/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ setcuts.f
+gfortran -O -ffixed-line-length-132 -fno-automatic -c -I. -I/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ fks_singular.f
+fks_singular.f:7423:132:
+
+ 7423 |     1  B1=B0
+      |                                                                                                                                    1
+Warning: Fortran 2018 deleted feature: DO termination statement which is not END DO or CONTINUE with label 1 at (1)
+fks_singular.f:38:51:
+
+   38 |         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+      |                                                   1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 1
+fks_singular.f:7048:55:
+
+ 7048 |             if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+      |                                                       1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 1
+fks_singular.f:7065:55:
+
+ 7065 |             if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+      |                                                       1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 1
+fks_singular.f:7145:58:
+
+ 7145 |                if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+      |                                                          1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 1
+fks_singular.f:506:51:
+
+  506 |         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+      |                                                   1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 1
+fks_singular.f:540:51:
+
+  540 |         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+      |                                                   1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 1
+fks_singular.f:563:51:
+
+  563 |         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+      |                                                   1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 1
+fks_singular.f:584:51:
+
+  584 |         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+      |                                                   1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 1
+fks_singular.f:632:51:
+
+  632 |         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+      |                                                   1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 1
+fks_singular.f:692:51:
+
+  692 |         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+      |                                                   1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 1
+fks_singular.f:790:51:
+
+  790 |         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+      |                                                   1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 1
+fks_singular.f:899:51:
+
+  899 |         if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+      |                                                   1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 1
+fks_singular.f:1067:55:
+
+ 1067 |             if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+      |                                                       1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 1
+fks_singular.f:8019:3:
+
+ 8019 |  12      continue
+      |   1
+......
+ 8034 |       goto 12
+      |                                                                                                                                    2
+Warning: Legacy Extension: Label at (1) is not in the same block as the GOTO statement at (2)
+fks_singular.f:1147:55:
+
+ 1147 |             if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+      |                                                       1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 1
+fks_singular.f:2455:58:
+
+ 2455 |                if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+      |                                                          1
+Warning: Array reference at (1) is out of bounds (0 < 1) in dimension 1
+fks_singular.f:7674:31:
+
+ 7674 |       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
+      |                               1
+Warning: Named COMMON block ‘numberofparticles’ at (1) shall be of the same size as elsewhere (88 vs 80 bytes)
+gfortran -O -ffixed-line-length-132 -fno-automatic -c -I. -I/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ add_write_info.f
+gfortran -O -ffixed-line-length-132 -fno-automatic -c -I. -I/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ madfks_plot.f
+gfortran -O -ffixed-line-length-132 -ffree-line-length-none -c -I. -I/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ integrator_helpers.f90
+gfortran -O -ffixed-line-length-132 -ffree-line-length-none -c -I. -I/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ simple_integrator.f90
+gfortran -O -ffixed-line-length-132 -ffree-line-length-none -c -I. -I/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ ampli_mint_adapter.f90
+gfortran -O -ffixed-line-length-132 -fno-automatic -c -I. -I/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ driver_mintMC.f
+gfortran -O -ffixed-line-length-132 -fno-automatic -c -I. -I/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ handling_lhe_events.f
+gfortran -O -ffixed-line-length-132 -fno-automatic -c -I. -I/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ write_event.f
+gfortran -o madevent_mintMC analysis_dummy.o dbook.o open_output_files_dummy.o HwU_dummy.o parton_lum_1.o parton_lum_2.o parton_lum_3.o parton_lum_4.o parton_lum_5.o parton_lum_chooser.o parton_lum_native_2_2.o parton_lum_native_2_3.o parton_lum_native_3_2.o parton_lum_native_3_3.o process_module.o scale_module.o matrix_1.o matrix_2.o matrix_3.o matrix_4.o matrix_5.o FKSParams.o real_me_chooser.o chooser_functions.o recmom.o fks_phase_space_data.o genps_fks_helpers.o genps_fks_sampling.o genps_fks_radiation.o genps_fks.o resonance_recoil.o initial_recoil.o recoil_selection.o resonance_histories.o setcuts.o setscales.o veto_xsec.o  born.o sborn_sf.o extra_cnt_wrapper.o born_support.o mc_native_context.o mc_native_runtime.o mc_native_props.o  ewsudakov_functions_dummy.o ewsudakov_wrapper.o  momentum_reshuffling.o rescale_alpha_tagged.o fks_Sij.o fastjetfortran_madfks_core.o fjcore.o fastjet_wrapper.o fks_singular.o montecarlocounter.o mcatnlo_delta_scales.o herwig7_scales.o boostwdir2.o cluster.o splitorders_stuff.o reweight_xsec.o get_color.o iproc_map.o sudakov.o MC_integer.o reweight_xsec_events_pdf_dummy.o pineappl_interface_dummy.o weight_lines.o mint_module.o polfit.o cuts.o dummy_fct.o pythia_unlops.o recluster.o fill_MC_mshell.o born_hel.o open_output_files.o add_write_info.o madfks_plot.o integrator_helpers.o simple_integrator.o ampli_mint_adapter.o driver_mintMC.o handling_lhe_events.o write_event.o BinothLHA.o -L/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ libMadLoop.a -lcts  -Wl,-rpath,/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/HEPTools/lib/ -liregi -L/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/HEPTools/lib/ -lninja -L/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/HEPTools/lib/ -lavh_olo -L/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/HEPTools/lib/ -lcollier   -L/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ -ldhelas -lgeneric -lmodel -lpdf -lgammaUPC -lcernlib  -L/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/lib/ -lmc_born_support -Wl,-rpath,'$ORIGIN' -Wl,-rpath,'$ORIGIN/../../lib' -lstdc++   -lstdc++ 
+rm handling_lhe_events.o
+strip madevent_mintMC
