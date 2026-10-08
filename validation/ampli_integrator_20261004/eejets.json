@@ -1,0 +1,211 @@
+{
+  "process": "e+ e- > u u~ [QCD]",
+  "output": "/tmp/mg5-amplicol-backend-sq5iorrd/eejets",
+  "generation_command_file": "/tmp/mg5-amplicol-backend-sq5iorrd/generate.cmd",
+  "script": "/tmp/mg5-amplicol-backend-sq5iorrd/validate_eejets.py",
+  "normalization_note": "Standalone stage2 supplies synthetic global rates equal to twice the tested channel rate and global20/local10 events; tests event path, not physical total or coordinator.",
+  "cases": {
+    "ampli_strict": {
+      "directory": "/tmp/mg5-amplicol-backend-sq5iorrd/eejets/SubProcesses/P0_epem_uux/GF1.0_3",
+      "note": "Final frozen-envelope rejection, native history sum, folding222.",
+      "mint_grids": false,
+      "ampli_grids": true,
+      "born_spreading_table": false,
+      "results": {
+        "0": [
+          "0.13965271388688802",
+          "1.7557677868425148E-003",
+          "0.12844083591321673",
+          "1.6978169008496167E-003",
+          "4",
+          "4096",
+          "0.860668004"
+        ],
+        "1": [
+          "0.14323256646892460",
+          "5.6553812760138907E-004",
+          "0.12920282481448325",
+          "5.2165029066616770E-004",
+          "4",
+          "4096",
+          "6.15655088"
+        ]
+      },
+      "events": 10,
+      "weights": [
+        0.28646513,
+        0.28646513,
+        0.28646513,
+        0.28646513,
+        0.28646513,
+        0.28646513,
+        0.28646513,
+        0.28646513,
+        0.28646513,
+        0.28646513
+      ],
+      "production_summary": [
+        "AmpliCol production trials, candidates, quota, overweight:                  742          10          10   0.0000000000000000"
+      ],
+      "logs": {
+        "0": "/tmp/mg5-amplicol-backend-sq5iorrd/eejets/SubProcesses/P0_epem_uux/GF1.0_3/log_MINT0.txt",
+        "1": "/tmp/mg5-amplicol-backend-sq5iorrd/eejets/SubProcesses/P0_epem_uux/GF1.0_3/log_MINT1.txt",
+        "2": "/tmp/mg5-amplicol-backend-sq5iorrd/eejets/SubProcesses/P0_epem_uux/GF1.0_3/log_MINT2.txt"
+      }
+    },
+    "mint": {
+      "directory": "/tmp/mg5-amplicol-backend-sq5iorrd/eejets/SubProcesses/P0_epem_uux/GF1.0_2",
+      "note": "NLOPSIntegrator0, native history sum, folding222.",
+      "mint_grids": true,
+      "ampli_grids": false,
+      "born_spreading_table": false,
+      "results": {
+        "0": [
+          "0.14148538758903037",
+          "1.1392678416501428E-003",
+          "0.13074091524482367",
+          "1.1906126375554006E-003",
+          "4",
+          "972",
+          "0.836485982"
+        ],
+        "1": [
+          "0.14345480754799975",
+          "5.0092911486550329E-004",
+          "0.12987701973586055",
+          "5.4722039463266645E-004",
+          "4",
+          "1024",
+          "6.29786587"
+        ]
+      },
+      "events": 10,
+      "weights": [
+        0.28690962,
+        0.28690962,
+        0.28690962,
+        0.28690962,
+        0.28690962,
+        0.28690962,
+        0.28690962,
+        0.28690962,
+        0.28690962,
+        0.28690962
+      ],
+      "production_summary": [],
+      "logs": {
+        "0": "/tmp/mg5-amplicol-backend-sq5iorrd/eejets/SubProcesses/P0_epem_uux/GF1.0_2/log_MINT0.txt",
+        "1": "/tmp/mg5-amplicol-backend-sq5iorrd/eejets/SubProcesses/P0_epem_uux/GF1.0_2/log_MINT1.txt",
+        "2": "/tmp/mg5-amplicol-backend-sq5iorrd/eejets/SubProcesses/P0_epem_uux/GF1.0_2/log_MINT2.txt"
+      }
+    },
+    "fixed_order_exclusion": {
+      "directory": "/tmp/mg5-amplicol-backend-sq5iorrd/eejets/SubProcesses/P0_epem_uux/all_G1.0",
+      "note": "NLOPSIntegrator1 ignored, grouped2-channel MINT fixed-order run.",
+      "mint_grids": true,
+      "ampli_grids": false,
+      "born_spreading_table": false,
+      "results": {
+        "0": [
+          "0.17907123419479554",
+          "1.6328651553362463E-003",
+          "0.17875149003907423",
+          "1.6427300047507567E-003",
+          "4",
+          "972",
+          "0.340844005",
+          "0.12679852841603867",
+          "2.0405913836481358E-003",
+          "0.12650658506536361",
+          "2.0476781337294332E-003",
+          "4",
+          "972",
+          "0.340844005",
+          "5.2272705778756888E-002",
+          "1.6555808399069405E-003",
+          "5.2244904973710662E-002",
+          "1.6558140785818815E-003",
+          "4",
+          "972",
+          "0.340844005"
+        ]
+      },
+      "logs": {
+        "0": "/tmp/mg5-amplicol-backend-sq5iorrd/eejets/SubProcesses/P0_epem_uux/all_G1.0/log_MINT0.txt"
+      }
+    },
+    "born_native_original_failure": {
+      "directory": "/tmp/mg5-amplicol-backend-sq5iorrd/eejets_born_native_original_failure",
+      "note": "Original native soft-recoil reconstruction failure during800k training, prior to subsequently tested radiation-map fix.",
+      "mint_grids": false,
+      "ampli_grids": false,
+      "born_spreading_table": false,
+      "results": {},
+      "logs": {
+        "0": "/tmp/mg5-amplicol-backend-sq5iorrd/eejets_born_native_original_failure/log_MINT0.txt"
+      }
+    },
+    "born_native_fixed": {
+      "directory": "/tmp/mg5-amplicol-backend-sq5iorrd/eejets/SubProcesses/P0_epem_uux/GF2.0",
+      "note": "Default MCExplicitKLSumTrue, full800k training+200k validation, native soft-recoil precision fix, folding222 and strictproduction.",
+      "mint_grids": false,
+      "ampli_grids": true,
+      "born_spreading_table": true,
+      "results": {
+        "0": [
+          "5.6576429175188396E-002",
+          "1.1143584454459399E-002",
+          "5.2292081016341925E-002",
+          "1.1142193855893906E-002",
+          "4",
+          "4096",
+          "194.366898"
+        ],
+        "1": [
+          "5.5572406167114528E-002",
+          "2.4621728422772691E-003",
+          "4.7214498700302254E-002",
+          "2.4576954996723310E-003",
+          "4",
+          "4096",
+          "6.13393784"
+        ]
+      },
+      "events": 10,
+      "weights": [
+        0.11114481,
+        0.11114481,
+        0.11114481,
+        0.11114481,
+        0.11114481,
+        0.11114481,
+        0.11114481,
+        0.11114481,
+        0.11114481,
+        0.11114481
+      ],
+      "logs": {
+        "0": "/tmp/mg5-amplicol-backend-sq5iorrd/eejets/SubProcesses/P0_epem_uux/GF2.0/log_MINT0.txt",
+        "1": "/tmp/mg5-amplicol-backend-sq5iorrd/eejets/SubProcesses/P0_epem_uux/GF2.0/log_MINT1.txt",
+        "2": "/tmp/mg5-amplicol-backend-sq5iorrd/eejets/SubProcesses/P0_epem_uux/GF2.0/log_MINT2.txt"
+      },
+      "production_summary": [
+        "AmpliCol production trials, candidates, quota, overweight:                  372          10          10   0.0000000000000000"
+      ],
+      "calibration_summary": [
+        "Training born-spreading table with       800000  independent phase-space points",
+        "Validating born-spreading table with       200000  independent phase-space points",
+        "Born spreading validation reduced sampled negative mass by    3.7360322388119069       +/-   0.28592875423585873"
+      ]
+    }
+  },
+  "source_note": "Final born_native_fixed run uses the native massless map correction. All recorded real eejets cases precede the final missing-MC_integer-file guard (covered by automated tests); the other successful eejets cases also predate the massless map correction. Superseded production implementations are excluded.",
+  "source_sha256_at_final_born_run": {
+    "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+    "simple_integrator.f90": "06a5e9411571f07bb8b6dce1d4b5ca4c2bff04c1d1583eb737c216d010004b4a",
+    "driver_mintMC.f": "c1bdf5ecd3726859f0c537de1263a4ef2f54b2b190f54438fd917277f47fe597",
+    "integrator_helpers.f90": "dbdf24b3cf6ee8742588baa25caa160d875eab9a2a7c79d7f3b7bb0981898c35",
+    "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+    "ampli_mint_adapter.f90": "68758eb8865f2bb4b55b8ef5a96fd7983188b0f3b062ffa9b0981d9c8074b6c3"
+  }
+}

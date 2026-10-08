@@ -1,0 +1,10 @@
+{
+  "exactly_300000_events": true,
+  "full_sample_and_integration": true,
+  "main_verification_passed": true,
+  "independent_live_audit_passed": true,
+  "independent_archived_audit_passed": true,
+  "comparison_passed": true,
+  "source_matches_current": true,
+  "live_and_archived_audits_match": true
+}

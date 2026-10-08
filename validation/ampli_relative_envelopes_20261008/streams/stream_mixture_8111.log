@@ -1,0 +1,24 @@
+ AmpliCol survey iteration, cumulative trials, ABS, signed, relative error:           1        4000  0.61476902172199765       0.58769342771609923        1.0196583141883616E-002
+ AmpliCol survey iteration, cumulative trials, ABS, signed, relative error:           2        8000  0.61411789796880834       0.58804282895043203        4.3715868804341000E-003
+ AmpliCol survey iteration, cumulative trials, ABS, signed, relative error:           3       12000  0.61154227241284631       0.58565983034777136        2.3720385320615679E-003
+ AmpliCol survey iteration, cumulative trials, ABS, signed, relative error:           4       16000  0.61308194577740727       0.58668973747869646        1.4924063530858999E-003
+ AmpliCol survey retained statistical points, total evaluations:        4000       16000
+ AmpliCol virtual stream rate and chosen probabilities:   2.1524209349571041E-002   4.1892450530308212E-002
+ AmpliCol saved survey stream maxima, initial production envelope:  0.73121724838916624        3.1971862054532584E-002  0.76318911044369886     
+ AmpliCol native surveyed maximum, initial storage cutoff:  0.76318911044369886       0.61308194577740627     
+ AmpliCol native iteration, nonzero target, storage envelope:           1                 4000  0.61308194577740627     
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:           1                 4000                 4000  0.61143771214572873       0.58330809961009067     
+ AmpliCol native full-trial, reserve, worst-collected tails:   1.0000000000000000        1.0000000000000000        1.0000000000000000     
+ AmpliCol native effective events, remaining, nonzero acceptance:   3336.0000000000000        664.00000000000000       0.83399999999999996     
+ AmpliCol native iteration, nonzero target, storage envelope:           2                 1024  0.70682379911182425     
+ AmpliCol native production iteration, trials, ABS, signed, errors:           2                 4000  0.61143771214572873       0.58330809961009067        1.5934802750652048E-003   3.3077354153316185E-003
+ AmpliCol native grid updates, next nonzero target:           0                 1024
+ AmpliCol native completed iteration, trials, nonzero, ABS, signed:           2                 1024                 1024  0.61157581193315280       0.58188033686097695     
+ AmpliCol native full-trial, reserve, worst-collected tails:   5.0452535629399119E-004   5.0135746663097823E-004   5.5154829314018889E-004
+ AmpliCol native production iteration, trials, ABS, signed, errors:           2                 5024  0.61157581193315280       0.58188033686097695        1.4263875984391072E-003   3.0147588519366508E-003
+ AmpliCol native grid updates, next nonzero target:           0                 1024
+ AmpliCol generation trials, candidates, requested events:                 5024        4705        4000
+ AmpliCol full-trial, reserve, worst-collected tail fractions:   5.0452535629399119E-004   5.0135746663097823E-004   5.5154829314018889E-004
+ AmpliCol production adaptation dimensions, updates:           0           0
+STREAM_OBSERVABLES    3.9999999999998877E+03    3.8220002417498240E+03    2.5964321172660639E+03    7.3345137144693501E+02    6.7011651128668996E+02    2.4318502919165567E+03    7.2549777905298970E+02    6.6465217078009130E+02
+ PASS stream_mixture

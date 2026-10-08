@@ -1,0 +1,50 @@
+{
+  "adopted": {
+    "instrumented_adapter_sha256": "c6b041db161136643b6eeff4c91f627474097469852f53f1eb0ad0b3bd6c7bb8",
+    "executable_sha256": "e0de8716bb2d781463c9dc13602d59c97b66cda30d8b1657ab1d5bf61b7c48d5"
+  },
+  "baseline": {
+    "instrumented_adapter_sha256": "c6b041db161136643b6eeff4c91f627474097469852f53f1eb0ad0b3bd6c7bb8",
+    "executable_note": "Fresh GF1 baseline used initial madevent_mintMC before per-variant binary copies; reused GF3 results have exact source hashes and verified numerical instrumentation invariance."
+  },
+  "baseline_diagnostic": {
+    "instrumented_adapter_sha256": "c6b041db161136643b6eeff4c91f627474097469852f53f1eb0ad0b3bd6c7bb8",
+    "executable_sha256": "44de137a8b064acf5ef38579beebef334af88ffb1065b55d53cbb3f1bbcdb8fd"
+  },
+  "baseline_seed39727": {
+    "instrumented_adapter_sha256": "c6b041db161136643b6eeff4c91f627474097469852f53f1eb0ad0b3bd6c7bb8",
+    "executable_sha256": "44de137a8b064acf5ef38579beebef334af88ffb1065b55d53cbb3f1bbcdb8fd"
+  },
+  "baseline_seed59727": {
+    "instrumented_adapter_sha256": "c6b041db161136643b6eeff4c91f627474097469852f53f1eb0ad0b3bd6c7bb8",
+    "executable_sha256": "44de137a8b064acf5ef38579beebef334af88ffb1065b55d53cbb3f1bbcdb8fd"
+  },
+  "combined": {
+    "instrumented_adapter_sha256": "55092224642e6f3e3b1265c5bfad6caebb4e757662a9910102adeabf83c07aff",
+    "executable_sha256": "707608f6c8e946dbb8ef5043f17311808360029905713f3fd21cf864bab470e3"
+  },
+  "combined_seed39727": {
+    "instrumented_adapter_sha256": "55092224642e6f3e3b1265c5bfad6caebb4e757662a9910102adeabf83c07aff",
+    "executable_sha256": "707608f6c8e946dbb8ef5043f17311808360029905713f3fd21cf864bab470e3"
+  },
+  "combined_seed59727": {
+    "instrumented_adapter_sha256": "55092224642e6f3e3b1265c5bfad6caebb4e757662a9910102adeabf83c07aff",
+    "executable_sha256": "707608f6c8e946dbb8ef5043f17311808360029905713f3fd21cf864bab470e3"
+  },
+  "observed_maximum": {
+    "instrumented_adapter_sha256": "c6b041db161136643b6eeff4c91f627474097469852f53f1eb0ad0b3bd6c7bb8",
+    "executable_sha256": "61a49c5c8c66564f44cf844b5b68d32a5f5281416f75c6dffd9cf107b193ea87"
+  },
+  "quantile": {
+    "instrumented_adapter_sha256": "c6b041db161136643b6eeff4c91f627474097469852f53f1eb0ad0b3bd6c7bb8",
+    "executable_sha256": "b2163d30d1acee887d91781fdaaee2e5a8fe8159463ff892ad2760d61d07fbac"
+  },
+  "quantile_seed59727": {
+    "instrumented_adapter_sha256": "c6b041db161136643b6eeff4c91f627474097469852f53f1eb0ad0b3bd6c7bb8",
+    "executable_sha256": "b2163d30d1acee887d91781fdaaee2e5a8fe8159463ff892ad2760d61d07fbac"
+  },
+  "stream_mixture": {
+    "instrumented_adapter_sha256": "324606d6d831c8713a7f1f818d2e4de9bc77d81c2540ada491160981668ae7eb",
+    "executable_sha256": "7756e6000e073a1bbe77dffc013a2fe461ab118b564c021446f14ccad0eef230"
+  }
+}

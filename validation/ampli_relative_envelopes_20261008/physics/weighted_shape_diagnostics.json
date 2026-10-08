@@ -1,0 +1,2174 @@
+{
+  "note": "Record weighted ttbar shape diagnostics for each actual worker collection.\n\nThese channel-only, shared-seed samples are correlated and are not a coverage\nstudy. Signed bins are normalized by the sample's absolute weight sum, retaining\nnegative events and native correction factors.\n",
+  "edges": {
+    "top_pt": [
+      0.0,
+      50.0,
+      100.0,
+      200.0,
+      400.0,
+      800.0,
+      "inf"
+    ],
+    "ttbar_mass": [
+      0.0,
+      400.0,
+      500.0,
+      700.0,
+      1000.0,
+      1500.0,
+      3000.0,
+      "inf"
+    ]
+  },
+  "samples": {
+    "baseline": {
+      "2500": {
+        "events": 2242,
+        "negative_events": 475,
+        "signed_over_absolute": 0.5748661087137269,
+        "mean_absolute_weight": 0.9998223971375741,
+        "max_absolute_weight": 1.9544423268891504,
+        "weight_effective_count": 2240.20319329659,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 191.59037024531284,
+              "absolute": 347.32684135186616,
+              "sum_squared": 348.09994516395807,
+              "count": 347,
+              "signed_fraction_of_abs": 0.0854702958464975,
+              "absolute_fraction": 0.15494582450967292
+            },
+            {
+              "signed": 400.40118526683,
+              "absolute": 726.0314719226681,
+              "sum_squared": 728.3701606491733,
+              "count": 725,
+              "signed_fraction_of_abs": 0.17862279674195394,
+              "absolute_fraction": 0.3238895807740452
+            },
+            {
+              "signed": 535.9013321398893,
+              "absolute": 879.7317052759877,
+              "sum_squared": 878.5067864718976,
+              "count": 881,
+              "signed_fraction_of_abs": 0.2390707076972676,
+              "absolute_fraction": 0.3924567243082611
+            },
+            {
+              "signed": 146.7516746965595,
+              "absolute": 268.545581587582,
+              "sum_squared": 268.0919308186324,
+              "count": 269,
+              "signed_fraction_of_abs": 0.0654673250864536,
+              "absolute_fraction": 0.11980075134868053
+            },
+            {
+              "signed": 12.978039258879377,
+              "absolute": 18.967903532208318,
+              "sum_squared": 18.935861284587418,
+              "count": 19,
+              "signed_fraction_of_abs": 0.005789627388597922,
+              "absolute_fraction": 0.008461763106412347
+            },
+            {
+              "signed": 0.9983107122214905,
+              "absolute": 0.9983107122214905,
+              "sum_squared": 0.9966242781361796,
+              "count": 1,
+              "signed_fraction_of_abs": 0.0004453559529690709,
+              "absolute_fraction": 0.0004453559529690709
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 215.11060665846023,
+              "absolute": 350.2338648553282,
+              "sum_squared": 352.6035897546851,
+              "count": 349,
+              "signed_fraction_of_abs": 0.09596289817320787,
+              "absolute_fraction": 0.15624267548686707
+            },
+            {
+              "signed": 502.457795566923,
+              "absolute": 813.1735976243764,
+              "sum_squared": 814.0056437862225,
+              "count": 813,
+              "signed_fraction_of_abs": 0.22415122629856968,
+              "absolute_fraction": 0.3627645161629229
+            },
+            {
+              "signed": 387.34455634194,
+              "absolute": 726.7701984972487,
+              "sum_squared": 725.5424744831388,
+              "count": 728,
+              "signed_fraction_of_abs": 0.17279810975200027,
+              "absolute_fraction": 0.3242191337614852
+            },
+            {
+              "signed": 139.7822824146235,
+              "absolute": 273.55591785230393,
+              "sum_squared": 273.1129069477139,
+              "count": 274,
+              "signed_fraction_of_abs": 0.062358212559322605,
+              "absolute_fraction": 0.12203591025717843
+            },
+            {
+              "signed": 38.9341177766381,
+              "absolute": 62.89357486995383,
+              "sum_squared": 62.7873295225794,
+              "count": 63,
+              "signed_fraction_of_abs": 0.01736888216579375,
+              "absolute_fraction": 0.028057425037051435
+            },
+            {
+              "signed": 4.991553561107453,
+              "absolute": 14.974660683322359,
+              "sum_squared": 14.949364172042694,
+              "count": 15,
+              "signed_fraction_of_abs": 0.0022267797648453545,
+              "absolute_fraction": 0.006680339294536064
+            },
+            {
+              "signed": 0.0,
+              "absolute": 0.0,
+              "sum_squared": 0.0,
+              "count": 0,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.0
+            }
+          ]
+        }
+      },
+      "30000": {
+        "events": 24655,
+        "negative_events": 5140,
+        "signed_over_absolute": 0.5827365577678189,
+        "mean_absolute_weight": 1.0000455072444474,
+        "max_absolute_weight": 3.833263549829296,
+        "weight_effective_count": 24618.17021439612,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 2150.050985680154,
+              "absolute": 3661.573374808103,
+              "sum_squared": 3662.1964519684593,
+              "count": 3663,
+              "signed_fraction_of_abs": 0.08720150668167644,
+              "absolute_fraction": 0.14850564811502392
+            },
+            {
+              "signed": 4393.644995925534,
+              "absolute": 7633.120457992462,
+              "sum_squared": 7643.295471106133,
+              "count": 7631,
+              "signed_fraction_of_abs": 0.1781969199897431,
+              "absolute_fraction": 0.309583172237707
+            },
+            {
+              "signed": 5918.373551269226,
+              "absolute": 10100.742104040479,
+              "sum_squared": 10117.537776096335,
+              "count": 10101,
+              "signed_fraction_of_abs": 0.24003667550813848,
+              "absolute_fraction": 0.40966467118301436
+            },
+            {
+              "signed": 1797.0856847724106,
+              "absolute": 3105.8731342212845,
+              "sum_squared": 3116.4765097546992,
+              "count": 3105,
+              "signed_fraction_of_abs": 0.07288598288689081,
+              "absolute_fraction": 0.1259676252656675
+            },
+            {
+              "signed": 106.87084759284024,
+              "absolute": 150.81773819176502,
+              "sum_squared": 150.63569637933634,
+              "count": 151,
+              "signed_fraction_of_abs": 0.004334454853634731,
+              "absolute_fraction": 0.00611684750372751
+            },
+            {
+              "signed": 1.9975859363147674,
+              "absolute": 3.995171872629535,
+              "sum_squared": 3.990349572962546,
+              "count": 4,
+              "signed_fraction_of_abs": 8.101784773149016e-05,
+              "absolute_fraction": 0.00016203569546298033
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 2428.938972191594,
+              "absolute": 3865.342430753952,
+              "sum_squared": 3881.6371964159503,
+              "count": 3861,
+              "signed_fraction_of_abs": 0.09851261175834201,
+              "absolute_fraction": 0.1567700887315146
+            },
+            {
+              "signed": 5144.971164301559,
+              "absolute": 8644.255571036154,
+              "sum_squared": 8642.761990451667,
+              "count": 8649,
+              "signed_fraction_of_abs": 0.2086691154530681,
+              "absolute_fraction": 0.350592667316385
+            },
+            {
+              "signed": 4699.335115870202,
+              "absolute": 8183.8880860967265,
+              "sum_squared": 8186.5585760945005,
+              "count": 8188,
+              "signed_fraction_of_abs": 0.19059506273817878,
+              "absolute_fraction": 0.3319211387892266
+            },
+            {
+              "signed": 1638.8335119240994,
+              "absolute": 3069.5011897976788,
+              "sum_squared": 3089.30674465216,
+              "count": 3064,
+              "signed_fraction_of_abs": 0.06646761048552362,
+              "absolute_fraction": 0.12449245636232295
+            },
+            {
+              "signed": 411.99799629007885,
+              "absolute": 793.2554066264481,
+              "sum_squared": 794.109007940799,
+              "count": 793,
+              "signed_fraction_of_abs": 0.016709764682608864,
+              "absolute_fraction": 0.03217275641457858
+            },
+            {
+              "signed": 43.94689059892488,
+              "absolute": 99.87929681573851,
+              "sum_squared": 99.7587393240636,
+              "count": 100,
+              "signed_fraction_of_abs": 0.0017823926500927835,
+              "absolute_fraction": 0.004050892386574514
+            },
+            {
+              "signed": 0.0,
+              "absolute": 0.0,
+              "sum_squared": 0.0,
+              "count": 0,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.0
+            }
+          ]
+        }
+      },
+      "gf1_large": {
+        "events": 25985,
+        "negative_events": 4995,
+        "signed_over_absolute": 0.6153212971824695,
+        "mean_absolute_weight": 0.999966361697318,
+        "max_absolute_weight": 2.9375022856208313,
+        "weight_effective_count": 25970.942742641204,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 2511.9107623503733,
+              "absolute": 3924.04991956324,
+              "sum_squared": 3928.9569115226295,
+              "count": 3923,
+              "signed_fraction_of_abs": 0.09667097408533072,
+              "absolute_fraction": 0.15101719924504614
+            },
+            {
+              "signed": 5089.510661733974,
+              "absolute": 8133.328409703017,
+              "sum_squared": 8144.3670627591555,
+              "count": 8130,
+              "signed_fraction_of_abs": 0.19586999692104184,
+              "absolute_fraction": 0.3130114300661664
+            },
+            {
+              "signed": 6201.234619857935,
+              "absolute": 10252.979742420634,
+              "sum_squared": 10251.798790100669,
+              "count": 10256,
+              "signed_fraction_of_abs": 0.2386547325719543,
+              "absolute_fraction": 0.3945862861981374
+            },
+            {
+              "signed": 2066.048051168974,
+              "absolute": 3436.0019394004225,
+              "sum_squared": 3434.660976788562,
+              "count": 3438,
+              "signed_fraction_of_abs": 0.07951193195522646,
+              "absolute_fraction": 0.13223465555365652
+            },
+            {
+              "signed": 114.88688330926728,
+              "absolute": 230.77278299513722,
+              "sum_squared": 230.5457894862352,
+              "count": 231,
+              "signed_fraction_of_abs": 0.004421425747124309,
+              "absolute_fraction": 0.008881298674658408
+            },
+            {
+              "signed": 4.995081883011614,
+              "absolute": 6.9931146362162595,
+              "sum_squared": 6.986236045037438,
+              "count": 7,
+              "signed_fraction_of_abs": 0.00019223590204888274,
+              "absolute_fraction": 0.00026913026286843586
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 4786.549715209508,
+              "absolute": 7120.894213952266,
+              "sum_squared": 7130.894466009808,
+              "count": 7119,
+              "signed_fraction_of_abs": 0.1842105342325943,
+              "absolute_fraction": 0.2740478644142781
+            },
+            {
+              "signed": 6609.528583743249,
+              "absolute": 10875.10892716601,
+              "sum_squared": 10881.195192399075,
+              "count": 10874,
+              "signed_fraction_of_abs": 0.2543679401402925,
+              "absolute_fraction": 0.4185289497663185
+            },
+            {
+              "signed": 3680.93347234719,
+              "absolute": 6395.915890220479,
+              "sum_squared": 6393.433618528444,
+              "count": 6399,
+              "signed_fraction_of_abs": 0.1416608542184619,
+              "absolute_fraction": 0.24614704811285631
+            },
+            {
+              "signed": 820.2656895759861,
+              "absolute": 1357.8361380346387,
+              "sum_squared": 1356.690877323173,
+              "count": 1359,
+              "signed_fraction_of_abs": 0.03156795392917924,
+              "absolute_fraction": 0.05225637155567188
+            },
+            {
+              "signed": 88.31155029782406,
+              "absolute": 211.3933626828734,
+              "sum_squared": 212.14683686539257,
+              "count": 211,
+              "signed_fraction_of_abs": 0.0033986731209703406,
+              "absolute_fraction": 0.008135481001962649
+            },
+            {
+              "signed": 2.9970491298069684,
+              "absolute": 22.977376661853437,
+              "sum_squared": 22.95477557655158,
+              "count": 23,
+              "signed_fraction_of_abs": 0.00011534154122932964,
+              "absolute_fraction": 0.0008842851494248611
+            },
+            {
+              "signed": 0.0,
+              "absolute": 0.0,
+              "sum_squared": 0.0,
+              "count": 0,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "baseline_diagnostic": {
+      "2500": {
+        "events": 2242,
+        "negative_events": 475,
+        "signed_over_absolute": 0.5748661087137269,
+        "mean_absolute_weight": 0.9998223971375741,
+        "max_absolute_weight": 1.9544423268891504,
+        "weight_effective_count": 2240.20319329659,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 191.59037024531284,
+              "absolute": 347.32684135186616,
+              "sum_squared": 348.09994516395807,
+              "count": 347,
+              "signed_fraction_of_abs": 0.0854702958464975,
+              "absolute_fraction": 0.15494582450967292
+            },
+            {
+              "signed": 400.40118526683,
+              "absolute": 726.0314719226681,
+              "sum_squared": 728.3701606491733,
+              "count": 725,
+              "signed_fraction_of_abs": 0.17862279674195394,
+              "absolute_fraction": 0.3238895807740452
+            },
+            {
+              "signed": 535.9013321398893,
+              "absolute": 879.7317052759877,
+              "sum_squared": 878.5067864718976,
+              "count": 881,
+              "signed_fraction_of_abs": 0.2390707076972676,
+              "absolute_fraction": 0.3924567243082611
+            },
+            {
+              "signed": 146.7516746965595,
+              "absolute": 268.545581587582,
+              "sum_squared": 268.0919308186324,
+              "count": 269,
+              "signed_fraction_of_abs": 0.0654673250864536,
+              "absolute_fraction": 0.11980075134868053
+            },
+            {
+              "signed": 12.978039258879377,
+              "absolute": 18.967903532208318,
+              "sum_squared": 18.935861284587418,
+              "count": 19,
+              "signed_fraction_of_abs": 0.005789627388597922,
+              "absolute_fraction": 0.008461763106412347
+            },
+            {
+              "signed": 0.9983107122214905,
+              "absolute": 0.9983107122214905,
+              "sum_squared": 0.9966242781361796,
+              "count": 1,
+              "signed_fraction_of_abs": 0.0004453559529690709,
+              "absolute_fraction": 0.0004453559529690709
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 215.11060665846023,
+              "absolute": 350.2338648553282,
+              "sum_squared": 352.6035897546851,
+              "count": 349,
+              "signed_fraction_of_abs": 0.09596289817320787,
+              "absolute_fraction": 0.15624267548686707
+            },
+            {
+              "signed": 502.457795566923,
+              "absolute": 813.1735976243764,
+              "sum_squared": 814.0056437862225,
+              "count": 813,
+              "signed_fraction_of_abs": 0.22415122629856968,
+              "absolute_fraction": 0.3627645161629229
+            },
+            {
+              "signed": 387.34455634194,
+              "absolute": 726.7701984972487,
+              "sum_squared": 725.5424744831388,
+              "count": 728,
+              "signed_fraction_of_abs": 0.17279810975200027,
+              "absolute_fraction": 0.3242191337614852
+            },
+            {
+              "signed": 139.7822824146235,
+              "absolute": 273.55591785230393,
+              "sum_squared": 273.1129069477139,
+              "count": 274,
+              "signed_fraction_of_abs": 0.062358212559322605,
+              "absolute_fraction": 0.12203591025717843
+            },
+            {
+              "signed": 38.9341177766381,
+              "absolute": 62.89357486995383,
+              "sum_squared": 62.7873295225794,
+              "count": 63,
+              "signed_fraction_of_abs": 0.01736888216579375,
+              "absolute_fraction": 0.028057425037051435
+            },
+            {
+              "signed": 4.991553561107453,
+              "absolute": 14.974660683322359,
+              "sum_squared": 14.949364172042694,
+              "count": 15,
+              "signed_fraction_of_abs": 0.0022267797648453545,
+              "absolute_fraction": 0.006680339294536064
+            },
+            {
+              "signed": 0.0,
+              "absolute": 0.0,
+              "sum_squared": 0.0,
+              "count": 0,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "quantile": {
+      "2500": {
+        "events": 2242,
+        "negative_events": 473,
+        "signed_over_absolute": 0.5762303727892514,
+        "mean_absolute_weight": 1.0002029984636953,
+        "max_absolute_weight": 2.355958629960233,
+        "weight_effective_count": 2238.2379032418085,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 186.92459702823632,
+              "absolute": 340.9930392113628,
+              "sum_squared": 341.15765210857614,
+              "count": 341,
+              "signed_fraction_of_abs": 0.08335711834233207,
+              "absolute_fraction": 0.15206236940106588
+            },
+            {
+              "signed": 401.37941837962734,
+              "absolute": 712.311731981386,
+              "sum_squared": 718.1285512752015,
+              "count": 710,
+              "signed_fraction_of_abs": 0.17899105955003325,
+              "absolute_fraction": 0.3176481548355817
+            },
+            {
+              "signed": 552.1741963963614,
+              "absolute": 903.7288627001508,
+              "sum_squared": 902.5499369220419,
+              "count": 905,
+              "signed_fraction_of_abs": 0.2462364534488781,
+              "absolute_fraction": 0.4030086727756763
+            },
+            {
+              "signed": 138.71883539902188,
+              "absolute": 262.46801230174634,
+              "sum_squared": 261.9371006906086,
+              "count": 263,
+              "signed_fraction_of_abs": 0.061860250403107976,
+              "absolute_fraction": 0.11704493421595245
+            },
+            {
+              "signed": 12.973704030124383,
+              "absolute": 22.953476360989292,
+              "sum_squared": 22.907046828456266,
+              "count": 23,
+              "signed_fraction_of_abs": 0.0057854910448950055,
+              "absolute_fraction": 0.010235868771737317
+            },
+            {
+              "signed": 0.0,
+              "absolute": 0.0,
+              "sum_squared": 0.0,
+              "count": 0,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.0
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 204.5101184376982,
+              "absolute": 346.3733142260432,
+              "sum_squared": 349.81544333031854,
+              "count": 345,
+              "signed_fraction_of_abs": 0.09119920232991288,
+              "absolute_fraction": 0.154461648191782
+            },
+            {
+              "signed": 518.8302897538266,
+              "absolute": 811.961208620524,
+              "sum_squared": 812.6347082754216,
+              "count": 812,
+              "signed_fraction_of_abs": 0.23136707822386376,
+              "absolute_fraction": 0.362085823013116
+            },
+            {
+              "signed": 395.00626122320034,
+              "absolute": 736.6484793333711,
+              "sum_squared": 737.2685374031927,
+              "count": 737,
+              "signed_fraction_of_abs": 0.1761490150906713,
+              "absolute_fraction": 0.3285008792032604
+            },
+            {
+              "signed": 145.88071929222235,
+              "absolute": 277.6137140596387,
+              "sum_squared": 277.24449977282376,
+              "count": 278,
+              "signed_fraction_of_abs": 0.06505401950963906,
+              "absolute_fraction": 0.12379900550395737
+            },
+            {
+              "signed": 22.953476360989292,
+              "absolute": 58.88065675210288,
+              "sum_squared": 58.76155490777911,
+              "count": 59,
+              "signed_fraction_of_abs": 0.010235868771737317,
+              "absolute_fraction": 0.0262572285883696
+            },
+            {
+              "signed": 4.989886165432455,
+              "absolute": 10.9777495639514,
+              "sum_squared": 10.955544135348651,
+              "count": 11,
+              "signed_fraction_of_abs": 0.0022251888634211557,
+              "absolute_fraction": 0.004895415499526543
+            },
+            {
+              "signed": 0.0,
+              "absolute": 0.0,
+              "sum_squared": 0.0,
+              "count": 0,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.0
+            }
+          ]
+        }
+      },
+      "30000": {
+        "events": 24655,
+        "negative_events": 5295,
+        "signed_over_absolute": 0.5694134037895701,
+        "mean_absolute_weight": 1.0001800323859245,
+        "max_absolute_weight": 5.945430052806714,
+        "weight_effective_count": 24523.217898787632,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 2051.8684213428437,
+              "absolute": 3656.247219007992,
+              "sum_squared": 3691.1601289004907,
+              "count": 3651,
+              "signed_fraction_of_abs": 0.08320823707433936,
+              "absolute_fraction": 0.14826968544235794
+            },
+            {
+              "signed": 4480.874751524842,
+              "absolute": 7702.470431955858,
+              "sum_squared": 7762.819150167082,
+              "count": 7696,
+              "signed_fraction_of_abs": 0.18171033032483241,
+              "absolute_fraction": 0.3123538425240882
+            },
+            {
+              "signed": 5641.614682066786,
+              "absolute": 10110.355519687946,
+              "sum_squared": 10126.739377921089,
+              "count": 10117,
+              "signed_fraction_of_abs": 0.22878114749690895,
+              "absolute_fraction": 0.40999941820708224
+            },
+            {
+              "signed": 1774.2789132367657,
+              "absolute": 3039.7257250514726,
+              "sum_squared": 3065.4170514436655,
+              "count": 3040,
+              "signed_fraction_of_abs": 0.07195130979791903,
+              "absolute_fraction": 0.1232682447569036
+            },
+            {
+              "signed": 91.78054208478332,
+              "absolute": 147.64695900595555,
+              "sum_squared": 147.2947601601784,
+              "count": 148,
+              "signed_fraction_of_abs": 0.003721923406572079,
+              "absolute_fraction": 0.005987442001876815
+            },
+            {
+              "signed": 0.9976145878780801,
+              "absolute": 2.9928437636342404,
+              "sum_squared": 2.9857045978414547,
+              "count": 3,
+              "signed_fraction_of_abs": 4.045568920187045e-05,
+              "absolute_fraction": 0.00012136706760561135
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 2420.745971075197,
+              "absolute": 3845.636043997238,
+              "sum_squared": 3919.2919173499226,
+              "count": 3832,
+              "signed_fraction_of_abs": 0.09816711567019183,
+              "absolute_fraction": 0.15594986126894553
+            },
+            {
+              "signed": 4970.11653938026,
+              "absolute": 8592.379205139872,
+              "sum_squared": 8599.188655806129,
+              "count": 8600,
+              "signed_fraction_of_abs": 0.20155027047260532,
+              "absolute_fraction": 0.34844179992106866
+            },
+            {
+              "signed": 4634.414846766878,
+              "absolute": 8317.350283294054,
+              "sum_squared": 8340.652468353888,
+              "count": 8324,
+              "signed_fraction_of_abs": 0.18793675328276988,
+              "absolute_fraction": 0.3372887106229401
+            },
+            {
+              "signed": 1542.154843580233,
+              "absolute": 3015.9587466089547,
+              "sum_squared": 3020.976932079739,
+              "count": 3017,
+              "signed_fraction_of_abs": 0.06253811623358668,
+              "absolute_fraction": 0.12230443618311039
+            },
+            {
+              "signed": 422.27584292477775,
+              "absolute": 778.2077373142091,
+              "sum_squared": 804.8113916123683,
+              "count": 773,
+              "signed_fraction_of_abs": 0.017124308792596032,
+              "absolute_fraction": 0.031558209691218
+            },
+            {
+              "signed": 49.71165194077013,
+              "absolute": 107.91145294396644,
+              "sum_squared": 109.50433825763128,
+              "count": 107,
+              "signed_fraction_of_abs": 0.002015927959619149,
+              "absolute_fraction": 0.004376070934276379
+            },
+            {
+              "signed": 1.9952291757561602,
+              "absolute": 1.9952291757561602,
+              "sum_squared": 1.9904697318943032,
+              "count": 2,
+              "signed_fraction_of_abs": 8.09113784037409e-05,
+              "absolute_fraction": 8.09113784037409e-05
+            }
+          ]
+        }
+      },
+      "gf1_large": {
+        "events": 25985,
+        "negative_events": 4962,
+        "signed_over_absolute": 0.6172725187201125,
+        "mean_absolute_weight": 0.9999473158632143,
+        "max_absolute_weight": 4.147438967254615,
+        "weight_effective_count": 25942.001440315475,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 2447.800845193835,
+              "absolute": 3905.1924283899352,
+              "sum_squared": 3920.071517690722,
+              "count": 3902,
+              "signed_fraction_of_abs": 0.09420549595008297,
+              "absolute_fraction": 0.15029433061081013
+            },
+            {
+              "signed": 5021.041539461145,
+              "absolute": 8117.090401348317,
+              "sum_squared": 8140.261859376814,
+              "count": 8113,
+              "signed_fraction_of_abs": 0.19323864085578776,
+              "absolute_fraction": 0.31239245971831653
+            },
+            {
+              "signed": 6353.765417148255,
+              "absolute": 10317.742178181623,
+              "sum_squared": 10319.193171704208,
+              "count": 10325,
+              "signed_fraction_of_abs": 0.24452954309914002,
+              "absolute_fraction": 0.39708623391038983
+            },
+            {
+              "signed": 2085.597582293833,
+              "absolute": 3401.0514727792697,
+              "sum_squared": 3403.689740287914,
+              "count": 3402,
+              "signed_fraction_of_abs": 0.08026582512954651,
+              "absolute_fraction": 0.13089207864848162
+            },
+            {
+              "signed": 125.7858565268388,
+              "absolute": 237.5644081136519,
+              "sum_squared": 237.13083233209127,
+              "count": 238,
+              "signed_fraction_of_abs": 0.004840965318270605,
+              "absolute_fraction": 0.009142848745385693
+            },
+            {
+              "signed": 4.990113910125528,
+              "absolute": 4.990113910125528,
+              "sum_squared": 4.980247367205657,
+              "count": 5,
+              "signed_fraction_of_abs": 0.00019204836728192135,
+              "absolute_fraction": 0.00019204836728192135
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 4667.70026406759,
+              "absolute": 7105.426507647033,
+              "sum_squared": 7134.12441923698,
+              "count": 7099,
+              "signed_fraction_of_abs": 0.17964003043229607,
+              "absolute_fraction": 0.2734577975998489
+            },
+            {
+              "signed": 6713.786931952354,
+              "absolute": 10889.77968379684,
+              "sum_squared": 10900.757830182589,
+              "count": 10893,
+              "signed_fraction_of_abs": 0.25838524766816695,
+              "absolute_fraction": 0.41910153675838874
+            },
+            {
+              "signed": 3718.4298803616202,
+              "absolute": 6364.864046369704,
+              "sum_squared": 6365.297040861674,
+              "count": 6369,
+              "signed_fraction_of_abs": 0.14310663047725808,
+              "absolute_fraction": 0.24495668237079501
+            },
+            {
+              "signed": 815.2744671896795,
+              "absolute": 1376.0161289754406,
+              "sum_squared": 1378.0567514113752,
+              "count": 1376,
+              "signed_fraction_of_abs": 0.031376464171030856,
+              "absolute_fraction": 0.05295703779168349
+            },
+            {
+              "signed": 114.77261993288695,
+              "absolute": 226.5511715196999,
+              "sum_squared": 226.1032304711371,
+              "count": 227,
+              "signed_fraction_of_abs": 0.004417112447484183,
+              "absolute_fraction": 0.008718995874599265
+            },
+            {
+              "signed": 9.017191029901662,
+              "absolute": 20.99346441420293,
+              "sum_squared": 20.9880965953655,
+              "count": 21,
+              "signed_fraction_of_abs": 0.00034703352387365416,
+              "absolute_fraction": 0.0008079496053502653
+            },
+            {
+              "signed": 0.0,
+              "absolute": 0.0,
+              "sum_squared": 0.0,
+              "count": 0,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "stream_mixture": {
+      "gf1_large": {
+        "events": 25985,
+        "negative_events": 4996,
+        "signed_over_absolute": 0.6153498444600498,
+        "mean_absolute_weight": 1.0000559299962144,
+        "max_absolute_weight": 2.648172069793622,
+        "weight_effective_count": 25969.40110724138,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 2507.9876577091977,
+              "absolute": 3966.1129852593494,
+              "sum_squared": 3967.9944003569267,
+              "count": 3966,
+              "signed_fraction_of_abs": 0.09651134861704659,
+              "absolute_fraction": 0.15262232722651753
+            },
+            {
+              "signed": 4968.565229330462,
+              "absolute": 7967.658338063202,
+              "sum_squared": 7981.027463597374,
+              "count": 7963,
+              "signed_fraction_of_abs": 0.19119828181788012,
+              "absolute_fraction": 0.3066081482349536
+            },
+            {
+              "signed": 6336.91520920389,
+              "absolute": 10390.833040067699,
+              "sum_squared": 10390.646752644294,
+              "count": 10394,
+              "signed_fraction_of_abs": 0.24385456245457124,
+              "absolute_fraction": 0.39985575960429176
+            },
+            {
+              "signed": 2023.4655283929803,
+              "absolute": 3410.133055546106,
+              "sum_squared": 3412.415990739459,
+              "count": 3410,
+              "signed_fraction_of_abs": 0.07786616749290039,
+              "absolute_fraction": 0.1312273364434897
+            },
+            {
+              "signed": 151.82865137744128,
+              "absolute": 245.72268578191265,
+              "sum_squared": 245.44568417835657,
+              "count": 246,
+              "signed_fraction_of_abs": 0.005842607661206963,
+              "absolute_fraction": 0.009455799241163944
+            },
+            {
+              "signed": 1.9977454128610677,
+              "absolute": 5.993236238583203,
+              "sum_squared": 5.986480101911157,
+              "count": 6,
+              "signed_fraction_of_abs": 7.687641659482839e-05,
+              "absolute_fraction": 0.00023062924978448521
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 4682.372669421278,
+              "absolute": 7095.582050915661,
+              "sum_squared": 7113.891458982695,
+              "count": 7089,
+              "signed_fraction_of_abs": 0.18018513754019688,
+              "absolute_fraction": 0.27304926754794384
+            },
+            {
+              "signed": 6694.288559083673,
+              "absolute": 10847.753182474118,
+              "sum_squared": 10849.35657981665,
+              "count": 10849,
+              "signed_fraction_of_abs": 0.2576068565899392,
+              "absolute_fraction": 0.4174387724306849
+            },
+            {
+              "signed": 3693.419994921623,
+              "absolute": 6401.2532155231365,
+              "sum_squared": 6399.3008868370935,
+              "count": 6404,
+              "signed_fraction_of_abs": 0.14212866782791103,
+              "absolute_fraction": 0.24633039112865415
+            },
+            {
+              "signed": 802.8118186414139,
+              "absolute": 1420.115151215509,
+              "sum_squared": 1419.4680822110292,
+              "count": 1421,
+              "signed_fraction_of_abs": 0.03089347392305651,
+              "absolute_fraction": 0.054648286650859454
+            },
+            {
+              "signed": 110.87487041378911,
+              "absolute": 206.76665023112133,
+              "sum_squared": 206.53356351593425,
+              "count": 207,
+              "signed_fraction_of_abs": 0.00426664112101297,
+              "absolute_fraction": 0.007956709117564771
+            },
+            {
+              "signed": 6.9921089450137375,
+              "absolute": 14.983090596458009,
+              "sum_squared": 14.966200254777895,
+              "count": 15,
+              "signed_fraction_of_abs": 0.0002690674580818994,
+              "absolute_fraction": 0.0005765731244612131
+            },
+            {
+              "signed": 0.0,
+              "absolute": 0.0,
+              "sum_squared": 0.0,
+              "count": 0,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "observed_maximum": {
+      "2500": {
+        "events": 2242,
+        "negative_events": 469,
+        "signed_over_absolute": 0.5802926621371195,
+        "mean_absolute_weight": 1.0001733965270179,
+        "max_absolute_weight": 1.9143471059354538,
+        "weight_effective_count": 2239.9388793327394,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 182.5389504876131,
+              "absolute": 338.2694136782006,
+              "sum_squared": 338.931310857588,
+              "count": 338,
+              "signed_fraction_of_abs": 0.08140379320021524,
+              "absolute_fraction": 0.15085226097477147
+            },
+            {
+              "signed": 403.95074075607477,
+              "absolute": 725.2854860424809,
+              "sum_squared": 727.9549956288479,
+              "count": 724,
+              "signed_fraction_of_abs": 0.1801430460498494,
+              "absolute_fraction": 0.3234432407943869
+            },
+            {
+              "signed": 568.0060355583112,
+              "absolute": 892.3297339101915,
+              "sum_squared": 891.9459041521985,
+              "count": 893,
+              "signed_fraction_of_abs": 0.2533039974840905,
+              "absolute_fraction": 0.3979371248250796
+            },
+            {
+              "signed": 133.7684747919163,
+              "absolute": 263.54386078407254,
+              "sum_squared": 263.08850968551144,
+              "count": 264,
+              "signed_fraction_of_abs": 0.0596544530884015,
+              "absolute_fraction": 0.11752817623386502
+            },
+            {
+              "signed": 11.979266399276066,
+              "absolute": 21.961988398672794,
+              "sum_squared": 21.92404247379266,
+              "count": 22,
+              "signed_fraction_of_abs": 0.005342189828812065,
+              "absolute_fraction": 0.009794014686155456
+            },
+            {
+              "signed": 0.9982721999396724,
+              "absolute": 0.9982721999396724,
+              "sum_squared": 0.9965473851723933,
+              "count": 1,
+              "signed_fraction_of_abs": 0.0004451824857343389,
+              "absolute_fraction": 0.0004451824857343389
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 200.22073222157172,
+              "absolute": 343.092902488857,
+              "sum_squared": 345.2047668525586,
+              "count": 342,
+              "signed_fraction_of_abs": 0.089289036869238,
+              "absolute_fraction": 0.15300331029655923
+            },
+            {
+              "signed": 513.5694129452951,
+              "absolute": 806.7185243289531,
+              "sum_squared": 808.2616416463559,
+              "count": 806,
+              "signed_fraction_of_abs": 0.22902782213701667,
+              "absolute_fraction": 0.35975854879100555
+            },
+            {
+              "signed": 410.7574156369391,
+              "absolute": 736.194152817282,
+              "sum_squared": 735.6074851776482,
+              "count": 737,
+              "signed_fraction_of_abs": 0.18317850315586898,
+              "absolute_fraction": 0.3283079935052678
+            },
+            {
+              "signed": 139.75810799155428,
+              "absolute": 279.51621598310714,
+              "sum_squared": 279.0332678482697,
+              "count": 280,
+              "signed_fraction_of_abs": 0.062325548002807506,
+              "absolute_fraction": 0.12465109600561439
+            },
+            {
+              "signed": 30.946438198129858,
+              "absolute": 64.88769299607866,
+              "sum_squared": 64.77558003620553,
+              "count": 65,
+              "signed_fraction_of_abs": 0.013800657057764511,
+              "absolute_fraction": 0.028936861572732005
+            },
+            {
+              "signed": 5.989633199638034,
+              "absolute": 11.979266399276066,
+              "sum_squared": 11.95856862206872,
+              "count": 12,
+              "signed_fraction_of_abs": 0.002671094914406033,
+              "absolute_fraction": 0.005342189828812065
+            },
+            {
+              "signed": 0.0,
+              "absolute": 0.0,
+              "sum_squared": 0.0,
+              "count": 0,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.0
+            }
+          ]
+        }
+      },
+      "30000": {
+        "events": 24655,
+        "negative_events": 5139,
+        "signed_over_absolute": 0.5828492220492075,
+        "mean_absolute_weight": 0.999896112558646,
+        "max_absolute_weight": 3.8096037351994476,
+        "weight_effective_count": 24627.26563711526,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 2096.5065452546914,
+              "absolute": 3648.0540489778514,
+              "sum_squared": 3651.9466948863023,
+              "count": 3648,
+              "signed_fraction_of_abs": 0.0850425621003678,
+              "absolute_fraction": 0.14797943927621177
+            },
+            {
+              "signed": 4435.360774856255,
+              "absolute": 7680.303903200522,
+              "sum_squared": 7691.21917909992,
+              "count": 7678,
+              "signed_fraction_of_abs": 0.17991570071030977,
+              "absolute_fraction": 0.31154337348290045
+            },
+            {
+              "signed": 5957.946467126486,
+              "absolute": 10130.428876907925,
+              "sum_squared": 10130.700713676577,
+              "count": 10136,
+              "signed_fraction_of_abs": 0.24167777275396862,
+              "absolute_fraction": 0.4109300916888581
+            },
+            {
+              "signed": 1779.9560746964778,
+              "absolute": 3042.827489649838,
+              "sum_squared": 3053.121939180572,
+              "count": 3042,
+              "signed_fraction_of_abs": 0.0722020283508883,
+              "absolute_fraction": 0.1234290664796452
+            },
+            {
+              "signed": 96.88715649972319,
+              "absolute": 148.8266630768944,
+              "sum_squared": 148.65352780270769,
+              "count": 149,
+              "signed_fraction_of_abs": 0.003930124636150275,
+              "absolute_fraction": 0.006036995575117433
+            },
+            {
+              "signed": 1.9976733298912004,
+              "absolute": 1.9976733298912004,
+              "sum_squared": 1.9953493664792983,
+              "count": 2,
+              "signed_fraction_of_abs": 8.103349765258301e-05,
+              "absolute_fraction": 8.103349765258301e-05
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 2405.283329159873,
+              "absolute": 3860.1081203908125,
+              "sum_squared": 3877.871705108183,
+              "count": 3855,
+              "signed_fraction_of_abs": 0.09756776450426405,
+              "absolute_fraction": 0.1565811875405282
+            },
+            {
+              "signed": 5164.406129285153,
+              "absolute": 8656.910142142782,
+              "sum_squared": 8654.900251367295,
+              "count": 8662,
+              "signed_fraction_of_abs": 0.20948865146895965,
+              "absolute_fraction": 0.35115836868090694
+            },
+            {
+              "signed": 4755.330578626172,
+              "absolute": 8212.085121029035,
+              "sum_squared": 8212.249055992097,
+              "count": 8217,
+              "signed_fraction_of_abs": 0.19289493608113945,
+              "absolute_fraction": 0.3331145139801015
+            },
+            {
+              "signed": 1611.606716467118,
+              "absolute": 3058.5803412857204,
+              "sum_squared": 3064.9887204250717,
+              "count": 3057,
+              "signed_fraction_of_abs": 0.0653731153745932,
+              "absolute_fraction": 0.12406806418109988
+            },
+            {
+              "signed": 405.05934827147775,
+              "absolute": 773.8607937855522,
+              "sum_squared": 776.8392749448345,
+              "count": 773,
+              "signed_fraction_of_abs": 0.016430802402063033,
+              "absolute_fraction": 0.031390841474598294
+            },
+            {
+              "signed": 26.968589953531197,
+              "absolute": 90.89413651004959,
+              "sum_squared": 90.78839617480818,
+              "count": 91,
+              "signed_fraction_of_abs": 0.0010939522183098702,
+              "absolute_fraction": 0.0036870241431925257
+            },
+            {
+              "signed": 0.0,
+              "absolute": 0.0,
+              "sum_squared": 0.0,
+              "count": 0,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.0
+            }
+          ]
+        }
+      },
+      "gf1_large": {
+        "events": 25985,
+        "negative_events": 5003,
+        "signed_over_absolute": 0.6147001423715546,
+        "mean_absolute_weight": 1.0000628241633054,
+        "max_absolute_weight": 2.943941528331191,
+        "weight_effective_count": 25969.232284141595,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 2500.6399074469496,
+              "absolute": 3932.8092963640097,
+              "sum_squared": 3939.145874400209,
+              "count": 3931,
+              "signed_fraction_of_abs": 0.09622793214185608,
+              "absolute_fraction": 0.15133970507723146
+            },
+            {
+              "signed": 5064.208618351947,
+              "absolute": 8175.635816945811,
+              "sum_squared": 8187.144426175921,
+              "count": 8172,
+              "signed_fraction_of_abs": 0.19487744789952818,
+              "absolute_fraction": 0.31460928311457803
+            },
+            {
+              "signed": 6232.233789047578,
+              "absolute": 10210.18918761574,
+              "sum_squared": 10209.286395550682,
+              "count": 10213,
+              "signed_fraction_of_abs": 0.23982460183838997,
+              "absolute_fraction": 0.39290158865955943
+            },
+            {
+              "signed": 2050.031344843307,
+              "absolute": 3433.233131018334,
+              "sum_squared": 3433.93730743325,
+              "count": 3434,
+              "signed_fraction_of_abs": 0.0788879184695027,
+              "absolute_fraction": 0.1321153532641577
+            },
+            {
+              "signed": 121.87802799636843,
+              "absolute": 227.772052321083,
+              "sum_squared": 227.54433253753461,
+              "count": 228,
+              "signed_fraction_of_abs": 0.004690027769568652,
+              "absolute_fraction": 0.008764969930013586
+            },
+            {
+              "signed": 4.995001147392161,
+              "absolute": 6.993001606349026,
+              "sum_squared": 6.9860102094857215,
+              "count": 7,
+              "signed_fraction_of_abs": 0.00019221425285117472,
+              "absolute_fraction": 0.00026909995399164465
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 4784.413897449001,
+              "absolute": 7140.687305948852,
+              "sum_squared": 7152.201985527194,
+              "count": 7138,
+              "signed_fraction_of_abs": 0.184110576853234,
+              "absolute_fraction": 0.2747830951096811
+            },
+            {
+              "signed": 6542.984253748154,
+              "absolute": 10838.788143185462,
+              "sum_squared": 10845.744856068373,
+              "count": 10837,
+              "signed_fraction_of_abs": 0.25178269086240573,
+              "absolute_fraction": 0.417090908145691
+            },
+            {
+              "signed": 3737.665523954063,
+              "absolute": 6422.3243993496,
+              "sum_squared": 6420.646224588329,
+              "count": 6425,
+              "signed_fraction_of_abs": 0.14383031452745731,
+              "absolute_fraction": 0.247139540024601
+            },
+            {
+              "signed": 805.631420345479,
+              "absolute": 1356.456154536582,
+              "sum_squared": 1356.3339588472593,
+              "count": 1357,
+              "signed_fraction_of_abs": 0.031001762955747175,
+              "absolute_fraction": 0.052198227503060995
+            },
+            {
+              "signed": 94.30059127155653,
+              "absolute": 205.39947757197328,
+              "sum_squared": 206.1632877304798,
+              "count": 205,
+              "signed_fraction_of_abs": 0.003628811517720993,
+              "absolute_fraction": 0.007904043653349497
+            },
+            {
+              "signed": 8.99100206530589,
+              "absolute": 22.977005278003944,
+              "sum_squared": 22.954033545453083,
+              "count": 23,
+              "signed_fraction_of_abs": 0.00034598565513211456,
+              "absolute_fraction": 0.0008841855631154039
+            },
+            {
+              "signed": 0.0,
+              "absolute": 0.0,
+              "sum_squared": 0.0,
+              "count": 0,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "combined": {
+      "gf1_large": {
+        "events": 25985,
+        "negative_events": 5022,
+        "signed_over_absolute": 0.6132459822343955,
+        "mean_absolute_weight": 0.9999824909166637,
+        "max_absolute_weight": 8.642825932026456,
+        "weight_effective_count": 25909.72079410751,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 2505.40274743886,
+              "absolute": 3978.9544675113193,
+              "sum_squared": 3978.5592746326583,
+              "count": 3981,
+              "signed_fraction_of_abs": 0.09641895768760614,
+              "absolute_fraction": 0.15312773279109193
+            },
+            {
+              "signed": 4929.164586679061,
+              "absolute": 7980.301613423786,
+              "sum_squared": 8050.74598816138,
+              "count": 7974,
+              "signed_fraction_of_abs": 0.18969601282831397,
+              "absolute_fraction": 0.30711723469833874
+            },
+            {
+              "signed": 6324.6325186795975,
+              "absolute": 10383.311586105265,
+              "sum_squared": 10387.149568887819,
+              "count": 10387,
+              "signed_fraction_of_abs": 0.24339977907009439,
+              "absolute_fraction": 0.39959566640586414
+            },
+            {
+              "signed": 2026.0173313049204,
+              "absolute": 3386.348844650285,
+              "sum_squared": 3387.87029999035,
+              "count": 3387,
+              "signed_fraction_of_abs": 0.07797009065354389,
+              "absolute_fraction": 0.13032165239763618
+            },
+            {
+              "signed": 149.70065356203483,
+              "absolute": 251.63512396134664,
+              "sum_squared": 251.2734181883036,
+              "count": 252,
+              "signed_fraction_of_abs": 0.0057611419945794795,
+              "absolute_fraction": 0.009684030399801695
+            },
+            {
+              "signed": 0.0,
+              "absolute": 3.993390821128178,
+              "sum_squared": 3.9867925625676963,
+              "count": 4,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.000153683307406778
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 4679.052575735122,
+              "absolute": 7157.224510359299,
+              "sum_squared": 7238.1524846143075,
+              "count": 7145,
+              "signed_fraction_of_abs": 0.18007059854112292,
+              "absolute_fraction": 0.2754415943426562
+            },
+            {
+              "signed": 6677.469511203502,
+              "absolute": 10873.763285850207,
+              "sum_squared": 10872.28270034215,
+              "count": 10880,
+              "signed_fraction_of_abs": 0.25697850412240847,
+              "absolute_fraction": 0.4184704128847937
+            },
+            {
+              "signed": 3684.218880865067,
+              "absolute": 6331.99178955027,
+              "sum_squared": 6328.7206076455395,
+              "count": 6337,
+              "signed_fraction_of_abs": 0.14178500632249239,
+              "absolute_fraction": 0.24368299630030474
+            },
+            {
+              "signed": 764.443170404358,
+              "absolute": 1395.8873570897847,
+              "sum_squared": 1395.0702832898842,
+              "count": 1397,
+              "signed_fraction_of_abs": 0.029419147790567344,
+              "absolute_fraction": 0.053719907570744276
+            },
+            {
+              "signed": 122.74526551941966,
+              "absolute": 212.69956345534695,
+              "sum_squared": 212.40219070326907,
+              "count": 213,
+              "signed_fraction_of_abs": 0.00472377966958373,
+              "absolute_fraction": 0.008185618152585611
+            },
+            {
+              "signed": 6.988433936974311,
+              "absolute": 12.97852016866658,
+              "sum_squared": 12.95707582834501,
+              "count": 13,
+              "signed_fraction_of_abs": 0.00026894578796186154,
+              "absolute_fraction": 0.0004994707490720286
+            },
+            {
+              "signed": 0.0,
+              "absolute": 0.0,
+              "sum_squared": 0.0,
+              "count": 0,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "baseline_seed59727": {
+      "gf1_large": {
+        "events": 25985,
+        "negative_events": 5094,
+        "signed_over_absolute": 0.6071396435201037,
+        "mean_absolute_weight": 0.9999734134502186,
+        "max_absolute_weight": 2.98407345131541,
+        "weight_effective_count": 25962.69573804102,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 2536.5499713652102,
+              "absolute": 4036.6294322834283,
+              "sum_squared": 4036.730427574101,
+              "count": 4038,
+              "signed_fraction_of_abs": 0.09761852650645725,
+              "absolute_fraction": 0.155348730236141
+            },
+            {
+              "signed": 4916.927067369441,
+              "absolute": 7908.940627570958,
+              "sum_squared": 7909.844569096442,
+              "count": 7911,
+              "signed_fraction_of_abs": 0.18922677679319935,
+              "absolute_fraction": 0.30437371193400853
+            },
+            {
+              "signed": 6165.588915561155,
+              "absolute": 10391.972921957258,
+              "sum_squared": 10409.043198515377,
+              "count": 10388,
+              "signed_fraction_of_abs": 0.2372812330827793,
+              "absolute_fraction": 0.3999326232829856
+            },
+            {
+              "signed": 2014.739264758843,
+              "absolute": 3398.6106536917487,
+              "sum_squared": 3401.865158310745,
+              "count": 3400,
+              "signed_fraction_of_abs": 0.07753676471613422,
+              "absolute_fraction": 0.13079472824419605
+            },
+            {
+              "signed": 140.30168130754137,
+              "absolute": 242.16363346606764,
+              "sum_squared": 242.47342812936103,
+              "count": 242,
+              "signed_fraction_of_abs": 0.005399477065397344,
+              "absolute_fraction": 0.009319610234086614
+            },
+            {
+              "signed": 1.9972931795789346,
+              "absolute": 5.991879538736804,
+              "sum_squared": 5.983770067788796,
+              "count": 6,
+              "signed_fraction_of_abs": 7.686535624880874e-05,
+              "absolute_fraction": 0.0002305960687464262
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 4685.965529246823,
+              "absolute": 7198.313839206277,
+              "sum_squared": 7207.54993377377,
+              "count": 7196,
+              "signed_fraction_of_abs": 0.18033827655243326,
+              "absolute_fraction": 0.27702540783620283
+            },
+            {
+              "signed": 6603.166944480346,
+              "absolute": 10724.230249006847,
+              "sum_squared": 10730.129710114552,
+              "count": 10725,
+              "signed_fraction_of_abs": 0.2541213201683497,
+              "absolute_fraction": 0.4127194680342042
+            },
+            {
+              "signed": 3621.5231338395856,
+              "absolute": 6525.478750496114,
+              "sum_squared": 6531.888657619154,
+              "count": 6527,
+              "signed_fraction_of_abs": 0.13937346239001694,
+              "absolute_fraction": 0.2511315083730762
+            },
+            {
+              "signed": 756.5961076881241,
+              "absolute": 1313.588120275162,
+              "sum_squared": 1313.9754626663705,
+              "count": 1314,
+              "signed_fraction_of_abs": 0.029117422493862448,
+              "absolute_fraction": 0.050553128534910195
+            },
+            {
+              "signed": 99.86465897894689,
+              "absolute": 201.72661113747316,
+              "sum_squared": 201.45359228222216,
+              "count": 202,
+              "signed_fraction_of_abs": 0.003843267812440443,
+              "absolute_fraction": 0.007763400981129712
+            },
+            {
+              "signed": 8.987819308105205,
+              "absolute": 20.971578385578812,
+              "sum_squared": 20.943195237260785,
+              "count": 21,
+              "signed_fraction_of_abs": 0.0003458941031196393,
+              "absolute_fraction": 0.0008070862406124918
+            },
+            {
+              "signed": 0.0,
+              "absolute": 0.0,
+              "sum_squared": 0.0,
+              "count": 0,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "baseline_seed39727": {
+      "30000": {
+        "events": 24655,
+        "negative_events": 5269,
+        "signed_over_absolute": 0.5723444175258255,
+        "mean_absolute_weight": 1.0000011677336174,
+        "max_absolute_weight": 3.564306559780704,
+        "weight_effective_count": 24620.659045185977,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 2101.5582192171914,
+              "absolute": 3703.298120112746,
+              "sum_squared": 3700.8234080468937,
+              "count": 3707,
+              "signed_fraction_of_abs": 0.0852385222129335,
+              "absolute_fraction": 0.15020457496053885
+            },
+            {
+              "signed": 4504.585490505057,
+              "absolute": 7636.452304328126,
+              "sum_squared": 7652.226582961355,
+              "count": 7632,
+              "signed_fraction_of_abs": 0.18270453175239465,
+              "absolute_fraction": 0.309732037598721
+            },
+            {
+              "signed": 5658.956309246349,
+              "absolute": 10013.026266822066,
+              "sum_squared": 10030.780899997571,
+              "count": 10011,
+              "signed_fraction_of_abs": 0.22952543910365214,
+              "absolute_fraction": 0.4061251094823904
+            },
+            {
+              "signed": 1753.242612853318,
+              "absolute": 3097.636837180065,
+              "sum_squared": 3101.3843778091305,
+              "count": 3100,
+              "signed_fraction_of_abs": 0.07111095378362889,
+              "absolute_fraction": 0.12563914905575418
+            },
+            {
+              "signed": 89.83109065147612,
+              "absolute": 201.62089235109073,
+              "sum_squared": 201.24249620024884,
+              "count": 202,
+              "signed_fraction_of_abs": 0.0036435200061981005,
+              "absolute_fraction": 0.00817767823613351
+            },
+            {
+              "signed": 2.994369688382541,
+              "absolute": 2.994369688382541,
+              "sum_squared": 2.9887499435680516,
+              "count": 3,
+              "signed_fraction_of_abs": 0.00012145066687327017,
+              "absolute_fraction": 0.00012145066687327017
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 2520.245550949422,
+              "absolute": 3899.923534106752,
+              "sum_squared": 3925.5822790776615,
+              "count": 3893,
+              "signed_fraction_of_abs": 0.10222034508121698,
+              "absolute_fraction": 0.1581796382088929
+            },
+            {
+              "signed": 5143.672080160349,
+              "absolute": 8559.228138251287,
+              "sum_squared": 8560.505622601782,
+              "count": 8563,
+              "signed_fraction_of_abs": 0.20862567729582468,
+              "absolute_fraction": 0.34715952721008
+            },
+            {
+              "signed": 4457.715841479954,
+              "absolute": 8290.524316695124,
+              "sum_squared": 8287.900868871371,
+              "count": 8297,
+              "signed_fraction_of_abs": 0.18080351393475513,
+              "absolute_fraction": 0.3362609870445134
+            },
+            {
+              "signed": 1585.2323668135991,
+              "absolute": 3110.2596594527595,
+              "sum_squared": 3115.558228148803,
+              "count": 3109,
+              "signed_fraction_of_abs": 0.0642965124999649,
+              "absolute_fraction": 0.12615112664782954
+            },
+            {
+              "signed": 346.41110544947753,
+              "absolute": 699.2733119479752,
+              "sum_squared": 704.2595180639897,
+              "count": 697,
+              "signed_fraction_of_abs": 0.01405032248769242,
+              "absolute_fraction": 0.028362299549137077
+            },
+            {
+              "signed": 56.89302407926824,
+              "absolute": 94.82170679878034,
+              "sum_squared": 94.64374821298831,
+              "count": 95,
+              "signed_fraction_of_abs": 0.0023075626705921317,
+              "absolute_fraction": 0.003845937784320217
+            },
+            {
+              "signed": 0.998123229460847,
+              "absolute": 0.998123229460847,
+              "sum_squared": 0.9962499811893506,
+              "count": 1,
+              "signed_fraction_of_abs": 4.048355562442339e-05,
+              "absolute_fraction": 4.048355562442339e-05
+            }
+          ]
+        }
+      }
+    },
+    "combined_seed39727": {
+      "30000": {
+        "events": 24655,
+        "negative_events": 5177,
+        "signed_over_absolute": 0.5790171621212848,
+        "mean_absolute_weight": 1.0000293673184537,
+        "max_absolute_weight": 11.937348248877315,
+        "weight_effective_count": 24460.00416316646,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 2168.2523657163756,
+              "absolute": 3605.437194698191,
+              "sum_squared": 3599.7854052060584,
+              "count": 3612,
+              "signed_fraction_of_abs": 0.08794113534084749,
+              "absolute_fraction": 0.14623124379579433
+            },
+            {
+              "signed": 4441.432218281769,
+              "absolute": 7646.6732650224785,
+              "sum_squared": 7667.92544900664,
+              "count": 7645,
+              "signed_fraction_of_abs": 0.18013797563000516,
+              "absolute_fraction": 0.3101378507129666
+            },
+            {
+              "signed": 5806.47807403971,
+              "absolute": 10079.965685120564,
+              "sum_squared": 10264.050134207318,
+              "count": 10069,
+              "signed_fraction_of_abs": 0.2355022331517584,
+              "absolute_fraction": 0.4088286218718877
+            },
+            {
+              "signed": 1753.1860555905191,
+              "absolute": 3131.1193015598433,
+              "sum_squared": 3129.1906678788764,
+              "count": 3136,
+              "signed_fraction_of_abs": 0.07110665466352822,
+              "absolute_fraction": 0.12699360582772334
+            },
+            {
+              "signed": 105.7410990242261,
+              "absolute": 189.53593221323632,
+              "sum_squared": 189.07299789442263,
+              "count": 190,
+              "signed_fraction_of_abs": 0.004288703864647739,
+              "absolute_fraction": 0.007687299380029002
+            },
+            {
+              "signed": 0.9975575379643972,
+              "absolute": 2.9926726138931916,
+              "sum_squared": 2.985363124648769,
+              "count": 3,
+              "signed_fraction_of_abs": 4.045947042120509e-05,
+              "absolute_fraction": 0.00012137841126361527
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 2510.4767204480595,
+              "absolute": 3878.921721154096,
+              "sum_squared": 4027.4553715168176,
+              "count": 3865,
+              "signed_fraction_of_abs": 0.10182125315935145,
+              "absolute_fraction": 0.15732337501398866
+            },
+            {
+              "signed": 5213.845375483836,
+              "absolute": 8649.479010595884,
+              "sum_squared": 8673.927333164476,
+              "count": 8655,
+              "signed_fraction_of_abs": 0.21146592023211594,
+              "absolute_fraction": 0.3508101807361895
+            },
+            {
+              "signed": 4532.311334122719,
+              "absolute": 8190.5479077886275,
+              "sum_squared": 8183.08841122971,
+              "count": 8203,
+              "signed_fraction_of_abs": 0.1838238992578044,
+              "absolute_fraction": 0.3321966084130421
+            },
+            {
+              "signed": 1580.30865729138,
+              "absolute": 3074.76896464175,
+              "sum_squared": 3102.9446225357933,
+              "count": 3071,
+              "signed_fraction_of_abs": 0.06409500098262691,
+              "absolute_fraction": 0.1247081188227182
+            },
+            {
+              "signed": 392.2600785604524,
+              "absolute": 757.2629055606463,
+              "sum_squared": 761.1065695087469,
+              "count": 756,
+              "signed_fraction_of_abs": 0.015909493379521366,
+              "absolute_fraction": 0.030713472619461356
+            },
+            {
+              "signed": 45.88764674636227,
+              "absolute": 103.74598394829731,
+              "sum_squared": 103.49258832115746,
+              "count": 104,
+              "signed_fraction_of_abs": 0.0018611356393754342,
+              "absolute_fraction": 0.004207784923805329
+            },
+            {
+              "signed": 0.9975575379643972,
+              "absolute": 0.9975575379643972,
+              "sum_squared": 0.9951210415495897,
+              "count": 1,
+              "signed_fraction_of_abs": 4.045947042120509e-05,
+              "absolute_fraction": 4.045947042120509e-05
+            }
+          ]
+        }
+      }
+    },
+    "combined_seed59727": {
+      "gf1_large": {
+        "events": 25985,
+        "negative_events": 5065,
+        "signed_over_absolute": 0.6100063680951018,
+        "mean_absolute_weight": 1.0000942131336004,
+        "max_absolute_weight": 6.911829158062893,
+        "weight_effective_count": 25912.136683067,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 2467.6395695857336,
+              "absolute": 4005.204835893507,
+              "sum_squared": 4017.393731338236,
+              "count": 4004,
+              "signed_fraction_of_abs": 0.09495505512527515,
+              "absolute_fraction": 0.15412074383461666
+            },
+            {
+              "signed": 4869.733434347684,
+              "absolute": 7874.022120654924,
+              "sum_squared": 7921.378710023604,
+              "count": 7870,
+              "signed_fraction_of_abs": 0.18738790397234079,
+              "absolute_fraction": 0.30299327897791173
+            },
+            {
+              "signed": 6279.368724453225,
+              "absolute": 10329.208441999333,
+              "sum_squared": 10345.175125470892,
+              "count": 10330,
+              "signed_fraction_of_abs": 0.241630832448713,
+              "absolute_fraction": 0.3974691316751588
+            },
+            {
+              "signed": 2085.0423432907855,
+              "absolute": 3536.4556380662466,
+              "sum_squared": 3536.9159024790297,
+              "count": 3538,
+              "signed_fraction_of_abs": 0.08023266974882685,
+              "absolute_fraction": 0.13608322066137285
+            },
+            {
+              "signed": 146.7320677860489,
+              "absolute": 238.56438231881418,
+              "sum_squared": 238.12955862408958,
+              "count": 239,
+              "signed_fraction_of_abs": 0.005646266884757786,
+              "absolute_fraction": 0.009179984935082385
+            },
+            {
+              "signed": 3.992709327511537,
+              "absolute": 3.992709327511537,
+              "sum_squared": 3.9854319434994077,
+              "count": 4,
+              "signed_fraction_of_abs": 0.00015363991523150447,
+              "absolute_fraction": 0.00015363991523150447
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 4591.148192453316,
+              "absolute": 7100.258240051204,
+              "sum_squared": 7173.8372987018465,
+              "count": 7085,
+              "signed_fraction_of_abs": 0.17666791174689242,
+              "absolute_fraction": 0.2732187556470966
+            },
+            {
+              "signed": 6617.698665955495,
+              "absolute": 10732.941569397448,
+              "sum_squared": 10741.576792082882,
+              "count": 10737,
+              "signed_fraction_of_abs": 0.25464980760288125,
+              "absolute_fraction": 0.41300482896275886
+            },
+            {
+              "signed": 3696.3865655623495,
+              "absolute": 6464.328959074806,
+              "sum_squared": 6459.325187804024,
+              "count": 6471,
+              "signed_fraction_of_abs": 0.14223738118943502,
+              "absolute_fraction": 0.24874812360052595
+            },
+            {
+              "signed": 819.5087263392022,
+              "absolute": 1448.3604454222996,
+              "sum_squared": 1447.1205487085333,
+              "count": 1450,
+              "signed_fraction_of_abs": 0.03153479026851834,
+              "absolute_fraction": 0.05573307691748145
+            },
+            {
+              "signed": 111.79586117032296,
+              "absolute": 223.59172234064593,
+              "sum_squared": 223.1841888359668,
+              "count": 224,
+              "signed_fraction_of_abs": 0.004301917626482122,
+              "absolute_fraction": 0.008603835252964244
+            },
+            {
+              "signed": 15.970837310046143,
+              "absolute": 17.96719197380191,
+              "sum_squared": 17.934443745747334,
+              "count": 18,
+              "signed_fraction_of_abs": 0.0006145596609260177,
+              "absolute_fraction": 0.0006913796185417698
+            },
+            {
+              "signed": 0.0,
+              "absolute": 0.0,
+              "sum_squared": 0.0,
+              "count": 0,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "quantile_seed59727": {
+      "gf1_large": {
+        "events": 25985,
+        "negative_events": 5082,
+        "signed_over_absolute": 0.608041381440542,
+        "mean_absolute_weight": 0.9999655375831116,
+        "max_absolute_weight": 4.0378791973145605,
+        "weight_effective_count": 25935.790428551223,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 2492.7082272831262,
+              "absolute": 3990.2579471320005,
+              "sum_squared": 3991.3311580531304,
+              "count": 3993,
+              "signed_fraction_of_abs": 0.09593204290913308,
+              "absolute_fraction": 0.15356534407558564
+            },
+            {
+              "signed": 4853.076789432512,
+              "absolute": 7933.477552240733,
+              "sum_squared": 7936.74802362807,
+              "count": 7937,
+              "signed_fraction_of_abs": 0.1867709849510108,
+              "absolute_fraction": 0.30532041441116403
+            },
+            {
+              "signed": 6253.893119161921,
+              "absolute": 10374.073982399397,
+              "sum_squared": 10404.967413651648,
+              "count": 10370,
+              "signed_fraction_of_abs": 0.2406814951264773,
+              "absolute_fraction": 0.39924693132126565
+            },
+            {
+              "signed": 2070.9523874143133,
+              "absolute": 3445.7331849779102,
+              "sum_squared": 3459.3365027946415,
+              "count": 3444,
+              "signed_fraction_of_abs": 0.07970074119293873,
+              "absolute_fraction": 0.13260927217101834
+            },
+            {
+              "signed": 127.78221916886798,
+              "absolute": 239.56377771014706,
+              "sum_squared": 239.1293595406888,
+              "count": 240,
+              "signed_fraction_of_abs": 0.0049177072543676245,
+              "absolute_fraction": 0.009219628013910162
+            },
+            {
+              "signed": 0.9980496298328437,
+              "absolute": 0.9980496298328437,
+              "sum_squared": 0.9961030636094764,
+              "count": 1,
+              "signed_fraction_of_abs": 3.841000678162959e-05,
+              "absolute_fraction": 3.841000678162959e-05
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 4574.471998225337,
+              "absolute": 7138.739637272603,
+              "sum_squared": 7159.58430609266,
+              "count": 7134,
+              "signed_fraction_of_abs": 0.17604886092051109,
+              "absolute_fraction": 0.2747348725792848
+            },
+            {
+              "signed": 6635.354900594012,
+              "absolute": 10727.894289596978,
+              "sum_squared": 10728.93760576641,
+              "count": 10734,
+              "signed_fraction_of_abs": 0.25536207730773924,
+              "absolute_fraction": 0.4128637295171765
+            },
+            {
+              "signed": 3710.7753722140333,
+              "absolute": 6537.424923219506,
+              "sum_squared": 6563.482320544213,
+              "count": 6536,
+              "signed_fraction_of_abs": 0.1428094384802453,
+              "absolute_fraction": 0.2515932355761817
+            },
+            {
+              "signed": 776.0094091841578,
+              "absolute": 1369.4571721066327,
+              "sum_squared": 1370.326581906913,
+              "count": 1370,
+              "signed_fraction_of_abs": 0.02986477403369606,
+              "absolute_fraction": 0.052703650896175167
+            },
+            {
+              "signed": 89.82446668495604,
+              "absolute": 193.62162818757233,
+              "sum_squared": 193.24399434023812,
+              "count": 194,
+              "signed_fraction_of_abs": 0.0034569006103466675,
+              "absolute_fraction": 0.0074515413156361655
+            },
+            {
+              "signed": 12.974645187826969,
+              "absolute": 16.966843707158343,
+              "sum_squared": 16.9337520813611,
+              "count": 17,
+              "signed_fraction_of_abs": 0.0004993300881611847,
+              "absolute_fraction": 0.0006529701152877031
+            },
+            {
+              "signed": 0.0,
+              "absolute": 0.0,
+              "sum_squared": 0.0,
+              "count": 0,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.0
+            }
+          ]
+        }
+      }
+    },
+    "adopted": {
+      "2500": {
+        "events": 2242,
+        "negative_events": 473,
+        "signed_over_absolute": 0.5762303727892514,
+        "mean_absolute_weight": 1.0002029984636953,
+        "max_absolute_weight": 2.355958629960233,
+        "weight_effective_count": 2238.2379032418085,
+        "bins": {
+          "top_pt": [
+            {
+              "signed": 186.92459702823632,
+              "absolute": 340.9930392113628,
+              "sum_squared": 341.15765210857614,
+              "count": 341,
+              "signed_fraction_of_abs": 0.08335711834233207,
+              "absolute_fraction": 0.15206236940106588
+            },
+            {
+              "signed": 401.37941837962734,
+              "absolute": 712.311731981386,
+              "sum_squared": 718.1285512752015,
+              "count": 710,
+              "signed_fraction_of_abs": 0.17899105955003325,
+              "absolute_fraction": 0.3176481548355817
+            },
+            {
+              "signed": 552.1741963963614,
+              "absolute": 903.7288627001508,
+              "sum_squared": 902.5499369220419,
+              "count": 905,
+              "signed_fraction_of_abs": 0.2462364534488781,
+              "absolute_fraction": 0.4030086727756763
+            },
+            {
+              "signed": 138.71883539902188,
+              "absolute": 262.46801230174634,
+              "sum_squared": 261.9371006906086,
+              "count": 263,
+              "signed_fraction_of_abs": 0.061860250403107976,
+              "absolute_fraction": 0.11704493421595245
+            },
+            {
+              "signed": 12.973704030124383,
+              "absolute": 22.953476360989292,
+              "sum_squared": 22.907046828456266,
+              "count": 23,
+              "signed_fraction_of_abs": 0.0057854910448950055,
+              "absolute_fraction": 0.010235868771737317
+            },
+            {
+              "signed": 0.0,
+              "absolute": 0.0,
+              "sum_squared": 0.0,
+              "count": 0,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.0
+            }
+          ],
+          "ttbar_mass": [
+            {
+              "signed": 204.5101184376982,
+              "absolute": 346.3733142260432,
+              "sum_squared": 349.81544333031854,
+              "count": 345,
+              "signed_fraction_of_abs": 0.09119920232991288,
+              "absolute_fraction": 0.154461648191782
+            },
+            {
+              "signed": 518.8302897538266,
+              "absolute": 811.961208620524,
+              "sum_squared": 812.6347082754216,
+              "count": 812,
+              "signed_fraction_of_abs": 0.23136707822386376,
+              "absolute_fraction": 0.362085823013116
+            },
+            {
+              "signed": 395.00626122320034,
+              "absolute": 736.6484793333711,
+              "sum_squared": 737.2685374031927,
+              "count": 737,
+              "signed_fraction_of_abs": 0.1761490150906713,
+              "absolute_fraction": 0.3285008792032604
+            },
+            {
+              "signed": 145.88071929222235,
+              "absolute": 277.6137140596387,
+              "sum_squared": 277.24449977282376,
+              "count": 278,
+              "signed_fraction_of_abs": 0.06505401950963906,
+              "absolute_fraction": 0.12379900550395737
+            },
+            {
+              "signed": 22.953476360989292,
+              "absolute": 58.88065675210288,
+              "sum_squared": 58.76155490777911,
+              "count": 59,
+              "signed_fraction_of_abs": 0.010235868771737317,
+              "absolute_fraction": 0.0262572285883696
+            },
+            {
+              "signed": 4.989886165432455,
+              "absolute": 10.9777495639514,
+              "sum_squared": 10.955544135348651,
+              "count": 11,
+              "signed_fraction_of_abs": 0.0022251888634211557,
+              "absolute_fraction": 0.004895415499526543
+            },
+            {
+              "signed": 0.0,
+              "absolute": 0.0,
+              "sum_squared": 0.0,
+              "count": 0,
+              "signed_fraction_of_abs": 0.0,
+              "absolute_fraction": 0.0
+            }
+          ]
+        }
+      }
+    }
+  }
+}

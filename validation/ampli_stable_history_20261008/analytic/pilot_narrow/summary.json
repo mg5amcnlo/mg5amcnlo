@@ -1,0 +1,132 @@
+{
+  "seeds_per_variant": 2,
+  "final_quota": 10000,
+  "tail_width": 0.0005,
+  "truth": [
+    0.08313333333333153,
+    0.003583333333333256
+  ],
+  "shape_truth": [
+    0.2907471934028287,
+    0.07011627907120978,
+    0.04310344827586207
+  ],
+  "provenance": {
+    "baseline": {
+      "validation/ampli_stable_history_20261008/physics/baseline_sources/Template/NLO/SubProcesses/integrator_helpers.f90": "ccdc363fd95481fb4e2aa03faeb286a4c22afe4656c2af4a79e969662d8afc61",
+      "validation/ampli_stable_history_20261008/physics/baseline_sources/Template/NLO/SubProcesses/simple_integrator.f90": "cc3dff89e60548049c7eec9103a8768d5609678c31f10004f0bf95ea596c28de",
+      "validation/ampli_stable_history_20261008/analytic/pilot_narrow/baseline_build/driver.f90": "ca1882ea903af587b9021ec35fb3dc9418d4029a159765877a4b10dcab9419d8"
+    },
+    "candidate": {
+      "validation/ampli_stable_history_20261008/physics/candidate_sources/Template/NLO/SubProcesses/integrator_helpers.f90": "ccdc363fd95481fb4e2aa03faeb286a4c22afe4656c2af4a79e969662d8afc61",
+      "validation/ampli_stable_history_20261008/physics/candidate_sources/Template/NLO/SubProcesses/simple_integrator.f90": "ce266c253b42c60eec6d72a5874ae729a1676346763c5f119f35889c59a3153f",
+      "validation/ampli_stable_history_20261008/analytic/pilot_narrow/candidate_build/driver.f90": "ca1882ea903af587b9021ec35fb3dc9418d4029a159765877a4b10dcab9419d8"
+    }
+  },
+  "variants": {
+    "baseline": {
+      "total_trials": 1201008,
+      "mean_trials": 600504,
+      "total_skipped": 0,
+      "replicas_with_skips": 0,
+      "mean_epochs": 5,
+      "mean_updates": 4,
+      "mean_eligible_epochs": 5,
+      "expired_trials": 0,
+      "max_tail": 0.009808867282728373,
+      "max_selected_tail": 0.008797182783530016,
+      "rates": [
+        {
+          "mean": 0.08282492271561742,
+          "truth": 0.08313333333333153,
+          "empirical_scatter": 0.00021547628634996315,
+          "empirical_mean_error": 0.00015236474326295324,
+          "mean_bias_z": -2.024159993377547,
+          "rms_quoted_error": 0.0002914099569498425,
+          "scatter_over_rms_quote": 0.7394266435002114
+        },
+        {
+          "mean": 0.0036013315299900884,
+          "truth": 0.003583333333333256,
+          "empirical_scatter": 0.00012390296710335414,
+          "empirical_mean_error": 8.761262824791543e-05,
+          "mean_bias_z": 0.2054292516588271,
+          "rms_quoted_error": 5.327144441460547e-05,
+          "scatter_over_rms_quote": 2.3258796239694894
+        }
+      ],
+      "shapes": [
+        {
+          "mean": 0.29203591717254707,
+          "truth": 0.2907471934028287,
+          "empirical_mean_error": 0.0047640828274529414,
+          "mean_bias_z": 0.27050826284802276
+        },
+        {
+          "mean": 0.06599577286556053,
+          "truth": 0.07011627907120978,
+          "empirical_mean_error": 0.00029577286556053956,
+          "mean_bias_z": -13.931319216318874
+        },
+        {
+          "mean": 0.05258900130568389,
+          "truth": 0.04310344827586207,
+          "empirical_mean_error": 0.0005890013056838901,
+          "mean_bias_z": 16.1044685950367
+        }
+      ]
+    },
+    "candidate": {
+      "total_trials": 1213902,
+      "mean_trials": 606951,
+      "total_skipped": 0,
+      "replicas_with_skips": 0,
+      "mean_epochs": 5.5,
+      "mean_updates": 4.5,
+      "mean_eligible_epochs": 5.5,
+      "expired_trials": 0,
+      "max_tail": 0.009216092562177052,
+      "max_selected_tail": 0.007715461973899936,
+      "rates": [
+        {
+          "mean": 0.0830861065008362,
+          "truth": 0.08313333333333153,
+          "empirical_scatter": 7.674134108571007e-05,
+          "empirical_mean_error": 5.426432267905539e-05,
+          "mean_bias_z": -0.8703109181820179,
+          "rms_quoted_error": 0.0002957742816047929,
+          "scatter_over_rms_quote": 0.2594591411712063
+        },
+        {
+          "mean": 0.003516349461216892,
+          "truth": 0.003583333333333256,
+          "empirical_scatter": 0.0001249665108697822,
+          "empirical_mean_error": 8.836466725724538e-05,
+          "mean_bias_z": -0.758039091816664,
+          "rms_quoted_error": 5.3815676617417014e-05,
+          "scatter_over_rms_quote": 2.3221209640861002
+        }
+      ],
+      "shapes": [
+        {
+          "mean": 0.29107253324264626,
+          "truth": 0.2907471934028287,
+          "empirical_mean_error": 0.0014934238577536674,
+          "mean_bias_z": 0.21784829412524864
+        },
+        {
+          "mean": 0.06903775096271035,
+          "truth": 0.07011627907120978,
+          "empirical_mean_error": 0.0003293861073189741,
+          "mean_bias_z": -3.2743582213532503
+        },
+        {
+          "mean": 0.05037525500375538,
+          "truth": 0.04310344827586207,
+          "empirical_mean_error": 0.003189471518496422,
+          "mean_bias_z": 2.279940951258714
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "status": "verified",
+  "directory": "P0_udx_wpgg",
+  "context": 22,
+  "born_pdgs": [
+    [
+      2,
+      -1,
+      24,
+      21,
+      21
+    ],
+    [
+      4,
+      -3,
+      24,
+      21,
+      21
+    ]
+  ],
+  "grouped_born_flavours": 2,
+  "integrated_sector_count": 8,
+  "all_history_tables_complete": true,
+  "foreign_contexts": [
+    "P0_gdx_wpuxg",
+    "P0_udx_wpccx",
+    "P0_udx_wpddx",
+    "P0_udx_wpuux",
+    "P0_ug_wpdg"
+  ],
+  "previously_unsubtracted_real_sectors": [
+    {
+      "sector": 6,
+      "real_pdgs": [
+        [
+          2,
+          -1,
+          24,
+          1,
+          -1,
+          21
+        ],
+        [
+          4,
+          -3,
+          24,
+          3,
+          -3,
+          21
+        ]
+      ],
+      "fks_pair": [
+        5,
+        4
+      ],
+      "allowed_pairs": [
+        [
+          5,
+          2
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          6,
+          1
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          6,
+          4
+        ],
+        [
+          6,
+          5
+        ]
+      ]
+    }
+  ],
+  "nFKSconfigs": "      INTEGER FKS_CONFIGS,FKS_INTEGRATED\n      PARAMETER(FKS_CONFIGS=30,FKS_INTEGRATED=8)\n",
+  "scope": "Selected Born component of the complete pp > W+jj NLO export; not the inclusive W+jj cross section.",
+  "retain": "Keep complete Source/BornSupport and compiled provider library when narrowing subproc.mg."
+}

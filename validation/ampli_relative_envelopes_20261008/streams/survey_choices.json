@@ -1,0 +1,210 @@
+{
+  "note": "Saved-survey diagnostics only; empirical maxima are not bounds. Conditional second moments inferred from the last survey iteration; the rare virtual sample can have substantial statistical uncertainty.",
+  "channels": [
+    {
+      "channel": "P0_gg_ttx/GF1.0",
+      "survey_points": 8192,
+      "survey_virtual_fraction": 0.015625,
+      "survey_expected_virtual_evaluations": 128.0,
+      "survey_rates": [
+        100.51913200526616,
+        0.6815775155136659
+      ],
+      "survey_conditional_abs_second_moments": [
+        19712.054135950166,
+        4.953076930194639
+      ],
+      "rate_mixture": {
+        "probability": 0.006734908467946221,
+        "survey_initial_envelope": 3459.4518788408204,
+        "estimated_abs_second_moment": 20581.14664190592,
+        "estimated_abs_variance": 10339.563034396666
+      },
+      "capped_maximum_mixture": {
+        "probability": 0.021472740729476733,
+        "survey_initial_envelope": 1085.0543974236903,
+        "estimated_abs_second_moment": 20375.282343139734,
+        "estimated_abs_variance": 10133.698735630478,
+        "initial_envelope_ratio": 0.3136492240462284,
+        "estimated_abs_variance_ratio": 0.9800896519435746,
+        "nonvirtual_probability_penalty": 1.015061238327195
+      },
+      "uncapped_maximum_mixture": {
+        "probability": 0.021472740729476733,
+        "survey_initial_envelope": 1085.0543974236903,
+        "estimated_abs_second_moment": 20375.282343139734,
+        "estimated_abs_variance": 10133.698735630478
+      },
+      "minimum_abs_variance_mixture": {
+        "probability": 0.015604194310186824,
+        "survey_initial_envelope": 1493.1300706789618,
+        "estimated_abs_second_moment": 20341.940235171623,
+        "estimated_abs_variance": 10100.356627662368
+      }
+    },
+    {
+      "channel": "P0_gg_ttx/GF2.0",
+      "survey_points": 8192,
+      "survey_virtual_fraction": 0.015625,
+      "survey_expected_virtual_evaluations": 128.0,
+      "survey_rates": [
+        464.8911796129711,
+        2.6544065438817266
+      ],
+      "survey_conditional_abs_second_moments": [
+        482528.6356217951,
+        35.94548142268464
+      ],
+      "rate_mixture": {
+        "probability": 0.00567732136175321,
+        "survey_initial_envelope": 7909.514273254337,
+        "estimated_abs_second_moment": 491615.1630755705,
+        "estimated_abs_variance": 273016.2879408154
+      },
+      "capped_maximum_mixture": {
+        "probability": 0.01077759082121493,
+        "survey_initial_envelope": 4166.502058720463,
+        "estimated_abs_second_moment": 491120.99690366985,
+        "estimated_abs_variance": 272522.12176891475,
+        "initial_envelope_ratio": 0.5267709134566328,
+        "estimated_abs_variance_ratio": 0.9981899754933018,
+        "nonvirtual_probability_penalty": 1.0051558369605635
+      },
+      "uncapped_maximum_mixture": {
+        "probability": 0.01077759082121493,
+        "survey_initial_envelope": 4166.502058720463,
+        "estimated_abs_second_moment": 491120.99690366985,
+        "estimated_abs_variance": 272522.12176891475
+      },
+      "minimum_abs_variance_mixture": {
+        "probability": 0.008557133330626382,
+        "survey_initial_envelope": 5247.651591908962,
+        "estimated_abs_second_moment": 490893.98062723066,
+        "estimated_abs_variance": 272295.10549247556
+      }
+    },
+    {
+      "channel": "P0_gg_ttx/GF3.0",
+      "survey_points": 8192,
+      "survey_virtual_fraction": 0.015625,
+      "survey_expected_virtual_evaluations": 128.0,
+      "survey_rates": [
+        473.45447884891234,
+        3.013713068415494
+      ],
+      "survey_conditional_abs_second_moments": [
+        615549.7607938332,
+        35.96183652309373
+      ],
+      "rate_mixture": {
+        "probability": 0.006325108621182428,
+        "survey_initial_envelope": 35859.61395221251,
+        "estimated_abs_second_moment": 625153.5311602454,
+        "estimated_abs_variance": 398131.59325127787
+      },
+      "capped_maximum_mixture": {
+        "probability": 0.006325108621182428,
+        "survey_initial_envelope": 35859.61395221251,
+        "estimated_abs_second_moment": 625153.5311602454,
+        "estimated_abs_variance": 398131.59325127787,
+        "initial_envelope_ratio": 1.0,
+        "estimated_abs_variance_ratio": 1.0,
+        "nonvirtual_probability_penalty": 1.0
+      },
+      "uncapped_maximum_mixture": {
+        "probability": 0.0008366779571015953,
+        "survey_initial_envelope": 35662.63614040191,
+        "estimated_abs_second_moment": 659046.9036847572,
+        "estimated_abs_variance": 432024.96577578963
+      },
+      "minimum_abs_variance_mixture": {
+        "probability": 0.007585469426015398,
+        "survey_initial_envelope": 35905.15545781267,
+        "estimated_abs_second_moment": 624995.568509965,
+        "estimated_abs_variance": 397973.6306009974
+      }
+    },
+    {
+      "channel": "P0_uux_ttx/GF1.0",
+      "survey_points": 8192,
+      "survey_virtual_fraction": 0.015625,
+      "survey_expected_virtual_evaluations": 128.0,
+      "survey_rates": [
+        57.13039120926212,
+        0.40277832948769526
+      ],
+      "survey_conditional_abs_second_moments": [
+        5323.708060910894,
+        0.7562952962351628
+      ],
+      "rate_mixture": {
+        "probability": 0.007000802019371025,
+        "survey_initial_envelope": 1012.7766389382598,
+        "estimated_abs_second_moment": 5469.270855814633,
+        "estimated_abs_variance": 2159.2052586401032
+      },
+      "capped_maximum_mixture": {
+        "probability": 0.013856267244582676,
+        "survey_initial_envelope": 511.69976833571917,
+        "estimated_abs_second_moment": 5453.0927358633,
+        "estimated_abs_variance": 2143.02713868877,
+        "initial_envelope_ratio": 0.505244442518103,
+        "estimated_abs_variance_ratio": 0.9925073728462839,
+        "nonvirtual_probability_penalty": 1.006951791100529
+      },
+      "uncapped_maximum_mixture": {
+        "probability": 0.013856267244582676,
+        "survey_initial_envelope": 511.69976833571917,
+        "estimated_abs_second_moment": 5453.0927358633,
+        "estimated_abs_variance": 2143.02713868877
+      },
+      "minimum_abs_variance_mixture": {
+        "probability": 0.011778577611036354,
+        "survey_initial_envelope": 601.9613720087314,
+        "estimated_abs_second_moment": 5451.37054778179,
+        "estimated_abs_variance": 2141.3049506072603
+      }
+    },
+    {
+      "channel": "P0_uxu_ttx/GF1.0",
+      "survey_points": 8192,
+      "survey_virtual_fraction": 0.01978310820004695,
+      "survey_expected_virtual_evaluations": 162.0632223747846,
+      "survey_rates": [
+        57.814592511799155,
+        0.48113736167884624
+      ],
+      "survey_conditional_abs_second_moments": [
+        5496.612216268768,
+        0.6755614669912656
+      ],
+      "rate_mixture": {
+        "probability": 0.008253389445900781,
+        "survey_initial_envelope": 525.163083296852,
+        "estimated_abs_second_moment": 5624.208044053273,
+        "estimated_abs_variance": 2225.8159225717573
+      },
+      "capped_maximum_mixture": {
+        "probability": 0.010291824635764628,
+        "survey_initial_envelope": 421.1474255008942,
+        "estimated_abs_second_moment": 5619.411242363805,
+        "estimated_abs_variance": 2221.01912088229,
+        "initial_envelope_ratio": 0.8019364629688521,
+        "estimated_abs_variance_ratio": 0.9978449243529873,
+        "nonvirtual_probability_penalty": 1.002059632567058
+      },
+      "uncapped_maximum_mixture": {
+        "probability": 0.010291824635764628,
+        "survey_initial_envelope": 421.1474255008942,
+        "estimated_abs_second_moment": 5619.411242363805,
+        "estimated_abs_variance": 2221.01912088229
+      },
+      "minimum_abs_variance_mixture": {
+        "probability": 0.010964698113624483,
+        "survey_initial_envelope": 421.4339460450528,
+        "estimated_abs_second_moment": 5619.161473212751,
+        "estimated_abs_variance": 2220.7693517312355
+      }
+    }
+  ]
+}

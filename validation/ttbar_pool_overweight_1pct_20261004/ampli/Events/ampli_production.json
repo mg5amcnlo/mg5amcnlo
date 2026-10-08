@@ -1,0 +1,411 @@
+{
+  "absolute_cross_section": 1097.5429122550074,
+  "allowed_overweight_factor": 0.01,
+  "channels": [
+    {
+      "absolute": 441.97568126893816,
+      "available_candidates": 113392,
+      "batches": [
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_1",
+          "include_rate": true,
+          "trials": 9832
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_2",
+          "include_rate": true,
+          "trials": 9832
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_3",
+          "include_rate": true,
+          "trials": 9832
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_4",
+          "include_rate": true,
+          "trials": 9832
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_5",
+          "include_rate": true,
+          "trials": 9832
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_6",
+          "include_rate": true,
+          "trials": 9832
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_7",
+          "include_rate": true,
+          "trials": 9832
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_8",
+          "include_rate": true,
+          "trials": 9832
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_9",
+          "include_rate": true,
+          "trials": 9832
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_10",
+          "include_rate": true,
+          "trials": 9832
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_11",
+          "include_rate": true,
+          "trials": 9831
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_12",
+          "include_rate": true,
+          "trials": 9831
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_13",
+          "include_rate": true,
+          "trials": 9831
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_14",
+          "include_rate": true,
+          "trials": 9831
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_15",
+          "include_rate": true,
+          "trials": 9831
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_16",
+          "include_rate": true,
+          "trials": 9831
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_17",
+          "include_rate": true,
+          "trials": 9831
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_18",
+          "include_rate": true,
+          "trials": 9831
+        }
+      ],
+      "channel": "3.0",
+      "error_abs": 0.9681272836024296,
+      "error_signed": 0.8460214666616639,
+      "generation_cpu_seconds": 381.1630096,
+      "quota": 40235,
+      "rate_moments": {
+        "absolute": 441.97568126893816,
+        "covariance": 0.6214246767155337,
+        "covariance_sum": 19461464862.1398,
+        "error_abs": 0.9681272836024296,
+        "error_signed": 0.8460214666616639,
+        "m2_abs": 29352963222.15199,
+        "m2_signed": 22415570522.947407,
+        "mean_abs": 441.97568126893816,
+        "mean_signed": 269.5117116460881,
+        "signed": 269.5117116460881,
+        "trials": 176968
+      },
+      "selection": {
+        "available": 113392,
+        "max_correction": 7.094618478760051,
+        "overweight": 0.006377247064813659,
+        "reserve": 44259,
+        "selected": 40235,
+        "sum_corrections": 40237.10788458062
+      },
+      "signed": 269.5117116460881,
+      "subprocess": "P0_gg_ttx"
+    },
+    {
+      "absolute": 442.9575972662133,
+      "available_candidates": 114114,
+      "batches": [
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_1",
+          "include_rate": true,
+          "trials": 9885
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_2",
+          "include_rate": true,
+          "trials": 9885
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_3",
+          "include_rate": true,
+          "trials": 9885
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_4",
+          "include_rate": true,
+          "trials": 9885
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_5",
+          "include_rate": true,
+          "trials": 9884
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_6",
+          "include_rate": true,
+          "trials": 9884
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_7",
+          "include_rate": true,
+          "trials": 9884
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_8",
+          "include_rate": true,
+          "trials": 9884
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_9",
+          "include_rate": true,
+          "trials": 9884
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_10",
+          "include_rate": true,
+          "trials": 9884
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_11",
+          "include_rate": true,
+          "trials": 9884
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_12",
+          "include_rate": true,
+          "trials": 9884
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_13",
+          "include_rate": true,
+          "trials": 9884
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_14",
+          "include_rate": true,
+          "trials": 9884
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_15",
+          "include_rate": true,
+          "trials": 9884
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_16",
+          "include_rate": true,
+          "trials": 9884
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_17",
+          "include_rate": true,
+          "trials": 9884
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_18",
+          "include_rate": true,
+          "trials": 9884
+        }
+      ],
+      "channel": "2.0",
+      "error_abs": 0.9593183408949704,
+      "error_signed": 0.8505630130253412,
+      "generation_cpu_seconds": 384.2047444,
+      "quota": 40297,
+      "rate_moments": {
+        "absolute": 442.9575972662133,
+        "covariance": 0.6352185263634879,
+        "covariance_sum": 20107159681.05096,
+        "error_abs": 0.9593183408949704,
+        "error_signed": 0.8505630130253412,
+        "m2_abs": 29130843919.648804,
+        "m2_signed": 22900267620.09415,
+        "mean_abs": 442.9575972662133,
+        "mean_signed": 270.2748545377535,
+        "signed": 270.2748545377535,
+        "trials": 177916
+      },
+      "selection": {
+        "available": 114114,
+        "max_correction": 7.715827623421868,
+        "overweight": 0.004818096137437453,
+        "reserve": 44327,
+        "selected": 40297,
+        "sum_corrections": 40292.09554438208
+      },
+      "signed": 270.2748545377535,
+      "subprocess": "P0_gg_ttx"
+    },
+    {
+      "absolute": 96.87291819863343,
+      "available_candidates": 26154,
+      "batches": [
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF1.0_1",
+          "include_rate": true,
+          "trials": 9651
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF1.0_2",
+          "include_rate": true,
+          "trials": 9651
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF1.0_3",
+          "include_rate": true,
+          "trials": 9651
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF1.0_4",
+          "include_rate": true,
+          "trials": 9651
+        }
+      ],
+      "channel": "1.0",
+      "error_abs": 0.3881339143688954,
+      "error_signed": 0.3671690341135943,
+      "generation_cpu_seconds": 82.4777125,
+      "quota": 8855,
+      "rate_moments": {
+        "absolute": 96.87291819863343,
+        "covariance": 0.11562234144438084,
+        "covariance_sum": 172303906.40259606,
+        "error_abs": 0.3881339143688954,
+        "error_signed": 0.3671690341135943,
+        "m2_abs": 224500104.83267182,
+        "m2_signed": 200902554.01503342,
+        "mean_abs": 96.87291819863343,
+        "mean_signed": 63.26512768039535,
+        "signed": 63.26512768039535,
+        "trials": 38604
+      },
+      "selection": {
+        "available": 26154,
+        "max_correction": 2.2389216745391094,
+        "overweight": 0.0006955902960150866,
+        "reserve": 9741,
+        "selected": 8855,
+        "sum_corrections": 8854.73861101499
+      },
+      "signed": 63.26512768039535,
+      "subprocess": "P0_gg_ttx"
+    },
+    {
+      "absolute": 57.80265626405161,
+      "available_candidates": 16573,
+      "batches": [
+        {
+          "directory": "SubProcesses/P0_uux_ttx/GF1.0_1",
+          "include_rate": true,
+          "trials": 7723
+        },
+        {
+          "directory": "SubProcesses/P0_uux_ttx/GF1.0_2",
+          "include_rate": true,
+          "trials": 7723
+        },
+        {
+          "directory": "SubProcesses/P0_uux_ttx/GF1.0_3",
+          "include_rate": true,
+          "trials": 7722
+        }
+      ],
+      "channel": "1.0",
+      "error_abs": 0.2811171490867042,
+      "error_signed": 0.23432838364859512,
+      "generation_cpu_seconds": 29.440923689999998,
+      "quota": 5331,
+      "rate_moments": {
+        "absolute": 57.80265626405161,
+        "covariance": 0.05394522212148273,
+        "covariance_sum": 28954183.925862227,
+        "error_abs": 0.2811171490867042,
+        "error_signed": 0.23432838364859512,
+        "m2_abs": 42416323.51736203,
+        "m2_signed": 29471900.133514993,
+        "mean_abs": 57.80265626405161,
+        "mean_signed": 39.7583472149543,
+        "signed": 39.7583472149543,
+        "trials": 23168
+      },
+      "selection": {
+        "available": 16573,
+        "max_correction": 4.460347684167323,
+        "overweight": 0.001997425404154474,
+        "reserve": 5865,
+        "selected": 5331,
+        "sum_corrections": 5330.824413808107
+      },
+      "signed": 39.7583472149543,
+      "subprocess": "P0_uux_ttx"
+    },
+    {
+      "absolute": 57.934059257170986,
+      "available_candidates": 16903,
+      "batches": [
+        {
+          "directory": "SubProcesses/P0_uxu_ttx/GF1.0_1",
+          "include_rate": true,
+          "trials": 7786
+        },
+        {
+          "directory": "SubProcesses/P0_uxu_ttx/GF1.0_2",
+          "include_rate": true,
+          "trials": 7785
+        },
+        {
+          "directory": "SubProcesses/P0_uxu_ttx/GF1.0_3",
+          "include_rate": true,
+          "trials": 7785
+        }
+      ],
+      "channel": "1.0",
+      "error_abs": 0.27693135633701177,
+      "error_signed": 0.23282892828952004,
+      "generation_cpu_seconds": 29.21850303,
+      "quota": 5282,
+      "rate_moments": {
+        "absolute": 57.934059257170986,
+        "covariance": 0.047651080485734375,
+        "covariance_sum": 25992681.839688487,
+        "error_abs": 0.27693135633701177,
+        "error_signed": 0.23282892828952004,
+        "m2_abs": 41833346.10698174,
+        "m2_signed": 29570060.72635847,
+        "mean_abs": 57.934059257170986,
+        "mean_signed": 39.72491255817914,
+        "signed": 39.72491255817914,
+        "trials": 23356
+      },
+      "selection": {
+        "available": 16903,
+        "max_correction": 4.864082022671456,
+        "overweight": 0.001233903298820755,
+        "reserve": 5811,
+        "selected": 5282,
+        "sum_corrections": 5282.62329067545
+      },
+      "signed": 39.72491255817914,
+      "subprocess": "P0_uxu_ttx"
+    }
+  ],
+  "cross_section": 682.5349536373703,
+  "requested_events": 100000,
+  "seed": 19721,
+  "uncertainty": 1.2973596116816721,
+  "version": 1
+}

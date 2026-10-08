@@ -21,6 +21,7 @@ module FKSParams
   logical :: FKSExplicitSum=.false.
   integer :: FKSFinalRecoil=0
   integer :: FKSISRMapping=0
+  integer :: NLOPSIntegrator=0
 
 contains
 
@@ -82,6 +83,12 @@ contains
              endif
           else if (buff .eq. '#SeparateFlavourConfigurations') then
              read(68,*,end=999) separate_flavour_configs
+          else if (buff .eq. '#NLOPSIntegrator') then
+             read(68,*,end=999) NLOPSIntegrator
+             if (NLOPSIntegrator.lt.0.or.NLOPSIntegrator.gt.1) then
+                write(*,*) 'NLOPSIntegrator must be 0 (MINT) or 1 (AmpliCol).'
+                stop 1
+             endif
           else if (buff .eq. '#FKSISRMapping') then
              read(68,*,end=999) FKSISRMapping
              if (FKSISRMapping.lt.0.or.FKSISRMapping.gt.2) then
@@ -230,6 +237,7 @@ contains
        write(*,*) ' > UsePolyVirtual            = ',use_poly_virtual
        write(*,*) ' > FKSFinalRecoil            = ',FKSFinalRecoil
        write(*,*) ' > FKSISRMapping             = ',FKSISRMapping
+       write(*,*) ' > NLOPSIntegrator           = ',NLOPSIntegrator
        write(*,*) ' > MCExplicitKLSum           = ',MCExplicitKLSum
        write(*,*) ' > MCSubtractionAtFixedFlow  = ',MCSubtractionAtFixedFlow
        write(*,*) ' > FKSExplicitSum            = ',FKSExplicitSum
@@ -258,6 +266,7 @@ contains
     use_poly_virtual=.true.
     FKSFinalRecoil=0
     FKSISRMapping=0
+    NLOPSIntegrator=0
     MCExplicitKLSum=.true.
     MCSubtractionAtFixedFlow=.true.
     FKSExplicitSum=.false.

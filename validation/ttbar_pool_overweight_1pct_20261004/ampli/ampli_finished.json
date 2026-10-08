@@ -1,0 +1,49 @@
+{
+  "backend": "ampli",
+  "settings": {
+    "nevents": 100000,
+    "req_acc": 0.003,
+    "nevt_job": 2500,
+    "iseed": 19721,
+    "ebeam1": 6500.0,
+    "ebeam2": 6500.0,
+    "pdlabel": "nn23nlo",
+    "parton_shower": "PYTHIA8",
+    "folding": [
+      2,
+      1,
+      1
+    ],
+    "born_spreading": false,
+    "reweight_scale": [
+      false
+    ],
+    "reweight_pdf": [
+      false
+    ],
+    "store_rwgt_info": false,
+    "event_norm": "average",
+    "fixed_ren_scale": false,
+    "fixed_fac_scale": false,
+    "dynamical_scale_choice": [
+      -1
+    ]
+  },
+  "cores": 5,
+  "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+  "started": "2026-10-04T13:16:57.128699+00:00",
+  "source_sha256": {
+    "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+    "simple_integrator.f90": "9de030ac7974cf82bfbe33dba24768d255914ffeb9ae1122ac99a7029b63dadd",
+    "driver_mintMC.f": "d9a4ae21ab610b0745d869272c5e5087d0b605435dae62d18c576250805f6d97",
+    "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+    "ampli_mint_adapter.f90": "265b49848984a4f438b50215b22a4021fd4912c3d6154a8c7d1448a507e327be"
+  },
+  "finished": "2026-10-04T13:21:31.979242+00:00",
+  "wall_seconds": 274.84941786300624,
+  "child_user_cpu_seconds": 1047.157058,
+  "child_system_cpu_seconds": 127.373962,
+  "cli_returncode": 0,
+  "summary_exists": true,
+  "events_exist": true
+}

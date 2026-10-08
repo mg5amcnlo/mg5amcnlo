@@ -1,0 +1,44 @@
+{
+  "work_directory": "/tmp/mg5-epvej-unfolded-10k-cv7t_d8h",
+  "process": "p p > e+ ve j [QCD]",
+  "events": 10000,
+  "folding": [
+    1,
+    1,
+    1
+  ],
+  "seed": 19727,
+  "cores": 5,
+  "launch_order": [
+    "mint",
+    "ampli",
+    "mint_tail"
+  ],
+  "run_name": "benchmark_10k",
+  "notes": "Fresh matrix-element export and full integrations; unfolded comparison. Pristine MINT timing plus separate exact-replay overweight diagnostic. Same settings as ttbar except final state and default nonzero top width (no external tops).",
+  "physics_selection": {
+    "model": "loop_sm",
+    "beam_energy_GeV": 6500,
+    "pdf": "nn23nlo",
+    "jet_algorithm": "kT",
+    "jet_radius": 0.7,
+    "jet_pt_min_GeV": 10,
+    "jet_eta_max": null,
+    "lepton_pt_min_GeV": 0,
+    "lepton_eta_max": null,
+    "W_width_GeV": 2.0476,
+    "p_and_j_flavors": [
+      "g",
+      "u",
+      "c",
+      "d",
+      "s",
+      "u~",
+      "c~",
+      "d~",
+      "s~"
+    ],
+    "parton_shower_matching": "PYTHIA8",
+    "shower_executed": false
+  }
+}

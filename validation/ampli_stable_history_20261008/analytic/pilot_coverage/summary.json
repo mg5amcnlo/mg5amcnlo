@@ -1,0 +1,133 @@
+{
+  "seeds_per_variant": 2,
+  "final_quota": 30000,
+  "tail_width": 0.005,
+  "initial_nonzero": 128,
+  "truth": [
+    0.08313333333333153,
+    0.003583333333333256
+  ],
+  "shape_truth": [
+    0.2907471934028287,
+    0.07325581396697017,
+    0.04310344827586207
+  ],
+  "provenance": {
+    "baseline": {
+      "validation/ampli_stable_history_20261008/physics/baseline_sources/Template/NLO/SubProcesses/integrator_helpers.f90": "ccdc363fd95481fb4e2aa03faeb286a4c22afe4656c2af4a79e969662d8afc61",
+      "validation/ampli_stable_history_20261008/physics/baseline_sources/Template/NLO/SubProcesses/simple_integrator.f90": "cc3dff89e60548049c7eec9103a8768d5609678c31f10004f0bf95ea596c28de",
+      "validation/ampli_stable_history_20261008/analytic/pilot_coverage/driver.f90": "da9373f47beaa36f300de9ded43b3a2d3a7ee92cedbf38e0e3ac072aaaf9a264"
+    },
+    "candidate": {
+      "validation/ampli_stable_history_20261008/physics/candidate_sources/Template/NLO/SubProcesses/integrator_helpers.f90": "ccdc363fd95481fb4e2aa03faeb286a4c22afe4656c2af4a79e969662d8afc61",
+      "validation/ampli_stable_history_20261008/physics/candidate_sources/Template/NLO/SubProcesses/simple_integrator.f90": "ce266c253b42c60eec6d72a5874ae729a1676346763c5f119f35889c59a3153f",
+      "validation/ampli_stable_history_20261008/analytic/pilot_coverage/driver.f90": "da9373f47beaa36f300de9ded43b3a2d3a7ee92cedbf38e0e3ac072aaaf9a264"
+    }
+  },
+  "variants": {
+    "baseline": {
+      "total_trials": 427307,
+      "mean_trials": 213653.5,
+      "total_skipped": 0,
+      "replicas_with_skips": 0,
+      "mean_epochs": 12,
+      "mean_updates": 11,
+      "mean_eligible_epochs": 8,
+      "expired_trials": 9559,
+      "max_tail": 0.00958088550361745,
+      "max_selected_tail": 0.008734791671281302,
+      "rates": [
+        {
+          "mean": 0.08312351204424771,
+          "truth": 0.08313333333333153,
+          "empirical_scatter": 0.00018119156953345556,
+          "empirical_mean_error": 0.00012812178751094025,
+          "mean_bias_z": -0.07665588558059169,
+          "rms_quoted_error": 0.0002721328173012894,
+          "scatter_over_rms_quote": 0.665820356876881
+        },
+        {
+          "mean": 0.003539523203133993,
+          "truth": 0.003583333333333256,
+          "empirical_scatter": 2.5388682910705024e-05,
+          "empirical_mean_error": 1.7952509851554534e-05,
+          "mean_bias_z": -2.4403345583163523,
+          "rms_quoted_error": 5.5653926864569576e-05,
+          "scatter_over_rms_quote": 0.4561885268668791
+        }
+      ],
+      "shapes": [
+        {
+          "mean": 0.28848945186922825,
+          "truth": 0.2907471934028287,
+          "empirical_mean_error": 0.00010269304186996674,
+          "mean_bias_z": -21.985340900304102
+        },
+        {
+          "mean": 0.07265308277745935,
+          "truth": 0.07325581396697017,
+          "empirical_mean_error": 0.000752853798396659,
+          "mean_bias_z": -0.800595269353022
+        },
+        {
+          "mean": 0.04099597002708309,
+          "truth": 0.04310344827586207,
+          "empirical_mean_error": 0.01183848403513877,
+          "mean_bias_z": -0.17801926686927155
+        }
+      ]
+    },
+    "candidate": {
+      "total_trials": 685005,
+      "mean_trials": 342502.5,
+      "total_skipped": 2,
+      "replicas_with_skips": 2,
+      "mean_epochs": 12,
+      "mean_updates": 10,
+      "mean_eligible_epochs": 9,
+      "expired_trials": 4478,
+      "max_tail": 0.009658999016444358,
+      "max_selected_tail": 0.008094425311979828,
+      "rates": [
+        {
+          "mean": 0.08301042583290433,
+          "truth": 0.08313333333333153,
+          "empirical_scatter": 0.00012760613862068432,
+          "empirical_mean_error": 9.023116593971647e-05,
+          "mean_bias_z": -1.3621402222522507,
+          "rms_quoted_error": 0.00022569753593373865,
+          "scatter_over_rms_quote": 0.5653856081891276
+        },
+        {
+          "mean": 0.003555911918835461,
+          "truth": 0.003583333333333256,
+          "empirical_scatter": 0.00012518168568512232,
+          "empirical_mean_error": 8.851681882831295e-05,
+          "mean_bias_z": -0.3097876184522817,
+          "rms_quoted_error": 4.552128356068138e-05,
+          "scatter_over_rms_quote": 2.7499594891310783
+        }
+      ],
+      "shapes": [
+        {
+          "mean": 0.29192731444143116,
+          "truth": 0.2907471934028287,
+          "empirical_mean_error": 0.0019052165364035756,
+          "mean_bias_z": 0.6194157021281005
+        },
+        {
+          "mean": 0.07251437233972202,
+          "truth": 0.07325581396697017,
+          "empirical_mean_error": 0.0004679648403241448,
+          "mean_bias_z": -1.5843960130307608
+        },
+        {
+          "mean": 0.04923923012438894,
+          "truth": 0.04310344827586207,
+          "empirical_mean_error": 0.0004746273290106746,
+          "mean_bias_z": 12.92757806702039
+        }
+      ]
+    }
+  }
+}

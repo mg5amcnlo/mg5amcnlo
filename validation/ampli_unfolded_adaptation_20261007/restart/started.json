@@ -1,0 +1,34 @@
+{
+  "settings": {
+    "nevents": 6000,
+    "req_acc": 0.15,
+    "nevt_job": 2000,
+    "iseed": 19724,
+    "ebeam1": 6500.0,
+    "ebeam2": 6500.0,
+    "pdlabel": "nn23nlo",
+    "parton_shower": "PYTHIA8",
+    "folding": [
+      2,
+      2,
+      2
+    ],
+    "born_spreading": false,
+    "event_norm": "sum",
+    "reweight_scale": [
+      false
+    ],
+    "reweight_pdf": [
+      false
+    ],
+    "store_rwgt_info": false
+  },
+  "started": "2026-10-07T06:08:08.851359+00:00",
+  "source_sha256": {
+    "Template/NLO/SubProcesses/ampli_mint_adapter.f90": "153317969de8e15537cd179ae30fc1336d848d76ca60de8d0616a88e68afca9a",
+    "Template/NLO/SubProcesses/simple_integrator.f90": "4e91f2c2e5907468aca796fed420e3fe7aac0d8a844569b937ab18afd7af5796",
+    "Template/NLO/SubProcesses/driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+    "madgraph/interface/amcatnlo_run_interface.py": "51fb36480b574b6d418b20b0cfb7031da933c90f28a071af9655ab06c6050988",
+    "madgraph/various/ampli_pool.py": "77999aa72ed674a34082cbb39609b2eb749237259fb2df5b5583b261ee1d7cd3"
+  }
+}

@@ -1,0 +1,227 @@
+{
+  "2500": {
+    "worker": "/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/SubProcesses/P0_gg_ttx/GF3.0_quantile_gf3_small",
+    "exit_code": 0,
+    "wall_seconds": 18.1654173420975,
+    "timing": {
+      "Born": 0.0504437611,
+      "PS_Generation": 0.339832276,
+      "Reals_evaluation": 2.95085382,
+      "MCsubtraction": 1.54738832,
+      "Counter_terms": 1.17447829,
+      "Integrated_CT": 0.63840723,
+      "Virtuals": 0.0779045075,
+      "FxFx_cluster": 0.0,
+      "Nbody_prefactor": 1.66787624,
+      "N1body_prefactor": 0.177726477,
+      "Adding_alphas_pdf": 0.45235914,
+      "Reweight_scale": 0.0,
+      "Reweight_pdf": 0.0,
+      "Filling_plots": 0.0,
+      "Applying_cuts": 0.366065979,
+      "Sum_ident_contr": 0.0530707017,
+      "Pick_unwgt": 0.0117508173,
+      "Write_events": 0.96056658,
+      "AlphaS_dependencies": 0.92959851,
+      "Other_tasks": 6.72844887,
+      "Total": 18.1267719
+    },
+    "trials": 17270,
+    "candidates": 5082,
+    "quota": 2242,
+    "reserve": 2467,
+    "mean_signed": 263.801392986061,
+    "mean_abs": 462.50560683309305,
+    "pooled_trial_error_signed": 3.1792212185288076,
+    "pooled_trial_error_abs": 3.8547848373192903,
+    "active_trials": 17270,
+    "expired_trial_fraction": 0.0,
+    "epochs": 3,
+    "eligible_epochs": 3,
+    "adaptation": {
+      "mode": "adaptive_unfolded",
+      "ndim": 7,
+      "mask": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "updates": 2,
+      "completed_iterations": 3,
+      "schedule": "nonzero_trials",
+      "proposals": 3,
+      "history": "last_eight_event_proposals"
+    },
+    "tails": {
+      "full_trial_tail": 0.008189736324365678,
+      "reserve_tail": 0.008090727390349701,
+      "worst_subset_tail": 0.00890088023221892
+    },
+    "validator_passed": true,
+    "published_rate": {
+      "absolute": 462.50560683309305,
+      "error_abs": 3.8546732322052,
+      "signed": 263.801392986061,
+      "error_signed": 3.1791291725750677
+    },
+    "res_dat": "462.50560683309305        3.8546732322052000        263.80139298606099        3.1791291725750677                3       17270   18.1267719",
+    "numerical_artifact_sha256": {
+      "ampli_pool.dat": "1f1e84c814c8471f0279360da5b43170951b68a9a75e6afde76e425c171dd69d",
+      "ampli_candidates.lhe": "6d24f00f7c8df730957e4d16fd03f3bde93546ac2e95a69346f58c4bc6f3a0f5"
+    }
+  },
+  "30000": {
+    "worker": "/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/SubProcesses/P0_gg_ttx/GF3.0_quantile_gf3_large",
+    "exit_code": 0,
+    "wall_seconds": 188.47793659905437,
+    "timing": {
+      "Born": 0.538626313,
+      "PS_Generation": 3.47803307,
+      "Reals_evaluation": 32.5492477,
+      "MCsubtraction": 16.4769306,
+      "Counter_terms": 12.1938763,
+      "Integrated_CT": 6.81461525,
+      "Virtuals": 0.625983179,
+      "FxFx_cluster": 0.0,
+      "Nbody_prefactor": 17.9420471,
+      "N1body_prefactor": 1.86473644,
+      "Adding_alphas_pdf": 4.66211748,
+      "Reweight_scale": 0.0,
+      "Reweight_pdf": 0.0,
+      "Filling_plots": 0.0,
+      "Applying_cuts": 3.81023383,
+      "Sum_ident_contr": 0.567740917,
+      "Pick_unwgt": 0.0947247073,
+      "Write_events": 7.38000298,
+      "AlphaS_dependencies": 10.1983852,
+      "Other_tasks": 69.0896072,
+      "Total": 188.286911
+    },
+    "trials": 187206,
+    "candidates": 41124,
+    "quota": 24655,
+    "reserve": 27121,
+    "mean_signed": 268.37229949657313,
+    "mean_abs": 469.08945425391784,
+    "pooled_trial_error_signed": 1.0310850906084816,
+    "pooled_trial_error_abs": 1.2703267304156096,
+    "active_trials": 187206,
+    "expired_trial_fraction": 0.0,
+    "epochs": 5,
+    "eligible_epochs": 5,
+    "adaptation": {
+      "mode": "adaptive_unfolded",
+      "ndim": 7,
+      "mask": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "updates": 4,
+      "completed_iterations": 5,
+      "schedule": "nonzero_trials",
+      "proposals": 5,
+      "history": "last_eight_event_proposals"
+    },
+    "tails": {
+      "full_trial_tail": 0.008716147532520015,
+      "reserve_tail": 0.008896152214864481,
+      "worst_subset_tail": 0.009783613580757222
+    },
+    "validator_passed": true,
+    "published_rate": {
+      "absolute": 469.08945425391784,
+      "error_abs": 1.2703233375531298,
+      "signed": 268.37229949657313,
+      "error_signed": 1.0310823367264812
+    },
+    "res_dat": "469.08945425391784        1.2703233375531298        268.37229949657313        1.0310823367264812                5      187206   188.286911",
+    "numerical_artifact_sha256": {
+      "ampli_pool.dat": "2d99a67e20dce15e92958a6befa32bb37c828670083cebe54a6cddcbbcaafd6c",
+      "ampli_candidates.lhe": "a3d7a43f485d5842b74cc230206fdfc8e55cd3c522cf644efb526f90fe7c2dc4"
+    }
+  },
+  "gf1_large": {
+    "worker": "/tmp/mg5-ampli-relative-envelopes-u0gy2ues/ampli/SubProcesses/P0_gg_ttx/GF1.0_quantile_gf1_large",
+    "exit_code": 0,
+    "wall_seconds": 151.60771455103531,
+    "timing": {
+      "Born": 0.432346195,
+      "PS_Generation": 2.80606627,
+      "Reals_evaluation": 25.2940788,
+      "MCsubtraction": 13.0213099,
+      "Counter_terms": 9.43134212,
+      "Integrated_CT": 5.33930826,
+      "Virtuals": 0.575813651,
+      "FxFx_cluster": 0.0,
+      "Nbody_prefactor": 14.1672897,
+      "N1body_prefactor": 1.45847821,
+      "Adding_alphas_pdf": 3.56476498,
+      "Reweight_scale": 0.0,
+      "Reweight_pdf": 0.0,
+      "Filling_plots": 0.0,
+      "Applying_cuts": 2.97267675,
+      "Sum_ident_contr": 0.446831763,
+      "Pick_unwgt": 0.0873465762,
+      "Write_events": 6.94238281,
+      "AlphaS_dependencies": 8.02356911,
+      "Other_tasks": 56.8773575,
+      "Total": 151.440964
+    },
+    "trials": 151142,
+    "candidates": 39822,
+    "quota": 25985,
+    "reserve": 28584,
+    "mean_signed": 63.058756675126965,
+    "mean_abs": 103.2283869528634,
+    "pooled_trial_error_signed": 0.23704784595179065,
+    "pooled_trial_error_abs": 0.2797979398889941,
+    "active_trials": 151142,
+    "expired_trial_fraction": 0.0,
+    "epochs": 6,
+    "eligible_epochs": 6,
+    "adaptation": {
+      "mode": "adaptive_unfolded",
+      "ndim": 7,
+      "mask": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "updates": 4,
+      "completed_iterations": 6,
+      "schedule": "nonzero_trials",
+      "proposals": 5,
+      "history": "last_eight_event_proposals"
+    },
+    "tails": {
+      "full_trial_tail": 0.008735466423300703,
+      "reserve_tail": 0.009030135759614559,
+      "worst_subset_tail": 0.009931359068268813
+    },
+    "validator_passed": true,
+    "published_rate": {
+      "absolute": 103.2283869528634,
+      "error_abs": 0.27979701427466225,
+      "signed": 63.058756675126965,
+      "error_signed": 0.23704706176130078
+    },
+    "res_dat": "103.22838695286340       0.27979701427466225        63.058756675126965       0.23704706176130078                6      151142   151.440964",
+    "numerical_artifact_sha256": {
+      "ampli_pool.dat": "607656851ff8e115e401412f34d578fdcb670f3c7ceaf652a9f337e919035e21",
+      "ampli_candidates.lhe": "587577220fd1d7566be5d162160cfad412da6cb0d7309c2ef8fa2e0ec07fa699"
+    }
+  }
+}

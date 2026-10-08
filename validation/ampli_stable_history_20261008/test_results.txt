@@ -1,0 +1,31 @@
+Stable adaptation / proposal history validation, 2026-10-08
+
+python -m unittest tests.unit_tests.fks.test_ampli_integrator tests.unit_tests.fks.test_ampli_adapter
+  Ran 77 tests in 13.153s: OK
+  Integrator 57, adapter 20. These compile and run standalone Fortran fixtures.
+
+python -m unittest tests.unit_tests.various.test_ampli_pool tests.unit_tests.interface.test_ampli_orchestration tests.unit_tests.fks.test_ampli_lhe
+  Ran 74 tests in 0.752s: OK
+  Pool/collector 41, orchestration 27, LHE 6.
+  Existing ResourceWarning messages for unclosed files in banner.py and
+  amcatnlo_run_interface.py were emitted; no test failed.
+
+Total: 151 passing tests.
+git diff --check: passed.
+
+Real ttbar worker replay and actual collection validation:
+  physics/findings.txt
+  physics/comparison.json
+  physics/collection_validation.json
+
+Offline 148-worker history policy analysis:
+  offline/findings.txt
+  offline/history_policies.json
+
+Independent-seed analytic experiment (16 seeds per variant):
+  analytic/findings.md
+  analytic/replicas/summary.json
+  analytic/replicas/records.json
+  All 32 pools passed production parsing, strict native tail checks and
+  uniform final-selection tail checks; the folded map stayed bitwise fixed.
+  Statistical deviations are reported explicitly in the findings/report.

@@ -1,0 +1,76 @@
+Local CPU profiling, 2026-10-08
+
+Representative channel: P0_gg_ttx/GF3.0, worker 1 from each benchmark.
+The gg GF2/GF3 channels together accounted for 88.1% of the 2500/job
+benchmark's generation CPU. Profiling this channel therefore probes the
+dominant work, although individual workers can fluctuate.
+
+Observed isolated replay CPU:
+                              2500/job       30000/job
+Requested worker quota           2467           27121
+Generation trials               25544          231973
+Total CPU [s]                 24.4946         219.4705
+Integrand CPU [s]             21.1690         192.7868
+Integrand share                86.42%          87.84%
+Sampler CPU [s]                0.2770           1.6902
+Sampler share                   1.13%           0.77%
+Historical envelopes [s]       0.1063           0.2628
+Historical envelope share       0.43%           0.12%
+Virtual-stream draws              155            1492
+Virtual-stream integrand [s]   0.0953           0.8220
+
+Sampler CPU sums sampling, map_fold/nlops_prepare_point, native_consider,
+and finish_native_iteration. Its boundary timing includes historical
+envelopes, selection, grid updates, cutoff prediction, and diagnostic writes.
+No per-candidate timers were inserted inside historical envelope loops.
+
+A second replay of the small worker timed the whole
+write_current_mcatnlo_event call: 2.6044 s / 24.1472 s = 10.79%.
+This includes selecting a contribution, updating FKS state, constructing
+reweight information, reconstructing the event, and serializing the LHE.
+The existing Write_events timer measures only finalize_event and therefore
+understates the complete cost of storing candidates by about a factor two.
+Writing the final native pool metadata took 0.0146 s, only 0.06%.
+
+Implications:
+- Almost all potential large improvement must reduce expensive integrand
+  evaluations, improve their acceptance, or reduce unnecessary candidate
+  construction. Rewriting/caching the sampler alone cannot close the
+  observed 30-40% generation CPU gap to MINT for this process.
+- Eliminating every historical-envelope recalculation would save less than
+  half a percent in these workers. The larger job does not incur an
+  appreciable bookkeeping penalty.
+- Candidate construction has meaningful but bounded potential (~11% of a
+  representative small job), including work beyond text I/O. Simply reducing
+  the number of candidates stored risks losing later overweight guarantees;
+  a safe scheme must preserve the information needed by future envelopes.
+- Direct virtual-integrand cost is below half a percent in both workers.
+  Optimizing virtual matrix elements is not the principal ttbar lever.
+
+All numerical results, event candidate payloads, and native POOL4 metadata
+are unchanged by the timers. Both main replays and the event-write replay
+produced byte-identical candidate LHE and POOL4 files relative to their
+original workers. Every res.dat field except measured CPU time is identical.
+
+Limitations:
+These are isolated timing replays with observational CPU_TIME calls, not
+fresh controlled benchmark samples. The profiler and original runs differ
+in load/date, so use within-run fractions rather than treating their total
+CPU differences as speedups. Timers add small overhead. The integrand is the
+whole sigintF calculation (phase space, PDFs, subtraction, matrix elements,
+and associated physics bookkeeping), not just matrix-element arithmetic.
+The large replay was run once; no full sample was generated here.
+
+Reproduction:
+1. python setup.py (copies inputs into a new isolated temporary export)
+2. python instrument.py
+3. make -j1 madevent_mintMC in the new export's SubProcesses/P0_gg_ttx
+4. In GF3.0_1 and GF3.0_profile30k, run sequentially:
+       ../madevent_mintMC < input_app.txt > profile.log 2>&1
+5. python summarize.py
+6. Optionally python instrument_event_write.py, rebuild, and replay only
+   GF3.0_1 with output profile_event_write.log for the full event timer.
+
+paths.json identifies the completed replica; provenance.json identifies the
+source hashes/compiler. The .patch files contain every instrumentation edit.
+Production repository sources and benchmark exports were not modified.

@@ -1,0 +1,17 @@
+{
+  "ampli_candidates.lhe": {
+    "original_sha256": "8e72d75900c7cf91d93d6f4da42c6c3546b1f2c4a0ab77ba20493be6f7db4890",
+    "instrumented_sha256": "8e72d75900c7cf91d93d6f4da42c6c3546b1f2c4a0ab77ba20493be6f7db4890",
+    "identical": true
+  },
+  "ampli_pool.dat": {
+    "original_sha256": "fc34ba721a7f3531858e35134937517d08aa4685f813d1d80672319fa5344f00",
+    "instrumented_sha256": "fc34ba721a7f3531858e35134937517d08aa4685f813d1d80672319fa5344f00",
+    "identical": true
+  },
+  "res.dat": {
+    "original_sha256": "38d033be7073a6709064e11bdd8992ec7ba7506987fadf1c09e8caa4cf547742",
+    "instrumented_sha256": "2fbe2d5033c5c612d982b2b209a013ef627516db67bdb67cea0cbd31ca79fb36",
+    "identical": false
+  }
+}

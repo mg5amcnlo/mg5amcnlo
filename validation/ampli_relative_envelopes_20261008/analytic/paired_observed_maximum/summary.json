@@ -1,0 +1,134 @@
+{
+  "seeds_per_variant": 16,
+  "final_quota": 30000,
+  "tail_width": 0.005,
+  "initial_nonzero": 128,
+  "seed_offset": 400,
+  "truth": [
+    0.08313333333333153,
+    0.003583333333333256
+  ],
+  "shape_truth": [
+    0.2907471934028287,
+    0.07325581396697017,
+    0.04310344827586207
+  ],
+  "provenance": {
+    "baseline": {
+      "validation/ampli_relative_envelopes_20261008/physics/baseline_sources/Template/NLO/SubProcesses/integrator_helpers.f90": "ccdc363fd95481fb4e2aa03faeb286a4c22afe4656c2af4a79e969662d8afc61",
+      "validation/ampli_relative_envelopes_20261008/physics/baseline_sources/Template/NLO/SubProcesses/simple_integrator.f90": "ce266c253b42c60eec6d72a5874ae729a1676346763c5f119f35889c59a3153f",
+      "validation/ampli_relative_envelopes_20261008/analytic/replicas/driver.f90": "da9373f47beaa36f300de9ded43b3a2d3a7ee92cedbf38e0e3ac072aaaf9a264"
+    },
+    "observed_maximum": {
+      "validation/ampli_relative_envelopes_20261008/experiments/observed_maximum/integrator_helpers.f90": "ccdc363fd95481fb4e2aa03faeb286a4c22afe4656c2af4a79e969662d8afc61",
+      "validation/ampli_relative_envelopes_20261008/experiments/observed_maximum/simple_integrator.f90": "690b0484f3a87077f652a1df124ee67e45b251a8509457913b0bc458fbe043b9",
+      "validation/ampli_relative_envelopes_20261008/analytic/paired_observed_maximum/driver.f90": "da9373f47beaa36f300de9ded43b3a2d3a7ee92cedbf38e0e3ac072aaaf9a264"
+    }
+  },
+  "variants": {
+    "baseline": {
+      "total_trials": 4970039,
+      "mean_trials": 310627.4375,
+      "total_skipped": 5,
+      "replicas_with_skips": 5,
+      "mean_epochs": 10.75,
+      "mean_updates": 9.4375,
+      "mean_eligible_epochs": 8.3125,
+      "expired_trials": 24234,
+      "max_tail": 0.009971502490442756,
+      "max_selected_tail": 0.00874347600926491,
+      "rates": [
+        {
+          "mean": 0.08308883810849102,
+          "truth": 0.08313333333333153,
+          "empirical_scatter": 0.00017043761347077115,
+          "empirical_mean_error": 4.260940336769279e-05,
+          "mean_bias_z": -1.0442583402669727,
+          "rms_quoted_error": 0.0002407434548419281,
+          "scatter_over_rms_quote": 0.7079636436333454
+        },
+        {
+          "mean": 0.003600126664290702,
+          "truth": 0.003583333333333256,
+          "empirical_scatter": 4.751038541075233e-05,
+          "empirical_mean_error": 1.1877596352688082e-05,
+          "mean_bias_z": 1.4138661105152877,
+          "rms_quoted_error": 4.8530557243438904e-05,
+          "scatter_over_rms_quote": 0.9789787735679771
+        }
+      ],
+      "shapes": [
+        {
+          "mean": 0.2914984746625819,
+          "truth": 0.2907471934028287,
+          "empirical_mean_error": 0.000620466512401878,
+          "mean_bias_z": 1.2108328890223883
+        },
+        {
+          "mean": 0.07317358537202943,
+          "truth": 0.07325581396697017,
+          "empirical_mean_error": 0.00027294478274658994,
+          "mean_bias_z": -0.30126457854694616
+        },
+        {
+          "mean": 0.04264752743859961,
+          "truth": 0.04310344827586207,
+          "empirical_mean_error": 0.0009569619389126093,
+          "mean_bias_z": -0.4764252565577683
+        }
+      ]
+    },
+    "observed_maximum": {
+      "total_trials": 4970039,
+      "mean_trials": 310627.4375,
+      "total_skipped": 5,
+      "replicas_with_skips": 5,
+      "mean_epochs": 10.75,
+      "mean_updates": 9.4375,
+      "mean_eligible_epochs": 8.3125,
+      "expired_trials": 24234,
+      "max_tail": 0.009971502490442756,
+      "max_selected_tail": 0.00874347600926491,
+      "rates": [
+        {
+          "mean": 0.08308883810849102,
+          "truth": 0.08313333333333153,
+          "empirical_scatter": 0.00017043761347077115,
+          "empirical_mean_error": 4.260940336769279e-05,
+          "mean_bias_z": -1.0442583402669727,
+          "rms_quoted_error": 0.0002407434548419281,
+          "scatter_over_rms_quote": 0.7079636436333454
+        },
+        {
+          "mean": 0.003600126664290702,
+          "truth": 0.003583333333333256,
+          "empirical_scatter": 4.751038541075233e-05,
+          "empirical_mean_error": 1.1877596352688082e-05,
+          "mean_bias_z": 1.4138661105152877,
+          "rms_quoted_error": 4.8530557243438904e-05,
+          "scatter_over_rms_quote": 0.9789787735679771
+        }
+      ],
+      "shapes": [
+        {
+          "mean": 0.2914984746625819,
+          "truth": 0.2907471934028287,
+          "empirical_mean_error": 0.000620466512401878,
+          "mean_bias_z": 1.2108328890223883
+        },
+        {
+          "mean": 0.07317358537202943,
+          "truth": 0.07325581396697017,
+          "empirical_mean_error": 0.00027294478274658994,
+          "mean_bias_z": -0.30126457854694616
+        },
+        {
+          "mean": 0.04264752743859961,
+          "truth": 0.04310344827586207,
+          "empirical_mean_error": 0.0009569619389126093,
+          "mean_bias_z": -0.4764252565577683
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,2414 @@
+{
+  "expected_events_per_backend": 10000,
+  "mint": {
+    "path": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_10k_20261007/mint",
+    "backend": "mint",
+    "run_card": {
+      "run_tag": "tag_1",
+      "nevents": "10000",
+      "req_acc": "0.01",
+      "nevt_job": "2500",
+      "time_of_flight": "-1.0",
+      "event_norm": "average",
+      "req_acc_fo": "0.01",
+      "npoints_fo_grid": "5000",
+      "niters_fo_grid": "4",
+      "npoints_fo": "10000",
+      "niters_fo": "6",
+      "iseed": "0",
+      "lpp1": "1",
+      "lpp2": "1",
+      "ebeam1": "6500.0",
+      "ebeam2": "6500.0",
+      "pdlabel": "nn23nlo",
+      "lhaid": "244600",
+      "pdfscheme": "0",
+      "photons_from_lepton": "True",
+      "parton_shower": "PYTHIA8",
+      "shower_scale_factor": "1.0",
+      "mcatnlo_delta": "False",
+      "fixed_ren_scale": "False",
+      "fixed_fac_scale": "False",
+      "mur_ref_fixed": "91.118",
+      "muf_ref_fixed": "91.118",
+      "dynamical_scale_choice": "-1",
+      "mur_over_ref": "1.0",
+      "muf_over_ref": "1.0",
+      "rw_rscale": "1.0, 2.0, 0.5",
+      "rw_fscale": "1.0, 2.0, 0.5",
+      "reweight_scale": "False",
+      "reweight_pdf": "False",
+      "store_rwgt_info": "False",
+      "custom_fcts": "",
+      "ickkw": "0",
+      "bwcutoff": "15.0",
+      "jetalgo": "1.0",
+      "jetradius": "0.7",
+      "ptj": "10.0",
+      "etaj": "-1.0",
+      "gamma_is_j": "False",
+      "ptl": "0.0",
+      "etal": "-1.0",
+      "drll": "0.0",
+      "drll_sf": "0.0",
+      "mll": "0.0",
+      "mll_sf": "30.0",
+      "rphreco": "0.1",
+      "etaphreco": "-1.0",
+      "lepphreco": "False",
+      "quarkphreco": "False",
+      "ptgmin": "20.0",
+      "etagamma": "-1.0",
+      "r0gamma": "0.4",
+      "xn": "1.0",
+      "epsgamma": "1.0",
+      "isoem": "True",
+      "pt_min_pdg": "{}",
+      "pt_max_pdg": "{}",
+      "mxx_min_pdg": "{}",
+      "pineappl": "False",
+      "born_spreading": "False",
+      "folding": "1, 1, 1"
+    },
+    "fks_card": {
+      "IRPoleCheckThreshold": "1.0d-5",
+      "PrecisionVirtualAtRunTime": "1.0d-3",
+      "QCD^2==": "-1",
+      "QED^2==": "-1",
+      "SelectedCouplingOrders": "0",
+      "VetoedContributionTypes": "0",
+      "SelectedContributionTypes": "0",
+      "NLOPSIntegrator": "0",
+      "NHelForMCoverHels": "4",
+      "VirtualFraction": "1.0d0",
+      "MinVirtualFraction": "0.005d0",
+      "UsePolyVirtual": ".True.",
+      "SeparateFlavourConfigurations": ".false.",
+      "FKSISRMapping": "0",
+      "FKSFinalRecoil": "0",
+      "MCExplicitKLSum": ".true.",
+      "FKSExplicitSum": ".false."
+    },
+    "cards_sha256": {
+      "run_card.dat": "9eae7ee335b4414e28a65b2603d6613f2d7a3715f9e51857a429693aea4759cd",
+      "param_card.dat": "e0b5b7c21e5331a5df9ddededb6ece6ff9f65c9de79838f4fc0ab816704ff170",
+      "FKS_params.dat": "568e302cd0a449b95b75533d345ec0cc50fd60ec85a9fbdec758e301d167f527"
+    },
+    "stage_cpu_seconds": {
+      "0": 31.503963,
+      "1": 64.12892249,
+      "2": 54.76895852999999
+    },
+    "stage_cpu_complete_workers": {
+      "0": 5,
+      "1": 5,
+      "2": 7
+    },
+    "stage_wall_seconds_estimates": {
+      "0": {
+        "workers_with_wall_counters": 5,
+        "sum_worker_seconds": 29,
+        "phase_span_seconds": 7.360191583633423,
+        "note": "Span inferred from completed worker log modification times and integer wall durations; valid only when logs have not subsequently been copied/touched. In-progress workers are excluded."
+      },
+      "1": {
+        "workers_with_wall_counters": 5,
+        "sum_worker_seconds": 65,
+        "phase_span_seconds": 16.234026432037354,
+        "note": "Span inferred from completed worker log modification times and integer wall durations; valid only when logs have not subsequently been copied/touched. In-progress workers are excluded."
+      },
+      "2": {
+        "workers_with_wall_counters": 7,
+        "sum_worker_seconds": 54,
+        "phase_span_seconds": 13.425572872161865,
+        "note": "Span inferred from completed worker log modification times and integer wall durations; valid only when logs have not subsequently been copied/touched. In-progress workers are excluded."
+      }
+    },
+    "stage_logs": {
+      "0": 5,
+      "1": 5,
+      "2": 7
+    },
+    "integration_channels": [
+      {
+        "absolute_pb": 103.17021736308276,
+        "absolute_error_pb": 0.6421574028868179,
+        "signed_pb": 63.425416664776996,
+        "signed_error_pb": 0.5948553732498087,
+        "iterations": 2.0,
+        "points_or_quota": 8960.0,
+        "cpu_seconds": 15.1983843,
+        "channel": "P0_gg_ttx/GF1.0",
+        "result_path": "SubProcesses/P0_gg_ttx/GF1.0/res_1.dat"
+      },
+      {
+        "absolute_pb": 466.9288094200143,
+        "absolute_error_pb": 3.435965816825996,
+        "signed_pb": 269.49672204559874,
+        "signed_error_pb": 3.0808567158289106,
+        "iterations": 2.0,
+        "points_or_quota": 8960.0,
+        "cpu_seconds": 15.5634737,
+        "channel": "P0_gg_ttx/GF2.0",
+        "result_path": "SubProcesses/P0_gg_ttx/GF2.0/res_1.dat"
+      },
+      {
+        "absolute_pb": 460.34512111624707,
+        "absolute_error_pb": 3.407404453143773,
+        "signed_pb": 268.000366142509,
+        "signed_error_pb": 2.877265078437078,
+        "iterations": 2.0,
+        "points_or_quota": 8960.0,
+        "cpu_seconds": 15.3286152,
+        "channel": "P0_gg_ttx/GF3.0",
+        "result_path": "SubProcesses/P0_gg_ttx/GF3.0/res_1.dat"
+      },
+      {
+        "absolute_pb": 58.062611751421045,
+        "absolute_error_pb": 0.3188228331476666,
+        "signed_pb": 39.788914124288354,
+        "signed_error_pb": 0.28604441377873235,
+        "iterations": 2.0,
+        "points_or_quota": 8960.0,
+        "cpu_seconds": 8.99133396,
+        "channel": "P0_uux_ttx/GF1.0",
+        "result_path": "SubProcesses/P0_uux_ttx/GF1.0/res_1.dat"
+      },
+      {
+        "absolute_pb": 58.31868099777587,
+        "absolute_error_pb": 0.3246474122629221,
+        "signed_pb": 39.85352272751879,
+        "signed_error_pb": 0.2978897309309042,
+        "iterations": 2.0,
+        "points_or_quota": 8960.0,
+        "cpu_seconds": 9.04711533,
+        "channel": "P0_uxu_ttx/GF1.0",
+        "result_path": "SubProcesses/P0_uxu_ttx/GF1.0/res_1.dat"
+      }
+    ],
+    "production_workers": [
+      {
+        "channel": "P0_gg_ttx/GF1.0",
+        "log": "SubProcesses/P0_gg_ttx/GF1.0/log_MINT2.txt",
+        "cpu_seconds": 4.53386593,
+        "wall_seconds": 4,
+        "trials": 4577,
+        "generated_events": 910,
+        "quota": 910,
+        "upper_bound_failures": 10,
+        "fatal": false,
+        "zero_trials": 1,
+        "nonvirtual_efficiency": 0.2005306212690692,
+        "virtual_efficiency": 0.05555555555555555,
+        "efficiency": 0.19882018789600175
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_1",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_1/log_MINT2.txt",
+        "cpu_seconds": 11.9582453,
+        "wall_seconds": 12,
+        "trials": 12233,
+        "generated_events": 2019,
+        "quota": 2019,
+        "upper_bound_failures": 31,
+        "fatal": false,
+        "zero_trials": 0,
+        "nonvirtual_efficiency": 0.16585325502522955,
+        "virtual_efficiency": 0.09722222222222222,
+        "efficiency": 0.16504536908362627
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_2",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_2/log_MINT2.txt",
+        "cpu_seconds": 11.8372593,
+        "wall_seconds": 12,
+        "trials": 12247,
+        "generated_events": 2019,
+        "quota": 2019,
+        "upper_bound_failures": 13,
+        "fatal": false,
+        "zero_trials": 0,
+        "nonvirtual_efficiency": 0.16675,
+        "virtual_efficiency": 0.0728744939271255,
+        "efficiency": 0.164856699599902
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_1",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_1/log_MINT2.txt",
+        "cpu_seconds": 11.9131222,
+        "wall_seconds": 12,
+        "trials": 12307,
+        "generated_events": 2029,
+        "quota": 2029,
+        "upper_bound_failures": 18,
+        "fatal": false,
+        "zero_trials": 0,
+        "nonvirtual_efficiency": 0.16509858463552318,
+        "virtual_efficiency": 0.13095238095238096,
+        "efficiency": 0.1648655236857073
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_2",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_2/log_MINT2.txt",
+        "cpu_seconds": 11.8329077,
+        "wall_seconds": 12,
+        "trials": 12152,
+        "generated_events": 2029,
+        "quota": 2029,
+        "upper_bound_failures": 28,
+        "fatal": false,
+        "zero_trials": 0,
+        "nonvirtual_efficiency": 0.1683524199615481,
+        "virtual_efficiency": 0.07936507936507936,
+        "efficiency": 0.16696840026333115
+      },
+      {
+        "channel": "P0_uux_ttx/GF1.0",
+        "log": "SubProcesses/P0_uux_ttx/GF1.0/log_MINT2.txt",
+        "cpu_seconds": 1.35216403,
+        "wall_seconds": 1,
+        "trials": 2136,
+        "generated_events": 490,
+        "quota": 490,
+        "upper_bound_failures": 1,
+        "fatal": false,
+        "zero_trials": 0,
+        "nonvirtual_efficiency": 0.2296086751532296,
+        "virtual_efficiency": 0.2,
+        "efficiency": 0.22940074906367042
+      },
+      {
+        "channel": "P0_uxu_ttx/GF1.0",
+        "log": "SubProcesses/P0_uxu_ttx/GF1.0/log_MINT2.txt",
+        "cpu_seconds": 1.34139407,
+        "wall_seconds": 1,
+        "trials": 2199,
+        "generated_events": 504,
+        "quota": 504,
+        "upper_bound_failures": 4,
+        "fatal": false,
+        "zero_trials": 0,
+        "nonvirtual_efficiency": 0.22911912368781379,
+        "virtual_efficiency": 0.25,
+        "efficiency": 0.2291950886766712
+      }
+    ],
+    "fatal_logs": [],
+    "warnings": [],
+    "integration": {
+      "signed_pb": 680.5649417046919,
+      "signed_error_pb": 4.277235678401869,
+      "absolute_pb": 1146.825440648541,
+      "absolute_error_pb": 4.902619327768413,
+      "channels": 5,
+      "relative_signed_error": 0.006284831051814347,
+      "expected_channels": 5,
+      "complete": true
+    },
+    "integration_complete": true,
+    "production": {
+      "logged_workers": 7,
+      "workers_with_trial_counters": 7,
+      "counter_events": 10000,
+      "trials": 57851,
+      "efficiency": 0.17285785898255865,
+      "events_per_cpu_second_completed_workers": 182.58517723177894,
+      "upper_bound_failures": 105,
+      "zero_trials": 1,
+      "ampli_envelope_failure_workers": 0,
+      "all_logged_workers_finished": true,
+      "all_assigned_workers_finished": true,
+      "stored_candidates": 10000,
+      "candidate_retention_efficiency": 0.17285785898255865,
+      "cpu_seconds": 54.76895852999999,
+      "survey_cpu_seconds": 95.63288548999999,
+      "final_events": 10000,
+      "events_per_total_cpu_second": 66.4885465012665
+    },
+    "total_cpu_seconds_completed_workers": 150.40184402,
+    "cpu_note": "Sum of worker CPU times from phase logs/results; incomplete workers without final CPU counters are excluded. Compilation and Python coordination are excluded.",
+    "assignments": [
+      {
+        "file": "P0_gg_ttx/GF1.0/events.lhe",
+        "quota": 910,
+        "allocated_absolute_pb": 103.1702,
+        "weight_fraction": 1.0
+      },
+      {
+        "file": "P0_uxu_ttx/GF1.0/events.lhe",
+        "quota": 504,
+        "allocated_absolute_pb": 58.31868,
+        "weight_fraction": 1.0
+      },
+      {
+        "file": "P0_uux_ttx/GF1.0/events.lhe",
+        "quota": 490,
+        "allocated_absolute_pb": 58.06261,
+        "weight_fraction": 1.0
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_1/events.lhe",
+        "quota": 2019,
+        "allocated_absolute_pb": 233.4644,
+        "weight_fraction": 0.5
+      },
+      {
+        "file": "P0_gg_ttx/GF2.0_2/events.lhe",
+        "quota": 2019,
+        "allocated_absolute_pb": 233.4644,
+        "weight_fraction": 0.5
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_1/events.lhe",
+        "quota": 2029,
+        "allocated_absolute_pb": 230.1726,
+        "weight_fraction": 0.5
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0_2/events.lhe",
+        "quota": 2029,
+        "allocated_absolute_pb": 230.1726,
+        "weight_fraction": 0.5
+      }
+    ],
+    "assigned_events": 10000,
+    "lhe": {
+      "path": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_10k_20261007/mint/Events/benchmark_10k/events.lhe.gz",
+      "events": 10000,
+      "positive": 7953,
+      "negative": 2047,
+      "zero": 0,
+      "all_weights_finite": true,
+      "sum_weights": 6773150.812400891,
+      "sum_squared_weights": 13152084980.850517,
+      "sum_absolute_weights": 11468254.000002684,
+      "minimum_absolute_weight": 1146.8254,
+      "maximum_absolute_weight": 1146.8254,
+      "closed_document": true,
+      "truncated_event_header": false,
+      "init": [
+        {
+          "signed_pb": 680.56494,
+          "signed_error_pb": 4.2772,
+          "maximum_weight": 1146.8254,
+          "process": 0
+        }
+      ],
+      "negative_absolute_weight": 2347551.5937999506,
+      "rwgt_blocks": 0,
+      "mgrwgt_blocks": 0,
+      "idwtup": -4,
+      "init_processes": 1,
+      "negative_fraction": 0.2047,
+      "mean_sign": 0.5906,
+      "sign_effective_events": 3488.0836000000004,
+      "signed_weight_effective_events": 3488.0836000012055,
+      "absolute_weight_effective_events": 10000.000000005504,
+      "weighted_negative_fraction": 0.20469999999994778,
+      "rate_from_signs_pb": 677.3151052470283,
+      "sign_sampling_error_pb": 9.25447372638189,
+      "sign_error_note": "Binomial sign fluctuation conditional on the integrated absolute normalization; excludes its integration uncertainty.",
+      "rate_from_weights_pb": 677.3150812400892,
+      "weighted_event_sampling_error_pb": 9.25493615673846,
+      "sha256": "9f4e023c64f8ae6e760b65c070836e43a58bd85bea59a28f34c9f2521130a95f",
+      "event_sampling_error_note": "Sample variance of finalized signed event weights; conditional on the global absolute rate and neglecting finite-pool correlations. Not an independent integration uncertainty.",
+      "rate_minus_integration_pb": -3.2498604646027616,
+      "diagnostic_pull": -0.3187538336522891,
+      "signed_weight_effective_events_per_generation_cpu_second": 63.687236230548166,
+      "signed_weight_effective_events_per_total_cpu_second": 23.19176086389852,
+      "absolute_weight_effective_events_per_generation_cpu_second": 182.58517723187944,
+      "absolute_weight_effective_events_per_total_cpu_second": 66.48854650130309
+    },
+    "summary": "\n   --------------------------------------------------------------\n      Summary:\n      Process p p > t t~ [QCD]\n      Run at p-p collider (6500.0 + 6500.0 GeV)\n      Number of events generated: 10000\n      Total cross section: 6.806e+02 +- 4.3e+00 pb\n   --------------------------------------------------------------\n",
+    "complete_expected_sample": true,
+    "exported_source_sha256": {
+      "SubProcesses/mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+      "SubProcesses/ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de",
+      "SubProcesses/simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+      "SubProcesses/integrator_helpers.f90": "ccdc363fd95481fb4e2aa03faeb286a4c22afe4656c2af4a79e969662d8afc61",
+      "SubProcesses/driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+      "SubProcesses/genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+      "bin/internal/amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+      "bin/internal/ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+    },
+    "wrapper_metadata": {
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_10k_20261007/ampli_finished.json": {
+        "backend": "ampli",
+        "settings": {
+          "nevents": 10000,
+          "req_acc": 0.01,
+          "nevt_job": 2500,
+          "iseed": 19727,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            1,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-07T07:28:13.112344+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+          "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+        },
+        "python_source_sha256": {
+          "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+          "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+        },
+        "finished": "2026-10-07T07:29:55.503437+00:00",
+        "wall_seconds": 102.38874163600849,
+        "child_user_cpu_seconds": 269.361804,
+        "child_system_cpu_seconds": 32.668609000000004,
+        "cli_returncode": 0,
+        "summary_exists": true,
+        "events_exist": true
+      },
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_10k_20261007/ampli_started.json": {
+        "backend": "ampli",
+        "settings": {
+          "nevents": 10000,
+          "req_acc": 0.01,
+          "nevt_job": 2500,
+          "iseed": 19727,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            1,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-07T07:28:13.112344+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+          "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+        },
+        "python_source_sha256": {
+          "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+          "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+        }
+      },
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_10k_20261007/mint_finished.json": {
+        "backend": "mint",
+        "settings": {
+          "nevents": 10000,
+          "req_acc": 0.01,
+          "nevt_job": 2500,
+          "iseed": 19727,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            1,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-07T07:26:56.328390+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+          "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+        },
+        "python_source_sha256": {
+          "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+          "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+        },
+        "finished": "2026-10-07T07:28:12.963030+00:00",
+        "wall_seconds": 76.6325770309777,
+        "child_user_cpu_seconds": 215.325641,
+        "child_system_cpu_seconds": 26.168547,
+        "cli_returncode": 0,
+        "summary_exists": true,
+        "events_exist": true
+      },
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_10k_20261007/mint_started.json": {
+        "backend": "mint",
+        "settings": {
+          "nevents": 10000,
+          "req_acc": 0.01,
+          "nevt_job": 2500,
+          "iseed": 19727,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            1,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-07T07:26:56.328390+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+          "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+        },
+        "python_source_sha256": {
+          "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+          "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+        }
+      },
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_10k_20261007/mint_tail_finished.json": {
+        "backend": "mint_tail",
+        "settings": {
+          "nevents": 10000,
+          "req_acc": 0.01,
+          "nevt_job": 2500,
+          "iseed": 19727,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            1,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-07T07:29:55.652235+00:00",
+        "source_sha256": {
+          "mint_module.f90": "71bf022158bcd55cc624740c7ef99b104870bcc95d06d6e9f57367bc11666ed5",
+          "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+          "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+        },
+        "python_source_sha256": {
+          "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+          "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+        },
+        "finished": "2026-10-07T07:31:12.631418+00:00",
+        "wall_seconds": 76.97704569902271,
+        "child_user_cpu_seconds": 215.756928,
+        "child_system_cpu_seconds": 26.193857,
+        "cli_returncode": 0,
+        "summary_exists": true,
+        "events_exist": true
+      },
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_10k_20261007/mint_tail_started.json": {
+        "backend": "mint_tail",
+        "settings": {
+          "nevents": 10000,
+          "req_acc": 0.01,
+          "nevt_job": 2500,
+          "iseed": 19727,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            1,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-07T07:29:55.652235+00:00",
+        "source_sha256": {
+          "mint_module.f90": "71bf022158bcd55cc624740c7ef99b104870bcc95d06d6e9f57367bc11666ed5",
+          "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+          "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+        },
+        "python_source_sha256": {
+          "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+          "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+        }
+      }
+    },
+    "wrapper_started": {
+      "backend": "mint",
+      "settings": {
+        "nevents": 10000,
+        "req_acc": 0.01,
+        "nevt_job": 2500,
+        "iseed": 19727,
+        "ebeam1": 6500.0,
+        "ebeam2": 6500.0,
+        "pdlabel": "nn23nlo",
+        "parton_shower": "PYTHIA8",
+        "folding": [
+          1,
+          1,
+          1
+        ],
+        "born_spreading": false,
+        "reweight_scale": [
+          false
+        ],
+        "reweight_pdf": [
+          false
+        ],
+        "store_rwgt_info": false,
+        "event_norm": "average",
+        "fixed_ren_scale": false,
+        "fixed_fac_scale": false,
+        "dynamical_scale_choice": [
+          -1
+        ]
+      },
+      "cores": 5,
+      "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+      "started": "2026-10-07T07:26:56.328390+00:00",
+      "source_sha256": {
+        "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+        "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+        "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+        "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+        "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+      },
+      "python_source_sha256": {
+        "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+        "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+      }
+    },
+    "wrapper_finished": {
+      "backend": "mint",
+      "settings": {
+        "nevents": 10000,
+        "req_acc": 0.01,
+        "nevt_job": 2500,
+        "iseed": 19727,
+        "ebeam1": 6500.0,
+        "ebeam2": 6500.0,
+        "pdlabel": "nn23nlo",
+        "parton_shower": "PYTHIA8",
+        "folding": [
+          1,
+          1,
+          1
+        ],
+        "born_spreading": false,
+        "reweight_scale": [
+          false
+        ],
+        "reweight_pdf": [
+          false
+        ],
+        "store_rwgt_info": false,
+        "event_norm": "average",
+        "fixed_ren_scale": false,
+        "fixed_fac_scale": false,
+        "dynamical_scale_choice": [
+          -1
+        ]
+      },
+      "cores": 5,
+      "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+      "started": "2026-10-07T07:26:56.328390+00:00",
+      "source_sha256": {
+        "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+        "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+        "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+        "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+        "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+      },
+      "python_source_sha256": {
+        "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+        "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+      },
+      "finished": "2026-10-07T07:28:12.963030+00:00",
+      "wall_seconds": 76.6325770309777,
+      "child_user_cpu_seconds": 215.325641,
+      "child_system_cpu_seconds": 26.168547,
+      "cli_returncode": 0,
+      "summary_exists": true,
+      "events_exist": true
+    },
+    "whole_launch_wall_seconds": 76.6325770309777
+  },
+  "ampli": {
+    "path": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_10k_20261007/ampli",
+    "backend": "ampli",
+    "run_card": {
+      "run_tag": "tag_1",
+      "nevents": "10000",
+      "req_acc": "0.01",
+      "nevt_job": "2500",
+      "time_of_flight": "-1.0",
+      "event_norm": "average",
+      "req_acc_fo": "0.01",
+      "npoints_fo_grid": "5000",
+      "niters_fo_grid": "4",
+      "npoints_fo": "10000",
+      "niters_fo": "6",
+      "iseed": "0",
+      "lpp1": "1",
+      "lpp2": "1",
+      "ebeam1": "6500.0",
+      "ebeam2": "6500.0",
+      "pdlabel": "nn23nlo",
+      "lhaid": "244600",
+      "pdfscheme": "0",
+      "photons_from_lepton": "True",
+      "parton_shower": "PYTHIA8",
+      "shower_scale_factor": "1.0",
+      "mcatnlo_delta": "False",
+      "fixed_ren_scale": "False",
+      "fixed_fac_scale": "False",
+      "mur_ref_fixed": "91.118",
+      "muf_ref_fixed": "91.118",
+      "dynamical_scale_choice": "-1",
+      "mur_over_ref": "1.0",
+      "muf_over_ref": "1.0",
+      "rw_rscale": "1.0, 2.0, 0.5",
+      "rw_fscale": "1.0, 2.0, 0.5",
+      "reweight_scale": "False",
+      "reweight_pdf": "False",
+      "store_rwgt_info": "False",
+      "custom_fcts": "",
+      "ickkw": "0",
+      "bwcutoff": "15.0",
+      "jetalgo": "1.0",
+      "jetradius": "0.7",
+      "ptj": "10.0",
+      "etaj": "-1.0",
+      "gamma_is_j": "False",
+      "ptl": "0.0",
+      "etal": "-1.0",
+      "drll": "0.0",
+      "drll_sf": "0.0",
+      "mll": "0.0",
+      "mll_sf": "30.0",
+      "rphreco": "0.1",
+      "etaphreco": "-1.0",
+      "lepphreco": "False",
+      "quarkphreco": "False",
+      "ptgmin": "20.0",
+      "etagamma": "-1.0",
+      "r0gamma": "0.4",
+      "xn": "1.0",
+      "epsgamma": "1.0",
+      "isoem": "True",
+      "pt_min_pdg": "{}",
+      "pt_max_pdg": "{}",
+      "mxx_min_pdg": "{}",
+      "pineappl": "False",
+      "born_spreading": "False",
+      "folding": "1, 1, 1"
+    },
+    "fks_card": {
+      "IRPoleCheckThreshold": "1.0d-5",
+      "PrecisionVirtualAtRunTime": "1.0d-3",
+      "QCD^2==": "-1",
+      "QED^2==": "-1",
+      "SelectedCouplingOrders": "0",
+      "VetoedContributionTypes": "0",
+      "SelectedContributionTypes": "0",
+      "NLOPSIntegrator": "1",
+      "NHelForMCoverHels": "4",
+      "VirtualFraction": "1.0d0",
+      "MinVirtualFraction": "0.005d0",
+      "UsePolyVirtual": ".True.",
+      "SeparateFlavourConfigurations": ".false.",
+      "FKSISRMapping": "0",
+      "FKSFinalRecoil": "0",
+      "MCExplicitKLSum": ".true.",
+      "FKSExplicitSum": ".false."
+    },
+    "cards_sha256": {
+      "run_card.dat": "9eae7ee335b4414e28a65b2603d6613f2d7a3715f9e51857a429693aea4759cd",
+      "param_card.dat": "e0b5b7c21e5331a5df9ddededb6ece6ff9f65c9de79838f4fc0ab816704ff170",
+      "FKS_params.dat": "f74a5310ab7edc424c305f6f63f3865e5e511b454475dc1eb590b8a8e1bed380"
+    },
+    "stage_cpu_seconds": {
+      "0": 60.3458395,
+      "1": 56.657283740000004,
+      "2": 93.51207782999998
+    },
+    "stage_cpu_complete_workers": {
+      "0": 5,
+      "1": 5,
+      "2": 7
+    },
+    "stage_wall_seconds_estimates": {
+      "0": {
+        "workers_with_wall_counters": 5,
+        "sum_worker_seconds": 63,
+        "phase_span_seconds": 15.651780843734741,
+        "note": "Span inferred from completed worker log modification times and integer wall durations; valid only when logs have not subsequently been copied/touched. In-progress workers are excluded."
+      },
+      "1": {
+        "workers_with_wall_counters": 5,
+        "sum_worker_seconds": 58,
+        "phase_span_seconds": 14.151395797729492,
+        "note": "Span inferred from completed worker log modification times and integer wall durations; valid only when logs have not subsequently been copied/touched. In-progress workers are excluded."
+      },
+      "2": {
+        "workers_with_wall_counters": 7,
+        "sum_worker_seconds": 93,
+        "phase_span_seconds": 33.70341444015503,
+        "note": "Span inferred from completed worker log modification times and integer wall durations; valid only when logs have not subsequently been copied/touched. In-progress workers are excluded."
+      }
+    },
+    "stage_logs": {
+      "0": 5,
+      "1": 5,
+      "2": 7
+    },
+    "integration_channels": [
+      {
+        "absolute_pb": 102.39808855347931,
+        "absolute_error_pb": 0.8217893187924308,
+        "signed_pb": 62.148687747411806,
+        "signed_error_pb": 0.6987864110778893,
+        "iterations": 4.0,
+        "points_or_quota": 15360.0,
+        "cpu_seconds": 13.5673885,
+        "channel": "P0_gg_ttx/GF1.0",
+        "result_path": "SubProcesses/P0_gg_ttx/GF1.0/res_1.dat"
+      },
+      {
+        "absolute_pb": 471.0437231423734,
+        "absolute_error_pb": 4.098223346069982,
+        "signed_pb": 268.72963411816187,
+        "signed_error_pb": 3.4140109534616285,
+        "iterations": 4.0,
+        "points_or_quota": 15360.0,
+        "cpu_seconds": 13.6749773,
+        "channel": "P0_gg_ttx/GF2.0",
+        "result_path": "SubProcesses/P0_gg_ttx/GF2.0/res_1.dat"
+      },
+      {
+        "absolute_pb": 463.6546823726722,
+        "absolute_error_pb": 4.071141888562144,
+        "signed_pb": 264.22656843993485,
+        "signed_error_pb": 3.350484535889549,
+        "iterations": 4.0,
+        "points_or_quota": 15360.0,
+        "cpu_seconds": 13.724617,
+        "channel": "P0_gg_ttx/GF3.0",
+        "result_path": "SubProcesses/P0_gg_ttx/GF3.0/res_1.dat"
+      },
+      {
+        "absolute_pb": 58.18763696449628,
+        "absolute_error_pb": 0.3865178243406425,
+        "signed_pb": 40.0745979990205,
+        "signed_error_pb": 0.31816238364167965,
+        "iterations": 4.0,
+        "points_or_quota": 15360.0,
+        "cpu_seconds": 7.91646099,
+        "channel": "P0_uux_ttx/GF1.0",
+        "result_path": "SubProcesses/P0_uux_ttx/GF1.0/res_1.dat"
+      },
+      {
+        "absolute_pb": 58.24279960203994,
+        "absolute_error_pb": 0.4071501153674243,
+        "signed_pb": 39.900657496315524,
+        "signed_error_pb": 0.3365573065331615,
+        "iterations": 4.0,
+        "points_or_quota": 15360.0,
+        "cpu_seconds": 7.77383995,
+        "channel": "P0_uxu_ttx/GF1.0",
+        "result_path": "SubProcesses/P0_uxu_ttx/GF1.0/res_1.dat"
+      }
+    ],
+    "production_workers": [
+      {
+        "channel": "P0_gg_ttx/GF1.0_1",
+        "log": "SubProcesses/P0_gg_ttx/GF1.0_1/log_MINT2.txt",
+        "cpu_seconds": 7.56885195,
+        "wall_seconds": 8,
+        "trials": 7168,
+        "generated_events": 2597,
+        "quota": 989,
+        "upper_bound_failures": 0,
+        "fatal": false,
+        "reserve_target": 989,
+        "envelope_exceeded": false,
+        "efficiency": 0.3623046875
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_1",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_1/log_MINT2.txt",
+        "cpu_seconds": 16.4278469,
+        "wall_seconds": 16,
+        "trials": 15611,
+        "generated_events": 5150,
+        "quota": 2230,
+        "upper_bound_failures": 0,
+        "fatal": false,
+        "reserve_target": 2230,
+        "envelope_exceeded": false,
+        "efficiency": 0.32989558644545514
+      },
+      {
+        "channel": "P0_gg_ttx/GF2.0_2",
+        "log": "SubProcesses/P0_gg_ttx/GF2.0_2/log_MINT2.txt",
+        "cpu_seconds": 16.2247696,
+        "wall_seconds": 16,
+        "trials": 15610,
+        "generated_events": 4896,
+        "quota": 2230,
+        "upper_bound_failures": 0,
+        "fatal": false,
+        "reserve_target": 2230,
+        "envelope_exceeded": false,
+        "efficiency": 0.3136450992953235
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_1",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_1/log_MINT2.txt",
+        "cpu_seconds": 33.2696457,
+        "wall_seconds": 33,
+        "trials": 33406,
+        "generated_events": 8965,
+        "quota": 2227,
+        "upper_bound_failures": 0,
+        "fatal": false,
+        "reserve_target": 2227,
+        "envelope_exceeded": false,
+        "efficiency": 0.2683649643776567
+      },
+      {
+        "channel": "P0_gg_ttx/GF3.0_2",
+        "log": "SubProcesses/P0_gg_ttx/GF3.0_2/log_MINT2.txt",
+        "cpu_seconds": 15.9362917,
+        "wall_seconds": 16,
+        "trials": 15589,
+        "generated_events": 4718,
+        "quota": 2227,
+        "upper_bound_failures": 0,
+        "fatal": false,
+        "reserve_target": 2227,
+        "envelope_exceeded": false,
+        "efficiency": 0.3026493039964077
+      },
+      {
+        "channel": "P0_uux_ttx/GF1.0_1",
+        "log": "SubProcesses/P0_uux_ttx/GF1.0_1/log_MINT2.txt",
+        "cpu_seconds": 2.04149199,
+        "wall_seconds": 2,
+        "trials": 3072,
+        "generated_events": 1418,
+        "quota": 536,
+        "upper_bound_failures": 0,
+        "fatal": false,
+        "reserve_target": 536,
+        "envelope_exceeded": false,
+        "efficiency": 0.4615885416666667
+      },
+      {
+        "channel": "P0_uxu_ttx/GF1.0_1",
+        "log": "SubProcesses/P0_uxu_ttx/GF1.0_1/log_MINT2.txt",
+        "cpu_seconds": 2.04317999,
+        "wall_seconds": 2,
+        "trials": 3072,
+        "generated_events": 1422,
+        "quota": 564,
+        "upper_bound_failures": 0,
+        "fatal": false,
+        "reserve_target": 564,
+        "envelope_exceeded": false,
+        "efficiency": 0.462890625
+      }
+    ],
+    "fatal_logs": [],
+    "warnings": [],
+    "integration": {
+      "signed_pb": 676.5616875913875,
+      "signed_error_pb": 2.6341944586806774,
+      "absolute_pb": 1150.2018591060823,
+      "absolute_error_pb": 3.1313191391283017,
+      "channels": 5,
+      "expected_channels": 5,
+      "complete": true,
+      "relative_signed_error": 0.003893502258542921,
+      "estimator": "Survey once plus all native production iterations, including top-ups",
+      "rate_estimation_trials": 170328
+    },
+    "production_manifest": {
+      "absolute_cross_section": 1150.2018591060823,
+      "allowed_overweight_factor": 0.01,
+      "channels": [
+        {
+          "absolute": 465.23541649398146,
+          "allocation_order": 1,
+          "available_candidates": 4460,
+          "batches": [
+            {
+              "adaptation": {
+                "completed_iterations": 3,
+                "mask": [
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1
+                ],
+                "mode": "adaptive_unfolded",
+                "ndim": 7,
+                "schedule": "nonzero_trials",
+                "updates": 2
+              },
+              "available": 2230,
+              "collection_log_z": -0.6202325658584638,
+              "directory": "SubProcesses/P0_gg_ttx/GF2.0_1",
+              "generated_target": 2230,
+              "native_log_z": -0.6202325658584638,
+              "nominal_final_quota": 2027,
+              "pool_protocol": 4,
+              "trials": 15611
+            },
+            {
+              "adaptation": {
+                "completed_iterations": 3,
+                "mask": [
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1
+                ],
+                "mode": "adaptive_unfolded",
+                "ndim": 7,
+                "schedule": "nonzero_trials",
+                "updates": 2
+              },
+              "available": 2230,
+              "collection_log_z": -1.168773887896105,
+              "directory": "SubProcesses/P0_gg_ttx/GF2.0_2",
+              "generated_target": 2230,
+              "native_log_z": -1.168773887896105,
+              "nominal_final_quota": 2027,
+              "pool_protocol": 4,
+              "trials": 15610
+            }
+          ],
+          "channel": "2.0",
+          "error_abs": 2.2478412017374865,
+          "error_signed": 1.901383112459092,
+          "generated_target": 4460,
+          "generation_cpu_seconds": 32.65261649999999,
+          "generation_trials": 31221,
+          "initial_quota": 4054,
+          "quota": 4018,
+          "selection": {
+            "available": 4460,
+            "full_trial_tail": 0.0074138062779545095,
+            "max_correction": 3.212534091710102,
+            "max_worker_selected_tail": 0.008363106566571356,
+            "overweight": 0.007638247976543865,
+            "reserve": 4460,
+            "reserve_tail": 0.006882569836413327,
+            "selected": 4018,
+            "selected_tail": 0.007321326815927336,
+            "sum_corrections": 4018.4892814982004,
+            "worst_subset_tail": 0.007638247976543865
+          },
+          "signed": 267.5687643160081,
+          "subprocess": "P0_gg_ttx",
+          "survey_absolute": 471.0437231423734,
+          "survey_points": 15360,
+          "survey_signed": 268.72963411816187,
+          "updated_rates": {
+            "absolute": 465.23541649398146,
+            "error_abs": 2.2478412017374865,
+            "error_signed": 1.901383112459092,
+            "production_iterations": 6,
+            "production_trials": 31221,
+            "signed": 267.5687643160081,
+            "survey_trials": 15360,
+            "trials": 46581
+          }
+        },
+        {
+          "absolute": 466.15714602071955,
+          "allocation_order": 2,
+          "available_candidates": 4454,
+          "batches": [
+            {
+              "adaptation": {
+                "completed_iterations": 4,
+                "mask": [
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1
+                ],
+                "mode": "adaptive_unfolded",
+                "ndim": 7,
+                "schedule": "nonzero_trials",
+                "updates": 3
+              },
+              "available": 2227,
+              "collection_log_z": -0.9638649698246198,
+              "directory": "SubProcesses/P0_gg_ttx/GF3.0_1",
+              "generated_target": 2227,
+              "native_log_z": -0.9638649698246198,
+              "nominal_final_quota": 2024,
+              "pool_protocol": 4,
+              "trials": 33406
+            },
+            {
+              "adaptation": {
+                "completed_iterations": 3,
+                "mask": [
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1
+                ],
+                "mode": "adaptive_unfolded",
+                "ndim": 7,
+                "schedule": "nonzero_trials",
+                "updates": 2
+              },
+              "available": 2227,
+              "collection_log_z": -0.8611492902346125,
+              "directory": "SubProcesses/P0_gg_ttx/GF3.0_2",
+              "generated_target": 2227,
+              "native_log_z": -0.8611492902346125,
+              "nominal_final_quota": 2024,
+              "pool_protocol": 4,
+              "trials": 15589
+            }
+          ],
+          "channel": "3.0",
+          "error_abs": 2.012687644877663,
+          "error_signed": 1.6794335554766404,
+          "generated_target": 4454,
+          "generation_cpu_seconds": 49.205937399999996,
+          "generation_trials": 48995,
+          "initial_quota": 4048,
+          "quota": 4080,
+          "selection": {
+            "available": 4454,
+            "full_trial_tail": 0.008797901476600322,
+            "max_correction": 2.619407625871314,
+            "max_worker_selected_tail": 0.008629332139234079,
+            "overweight": 0.008797901476600322,
+            "reserve": 4454,
+            "reserve_tail": 0.005086328967146066,
+            "selected": 4080,
+            "selected_tail": 0.005551699611741235,
+            "sum_corrections": 4080.643911597096,
+            "worst_subset_tail": 0.005552109416592544
+          },
+          "signed": 266.74061371300843,
+          "subprocess": "P0_gg_ttx",
+          "survey_absolute": 463.6546823726722,
+          "survey_points": 15360,
+          "survey_signed": 264.22656843993485,
+          "updated_rates": {
+            "absolute": 466.15714602071955,
+            "error_abs": 2.012687644877663,
+            "error_signed": 1.6794335554766404,
+            "production_iterations": 7,
+            "production_trials": 48995,
+            "signed": 266.74061371300843,
+            "survey_trials": 15360,
+            "trials": 64355
+          }
+        },
+        {
+          "absolute": 102.17481671956965,
+          "allocation_order": 0,
+          "available_candidates": 989,
+          "batches": [
+            {
+              "adaptation": {
+                "completed_iterations": 3,
+                "mask": [
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1
+                ],
+                "mode": "adaptive_unfolded",
+                "ndim": 7,
+                "schedule": "nonzero_trials",
+                "updates": 2
+              },
+              "available": 989,
+              "collection_log_z": -0.6423712387021308,
+              "directory": "SubProcesses/P0_gg_ttx/GF1.0_1",
+              "generated_target": 989,
+              "native_log_z": -0.6423712387021308,
+              "nominal_final_quota": 899,
+              "pool_protocol": 4,
+              "trials": 7168
+            }
+          ],
+          "channel": "1.0",
+          "error_abs": 0.6629615479245125,
+          "error_signed": 0.5704556625307989,
+          "generated_target": 989,
+          "generation_cpu_seconds": 7.56885195,
+          "generation_trials": 7168,
+          "initial_quota": 899,
+          "quota": 900,
+          "selection": {
+            "available": 989,
+            "full_trial_tail": 0.005208321880653092,
+            "max_correction": 1.8984758291302817,
+            "max_worker_selected_tail": 0.005887247684075785,
+            "overweight": 0.005887247684075785,
+            "reserve": 989,
+            "reserve_tail": 0.005358153715917558,
+            "selected": 900,
+            "selected_tail": 0.005887247684075785,
+            "sum_corrections": 900.1173909119002,
+            "worst_subset_tail": 0.005887247684075785
+          },
+          "signed": 62.40147941614174,
+          "subprocess": "P0_gg_ttx",
+          "survey_absolute": 102.39808855347931,
+          "survey_points": 15360,
+          "survey_signed": 62.148687747411806,
+          "updated_rates": {
+            "absolute": 102.17481671956965,
+            "error_abs": 0.6629615479245125,
+            "error_signed": 0.5704556625307989,
+            "production_iterations": 3,
+            "production_trials": 7168,
+            "signed": 62.40147941614174,
+            "survey_trials": 15360,
+            "trials": 22528
+          }
+        },
+        {
+          "absolute": 58.351871290679036,
+          "allocation_order": 4,
+          "available_candidates": 564,
+          "batches": [
+            {
+              "adaptation": {
+                "completed_iterations": 2,
+                "mask": [
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1
+                ],
+                "mode": "adaptive_unfolded",
+                "ndim": 7,
+                "schedule": "nonzero_trials",
+                "updates": 1
+              },
+              "available": 564,
+              "collection_log_z": -0.28413954996775903,
+              "directory": "SubProcesses/P0_uxu_ttx/GF1.0_1",
+              "generated_target": 564,
+              "native_log_z": -0.28413954996775903,
+              "nominal_final_quota": 512,
+              "pool_protocol": 4,
+              "trials": 3072
+            }
+          ],
+          "channel": "1.0",
+          "error_abs": 0.3683187073730841,
+          "error_signed": 0.3028990889639916,
+          "generated_target": 564,
+          "generation_cpu_seconds": 2.04317999,
+          "generation_trials": 3072,
+          "initial_quota": 512,
+          "quota": 514,
+          "selection": {
+            "available": 564,
+            "full_trial_tail": 0.002478394670333429,
+            "max_correction": 1.3278446490030504,
+            "max_worker_selected_tail": 0.0025832090206923224,
+            "overweight": 0.0025832090206923224,
+            "reserve": 564,
+            "reserve_tail": 0.0023543344840479706,
+            "selected": 514,
+            "selected_tail": 0.0025832090206923224,
+            "sum_corrections": 514.0291158658065,
+            "worst_subset_tail": 0.0025832090206923224
+          },
+          "signed": 39.82882827387034,
+          "subprocess": "P0_uxu_ttx",
+          "survey_absolute": 58.24279960203994,
+          "survey_points": 15360,
+          "survey_signed": 39.900657496315524,
+          "updated_rates": {
+            "absolute": 58.351871290679036,
+            "error_abs": 0.3683187073730841,
+            "error_signed": 0.3028990889639916,
+            "production_iterations": 2,
+            "production_trials": 3072,
+            "signed": 39.82882827387034,
+            "survey_trials": 15360,
+            "trials": 18432
+          }
+        },
+        {
+          "absolute": 58.28260858113249,
+          "allocation_order": 3,
+          "available_candidates": 536,
+          "batches": [
+            {
+              "adaptation": {
+                "completed_iterations": 2,
+                "mask": [
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1,
+                  1
+                ],
+                "mode": "adaptive_unfolded",
+                "ndim": 7,
+                "schedule": "nonzero_trials",
+                "updates": 1
+              },
+              "available": 536,
+              "collection_log_z": -0.5567914134263772,
+              "directory": "SubProcesses/P0_uux_ttx/GF1.0_1",
+              "generated_target": 536,
+              "native_log_z": -0.5567914134263772,
+              "nominal_final_quota": 487,
+              "pool_protocol": 4,
+              "trials": 3072
+            }
+          ],
+          "channel": "1.0",
+          "error_abs": 0.3553607220444373,
+          "error_signed": 0.2933566388029832,
+          "generated_target": 536,
+          "generation_cpu_seconds": 2.04149199,
+          "generation_trials": 3072,
+          "initial_quota": 487,
+          "quota": 488,
+          "selection": {
+            "available": 536,
+            "full_trial_tail": 0.005426248454855913,
+            "max_correction": 1.742437295371542,
+            "max_worker_selected_tail": 0.0057448142237265165,
+            "overweight": 0.0057448142237265165,
+            "reserve": 536,
+            "reserve_tail": 0.005231127718845513,
+            "selected": 488,
+            "selected_tail": 0.0057448142237265165,
+            "sum_corrections": 488.0722592770665,
+            "worst_subset_tail": 0.0057448142237265165
+          },
+          "signed": 40.02200187235874,
+          "subprocess": "P0_uux_ttx",
+          "survey_absolute": 58.18763696449628,
+          "survey_points": 15360,
+          "survey_signed": 40.0745979990205,
+          "updated_rates": {
+            "absolute": 58.28260858113249,
+            "error_abs": 0.3553607220444373,
+            "error_signed": 0.2933566388029832,
+            "production_iterations": 2,
+            "production_trials": 3072,
+            "signed": 40.02200187235874,
+            "survey_trials": 15360,
+            "trials": 18432
+          }
+        }
+      ],
+      "cross_section": 676.5616875913875,
+      "generation_cpu_seconds": 93.51207783,
+      "generation_trials": 93528,
+      "overweight_definition": "full absolute cross section belonging to weights above their iteration threshold",
+      "rate_source": "survey_plus_production",
+      "requested_events": 10000,
+      "rounds": [
+        {
+          "channels": [
+            {
+              "absolute": 465.23541649398146,
+              "additional_quota": 0,
+              "available": 4460,
+              "channel": "2.0",
+              "quota": 4018,
+              "signed": 267.5687643160081,
+              "subprocess": "P0_gg_ttx"
+            },
+            {
+              "absolute": 466.15714602071955,
+              "additional_quota": 0,
+              "available": 4454,
+              "channel": "3.0",
+              "quota": 4080,
+              "signed": 266.74061371300843,
+              "subprocess": "P0_gg_ttx"
+            },
+            {
+              "absolute": 102.17481671956965,
+              "additional_quota": 0,
+              "available": 989,
+              "channel": "1.0",
+              "quota": 900,
+              "signed": 62.40147941614174,
+              "subprocess": "P0_gg_ttx"
+            },
+            {
+              "absolute": 58.351871290679036,
+              "additional_quota": 0,
+              "available": 564,
+              "channel": "1.0",
+              "quota": 514,
+              "signed": 39.82882827387034,
+              "subprocess": "P0_uxu_ttx"
+            },
+            {
+              "absolute": 58.28260858113249,
+              "additional_quota": 0,
+              "available": 536,
+              "channel": "1.0",
+              "quota": 488,
+              "signed": 40.02200187235874,
+              "subprocess": "P0_uux_ttx"
+            }
+          ],
+          "round": 1
+        }
+      ],
+      "sampling": "native_adaptive_unfolded",
+      "seed": 19727,
+      "survey_relative_accuracy": 0.03,
+      "uncertainty": 2.6341944586806774,
+      "uncertainty_convention": "native_trial_weighted_iteration_errors",
+      "version": 4,
+      "weight_convention": "native_iteration_envelopes"
+    },
+    "survey": {
+      "signed_pb": 675.0801458008445,
+      "signed_error_pb": 4.856337919342466,
+      "absolute_pb": 1153.526930635061,
+      "absolute_error_pb": 5.861751939525967,
+      "channels": 5,
+      "relative_signed_error": 0.0071937205523670295,
+      "expected_channels": 5,
+      "complete": true
+    },
+    "integration_complete": true,
+    "production": {
+      "logged_workers": 7,
+      "workers_with_trial_counters": 7,
+      "counter_events": 29166,
+      "trials": 93528,
+      "efficiency": 0.10691985287828244,
+      "events_per_cpu_second_completed_workers": 106.93805797128657,
+      "upper_bound_failures": 0,
+      "zero_trials": 2,
+      "ampli_envelope_failure_workers": 0,
+      "all_logged_workers_finished": true,
+      "all_assigned_workers_finished": true,
+      "stored_candidates": 29166,
+      "candidate_retention_efficiency": 0.31184244290479857,
+      "cpu_seconds": 93.51207782999998,
+      "survey_cpu_seconds": 117.00312324000001,
+      "final_events": 10000,
+      "events_per_total_cpu_second": 47.50250789098515,
+      "native_iterations": 20,
+      "grid_updates": 13,
+      "nonzero_trials": 93526,
+      "native_reserve_target": 11003,
+      "total_nominal_worker_quota": 10000,
+      "collection_available": 11003,
+      "collection_rounds": 1,
+      "rethresholded_workers": 0,
+      "max_channel_quota_change": 36
+    },
+    "total_cpu_seconds_completed_workers": 210.51520107,
+    "cpu_note": "Sum of worker CPU times from phase logs/results; incomplete workers without final CPU counters are excluded. Compilation and Python coordination are excluded.",
+    "assignments": [
+      {
+        "file": "P0_gg_ttx/GF2.0/events.lhe",
+        "quota": 4018,
+        "allocated_absolute_pb": 465.2354,
+        "weight_fraction": 1.0
+      },
+      {
+        "file": "P0_gg_ttx/GF3.0/events.lhe",
+        "quota": 4080,
+        "allocated_absolute_pb": 466.1571,
+        "weight_fraction": 1.0
+      },
+      {
+        "file": "P0_gg_ttx/GF1.0/events.lhe",
+        "quota": 900,
+        "allocated_absolute_pb": 102.1748,
+        "weight_fraction": 1.0
+      },
+      {
+        "file": "P0_uxu_ttx/GF1.0/events.lhe",
+        "quota": 514,
+        "allocated_absolute_pb": 58.35187,
+        "weight_fraction": 1.0
+      },
+      {
+        "file": "P0_uux_ttx/GF1.0/events.lhe",
+        "quota": 488,
+        "allocated_absolute_pb": 58.28261,
+        "weight_fraction": 1.0
+      }
+    ],
+    "assigned_events": 10000,
+    "lhe": {
+      "path": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_10k_20261007/ampli/Events/benchmark_10k/events.lhe.gz",
+      "events": 10000,
+      "positive": 7889,
+      "negative": 2111,
+      "zero": 0,
+      "all_weights_finite": true,
+      "sum_weights": 6637287.126294415,
+      "sum_squared_weights": 13256142496.567692,
+      "sum_absolute_weights": 11503573.616988264,
+      "minimum_absolute_weight": 1147.2853123437644,
+      "maximum_absolute_weight": 3695.062684726629,
+      "closed_document": true,
+      "truncated_event_header": false,
+      "init": [
+        {
+          "signed_pb": 676.5616875913875,
+          "signed_error_pb": 2.6341944586806774,
+          "maximum_weight": 1150.2018591060823,
+          "process": 0
+        }
+      ],
+      "negative_absolute_weight": 2433143.245347214,
+      "rwgt_blocks": 0,
+      "mgrwgt_blocks": 0,
+      "idwtup": -4,
+      "init_processes": 1,
+      "negative_fraction": 0.2111,
+      "mean_sign": 0.5778,
+      "sign_effective_events": 3338.5283999999997,
+      "signed_weight_effective_events": 3323.257909175314,
+      "absolute_weight_effective_events": 9982.708468601042,
+      "weighted_negative_fraction": 0.21151194631848952,
+      "rate_from_signs_pb": 664.5866341914943,
+      "sign_sampling_error_pb": 9.387698985082068,
+      "sign_error_note": "Binomial sign fluctuation conditional on the integrated absolute normalization; excludes its integration uncertainty.",
+      "rate_from_weights_pb": 663.7287126294416,
+      "weighted_event_sampling_error_pb": 9.408331214324205,
+      "sha256": "7d7585bab1f08768ce368e1490cf6258e12f37221007f7811dd739ad4a8d7ffb",
+      "event_sampling_error_note": "Sample variance of finalized signed event weights; conditional on the global absolute rate and neglecting finite-pool correlations. Not an independent integration uncertainty.",
+      "rate_minus_integration_pb": -12.832974961945865,
+      "diagnostic_pull": -1.3134890801540973,
+      "signed_weight_effective_events_per_generation_cpu_second": 35.538274694492635,
+      "signed_weight_effective_events_per_total_cpu_second": 15.786308505437917,
+      "absolute_weight_effective_events_per_generation_cpu_second": 106.75314569257117,
+      "absolute_weight_effective_events_per_total_cpu_second": 47.42036878031253
+    },
+    "summary": "\n   --------------------------------------------------------------\n      Summary:\n      Process p p > t t~ [QCD]\n      Run at p-p collider (6500.0 + 6500.0 GeV)\n      Number of events generated: 10000\n      Total cross section: 6.766e+02 +- 2.6e+00 pb\n   --------------------------------------------------------------\n",
+    "complete_expected_sample": true,
+    "native_validation": {
+      "collector_source": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_10k_20261007/ampli/bin/internal/ampli_pool.py",
+      "collector_sha256": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462",
+      "rates_recomputed_from_survey_once_and_all_iterations": true,
+      "initial_and_updated_quotas_reproduced": true,
+      "deterministic_collection_reproduced": true,
+      "final_lhe_magnitudes_reproduced": true,
+      "all_native_and_collected_tail_fractions_below_one_percent": true,
+      "collected_tail_fraction": 0.00614978114342761,
+      "maximum_native_tail_fraction": 0.008797901476600322,
+      "maximum_final_channel_tail_bound": 0.008797901476600322,
+      "workers": [
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_1",
+          "trials": 15611,
+          "nonzero_trials": 15610,
+          "iterations": 3,
+          "stored_candidates": 5150,
+          "reserve_target": 2230,
+          "nominal_quota": 2027,
+          "available": 2230,
+          "native_tails": {
+            "full_trial_tail": 0.006412119765277005,
+            "reserve_tail": 0.006233167849669853,
+            "worst_subset_tail": 0.006856200916454753
+          },
+          "rethresholded": false,
+          "adaptation": {
+            "mode": "adaptive_unfolded",
+            "ndim": 7,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "updates": 2,
+            "completed_iterations": 3,
+            "schedule": "nonzero_trials"
+          }
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF2.0_2",
+          "trials": 15610,
+          "nonzero_trials": 15610,
+          "iterations": 3,
+          "stored_candidates": 4896,
+          "reserve_target": 2230,
+          "nominal_quota": 2027,
+          "available": 2230,
+          "native_tails": {
+            "full_trial_tail": 0.0074138062779545095,
+            "reserve_tail": 0.007531971823157207,
+            "worst_subset_tail": 0.008284862987566694
+          },
+          "rethresholded": false,
+          "adaptation": {
+            "mode": "adaptive_unfolded",
+            "ndim": 7,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "updates": 2,
+            "completed_iterations": 3,
+            "schedule": "nonzero_trials"
+          }
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_1",
+          "trials": 33406,
+          "nonzero_trials": 33405,
+          "iterations": 4,
+          "stored_candidates": 8965,
+          "reserve_target": 2227,
+          "nominal_quota": 2024,
+          "available": 2227,
+          "native_tails": {
+            "full_trial_tail": 0.00228948010360736,
+            "reserve_tail": 0.0022622238040383583,
+            "worst_subset_tail": 0.0024888880576714252
+          },
+          "rethresholded": false,
+          "adaptation": {
+            "mode": "adaptive_unfolded",
+            "ndim": 7,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "updates": 3,
+            "completed_iterations": 4,
+            "schedule": "nonzero_trials"
+          }
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF3.0_2",
+          "trials": 15589,
+          "nonzero_trials": 15589,
+          "iterations": 3,
+          "stored_candidates": 4718,
+          "reserve_target": 2227,
+          "nominal_quota": 2024,
+          "available": 2227,
+          "native_tails": {
+            "full_trial_tail": 0.008797901476600322,
+            "reserve_tail": 0.00791043413025344,
+            "worst_subset_tail": 0.008701609540837086
+          },
+          "rethresholded": false,
+          "adaptation": {
+            "mode": "adaptive_unfolded",
+            "ndim": 7,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "updates": 2,
+            "completed_iterations": 3,
+            "schedule": "nonzero_trials"
+          }
+        },
+        {
+          "directory": "SubProcesses/P0_gg_ttx/GF1.0_1",
+          "trials": 7168,
+          "nonzero_trials": 7168,
+          "iterations": 3,
+          "stored_candidates": 2597,
+          "reserve_target": 989,
+          "nominal_quota": 899,
+          "available": 989,
+          "native_tails": {
+            "full_trial_tail": 0.005208321880653091,
+            "reserve_tail": 0.005358153715917515,
+            "worst_subset_tail": 0.005893786845529515
+          },
+          "rethresholded": false,
+          "adaptation": {
+            "mode": "adaptive_unfolded",
+            "ndim": 7,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "updates": 2,
+            "completed_iterations": 3,
+            "schedule": "nonzero_trials"
+          }
+        },
+        {
+          "directory": "SubProcesses/P0_uxu_ttx/GF1.0_1",
+          "trials": 3072,
+          "nonzero_trials": 3072,
+          "iterations": 2,
+          "stored_candidates": 1422,
+          "reserve_target": 564,
+          "nominal_quota": 512,
+          "available": 564,
+          "native_tails": {
+            "full_trial_tail": 0.002478394670333429,
+            "reserve_tail": 0.002354334484047962,
+            "worst_subset_tail": 0.002593293208568175
+          },
+          "rethresholded": false,
+          "adaptation": {
+            "mode": "adaptive_unfolded",
+            "ndim": 7,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "updates": 1,
+            "completed_iterations": 2,
+            "schedule": "nonzero_trials"
+          }
+        },
+        {
+          "directory": "SubProcesses/P0_uux_ttx/GF1.0_1",
+          "trials": 3072,
+          "nonzero_trials": 3072,
+          "iterations": 2,
+          "stored_candidates": 1418,
+          "reserve_target": 536,
+          "nominal_quota": 487,
+          "available": 536,
+          "native_tails": {
+            "full_trial_tail": 0.005426248454855913,
+            "reserve_tail": 0.005231127718845575,
+            "worst_subset_tail": 0.0057565910148147945
+          },
+          "rethresholded": false,
+          "adaptation": {
+            "mode": "adaptive_unfolded",
+            "ndim": 7,
+            "mask": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "updates": 1,
+            "completed_iterations": 2,
+            "schedule": "nonzero_trials"
+          }
+        }
+      ],
+      "production_counters": {
+        "native_iterations": 20,
+        "grid_updates": 13,
+        "nonzero_trials": 93526,
+        "zero_trials": 2,
+        "stored_candidates": 29166,
+        "native_reserve_target": 11003,
+        "total_nominal_worker_quota": 10000,
+        "collection_available": 11003,
+        "collection_rounds": 1,
+        "rethresholded_workers": 0,
+        "max_channel_quota_change": 36
+      }
+    },
+    "exported_source_sha256": {
+      "SubProcesses/mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+      "SubProcesses/ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de",
+      "SubProcesses/simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+      "SubProcesses/integrator_helpers.f90": "ccdc363fd95481fb4e2aa03faeb286a4c22afe4656c2af4a79e969662d8afc61",
+      "SubProcesses/driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+      "SubProcesses/genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+      "bin/internal/amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+      "bin/internal/ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+    },
+    "wrapper_metadata": {
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_10k_20261007/ampli_finished.json": {
+        "backend": "ampli",
+        "settings": {
+          "nevents": 10000,
+          "req_acc": 0.01,
+          "nevt_job": 2500,
+          "iseed": 19727,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            1,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-07T07:28:13.112344+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+          "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+        },
+        "python_source_sha256": {
+          "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+          "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+        },
+        "finished": "2026-10-07T07:29:55.503437+00:00",
+        "wall_seconds": 102.38874163600849,
+        "child_user_cpu_seconds": 269.361804,
+        "child_system_cpu_seconds": 32.668609000000004,
+        "cli_returncode": 0,
+        "summary_exists": true,
+        "events_exist": true
+      },
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_10k_20261007/ampli_started.json": {
+        "backend": "ampli",
+        "settings": {
+          "nevents": 10000,
+          "req_acc": 0.01,
+          "nevt_job": 2500,
+          "iseed": 19727,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            1,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-07T07:28:13.112344+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+          "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+        },
+        "python_source_sha256": {
+          "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+          "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+        }
+      },
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_10k_20261007/mint_finished.json": {
+        "backend": "mint",
+        "settings": {
+          "nevents": 10000,
+          "req_acc": 0.01,
+          "nevt_job": 2500,
+          "iseed": 19727,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            1,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-07T07:26:56.328390+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+          "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+        },
+        "python_source_sha256": {
+          "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+          "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+        },
+        "finished": "2026-10-07T07:28:12.963030+00:00",
+        "wall_seconds": 76.6325770309777,
+        "child_user_cpu_seconds": 215.325641,
+        "child_system_cpu_seconds": 26.168547,
+        "cli_returncode": 0,
+        "summary_exists": true,
+        "events_exist": true
+      },
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_10k_20261007/mint_started.json": {
+        "backend": "mint",
+        "settings": {
+          "nevents": 10000,
+          "req_acc": 0.01,
+          "nevt_job": 2500,
+          "iseed": 19727,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            1,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-07T07:26:56.328390+00:00",
+        "source_sha256": {
+          "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+          "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+          "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+        },
+        "python_source_sha256": {
+          "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+          "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+        }
+      },
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_10k_20261007/mint_tail_finished.json": {
+        "backend": "mint_tail",
+        "settings": {
+          "nevents": 10000,
+          "req_acc": 0.01,
+          "nevt_job": 2500,
+          "iseed": 19727,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            1,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-07T07:29:55.652235+00:00",
+        "source_sha256": {
+          "mint_module.f90": "71bf022158bcd55cc624740c7ef99b104870bcc95d06d6e9f57367bc11666ed5",
+          "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+          "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+        },
+        "python_source_sha256": {
+          "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+          "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+        },
+        "finished": "2026-10-07T07:31:12.631418+00:00",
+        "wall_seconds": 76.97704569902271,
+        "child_user_cpu_seconds": 215.756928,
+        "child_system_cpu_seconds": 26.193857,
+        "cli_returncode": 0,
+        "summary_exists": true,
+        "events_exist": true
+      },
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_unfolded_10k_20261007/mint_tail_started.json": {
+        "backend": "mint_tail",
+        "settings": {
+          "nevents": 10000,
+          "req_acc": 0.01,
+          "nevt_job": 2500,
+          "iseed": 19727,
+          "ebeam1": 6500.0,
+          "ebeam2": 6500.0,
+          "pdlabel": "nn23nlo",
+          "parton_shower": "PYTHIA8",
+          "folding": [
+            1,
+            1,
+            1
+          ],
+          "born_spreading": false,
+          "reweight_scale": [
+            false
+          ],
+          "reweight_pdf": [
+            false
+          ],
+          "store_rwgt_info": false,
+          "event_norm": "average",
+          "fixed_ren_scale": false,
+          "fixed_fac_scale": false,
+          "dynamical_scale_choice": [
+            -1
+          ]
+        },
+        "cores": 5,
+        "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+        "started": "2026-10-07T07:29:55.652235+00:00",
+        "source_sha256": {
+          "mint_module.f90": "71bf022158bcd55cc624740c7ef99b104870bcc95d06d6e9f57367bc11666ed5",
+          "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+          "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+          "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+          "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+        },
+        "python_source_sha256": {
+          "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+          "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+        }
+      }
+    },
+    "wrapper_started": {
+      "backend": "ampli",
+      "settings": {
+        "nevents": 10000,
+        "req_acc": 0.01,
+        "nevt_job": 2500,
+        "iseed": 19727,
+        "ebeam1": 6500.0,
+        "ebeam2": 6500.0,
+        "pdlabel": "nn23nlo",
+        "parton_shower": "PYTHIA8",
+        "folding": [
+          1,
+          1,
+          1
+        ],
+        "born_spreading": false,
+        "reweight_scale": [
+          false
+        ],
+        "reweight_pdf": [
+          false
+        ],
+        "store_rwgt_info": false,
+        "event_norm": "average",
+        "fixed_ren_scale": false,
+        "fixed_fac_scale": false,
+        "dynamical_scale_choice": [
+          -1
+        ]
+      },
+      "cores": 5,
+      "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+      "started": "2026-10-07T07:28:13.112344+00:00",
+      "source_sha256": {
+        "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+        "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+        "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+        "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+        "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+      },
+      "python_source_sha256": {
+        "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+        "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+      }
+    },
+    "wrapper_finished": {
+      "backend": "ampli",
+      "settings": {
+        "nevents": 10000,
+        "req_acc": 0.01,
+        "nevt_job": 2500,
+        "iseed": 19727,
+        "ebeam1": 6500.0,
+        "ebeam2": 6500.0,
+        "pdlabel": "nn23nlo",
+        "parton_shower": "PYTHIA8",
+        "folding": [
+          1,
+          1,
+          1
+        ],
+        "born_spreading": false,
+        "reweight_scale": [
+          false
+        ],
+        "reweight_pdf": [
+          false
+        ],
+        "store_rwgt_info": false,
+        "event_norm": "average",
+        "fixed_ren_scale": false,
+        "fixed_fac_scale": false,
+        "dynamical_scale_choice": [
+          -1
+        ]
+      },
+      "cores": 5,
+      "source_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+      "started": "2026-10-07T07:28:13.112344+00:00",
+      "source_sha256": {
+        "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+        "simple_integrator.f90": "ce8586c29b703840f3cc86ab2de949effe9bdf64b76adc1d645320351093c7d0",
+        "driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+        "genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+        "ampli_mint_adapter.f90": "734995d8b0b4aa2c9c336feb954d0e55c33c2db024b207cdf6c6abd248c590de"
+      },
+      "python_source_sha256": {
+        "amcatnlo_run_interface.py": "99a5f3b7432418adb715bc1eee4408edb688ef7829cf640f42d4dbb011325746",
+        "ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+      },
+      "finished": "2026-10-07T07:29:55.503437+00:00",
+      "wall_seconds": 102.38874163600849,
+      "child_user_cpu_seconds": 269.361804,
+      "child_system_cpu_seconds": 32.668609000000004,
+      "cli_returncode": 0,
+      "summary_exists": true,
+      "events_exist": true
+    },
+    "whole_launch_wall_seconds": 102.38874163600849
+  },
+  "comparison": {
+    "both_integrations_complete": true,
+    "ampli_minus_mint_pb": -4.003254113304479,
+    "combined_signed_integration_error_pb": 5.023318175741796,
+    "integration_pull": -0.7969342122576809,
+    "uncertainty_ratio_ampli_over_mint": 0.6158637626591827,
+    "efficiency_ratio_ampli_over_mint": 0.6185420408861517,
+    "events_per_cpu_second_completed_workers_ratio_ampli_over_mint": 0.585688606230813,
+    "events_per_total_cpu_second_ratio_ampli_over_mint": 0.7144464782378768,
+    "both_samples_complete": true,
+    "run_card_differences": {},
+    "fks_card_differences": {
+      "NLOPSIntegrator": {
+        "mint": "0",
+        "ampli": "1"
+      }
+    },
+    "param_cards_identical": true,
+    "exported_sources_identical": true,
+    "whole_launch_wall_speedup_ampli": 0.7484472980770304,
+    "generation_cpu_speedup_ampli": 0.585688606230813,
+    "total_worker_cpu_speedup_ampli": 0.7144464782378768,
+    "signed_weight_effective_events_per_generation_cpu_second_ratio_ampli_over_mint": 0.5580125123634487,
+    "signed_weight_effective_events_per_total_cpu_second_ratio_ampli_over_mint": 0.6806860676979337,
+    "absolute_weight_effective_events_per_generation_cpu_second_ratio_ampli_over_mint": 0.5846758609380259,
+    "absolute_weight_effective_events_per_total_cpu_second_ratio_ampli_over_mint": 0.7132110908663517,
+    "interpretation": "Integration errors are Monte Carlo integration uncertainties, not scale/PDF theory uncertainties. Final-event efficiency uses finalized event count divided by all attempted folded phase-space points, including top-ups. Candidate retention is reported separately. AmpliCol final rates combine its 3% per-channel survey and all native production iterations, while MINT rates use stage-1 integration. Nonzero-count stopping and adaptation mean the native error is a conventional Monte Carlo estimate, not an exactly unbiased finite-sample uncertainty. MINT bound exceedance counts do not measure full overweight tail mass. Ratios from incomplete worker subsets are diagnostic only."
+  }
+}

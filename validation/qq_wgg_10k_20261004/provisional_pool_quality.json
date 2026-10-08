@@ -1,0 +1,145 @@
+{
+  "status": "Provisional read-only forecast from completed initial pools; final allocation and pool quality may change.",
+  "time_utc": "2026-10-04T14:37:16.498868+00:00",
+  "survey_absolute_pb": 301.9863,
+  "channels": [
+    {
+      "directory": "P0_udx_wpgg/GF1.0_1",
+      "provisional_quota": 1000,
+      "approximate_final_quota": 734,
+      "pool_complete": true,
+      "trials": 12459,
+      "candidates": 3741,
+      "quality": {
+        "available": 3741,
+        "reserve": 1000,
+        "selected": 734,
+        "overweight": 0.3316686589802093,
+        "max_correction": 15.2464335948854
+      },
+      "empirical_threshold_forecast": {
+        "threshold": 2738.838532986554,
+        "total_trials_estimate": 113436,
+        "multiplier": 9.10470801554312,
+        "limitation": "Extrapolation from observed weights and frozen mean; ignores unseen tails and finite-sample fluctuations. Not a stopping criterion."
+      }
+    },
+    {
+      "directory": "P0_udx_wpgg/GF2.0_1",
+      "provisional_quota": 1000,
+      "approximate_final_quota": 753,
+      "pool_complete": true,
+      "trials": 9738,
+      "candidates": 3132,
+      "quality": {
+        "available": 3132,
+        "reserve": 1000,
+        "selected": 753,
+        "overweight": 0.32419183915996475,
+        "max_correction": 11.457067100547967
+      },
+      "empirical_threshold_forecast": {
+        "threshold": 1788.296283216864,
+        "total_trials_estimate": 75528,
+        "multiplier": 7.755975759990534,
+        "limitation": "Extrapolation from observed weights and frozen mean; ignores unseen tails and finite-sample fluctuations. Not a stopping criterion."
+      }
+    },
+    {
+      "directory": "P0_udx_wpgg/GF3.0_1",
+      "provisional_quota": 1711,
+      "approximate_final_quota": 1555,
+      "pool_complete": true,
+      "trials": 25899,
+      "candidates": 6538,
+      "quality": {
+        "available": 6538,
+        "reserve": 1711,
+        "selected": 1555,
+        "overweight": 0.19135576766406548,
+        "max_correction": 25.524772594327036
+      },
+      "empirical_threshold_forecast": {
+        "threshold": 6929.864718959145,
+        "total_trials_estimate": 258600,
+        "multiplier": 9.98493073073566,
+        "limitation": "Extrapolation from observed weights and frozen mean; ignores unseen tails and finite-sample fluctuations. Not a stopping criterion."
+      }
+    },
+    {
+      "directory": "P0_udx_wpgg/GF4.0_1",
+      "provisional_quota": 1000,
+      "approximate_final_quota": 690,
+      "pool_complete": true,
+      "trials": 9543,
+      "candidates": 2988,
+      "quality": {
+        "available": 2988,
+        "reserve": 1000,
+        "selected": 690,
+        "overweight": 0.27753770866993116,
+        "max_correction": 7.927870331431455
+      },
+      "empirical_threshold_forecast": {
+        "threshold": 1022.4479565961398,
+        "total_trials_estimate": 47163,
+        "multiplier": 4.942121653314811,
+        "limitation": "Extrapolation from observed weights and frozen mean; ignores unseen tails and finite-sample fluctuations. Not a stopping criterion."
+      }
+    },
+    {
+      "directory": "P0_udx_wpgg/GF5.0_1",
+      "provisional_quota": 2126,
+      "approximate_final_quota": 1932,
+      "pool_complete": true,
+      "trials": 38420,
+      "candidates": 10542,
+      "quality": {
+        "available": 10542,
+        "reserve": 2126,
+        "selected": 1932,
+        "overweight": 0.17772203744904846,
+        "max_correction": 18.29911557025614
+      },
+      "empirical_threshold_forecast": {
+        "threshold": 9555.821129163995,
+        "total_trials_estimate": 340315,
+        "multiplier": 8.857755472966703,
+        "limitation": "Extrapolation from observed weights and frozen mean; ignores unseen tails and finite-sample fluctuations. Not a stopping criterion."
+      }
+    },
+    {
+      "directory": "P0_udx_wpgg/GF6.0_1",
+      "provisional_quota": 1000,
+      "approximate_final_quota": 751,
+      "pool_complete": true,
+      "trials": 17399,
+      "candidates": 5187,
+      "quality": {
+        "available": 5187,
+        "reserve": 1000,
+        "selected": 751,
+        "overweight": 0.14959548204352704,
+        "max_correction": 21.4402646863359
+      },
+      "empirical_threshold_forecast": {
+        "threshold": 5252.835789820941,
+        "total_trials_estimate": 228510,
+        "multiplier": 13.133508408510743,
+        "limitation": "Extrapolation from observed weights and frozen mean; ignores unseen tails and finite-sample fluctuations. Not a stopping criterion."
+      }
+    },
+    {
+      "directory": "P0_udx_wpgg/GF7.0_1",
+      "provisional_quota": 2208,
+      "approximate_final_quota": 2007,
+      "pool_complete": false
+    },
+    {
+      "directory": "P0_udx_wpgg/GF8.0_1",
+      "provisional_quota": 1737,
+      "approximate_final_quota": 1578,
+      "pool_complete": false
+    }
+  ]
+}

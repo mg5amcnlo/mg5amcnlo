@@ -1,0 +1,184 @@
+/tmp/mg5-epvej-unfolded-10k-cv7t_d8h/mint/bin/internal/file_writers.py:188: SyntaxWarning: invalid escape sequence '\s'
+  keyword_pairs = {r'^if.+then\s*$': ('^end\s*if', 2),
+INFO: ************************************************************
+*                                                          *
+*           W E L C O M E  to  M A D G R A P H 5           *
+*                       a M C @ N L O                      *
+*                                                          *
+*                 *                       *                *
+*                   *        * *        *                  *
+*                     * * * * 5 * * * *                    *
+*                   *        * *        *                  *
+*                 *                       *                *
+*                                                          *
+*         VERSION 5.3.8.0                                  *
+*                                                          *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+*                 http://amcatnlo.cern.ch                  *
+*                                                          *
+*               Type 'help' for in-line help.              *
+*                                                          *
+************************************************************ 
+INFO: load configuration from /nfs/home/rikkert/.mg5/mg5_configuration.txt  
+INFO: load configuration from /tmp/mg5-epvej-unfolded-10k-cv7t_d8h/mint/Cards/amcatnlo_configuration.txt  
+INFO: load configuration from /export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/input/mg5_configuration.txt  
+INFO: load configuration from /tmp/mg5-epvej-unfolded-10k-cv7t_d8h/mint/Cards/amcatnlo_configuration.txt  
+Using default eps viewer "evince". Set another one in ./input/mg5_configuration.txt
+Using default web browser "firefox". Set another one in ./input/mg5_configuration.txt
+Using default gzip "gzip". Set another one in ./input/mg5_configuration.txt
+import command /tmp/mg5-epvej-unfolded-10k-cv7t_d8h/mint.cmd
+set automatic_html_opening False --no_save
+set notification_center False --no_save
+set run_mode 2 --no_save
+set nb_core 5 --no_save
+launch aMC@NLO -f -p --name=benchmark_10k
+stty: 'standard input': Inappropriate ioctl for device
+stty: 'standard input': Inappropriate ioctl for device
+INFO: will run in mode: aMC@NLO 
+INFO: Starting run 
+INFO: Compiling the code 
+INFO: Using built-in libraries for PDFs 
+INFO: Compiling source... 
+INFO:           ...done, continuing with P* directories 
+INFO: Compiling directories... 
+INFO: Compiling on 5 cores 
+INFO:  Compiling P0_gu_vedep... 
+INFO:  Compiling P0_gdx_veuxep... 
+INFO:  Compiling P0_ug_vedep... 
+INFO:  Compiling P0_udx_veepg... 
+INFO:  Compiling P0_dxg_veuxep... 
+INFO:     P0_udx_veepg done. 
+INFO:  Compiling P0_dxu_veepg... 
+INFO:     P0_dxg_veuxep done. 
+INFO:     P0_gu_vedep done. 
+INFO:     P0_gdx_veuxep done. 
+INFO:     P0_ug_vedep done. 
+INFO:     P0_dxu_veepg done. 
+INFO: Checking test output: 
+INFO: P0_gu_vedep 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_gdx_veuxep 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_ug_vedep 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_udx_veepg 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_dxg_veuxep 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: P0_dxu_veepg 
+INFO:  Result for test_ME: 
+INFO:    Passed. 
+INFO:  Result for test_MC: 
+INFO:    Passed. 
+INFO:  Result for check_poles: 
+INFO:    Poles successfully cancel for 20 points over 20 (tolerance=1.0e-05) 
+INFO: Starting run 
+INFO: Using 5 cores 
+INFO: Cleaning previous results 
+INFO: Doing NLO matched to parton shower 
+INFO: Setting up grids 
+INFO:  Idle: 7,  Running: 5,  Completed: 0 [ current time: 09h42 ] 
+INFO:  Idle: 6,  Running: 5,  Completed: 1 [  17.5s  ] 
+INFO:  Idle: 5,  Running: 5,  Completed: 2 [  18.8s  ] 
+INFO:  Idle: 4,  Running: 5,  Completed: 3 [  19.3s  ] 
+INFO:  Idle: 3,  Running: 5,  Completed: 4 [  36s  ] 
+INFO:  Idle: 2,  Running: 5,  Completed: 5 [  36.2s  ] 
+INFO:  Idle: 1,  Running: 5,  Completed: 6 [  37.4s  ] 
+INFO:  Idle: 0,  Running: 5,  Completed: 7 [  39.3s  ] 
+INFO:  Idle: 0,  Running: 4,  Completed: 8 [  42.2s  ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 9 [  54.3s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 10 [  55.4s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 11 [  56.2s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 12 [  1m 13s  ] 
+sum of cpu time of last step: 0 second
+INFO: Determining the number of unweighted events per channel
+
+      Intermediate results:
+      Random seed: 19727
+      Total cross section:      5.631e+03 +- 7.2e+01 pb
+      Total abs(cross section): 1.284e+04 +- 8.7e+01 pb 
+
+ 
+INFO: Computing upper envelope 
+INFO:  Idle: 7,  Running: 5,  Completed: 0 [ current time: 09h43 ] 
+INFO:  Idle: 6,  Running: 5,  Completed: 1 [  41.6s  ] 
+INFO:  Idle: 5,  Running: 5,  Completed: 2 [  41.9s  ] 
+INFO:  Idle: 4,  Running: 5,  Completed: 3 [  42.4s  ] 
+INFO:  Idle: 3,  Running: 5,  Completed: 4 [  43.8s  ] 
+INFO:  Idle: 2,  Running: 5,  Completed: 5 [  44.1s  ] 
+INFO:  Idle: 1,  Running: 5,  Completed: 6 [  1m 17s  ] 
+INFO:  Idle: 0,  Running: 5,  Completed: 7 [  1m 17s  ] 
+INFO:  Idle: 0,  Running: 4,  Completed: 8 [  1m 24s  ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 9 [  1m 25s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 10 [  1m 26s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 11 [  1m 51s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 12 [  1m 52s  ] 
+sum of cpu time of last step: 0 second
+INFO: Updating the number of unweighted events per channel
+
+      Intermediate results:
+      Random seed: 19727
+      Total cross section:      5.660e+03 +- 5.6e+01 pb
+      Total abs(cross section): 1.316e+04 +- 6.5e+01 pb 
+
+ 
+INFO: Generating events 
+INFO:  Idle: 7,  Running: 5,  Completed: 0 [ current time: 09h45 ] 
+INFO:  Idle: 6,  Running: 5,  Completed: 1 [  15.7s  ] 
+INFO:  Idle: 5,  Running: 5,  Completed: 2 [  16.4s  ] 
+INFO:  Idle: 4,  Running: 5,  Completed: 3 [  18.5s  ] 
+INFO:  Idle: 3,  Running: 5,  Completed: 4 [  30.4s  ] 
+INFO:  Idle: 2,  Running: 5,  Completed: 5 [  33.6s  ] 
+INFO:  Idle: 1,  Running: 5,  Completed: 6 [  35.3s  ] 
+INFO:  Idle: 0,  Running: 5,  Completed: 7 [  36.4s  ] 
+INFO:  Idle: 0,  Running: 4,  Completed: 8 [  38.6s  ] 
+INFO:  Idle: 0,  Running: 3,  Completed: 9 [  38.8s  ] 
+INFO:  Idle: 0,  Running: 2,  Completed: 10 [  40.5s  ] 
+INFO:  Idle: 0,  Running: 1,  Completed: 11 [  46.4s  ] 
+INFO:  Idle: 0,  Running: 0,  Completed: 12 [  55s  ] 
+sum of cpu time of last step: 0 second
+INFO: Collecting events 
+INFO: 
+   --------------------------------------------------------------
+      Summary:
+      Process p p > e+ ve j [QCD]
+      Run at p-p collider (6500.0 + 6500.0 GeV)
+      Number of events generated: 10000
+      Total cross section: 5.660e+03 +- 5.6e+01 pb
+   --------------------------------------------------------------
+ 
+INFO: The /tmp/mg5-epvej-unfolded-10k-cv7t_d8h/mint/Events/benchmark_10k/events.lhe.gz file has been generated.
+ 
+INFO: Events generated 
+reweight -from_cards
+decay_events -from_cards
+INFO:  
+quit
+INFO:  
+quit
+INFO:  

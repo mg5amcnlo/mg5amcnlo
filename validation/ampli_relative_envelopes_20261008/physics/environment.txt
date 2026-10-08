@@ -1,0 +1,6 @@
+2026-10-08T15:58:45.155434
+Linux-7.0.0-34-generic-x86_64-with-glibc2.39
+3.12.3
+logical CPUs 12
+GNU Fortran (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Physics variants may overlap; all use dedicated executables and isolated workers. Timings are single observations with stream-trace I/O; use deterministic trial counts for primary efficiency comparison.

@@ -1,0 +1,14 @@
+{
+  "work_directory": "/tmp/mg5-ttbar-native-10k-i2y8wskw",
+  "process": "p p > t t~ [QCD]",
+  "events": 10000,
+  "seed": 19727,
+  "run_name": "benchmark_10k",
+  "launch_order": [
+    "mint",
+    "ampli"
+  ],
+  "cores": 5,
+  "base_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+  "notes": "Same physics and run cards except NLOPSIntegrator; MINT req_acc=.01, AmpliCol surveys3%perchannel then updates rates during production."
+}

@@ -1,0 +1,11 @@
+{
+  "original": "/tmp/mg5-ttbar-bounded-300k-kqeozrhq/ampli",
+  "large": "/tmp/mg5-ttbar-30k-jobs-bx5bg6kc/ampli",
+  "isolated": "/tmp/mg5-ampli-stable-history-djk1m74v/ampli",
+  "process": "SubProcesses/P0_gg_ttx",
+  "survey_note": "Identical saved 8-learned-bin survey from the October 7 benchmarks; no new survey. This isolates generation changes and does not measure the benefit of newer survey refinement.",
+  "survey_hashes": {
+    "ampli_grids": "79c2e44fd111d499574e9dd5819a7b914bdc22fc6dac8e0c148465b8ca47adb4",
+    "grid.MC_integer": "ed9937859a7cb69814d3a9c54d27c4e84194480fe4d50f71651fa68d7b2e9afc"
+  }
+}

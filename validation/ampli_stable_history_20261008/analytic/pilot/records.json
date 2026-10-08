@@ -1,0 +1,178 @@
+[
+  {
+    "variant": "baseline",
+    "replica": 1,
+    "seed": 1007922,
+    "quota": 10000,
+    "trials": 169892,
+    "nonzero": 67424,
+    "epochs": 4,
+    "updates": 3,
+    "proposals": 4,
+    "skipped_adaptations": 0,
+    "eligible_epochs": 4,
+    "active_trials": 169892,
+    "means": [
+      0.08209029460814014,
+      0.003521712931531852
+    ],
+    "quoted_errors": [
+      0.0003631273075553928,
+      7.083443565824535e-05
+    ],
+    "reserve_shapes": [
+      0.289971850974106,
+      0.07072657288141523,
+      0.04980303204718719
+    ],
+    "final_shapes": [
+      0.28997093996581264,
+      0.0719930021301009,
+      0.0507884747802249
+    ],
+    "tail_checks": {
+      "available": 11000,
+      "reserve": 11000,
+      "selected": 10000,
+      "full_trial_tail": 0.006437831958480133,
+      "reserve_tail": 0.006187383479654964,
+      "worst_subset_tail": 0.006806055764227378,
+      "max_correction": 1.0415747585258,
+      "overweight": 0.006806055764227378
+    },
+    "selected_tail": 0.006299585730949555,
+    "wall_seconds": 0.4646744530182332
+  },
+  {
+    "variant": "baseline",
+    "replica": 2,
+    "seed": 1015841,
+    "quota": 10000,
+    "trials": 165379,
+    "nonzero": 66131,
+    "epochs": 4,
+    "updates": 3,
+    "proposals": 4,
+    "skipped_adaptations": 0,
+    "eligible_epochs": 4,
+    "active_trials": 165379,
+    "means": [
+      0.08300669154651946,
+      0.0036316434498418317
+    ],
+    "quoted_errors": [
+      0.00037243982093838613,
+      7.263096701547434e-05
+    ],
+    "reserve_shapes": [
+      0.288502392908164,
+      0.07441087996728606,
+      0.026327617155027197
+    ],
+    "final_shapes": [
+      0.28745500503843835,
+      0.07404493855270344,
+      0.02396860611057715
+    ],
+    "tail_checks": {
+      "available": 11000,
+      "reserve": 11000,
+      "selected": 10000,
+      "full_trial_tail": 0.007838976405244523,
+      "reserve_tail": 0.007420878841477335,
+      "worst_subset_tail": 0.008162844905835133,
+      "max_correction": 1.0476051725718594,
+      "overweight": 0.008162844905835133
+    },
+    "selected_tail": 0.007755314782100094,
+    "wall_seconds": 0.4147366980323568
+  },
+  {
+    "variant": "candidate",
+    "replica": 1,
+    "seed": 11007941,
+    "quota": 10000,
+    "trials": 164456,
+    "nonzero": 65612,
+    "epochs": 4,
+    "updates": 3,
+    "proposals": 4,
+    "skipped_adaptations": 0,
+    "eligible_epochs": 4,
+    "active_trials": 164456,
+    "means": [
+      0.08311353863748293,
+      0.003347087969892347
+    ],
+    "quoted_errors": [
+      0.00037550478347440105,
+      7.311538162287372e-05
+    ],
+    "reserve_shapes": [
+      0.29389061422932544,
+      0.07405821325706488,
+      0.04126750852913158
+    ],
+    "final_shapes": [
+      0.2943840521750306,
+      0.07275023239841744,
+      0.041594157771374665
+    ],
+    "tail_checks": {
+      "available": 11000,
+      "reserve": 11000,
+      "selected": 10000,
+      "full_trial_tail": 0.00472831445284406,
+      "reserve_tail": 0.004244420579019106,
+      "worst_subset_tail": 0.00466883328616591,
+      "max_correction": 1.0360100128844532,
+      "overweight": 0.00472831445284406
+    },
+    "selected_tail": 0.003953959335774407,
+    "wall_seconds": 0.4146013400750235
+  },
+  {
+    "variant": "candidate",
+    "replica": 2,
+    "seed": 11015860,
+    "quota": 10000,
+    "trials": 161978,
+    "nonzero": 65035,
+    "epochs": 4,
+    "updates": 3,
+    "proposals": 4,
+    "skipped_adaptations": 0,
+    "eligible_epochs": 4,
+    "active_trials": 161978,
+    "means": [
+      0.08386357504558316,
+      0.003667790348805898
+    ],
+    "quoted_errors": [
+      0.0003798800151197584,
+      7.401595031344281e-05
+    ],
+    "reserve_shapes": [
+      0.29549455571627214,
+      0.07115999235171176,
+      0.04101312214374226
+    ],
+    "final_shapes": [
+      0.2935514435209931,
+      0.07035377320906183,
+      0.043129924042232204
+    ],
+    "tail_checks": {
+      "available": 11000,
+      "reserve": 11000,
+      "selected": 10000,
+      "full_trial_tail": 0.00864239169597656,
+      "reserve_tail": 0.00835262907888985,
+      "worst_subset_tail": 0.00918773375565607,
+      "max_correction": 1.0486182858585378,
+      "overweight": 0.00918773375565607
+    },
+    "selected_tail": 0.007964093114681813,
+    "wall_seconds": 0.41465551999863237
+  }
+]

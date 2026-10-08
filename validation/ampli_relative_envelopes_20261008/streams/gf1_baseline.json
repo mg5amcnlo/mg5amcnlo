@@ -1,0 +1,285 @@
+{
+  "worker": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ampli_relative_envelopes_20261008/physics/baseline/gf1_large",
+  "trials": 189058,
+  "candidates": 47848,
+  "streams": {
+    "novi": {
+      "trials": 187757,
+      "abs_sum": 19390265.35335392,
+      "signed_sum": 11910106.325230101,
+      "weight_square_sum": 4260212139.395581,
+      "maximum": 2073.0730506649716,
+      "candidates": 47585,
+      "retained": 28415,
+      "retained_correction_sum": 28407.9586776279,
+      "tail_count": 203,
+      "tail_abs_sum": 129883.06096814456,
+      "tail_correction_sum": 223.70866093899167,
+      "probabilities": [
+        0.9932650915320538
+      ],
+      "trial_fraction": 0.9931185138952068,
+      "absolute_rate_fraction": 0.9941159999437097,
+      "full_tail_mass_fraction": 0.8956521862360453,
+      "reserve_tail_mass_fraction": 0.913460300490988,
+      "mean_abs_contribution": 102.56252236537952,
+      "mean_signed_contribution": 62.99710313887855,
+      "conditional_second_moment": 22385.42957492136
+    },
+    "virt": {
+      "trials": 1301,
+      "abs_sum": 114767.61508423327,
+      "signed_sum": -1679.2712067753052,
+      "weight_square_sum": 42487265.7634111,
+      "maximum": 2172.733190271974,
+      "candidates": 263,
+      "retained": 169,
+      "retained_correction_sum": 176.04132236683873,
+      "tail_count": 14,
+      "tail_abs_sum": 15132.00510786726,
+      "tail_correction_sum": 21.193783993478288,
+      "probabilities": [
+        0.006734908467946221
+      ],
+      "trial_fraction": 0.006881486104793238,
+      "absolute_rate_fraction": 0.005884000056290249,
+      "full_tail_mass_fraction": 0.10434781376395465,
+      "reserve_tail_mass_fraction": 0.08653969950901191,
+      "mean_abs_contribution": 0.607049768241668,
+      "mean_signed_contribution": -0.008882307052731464,
+      "conditional_second_moment": 1.4813063419731813
+    }
+  },
+  "epochs": [
+    {
+      "novi": {
+        "trials": 8126,
+        "abs_sum": 844130.3891159036,
+        "signed_sum": 520654.9978537562,
+        "weight_square_sum": 171038268.53941166,
+        "maximum": 945.5471989278872,
+        "candidates": 5087,
+        "retained": 717,
+        "retained_correction_sum": 716.2947420238552,
+        "tail_count": 0,
+        "tail_abs_sum": 0.0,
+        "tail_correction_sum": 0.0
+      },
+      "virt": {
+        "trials": 66,
+        "abs_sum": 4704.671266622935,
+        "signed_sum": 1357.4285916263057,
+        "weight_square_sum": 1328335.141484734,
+        "maximum": 812.7553453158282,
+        "candidates": 29,
+        "retained": 3,
+        "retained_correction_sum": 2.9970491298069684,
+        "tail_count": 0,
+        "tail_abs_sum": 0.0,
+        "tail_correction_sum": 0.0
+      }
+    },
+    {
+      "novi": {
+        "trials": 16275,
+        "abs_sum": 1697248.919420084,
+        "signed_sum": 1039750.9136654789,
+        "weight_square_sum": 347378282.8906611,
+        "maximum": 2073.0730506649716,
+        "candidates": 4778,
+        "retained": 1909,
+        "retained_correction_sum": 1908.6202989603923,
+        "tail_count": 3,
+        "tail_abs_sum": 3954.4540850244234,
+        "tail_correction_sum": 4.4950851563034995
+      },
+      "virt": {
+        "trials": 110,
+        "abs_sum": 8740.289493638673,
+        "signed_sum": -2144.2438029576397,
+        "weight_square_sum": 2581904.874407371,
+        "maximum": 766.8041192179128,
+        "candidates": 22,
+        "retained": 7,
+        "retained_correction_sum": 6.9931146362162595,
+        "tail_count": 0,
+        "tail_abs_sum": 0.0,
+        "tail_correction_sum": 0.0
+      }
+    },
+    {
+      "novi": {
+        "trials": 32537,
+        "abs_sum": 3381522.7328463104,
+        "signed_sum": 2077188.309438255,
+        "weight_square_sum": 748586921.8387154,
+        "maximum": 1166.4786171499582,
+        "candidates": 7747,
+        "retained": 4769,
+        "retained_correction_sum": 4765.8020200600795,
+        "tail_count": 5,
+        "tail_abs_sum": 4640.025985511341,
+        "tail_correction_sum": 6.488001926295949
+      },
+      "virt": {
+        "trials": 232,
+        "abs_sum": 23600.778097721977,
+        "signed_sum": 827.241220264536,
+        "weight_square_sum": 10292008.186389666,
+        "maximum": 1933.08476167854,
+        "candidates": 51,
+        "retained": 35,
+        "retained_correction_sum": 37.28903039757689,
+        "tail_count": 3,
+        "tail_abs_sum": 3805.067875036222,
+        "tail_correction_sum": 5.320506346302552
+      }
+    },
+    {
+      "novi": {
+        "trials": 65098,
+        "abs_sum": 6717531.706641317,
+        "signed_sum": 4127563.411545316,
+        "weight_square_sum": 1428742589.7914493,
+        "maximum": 1312.396411442712,
+        "candidates": 16302,
+        "retained": 9133,
+        "retained_correction_sum": 9127.27110362808,
+        "tail_count": 13,
+        "tail_abs_sum": 12013.26287498719,
+        "tail_correction_sum": 16.24174901503733
+      },
+      "virt": {
+        "trials": 440,
+        "abs_sum": 43558.20160930561,
+        "signed_sum": -3687.6678108015753,
+        "weight_square_sum": 21049523.30130946,
+        "maximum": 2172.733190271974,
+        "candidates": 83,
+        "retained": 52,
+        "retained_correction_sum": 56.579575235961634,
+        "tail_count": 9,
+        "tail_abs_sum": 10075.461548257885,
+        "tail_correction_sum": 13.621871042061796
+      }
+    },
+    {
+      "novi": {
+        "trials": 28521,
+        "abs_sum": 2910065.7401097724,
+        "signed_sum": 1794423.8102008423,
+        "weight_square_sum": 674911629.2717334,
+        "maximum": 846.508003242198,
+        "candidates": 5785,
+        "retained": 5138,
+        "retained_correction_sum": 5140.2370221159945,
+        "tail_count": 90,
+        "tail_abs_sum": 54031.28027626207,
+        "tail_correction_sum": 97.20235302712246
+      },
+      "virt": {
+        "trials": 214,
+        "abs_sum": 16247.448896399503,
+        "signed_sum": 2538.702359013408,
+        "weight_square_sum": 2992456.8040141338,
+        "maximum": 514.3202792854458,
+        "candidates": 35,
+        "retained": 31,
+        "retained_correction_sum": 30.969507674672027,
+        "tail_count": 0,
+        "tail_abs_sum": 0.0,
+        "tail_correction_sum": 0.0
+      }
+    },
+    {
+      "novi": {
+        "trials": 29153,
+        "abs_sum": 3028578.2356709978,
+        "signed_sum": 1852500.8747342322,
+        "weight_square_sum": 713611300.507723,
+        "maximum": 999.2014136270288,
+        "candidates": 6032,
+        "retained": 5430,
+        "retained_correction_sum": 5431.890059366443,
+        "tail_count": 91,
+        "tail_abs_sum": 54553.38749579474,
+        "tail_correction_sum": 98.14162468627134
+      },
+      "virt": {
+        "trials": 189,
+        "abs_sum": 13563.016859060686,
+        "signed_sum": -139.1687048263007,
+        "weight_square_sum": 3177982.3473433005,
+        "maximum": 632.080859272382,
+        "candidates": 29,
+        "retained": 28,
+        "retained_correction_sum": 28.22583239677435,
+        "tail_count": 2,
+        "tail_abs_sum": 1251.4756845731526,
+        "tail_correction_sum": 2.251406605113945
+      }
+    },
+    {
+      "novi": {
+        "trials": 7026,
+        "abs_sum": 702679.7942192204,
+        "signed_sum": 428568.4672318924,
+        "weight_square_sum": 152120881.7818491,
+        "maximum": 690.6502505647911,
+        "candidates": 1588,
+        "retained": 1126,
+        "retained_correction_sum": 1125.033270805566,
+        "tail_count": 1,
+        "tail_abs_sum": 690.6502505647911,
+        "tail_correction_sum": 1.1398471279612006
+      },
+      "virt": {
+        "trials": 47,
+        "abs_sum": 4317.52561360789,
+        "signed_sum": -430.78897791512236,
+        "weight_square_sum": 1064420.3894995216,
+        "maximum": 537.9168351297113,
+        "candidates": 14,
+        "retained": 13,
+        "retained_correction_sum": 12.9872128958302,
+        "tail_count": 0,
+        "tail_abs_sum": 0.0,
+        "tail_correction_sum": 0.0
+      }
+    },
+    {
+      "novi": {
+        "trials": 1021,
+        "abs_sum": 108507.83533003558,
+        "signed_sum": 69455.5405599096,
+        "weight_square_sum": 23822264.774014417,
+        "maximum": 498.8773954896729,
+        "candidates": 266,
+        "retained": 193,
+        "retained_correction_sum": 192.81016068424879,
+        "tail_count": 0,
+        "tail_abs_sum": 0.0,
+        "tail_correction_sum": 0.0
+      },
+      "virt": {
+        "trials": 3,
+        "abs_sum": 35.683247876110826,
+        "signed_sum": -0.7740811789186672,
+        "weight_square_sum": 634.7189629209083,
+        "maximum": 18.16735324626602,
+        "candidates": 0,
+        "retained": 0,
+        "retained_correction_sum": 0.0,
+        "tail_count": 0,
+        "tail_abs_sum": 0.0,
+        "tail_correction_sum": 0.0
+      }
+    }
+  ],
+  "final_checks": {
+    "full_trial_tail": 0.007434751138881316,
+    "reserve_tail": 0.008567815733710451,
+    "worst_subset_tail": 0.009423835039053703
+  },
+  "note": "Final thresholds attributed using original per-trial stream identity. No claim that final historical thresholds were available earlier."
+}

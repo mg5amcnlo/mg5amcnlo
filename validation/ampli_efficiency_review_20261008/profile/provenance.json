@@ -1,0 +1,15 @@
+{
+  "source_sha256": {
+    "simple_integrator.f90": "0e3a137fd13b8bdd5881c640de29ae9eb7a137006166d6f2f1d5ebb7ea7e54c8",
+    "ampli_mint_adapter.f90": "62e3f8b3d74410b6616a6d4ff842cc729b111bc7a01a514f7a9167d31f295625",
+    "driver_mintMC.f": "b6f2882fcf601b259007ebc7de76010e667656c8ad2004af878bb5dea2705160",
+    "integrator_helpers.f90": "ccdc363fd95481fb4e2aa03faeb286a4c22afe4656c2af4a79e969662d8afc61",
+    "mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416"
+  },
+  "compiler": "GNU Fortran (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+  "compiler_flags": "inherited exported makefile: -O; imported modules omit -fno-automatic and add -ffree-line-length-none",
+  "cores": 1,
+  "observational_timers_only": true,
+  "benchmark_inputs_reused": true,
+  "large_replay_worker": "SubProcesses/P0_gg_ttx/GF3.0_profile30k"
+}

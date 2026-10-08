@@ -1,0 +1,9 @@
+{
+  "status": "stopped_by_user",
+  "stopped": "2026-10-07T09:42:50.630049+00:00",
+  "work_directory": "/tmp/mg5-ttbar-two-stage-300k-ts9qfx5j",
+  "signalled_process_groups": [
+    1097539
+  ],
+  "reason": "User stopped the 300K two-stage benchmark because it was too slow. Partial results are not a completed sample."
+}

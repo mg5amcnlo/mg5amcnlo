@@ -1,0 +1,21 @@
+{
+  "base_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+  "branch": "MCcntRefactor_Sfun_Granny_AmpliColIntegrator",
+  "source_sha256": {
+    "Template/NLO/SubProcesses/ampli_mint_adapter.f90": "5de7c0fa8b52d6084fa256d230e0c2d1c50b68b7c761ebbd6fa3cf6d93a0aac0",
+    "Template/NLO/SubProcesses/simple_integrator.f90": "ec5282fd1440a715bfa2f5ad8ca73d7faaa725d5141258587d829256cdf00ea2",
+    "Template/NLO/SubProcesses/driver_mintMC.f": "17bd76bb893b7f7b7b9e4e76cc862389b1291b6da7fa71b02bf17d87826c46df",
+    "madgraph/interface/amcatnlo_run_interface.py": "857df49e0b2d64f0fca429b0b99ef972823428f58eea26ed5e4b5e8285d50fae",
+    "madgraph/various/ampli_pool.py": "5ef93d8df85968af278c6fb7a3949e671e36ee5ee13bd6b9eeb92b5bcf150fc2",
+    "madgraph/iolibs/export_fks.py": "b55166cd3dad199c84f5e4060380e82c646d91b08e58260420ff46ace96dd343",
+    "tests/unit_tests/fks/test_ampli_integrator.py": "3d9ff1f667f27896f8cf1f894bae790fb780b7e65a211bfb3c2913311988f714",
+    "tests/unit_tests/fks/test_ampli_adapter.py": "222b8dee7e881d5d8cc857102ead3ffa3653398b8eff2e8609b7b7094ae2b288",
+    "tests/unit_tests/fks/test_ampli_lhe.py": "17d3ae47aece29d3e17c7e477cd05f8d32c879d4e7bc1ce4d599788509807ee1",
+    "tests/unit_tests/fks/test_nlops_integrator_selection.py": "c1cc8b256ee10a48c503e3a2d09b931f1c89805e5734b7b24239d61b42b1af79",
+    "tests/unit_tests/interface/test_ampli_orchestration.py": "e4135e82cba41b239052a552814c57794f9abe0287b99be944a35abe21c11c18",
+    "tests/unit_tests/various/test_ampli_pool.py": "736354e8c7e39bcbb93df4b7d4fd4cf0ec2299ba7c2819ed72dcfc97143b5345",
+    "tests/unit_tests/fks/test_born_spreading.py": "613677dad9f783012c1fa6cba2b2085d9f1548a3759f8e654155e0b0d3de3d22",
+    "tests/unit_tests/fks/test_momentum_maps.py": "c38a01640ad0e11cb3a087b1527efcdcecf64fa4ca3e45dabbad0a5f5b3382b4"
+  },
+  "original_work_directory": "/tmp/mg5-ampli-survey3pct-pplkuvtz"
+}

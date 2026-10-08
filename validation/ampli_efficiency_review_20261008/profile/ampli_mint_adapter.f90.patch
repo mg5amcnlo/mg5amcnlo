@@ -1,0 +1,99 @@
+--- ampli_mint_adapter.f90
++++ ampli_mint_adapter.f90
+@@ -15,6 +15,8 @@
+   integer,save :: checkpoint_stage=-1
+   integer,parameter :: checkpoint_version=3
+   character(len=4),save :: generation_mode
++  real(kind=8),save :: p_sample=0d0,p_map=0d0,p_fun=0d0,p_virt=0d0,p_consider=0d0,p_finish=0d0
++  integer(kind=8),save :: p_nfun=0_8,p_nvirt=0_8
+   integer(kind=8),save :: production_points=0_8
+ contains
+   subroutine ampli_evaluate(fun,values,xfirst,fold_points)
+@@ -23,13 +25,21 @@
+     double precision,intent(out),optional :: fold_points(:,:)
+     double precision :: base(ndim),x(ndimmax),vol,dummy,tmp(ndim),unused
+     integer :: folds(ndimmax),iret,ifl,ipoint
++    real(kind=8) :: pt0,pt1,pt2,pt3,fun_elapsed
++    character(len=4) :: prof_abrv
++    common /to_abrv/ prof_abrv
++    call cpu_time(pt0)
+     call sampler%sample(tmp,unused,base)
++    call cpu_time(pt1)
++    p_sample=p_sample+pt1-pt0
++    fun_elapsed=0d0
+     folds=1
+     ifl=0
+     ipoint=0
+     x=0d0
+     new_point=.true.
+     do
++       call cpu_time(pt0)
+        call sampler%map_fold(base,folds(1:ndim),ifold(1:ndim),x(1:ndim),vol)
+        call nlops_prepare_point(x)
+        if (ifl.eq.0) xfirst=x
+@@ -38,13 +48,26 @@
+           fold_points(:,ipoint)=x(1:ndim)
+        endif
+        values=0d0
++       call cpu_time(pt1)
++       p_map=p_map+pt1-pt0
+        dummy=fun(x,vol,ifl,values)
++       call cpu_time(pt2)
++       fun_elapsed=fun_elapsed+pt2-pt1
+        ifl=1
+        call nlops_next_fold(folds,iret)
+        if (iret.ne.0) exit
+     enddo
+     values=0d0
++    call cpu_time(pt1)
+     dummy=fun(x,vol,2,values)
++    call cpu_time(pt2)
++    fun_elapsed=fun_elapsed+pt2-pt1
++    p_fun=p_fun+fun_elapsed
++    p_nfun=p_nfun+1_8
++    if (prof_abrv.eq.'virt') then
++       p_virt=p_virt+fun_elapsed
++       p_nvirt=p_nvirt+1_8
++    endif
+   end subroutine ampli_evaluate
+ 
+   subroutine ampli_calibration_point(x,vol,folds)
+@@ -261,13 +284,17 @@
+     logical,intent(out) :: to_write,done
+     double precision :: values(nintegrals),x(ndimmax),probability,ran2,point(2),rates(2),errors(2),moments(5)
+     logical :: iteration_done
++    real(kind=8) :: pt0,pt1
+     character(len=4) :: abrv
+     common /to_abrv/ abrv
+     external ran2
+     ! The last candidate's LHE factor must be recorded before an iteration
+     ! can finalize its acceptance thresholds and tail bounds.
+     if (sampler%native_iteration_done.and..not.sampler%production_done) then
++       call cpu_time(pt0)
+        call sampler%finish_native_iteration(done)
++       call cpu_time(pt1)
++       p_finish=p_finish+pt1-pt0
+        call sampler%native_rates(rates,errors,moments)
+        write(*,*) 'AmpliCol native production iteration, trials, ABS, signed, errors:', &
+             sampler%native_iteration,production_points,rates,errors
+@@ -294,7 +321,10 @@
+     point=[values(1),values(2)]/probability
+     if (.not.all(ieee_is_finite(point))) error stop 'Nonfinite AmpliCol production contribution'
+     production_points=production_points+1_8
++    call cpu_time(pt0)
+     call sampler%native_consider(point,x(1:ndim),to_write,iteration_done)
++    call cpu_time(pt1)
++    p_consider=p_consider+pt1-pt0
+     done=.false.
+   end subroutine ampli_next_candidate
+ 
+@@ -329,6 +359,9 @@
+     ampli_absolute_uncertainty=errors(1)
+     ncalls0=int(min(production_points,int(huge(ncalls0),8)))
+     itmax=sampler%native_iteration
++    write(*,*) 'PROFILE sample,map,fun,virt,consider,finish:', &
++         p_sample,p_map,p_fun,p_virt,p_consider,p_finish
++    write(*,*) 'PROFILE integrand trials,virtual trials:',p_nfun,p_nvirt
+     write(*,*) 'AmpliCol generation trials, candidates, requested events:', &
+          production_points,sampler%ncandidates,sampler%quota
+     write(*,*) 'AmpliCol full-trial, reserve, worst-collected tail fractions:', &

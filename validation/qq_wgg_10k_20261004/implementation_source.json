@@ -1,0 +1,19 @@
+{
+  "base_commit": "7fa5120a4ab08bd4b8e880643d4a005bf82335d9",
+  "branch": "MCcntRefactor_Sfun_Granny_AmpliColIntegrator",
+  "files": {
+    "Template/NLO/SubProcesses/ampli_mint_adapter.f90": "265b49848984a4f438b50215b22a4021fd4912c3d6154a8c7d1448a507e327be",
+    "Template/NLO/SubProcesses/driver_mintMC.f": "d9a4ae21ab610b0745d869272c5e5087d0b605435dae62d18c576250805f6d97",
+    "Template/NLO/SubProcesses/simple_integrator.f90": "9de030ac7974cf82bfbe33dba24768d255914ffeb9ae1122ac99a7029b63dadd",
+    "docs/ampli_integrator.md": "6e00b98785da4059f897ff1824a0b86ae1b84cb26c9b700caa6aa29748b23deb",
+    "madgraph/interface/amcatnlo_run_interface.py": "f163c65da2e60eae5aa0dda27bb049c8d41ddf0b66dd47698bbd6e9b153032a5",
+    "madgraph/iolibs/export_fks.py": "b55166cd3dad199c84f5e4060380e82c646d91b08e58260420ff46ace96dd343",
+    "tests/unit_tests/fks/test_ampli_adapter.py": "c91b4ea12695f40056aa09cca548919e59ba298716e117607c3cb36020704cee",
+    "tests/unit_tests/fks/test_ampli_integrator.py": "35d51b0fd6bdcc9a8c1660f18f4472c69d2b1f60e07c1f21ca7a63a1c4d4af3b",
+    "tests/unit_tests/interface/test_ampli_orchestration.py": "5ee30f57a4931a6faa0a36cfa43df20acad0320af611a4e0c645189b57dec323",
+    "madgraph/various/ampli_pool.py": "20faaec66060e5d4ef71c7ea1c993f72fb7772ea0daee796d0b8fa45afb923cf",
+    "tests/unit_tests/various/test_ampli_pool.py": "b3c9f70a0d81675fe1056b68237084b64a1c226b967fb6ac1205e524aa530467"
+  },
+  "patch_sha256": "2043216d912b10b0acf079e21f655ce38cc3d3244f9cfefcfd9a720757438d80",
+  "note": "Existing uncommitted integrator implementation used for this benchmark; no core source changes made for this W+gg task."
+}

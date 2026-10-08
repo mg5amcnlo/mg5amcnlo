@@ -1,0 +1,28 @@
+{
+  "settings": {
+    "nevents": 60,
+    "nevt_job": 10,
+    "iseed": 19722,
+    "event_norm": "unity",
+    "reweight_scale": [
+      true
+    ],
+    "store_rwgt_info": true
+  },
+  "survey_grid_sha256": {
+    "SubProcesses/P0_dxd_emep/GF1.0/ampli_grids": "12873a20b590a7a4eceb782502fa13aa57ba10d7b78f9b01cb239de100a7844d",
+    "SubProcesses/P0_dxd_emep/GF2.0/ampli_grids": "8e5a28a2059f2d8982a3dbff82788a9ed5bd42506f3daa8d4ca93d17aa236e10",
+    "SubProcesses/P0_uux_emep/GF1.0/ampli_grids": "3e8b2a69d9137a7c6de116b5f620489fab6ab88e39d150a2f10daa5ee63ac369",
+    "SubProcesses/P0_uux_emep/GF2.0/ampli_grids": "5fb6665c6302e6c747bca29059fe32176edc49a6732662f74f4c8eb554f4586c",
+    "SubProcesses/P0_ddx_emep/GF1.0/ampli_grids": "e4e26b6518b0b933068e44967c0ec98f71637003ff40f6f692c5e80375023811",
+    "SubProcesses/P0_ddx_emep/GF2.0/ampli_grids": "ca9f4f799b4b7aed95d6f17cbb5218f71976ad2431180458f70fec544ed66f27",
+    "SubProcesses/P0_uxu_emep/GF1.0/ampli_grids": "46558096bac88f1a8a6d9a1e18daea2838bd5464e973fc16f5d94a3e1b50cc11",
+    "SubProcesses/P0_uxu_emep/GF2.0/ampli_grids": "f969503ee43c7ed198975997947709bc124bef4f10efd9437b69d6e3f0593b9f"
+  },
+  "started": "2026-10-07T04:34:07.619539+00:00",
+  "collector_sha256": "5ef93d8df85968af278c6fb7a3949e671e36ee5ee13bd6b9eeb92b5bcf150fc2",
+  "returncode": 0,
+  "wall_seconds": 9.718395386997145,
+  "events_exist": true,
+  "survey_grids_unchanged": true
+}

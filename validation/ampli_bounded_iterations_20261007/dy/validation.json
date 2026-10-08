@@ -1,0 +1,170 @@
+{
+  "events": 2000,
+  "negative_events": 44,
+  "generation_trials": 12851,
+  "generation_cpu_seconds": 37.5550816,
+  "native_iterations": 12,
+  "grid_updates": 4,
+  "collection_rounds": 1,
+  "collected_tail_fraction": 0.0006840865414621611,
+  "max_native_tail_fraction": 0.00338633961884966,
+  "max_channel_tail_bound": 0.00338633961884967,
+  "signed_rate_pb": 2096.3660777664077,
+  "signed_error_pb": 5.100278711642151,
+  "absolute_rate_pb": 2211.859504434569,
+  "folding": [
+    2,
+    2,
+    2
+  ],
+  "adaptation_mask": [
+    1,
+    1,
+    1,
+    1,
+    0,
+    0,
+    0
+  ],
+  "unchanged_survey_checkpoints": 16,
+  "first_batch_and_storage_cutoff_verified": true,
+  "first_epoch_survey_envelope_floor_verified": true,
+  "remaining_event_forecasts_verified": true,
+  "source_snapshots_match": true,
+  "seed": 19731,
+  "cores": 2,
+  "iterations": [
+    {
+      "directory": "SubProcesses/P0_uux_emep/GF2.0_1",
+      "nonzero_targets": [
+        1024,
+        1024
+      ],
+      "nonzero_counts": [
+        1024,
+        1024
+      ],
+      "trials": [
+        1025,
+        1026
+      ],
+      "initial_storage_cutoff": 440.80736290899034,
+      "saved_envelope": 4510.422051389353,
+      "final_first_epoch_envelope": 4510.422051389353
+    },
+    {
+      "directory": "SubProcesses/P0_ddx_emep/GF2.0_1",
+      "nonzero_targets": [
+        1024,
+        1024
+      ],
+      "nonzero_counts": [
+        1024,
+        1024
+      ],
+      "trials": [
+        1024,
+        1026
+      ],
+      "initial_storage_cutoff": 478.81860786249075,
+      "saved_envelope": 6564.722528036744,
+      "final_first_epoch_envelope": 6564.722528036744
+    },
+    {
+      "directory": "SubProcesses/P0_dxd_emep/GF2.0_1",
+      "nonzero_targets": [
+        1024
+      ],
+      "nonzero_counts": [
+        1024
+      ],
+      "trials": [
+        1026
+      ],
+      "initial_storage_cutoff": 471.32413460762996,
+      "saved_envelope": 3266.9980074561795,
+      "final_first_epoch_envelope": 3266.9980074561795
+    },
+    {
+      "directory": "SubProcesses/P0_uxu_emep/GF2.0_1",
+      "nonzero_targets": [
+        1024,
+        1024
+      ],
+      "nonzero_counts": [
+        1024,
+        1024
+      ],
+      "trials": [
+        1024,
+        1026
+      ],
+      "initial_storage_cutoff": 439.11229068499426,
+      "saved_envelope": 2840.539605173034,
+      "final_first_epoch_envelope": 2840.539605173034
+    },
+    {
+      "directory": "SubProcesses/P0_uxu_emep/GF1.0_1",
+      "nonzero_targets": [
+        1024,
+        1024
+      ],
+      "nonzero_counts": [
+        1024,
+        1024
+      ],
+      "trials": [
+        1116,
+        1217
+      ],
+      "initial_storage_cutoff": 157.88056155828275,
+      "saved_envelope": 3037.45314570127,
+      "final_first_epoch_envelope": 3037.45314570127
+    },
+    {
+      "directory": "SubProcesses/P0_uux_emep/GF1.0_1",
+      "nonzero_targets": [
+        1024
+      ],
+      "nonzero_counts": [
+        1024
+      ],
+      "trials": [
+        1126
+      ],
+      "initial_storage_cutoff": 152.82585346875229,
+      "saved_envelope": 1265.0604719628075,
+      "final_first_epoch_envelope": 1265.0604719628075
+    },
+    {
+      "directory": "SubProcesses/P0_dxd_emep/GF1.0_1",
+      "nonzero_targets": [
+        1024
+      ],
+      "nonzero_counts": [
+        1024
+      ],
+      "trials": [
+        1097
+      ],
+      "initial_storage_cutoff": 34.311579305675444,
+      "saved_envelope": 474.7979842116744,
+      "final_first_epoch_envelope": 474.7979842116744
+    },
+    {
+      "directory": "SubProcesses/P0_ddx_emep/GF1.0_1",
+      "nonzero_targets": [
+        1024
+      ],
+      "nonzero_counts": [
+        1024
+      ],
+      "trials": [
+        1118
+      ],
+      "initial_storage_cutoff": 34.13944089002462,
+      "saved_envelope": 337.9007508969663,
+      "final_first_epoch_envelope": 337.9007508969663
+    }
+  ]
+}

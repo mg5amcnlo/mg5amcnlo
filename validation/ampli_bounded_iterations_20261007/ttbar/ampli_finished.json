@@ -1,0 +1,43 @@
+{
+  "backend": "ampli",
+  "run_name": "bounded_10k",
+  "work_directory": "/tmp/mg5-ttbar-bounded-iterations-4_21yk2j",
+  "cores": 3,
+  "previous_benchmark": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_Granny/validation/ttbar_two_stage_300k_20261007",
+  "expected_events": 10000,
+  "req_acc": -1,
+  "folding": [
+    1,
+    1,
+    1
+  ],
+  "seed": 19727,
+  "fresh_export": true,
+  "fresh_survey": true,
+  "started": "2026-10-07T09:58:19.884221+00:00",
+  "source_sha256": {
+    "Template/NLO/SubProcesses/ampli_mint_adapter.f90": "62e3f8b3d74410b6616a6d4ff842cc729b111bc7a01a514f7a9167d31f295625",
+    "Template/NLO/SubProcesses/simple_integrator.f90": "0e3a137fd13b8bdd5881c640de29ae9eb7a137006166d6f2f1d5ebb7ea7e54c8",
+    "Template/NLO/SubProcesses/driver_mintMC.f": "b6f2882fcf601b259007ebc7de76010e667656c8ad2004af878bb5dea2705160",
+    "Template/NLO/SubProcesses/mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+    "Template/NLO/SubProcesses/integrator_helpers.f90": "ccdc363fd95481fb4e2aa03faeb286a4c22afe4656c2af4a79e969662d8afc61",
+    "Template/NLO/SubProcesses/genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+    "madgraph/interface/amcatnlo_run_interface.py": "72a59f37881194e4677ec64da753ecce3938ae9d1de83fa10b28325240a3888b",
+    "madgraph/various/ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+  },
+  "exported_source_sha256": {
+    "SubProcesses/ampli_mint_adapter.f90": "62e3f8b3d74410b6616a6d4ff842cc729b111bc7a01a514f7a9167d31f295625",
+    "SubProcesses/simple_integrator.f90": "0e3a137fd13b8bdd5881c640de29ae9eb7a137006166d6f2f1d5ebb7ea7e54c8",
+    "SubProcesses/driver_mintMC.f": "b6f2882fcf601b259007ebc7de76010e667656c8ad2004af878bb5dea2705160",
+    "SubProcesses/mint_module.f90": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
+    "SubProcesses/integrator_helpers.f90": "ccdc363fd95481fb4e2aa03faeb286a4c22afe4656c2af4a79e969662d8afc61",
+    "SubProcesses/genps_fks_radiation.f": "62f4827630965230d3ee61a2e00b7f0719cc9eb10d7c129dcaa5d0d2b8d108d7",
+    "bin/internal/amcatnlo_run_interface.py": "72a59f37881194e4677ec64da753ecce3938ae9d1de83fa10b28325240a3888b",
+    "bin/internal/ampli_pool.py": "90f0fd3395e38ab9d9b22932421372a5ec4d8314d5f146afb1e5816a65a0e462"
+  },
+  "finished": "2026-10-07T10:00:10.436916+00:00",
+  "cli_returncode": 0,
+  "wall_seconds": 110.55111748399213,
+  "summary_exists": true,
+  "events_exist": true
+}

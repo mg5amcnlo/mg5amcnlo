@@ -1,0 +1,128 @@
+--- tests/unit_tests/fks/test_ampli_integrator.py
++++ tests/unit_tests/fks/test_ampli_integrator.py
+@@ -1040,11 +1040,90 @@
+         read(unit,'(a)') line
+      enddo
+      read(unit,*) epoch_id,row_n,row_nz,row_target,epoch_moments,row_c,row_m,row_t,eligible,proposal_id
+-     call check(row_m.eq.1d100.and.row_c.eq.1d0,'first epoch keeps survey maximum separately from storage cutoff')
++     call check(row_m.eq.1d0.and.row_c.eq.1d0,'mature first proposal uses the candidate quantile independently of survey maximum')
+      read(unit,*) epoch_id,row_n,row_nz,row_target,epoch_moments,row_c,row_m,row_t,eligible,proposal_id
+-     call check(row_m.eq.1d100.and.proposal_id.eq.1, &
+-          'later identical proposals retain the same surveyed maximum floor')
++     call check(row_m.eq.1d0.and.proposal_id.eq.1, &
++          'later identical proposals reuse the same mature relative quantile')
+      close(unit)
++  case('native_relative_sparse_boundary')
++     forced_random=0.5d0
++     do nlarge=200,201
++        call integ%start_native_production(20,18,[2,4],1d0,1000d0,10000_8,initial_nonzero=4096_8)
++        do i=1,nlarge
++           call integ%native_consider([1d0,1d0],[0.2d0,0.3d0],to_write,done)
++           call check(to_write,'bootstrap boundary retains all prescribed candidates')
++        enddo
++        saved_rng=rng_state
++        call integ%check_native_completion(done)
++        call check(done.and.rng_state.eq.saved_rng,'bootstrap-boundary completion uses no RNG')
++        open(newunit=unit,status='scratch')
++        call integ%write_native_pool(unit)
++        rewind(unit)
++        do i=1,6
++           read(unit,'(a)') line
++        enddo
++        read(unit,*) epoch_id,row_n,row_nz,row_target,epoch_moments,row_c,row_m,row_t,eligible,proposal_id
++        close(unit)
++        if (nlarge.eq.200) then
++           call check(row_m.eq.1000d0,'sparse relative envelope preserves survey maximum')
++        else
++           call check(row_m.eq.1d0,'mature relative envelope releases initial survey floor')
++        endif
++        call check(abs(row_t-2d0).lt.1d-12,'common scale cancellation preserves actual threshold')
++        call check(integ%full_trial_tail.eq.0d0.and.integ%reserve_tail.eq.0d0, &
++             'bootstrap scale transition leaves a constant target unweighted')
++     enddo
++  case('native_relative_retained_outlier')
++     forced_random=0.9d0
++     do quota_value=100,900,800
++        call integ%start_native_production(quota_value,quota_value*9/10,[2,4],1d0,1000d0,10000_8, &
++             initial_nonzero=4096_8)
++        do i=1,1024
++           weight=1d0
++           sgn=1d0
++           if (i.eq.1024) then
++              weight=5d0
++              sgn=-1d0
++           endif
++           call integ%native_consider([weight,sgn*weight],[0.2d0,0.3d0],to_write,done)
++           call check(to_write,'relative-quantile fixture keeps every candidate including outlier')
++        enddo
++        call integ%native_rates(res,unc,native_moments)
++        saved_rng=rng_state
++        call integ%check_native_completion(done)
++        call check(rng_state.eq.saved_rng,'quantile calculation leaves RNG unchanged')
++        call integ%native_rates(r2,e2,epoch_moments)
++        call check(all(res.eq.r2).and.all(unc.eq.e2).and.all(native_moments.eq.epoch_moments), &
++             'relative scale recomputation leaves every rate moment unchanged')
++        call check(abs(integ%full_trial_tail-5d0/1028d0).lt.1d-14, &
++             'outlier contributes its whole observed weight above the quantile')
++        if (quota_value.eq.100) then
++           call check(.not.done.and.integ%reserve_tail.gt.0.01d0.and.integ%worst_subset_tail.gt.0.01d0, &
++                'robust relative scale cannot hide an outlier that fails final-sample tail checks')
++        else
++           call check(done.and.integ%overweight.lt.0.01d0,'sufficient reserve retains outlier correction safely')
++           open(newunit=unit,status='scratch')
++           call integ%write_native_pool(unit)
++           rewind(unit)
++           do i=1,6
++              read(unit,'(a)') line
++           enddo
++           read(unit,*) epoch_id,row_n,row_nz,row_target,epoch_moments,row_c,row_m,row_t,eligible,proposal_id
++           call check(row_m.eq.1d0,'a single large outlier cannot control the mature relative quantile')
++           actual=0d0
++           do i=1,1024
++              read(unit,*) epoch_id,weight,target,row_correction(i),j,row_factor
++              if (i.lt.1024.and.row_correction(i).gt.0d0) actual=row_correction(i)
++              if (i.eq.1024) then
++                 call check(weight.eq.5d0.and.j.eq.1.and.row_correction(i).gt.0d0, &
++                      'serialized outlier remains selected and tagged with original weight')
++                 call check(abs(row_correction(i)/actual-4.5d0).lt.1d-12, &
++                      'outlier native correction includes its full weight, not only excess')
++              endif
++           enddo
++           close(unit)
++        endif
++     enddo
+   case('native_small_trial_budget')
+      call integ%start_native_production(10,9,[2,4],1d0,1d100,40_8)
+      call check(integ%native_target_nonzero.eq.40_8,'default initial request respects a smaller trial ceiling')
+@@ -1376,10 +1455,16 @@
+                 hi=mid
+              endif
+           enddo
+-          expected_envelope=max(expected_envelope,expected_weights(i)*newjac/candidate_jac(i))
++          expected_priorities(i)=expected_weights(i)*newjac/candidate_jac(i)
++       enddo
++       ! Independent repeated-maximum reference, not the integrator heap code.
++       do j=1,max(int(0.05d0*nwritten),1)
++          k=maxloc(expected_priorities(1:nwritten),dim=1)
++          expected_envelope=expected_priorities(k)
++          expected_priorities(k)=-1d0
+        enddo
+        call check(abs(last_envelope-expected_envelope).lt.1d-8*expected_envelope, &
+-            'historical native envelope uses candidate coordinates and birth Jacobians')
++            'historical relative quantile uses candidate coordinates and birth Jacobians')
+      end block base_native
+   case('native_zero')
+      call integ%start_native_production(0,0,[1,2],0d0,1d0,0_8)
+@@ -1990,6 +2075,12 @@
+     def test_native_initial_batch_respects_small_trial_ceiling(self):
+         self.run_case('native_small_trial_budget')
+ 
++    def test_native_relative_scale_sparse_bootstrap_boundary(self):
++        self.run_case('native_relative_sparse_boundary')
++
++    def test_native_relative_scale_retains_full_outlier_and_final_tail_checks(self):
++        self.run_case('native_relative_retained_outlier')
++
+     def test_native_sparse_pool_recovers_storage_cutoff(self):
+         self.run_case('native_sparse_cutoff')
+ 

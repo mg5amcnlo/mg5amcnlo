@@ -1,0 +1,36 @@
+{
+  "channels": [
+    {
+      "channel": "P0_gg_ttx/GF1.0",
+      "absolute_rate_pb": 96.25189485717043,
+      "production_envelope": 1602.3988028242654,
+      "estimated_acceptance": 0.060067378162991764
+    },
+    {
+      "channel": "P0_gg_ttx/GF2.0",
+      "absolute_rate_pb": 442.8586639888153,
+      "production_envelope": 29582.149024921087,
+      "estimated_acceptance": 0.014970469644234938
+    },
+    {
+      "channel": "P0_gg_ttx/GF3.0",
+      "absolute_rate_pb": 445.3024009514284,
+      "production_envelope": 20796.014288732913,
+      "estimated_acceptance": 0.021412872426842346
+    },
+    {
+      "channel": "P0_uux_ttx/GF1.0",
+      "absolute_rate_pb": 57.764015159053585,
+      "production_envelope": 1426.845325631578,
+      "estimated_acceptance": 0.04048372596622199
+    },
+    {
+      "channel": "P0_uxu_ttx/GF1.0",
+      "absolute_rate_pb": 58.23165144232351,
+      "production_envelope": 2742.5642393140633,
+      "estimated_acceptance": 0.02123255696533391
+    }
+  ],
+  "estimated_global_acceptance": 0.019597670193711593,
+  "interpretation": "Model estimate from integrated absolute targets and frozen rejection envelopes, assuming valid bounds and quotas proportional to channel rates. This is not a measured acceptance for a completed sample; an actual bound violation invalidated the run."
+}

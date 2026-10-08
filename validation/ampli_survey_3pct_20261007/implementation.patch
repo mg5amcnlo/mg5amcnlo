@@ -1,0 +1,3053 @@
+diff --git a/Template/NLO/SubProcesses/ampli_mint_adapter.f90 b/Template/NLO/SubProcesses/ampli_mint_adapter.f90
+index 2adcd7a82..c74e82550 100644
+--- a/Template/NLO/SubProcesses/ampli_mint_adapter.f90
++++ b/Template/NLO/SubProcesses/ampli_mint_adapter.f90
+@@ -4,16 +4,19 @@
+ module ampli_mint_adapter
+   use simple_integrator_mod, only: staged_integrator
+   use mint_module
++  use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+   implicit none
+   private
+   public :: ampli_integrate,ampli_load_production,ampli_start_generation
+-  public :: ampli_next_candidate,ampli_final_weights,ampli_rewrite_events
++  public :: ampli_next_candidate,ampli_finish_pool,ampli_rewrite_events,ampli_record_candidate_factor
+   double precision,public,save :: ampli_absolute_uncertainty=0d0
+   type(staged_integrator),save :: sampler
+   double precision,save :: stream_max(2)=0d0,virtual_probability=0d0
+   integer,save :: checkpoint_stage=-1
+   integer,parameter :: checkpoint_version=2
+   character(len=4),save :: generation_mode
++  integer(kind=8),save :: production_points=0_8
++  double precision,save :: pool_mean(2)=0d0,pool_m2(2)=0d0,pool_cov=0d0
+ contains
+   subroutine ampli_evaluate(fun,values,xfirst)
+     double precision,external :: fun
+@@ -125,7 +128,10 @@ contains
+        call reset_MC_grid
+        points=1024
+     enddo
+-    if (.not.converged) write(*,*) 'AmpliCol integration iteration limit reached; reported uncertainty applies'
++    if (.not.converged) then
++       if (imode.eq.1) error stop 'AmpliCol survey failed to reach requested channel accuracy'
++       write(*,*) 'AmpliCol adaptation iteration limit reached; continuing to survey'
++    endif
+     if (only_virt.and.imode.eq.1) then
+        ans(3,1)=0d0
+        ans(5,1)=0d0
+@@ -192,31 +198,57 @@ contains
+   subroutine ampli_start_generation(quota)
+     integer,intent(in) :: quota
+     character(len=4) :: abrv
+-    double precision :: envelope,total
++    character(len=32) :: tag
++    double precision :: total
++    integer :: iu,ios,version,generated_target,final_quota
++    integer(kind=8) :: safety_limit
++    logical :: exists
+     common /to_abrv/ abrv
+     generation_mode=abrv
+     total=ans(1,1)+ans(5,1)
+     if (total.le.0d0.and.quota.gt.0) error stop 'Cannot generate events from a zero AmpliCol rate'
+     virtual_probability=0d0
+     if (generation_mode.ne.'born'.and..not.only_virt.and.total.gt.0d0) &
+-         virtual_probability=ans(5,1)/total
+-    envelope=0d0
+-    if (virtual_probability.lt.1d0) envelope=stream_max(1)/(1d0-virtual_probability)
+-    if (virtual_probability.gt.0d0) envelope=max(envelope,stream_max(2)/virtual_probability)
+-    ! A fixed survey envelope makes even one-event channel quotas ordinary
+-    ! rejection samples. Observed violations must invalidate production;
+-    ! changing the envelope conditional on accepted events would bias them.
+-    call sampler%start_production(quota,2d0*max(envelope,total,tiny(1d0)), &
+-         max(1000000_8,100000_8*int(quota,8)),overweight_tolerance=0d0)
++         virtual_probability=max(1d-3,min(1d0-1d-3,ans(5,1)/total))
++    generated_target=quota
++    final_quota=quota
++    inquire(file='ampli_job.dat',exist=exists)
++    if (exists) then
++       open(newunit=iu,file='ampli_job.dat',status='old',action='read')
++       read(iu,*,iostat=ios) tag,version
++       if (ios.ne.0) error stop 'Invalid AmpliCol production job header'
++       if (tag.ne.'MG5_AMPLI_JOB'.or.version.ne.2) error stop 'Incompatible AmpliCol production job'
++       read(iu,*,iostat=ios) generated_target,final_quota
++       if (ios.ne.0.or.generated_target.ne.quota.or.final_quota.lt.0.or. &
++            final_quota.gt.generated_target.or.(quota.gt.0.and.final_quota.eq.0)) &
++            error stop 'Invalid AmpliCol production event quotas'
++       close(iu)
++    elseif (quota.gt.0) then
++       error stop 'Missing AmpliCol production event quotas'
++    endif
++    production_points=0_8
++    pool_mean=0d0
++    pool_m2=0d0
++    pool_cov=0d0
++    ! This is an emergency ceiling, never a point-budget stopping target.
++    ! Completion requires both the event quota and all three tail-mass checks.
++    safety_limit=max(10000000_8,100000_8*int(quota,8))
++    if (quota.eq.0) safety_limit=0_8
++    call sampler%start_production(quota,max(total,tiny(1d0)),safety_limit,1d-2,final_quota)
+   end subroutine ampli_start_generation
+ 
+   subroutine ampli_next_candidate(fun,to_write,done)
+     double precision,external :: fun
+     logical,intent(out) :: to_write,done
+-    double precision :: values(nintegrals),x(ndimmax),probability,ran2
++    double precision :: values(nintegrals),x(ndimmax),probability,ran2,point(2),delta(2)
+     character(len=4) :: abrv
+     common /to_abrv/ abrv
+     external ran2
++    if (sampler%production_done) then
++       to_write=.false.
++       done=.true.
++       return
++    endif
+     probability=1d0
+     abrv=generation_mode
+     if (generation_mode.ne.'born'.and..not.only_virt) then
+@@ -229,21 +261,52 @@ contains
+        endif
+     endif
+     call ampli_evaluate(fun,values,x)
+-    call sampler%consider(values(1)/probability,to_write,done)
+-    if (sampler%envelope_exceeded) &
+-         error stop 'AmpliCol production envelope exceeded; repeat integration with more statistics'
+-    if (done.and..not.sampler%quota_complete) error stop 'AmpliCol production budget exhausted before quota'
++    point=[values(1),values(2)]/probability
++    if (.not.all(ieee_is_finite(point))) error stop 'Nonfinite AmpliCol production contribution'
++    production_points=production_points+1_8
++    delta=point-pool_mean
++    pool_mean=pool_mean+delta/dble(production_points)
++    pool_m2=pool_m2+delta*(point-pool_mean)
++    pool_cov=pool_cov+delta(1)*(point(2)-pool_mean(2))
++    call sampler%consider(point(1),to_write,done)
+   end subroutine ampli_next_candidate
+ 
+-  subroutine ampli_final_weights(weights)
+-    double precision,allocatable,intent(out) :: weights(:)
+-    call sampler%final_weights(weights)
+-    ! MG5's sum/unity conventions advertise unweighted events (IDWTUP=-3).
+-    ! Strict frozen-envelope rejection must return unit factors throughout.
+-    if (sampler%overweight.gt.0d0) error stop 'AmpliCol production budget exhausted with overweight events'
+-    write(*,*) 'AmpliCol production trials, candidates, quota, overweight:', &
+-         sampler%ntrials,sampler%ncandidates,sampler%quota,sampler%overweight
+-  end subroutine ampli_final_weights
++  subroutine ampli_record_candidate_factor(factor,done)
++    double precision,intent(in) :: factor
++    logical,intent(out) :: done
++    call sampler%record_candidate_factor(factor,done)
++  end subroutine ampli_record_candidate_factor
++
++  subroutine ampli_finish_pool
++    double precision,allocatable :: weights(:),priorities(:),corrections(:),factors(:)
++    integer,allocatable :: tail(:)
++    integer :: iu,ios,i
++    if (.not.sampler%quota_complete) error stop 'AmpliCol generation safety limit reached before event quota'
++    call sampler%production_candidates(weights,priorities,corrections,tail,factors)
++    if (sampler%overweight.ge.1d-2) error stop 'AmpliCol generation safety limit reached before one-percent tail bound'
++    if (production_points.ne.sampler%ntrials) error stop 'AmpliCol production moments are incomplete'
++    open(newunit=iu,file='ampli_pool.dat.tmp',status='replace',action='write')
++    write(iu,'(a)') 'MG5_AMPLI_POOL 2'
++    write(iu,*) production_points,size(weights),sampler%envelope
++    write(iu,*) pool_mean,pool_m2,pool_cov
++    write(iu,*) sampler%quota,sampler%final_quota,sampler%threshold, &
++         sampler%full_trial_tail,sampler%reserve_tail,sampler%worst_subset_tail
++    do i=1,size(weights)
++       write(iu,*) weights(i),priorities(i),corrections(i),tail(i),factors(i)
++    enddo
++    close(iu)
++    call rename('ampli_pool.dat.tmp','ampli_pool.dat',ios)
++    if (ios.ne.0) error stop 'Cannot install AmpliCol candidate metadata'
++    ! Published rates remain the independent survey estimate. The sidecar
++    ! preserves all production moments as diagnostics, including rejected and
++    ! zero points, without confusing event-stopped means with fixed-size rates.
++    ncalls0=int(min(production_points,int(huge(ncalls0),8)))
++    itmax=1
++    write(*,*) 'AmpliCol generation trials, candidates, requested events:', &
++         production_points,size(weights),sampler%quota
++    write(*,*) 'AmpliCol full-trial, reserve, worst-collected tail fractions:', &
++         sampler%full_trial_tail,sampler%reserve_tail,sampler%worst_subset_tail
++  end subroutine ampli_finish_pool
+ 
+   ! Only XWGTUP changes. The internal mgrwgt coefficients and reference weight
+   ! stay together: the normal MG5 reweighter subsequently multiplies their
+diff --git a/Template/NLO/SubProcesses/driver_mintMC.f b/Template/NLO/SubProcesses/driver_mintMC.f
+index 2861590f4..42d4db28b 100644
+--- a/Template/NLO/SubProcesses/driver_mintMC.f
++++ b/Template/NLO/SubProcesses/driver_mintMC.f
+@@ -25,7 +25,16 @@ C     LOCAL
+ C
+       integer i,j,k,l,l1,l2,nndim,nevts,p_label
+       logical ampli_write,ampli_done
+-      double precision,allocatable :: ampli_weights(:)
++      double precision ampli_candidate_factor
++      interface
++         subroutine write_current_mcatnlo_event(lunlhe,p_label,
++     $        event_weight,putonshell,absolute_weight)
++         integer lunlhe,p_label
++         double precision event_weight
++         logical putonshell
++         double precision,optional,intent(out) :: absolute_weight
++         end subroutine write_current_mcatnlo_event
++      end interface
+ 
+       integer lunlhe
+       parameter (lunlhe=98)
+@@ -296,17 +305,17 @@ c fill the information for the write_header_init common block
+             ampli_done=.false.
+             do while (.not.ampli_done)
+                call ampli_next_candidate(sigintF,ampli_write,ampli_done)
+-               if (ampli_write) call write_current_mcatnlo_event(
+-     $              lunlhe,p_label,event_weight,putonshell)
++               if (ampli_write) then
++                  call write_current_mcatnlo_event(
++     $                 lunlhe,p_label,1d0,putonshell,
++     $                 ampli_candidate_factor)
++                  call ampli_record_candidate_factor(
++     $                 ampli_candidate_factor,ampli_done)
++               endif
+             enddo
+             write(lunlhe,'(a)') '</LesHouchesEvents>'
+             close(lunlhe)
+-            call ampli_final_weights(ampli_weights)
+-            call ampli_rewrite_events('ampli_candidates.lhe',
+-     $           'events.lhe',ampli_weights,nevts)
+-            open(unit=lunlhe,file='ampli_candidates.lhe',status='old')
+-            close(lunlhe,status='delete')
+-            deallocate(ampli_weights)
++            call ampli_finish_pool
+             call deallocate_weight_lines
+          else
+          vn=-1
+@@ -1953,12 +1962,14 @@ c     if there are no soft singularities at all, just do something trivial
+       end
+ 
+       subroutine write_current_mcatnlo_event(lunlhe,p_label,
+-     $     event_weight,putonshell)
++     $     event_weight,putonshell,absolute_weight)
+ c Store the full event while its contribution/fold state is still live.
+       use mint_module, only: ndimmax,max_fold
+       implicit none
+       integer lunlhe,p_label,iFKS_picked,ifold_picked
+       double precision event_weight,weight,inv_bias
++      double precision,optional,intent(out) :: absolute_weight
++      character*14 formatted_weight
+       double precision x_save(ndimmax,max_fold)
+       common /c_vegas_x_fold/x_save,ifold_picked
+       character*7 event_norm
+@@ -1971,6 +1982,12 @@ c Store the full event while its contribution/fold state is still live.
+          call include_inverse_bias_wgt(inv_bias)
+          weight=weight*inv_bias
+       endif
++c Match the magnitude emitted by handling_lhe_events.f format 503.
++c Tail guarantees must apply to the actual rounded LHE payload.
++      if (present(absolute_weight)) then
++         write(formatted_weight,'(e14.8)') abs(weight)
++         read(formatted_weight,*) absolute_weight
++      endif
+       call fill_rwgt_lines
+       call finalize_event(x_save(1,ifold_picked),weight,lunlhe,
+      $     putonshell,p_label)
+diff --git a/Template/NLO/SubProcesses/simple_integrator.f90 b/Template/NLO/SubProcesses/simple_integrator.f90
+index 4690bc431..7f6dc6180 100644
+--- a/Template/NLO/SubProcesses/simple_integrator.f90
++++ b/Template/NLO/SubProcesses/simple_integrator.f90
+@@ -2,8 +2,9 @@
+ ! 61b9cd52f44b4cdfc4773daa197e94eeb482b560 (2026-10-04).
+ ! The original integrator and helper module names are retained. MG5 additions
+ ! are the staged_integrator type and staged_* procedures below. They reuse the
+-! original adaptive grids; MC@NLO production uses the strict frozen-envelope
+-! rejection path. Process allocation, signed event payloads, normalization,
++! original adaptive grids; MC@NLO production freezes the integration maps and
++! uses quota-driven priority selection with repeated threshold evaluation and
++! a full overweight-tail cross-section bound. Process allocation, normalization,
+ ! physics and RNG ownership stay with MG5. No second RNG is supplied.
+ !===============================================================================
+ ! SimpleIntegrator
+@@ -220,19 +221,27 @@ module simple_integrator_mod
+   ! Positive tolerance selects the upstream-style finite-pool rank scheme with
+   ! normalized overweight corrections. This mode is approximate at finite
+   ! quota and must not be used to promise strict unweighted event densities.
++  !
++  ! Legacy start_pool/consider_pool (unused by current MC@NLO) collect an immutable-budget production
++  ! batch. The positive cutoff only controls storage: every point with priority
++  ! weight/uniform above it is retained, including arbitrarily large weights.
++  ! A coordinator may raise that cutoff and combine independent batches before
++  ! final selection. No event quota or final selection is imposed here.
+   type,public :: staged_integrator
+      private
+-     integer,public :: ndim=0,nvalues=0,ncandidates=0,quota=0
++     integer,public :: ndim=0,nvalues=0,ncandidates=0,quota=0,final_quota=0
+      integer(kind=8),public :: npoints=0_8,total_points=0_8,ntrials=0_8
+      real(kind=8),public :: max_weight=0d0,envelope=0d0,overweight=0d0
++     real(kind=8),public :: total_abs=0d0,threshold=0d0,full_trial_tail=0d0,reserve_tail=0d0,worst_subset_tail=0d0
+      real(kind=8),allocatable,public :: res(:),unc(:)
+      logical,public :: quota_complete=.false.,exhausted=.false.,production_done=.false.
+      logical,public :: envelope_exceeded=.false.
+      type(grid),allocatable :: maps(:)
+-     real(kind=8),allocatable :: mean(:),m2(:),candidate_weight(:),candidate_priority(:)
++     real(kind=8),allocatable :: mean(:),m2(:),candidate_weight(:),candidate_priority(:),candidate_factor(:)
+      integer(kind=8) :: max_trials=0_8,next_pool_check=0_8
+-     real(kind=8) :: overweight_tolerance=1d-3
++     real(kind=8) :: overweight_tolerance=1d-2
+      logical :: iteration_active=.false.,adapt_iteration=.false.,production_active=.false.
++     logical :: pool_mode=.false.
+    contains
+      procedure,public :: init => staged_init
+      procedure,public :: begin_iteration => staged_begin_iteration
+@@ -245,6 +254,12 @@ module simple_integrator_mod
+      procedure,public :: start_production => staged_start_production
+      procedure,public :: consider => staged_consider
+      procedure,public :: final_weights => staged_final_weights
++     procedure,public :: record_candidate_factor => staged_record_candidate_factor
++     procedure,public :: production_candidates => staged_production_candidates
++     procedure,public :: start_pool => staged_start_pool
++     procedure,public :: consider_pool => staged_consider_pool
++     procedure,public :: pool_candidates => staged_pool_candidates
++     procedure,public :: export_pool => staged_export_pool
+      procedure,private :: select_candidates => staged_select_candidates
+      procedure,private :: grow_candidates => staged_grow_candidates
+   end type staged_integrator
+@@ -259,7 +274,8 @@ module simple_integrator_mod
+   real(kind=8),parameter :: required_accuracy_factor=10d0
+   integer,parameter :: min_grid_size=8
+   integer,parameter :: max_grid_size=2048
+-  real(kind=8),parameter :: allowed_overweight_factor=0.001d0
++  ! Keep the MC@NLO pool coordinator's ALLOWED_OVERWEIGHT_FACTOR in sync.
++  real(kind=8),parameter :: allowed_overweight_factor=0.01d0
+   integer,parameter :: final_n_iters_for_evnt_gen=8
+ contains
+ 
+@@ -856,7 +872,7 @@ contains
+     real(kind=8),dimension(this%nevnt_in_list) :: fabs
+     real(kind=8),dimension(this%nevts_unw_req) :: fabs_top
+     integer,dimension(this%nevts_unw_req) :: top_idx
+-    real(kind=8) :: fmax_req,tmp
++    real(kind=8) :: fmax_req,tmp,tail_mass,total_mass
+     logical,dimension(this%current_iter) :: to_include
+     ! check which iterations to include (only the final
+     ! 'final_n_iters_for_evnt_gen' that generated events for this
+@@ -893,14 +909,16 @@ contains
+     fmax_req=fabs_top(k)
+     ! check the overweight fraction
+     this%overweight=0d0
++    tail_mass=0d0
++    total_mass=0d0
+     do j=1,this%nevts_unw_req
+        this%evnt_list(top_idx(j))%unwgt=.true.
+        tmp=this%evnt_list(top_idx(j))%f_abs(this%evnt_list(top_idx(j))%iter)/fmax(this%evnt_list(top_idx(j))%iter)
+        this%evnt_list(top_idx(j))%overwgt=tmp/fmax_req
+-       if (tmp.lt.fmax_req) cycle
+-       this%overweight=this%overweight+(tmp/fmax_req-1d0)
++       total_mass=total_mass+max(1d0,tmp/fmax_req)
++       if (tmp.gt.fmax_req) tail_mass=tail_mass+tmp/fmax_req
+     enddo
+-    this%overweight=this%overweight/dble(this%nevts_unw_req)
++    if (total_mass.gt.0d0) this%overweight=tail_mass/total_mass
+     if (this%overweight.lt.allowed_overweight_factor) then
+        done=.true.
+     else
+@@ -1525,7 +1543,7 @@ contains
+     integer :: i
+     if (ndim.lt.1.or.nvalues.lt.1) error stop 'staged integrator: invalid dimensions'
+     if (allocated(this%maps)) deallocate(this%maps,this%mean,this%m2,this%res,this%unc)
+-    if (allocated(this%candidate_weight)) deallocate(this%candidate_weight,this%candidate_priority)
++    if (allocated(this%candidate_weight)) deallocate(this%candidate_weight,this%candidate_priority,this%candidate_factor)
+     this%ndim=ndim
+     this%nvalues=nvalues
+     allocate(this%maps(ndim),this%mean(nvalues),this%m2(nvalues),this%res(nvalues),this%unc(nvalues))
+@@ -1542,6 +1560,7 @@ contains
+     this%iteration_active=.false.
+     this%adapt_iteration=.false.
+     this%production_active=.false.
++    this%pool_mode=.false.
+     this%production_done=.false.
+     this%quota_complete=.false.
+     this%exhausted=.false.
+@@ -1551,6 +1570,12 @@ contains
+     this%next_pool_check=0_8
+     this%ncandidates=0
+     this%quota=0
++    this%final_quota=0
++    this%total_abs=0d0
++    this%threshold=0d0
++    this%full_trial_tail=0d0
++    this%reserve_tail=0d0
++    this%worst_subset_tail=0d0
+     this%envelope=0d0
+     this%overweight=0d0
+     this%overweight_tolerance=allowed_overweight_factor
+@@ -1690,13 +1715,14 @@ contains
+     this%iteration_active=.false.
+   end subroutine staged_finish_iteration
+ 
+-  subroutine staged_start_production(this,quota,envelope,max_trials,overweight_tolerance)
++  subroutine staged_start_production(this,quota,envelope,max_trials,overweight_tolerance,final_quota)
+     use,intrinsic :: ieee_arithmetic,only: ieee_is_finite
+     class(staged_integrator),intent(inout) :: this
+     integer,intent(in) :: quota
+     real(kind=8),intent(in) :: envelope
+     integer(kind=8),intent(in) :: max_trials
+     real(kind=8),intent(in),optional :: overweight_tolerance
++    integer,intent(in),optional :: final_quota
+     if (.not.allocated(this%maps)) error stop 'staged integrator: production before init'
+     if (this%iteration_active) error stop 'staged integrator: production during iteration'
+     if (quota.lt.0.or.max_trials.lt.0_8.or.(quota.gt.0.and.max_trials.eq.0_8)) &
+@@ -1708,9 +1734,18 @@ contains
+          error stop 'staged integrator: invalid overweight tolerance'
+     if (quota.gt.0.and.envelope.eq.0d0.and.this%overweight_tolerance.eq.0d0) &
+          error stop 'staged integrator: strict production requires a positive envelope'
+-    if (allocated(this%candidate_weight)) deallocate(this%candidate_weight,this%candidate_priority)
+-    allocate(this%candidate_weight(16),this%candidate_priority(16))
++    if (allocated(this%candidate_weight)) deallocate(this%candidate_weight,this%candidate_priority,this%candidate_factor)
++    allocate(this%candidate_weight(16),this%candidate_priority(16),this%candidate_factor(16))
++    this%candidate_factor=1d0
+     this%quota=quota
++    this%final_quota=quota
++    if (present(final_quota)) this%final_quota=final_quota
++    if (this%final_quota.lt.0.or.this%final_quota.gt.quota) error stop 'staged integrator: invalid final quota'
++    this%total_abs=0d0
++    this%threshold=envelope
++    this%full_trial_tail=0d0
++    this%reserve_tail=0d0
++    this%worst_subset_tail=0d0
+     this%envelope=envelope
+     this%max_trials=max_trials
+     this%ntrials=0_8
+@@ -1722,8 +1757,106 @@ contains
+     this%quota_complete=quota.eq.0
+     this%production_done=quota.eq.0
+     this%production_active=.true.
++    this%pool_mode=.false.
+   end subroutine staged_start_production
+ 
++  subroutine staged_start_pool(this,budget,cutoff)
++    use,intrinsic :: ieee_arithmetic,only: ieee_is_finite
++    class(staged_integrator),intent(inout) :: this
++    integer(kind=8),intent(in) :: budget
++    real(kind=8),intent(in) :: cutoff
++    if (.not.allocated(this%maps)) error stop 'staged integrator: pool before init'
++    if (this%iteration_active) error stop 'staged integrator: pool during iteration'
++    if (budget.lt.0_8) error stop 'staged integrator: invalid pool budget'
++    if (.not.ieee_is_finite(cutoff)) error stop 'staged integrator: invalid pool cutoff'
++    if (cutoff.le.0d0) error stop 'staged integrator: invalid pool cutoff'
++    if (allocated(this%candidate_weight)) deallocate(this%candidate_weight,this%candidate_priority,this%candidate_factor)
++    allocate(this%candidate_weight(16),this%candidate_priority(16),this%candidate_factor(16))
++    this%candidate_factor=1d0
++    this%quota=0
++    this%final_quota=0
++    this%total_abs=0d0
++    this%threshold=cutoff
++    this%full_trial_tail=0d0
++    this%reserve_tail=0d0
++    this%worst_subset_tail=0d0
++    this%envelope=cutoff
++    this%max_trials=budget
++    this%ntrials=0_8
++    this%ncandidates=0
++    this%next_pool_check=0_8
++    this%max_weight=0d0
++    this%overweight=0d0
++    this%overweight_tolerance=0d0
++    this%exhausted=budget.eq.0_8
++    this%envelope_exceeded=.false.
++    this%quota_complete=.false.
++    this%production_done=budget.eq.0_8
++    this%production_active=.true.
++    this%pool_mode=.true.
++  end subroutine staged_start_pool
++
++  subroutine staged_consider_pool(this,weight,to_write,done)
++    use,intrinsic :: ieee_arithmetic,only: ieee_is_finite
++    class(staged_integrator),intent(inout) :: this
++    real(kind=8),intent(in) :: weight
++    logical,intent(out) :: to_write,done
++    real(kind=8) :: rnd,priority
++    if (.not.this%pool_mode.or..not.this%production_active.or.this%production_done) &
++         error stop 'staged integrator: candidate outside active pool'
++    if (.not.ieee_is_finite(weight)) error stop 'staged integrator: invalid pool target'
++    if (weight.lt.0d0) error stop 'staged integrator: invalid pool target'
++    this%ntrials=this%ntrials+1_8
++    this%max_weight=max(this%max_weight,weight)
++    to_write=.false.
++    if (weight.gt.0d0) then
++       rnd=ran2()
++       if (.not.ieee_is_finite(rnd)) error stop 'staged integrator: invalid RNG value'
++       if (rnd.lt.0d0.or.rnd.ge.1d0) error stop 'staged integrator: invalid RNG value'
++       ! Keeping priorities logarithmic avoids both overflow for large weights
++       ! and underflow in cutoff*rnd. The same variate must be kept for any later
++       ! threshold revision; drawing it again would distort the retained pool.
++       priority=log(weight)-log(max(rnd,tiny(1d0)))
++       if (priority.gt.log(this%envelope)) then
++          if (this%ncandidates.eq.huge(this%ncandidates)) error stop 'staged integrator: too many candidate events'
++          this%ncandidates=this%ncandidates+1
++          if (this%ncandidates.gt.size(this%candidate_weight)) call this%grow_candidates()
++          this%candidate_weight(this%ncandidates)=weight
++          this%candidate_priority(this%ncandidates)=priority
++          to_write=.true.
++       endif
++    endif
++    this%exhausted=this%ntrials.eq.this%max_trials
++    this%production_done=this%exhausted
++    done=this%production_done
++  end subroutine staged_consider_pool
++
++  subroutine staged_pool_candidates(this,weights,priorities)
++    class(staged_integrator),intent(inout) :: this
++    real(kind=8),allocatable,intent(out) :: weights(:),priorities(:)
++    if (.not.this%pool_mode.or..not.this%production_done) &
++         error stop 'staged integrator: pool is not finished'
++    allocate(weights(this%ncandidates),priorities(this%ncandidates))
++    weights=this%candidate_weight(1:this%ncandidates)
++    priorities=this%candidate_priority(1:this%ncandidates)
++    this%production_active=.false.
++  end subroutine staged_pool_candidates
++
++  subroutine staged_export_pool(this,unit)
++    class(staged_integrator),intent(inout) :: this
++    integer,intent(in) :: unit
++    real(kind=8),allocatable :: weights(:),priorities(:)
++    integer :: i
++    call this%pool_candidates(weights,priorities)
++    write(unit,'(a)') 'MG5_SIMPLE_POOL 1'
++    write(unit,*) this%ntrials,this%ncandidates
++    write(unit,'(es25.17)') this%envelope
++    do i=1,this%ncandidates
++       write(unit,'(i0,1x,2(es25.17,1x))') i,weights(i),priorities(i)
++    enddo
++    write(unit,'(a)') 'END_MG5_SIMPLE_POOL'
++  end subroutine staged_export_pool
++
+   subroutine staged_consider(this,weight,to_write,done)
+     use,intrinsic :: ieee_arithmetic,only: ieee_is_finite
+     class(staged_integrator),intent(inout) :: this
+@@ -1731,10 +1864,12 @@ contains
+     logical,intent(out) :: to_write,done
+     real(kind=8) :: rnd
+     real(kind=8),allocatable :: weights(:)
+-    if (.not.this%production_active.or.this%production_done) &
++    if (this%pool_mode.or..not.this%production_active.or.this%production_done) &
+          error stop 'staged integrator: candidate outside active production'
+     if (.not.ieee_is_finite(weight).or.weight.lt.0d0) error stop 'staged integrator: invalid event target'
+     this%ntrials=this%ntrials+1_8
++    this%total_abs=this%total_abs+weight
++    if (.not.ieee_is_finite(this%total_abs)) error stop 'staged integrator: absolute trial sum overflow'
+     to_write=.false.
+     ! Do not clip an overweight or adapt the envelope while retaining events.
+     ! In particular, adaptive rank cutoffs bias single-event channel quotas.
+@@ -1755,6 +1890,7 @@ contains
+           this%ncandidates=this%ncandidates+1
+           if (this%ncandidates.gt.size(this%candidate_weight)) call this%grow_candidates()
+           this%candidate_weight(this%ncandidates)=weight
++          this%candidate_factor(this%ncandidates)=1d0
+           ! Log priorities preserve ordering without overflowing for tiny rnd.
+           this%candidate_priority(this%ncandidates)=log(weight)-log(rnd)
+        endif
+@@ -1768,7 +1904,7 @@ contains
+     endif
+     if (this%quota_complete.and.(int(this%ncandidates,8).ge.this%next_pool_check.or.this%exhausted)) then
+        call this%select_candidates(weights)
+-       this%production_done=this%overweight.le.this%overweight_tolerance.or.this%exhausted
++       this%production_done=this%overweight.lt.this%overweight_tolerance.or.this%exhausted
+        this%next_pool_check=int(this%ncandidates,8)+max(1_8,(int(this%quota,8)+1_8)/2_8)
+     endif
+     if (this%exhausted) this%production_done=.true.
+@@ -1777,13 +1913,16 @@ contains
+ 
+   subroutine staged_grow_candidates(this)
+     class(staged_integrator),intent(inout) :: this
+-    real(kind=8),allocatable :: weights(:),priorities(:)
++    real(kind=8),allocatable :: weights(:),priorities(:),factors(:)
+     integer :: n
+     n=size(this%candidate_weight)
+     if (n.gt.huge(n)/2) error stop 'staged integrator: too many candidate events'
+-    allocate(weights(2*n),priorities(2*n))
++    allocate(weights(2*n),priorities(2*n),factors(2*n))
++    factors=1d0
+     weights(1:n)=this%candidate_weight
+     priorities(1:n)=this%candidate_priority
++    factors(1:n)=this%candidate_factor
++    call move_alloc(factors,this%candidate_factor)
+     call move_alloc(weights,this%candidate_weight)
+     call move_alloc(priorities,this%candidate_priority)
+   end subroutine staged_grow_candidates
+@@ -1792,57 +1931,115 @@ contains
+     use topk_heap_mod,only: topk_largest
+     class(staged_integrator),intent(inout) :: this
+     real(kind=8),allocatable,intent(out) :: weights(:)
+-    real(kind=8),allocatable :: top(:),correction(:)
+-    integer,allocatable :: indices(:)
+-    real(kind=8) :: log_threshold,correction_sum,max_log,log_mean
+-    integer :: j,ntop
++    real(kind=8),allocatable :: top(:),correction(:),mass(:),ordinary(:),smallest(:)
++    integer,allocatable :: indices(:),ordinary_indices(:)
++    logical,allocatable :: tail(:)
++    real(kind=8) :: log_threshold,correction_sum,max_log,tail_mass,denominator
++    integer :: j,ntop,ntail,nordinary,nkeep
+     if (this%envelope_exceeded) error stop 'staged integrator: strict production envelope exceeded'
+     if (.not.this%quota_complete) error stop 'staged integrator: event quota not reached'
+     allocate(weights(this%ncandidates))
+     weights=0d0
+     this%overweight=0d0
++    this%full_trial_tail=0d0
++    this%reserve_tail=0d0
++    this%worst_subset_tail=0d0
+     if (this%quota.eq.0) return
+     if (this%overweight_tolerance.eq.0d0) then
+        if (this%ncandidates.ne.this%quota) error stop 'staged integrator: strict event count mismatch'
+        weights=1d0
++       this%threshold=this%envelope
+        return
+     endif
+     ntop=min(this%quota+1,this%ncandidates)
+-    allocate(top(ntop),indices(ntop),correction(this%quota))
++    allocate(top(ntop),indices(ntop),correction(this%quota),mass(this%quota),tail(this%quota))
+     call topk_largest(this%candidate_priority(1:this%ncandidates),ntop,top,indices)
+     if (ntop.gt.this%quota) then
+-       ! Priority-sampling corrections use the first EXCLUDED priority.
+        log_threshold=top(ntop)
+     elseif (this%envelope.gt.0d0) then
+        log_threshold=log(this%envelope)
+     else
+-       ! With no excluded point and no filtering envelope, every trial was
+-       ! retained. This is the self-normalized importance-sampling limit.
+        log_threshold=minval(log(this%candidate_weight(1:this%ncandidates)))
+     endif
++    if (log_threshold.ge.log(huge(1d0))) then
++       this%threshold=huge(1d0)
++    else
++       this%threshold=max(this%envelope,exp(log_threshold))
++    endif
++    ! Every point above this threshold passed the initial retention cutoff;
++    ! its raw contribution is therefore available in the candidate metadata.
++    if (this%total_abs.gt.0d0) this%full_trial_tail= &
++         sum(this%candidate_weight(1:this%ncandidates), &
++             mask=this%candidate_weight(1:this%ncandidates).gt.this%threshold)/this%total_abs
+     do j=1,this%quota
+        correction(j)=max(0d0,log(this%candidate_weight(indices(j)))-log_threshold)
++       tail(j)=this%candidate_weight(indices(j)).gt.this%threshold
+     enddo
+-    ! Normalize in log space: a representable correction mean can coexist
+-    ! with a raw sum that overflows when several extreme tails are retained.
+     max_log=maxval(correction)
+     correction=exp(correction-max_log)
+     correction_sum=sum(correction)
+-    log_mean=max_log+log(correction_sum/dble(this%quota))
+-    if (log_mean.ge.log(huge(1d0))) then
+-       this%overweight=huge(1d0)
+-    else
+-       this%overweight=max(0d0,exp(log_mean)-1d0)
+-    endif
+     do j=1,this%quota
+        weights(indices(j))=correction(j)*dble(this%quota)/correction_sum
+        if (weights(indices(j)).eq.0d0) error stop 'staged integrator: correction exceeds floating-point dynamic range'
++       mass(j)=log(correction(j))+log(this%candidate_factor(indices(j)))
+     enddo
++    ! Common rescaling avoids overflow and cancels in all tail fractions.
++    mass=exp(mass-maxval(mass))
++    tail_mass=sum(mass,mask=tail)
++    denominator=sum(mass)
++    this%reserve_tail=tail_mass/denominator
++    ntail=count(tail)
++    if (ntail.gt.0.and.this%final_quota.gt.0) then
++       if (ntail.ge.this%final_quota) then
++          this%worst_subset_tail=1d0
++       else
++          nkeep=this%final_quota-ntail
++          nordinary=this%quota-ntail
++          allocate(ordinary(nordinary),smallest(nkeep),ordinary_indices(nkeep))
++          ordinary=-pack(mass,.not.tail)
++          call topk_largest(ordinary,nkeep,smallest,ordinary_indices)
++          this%worst_subset_tail=tail_mass/(tail_mass-sum(smallest))
++       endif
++    endif
++    this%overweight=max(this%full_trial_tail,this%reserve_tail,this%worst_subset_tail)
+   end subroutine staged_select_candidates
+ 
++  subroutine staged_record_candidate_factor(this,factor,done)
++    use,intrinsic :: ieee_arithmetic,only: ieee_is_finite
++    class(staged_integrator),intent(inout) :: this
++    real(kind=8),intent(in) :: factor
++    logical,intent(out) :: done
++    real(kind=8),allocatable :: weights(:)
++    if (this%ncandidates.le.0.or..not.this%production_active.or.this%pool_mode) &
++         error stop 'staged integrator: no production candidate for LHE factor'
++    if (.not.ieee_is_finite(factor).or.factor.le.0d0) error stop 'staged integrator: invalid LHE candidate factor'
++    this%candidate_factor(this%ncandidates)=factor
++    ! consider() sees a provisional factor of one. Its final decision must be
++    ! repeated after the actual selected contribution and inverse bias exist.
++    if (this%production_done.and.this%quota_complete.and.this%overweight_tolerance.gt.0d0) then
++       call this%select_candidates(weights)
++       this%production_done=this%overweight.lt.this%overweight_tolerance.or.this%exhausted
++    endif
++    done=this%production_done
++  end subroutine staged_record_candidate_factor
++
++  subroutine staged_production_candidates(this,raw,priorities,weights,tail,factors)
++    class(staged_integrator),intent(inout) :: this
++    real(kind=8),allocatable,intent(out) :: raw(:),priorities(:),weights(:),factors(:)
++    integer,allocatable,intent(out) :: tail(:)
++    call this%final_weights(weights)
++    raw=this%candidate_weight(1:this%ncandidates)
++    priorities=this%candidate_priority(1:this%ncandidates)
++    factors=this%candidate_factor(1:this%ncandidates)
++    allocate(tail(this%ncandidates))
++    tail=0
++    where(raw.gt.this%threshold) tail=1
++  end subroutine staged_production_candidates
++
+   subroutine staged_final_weights(this,weights)
+     class(staged_integrator),intent(inout) :: this
+     real(kind=8),allocatable,intent(out) :: weights(:)
++    if (this%pool_mode) error stop 'staged integrator: pool requires coordinator finalization'
+     if (.not.this%production_active.or..not.this%production_done) &
+          error stop 'staged integrator: production is not finished'
+     call this%select_candidates(weights)
+@@ -1854,13 +2051,14 @@ contains
+     integer,intent(in) :: unit
+     integer :: i
+     if (.not.allocated(this%maps)) error stop 'staged integrator: save before init'
+-    write(unit,'(a)') 'MG5_SIMPLE_INTEGRATOR 1'
++    write(unit,'(a)') 'MG5_SIMPLE_INTEGRATOR 3'
+     write(unit,*) this%ndim,this%nvalues
+     write(unit,*) this%npoints,this%total_points,this%ntrials,this%max_trials,this%next_pool_check
+     write(unit,*) this%quota,this%ncandidates
++    write(unit,*) this%final_quota,this%total_abs,this%threshold,this%full_trial_tail,this%reserve_tail,this%worst_subset_tail
+     write(unit,'(4(es25.17,1x))') this%max_weight,this%envelope,this%overweight,this%overweight_tolerance
+     write(unit,*) this%iteration_active,this%adapt_iteration,this%production_active,&
+-         this%production_done,this%quota_complete,this%exhausted,this%envelope_exceeded
++         this%production_done,this%quota_complete,this%exhausted,this%envelope_exceeded,this%pool_mode
+     write(unit,'(*(es25.17,1x))') this%mean
+     write(unit,'(*(es25.17,1x))') this%m2
+     write(unit,'(*(es25.17,1x))') this%res
+@@ -1873,7 +2071,7 @@ contains
+        write(unit,*) this%maps(i)%nhits
+     enddo
+     do i=1,this%ncandidates
+-       write(unit,'(2(es25.17,1x))') this%candidate_weight(i),this%candidate_priority(i)
++       write(unit,'(3(es25.17,1x))') this%candidate_weight(i),this%candidate_priority(i),this%candidate_factor(i)
+     enddo
+     write(unit,'(a)') 'END_MG5_SIMPLE_INTEGRATOR'
+   end subroutine staged_save
+@@ -1882,11 +2080,20 @@ contains
+     use,intrinsic :: ieee_arithmetic,only: ieee_is_finite
+     class(staged_integrator),intent(inout) :: this
+     integer,intent(in) :: unit,ndim,nvalues
+-    integer :: saved_ndim,saved_nvalues,ios,i,n,nfill
++    integer :: saved_ndim,saved_nvalues,ios,i,n,nfill,version
+     character(len=80) :: marker
+     read(unit,'(a)',iostat=ios) marker
+     if (ios.ne.0) error stop 'staged integrator: missing checkpoint header'
+-    if (trim(marker).ne.'MG5_SIMPLE_INTEGRATOR 1') error stop 'staged integrator: incompatible checkpoint version'
++    select case(trim(marker))
++    case('MG5_SIMPLE_INTEGRATOR 1')
++       version=1
++    case('MG5_SIMPLE_INTEGRATOR 2')
++       version=2
++    case('MG5_SIMPLE_INTEGRATOR 3')
++       version=3
++    case default
++       error stop 'staged integrator: incompatible checkpoint version'
++    end select
+     read(unit,*,iostat=ios) saved_ndim,saved_nvalues
+     if (ios.ne.0) error stop 'staged integrator: invalid checkpoint dimensions'
+     if (saved_ndim.ne.ndim.or.saved_nvalues.ne.nvalues) error stop 'staged integrator: incompatible checkpoint dimensions'
+@@ -1895,6 +2102,16 @@ contains
+     if (ios.ne.0) error stop 'staged integrator: invalid checkpoint counters'
+     read(unit,*,iostat=ios) this%quota,this%ncandidates
+     if (ios.ne.0) error stop 'staged integrator: invalid checkpoint event counters'
++    this%final_quota=this%quota
++    if (version.ge.3) then
++       read(unit,*,iostat=ios) this%final_quota,this%total_abs,this%threshold, &
++            this%full_trial_tail,this%reserve_tail,this%worst_subset_tail
++       if (ios.ne.0.or.this%final_quota.lt.0.or.this%final_quota.gt.this%quota.or. &
++            .not.all(ieee_is_finite([this%total_abs,this%threshold,this%full_trial_tail, &
++            this%reserve_tail,this%worst_subset_tail]))) error stop 'staged integrator: invalid checkpoint tail state'
++    elseif (this%ntrials.gt.0_8) then
++       error stop 'staged integrator: old production checkpoint lacks tail statistics'
++    endif
+     if (this%npoints.lt.0_8.or.this%total_points.lt.this%npoints.or.this%ntrials.lt.0_8.or.&
+          this%max_trials.lt.this%ntrials.or.this%next_pool_check.lt.0_8.or.this%quota.lt.0.or.this%ncandidates.lt.0) &
+          error stop 'staged integrator: corrupt checkpoint counters'
+@@ -1903,9 +2120,21 @@ contains
+     if (.not.all(ieee_is_finite([this%max_weight,this%envelope,this%overweight,this%overweight_tolerance])).or.&
+          min(this%max_weight,this%envelope,this%overweight,this%overweight_tolerance).lt.0d0) &
+          error stop 'staged integrator: corrupt checkpoint envelopes'
+-    read(unit,*,iostat=ios) this%iteration_active,this%adapt_iteration,this%production_active,&
+-         this%production_done,this%quota_complete,this%exhausted,this%envelope_exceeded
++    if (version.eq.1) then
++       read(unit,*,iostat=ios) this%iteration_active,this%adapt_iteration,this%production_active,&
++            this%production_done,this%quota_complete,this%exhausted,this%envelope_exceeded
++    else
++       read(unit,*,iostat=ios) this%iteration_active,this%adapt_iteration,this%production_active,&
++            this%production_done,this%quota_complete,this%exhausted,this%envelope_exceeded,this%pool_mode
++    endif
+     if (ios.ne.0) error stop 'staged integrator: invalid checkpoint flags'
++    if (int(this%ncandidates,8).gt.this%ntrials) error stop 'staged integrator: corrupt checkpoint event counters'
++    if (this%pool_mode) then
++       if (this%quota.ne.0.or.this%envelope.le.0d0.or.this%iteration_active.or.&
++            this%envelope_exceeded.or.this%quota_complete.or.&
++            (this%production_done.neqv.(this%ntrials.eq.this%max_trials))) &
++            error stop 'staged integrator: corrupt checkpoint pool state'
++    endif
+     read(unit,*,iostat=ios) this%mean
+     if (ios.ne.0) error stop 'staged integrator: invalid checkpoint mean'
+     read(unit,*,iostat=ios) this%m2
+@@ -1945,12 +2174,19 @@ contains
+             any(.not.ieee_is_finite(this%maps(i)%accum)).or.any(this%maps(i)%nhits.lt.0)) &
+             error stop 'staged integrator: corrupt checkpoint adaptation grid'
+     enddo
+-    allocate(this%candidate_weight(max(16,this%ncandidates)),this%candidate_priority(max(16,this%ncandidates)))
++    allocate(this%candidate_weight(max(16,this%ncandidates)),this%candidate_priority(max(16,this%ncandidates)), &
++         this%candidate_factor(max(16,this%ncandidates)))
++    this%candidate_factor=1d0
+     do i=1,this%ncandidates
+-       read(unit,*,iostat=ios) this%candidate_weight(i),this%candidate_priority(i)
++       if (version.ge.3) then
++          read(unit,*,iostat=ios) this%candidate_weight(i),this%candidate_priority(i),this%candidate_factor(i)
++       else
++          read(unit,*,iostat=ios) this%candidate_weight(i),this%candidate_priority(i)
++       endif
+        if (ios.ne.0) error stop 'staged integrator: invalid checkpoint candidate'
+        if (.not.ieee_is_finite(this%candidate_weight(i)).or.this%candidate_weight(i).le.0d0.or.&
+-            .not.ieee_is_finite(this%candidate_priority(i))) error stop 'staged integrator: corrupt checkpoint candidate'
++            .not.ieee_is_finite(this%candidate_priority(i)).or..not.ieee_is_finite(this%candidate_factor(i)).or. &
++            this%candidate_factor(i).le.0d0) error stop 'staged integrator: corrupt checkpoint candidate'
+     enddo
+     read(unit,'(a)',iostat=ios) marker
+     if (ios.ne.0) error stop 'staged integrator: truncated checkpoint'
+diff --git a/madgraph/interface/amcatnlo_run_interface.py b/madgraph/interface/amcatnlo_run_interface.py
+index f8930c489..888db23fa 100755
+--- a/madgraph/interface/amcatnlo_run_interface.py
++++ b/madgraph/interface/amcatnlo_run_interface.py
+@@ -22,6 +22,7 @@ import atexit
+ import collections
+ import glob
+ import hashlib
++import json
+ import logging
+ import math
+ import optparse
+@@ -82,6 +83,7 @@ except ImportError:
+     import internal.FO_analyse_card as analyse_card 
+     import internal.lhe_parser as lhe_parser
+     import internal.collect_events as collect_events
++    import internal.ampli_pool as ampli_pool
+ else:
+     # import from madgraph directory
+     aMCatNLO = False
+@@ -99,6 +101,7 @@ else:
+     import madgraph.various.lhe_parser as lhe_parser
+     from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error,MG5DIR
+     import madgraph.various.collect_events as collect_events
++    import madgraph.various.ampli_pool as ampli_pool
+ 
+ class aMCatNLOError(Exception):
+     pass
+@@ -2015,6 +2018,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
+             
+             jobs_to_run,jobs_to_collect,integration_step = self.create_jobs_to_run(options,p_dirs, \
+                                             req_acc,mode_dict[mode],1,mode,fixed_order=False)
++            if jobs_to_run and jobs_to_run[0].get('nlops_integrator', 0) == 1:
++                mcatnlo_status = ['Adapting integration grids', 'Surveying channel rates',
++                                  'Generating channel event samples']
+             # Make sure to update all the jobs to be ready for the event generation step
+             if options['only_generation']:
+                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
+@@ -2036,6 +2042,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
+                     self.print_summary(options,2,mode)
+                     return
+ 
++            # AmpliCol pools have been finalized before either reweighting or collection.
+             # Sanity check on the event files. If error the jobs are resubmitted
+             self.check_event_files(jobs_to_collect)
+ 
+@@ -2366,6 +2373,13 @@ RESTART = %(mint_mode)s
+                     
+         with open(pjoin(job['dirname'], 'input_app.txt'), 'w') as input_file:
+             input_file.write(content)
++        if (not fixed_order and job.get('nlops_integrator', 0) == 1 and
++                job['mint_mode'] == 2 and 'ampli_final_quota' in job):
++            # The native worker controls its own event-generation stopping.
++            # The survey, independent of that stopping, supplies published rates.
++            with open(pjoin(job['dirname'], 'ampli_job.dat'), 'w') as plan_file:
++                plan_file.write('MG5_AMPLI_JOB 2\n%d %d\n' %
++                                (job['nevents'], job['ampli_final_quota']))
+ 
+ 
+     def run_all_jobs(self,jobs_to_run,integration_step,fixed_order=True):
+@@ -2407,6 +2421,12 @@ RESTART = %(mint_mode)s
+            final answer.
+         """
+ # Get the results of the current integration/MINT step
++        if (not fixed_order and integration_step == 2 and jobs_to_run and
++                jobs_to_run[0].get('nlops_integrator', 0) == 1):
++            try:
++                return self.finalize_ampli_pools(jobs_to_run, mode)
++            except ampli_pool.PoolError as error:
++                raise aMCatNLOError(str(error)) from error
+         self.append_the_results(jobs_to_run,integration_step)
+         self.cross_sect_dict = self.write_res_txt_file(jobs_to_collect,integration_step)
+ # Update HTML pages
+@@ -2451,8 +2471,14 @@ RESTART = %(mint_mode)s
+             with open(pjoin(self.me_dir,"SubProcesses","job_status.pkl"),'wb') as f:
+                 pickle.dump(jobs_to_collect,f)
+             # next step is event generation (mint_step 2)
+-            jobs_to_run_new,jobs_to_collect_new= \
+-                    self.check_the_need_to_split(jobs_to_run_new,jobs_to_collect)
++            if jobs_to_run_new and jobs_to_run_new[0].get('nlops_integrator', 0) == 1:
++                self._ampli_next_split = {}
++                jobs_to_run_new = self.split_ampli_batch(jobs_to_run_new)
++                self._ampli_channels = copy.deepcopy(jobs_to_collect)
++                jobs_to_collect_new = jobs_to_run_new
++            else:
++                jobs_to_run_new,jobs_to_collect_new= \
++                        self.check_the_need_to_split(jobs_to_run_new,jobs_to_collect)
+             self.prepare_directories(jobs_to_run_new,mode,fixed_order)
+             self.write_nevents_unweighted_file(jobs_to_collect_new,jobs_to_collect)
+         else:
+@@ -2817,11 +2843,19 @@ RESTART = %(mint_mode)s
+             if step+1 == 1 or step+1 == 2 :
+                 # determine the req. accuracy for each of the jobs for Mint-step = 1
+                 for job in jobs:
+-                    if job['resultABS'] == 0. or req_acc2_inv == 0:
++                    if (job.get('nlops_integrator', 0) == 1 and nevents > 0):
++                        # Each channel is surveyed independently before quotas
++                        # are assigned, including channels with small rates.
++                        accuracy = 0.03
++                    elif job['resultABS'] == 0. or req_acc2_inv == 0:
+                         accuracy = 0.2
+                     else:
+                         accuracy=min(math.sqrt(totABS/(req_acc2_inv*job['resultABS'])),0.2)
+                     job['accuracy']=accuracy
++            if (step+1 == 2 and nevents > 0 and jobs and
++                    jobs[0].get('nlops_integrator', 0) == 1):
++                self.plan_ampli_production(jobs, req_acc)
++                return jobs
+             if step+1 == 2:
+                 # Randomly (based on the relative ABS Xsec of the job) determine the 
+                 # number of events each job needs to generate for MINT-step = 2.
+@@ -2852,6 +2886,196 @@ RESTART = %(mint_mode)s
+             return []
+ 
+ 
++    def plan_ampli_production(self, jobs, req_acc):
++        """Allocate final channel quotas from independent, three-percent surveys.
++
++        The extra ten percent supplies a reserve for native re-evaluation and
++        collection. No production trial budget or requested total-rate accuracy
++        enters this allocation; event stopping cannot update the published rate.
++        """
++        nevents = self.run_card['nevents']
++        absolute = self.cross_sect_dict['xseca']
++        for job in jobs:
++            rate, error = job['resultABS'], job['errorABS']
++            if (not math.isfinite(rate) or not math.isfinite(error) or
++                    rate < 0. or error < 0. or
++                    error > .03 * rate * (1. + 1.e-12)):
++                raise aMCatNLOError('AmpliCol survey did not reach 3%% absolute-rate '
++                    'accuracy in %s channel %s (rate=%g, error=%g). '
++                    'Run the survey again before generating events.' %
++                    (job.get('p_dir', '?'), job.get('channel', '?'), rate, error))
++        if absolute <= 0. or not any(job['resultABS'] > 0. for job in jobs):
++            raise aMCatNLOError('Cannot generate events: the total absolute '
++                                'cross section is zero.')
++        allocation_rng = random.Random(self.get_randinit_seed() ^ 0x414D504C)
++        positive_jobs = [job for job in jobs if job['resultABS'] > 0.]
++        for job in jobs:
++            job['nevents'] = 0
++        for unused in range(nevents):
++            target = allocation_rng.random() * absolute
++            cumulative = 0.
++            for job in positive_jobs:
++                cumulative += job['resultABS']
++                if target < cumulative:
++                    break
++            job['nevents'] += 1
++        for job in jobs:
++            job['ampli_final_quota'] = job['nevents']
++            job['ampli_generated_target'] = (11 * job['nevents'] + 9) // 10
++            job['ampli_survey_absolute'] = job['resultABS']
++            job['mint_mode'] = 2
++        logger.info('AmpliCol production: %d final events, %d events including reserves',
++                    nevents, sum(job['ampli_generated_target'] for job in jobs))
++
++    def split_ampli_batch(self, channels):
++        """Split accepted-event quotas, retaining independent saved-grid workers.
++
++        Each worker keeps a final quota and generates ten percent extra, rounded
++        up. This rounding can add a few reserve events at split boundaries. Fresh
++        directory indices prevent a generation-only restart from reusing streams
++        or overwriting previously generated events or the unsplit survey.
++        """
++        jobs = []
++        nevt_job = self.run_card['nevt_job']
++        if 0 < nevt_job < 2:
++            raise aMCatNLOError('AmpliCol nevt_job must be at least 2 to include '
++                                'the event-generation reserve, or negative for no splitting.')
++        max_quota = (10 * nevt_job) // 11 if nevt_job > 0 else None
++        if not hasattr(self, '_ampli_next_split'):
++            self._ampli_next_split = {}
++        for channel in channels:
++            quota = channel['ampli_final_quota']
++            if quota <= 0:
++                continue
++            count = (quota + max_quota - 1) // max_quota if max_quota else 1
++            key = (channel['p_dir'], channel['channel'])
++            index = self._ampli_next_split.get(key, 0)
++            generated = 0
++            for part in range(count):
++                job = copy.copy(channel)
++                index += 1
++                while os.path.exists(channel['dirname'] + '_%d' % index):
++                    index += 1
++                job['split'] = index
++                job['dirname'] = channel['dirname'] + '_%d' % index
++                job['ampli_final_quota'] = quota // count + (part < quota % count)
++                job['nevents'] = (11 * job['ampli_final_quota'] + 9) // 10
++                job['ampli_generated_target'] = job['nevents']
++                job['ampli_parent'] = channel['dirname']
++                job['wgt_frac'] = float(job['ampli_final_quota']) / quota
++                generated += job['nevents']
++                jobs.append(job)
++            channel['ampli_generated_target'] = generated
++            self._ampli_next_split[key] = index
++        return jobs
++
++    def finalize_ampli_pools(self, jobs, mode):
++        """Collect native event samples while preserving the independent survey.
++
++        Each worker has already generated its reserve and met the full-tail
++        criterion, including its final quota's worst possible subset. Collection
++        validates those facts and uniformly trims each reserve once. Production
++        moments are diagnostics: event-count stopping never changes channel
++        probabilities, published cross sections, or their uncertainties.
++        """
++        channels = self._ampli_channels
++        self.append_the_results(jobs, 2)
++        pools = collections.defaultdict(list)
++        channel_jobs = collections.defaultdict(list)
++        for job in jobs:
++            pool = ampli_pool.read_pool(job['dirname'])
++            if (pool['generated_target'] != job['nevents'] or
++                    pool['final_quota'] != job['ampli_final_quota']):
++                raise aMCatNLOError('AmpliCol worker event quotas disagree with '
++                                    'the generation plan: %s' % job['dirname'])
++            pools[job['ampli_parent']].append(pool)
++            channel_jobs[job['ampli_parent']].append(job)
++        if sum(channel['ampli_final_quota'] for channel in channels) != self.run_card['nevents']:
++            raise aMCatNLOError('AmpliCol final channel quotas do not sum to the requested events.')
++        # Restore survey totals even though append_the_results read worker diagnostics.
++        self.cross_sect_dict = self.write_res_txt_file(channels, 2)
++        total = self.cross_sect_dict['xseca']
++        normalization = total
++        event_norm = self.run_card['event_norm'].lower()
++        if event_norm == 'sum':
++            normalization /= self.run_card['nevents']
++        elif event_norm == 'unity':
++            normalization = 1.
++        process_rates = [(int(label), self.cross_sect_dict[label]['xsect'],
++                           self.cross_sect_dict[label]['errt'])
++                         for label in self.cross_sect_dict['p_labels']]
++        selection_rng = random.Random(self.get_randinit_seed() ^ 0x504F4F4C)
++        manifest = {
++            'version': 2, 'requested_events': self.run_card['nevents'],
++            'seed': self.get_randinit_seed(), 'channels': [],
++            'rate_source': 'survey', 'survey_relative_accuracy': .03,
++            'allowed_overweight_factor': ampli_pool.ALLOWED_OVERWEIGHT_FACTOR,
++            'overweight_definition': 'full absolute cross section belonging to weights above the threshold',
++        }
++        finalized = []
++        for channel in channels:
++            dirname = channel['dirname']
++            channel_pools = pools[dirname]
++            workers = channel_jobs[dirname]
++            requested = channel['ampli_final_quota']
++            if sum(pool['final_quota'] for pool in channel_pools) != requested:
++                raise aMCatNLOError('AmpliCol worker quotas do not fill channel %s' % dirname)
++            channel['nevents'] = requested
++            channel['wgt_frac'] = 1.
++            generation_cpu = sum(job.get('time_spend', 0.) for job in workers)
++            trials = sum(pool['trials'] for pool in channel_pools)
++            selection_diagnostics = None
++            if requested:
++                selection_diagnostics = ampli_pool.finalize_channel(
++                    channel_pools, requested, pjoin(dirname, 'events.lhe'),
++                    normalization, selection_rng, cross_sections=process_rates)
++                channel['ampli_finalized'] = True
++                finalized.append(channel)
++            # res_2 and HTML retain the same survey rate and error as the LHE init.
++            with open(pjoin(dirname, 'results.dat'), 'w') as result_file:
++                result_file.write('%.16e %.16e 0 0 0 0 0 0 0 %.16e\n' %
++                                  (channel['resultABS'], channel['error'], channel['result']))
++            with open(pjoin(dirname, 'res_2.dat'), 'w') as result_file:
++                result_file.write('%.16e %.16e %.16e %.16e %d %d %.8g\n' %
++                    (channel['resultABS'], channel['errorABS'], channel['result'],
++                     channel['error'], channel['niters_done'], channel['npoints_done'],
++                     generation_cpu))
++            manifest['channels'].append({
++                'subprocess': channel['p_dir'], 'channel': channel['channel'],
++                'quota': requested,
++                'generated_target': sum(pool['generated_target'] for pool in channel_pools),
++                'absolute': channel['resultABS'], 'signed': channel['result'],
++                'error_abs': channel['errorABS'], 'error_signed': channel['error'],
++                'survey_points': channel['npoints_done'],
++                'production_moments_diagnostic': ampli_pool.combine_moments(channel_pools),
++                'batches': [{'directory': os.path.relpath(job['dirname'], self.me_dir),
++                            'trials': pool['trials'],
++                            'generated_target': pool['generated_target'],
++                            'final_quota': pool['final_quota']} for job, pool in zip(workers, channel_pools)],
++                'available_candidates': ampli_pool.available_events(channel_pools),
++                'selection': selection_diagnostics,
++                'generation_trials': trials, 'generation_cpu_seconds': generation_cpu,
++            })
++        self.write_nevents_unweighted_file(finalized, channels)
++        manifest['cross_section'] = self.cross_sect_dict['xsect']
++        manifest['uncertainty'] = self.cross_sect_dict['errt']
++        manifest['absolute_cross_section'] = total
++        manifest['generation_trials'] = sum(channel['generation_trials'] for channel in manifest['channels'])
++        manifest['generation_cpu_seconds'] = sum(channel['generation_cpu_seconds'] for channel in manifest['channels'])
++        manifest_path = pjoin(self.me_dir, 'SubProcesses', 'ampli_production.json')
++        with open(manifest_path, 'w') as output:
++            json.dump(manifest, output, indent=2, sort_keys=True)
++            output.write('\n')
++        run_directory = pjoin(self.me_dir, 'Events', self.run_name)
++        if os.path.isdir(run_directory):
++            files.cp(manifest_path, run_directory)
++        cross, error = self.make_make_all_html_results(jobs=channels)
++        self.results.add_detail('cross', cross)
++        self.results.add_detail('error', error)
++        logger.info('AmpliCol collected %d events from %d evaluations; rates use the 3%% survey',
++                    sum(channel['nevents'] for channel in channels), manifest['generation_trials'])
++        return [], finalized
++
+     def get_randinit_seed(self):
+         """ Get the random number seed from the randinit file """
+         with open(pjoin(self.me_dir,"SubProcesses","randinit")) as randinit:
+@@ -5108,6 +5332,9 @@ RESTART = %(mint_mode)s
+             except IOError:
+                 pass
+             if last_line != "</LesHouchesEvents>":
++                if job.get('ampli_finalized'):
++                    raise aMCatNLOError('Finalized AmpliCol event file is incomplete: %s' %
++                                        pjoin(job['dirname'], 'events.lhe'))
+                 jobs_to_resubmit.append(job)
+         self.njobs = 0
+         if jobs_to_resubmit:
+@@ -5331,6 +5558,12 @@ RESTART = %(mint_mode)s
+                         '%s/grid.MC_integer' % current,
+                         '%s/res_%s.dat' % (current, args[3]),
+                     ])
++            if args[3] == '2' and self.get_nlops_integrator() == 1:
++                required_output.extend([
++                    '%s/ampli_pool.dat' % current,
++                    '%s/ampli_candidates.lhe' % current,
++                    '%s/res_2.dat' % current,
++                ])
+             if args[3] == '1':
+                 output_files.append('%s/results.dat' % current)
+             if args[1] == 'F' and args[3] == '0' and \
+diff --git a/madgraph/iolibs/export_fks.py b/madgraph/iolibs/export_fks.py
+index 34b59f9d4..daead413f 100755
+--- a/madgraph/iolibs/export_fks.py
++++ b/madgraph/iolibs/export_fks.py
+@@ -319,6 +319,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
+           pjoin('various','systematics.py'),          
+           pjoin('various','lhe_parser.py'),
+           pjoin('various','collect_events.py'),
++          pjoin('various','ampli_pool.py'),
+           pjoin('madevent','sum_html.py'),
+           pjoin('madevent','gen_crossxhtml.py'),          
+           pjoin('iolibs','files.py'),
+diff --git a/tests/unit_tests/fks/test_ampli_adapter.py b/tests/unit_tests/fks/test_ampli_adapter.py
+index 914140745..cea49b342 100644
+--- a/tests/unit_tests/fks/test_ampli_adapter.py
++++ b/tests/unit_tests/fks/test_ampli_adapter.py
+@@ -80,7 +80,7 @@ module stub_state
+   implicit none
+   integer(kind=8) :: rng_state=1234567_8,ncalls=0_8,nopen=0_8,nfold=0_8,nclose=0_8
+   double precision :: nv_sum=0d0,v_sum=0d0,last_sign=1d0
+-  logical :: evaluate_virtual=.false.,zero_target=.false.
++  logical :: evaluate_virtual=.false.,zero_target=.false.,production_sparse=.false.,zero_point=.false.
+   integer :: survey_points=0
+   double precision :: survey_sum(4)=0d0,survey_square(4)=0d0
+ end module stub_state
+@@ -111,6 +111,8 @@ double precision function analytic_sigint(x,vol,ifl,values)
+      nopen=nopen+1_8
+      nv_sum=0d0
+      v_sum=0d0
++     zero_point=zero_target
++     if (imode.eq.2.and.production_sparse.and.mod(nopen,4_8).eq.0_8) zero_point=.true.
+      evaluate_virtual=abrv.eq.'virt'
+      if (abrv.eq.'all') evaluate_virtual=ran2().lt.virtual_fraction(1)
+   elseif (ifl.eq.1) then
+@@ -138,7 +140,7 @@ double precision function analytic_sigint(x,vol,ifl,values)
+   else
+      error stop 'unexpected callback ifl'
+   endif
+-  if (zero_target) return
++  if (zero_point) return
+   base=(0.1d0+exp(-10d0*x(1)))*(1d0+x(2))*vol
+   if (abrv.ne.'virt') nv_sum=nv_sum+2d0*base
+   if (evaluate_virtual) then
+@@ -159,10 +161,13 @@ program test_adapter
+   use stub_state
+   implicit none
+   double precision,external :: analytic_sigint
+-  double precision :: expected,base,weight,scale,aqed,aqcd,signsum,saved_absolute_error
+-  double precision,allocatable :: weights(:)
+-  integer :: ini_fin_fks,unit,iu,i,candidates,quota,nup,idprup,kept,ios,negatives
+-  integer(kind=8) :: opens_before,folds_before,closes_before
++  double precision :: expected,base,weight,saved_absolute_error,virtual_prob,probability
++  double precision :: moments(5),exported(5),delta_abs,delta_signed,abs_target,signed_target,priority,cutoff
++  double precision,allocatable :: candidate_weights(:)
++  double precision :: survey_ans(nintegrals),survey_unc(nintegrals),threshold,tail_fractions(3),correction,factor
++  integer :: final_quota,export_quota,export_final,tail_flag,selected
++  integer :: ini_fin_fks,unit,iu,i,candidates,quota,ios,negatives,export_candidates
++  integer(kind=8) :: opens_before,folds_before,closes_before,budget,trials,export_trials
+   logical :: to_write,done
+   character(len=4) :: abrv
+   character(len=40) :: task
+@@ -186,6 +191,8 @@ program test_adapter
+      zero_target=.true.
+   elseif (task.eq.'covariance') then
+      virtual_fraction=1d0
++  elseif (task.eq.'sparse_production') then
++     production_sparse=.true.
+   endif
+   imode=0
+   ifold=1
+@@ -200,6 +207,7 @@ program test_adapter
+   opens_before=nopen
+   folds_before=nfold
+   closes_before=nclose
++  if (task.eq.'failed_survey') accuracy=1d-12
+   call ampli_integrate(analytic_sigint)
+   call check(nopen-opens_before.eq.16000_8,'survey point count')
+   call check(nclose-closes_before.eq.16000_8,'one closing callback per point')
+@@ -220,8 +228,16 @@ program test_adapter
+      imode=2
+      call ampli_load_production
+      call ampli_start_generation(0)
+-     call ampli_final_weights(weights)
+-     call check(size(weights).eq.0,'zero-quota complete workflow')
++     call ampli_finish_pool
++     open(newunit=iu,file='ampli_pool.dat',status='old')
++     read(iu,'(a)') line
++     call check(trim(line).eq.'MG5_AMPLI_POOL 2','zero-pool metadata version')
++     read(iu,*) export_trials,export_candidates,cutoff
++     read(iu,*) exported
++     close(iu)
++     call check(export_trials.eq.0_8.and.export_candidates.eq.0,'zero-quota complete workflow')
++     call check(all(exported.eq.0d0),'empty-pool moments')
++     call check(all(ans.eq.0d0).and.all(unc.eq.0d0),'zero production results')
+      print *, 'PASS ',trim(task)
+      stop
+   elseif (only_virt) then
+@@ -253,57 +269,107 @@ program test_adapter
+   endif
+   call ampli_load_production
+   call check(ampli_absolute_uncertainty.eq.saved_absolute_error,'absolute uncertainty checkpoint round trip')
++  virtual_prob=0d0
++  if (.not.only_virt.and.task.ne.'born') virtual_prob=ans(5,1)/(ans(1,1)+ans(5,1))
+   quota=4000
++  final_quota=3636
++  if (task.eq.'tiny_quota') then
++     quota=2
++     final_quota=1
++  endif
++  if (task.eq.'custom_quota') then
++     quota=1237
++     final_quota=1000
++  endif
++  open(newunit=unit,file='ampli_job.dat',status='replace')
++  write(unit,'(a)') 'MG5_AMPLI_JOB 2'
++  write(unit,*) quota,final_quota
++  close(unit)
++  survey_ans=ans(:,1)
++  survey_unc=unc(:,1)
+   call ampli_start_generation(quota)
+-  open(newunit=unit,file='candidates.lhe',status='replace')
+-  write(unit,'(a)') '<LesHouchesEvents version="3.0">'
+-  write(unit,'(a)') '<header>sample header</header>'
++  allocate(candidate_weights(1000000))
+   candidates=0
++  negatives=0
++  trials=0_8
++  moments=0d0
++  opens_before=nopen
++  folds_before=nfold
++  closes_before=nclose
+   do
+      call ampli_next_candidate(analytic_sigint,to_write,done)
++     trials=trials+1_8
++     call check(trials.lt.1000000_8,'analytic generator terminates within safety limit')
++     probability=1d0
++     if (virtual_prob.gt.0d0) then
++        if (abrv.eq.'virt') then
++           probability=virtual_prob
++        else
++           probability=1d0-virtual_prob
++        endif
++     endif
++     signed_target=(nv_sum+v_sum)/probability
++     abs_target=abs(signed_target)
++     delta_abs=abs_target-moments(1)
++     delta_signed=signed_target-moments(2)
++     moments(1)=moments(1)+delta_abs/dble(trials)
++     moments(2)=moments(2)+delta_signed/dble(trials)
++     moments(3)=moments(3)+delta_abs*(abs_target-moments(1))
++     moments(4)=moments(4)+delta_signed*(signed_target-moments(2))
++     moments(5)=moments(5)+delta_abs*(signed_target-moments(2))
+      if (to_write) then
+         candidates=candidates+1
+-        write(unit,'(a)') '<event test="preserve">'
+-        write(unit,*) 1,1,7d0*last_sign,91d0,0.007d0,0.12d0
+-        write(unit,'(a)') ' 11 1 0 0 0 0 0 0 0 1 0 0 9'
+-        write(unit,'(a)') '<mgrwgt>reference data must survive</mgrwgt>'
+-        write(unit,'(a)') '</event>'
++        call ampli_record_candidate_factor(1d0,done)
++        candidate_weights(candidates)=abs_target
++        call check(last_sign.eq.sign(1d0,signed_target),'candidate sign follows sampled stream')
++        if (last_sign.lt.0d0) negatives=negatives+1
+      endif
+      if (done) exit
+   enddo
+-  write(unit,'(a)') '</LesHouchesEvents>'
+-  close(unit)
+-  call ampli_final_weights(weights)
+-  call check(size(weights).eq.candidates,'candidate payload ordering')
+-  call check(count(weights.gt.0d0).eq.quota,'exact driver quota')
+-  call check(all(pack(weights,weights.gt.0d0).eq.1d0),'strict unweighting retained unit factors')
+-  call ampli_rewrite_events('candidates.lhe','events.lhe',weights,quota)
+-  open(newunit=iu,file='events.lhe',status='old')
+-  kept=0
+-  negatives=0
+-  do
+-     read(iu,'(a)',iostat=ios) line
+-     if (ios.lt.0) exit
+-     call check(ios.eq.0,'read final events')
+-     if (index(line,'<event test=').eq.1) then
+-        kept=kept+1
+-        read(iu,*) nup,idprup,weight,scale,aqed,aqcd
+-        call check(abs(weight).eq.7d0,'external MG5 event normalization preserved')
+-        call check(scale.eq.91d0,'shower scale preserved')
+-        if (weight.lt.0d0) negatives=negatives+1
+-        read(iu,'(a)') line
+-        read(iu,'(a)') line
+-        call check(index(line,'reference data must survive').gt.0,'reweighting payload preserved')
+-     endif
++  budget=trials
++  call check(nopen-opens_before.eq.budget,'production point count')
++  call check(nclose-closes_before.eq.budget,'one production closing callback per point')
++  call check(nfold-folds_before.eq.7_8*budget,'all eight production folds evaluated')
++  call ampli_finish_pool
++  call check(ncalls0.eq.budget.and.itmax.eq.1,'results account for every production trial')
++  call check(all(ans(:,1).eq.survey_ans).and.all(unc(:,1).eq.survey_unc),'independent survey rates preserved')
++  call check(ampli_absolute_uncertainty.eq.saved_absolute_error,'survey absolute uncertainty preserved')
++  open(newunit=iu,file='ampli_pool.dat',status='old')
++  read(iu,'(a)') line
++  call check(trim(line).eq.'MG5_AMPLI_POOL 2','pool metadata version')
++  read(iu,*) export_trials,export_candidates,cutoff
++  call check(export_trials.eq.budget.and.export_candidates.eq.candidates,'metadata counts match callbacks')
++  call check(cutoff.gt.0d0,'pool retention cutoff is positive')
++  read(iu,*) exported
++  call check(all(abs(exported-moments).le.1d-10*max(1d0,abs(moments))),'exported means variances and covariance')
++  read(iu,*) export_quota,export_final,threshold,tail_fractions
++  call check(export_quota.eq.quota.and.export_final.eq.final_quota,'generated and final quotas exported')
++  call check(all(tail_fractions.lt.0.01d0),'all three tail criteria below one percent')
++  call check(threshold.ge.cutoff,'final threshold dominates retention cutoff')
++  selected=0
++  do i=1,candidates
++     read(iu,*,iostat=ios) weight,priority,correction,tail_flag,factor
++     if (correction.gt.0d0) selected=selected+1
++     call check((tail_flag.eq.1).eqv.(weight.gt.threshold),'full tail flag')
++     call check(factor.eq.1d0,'nominal LHE factor preserved')
++     call check(ios.eq.0,'each retained event has metadata')
++     call check(abs(weight-candidate_weights(i)).lt.1d-12,'metadata preserves candidate ordering')
++     call check(priority.ge.log(weight).and.priority.gt.log(cutoff),'stored candidate has valid retained priority')
+   enddo
+   close(iu)
+-  call check(kept.eq.quota,'LHE rewrite exact quota')
++  call check(selected.eq.quota,'exact generated reserve size')
++  call check(candidates.gt.0,'nonzero process retains candidates')
++  if (quota.gt.10) call check(candidates.lt.budget,'rejected points still contribute to production moments')
++  if (production_sparse) then
++     call check(candidates.le.3_8*budget/4_8,'zero production points cannot produce candidates')
++     base=0.75d0*base
++  endif
+   if (only_virt) then
+-     call check(negatives.eq.quota,'only-virtual event signs')
++     call check(negatives.eq.candidates,'only-virtual candidate signs')
+   elseif (task.eq.'born') then
+-     call check(negatives.eq.0,'Born-only event signs')
+-  else
+-     call check(abs(dble(negatives)/dble(quota)-0.2d0).lt.0.035d0,'virtual split signed event normalization')
++     call check(negatives.eq.0,'Born-only candidate signs')
++  elseif (quota.gt.10) then
++     call check(abs(dble(negatives)/dble(candidates)-0.2d0).lt.0.05d0,'virtual split signed candidate density')
+   endif
+   print *, 'PASS ',trim(task)
+ contains
+@@ -371,6 +437,18 @@ class TestAmpliAdapter(unittest.TestCase):
+     def test_correlated_absolute_rate_uncertainty(self):
+         self.run_case('covariance')
+ 
++    def test_custom_channel_event_quotas(self):
++        self.run_case('custom_quota')
++
++    def test_small_quota_finishes_with_tail_bound(self):
++        self.run_case('tiny_quota')
++
++    def test_production_moments_include_zero_and_rejected_points(self):
++        self.run_case('sparse_production')
++
++    def test_survey_must_reach_requested_accuracy(self):
++        self.run_case('failed_survey', 'survey failed to reach requested channel accuracy')
++
+     def test_missing_checkpoint(self):
+         self.run_case('missing', 'Missing AmpliCol checkpoint')
+ 
+diff --git a/tests/unit_tests/fks/test_ampli_integrator.py b/tests/unit_tests/fks/test_ampli_integrator.py
+index 2dd35a2e7..6dbab5461 100644
+--- a/tests/unit_tests/fks/test_ampli_integrator.py
++++ b/tests/unit_tests/fks/test_ampli_integrator.py
+@@ -32,15 +32,18 @@ end function ran2
+ program test_integrator
+   use simple_integrator_mod,only: staged_integrator
+   use test_rng
++  use,intrinsic :: ieee_arithmetic,only: ieee_value,ieee_quiet_nan,ieee_positive_inf,ieee_is_finite
+   implicit none
+   type(staged_integrator) :: integ,restored
+   real(kind=8) :: x(2),y(2),u(2),w,v,values(2),res(2),unc(2),r2(2),e2(2),target
+   real(kind=8) :: actual,expected,weight,constant_res(2),constant_unc(2)
+-  real(kind=8),allocatable :: weights(:),weights2(:),signs(:)
+-  integer :: i,j,k,iteration,unit,nwritten,case_seed,quota_value,envelope_choice,nlarge,rep
++  real(kind=8),allocatable :: weights(:),weights2(:),signs(:),priorities(:),priorities2(:)
++  real(kind=8) :: expected_weights(1000),expected_priorities(1000)
++  integer :: i,j,k,iteration,unit,unit2,ios,nwritten,case_seed,quota_value,envelope_choice,nlarge,rep
+   integer(kind=8) :: saved_rng
+   logical :: to_write,done
+   character(len=40) :: task
++  character(len=100000) :: line
+   call get_command_argument(1,task)
+   call integ%init(2,2)
+   select case(trim(task))
+@@ -203,7 +206,7 @@ program test_integrator
+      call check(done.and.integ%exhausted.and.integ%quota_complete,'overweight quota at budget limit')
+      call integ%final_weights(weights)
+      call check(count(weights.gt.0d0).eq.4,'overweight selection exact quota')
+-     call check(integ%overweight.gt.1d0,'raw overweight explicitly reported')
++     call check(integ%overweight.gt.0.9d0,'full tail mass explicitly reported')
+      call check(weights(1).gt.3d0,'large tail has nonunit corrected weight')
+      call check(abs(sum(weights)-4d0).lt.1d-12,'corrected weights preserve nominal normalization')
+      ! Many independent signed heavy-tail samples: the correction restores the
+@@ -230,6 +233,100 @@ program test_integrator
+      ! q=0.02 has negative weight 100, q=0.98 positive weight 1.
+      expected=(0.98d0-2d0)/(0.98d0+2d0)
+      call check(abs(actual-expected).lt.0.035d0,'corrected signed heavy-tail rate')
++  case('tail_mass')
++     ! A barely-overweight event contributes its WHOLE weight to the tail.
++     ! Mean excess would accept this sample, but the 1% tail test must fail.
++     call integ%start_production(100,1d0,10000_8,final_quota=100)
++     forced_random=0.5d0
++     do i=1,150
++        weight=1d0
++        if (i.eq.1) weight=2.001d0
++        call integ%consider(weight,to_write,done)
++     enddo
++     call check(.not.done,'full tail rejects tiny-excess sample')
++     call check(integ%reserve_tail.gt.0.01d0,'full selected tail rather than excess')
++     call check(abs(integ%full_trial_tail-2.001d0/151.001d0).lt.1d-12,'all-trial tail includes every trial')
++     ! More candidates raise the threshold and reevaluate the stored tail.
++     forced_random=0.1d0
++     do i=1,500
++        call integ%consider(1d0,to_write,done)
++        if (done) exit
++     enddo
++     call check(done.and.integ%overweight.lt.0.01d0,'generation continues until tail is controlled')
++     call integ%final_weights(weights)
++     call check(count(weights.gt.0d0).eq.100,'tail reevaluation preserves quota')
++  case('tail_worst_subset')
++     call integ%start_production(110,1d0,10000_8,final_quota=100)
++     forced_random=0.9d0
++     do i=1,1000
++        call integ%consider(0.5d0,to_write,done)
++        call check(.not.to_write,'rejected observations contribute to tail denominator')
++     enddo
++     forced_random=0.5d0
++     do i=1,165
++        weight=1d0
++        if (i.eq.1) weight=2.1d0
++        call integ%consider(weight,to_write,done)
++     enddo
++     call check(integ%full_trial_tail.lt.0.01d0.and.integ%reserve_tail.lt.0.01d0,'trial and reserve pass')
++     call check(integ%worst_subset_tail.gt.0.01d0.and..not.done,'thinned sample worst case prevents completion')
++     call check(abs(integ%worst_subset_tail-1.05d0/100.05d0).lt.1d-12,'analytic worst-subset fraction')
++  case('tail_factor')
++     call integ%start_production(110,1d0,10000_8,final_quota=110)
++     forced_random=0.9d0
++     do i=1,1000
++        call integ%consider(0.5d0,to_write,done)
++     enddo
++     forced_random=0.5d0
++     do i=1,165
++        weight=1d0
++        if (i.eq.165) weight=2.01d0
++        call integ%consider(weight,to_write,done)
++     enddo
++     call check(done,'provisional unit LHE factors pass')
++     call integ%record_candidate_factor(100d0,done)
++     call check(.not.done.and.integ%reserve_tail.gt.0.4d0,'actual bias factor revokes provisional completion')
++     open(newunit=unit,status='scratch',form='formatted')
++     call integ%save(unit)
++     rewind(unit)
++     call restored%load(unit,2,2)
++     close(unit)
++     call check(restored%total_abs.eq.integ%total_abs.and.restored%threshold.eq.integ%threshold, &
++          'checkpoint preserves trial mass and threshold')
++     call check(restored%reserve_tail.eq.integ%reserve_tail.and. &
++          restored%full_trial_tail.eq.integ%full_trial_tail.and. &
++          restored%worst_subset_tail.eq.integ%worst_subset_tail,'checkpoint preserves tail diagnostics')
++     ! Rechecking a different last factor after restoration tests saved factor
++     ! storage and active production state, not just the cached diagnostics.
++     call restored%record_candidate_factor(100d0,done)
++     call check(.not.done,'checkpoint preserves revoked completion')
++     forced_random=0.1d0
++     do i=1,500
++        call integ%consider(1d0,to_write,done)
++        if (to_write) call integ%record_candidate_factor(1d0,done)
++        if (done) exit
++     enddo
++     call check(done.and.integ%overweight.lt.0.01d0,'factor-corrected generator resumes')
++  case('tail_extreme_priority')
++     call integ%start_production(1,1d0,100_8)
++     forced_random=0d0
++     call integ%consider(huge(1d0)/4d0,to_write,done)
++     call check(.not.done,'first extreme candidate cannot finish priority selection')
++     call integ%consider(huge(1d0)/4d0,to_write,done)
++     call check(done.and.integ%threshold.eq.huge(1d0),'unrepresentable priority threshold saturates safely')
++     call check(integ%overweight.eq.0d0,'finite raw weights below saturated threshold have no tail')
++     call integ%final_weights(weights)
++     call check(count(weights.gt.0d0).eq.1.and.sum(weights).eq.1d0,'extreme priority preserves quota')
++  case('tail_equality')
++     call integ%start_production(199,0d0,10000_8)
++     forced_random=0.5d0
++     do i=1,299
++        weight=0.5d0
++        if (i.eq.1) weight=2d0
++        call integ%consider(weight,to_write,done)
++     enddo
++     call check(integ%reserve_tail.eq.0.01d0,'constructed one-percent reserve tail')
++     call check(.not.done,'one percent equality is rejected')
+   case('strict_rejection')
+      ! At tiny quotas a rank-selected pool is detectably biased. Ordinary
+      ! rejection must give p(weight=2)=2/3 for either valid frozen envelope.
+@@ -262,6 +359,149 @@ program test_integrator
+      call integ%consider(2d0,to_write,done)
+      call integ%final_weights(weights)
+      error stop 'violated strict envelope unexpectedly accepted'
++  case('pool_budget')
++     call integ%start_pool(100_8,1d0)
++     forced_random=0.5d0
++     nwritten=0
++     do i=1,100
++        weight=100d0
++        if (mod(i,3).eq.0) weight=0d0
++        call integ%consider_pool(weight,to_write,done)
++        if (to_write) nwritten=nwritten+1
++        call check(to_write.eqv.(weight.gt.0d0),'large candidates retained and zeros excluded')
++        call check(done.eqv.(i.eq.100),'pool completes only at fixed trial budget')
++     enddo
++     call check(integ%ntrials.eq.100_8.and.integ%ncandidates.eq.nwritten,'pool counters include zeros')
++     call check(.not.integ%envelope_exceeded,'underestimated storage cutoff is not fatal')
++     call integ%pool_candidates(weights,priorities)
++     call check(size(weights).eq.nwritten.and.all(weights.eq.100d0),'pool weights exported without correction')
++     call check(all(priorities.eq.log(100d0)-log(0.5d0)),'pool priorities retain original variates')
++     call integ%start_pool(0_8,1d0)
++     call integ%pool_candidates(weights,priorities)
++     call check(integ%production_done.and.size(weights).eq.0,'empty fixed budget is complete')
++  case('pool_retention')
++     call integ%start_pool(1000_8,2d0)
++     nwritten=0
++     do i=1,1000
++        forced_random=dble(mod(29*i,997)+1)/998d0
++        weight=dble(mod(i,17))/5d0
++        if (i.eq.1000) then
++           weight=huge(1d0)
++           forced_random=0d0
++        endif
++        if (weight.gt.0d0) then
++           target=log(weight)-log(max(forced_random,tiny(1d0)))
++           if (target.gt.log(2d0)) then
++              nwritten=nwritten+1
++              expected_weights(nwritten)=weight
++              expected_priorities(nwritten)=target
++           endif
++        endif
++        call integ%consider_pool(weight,to_write,done)
++     enddo
++     call integ%pool_candidates(weights,priorities)
++     call check(size(weights).eq.nwritten,'storage cutoff preserves every eligible candidate')
++     call check(all(weights.eq.expected_weights(1:nwritten)),'candidate order preserves event indices')
++     call check(all(priorities.eq.expected_priorities(1:nwritten)),'candidate priorities unchanged')
++     call check(all(ieee_is_finite(priorities)),'extreme weights and zero variate remain finite')
++     do i=1,nwritten
++        ! Any later threshold at least as large as the storage cutoff can be
++        ! applied to the retained metadata without losing an eligible event.
++        if (expected_priorities(i).gt.log(20d0)) &
++             call check(priorities(i).gt.log(20d0),'raised threshold retains all eligible events')
++     enddo
++     open(newunit=unit,status='scratch',form='formatted')
++     call integ%export_pool(unit)
++     rewind(unit)
++     read(unit,'(a)') line
++     call check(trim(line).eq.'MG5_SIMPLE_POOL 1','versioned pool export')
++     read(unit,*) saved_rng,j
++     call check(saved_rng.eq.1000_8.and.j.eq.nwritten,'pool export trial and candidate counts')
++     read(unit,*) target
++     call check(target.eq.2d0,'pool export cutoff')
++     do i=1,nwritten
++        read(unit,*) j,weight,target
++        call check(j.eq.i.and.weight.eq.weights(i).and.target.eq.priorities(i),'stable export indices')
++     enddo
++     read(unit,'(a)') line
++     call check(trim(line).eq.'END_MG5_SIMPLE_POOL','complete pool export')
++     close(unit)
++  case('pool_checkpoint')
++     call train(integ,3000)
++     forced_random=0.3141592653589d0
++     call integ%sample(x,w)
++     forced_random=-1d0
++     call integ%start_pool(1000_8,2d0)
++     do i=1,50
++        call random_two_weights(weight)
++        call integ%consider_pool(weight,to_write,done)
++     enddo
++     open(newunit=unit,status='scratch',form='formatted')
++     call integ%save(unit)
++     rewind(unit)
++     call restored%load(unit,2,2)
++     close(unit)
++     saved_rng=rng_state
++     do i=51,1000
++        call random_two_weights(weight)
++        call integ%consider_pool(weight,to_write,done)
++     enddo
++     rng_state=saved_rng
++     do i=51,1000
++        call random_two_weights(weight)
++        call restored%consider_pool(weight,to_write,done)
++     enddo
++     call integ%pool_candidates(weights,priorities)
++     call restored%pool_candidates(weights2,priorities2)
++     call check(integ%ntrials.eq.restored%ntrials,'pool checkpoint trial counts')
++     call check(size(weights).eq.size(weights2),'pool checkpoint candidate count')
++     call check(all(weights.eq.weights2).and.all(priorities.eq.priorities2),'exact pool checkpoint continuation')
++     forced_random=0.3141592653589d0
++     call restored%sample(y,v)
++     call check(all(x.eq.y).and.w.eq.v,'sampling map frozen through production pool')
++  case('legacy_checkpoint')
++     call train(integ,1000)
++     open(newunit=unit,status='scratch',form='formatted')
++     open(newunit=unit2,status='scratch',form='formatted')
++     call integ%save(unit)
++     rewind(unit)
++     i=0
++     do
++        read(unit,'(a)',iostat=ios) line
++        if (ios.ne.0) exit
++        i=i+1
++        if (i.eq.1) line='MG5_SIMPLE_INTEGRATOR 1'
++        ! Version 3 adds tail metadata before the envelope line.
++        if (i.eq.5) cycle
++        ! Version 1 ends the flag line before the final pool-mode flag.
++        if (i.eq.7) line=line(1:len_trim(line)-1)
++        write(unit2,'(a)') trim(line)
++     enddo
++     rewind(unit2)
++     call restored%load(unit2,2,2)
++     close(unit)
++     close(unit2)
++     call check(all(integ%res.eq.restored%res),'version 1 survey checkpoints remain readable')
++  case('pool_bad_budget')
++     call integ%start_pool(-1_8,1d0)
++  case('pool_bad_cutoff')
++     call integ%start_pool(10_8,0d0)
++  case('pool_nan_cutoff')
++     call integ%start_pool(10_8,ieee_value(1d0,ieee_quiet_nan))
++  case('pool_infinite_cutoff')
++     call integ%start_pool(10_8,ieee_value(1d0,ieee_positive_inf))
++  case('pool_nan_weight')
++     call integ%start_pool(10_8,1d0)
++     call integ%consider_pool(ieee_value(1d0,ieee_quiet_nan),to_write,done)
++  case('pool_negative_weight')
++     call integ%start_pool(10_8,1d0)
++     call integ%consider_pool(-1d0,to_write,done)
++  case('pool_premature_export')
++     call integ%start_pool(10_8,1d0)
++     call integ%pool_candidates(weights,priorities)
++  case('pool_no_local_selection')
++     call integ%start_pool(0_8,1d0)
++     call integ%final_weights(weights)
+   case('bad_version')
+      open(newunit=unit,status='scratch',form='formatted')
+      write(unit,'(a)') 'MG5_SIMPLE_INTEGRATOR 999'
+@@ -396,6 +636,21 @@ class TestAmpliIntegrator(unittest.TestCase):
+     def test_exact_event_quotas(self):
+         self.run_case('quotas')
+ 
++    def test_full_tail_mass_and_native_reevaluation(self):
++        self.run_case('tail_mass')
++
++    def test_worst_subset_protects_collection(self):
++        self.run_case('tail_worst_subset')
++
++    def test_actual_lhe_bias_factor_revokes_completion(self):
++        self.run_case('tail_factor')
++
++    def test_extreme_priority_threshold_is_finite(self):
++        self.run_case('tail_extreme_priority')
++
++    def test_one_percent_equality_fails(self):
++        self.run_case('tail_equality')
++
+     def test_overweight_corrections_and_signed_tail(self):
+         self.run_case('overweight')
+ 
+@@ -405,6 +660,31 @@ class TestAmpliIntegrator(unittest.TestCase):
+     def test_strict_rejection_refuses_underestimated_envelope(self):
+         self.run_case('strict_bad_bound', 'strict production envelope exceeded')
+ 
++    def test_fixed_pool_budget_including_zeros_and_overweights(self):
++        self.run_case('pool_budget')
++
++    def test_pool_retention_and_stable_export_indices(self):
++        self.run_case('pool_retention')
++
++    def test_pool_checkpoint_continuation(self):
++        self.run_case('pool_checkpoint')
++
++    def test_existing_survey_checkpoint_still_readable(self):
++        self.run_case('legacy_checkpoint')
++
++    def test_pool_input_guards(self):
++        for case, error in (
++                ('pool_bad_budget', 'invalid pool budget'),
++                ('pool_bad_cutoff', 'invalid pool cutoff'),
++                ('pool_nan_cutoff', 'invalid pool cutoff'),
++                ('pool_infinite_cutoff', 'invalid pool cutoff'),
++                ('pool_nan_weight', 'invalid pool target'),
++                ('pool_negative_weight', 'invalid pool target'),
++                ('pool_premature_export', 'pool is not finished'),
++                ('pool_no_local_selection', 'pool requires coordinator finalization')):
++            with self.subTest(case=case):
++                self.run_case(case, error)
++
+     def test_incompatible_checkpoint_version(self):
+         self.run_case('bad_version', 'incompatible checkpoint version')
+ 
+diff --git a/tests/unit_tests/fks/test_ampli_lhe.py b/tests/unit_tests/fks/test_ampli_lhe.py
+index df68bd0a8..beacbac01 100644
+--- a/tests/unit_tests/fks/test_ampli_lhe.py
++++ b/tests/unit_tests/fks/test_ampli_lhe.py
+@@ -146,3 +146,71 @@ class TestAmpliLHE(unittest.TestCase):
+                 result, unused = self.rewrite(content, [1.0], 1)
+                 self.assertNotEqual(result.returncode, 0)
+                 self.assertIn(diagnostic, result.stdout + result.stderr)
++
++    def test_candidate_factor_matches_emitted_lhe_rounding(self):
++        source = (TEMPLATE / 'driver_mintMC.f').read_text()
++        routine = source[source.rindex('      subroutine write_current_mcatnlo_event('):]
++        writer = self.work / 'writer.f'
++        writer.write_text('      module writer_under_test\n'
++                          '      implicit none\n      contains\n' + routine +
++                          '\n      end module writer_under_test\n')
++        stub = self.work / 'writer_stub.f90'
++        stub.write_text("""
++module mint_module
++  implicit none
++  integer,parameter :: ndimmax=2,max_fold=1
++  double precision :: recorded_absolute
++end module
++subroutine pick_unweight_contr(i,j)
++  integer i,j
++  i=1
++  j=1
++end subroutine
++subroutine update_fks_dir(i)
++  integer i
++end subroutine
++subroutine include_inverse_bias_wgt(w)
++  double precision w
++  w=1.234567896d0
++end subroutine
++subroutine fill_rwgt_lines
++end subroutine
++subroutine finalize_event(x,w,unit,shell,label)
++  use mint_module
++  double precision x(*),w
++  integer unit,label
++  logical shell
++  character(14) line
++  write(line,'(e14.8)') w
++  read(line,*) recorded_absolute
++  recorded_absolute=abs(recorded_absolute)
++end subroutine
++""")
++        driver = self.work / 'writer_driver.f90'
++        driver.write_text("""
++program test_writer
++  use mint_module
++  use writer_under_test
++  implicit none
++  double precision factor,x_save(ndimmax,max_fold)
++  integer ifold_picked
++  character(7) event_norm
++  common /c_vegas_x_fold/ x_save,ifold_picked
++  common /event_normalisation/ event_norm
++  event_norm='bias'
++  x_save=0d0
++  call write_current_mcatnlo_event(98,1,-1d0,.true.,factor)
++  if (factor.ne.recorded_absolute) error stop 'factor differs from emitted LHE'
++  if (factor.eq.1.234567896d0) error stop 'test did not exercise rounding'
++  call write_current_mcatnlo_event(98,1,1d0,.true.)
++end program
++""")
++        executable = self.work / 'check_writer'
++        result = subprocess.run([
++            shutil.which('gfortran'), '-O1', '-fcheck=all',
++            '-ffixed-line-length-none', str(stub), str(writer), str(driver),
++            '-o', str(executable)], cwd=self.work, capture_output=True, text=True)
++        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
++        result = subprocess.run([str(executable)], cwd=self.work,
++                                capture_output=True, text=True)
++        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+diff --git a/tests/unit_tests/interface/test_ampli_orchestration.py b/tests/unit_tests/interface/test_ampli_orchestration.py
+index 29d028cf3..6a647f833 100644
+--- a/tests/unit_tests/interface/test_ampli_orchestration.py
++++ b/tests/unit_tests/interface/test_ampli_orchestration.py
+@@ -1,14 +1,17 @@
+ """Job coordination contracts shared by the MINT and AmpliCol backends."""
+ 
+ import math
++import json
+ import os
+ import pickle
+ import tempfile
+ import unittest
++import xml.etree.ElementTree as ET
+ from unittest import mock
+ 
+ from madgraph.interface.amcatnlo_run_interface import aMCatNLOCmd, aMCatNLOError
+ from madgraph.various.banner import RunCardNLO
++from tests.unit_tests.fks.test_ampli_lhe import candidate_file
+ 
+ 
+ class TestAmpliOrchestration(unittest.TestCase):
+@@ -229,6 +232,233 @@ class TestAmpliOrchestration(unittest.TestCase):
+         updated = self.cmd.update_jobs_to_run(.1, 1, jobs, fixed_order=False)
+         self.assertEqual([job['nevents'] for job in updated], [0, 0])
+ 
++    def test_ampli_survey_is_three_percent_for_every_event_channel(self):
++        jobs = [dict(resultABS=rate, nlops_integrator=1) for rate in (9.999, .001, 0.)]
++        for requested_accuracy in (.001, .2, -1):
++            self.cmd.update_jobs_to_run(requested_accuracy, 0, jobs, fixed_order=False)
++            self.assertEqual([job['accuracy'] for job in jobs], [.03] * 3)
++        self.cmd.run_card['nevents'] = 0
++        jobs = [{'resultABS': 10., 'nlops_integrator': 1}]
++        self.cmd.update_jobs_to_run(.001, 0, jobs, fixed_order=False)
++        self.assertEqual(jobs[0]['accuracy'], .001)
++        self.cmd.run_card['nevents'] = 10
++        jobs[0]['nlops_integrator'] = 0
++        self.cmd.update_jobs_to_run(.001, 0, jobs, fixed_order=False)
++        self.assertEqual(jobs[0]['accuracy'], .001)
++
++    def test_ampli_quotas_are_exact_reproducible_and_have_ten_percent_reserve(self):
++        self.cmd.run_card['nevents'] = 100
++        jobs = [dict(resultABS=rate, errorABS=.03 * rate, nlops_integrator=1)
++                for rate in (6., 4., 0.)]
++        self.cmd.update_jobs_to_run(.003, 1, jobs, fixed_order=False)
++        quotas = [job['ampli_final_quota'] for job in jobs]
++        self.assertEqual(sum(quotas), 100)
++        self.assertEqual(quotas[2], 0)
++        self.assertTrue(all(0 < quota < 100 for quota in quotas[:2]))
++        self.assertEqual([job['ampli_generated_target'] for job in jobs],
++                         [(11 * quota + 9) // 10 for quota in quotas])
++        self.assertTrue(all('ampli_budget' not in job for job in jobs))
++        self.cmd.cross_sect_dict['xsect'] = 0.
++        self.cmd.update_jobs_to_run(.1, 1, jobs, fixed_order=False)
++        self.assertEqual([job['ampli_final_quota'] for job in jobs], quotas)
++        self.assertTrue(all(job['mint_mode'] == 2 for job in jobs))
++
++    def test_ampli_refuses_an_inaccurate_or_invalid_survey(self):
++        for rate, error in ((10., .30001), (0., .1), (-1., 0.),
++                            (10., -1.), (float('nan'), .1), (10., float('inf'))):
++            with self.subTest(rate=rate, error=error):
++                jobs = [dict(resultABS=rate, errorABS=error, nlops_integrator=1)]
++                with self.assertRaisesRegex(aMCatNLOError, 'survey did not reach 3%'):
++                    self.cmd.update_jobs_to_run(.1, 1, jobs, fixed_order=False)
++        # A tiny positive channel has no minimum 1000-event pool.
++        jobs = [dict(resultABS=10., errorABS=.1, nlops_integrator=1)]
++        self.cmd.update_jobs_to_run(.1, 1, jobs, fixed_order=False)
++        self.assertEqual(jobs[0]['ampli_final_quota'], 10)
++        self.assertEqual(jobs[0]['ampli_generated_target'], 11)
++
++    def test_ampli_split_event_protocol_and_unique_restart_streams(self):
++        self.write_card('#NLOPSIntegrator\n1\n')
++        channels, _, _ = self.create_jobs()
++        self.cmd.prepare_directories(channels, 'noshower', fixed_order=False)
++        for channel in channels:
++            channel.update(resultABS=5., errorABS=.1, error=.1, npoints_done=200)
++            for name in ('ampli_grids', 'grid.MC_integer', 'res_1'):
++                with open(os.path.join(channel['dirname'], name), 'w') as stream:
++                    stream.write('trained state\n')
++        self.cmd.run_card['nevt_job'] = 3
++        self.cmd.plan_ampli_production(channels, .1)
++        jobs = self.cmd.split_ampli_batch(channels)
++        self.cmd.prepare_directories(jobs, 'noshower', fixed_order=False)
++        self.assertEqual(sum(job['ampli_final_quota'] for job in jobs), 10)
++        for channel in channels:
++            parts = [job for job in jobs if job['channel'] == channel['channel']]
++            self.assertEqual(sum(job['ampli_final_quota'] for job in parts), channel['nevents'])
++            self.assertEqual(sum(job['nevents'] for job in parts), channel['ampli_generated_target'])
++            self.assertAlmostEqual(sum(job['wgt_frac'] for job in parts), 1.)
++        for job in jobs:
++            self.assertLessEqual(job['nevents'], 3)
++            self.assertEqual(job['nevents'], (11 * job['ampli_final_quota'] + 9) // 10)
++            with open(os.path.join(job['dirname'], 'ampli_job.dat')) as stream:
++                self.assertEqual(stream.read(), 'MG5_AMPLI_JOB 2\n%d %d\n' %
++                                 (job['nevents'], job['ampli_final_quota']))
++            self.assertEqual(os.path.realpath(os.path.join(job['dirname'], 'ampli_grids')),
++                             os.path.join(job['ampli_parent'], 'ampli_grids'))
++        restarted = self.cmd.split_ampli_batch(channels)
++        self.assertFalse({job['dirname'] for job in jobs} & {job['dirname'] for job in restarted})
++        self.assertEqual(sum(job['ampli_final_quota'] for job in restarted), 10)
++        self.cmd.run_card['nevt_job'] = 1
++        with self.assertRaisesRegex(aMCatNLOError, 'nevt_job must be at least 2'):
++            self.cmd.split_ampli_batch(channels)
++
++    def test_collection_preserves_survey_rates_and_collects_frozen_worker_quotas(self):
++        for event_norm, normalization in (('average', 10.), ('sum', 1.), ('unity', 1.)):
++            with self.subTest(event_norm=event_norm):
++                self.check_survey_collection(event_norm, normalization)
++
++    def check_survey_collection(self, event_norm, normalization):
++        self.write_card('#NLOPSIntegrator\n1\n')
++        self.cmd.run_card.update(event_norm=event_norm, nevt_job=-1)
++        channels, _, _ = self.create_jobs()
++        self.cmd.prepare_directories(channels, 'noshower', fixed_order=False)
++        for index, channel in enumerate(channels):
++            channel.update(resultABS=5., result=float(index + 1), errorABS=.1, error=.1,
++                           npoints_done=100, niters_done=2, time_spend=.5,
++                           err_percABS=2., err_perc=10., nevents=6 if index == 0 else 4,
++                           ampli_final_quota=6 if index == 0 else 4, mint_mode=2)
++        batches = self.cmd.split_ampli_batch(channels)
++        self.cmd._ampli_channels = channels
++        self.cmd.run_name = 'test_run'
++        self.cmd.results = mock.Mock()
++        self.cmd.make_make_all_html_results = mock.Mock(return_value=(3., .2))
++        self.cmd.run_all_jobs = mock.Mock()
++        pool_data = {}
++        for index, job in enumerate(batches):
++            pool_data[job['dirname']] = dict(trials=4000 + index,
++                available=job['nevents'], generated_target=job['nevents'],
++                final_quota=job['ampli_final_quota'],
++                # Deliberately incompatible production diagnostics must never
++                # replace published survey rates or change final quotas.
++                absolute=600., signed=200., error_abs=20., error_signed=10.)
++        def append_worker_results(jobs, step):
++            self.assertEqual(step, 2)
++            for job in jobs:
++                job.update(resultABS=600., result=200., errorABS=20., error=10.,
++                           npoints_done=4000, time_spend=2.)
++        self.cmd.append_the_results = mock.Mock(side_effect=append_worker_results)
++        with mock.patch('madgraph.interface.amcatnlo_run_interface.ampli_pool.read_pool',
++                        side_effect=lambda path: pool_data[path]), \
++             mock.patch('madgraph.interface.amcatnlo_run_interface.ampli_pool.combine_moments',
++                        side_effect=lambda pools: dict(trials=sum(pool['trials'] for pool in pools),
++                                                       absolute=600., signed=200.)), \
++             mock.patch('madgraph.interface.amcatnlo_run_interface.ampli_pool.available_events',
++                        side_effect=lambda pools: sum(pool['available'] for pool in pools)), \
++             mock.patch('madgraph.interface.amcatnlo_run_interface.ampli_pool.finalize_channel',
++                        return_value={}) as finalize:
++            remaining, finalized = self.cmd.finalize_ampli_pools(batches, 'noshower')
++        self.assertEqual(remaining, [])
++        self.cmd.run_all_jobs.assert_not_called()
++        self.assertEqual(self.cmd.cross_sect_dict['xseca'], 10.)
++        self.assertEqual(self.cmd.cross_sect_dict['xsect'], 3.)
++        self.assertAlmostEqual(self.cmd.cross_sect_dict['errt'], math.sqrt(.02))
++        self.assertEqual([job['nevents'] for job in finalized], [6, 4])
++        self.assertEqual(sum(job['nevents'] for job in finalized), 10)
++        self.assertEqual([call.args[1] for call in finalize.call_args_list], [6, 4])
++        for call in finalize.call_args_list:
++            self.assertEqual(call.args[3], normalization)
++            row = call.kwargs['cross_sections'][0]
++            self.assertEqual(row[:2], (0, 3.))
++            self.assertAlmostEqual(row[2], math.sqrt(.02))
++        with open(os.path.join(self.directory.name, 'SubProcesses', 'ampli_production.json')) as stream:
++            manifest = json.load(stream)
++        self.assertEqual(manifest['version'], 2)
++        self.assertEqual(manifest['rate_source'], 'survey')
++        self.assertEqual(manifest['survey_relative_accuracy'], .03)
++        self.assertEqual(manifest['requested_events'], 10)
++        self.assertEqual(manifest['allowed_overweight_factor'], .01)
++        self.assertEqual(sum(channel['quota'] for channel in manifest['channels']), 10)
++        self.assertEqual(manifest['generation_trials'], 8001)
++        self.assertEqual(manifest['generation_cpu_seconds'], 4.)
++        self.assertTrue(all(channel['survey_points'] == 100 for channel in manifest['channels']))
++        self.assertTrue(all(channel['production_moments_diagnostic']['absolute'] == 600.
++                            for channel in manifest['channels']))
++
++    def test_collection_rejects_wrong_worker_quota_before_writing(self):
++        self.cmd._ampli_channels = []
++        self.cmd.append_the_results = mock.Mock()
++        jobs = [dict(dirname=self.process, nevents=11, ampli_final_quota=10)]
++        with mock.patch('madgraph.interface.amcatnlo_run_interface.ampli_pool.read_pool',
++                        return_value=dict(generated_target=11, final_quota=9)):
++            with self.assertRaisesRegex(aMCatNLOError, 'quotas disagree'):
++                self.cmd.finalize_ampli_pools(jobs, 'noshower')
++
++    def test_live_collection_merges_split_workers_and_keeps_survey_normalization(self):
++        self.write_card('#NLOPSIntegrator\n1\n')
++        self.cmd.run_card.update(event_norm='average', nevt_job=3)
++        channels, _, _ = self.create_jobs()
++        self.cmd.prepare_directories(channels, 'noshower', fixed_order=False)
++        for index, channel in enumerate(channels):
++            channel.update(p_label='42', resultABS=5., result=float(index + 1),
++                           errorABS=.1, error=.1, npoints_done=100, niters_done=2,
++                           time_spend=.5, err_percABS=2., err_perc=10., mint_mode=2,
++                           nevents=6 if index == 0 else 4,
++                           ampli_final_quota=6 if index == 0 else 4)
++        workers = self.cmd.split_ampli_batch(channels)
++        self.assertEqual(len(workers), 5)
++        for worker_index, job in enumerate(workers):
++            os.makedirs(job['dirname'])
++            target, quota = job['nevents'], job['ampli_final_quota']
++            # Constant trial weights give exactly unit corrections. The last
++            # candidate lies on the excluded threshold; all others are kept.
++            lines = ['MG5_AMPLI_POOL 2', '%d %d 100' % (target + 1, target + 1),
++                     '100 100 0 0 0', '%d %d 100 0 0 0' % (target, quota)]
++            lines += ['100 %.16e 1 0 1' % math.log(200. + index)
++                      for index in range(target)]
++            lines += ['100 %.16e 0 0 1' % math.log(100.)]
++            with open(os.path.join(job['dirname'], 'ampli_pool.dat'), 'w') as stream:
++                stream.write('\n'.join(lines) + '\n')
++            content = candidate_file([1.] * (target + 1))
++            content = content.replace('# candidate ', '# worker %d candidate ' % worker_index)
++            with open(os.path.join(job['dirname'], 'ampli_candidates.lhe'), 'w') as stream:
++                stream.write(content)
++            with open(os.path.join(job['dirname'], 'res_2.dat'), 'w') as stream:
++                stream.write('100 0 100 0 1 %d 2\n' % (target + 1))
++        self.cmd._ampli_channels = channels
++        self.cmd.run_name = 'test_run'
++        self.cmd.results = mock.Mock()
++        self.cmd.make_make_all_html_results = mock.Mock(return_value=(3., .2))
++        remaining, finalized = self.cmd.finalize_ampli_pools(workers, 'noshower')
++        self.assertEqual(remaining, [])
++        self.assertEqual(self.cmd.cross_sect_dict['xsect'], 3.)
++        self.assertEqual(self.cmd.cross_sect_dict['xseca'], 10.)
++        self.assertAlmostEqual(self.cmd.cross_sect_dict['errt'], math.sqrt(.02))
++        identities = []
++        for channel in finalized:
++            with open(os.path.join(channel['dirname'], 'events.lhe')) as stream:
++                content = stream.read()
++            tree = ET.fromstring(content)
++            events = tree.findall('event')
++            self.assertEqual(len(events), channel['ampli_final_quota'])
++            for event in events:
++                self.assertEqual(float(event.text.split()[2]), 10.)
++                identities.extend(line.strip() for line in event.text.splitlines()
++                                  if '# worker' in line)
++            init = tree.find('init').text.splitlines()
++            self.assertEqual(init[1].split()[-2], '-4')
++            rate, error, unused, label = map(float, init[2].split())
++            self.assertEqual((rate, label), (3., 42.))
++            self.assertAlmostEqual(error, math.sqrt(.02))
++        self.assertEqual(len(identities), 10)
++        self.assertEqual(len(set(identities)), 10)
++        with open(os.path.join(self.directory.name, 'SubProcesses', 'ampli_production.json')) as stream:
++            manifest = json.load(stream)
++        self.assertEqual(manifest['generation_trials'], 20)
++        self.assertEqual(manifest['generation_cpu_seconds'], 10.)
++        self.assertEqual(sum(row['generated_target'] for row in manifest['channels']), 15)
++        for row in manifest['channels']:
++            self.assertEqual(row['production_moments_diagnostic']['absolute'], 100.)
++            self.assertEqual(row['selection']['selected_tail'], 0.)
++            self.assertEqual(row['selection']['selected'], row['quota'])
++
+     def test_signed_cancellation_does_not_break_result_parsing(self):
+         with open(os.path.join(self.process, 'res_1.dat'), 'w') as stream:
+             stream.write('5 .1 0 .1 2 100 .5\n')
+@@ -250,6 +480,9 @@ class TestAmpliOrchestration(unittest.TestCase):
+         _, _, required, _ = self.cmd.getIO_ajob(
+             'ajob1', self.process, ['1', 'F', '1', '2'])
+         self.assertNotIn('GF1_1/ampli_grids', required)
++        self.assertIn('GF1_1/ampli_pool.dat', required)
++        self.assertIn('GF1_1/ampli_candidates.lhe', required)
++        self.assertIn('GF1_1/res_2.dat', required)
+         _, _, required, _ = self.cmd.getIO_ajob(
+             'ajob1', self.process, ['1', 'all', '0', '0'])
+         self.assertIn('all_G1/mint_grids', required)
+diff --git a/madgraph/various/ampli_pool.py b/madgraph/various/ampli_pool.py
+new file mode 100644
+index 000000000..a045d856a
+--- /dev/null
++++ b/madgraph/various/ampli_pool.py
+@@ -0,0 +1,547 @@
++"""Validate and collect independent, quota-driven AmpliCol workers.
++
++Worker quotas and published rates come from the independent survey. Each
++worker reuses its saved proposal, generates a reserve, and supplies corrections
++and full overweight-tail diagnostics. Collection uniformly trims each reserve
++once; candidates from different workers are never rethresholded together.
++"""
++
++import math
++import os
++import random
++import re
++import shutil
++import sys
++import tempfile
++
++
++# Absolute cross-section mass above the threshold, including the whole
++# contribution of each overweight point. Keep the Fortran default in sync.
++ALLOWED_OVERWEIGHT_FACTOR = .01
++
++
++class PoolError(ValueError):
++    """An incomplete or incompatible provisional pool."""
++
++
++class PoolShortage(PoolError):
++    """More production points are required before finalizing this channel."""
++
++    def __init__(self, required, available):
++        self.required = required
++        self.available = available
++        super().__init__('AmpliCol channel needs %d events; %d are available' %
++                         (required, available))
++
++
++class PoolOverweight(PoolError):
++    """The full overweight-tail fraction fails the requested limit."""
++
++    def __init__(self, observed, allowed):
++        self.observed = observed
++        self.allowed = allowed
++        super().__init__('AmpliCol channel overweight tail %.8g is not below %.8g' %
++                         (observed, allowed))
++
++
++def _real(value):
++    result = float(value.replace('D', 'E').replace('d', 'e'))
++    if not math.isfinite(result):
++        raise PoolError('Nonfinite number in AmpliCol pool')
++    return result
++
++
++def read_pool(path):
++    """Read and validate ``ampli_pool.dat`` in a worker directory.
++
++    ``path`` can also name the sidecar itself. Candidate rows are pairs of
++    (absolute integrand weight, log priority) for legacy version 1. Version 2
++    adds normalized reserve correction, raw overweight flag, and absolute
++    nominal LHE factor. Rows always follow the unmodified candidate LHE order.
++    """
++    path = os.fspath(path)
++    if os.path.isdir(path):
++        path = os.path.join(path, 'ampli_pool.dat')
++    try:
++        with open(path) as stream:
++            header = stream.readline().split()
++            if len(header) != 2 or header[0] != 'MG5_AMPLI_POOL' or header[1] not in ('1', '2'):
++                raise PoolError('Incompatible AmpliCol pool header: %s' % path)
++            version = int(header[1])
++            counts = stream.readline().split()
++            if len(counts) != 3:
++                raise PoolError('Invalid AmpliCol pool counts: %s' % path)
++            trials, ncandidates = int(counts[0]), int(counts[1])
++            cutoff = _real(counts[2])
++            if trials < 0 or not 0 <= ncandidates <= trials or cutoff < 0.:
++                raise PoolError('Invalid AmpliCol pool budget: %s' % path)
++            moments = list(map(_real, stream.readline().split()))
++            if len(moments) != 5:
++                raise PoolError('Invalid AmpliCol pool moments: %s' % path)
++            mean_abs, mean_signed, m2_abs, m2_signed, covariance_sum = moments
++            tolerance = 1.e-10 * max(mean_abs, abs(mean_signed), 1.e-300)
++            if mean_abs < 0. or abs(mean_signed) > mean_abs + tolerance:
++                raise PoolError('Inconsistent signed and absolute pool rates: %s' % path)
++            if m2_abs < 0. or m2_signed < 0.:
++                raise PoolError('Negative AmpliCol pool variance: %s' % path)
++            cov_bound = math.sqrt(m2_abs) * math.sqrt(m2_signed)
++            if abs(covariance_sum) > cov_bound * (1. + 1.e-10) + 1.e-300:
++                raise PoolError('Invalid AmpliCol pool covariance: %s' % path)
++            if trials == 0 and any(moments):
++                raise PoolError('Nonzero moments for an empty AmpliCol pool: %s' % path)
++            generation = {}
++            if version == 2:
++                record = stream.readline().split()
++                if len(record) != 6:
++                    raise PoolError('Invalid AmpliCol generation record: %s' % path)
++                generation = dict(zip(
++                    ('generated_target', 'final_quota', 'threshold',
++                     'full_trial_tail', 'reserve_tail', 'worst_subset_tail'),
++                    [int(record[0]), int(record[1])] + list(map(_real, record[2:]))))
++            candidates = []
++            log_cutoff = math.log(cutoff) if cutoff else -math.inf
++            for unused in range(ncandidates):
++                row = list(map(_real, stream.readline().split()))
++                if len(row) != (2 if version == 1 else 5) or row[0] <= 0.:
++                    raise PoolError('Invalid AmpliCol candidate row: %s' % path)
++                # u in (0,1): log(w/u) >= log(w), and the writing cutoff.
++                if row[1] < max(math.log(row[0]), log_cutoff) - 1.e-11:
++                    raise PoolError('Inconsistent AmpliCol candidate priority: %s' % path)
++                if version == 2 and (row[2] < 0. or row[3] not in (0., 1.) or row[4] <= 0.):
++                    raise PoolError('Invalid AmpliCol candidate correction: %s' % path)
++                candidates.append(tuple(row))
++            if stream.read().strip():
++                raise PoolError('Unexpected trailing AmpliCol pool data: %s' % path)
++    except (OSError, ValueError) as error:
++        if isinstance(error, PoolError):
++            raise
++        raise PoolError('Cannot read AmpliCol pool %s: %s' % (path, error)) from error
++    pool = dict(path=os.path.abspath(path), version=version,
++                lhe_path=os.path.join(os.path.dirname(os.path.abspath(path)),
++                                      'ampli_candidates.lhe'),
++                trials=trials, ncandidates=ncandidates, cutoff=cutoff,
++                mean_abs=mean_abs, mean_signed=mean_signed,
++                m2_abs=m2_abs, m2_signed=m2_signed,
++                covariance_sum=covariance_sum, candidates=candidates, **generation)
++    if version == 2:
++        _worker_status(pool)
++    return pool
++
++
++def combine_moments(pools):
++    """Merge independent fixed-budget batches with Chan's moment identities.
++
++    The errors are errors of the *mean*, with the unbiased sample variance.
++    Quota-stopped production moments are diagnostics, not published rate estimates.
++    """
++    count = 0
++    mean_abs = mean_signed = m2_abs = m2_signed = covariance_sum = 0.
++    for pool in pools:
++        n = pool['trials']
++        if not n:
++            continue
++        combined = count + n
++        delta_abs = pool['mean_abs'] - mean_abs
++        delta_signed = pool['mean_signed'] - mean_signed
++        fraction = float(n) / combined
++        cross_count = count * fraction
++        mean_abs += delta_abs * fraction
++        mean_signed += delta_signed * fraction
++        m2_abs += pool['m2_abs'] + delta_abs * delta_abs * cross_count
++        m2_signed += pool['m2_signed'] + delta_signed * delta_signed * cross_count
++        covariance_sum += pool['covariance_sum'] + delta_abs * delta_signed * cross_count
++        count = combined
++    denominator = count * (count - 1) if count > 1 else 1
++    return dict(trials=count, mean_abs=mean_abs, mean_signed=mean_signed,
++                m2_abs=m2_abs, m2_signed=m2_signed,
++                covariance_sum=covariance_sum,
++                absolute=mean_abs, signed=mean_signed,
++                error_abs=math.sqrt(max(0., m2_abs) / denominator),
++                error_signed=math.sqrt(max(0., m2_signed) / denominator),
++                covariance=covariance_sum / denominator)
++
++
++_EVENT_OPEN = re.compile(r'^\s*<event(?:\s[^>]*)?>\s*$')
++_EVENT_CLOSE = re.compile(r'^\s*</event\s*>\s*$')
++_TOKENS = re.compile(r'\S+')
++_COMPACT_HEADER = re.compile(r'(<header>\r?\n)[ \t]*[0-9]+[ \t]*(\r?\n[ \t]*</header>)')
++
++
++def _header_count(preamble, quota):
++    # read_lhef_header reads the number immediately before </header> with
++    # format(1x,i8); reweight_xsec_events then loops over exactly that count.
++    # Only touch this compact worker header, not an ordinary XML banner.
++    return _COMPACT_HEADER.sub(lambda match: match.group(1) + ' %8d' % quota +
++                               match.group(2), preamble)
++
++
++def _replace_tokens(line, replacements):
++    tokens = list(_TOKENS.finditer(line))
++    if not tokens or max(replacements) >= len(tokens):
++        raise PoolError('Malformed LHE numerical record')
++    for index in sorted(replacements, reverse=True):
++        token = tokens[index]
++        line = line[:token.start()] + replacements[index] + line[token.end():]
++    return line
++
++
++def _read_event_weight(event):
++    for line in event.splitlines()[1:]:
++        if not line.strip() or line.lstrip().startswith('#'):
++            continue
++        tokens = line.split()
++        if len(tokens) < 6:
++            break
++        try:
++            int(tokens[0])
++            int(tokens[1])
++            return _real(tokens[2])
++        except ValueError as error:
++            raise PoolError('Invalid AmpliCol LHE event header') from error
++    raise PoolError('Invalid AmpliCol LHE event header')
++
++
++def _event_weight(event, multiplier):
++    """Scale XWGTUP alone; retain particles, scales and mgrwgt verbatim."""
++    lines = event.splitlines(keepends=True)
++    for index in range(1, len(lines)):
++        if not lines[index].strip() or lines[index].lstrip().startswith('#'):
++            continue
++        tokens = lines[index].split()
++        if len(tokens) < 6:
++            raise PoolError('Invalid AmpliCol LHE event header')
++        try:
++            int(tokens[0])
++            int(tokens[1])
++            weight = _real(tokens[2]) * multiplier
++        except ValueError as error:
++            raise PoolError('Invalid AmpliCol LHE event header') from error
++        if not math.isfinite(weight):
++            raise PoolError('Nonfinite finalized AmpliCol event weight')
++        lines[index] = _replace_tokens(lines[index], {2: '%.16e' % weight})
++        return ''.join(lines)
++    raise PoolError('Missing AmpliCol LHE event header')
++
++
++def _init_rates(preamble, cross_sections, normalization_factor):
++    """Replace XSECUP/XERRUP by the coordinator's final per-process rates."""
++    rates = {int(label): (float(rate), float(error))
++             for label, rate, error in cross_sections}
++    lines = preamble.splitlines(keepends=True)
++    inside = False
++    header = False
++    found = set()
++    expected = None
++    for index, line in enumerate(lines):
++        if line.strip() == '<init>':
++            inside, header = True, True
++        elif line.strip() == '</init>':
++            inside = False
++        elif inside and line.strip() and not line.lstrip().startswith('#'):
++            tokens = line.split()
++            if header:
++                if len(tokens) != 10:
++                    raise PoolError('Invalid AmpliCol LHE init header')
++                expected = int(tokens[-1])
++                # Native re-evaluation can leave residual weight corrections,
++                # including when the requested nominal scale is unity.
++                lines[index] = _replace_tokens(line, {8: '-4'})
++                header = False
++                continue
++            if len(tokens) != 4:
++                raise PoolError('Invalid AmpliCol LHE process row')
++            label = int(tokens[3])
++            if label not in rates or label in found:
++                raise PoolError('AmpliCol init process labels disagree with final rates')
++            rate, error = rates[label]
++            lines[index] = _replace_tokens(line, {
++                0: '%.16e' % rate, 1: '%.16e' % error,
++                # XMAXUP is unused for IDWTUP=-4. Record the nominal global
++                # scale rather than retaining the obsolete survey value.
++                2: '%.16e' % abs(normalization_factor)})
++            found.add(label)
++    if inside or expected != len(found) or found != set(rates):
++        raise PoolError('Incomplete AmpliCol LHE init block')
++    return ''.join(lines)
++
++
++def _lhe_parts(path):
++    """Yield ('preamble'|'event'|'footer', text) without loading the pool."""
++    with open(path) as stream:
++        lines = []
++        in_event = False
++        started = False
++        for line in stream:
++            if _EVENT_OPEN.match(line):
++                if in_event:
++                    raise PoolError('Nested AmpliCol LHE event: %s' % path)
++                if not started:
++                    yield 'preamble', ''.join(lines)
++                    started = True
++                elif any(part.strip() for part in lines):
++                    raise PoolError('Unexpected data between AmpliCol LHE events')
++                lines = [line]
++                in_event = True
++            elif _EVENT_CLOSE.match(line):
++                if not in_event:
++                    raise PoolError('Unmatched AmpliCol LHE event end: %s' % path)
++                lines.append(line)
++                yield 'event', ''.join(lines)
++                lines = []
++                in_event = False
++            else:
++                lines.append(line)
++        if in_event:
++            raise PoolError('Truncated AmpliCol LHE event: %s' % path)
++        remainder = ''.join(lines)
++        if '</LesHouchesEvents>' not in remainder:
++            raise PoolError('Incomplete AmpliCol LHE file: %s' % path)
++        if not started:
++            closing = remainder.index('</LesHouchesEvents>')
++            yield 'preamble', remainder[:closing]
++            remainder = remainder[closing:]
++        yield 'footer', remainder
++
++
++def _weighted_fraction(weights, flags):
++    """Compute a tail fraction without overflowing a sum of large weights."""
++    maximum = max(weights, default=0.)
++    if not maximum:
++        return 0.
++    scaled = [value / maximum for value in weights]
++    return math.fsum(value for value, flag in zip(scaled, flags) if flag) / math.fsum(scaled)
++
++
++def _worker_status(pool):
++    """Independently verify the worker's threshold, corrections and tail mass."""
++    if pool.get('version', 1) != 2:
++        raise PoolError('Legacy AmpliCol pool protocol 1 cannot be finalized; regenerate with protocol 2')
++    target, quota, threshold = (pool[key] for key in
++                                ('generated_target', 'final_quota', 'threshold'))
++    if any(isinstance(value, bool) or int(value) != value or value < 0
++           for value in (target, quota)) or target < quota:
++        raise PoolError('Invalid AmpliCol worker event quota')
++    if target and target < (11 * quota + 9) // 10:
++        raise PoolError('AmpliCol worker is missing its ten percent reserve')
++    if quota == 0 and target:
++        raise PoolError('AmpliCol zero-quota worker has a nonempty reserve')
++    if not math.isfinite(threshold) or threshold < pool['cutoff'] or threshold <= 0.:
++        raise PoolError('Invalid AmpliCol final threshold')
++    candidates = pool['candidates']
++    retained = []
++    log_threshold = math.log(threshold)
++    excluded_priority = max((row[1] for row in candidates if not row[2]), default=-math.inf)
++    retained_priority = min((row[1] for row in candidates if row[2]), default=math.inf)
++    if retained_priority < excluded_priority - 1.e-11:
++        raise PoolError('AmpliCol reserve violates candidate priority ordering')
++    # Fortran stores huge(1d0) when the first excluded log priority cannot be
++    # exponentiated. Preserve its actual rank threshold for membership and
++    # corrections; every representable raw weight then remains below it.
++    if threshold == sys.float_info.max:
++        log_threshold = max(log_threshold, excluded_priority)
++    for index, (weight, priority, correction, tail, factor) in enumerate(candidates):
++        if bool(tail) != (weight > threshold):
++            raise PoolError('AmpliCol raw overweight flag disagrees with the threshold')
++        if correction:
++            if priority < log_threshold - 1.e-11:
++                raise PoolError('AmpliCol reserve contains a rejected priority')
++            retained.append(index)
++        elif priority > log_threshold + 1.e-11 or tail:
++            raise PoolError('AmpliCol reserve omits a passing candidate')
++    if len(retained) != target:
++        raise PoolError('AmpliCol generated reserve count disagrees with its target')
++    if target:
++        logs = [max(0., math.log(candidates[index][0]) - log_threshold)
++                for index in retained]
++        largest = max(logs)
++        scaled = [math.exp(value-largest) for value in logs]
++        total = math.fsum(scaled)
++        for index, value in zip(retained, scaled):
++            expected = value * target / total
++            if not math.isclose(candidates[index][2], expected, rel_tol=1.e-10, abs_tol=1.e-300):
++                raise PoolError('AmpliCol normalized correction disagrees with its threshold')
++    weights = [candidates[index][2] * candidates[index][4] for index in retained]
++    if not all(math.isfinite(value) and value > 0. for value in weights):
++        raise PoolError('Nonfinite AmpliCol corrected event magnitude')
++    flags = [bool(candidates[index][3]) for index in retained]
++    reserve_tail = _weighted_fraction(weights, flags)
++    tail_weights = [value for value, flag in zip(weights, flags) if flag]
++    ordinary = sorted(value for value, flag in zip(weights, flags) if not flag)
++    if not quota or not tail_weights:
++        worst_tail = 0.
++    elif len(tail_weights) >= quota:
++        worst_tail = 1.
++    else:
++        subset = tail_weights + ordinary[:quota-len(tail_weights)]
++        worst_tail = _weighted_fraction(subset, [True]*len(tail_weights) +
++                                        [False]*(quota-len(tail_weights)))
++    if pool['trials'] and pool['mean_abs']:
++        # Every trial above threshold exceeds the storage cutoff, hence appears
++        # in candidates. Dividing before summing avoids a large trial sum.
++        tail_mean = math.fsum(row[0] / pool['trials'] for row in candidates if row[3])
++        full_tail = tail_mean / pool['mean_abs']
++    else:
++        if candidates:
++            raise PoolError('AmpliCol nonempty candidates have zero trial rate')
++        full_tail = 0.
++    diagnostics = dict(full_trial_tail=full_tail, reserve_tail=reserve_tail,
++                       worst_subset_tail=worst_tail)
++    for key, value in diagnostics.items():
++        reported = pool[key]
++        if not 0. <= reported <= 1. or not math.isclose(reported, value,
++                                                       rel_tol=1.e-9, abs_tol=1.e-12):
++            raise PoolError('AmpliCol %s diagnostic disagrees with candidate data' % key)
++    return retained, diagnostics
++
++
++def available_events(pools):
++    """Count generated reserve events; legacy pools remain diagnostic-only."""
++    return sum(sum(row[2] > 0. for row in pool['candidates'])
++               if pool.get('version', 1) == 2 else len(pool['candidates'])
++               for pool in pools)
++
++
++def pool_status(pools, quota, minimum_reserve=None):
++    """Return validated per-worker diagnostics without consuming randomness."""
++    if isinstance(quota, bool) or int(quota) != quota or quota < 0:
++        raise PoolError('Invalid AmpliCol final event quota')
++    pools = list(pools)
++    workers = [_worker_status(pool) for pool in pools]
++    if sum(pool['final_quota'] for pool in pools) != quota:
++        raise PoolError('AmpliCol final quota disagrees with the survey allocation')
++    diagnostics = dict(available=available_events(pools),
++                       reserve=sum(pool['generated_target'] for pool in pools),
++                       selected=quota)
++    for key in ('full_trial_tail', 'reserve_tail', 'worst_subset_tail'):
++        diagnostics[key] = max((status[key] for unused, status in workers), default=0.)
++    diagnostics['overweight'] = max(diagnostics[key] for key in
++                                   ('full_trial_tail', 'reserve_tail', 'worst_subset_tail'))
++    diagnostics['max_correction'] = max((row[2] for pool in pools
++                                         for row in pool['candidates']), default=1.)
++    return diagnostics
++
++
++def select_candidates(pools, quota, rng=None, minimum_reserve=None):
++    """Uniformly trim each independent worker once, preserving its corrections."""
++    rng = rng or random
++    pools = list(pools)
++    diagnostics = pool_status(pools, quota)
++    selection = {}
++    weights, flags = [], []
++    for pool_index, pool in enumerate(pools):
++        retained, unused = _worker_status(pool)
++        for index in rng.sample(retained, pool['final_quota']):
++            row = pool['candidates'][index]
++            selection[pool_index, index] = row[2]
++            weights.append(row[2] * row[4])
++            flags.append(bool(row[3]))
++    diagnostics['selected_tail'] = _weighted_fraction(weights, flags)
++    diagnostics['sum_corrections'] = math.fsum(selection.values())
++    return selection, diagnostics
++
++
++def finalize_channel(pools, quota, output_path, normalization_factor, rng=None,
++                     cross_sections=None, minimum_reserve=None,
++                     allowed_overweight=ALLOWED_OVERWEIGHT_FACTOR):
++    """Collect exactly the survey-assigned ``quota`` events, atomically.
++
++    Raw LHE candidates have signed unit nominal weights, including any bias
++    inverse. ``normalization_factor`` is MG5's updated global absolute rate
++    (``average``/``bias``), rate divided by total event count (``sum``), or one
++    (``unity``). Residual native corrections multiply that nominal scale.
++    ``cross_sections`` gives all LHE process rows as (label, signed rate,error).
++
++    Return selection diagnostics. A quota mismatch, excessive full tail, or
++    malformed input leaves any existing final file untouched. Candidate files
++    and sidecars are retained so top-ups and finalization can be audited or
++    repeated.
++    """
++    if not math.isfinite(normalization_factor) or normalization_factor < 0.:
++        raise PoolError('Invalid global AmpliCol event normalization')
++    if not math.isfinite(allowed_overweight) or allowed_overweight <= 0.:
++        raise PoolError('Invalid AmpliCol allowed overweight fraction')
++    pools = list(pools)
++    if not pools:
++        raise PoolError('Cannot finalize an AmpliCol channel without pools')
++    diagnostics = pool_status(pools, quota)
++    if diagnostics['overweight'] >= allowed_overweight:
++        raise PoolOverweight(diagnostics['overweight'], allowed_overweight)
++    selection, diagnostics = select_candidates(pools, quota, rng)
++    if diagnostics['selected_tail'] >= allowed_overweight:
++        raise PoolOverweight(diagnostics['selected_tail'], allowed_overweight)
++    output_path = os.path.abspath(os.fspath(output_path))
++    directory = os.path.dirname(output_path)
++    preamble = footer = None
++    written = 0
++    actual_weights, actual_flags = [], []
++    max_worker_tail = 0.
++    handle, temporary = tempfile.mkstemp(prefix='.ampli-final-', dir=directory)
++    try:
++        # Spool selected events first so no partially validated LHE header can
++        # replace a previous successful finalization.
++        with os.fdopen(handle, 'w+') as events:
++            for pool_index, pool in enumerate(pools):
++                count = 0
++                worker_weights, worker_flags = [], []
++                for kind, part in _lhe_parts(pool['lhe_path']):
++                    if kind == 'preamble':
++                        valid_header = '<init>' in part and '<LesHouchesEvents' in part
++                        if pool['ncandidates'] and not valid_header:
++                            raise PoolError('Missing AmpliCol candidate LHE header')
++                        # Fortran writes its header on the first event. A
++                        # legitimate zero-candidate worker therefore has only
++                        # a closing tag; borrow a later nonempty worker header.
++                        if preamble is None and valid_header:
++                            preamble = part
++                    elif kind == 'footer' and footer is None:
++                        footer = part
++                    elif kind == 'event':
++                        if count >= pool['ncandidates']:
++                            raise PoolError('AmpliCol sidecar/LHE candidate counts disagree: %s' % pool['path'])
++                        raw_magnitude = abs(_read_event_weight(part))
++                        expected = pool['candidates'][count][4]
++                        # MG5 writes candidate XWGTUP with Fortran e14.8.
++                        if not math.isclose(raw_magnitude, expected, rel_tol=5.1e-8, abs_tol=1.e-300):
++                            raise PoolError('AmpliCol nominal LHE factor disagrees with its sidecar')
++                        correction = selection.get((pool_index, count))
++                        if correction is not None:
++                            worker_weights.append(raw_magnitude * correction)
++                            worker_flags.append(bool(pool['candidates'][count][3]))
++                            events.write(_event_weight(part, normalization_factor * correction))
++                            written += 1
++                        count += 1
++                if count != pool['ncandidates']:
++                    raise PoolError('AmpliCol sidecar/LHE candidate counts disagree: %s' % pool['path'])
++                worker_tail = _weighted_fraction(worker_weights, worker_flags)
++                if worker_tail >= allowed_overweight:
++                    raise PoolOverweight(worker_tail, allowed_overweight)
++                max_worker_tail = max(max_worker_tail, worker_tail)
++                actual_weights.extend(worker_weights)
++                actual_flags.extend(worker_flags)
++            diagnostics['selected_tail'] = _weighted_fraction(actual_weights, actual_flags)
++            diagnostics['max_worker_selected_tail'] = max_worker_tail
++            if diagnostics['selected_tail'] >= allowed_overweight:
++                raise PoolOverweight(diagnostics['selected_tail'], allowed_overweight)
++            if written != quota:
++                raise PoolError('Incomplete AmpliCol final candidate selection')
++            if preamble is None:
++                raise PoolError('No AmpliCol pool contains an LHE init block')
++            if cross_sections is None:
++                raise PoolError('Final AmpliCol process rates are required')
++            preamble = _init_rates(preamble, cross_sections, normalization_factor)
++            preamble = _header_count(preamble, quota)
++            events.flush()
++            events.seek(0)
++            final_handle, final_path = tempfile.mkstemp(prefix='.ampli-lhe-', dir=directory)
++            try:
++                with os.fdopen(final_handle, 'w') as destination:
++                    destination.write(preamble)
++                    shutil.copyfileobj(events, destination)
++                    destination.write(footer)
++                os.replace(final_path, output_path)
++            finally:
++                if os.path.exists(final_path):
++                    os.unlink(final_path)
++    finally:
++        os.unlink(temporary)
++    return diagnostics
+diff --git a/tests/unit_tests/various/test_ampli_pool.py b/tests/unit_tests/various/test_ampli_pool.py
+new file mode 100644
+index 000000000..4b97c0e33
+--- /dev/null
++++ b/tests/unit_tests/various/test_ampli_pool.py
+@@ -0,0 +1,404 @@
++"""Survey quota collection, full-tail control, and AmpliCol LHE integrity."""
++
++import math
++from pathlib import Path
++import random
++import sys
++import tempfile
++import unittest
++import xml.etree.ElementTree as ET
++
++from madgraph.various import ampli_pool
++from tests.unit_tests.fks.test_ampli_lhe import candidate_file
++
++
++def moments(points):
++    n = len(points)
++    absolute = sum(abs(x) for x in points) / n
++    signed = sum(points) / n
++    return dict(trials=n, mean_abs=absolute, mean_signed=signed,
++                m2_abs=sum((abs(x)-absolute)**2 for x in points),
++                m2_signed=sum((x-signed)**2 for x in points),
++                covariance_sum=sum((abs(x)-absolute)*(x-signed) for x in points))
++
++
++class TestAmpliPool(unittest.TestCase):
++    def setUp(self):
++        self.tmp = tempfile.TemporaryDirectory(prefix='mg5_ampli_pool_')
++        self.addCleanup(self.tmp.cleanup)
++        self.work = Path(self.tmp.name)
++
++    def pool_file(self, name, points, candidates, cutoff=1., event_weights=None):
++        directory = self.work / name
++        directory.mkdir()
++        values = moments(points)
++        content = 'MG5_AMPLI_POOL 1\n%d %d %.16e\n' % (
++            len(points), len(candidates), cutoff)
++        content += ' '.join('%.16e' % values[key] for key in (
++            'mean_abs', 'mean_signed', 'm2_abs', 'm2_signed', 'covariance_sum')) + '\n'
++        content += ''.join('%.16e %.16e\n' % candidate for candidate in candidates)
++        (directory / 'ampli_pool.dat').write_text(content)
++        if event_weights is None:
++            event_weights = [1.] * len(candidates)
++        (directory / 'ampli_candidates.lhe').write_text(candidate_file(event_weights))
++        return directory
++
++    def test_sidecar_reads_all_trial_moments_and_fortran_exponents(self):
++        directory = self.pool_file('worker', [0., -1., 2., 0.],
++                                   [(2., math.log(4.))])
++        path = directory / 'ampli_pool.dat'
++        path.write_text(path.read_text().replace('e+', 'D+').replace('e-', 'D-'))
++        pool = ampli_pool.read_pool(directory)
++        self.assertEqual(pool['trials'], 4)
++        self.assertEqual(pool['ncandidates'], 1)
++        self.assertEqual(pool['mean_abs'], .75)
++        self.assertEqual(pool['mean_signed'], .25)
++        self.assertEqual(pool['candidates'], [(2., math.log(4.))])
++        self.assertEqual(Path(pool['lhe_path']), directory / 'ampli_candidates.lhe')
++
++    def test_split_moments_match_every_point_and_include_zeroes(self):
++        first = [0., -1., 2., 0.]
++        second = [3., -5., 0., -2., 1., 0., 0.]
++        combined = ampli_pool.combine_moments([moments(first), moments(second)])
++        direct = moments(first + second)
++        for key, value in direct.items():
++            self.assertAlmostEqual(combined[key], value)
++        n = len(first + second)
++        self.assertAlmostEqual(combined['error_abs'],
++                               math.sqrt(direct['m2_abs'] / (n*(n-1))))
++        self.assertAlmostEqual(combined['error_signed'],
++                               math.sqrt(direct['m2_signed'] / (n*(n-1))))
++        self.assertAlmostEqual(combined['covariance'],
++                               direct['covariance_sum'] / (n*(n-1)))
++
++    def test_malformed_sidecars_fail_before_events_are_finalized(self):
++        directory = self.pool_file('worker', [0., 1., 2.], [(2., math.log(4.))])
++        path = directory / 'ampli_pool.dat'
++        original = path.read_text()
++        mutations = [
++            original.replace('MG5_AMPLI_POOL 1', 'MG5_AMPLI_POOL 2'),
++            original.replace('3 1 ', '0 1 '),
++            original.rsplit('\n', 2)[0] + '\n',
++            original + 'unexpected\n',
++            original.replace('2.0000000000000000e+00', 'NaN'),
++        ]
++        for content in mutations:
++            with self.subTest(content=content):
++                path.write_text(content)
++                with self.assertRaises(ampli_pool.PoolError):
++                    ampli_pool.read_pool(path)
++
++    def test_lhe_scale_preserves_payload_and_bias_inverse(self):
++        events = [part for kind, part in self.parts(candidate_file([2., -3.]))
++                  if kind == 'event']
++        for event, expected in zip(events, [10., -15.]):
++            rewritten = ampli_pool._event_weight(event, 5.)
++            before, after = ET.fromstring(event), ET.fromstring(rewritten)
++            self.assertEqual(before.attrib, after.attrib)
++            self.assertEqual(before.text.splitlines()[2:], after.text.splitlines()[2:])
++            self.assertEqual(float(after.text.split()[2]), expected)
++            self.assertEqual([ET.tostring(child) for child in before],
++                             [ET.tostring(child) for child in after])
++
++    def parts(self, content):
++        path = self.work / 'lhe_test.lhe'
++        path.write_text(content)
++        return list(ampli_pool._lhe_parts(path))
++
++    def test_init_updates_signed_rate_and_error_by_process_label(self):
++        preamble = self.parts(candidate_file([1.]))[0][1]
++        updated = ampli_pool._init_rates(preamble, [(42, -3.5, .07)], 2.)
++        root = ET.fromstring(updated + '</LesHouchesEvents>')
++        init_lines = root.find('init').text.splitlines()
++        self.assertEqual(list(map(float, init_lines[2].split())), [-3.5, .07, 2., 42.])
++        self.assertEqual(init_lines[1].split()[-2], '-4')
++        with self.assertRaises(ampli_pool.PoolError):
++            ampli_pool._init_rates(preamble, [(7, 1., .1)], 1.)
++
++    def test_incomplete_lhe_is_rejected(self):
++        content = candidate_file([1.])
++        for truncated in (content[:content.index(' </event>')],
++                          content[:content.index('</LesHouchesEvents>')]):
++            with self.assertRaises(ampli_pool.PoolError):
++                self.parts(truncated)
++
++    def quota_pool(self, name, candidates, final_quota, threshold=1., cutoff=1.,
++                   event_weights=None, points=None):
++        """Write a v2 native worker with independently calculated diagnostics."""
++        directory = self.work / name
++        directory.mkdir()
++        if points is None:
++            points = [row[0] for row in candidates]
++        values = moments(points)
++        if event_weights is None:
++            event_weights = [1.] * len(candidates)
++        reserve = [index for index, (weight, priority) in enumerate(candidates)
++                   if priority > math.log(threshold)]
++        target = len(reserve)
++        raw = [max(1., candidates[index][0] / threshold) for index in reserve]
++        average = sum(raw)/target if target else 1.
++        corrections = dict(zip(reserve, [value/average for value in raw]))
++        flags = [weight > threshold for weight, priority in candidates]
++        tail = sum(weight for (weight, unused), flag in zip(candidates, flags) if flag)
++        full_tail = tail / sum(abs(point) for point in points) if tail else 0.
++        physical = {index: corrections[index]*abs(event_weights[index]) for index in reserve}
++        heavy = [physical[index] for index in reserve if flags[index]]
++        ordinary = sorted(physical[index] for index in reserve if not flags[index])
++        reserve_tail = sum(heavy)/sum(physical.values()) if heavy else 0.
++        if not final_quota or not heavy:
++            worst_tail = 0.
++        elif len(heavy) >= final_quota:
++            worst_tail = 1.
++        else:
++            worst_tail = sum(heavy)/(sum(heavy)+sum(ordinary[:final_quota-len(heavy)]))
++        text = 'MG5_AMPLI_POOL 2\n%d %d %.16e\n' % (len(points), len(candidates), cutoff)
++        text += ' '.join('%.16e' % values[key] for key in (
++            'mean_abs', 'mean_signed', 'm2_abs', 'm2_signed', 'covariance_sum')) + '\n'
++        text += '%d %d %.16e %.16e %.16e %.16e\n' % (
++            target, final_quota, threshold, full_tail, reserve_tail, worst_tail)
++        text += ''.join('%.16e %.16e %.16e %d %.16e\n' %
++                        (weight, priority, corrections.get(index, 0.), flags[index],
++                         abs(event_weights[index]))
++                        for index, (weight, priority) in enumerate(candidates))
++        (directory / 'ampli_pool.dat').write_text(text)
++        (directory / 'ampli_candidates.lhe').write_text(candidate_file(event_weights))
++        return directory
++
++    def test_legacy_pools_are_diagnostic_only(self):
++        pool = ampli_pool.read_pool(self.pool_file(
++            'legacy', [1., 1.], [(1., math.log(2.)), (1., math.log(3.))]))
++        self.assertEqual(pool['version'], 1)
++        self.assertEqual(ampli_pool.available_events([pool]), 2)
++        with self.assertRaisesRegex(ampli_pool.PoolError, 'Legacy.*protocol 1'):
++            ampli_pool.finalize_channel([pool], 1, self.work/'events.lhe', 1.,
++                                       cross_sections=[(42, 1., .1)])
++
++    def test_full_tail_includes_entire_slightly_overweight_event(self):
++        pool = ampli_pool.read_pool(self.quota_pool(
++            'tail', [(1.015, math.log(4.)), (1., math.log(3.)), (1., math.log(2.))], 2))
++        self.assertAlmostEqual(pool['full_trial_tail'], 1.015/3.015)
++        self.assertAlmostEqual(pool['reserve_tail'], 1.015/3.015)
++        self.assertAlmostEqual(pool['worst_subset_tail'], 1.015/2.015)
++        # The obsolete mean excess is only 0.5% and would have passed.
++        self.assertLess((1.015-1.)/3., .01)
++        with self.assertRaises(ampli_pool.PoolOverweight):
++            ampli_pool.finalize_channel([pool], 2, self.work/'events.lhe', 1.,
++                                       cross_sections=[(42, 1.005, .005)])
++
++    def test_all_trial_tail_uses_rejected_points_and_absolute_signs(self):
++        pool = ampli_pool.read_pool(self.quota_pool(
++            'tail', [(1.01, math.log(4.)), (1., math.log(3.)), (1., math.log(2.))], 2,
++            points=[1.01, -1., 1., -.5, .5, 0., 0.]))
++        self.assertAlmostEqual(pool['full_trial_tail'], 1.01/4.01)
++        self.assertNotAlmostEqual(pool['full_trial_tail'], 1.01/1.01)
++        self.assertEqual(pool['trials'], 7)
++
++    def test_uniform_trimming_is_safe_for_every_subset_before_rng_draw(self):
++        candidates = [(1.001, math.log(2.))] + [(1., math.log(2.))]*109
++        pool = ampli_pool.read_pool(self.quota_pool('trim', candidates, 100))
++        self.assertLess(pool['reserve_tail'], .01)
++        self.assertGreater(pool['worst_subset_tail'], .01)
++        output = self.work/'events.lhe'
++        output.write_text('previous successful file')
++        rng = random.Random(42)
++        before = rng.getstate()
++        with self.assertRaises(ampli_pool.PoolOverweight):
++            ampli_pool.finalize_channel([pool], 100, output, 1., rng,
++                                       cross_sections=[(42, 1., .01)])
++        self.assertEqual(rng.getstate(), before)
++        self.assertEqual(output.read_text(), 'previous successful file')
++        self.assertEqual(list(self.work.glob('.ampli-*')), [])
++
++    def test_small_tail_is_preserved_with_weighted_lhe_header(self):
++        candidates = [(1.015, math.log(2.))] + [(1., math.log(2.))]*219
++        pool = ampli_pool.read_pool(self.quota_pool('valid', candidates, 200,
++                        event_weights=[-1.] + [1.]*219))
++        output = self.work/'events.lhe'
++        diagnostics = ampli_pool.finalize_channel([pool], 200, output, 7., random.Random(42),
++                                                  cross_sections=[(42, 3.5, .07)])
++        tree = ET.fromstring(output.read_text())
++        events = tree.findall('event')
++        self.assertEqual(len(events), 200)
++        self.assertLess(diagnostics['selected_tail'], .01)
++        self.assertLess(diagnostics['worst_subset_tail'], .01)
++        self.assertEqual(tree.find('init').text.splitlines()[1].split()[-2], '-4')
++        self.assertEqual(list(map(float, tree.find('init').text.splitlines()[2].split())),
++                         [3.5, .07, 7., 42.])
++        self.assertTrue(all(event.find('mgrwgt') is not None for event in events))
++        self.assertTrue(all(event.find('rwgt') is not None for event in events))
++        self.assertTrue(Path(pool['lhe_path']).exists())
++
++    def test_workers_are_trimmed_independently_once_without_rethresholding(self):
++        first = ampli_pool.read_pool(self.quota_pool(
++            'first', [(1., math.log(3.))]*3, 2, threshold=2.,
++            event_weights=[1., -1., 1.]))
++        second = ampli_pool.read_pool(self.quota_pool(
++            'second', [(10., math.log(40.))]*4, 3, threshold=30., cutoff=20.,
++            event_weights=[-2., 2., -2., 2.]))
++        class CountingRandom(random.Random):
++            def __init__(self):
++                super().__init__(42)
++                self.calls = []
++            def sample(self, population, k):
++                self.calls.append((len(population), k))
++                return super().sample(population, k)
++        rng = CountingRandom()
++        selected, info = ampli_pool.select_candidates([first, second], 5, rng)
++        self.assertEqual(rng.calls, [(3, 2), (4, 3)])
++        self.assertEqual(sum(worker == 0 for worker, unused in selected), 2)
++        self.assertEqual(sum(worker == 1 for worker, unused in selected), 3)
++        self.assertEqual(info['available'], 7)
++        output = self.work/'events.lhe'
++        ampli_pool.finalize_channel([first, second], 5, output, 7.,
++                                   cross_sections=[(42, 3.5, .07)])
++        weights = [float(event.text.split()[2]) for event in
++                   ET.fromstring(output.read_text()).findall('event')]
++        self.assertEqual([abs(value) for value in weights], [7., 7., 14., 14., 14.])
++        with self.assertRaisesRegex(ampli_pool.PoolError, 'survey allocation'):
++            ampli_pool.finalize_channel([first, second], 4, output, 7.,
++                                       cross_sections=[(42, 3.5, .07)])
++
++    def test_nominal_bias_factors_enter_both_tail_guards(self):
++        candidates = [(1.001, math.log(2.))] + [(1., math.log(2.))]*219
++        pool = ampli_pool.read_pool(self.quota_pool('bias', candidates, 200,
++                        event_weights=[10.] + [1.]*219))
++        self.assertLess(pool['full_trial_tail'], .01)
++        self.assertGreater(pool['reserve_tail'], .01)
++        self.assertGreater(pool['worst_subset_tail'], .01)
++        with self.assertRaises(ampli_pool.PoolOverweight):
++            ampli_pool.finalize_channel([pool], 200, self.work/'events.lhe', 1.,
++                                       cross_sections=[(42, 1., .1)])
++
++    def test_threshold_ties_are_not_overweight(self):
++        pool = ampli_pool.read_pool(self.quota_pool(
++            'ties', [(1., math.log(3.))]*3, 2, threshold=1.))
++        self.assertEqual(pool['full_trial_tail'], 0.)
++        self.assertEqual(pool['reserve_tail'], 0.)
++        self.assertEqual(pool['worst_subset_tail'], 0.)
++        self.assertTrue(all(not row[3] for row in pool['candidates']))
++
++    def test_exact_one_percent_is_rejected(self):
++        candidates = [(2., math.log(3.))] + [(1., math.log(3.))]*218
++        pool = ampli_pool.read_pool(self.quota_pool('exact', candidates, 199))
++        self.assertAlmostEqual(pool['worst_subset_tail'], .01)
++        with self.assertRaises(ampli_pool.PoolOverweight):
++            ampli_pool.finalize_channel([pool], 199, self.work/'events.lhe', 1.,
++                                       cross_sections=[(42, 1., .1)])
++
++    def test_saturated_threshold_retains_true_log_priority_order(self):
++        directory = self.quota_pool('saturated', [(100., 713.)]*3, 2,
++                                    threshold=sys.float_info.max,
++                                    points=[100., 100., 100., 100.])
++        path = directory/'ampli_pool.dat'
++        lines = path.read_text().splitlines()
++        counts = lines[1].split()
++        counts[1] = '4'
++        lines[1] = ' '.join(counts)
++        # This excluded priority is above log(maxfloat), but below every
++        # retained priority. Fortran saturates exp(712) at maxfloat.
++        lines.append('100.0 712.0 0.0 0 1.0')
++        path.write_text('\n'.join(lines)+'\n')
++        Path(directory/'ampli_candidates.lhe').write_text(candidate_file([1.]*4))
++        pool = ampli_pool.read_pool(directory)
++        self.assertEqual(pool['full_trial_tail'], 0.)
++        self.assertEqual(ampli_pool.available_events([pool]), 3)
++        output = self.work/'events.lhe'
++        ampli_pool.finalize_channel([pool], 2, output, 1.,
++                                   cross_sections=[(42, 1., .1)])
++        self.assertEqual(len(ET.fromstring(output.read_text()).findall('event')), 2)
++        # Saturation never permits an excluded priority larger than a
++        # retained one, nor relaxes ordinary finite-threshold validation.
++        text = path.read_text()
++        path.write_text(text.replace('100.0 712.0 0.0', '100.0 714.0 0.0'))
++        with self.assertRaisesRegex(ampli_pool.PoolError, 'priority ordering'):
++            ampli_pool.read_pool(directory)
++        path.write_text(text.replace('1.7976931348623157e+308', '1.0000000000000000e+300'))
++        with self.assertRaisesRegex(ampli_pool.PoolError, 'passing candidate'):
++            ampli_pool.read_pool(directory)
++
++    def test_actual_lhe_tail_is_rechecked_after_native_writer_rounding(self):
++        candidates = [(2., math.log(3.))] + [(1., math.log(3.))]*218
++        directory = self.quota_pool('rounded', candidates, 199,
++                                    event_weights=[1.-1.e-9] + [1.]*218)
++        pool = ampli_pool.read_pool(directory)
++        self.assertLess(pool['worst_subset_tail'], .01)
++        # e14.8 rounds the almost-unit factor to exactly one. Its resulting
++        # final subset lies on the strict 1% boundary and must be rejected.
++        Path(pool['lhe_path']).write_text(candidate_file([1.]*219))
++        class FirstEvents:
++            def sample(self, population, k):
++                return population[:k]
++        output = self.work/'events.lhe'
++        output.write_text('previous successful file')
++        with self.assertRaises(ampli_pool.PoolOverweight):
++            ampli_pool.finalize_channel([pool], 199, output, 1., FirstEvents(),
++                                       cross_sections=[(42, 1., .1)])
++        self.assertEqual(output.read_text(), 'previous successful file')
++
++    def test_unselected_candidates_are_retained_only_for_diagnostics(self):
++        candidates = [(1., math.log(4.))]*3 + [(1., math.log(1.5))]
++        pool = ampli_pool.read_pool(self.quota_pool('unused', candidates, 2, threshold=2.))
++        self.assertEqual(pool['ncandidates'], 4)
++        self.assertEqual(ampli_pool.available_events([pool]), 3)
++        selected, unused = ampli_pool.select_candidates([pool], 2, random.Random(4))
++        self.assertNotIn((0, 3), selected)
++
++    def test_sidecar_tampering_fails_independent_reconstruction(self):
++        directory = self.quota_pool('checked', [(1., math.log(3.))]*3, 2)
++        path = directory/'ampli_pool.dat'
++        original = path.read_text().splitlines()
++        variants = []
++        for line, field, replacement in ((3, 3, '.001'), (3, 4, '.002'), (3, 5, '.003'),
++                                          (4, 2, '1.2'), (4, 3, '1'), (3, 1, '3')):
++            changed = original[:]
++            fields = changed[line].split()
++            fields[field] = replacement
++            changed[line] = ' '.join(fields)
++            variants.append('\n'.join(changed)+'\n')
++        for text in variants:
++            with self.subTest(text=text):
++                path.write_text(text)
++                with self.assertRaises(ampli_pool.PoolError):
++                    ampli_pool.read_pool(directory)
++
++    def test_lhe_factor_mismatch_and_corruption_preserve_existing_output(self):
++        directory = self.quota_pool('checked', [(1., math.log(3.))]*3, 2)
++        pool = ampli_pool.read_pool(directory)
++        output = self.work/'events.lhe'
++        output.write_text('previous successful file')
++        candidate_path = Path(pool['lhe_path'])
++        for weights in ([2., 1., 1.], [1., 1., 1., 1.], [1., 1.]):
++            candidate_path.write_text(candidate_file(weights))
++            with self.assertRaises(ampli_pool.PoolError):
++                ampli_pool.finalize_channel([pool], 2, output, 1.,
++                                           cross_sections=[(42, 1., .1)])
++            self.assertEqual(output.read_text(), 'previous successful file')
++            self.assertEqual(list(self.work.glob('.ampli-*')), [])
++
++    def test_empty_worker_spool_borrows_nonempty_worker_header(self):
++        empty = ampli_pool.read_pool(self.quota_pool('empty', [], 0, points=[0., 0.]))
++        Path(empty['lhe_path']).write_text('</LesHouchesEvents>\n')
++        filled = ampli_pool.read_pool(self.quota_pool(
++            'filled', [(1., math.log(2.))]*2, 1))
++        output = self.work/'events.lhe'
++        ampli_pool.finalize_channel([empty, filled], 1, output, 1.,
++                                   cross_sections=[(42, .25, .1)])
++        tree = ET.fromstring(output.read_text())
++        self.assertEqual(len(tree.findall('event')), 1)
++        self.assertIsNotNone(tree.find('init'))
++
++    def test_compact_worker_header_count_tracks_final_parent_quota(self):
++        directory = self.quota_pool('worker', [(1., math.log(2.))]*2, 1)
++        path = directory/'ampli_candidates.lhe'
++        content = path.read_text().replace(
++            '<header><generator>candidate test</generator></header>',
++            '  <!--\n  <scalesfunctionalform>\n untouched\n  </scalesfunctionalform>\n'
++            'PYTHIA8\n  -->\n  <header>\n     1500\n  </header>')
++        path.write_text(content)
++        output = self.work/'events.lhe'
++        ampli_pool.finalize_channel([ampli_pool.read_pool(directory)], 1, output, 1.,
++                                   cross_sections=[(42, .5, .1)])
++        rewritten = output.read_text()
++        self.assertIn('<header>\n        1\n  </header>', rewritten)
++        self.assertIn(' untouched\n  </scalesfunctionalform>', rewritten)
++        self.assertEqual(len(ET.fromstring(rewritten).findall('event')), 1)
