@@ -939,12 +939,14 @@ c value to the list of weights using the add_wgt subroutine
 ! G replacement. During H repartitioning add_wgt discards S records.
       use mc_counterterms, only: gfactsf,gfactcl,gfactazi
       use mint_module, only: pass_cuts_check
+      use weight_lines, only: mc_H_only,mc_S_only
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       double precision p(0:3,nexternal),p_lab(0:3,nexternal),
      $     p_cms(0:3,nexternal),jacPS,probne,replace_MC_subt
-      logical passcuts_nbody,passcuts_n1body
+      logical passcuts_nbody,passcuts_n1body,h_only_save,s_only_save
+      integer counter_pass,ncounter_passes
       character*4 abrv
       common /to_abrv/ abrv
 
@@ -970,17 +972,39 @@ c value to the list of weights using the add_wgt subroutine
 ! used for its raw MC term and its real-emission H/S split.
 ! This also applies to bogus P: H_b=P_b*(S_b*R-M_b), while S keeps
 ! P_b*M_b+(1-P_b)*S_b*R. Repartition H only after forming H_b.
-         call set_cms_stuff(0)
-         if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
-         call set_alphaS(p1_cnt(0,1,0))
-         call include_multichannel_enhance(3)
-         replace_MC_subt=(1d0-gfactsf)*probne
-         call compute_soft_counter_term(replace_MC_subt)
-         call set_cms_stuff(1)
-         replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
-         call compute_collinear_counter_term(replace_MC_subt)
-         call set_cms_stuff(2)
-         call compute_soft_collinear_counter_term(replace_MC_subt)
+! FxFx assigns the real-state scales to ALL H terms, including G.
+! A combined H/S evaluation needs separate passes because the S terms
+! keep the Born-state scales. Each record is still included only once.
+         h_only_save=mc_H_only
+         s_only_save=mc_S_only
+         ncounter_passes=1
+         if (ickkw.eq.3.and..not.(mc_H_only.or.mc_S_only))
+     $        ncounter_passes=2
+         do counter_pass=1,ncounter_passes
+            if (ncounter_passes.eq.2) then
+               mc_S_only=counter_pass.eq.1
+               mc_H_only=counter_pass.eq.2
+            endif
+            call set_cms_stuff(0)
+            if (ickkw.eq.3) then
+               if (mc_H_only) then
+                  call set_FxFx_scale(-3,p)
+               else
+                  call set_FxFx_scale(-2,p1_cnt(0,1,0))
+               endif
+            endif
+            call set_alphaS(p1_cnt(0,1,0))
+            if (counter_pass.eq.1) call include_multichannel_enhance(3)
+            replace_MC_subt=(1d0-gfactsf)*probne
+            call compute_soft_counter_term(replace_MC_subt)
+            call set_cms_stuff(1)
+            replace_MC_subt=(1d0-gfactcl)*(1d0-gfactsf)*probne
+            call compute_collinear_counter_term(replace_MC_subt)
+            call set_cms_stuff(2)
+            call compute_soft_collinear_counter_term(replace_MC_subt)
+         enddo
+         mc_H_only=h_only_save
+         mc_S_only=s_only_save
       endif
       if (passcuts_n1body) then
          pass_cuts_check=.true.
@@ -1273,6 +1297,8 @@ c     iterm=  0 : reset the computation of the Sudakovs
 c     iterm=  1 : Sudakov for n-body kinematics (f_b and f_nb)
 c     iterm=  2 : Sudakov for n-body kinematics (all but f_b and f_nb)
 c     iterm=  3 : Sudakov for n+1-body kinematics
+c     iterm=  4 : apply cached n+1-body Sudakov/scales to a native H
+c                 history of the same real point, without reclustering
 c     iterm= -1 or -2 : only restore scales for n-body w/o recomputing
 c     iterm= -3 : only restore scales for n+1-body w/o recomputing
       implicit none
@@ -1314,6 +1340,8 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
      &     ,fxfx_ren_scales_izero ,fxfx_ren_scales_mohdr
      &     ,fxfx_fac_scale_izero ,fxfx_fac_scale_mohdr
      &     ,nfxfx_ren_scales_izero ,nfxfx_ren_scales_mohdr
+      save rewgt_izero,rewgt_mohdr
+      data rewgt_izero_calculated,rewgt_mohdr_calculated /2*.false./
       integer need_matching(nexternal),need_matching_izero(nexternal)
       integer need_matching_S(nexternal),need_matching_H(nexternal)
      $     ,need_matching_cuts(nexternal)
@@ -1384,9 +1412,17 @@ c n-body momenta FxFx Sudakov factor (i.e. for S-events)
          do i=1,2
             FxFx_fac_scale_izero(i)=FxFx_fac_scale(i)
          enddo
-      elseif (iterm.eq.3) then
+      elseif (iterm.eq.3.or.iterm.eq.4) then
 c n+1-body momenta FxFx Sudakov factor (i.e. for H-events)
-         if (rewgt_mohdr_calculated) then
+         if (iterm.eq.4) then
+c The caller has mapped the matching flags to the native labels. Keep
+c the outer real cache, including its momentum ordering, unchanged.
+            if (.not.rewgt_mohdr_calculated) then
+               write (*,*) 'Missing real FxFx cache for native H sum'
+               stop 1
+            endif
+            already_set=.true.
+         elseif (rewgt_mohdr_calculated) then
             if (iterm.eq.iterm_last_mohdr) then
                if (momenta_equal(p,p_last_mohdr)) then
                   already_set=.true.
@@ -1400,27 +1436,30 @@ c n+1-body momenta FxFx Sudakov factor (i.e. for H-events)
             fxfx_fac_scale(2)=fxfx_fac_scale(1)
             rewgt_mohdr=min(rewgt_mohdr,1d0)
             need_matching_H(1:nexternal)=need_matching(1:nexternal)
-            need_matching_cuts(1:nexternal)=need_matching_H(1:nexternal)
+            nFxFx_ren_scales_mohdr=nFxFx_ren_scales
+            FxFx_ren_scales_mohdr=FxFx_ren_scales
+            FxFx_fac_scale_mohdr=FxFx_fac_scale
          endif
-         rewgt_mohdr_calculated=.true.
-         iterm_last_mohdr=iterm
-         do i=1,nexternal
-            do j=0,3
-               p_last_mohdr(j,i)=p(j,i)
+         if (iterm.eq.3) then
+            rewgt_mohdr_calculated=.true.
+            iterm_last_mohdr=iterm
+            do i=1,nexternal
+               do j=0,3
+                  p_last_mohdr(j,i)=p(j,i)
+               enddo
             enddo
-         enddo
+         endif
+         nFxFx_ren_scales=nFxFx_ren_scales_mohdr
+         FxFx_ren_scales=FxFx_ren_scales_mohdr
+         FxFx_fac_scale=FxFx_fac_scale_mohdr
+         need_matching_cuts=need_matching_H
          f_r=f_r*rewgt_mohdr
          f_MC_H =f_MC_H *rewgt_mohdr
-         f_s_MC_H =f_s_MC_H *rewgt_izero
-         f_c_MC_H =f_c_MC_H *rewgt_izero
-         f_sc_MC_H=f_sc_MC_H*rewgt_izero
-         nFxFx_ren_scales_mohdr=nFxFx_ren_scales
-         do i=0,nexternal
-            FxFx_ren_scales_mohdr(i)=FxFx_ren_scales(i)
-         enddo
-         do i=1,2
-            FxFx_fac_scale_mohdr(i)=FxFx_fac_scale(i)
-         enddo
+c G replacements belong to the same H event as the real and MC terms.
+c Their Sudakov must therefore also come from the n+1-body state.
+         f_s_MC_H =f_s_MC_H *rewgt_mohdr
+         f_c_MC_H =f_c_MC_H *rewgt_mohdr
+         f_sc_MC_H=f_sc_MC_H*rewgt_mohdr
          call cpu_time(tAfter)
          tFxFx=tFxFx+(tAfter-tBefore)
          return
@@ -8388,37 +8427,80 @@ c     reset the default dynamical_scale_choice
 ! Return the probability actually used for this draw, q_c=p_c. Keep
 ! this value with the sampled flow: do not recompute its denominator
 ! at another Born point or after changing the couplings.
+! A zero flow signals a numerically invalid Born evaluation. The caller
+! must discard the complete integration point, including earlier folds.
       implicit none
-      double precision mc_born_flow_weight
-      external mc_born_flow_weight
-      include 'genps.inc'
       include "born_nhel.inc"
       integer :: flow_picked,i
       double precision :: sumborn,target,sum,born_flow_factor
+      double precision :: flow_weights(max_bcol)
       double precision,external :: ran2
-      double Precision :: amp2(ngraphs),jamp2(0:ncolor)
-      common/to_amps/  amp2         ,jamp2
       logical :: is_leading_cflow(max_bcol)
       integer :: num_leading_cflows
       common/c_leading_cflows/is_leading_cflow,num_leading_cflows
 ! sumborn is the sum of the leading colour flow contributions to the Born.
-      sumborn=0.d0
-      do i=1,max_bcol
-         if(is_leading_cflow(i)) sumborn=sumborn+mc_born_flow_weight(i)
-      enddo
+      flow_picked=0
+      born_flow_factor=0d0
+      call get_born_flow_weights(flow_weights,sumborn)
+      if (sumborn.le.0d0) return
       target=ran2()*sumborn
       sum=0d0
       do i=1,max_bcol
          if (.not.is_leading_cflow(i)) cycle
-         sum=sum+mc_born_flow_weight(i)
+         sum=sum+flow_weights(i)
          if(sum.gt.target) then
             flow_picked=i
-            born_flow_factor=mc_born_flow_weight(flow_picked)/sumborn
+            born_flow_factor=flow_weights(flow_picked)/sumborn
             return
          endif
       enddo
       write (*,*) 'Error #1 in get_born_flow',sum,target,i
       stop 1
+      end
+
+      subroutine get_born_flow_weights(flow_weights,sumborn)
+! Shared validation for sampled and explicitly summed Born flows.
+! Return unnormalised weights; sumborn=0 rejects the entire point.
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      use fks_phase_space_data, only: p_born
+      use weight_lines, only: rejected_born_flow_points
+      implicit none
+      include 'born_nhel.inc'
+      double precision flow_weights(max_bcol),sumborn
+      double precision mc_born_flow_weight
+      external mc_born_flow_weight
+      integer i,num_leading_cflows
+      logical is_leading_cflow(max_bcol)
+      common/c_leading_cflows/is_leading_cflow,num_leading_cflows
+      flow_weights=0d0
+      do i=1,max_bcol
+         if(is_leading_cflow(i))flow_weights(i)=mc_born_flow_weight(i)
+      enddo
+      if(.not.all(ieee_is_finite(flow_weights)))goto 900
+      if(any(flow_weights.lt.0d0))goto 900
+      sumborn=0.d0
+      do i=1,max_bcol
+         if(is_leading_cflow(i)) sumborn=sumborn+flow_weights(i)
+      enddo
+      if(.not.ieee_is_finite(sumborn))goto 900
+      if(sumborn.le.0d0)goto 900
+      return
+ 900  continue
+      sumborn=0d0
+      rejected_born_flow_points=rejected_born_flow_points+1
+      if(rejected_born_flow_points.le.5.or.
+     $     mod(rejected_born_flow_points,100).eq.0)then
+         write(*,*) 'Rejecting phase-space point: invalid Born',
+     $        ' colour weights; count =',rejected_born_flow_points
+         write(*,*) 'Leading Born colour weights:',flow_weights
+      endif
+      if(rejected_born_flow_points.eq.1)then
+         do i=1,size(p_born,2)
+            write(*,'(a,i3,4es26.17e3)') 'Rejected Born momentum ',
+     $           i,p_born(:,i)
+         enddo
+      endif
+      return
       end
   
       

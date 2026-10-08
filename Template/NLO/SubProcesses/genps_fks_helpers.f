@@ -515,13 +515,18 @@ c must end up in the native FKS slots i and j, respectively.
         call apply_momentum_permutation(perm,p,p_flipped)
       end subroutine flip_momenta
 
-      subroutine apply_momentum_permutation(perm,p,p_permuted)
+      subroutine apply_momentum_permutation(perm,p,p_permuted,valid)
+        use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
         implicit none
         integer,intent(in) :: perm(nexternal)
         double precision,intent(in) :: p(0:3,nexternal)
         double precision,intent(out) :: p_permuted(0:3,nexternal)
+        logical,optional,intent(out) :: valid
         integer :: k
-        double precision :: tolerance
+        double precision :: tolerance,mass2_delta
+c Numerical failures can invalidate a whole integration point. Invalid
+c integer maps remain fatal: they indicate a broken history table.
+        if(present(valid))valid=.false.
 c Check the integer map BEFORE using it as a vector subscript.
         if (any(perm.lt.1).or.any(perm.gt.nexternal)) then
            write (*,*) 'Out-of-range MC momentum permutation',perm
@@ -538,9 +543,15 @@ c Check the integer map BEFORE using it as a vector subscript.
            endif
         enddo
         p_permuted=p(:,perm)
+        if (.not.all(ieee_is_finite(p))) then
+           if(present(valid))return
+           write (*,*) 'Nonfinite momenta in MC momentum permutation'
+           stop 1
+        endif
         tolerance=1d-12*max(1d0,sum(abs(p)))
         if (maxval(abs(sum(p_permuted(:,nincoming+1:),dim=2)
      $     -sum(p(:,nincoming+1:),dim=2))).gt.tolerance) then
+           if(present(valid))return
            write (*,*) 'MC momentum permutation changes total four-momentum'
            stop 1
         endif
@@ -548,11 +559,15 @@ c The export-time identity check forbids exchanges of unlike species.
 c Also check their on-shell invariants at the actual phase-space point.
         tolerance=1d-10*max(1d0,maxval(abs(p))**2)
         do k=nincoming+1,nexternal
-           if (abs(dot(p_permuted(:,k),p_permuted(:,k))-dot(p(:,k),p(:,k))).gt.tolerance) then
+           mass2_delta=dot(p_permuted(:,k),p_permuted(:,k))
+     $          -dot(p(:,k),p(:,k))
+           if (.not.ieee_is_finite(mass2_delta).or.abs(mass2_delta).gt.tolerance) then
+              if(present(valid))return
               write (*,*) 'MC momentum permutation changes a leg mass',k,perm(k)
               stop 1
            endif
         enddo
+        if(present(valid))valid=.true.
       end subroutine apply_momentum_permutation
 
       subroutine boost_isr_recoil(pin,pout,xi,y,phi,idir,inverse,
