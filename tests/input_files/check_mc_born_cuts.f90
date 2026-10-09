@@ -1,11 +1,12 @@
 module cut_fixture
   implicit none
   integer, parameter :: nexternal=7
-  integer :: ickkw,i_fks,j_fks,nFxFx_ren_scales
+  integer :: ickkw,i_fks,j_fks,nFxFx_ren_scales,nFKSprocess
   integer :: need_matching_S(7),need_matching_H(7),need_matching_cuts(7)
   double precision :: FxFx_fac_scale(2),FxFx_ren_scales(0:7)
   common /test_run/ickkw
   common /fks_indices/i_fks,j_fks
+  common /c_nFKSprocess/nFKSprocess
   common /c_need_matching/need_matching_S,need_matching_H,need_matching_cuts
   common /c_FxFx_scales/FxFx_fac_scale,FxFx_ren_scales,nFxFx_ren_scales
   double precision :: ptj,ptgmin
@@ -25,9 +26,15 @@ end module
 
 program check_mc_born_cuts
   use cut_fixture
+  use process_module, only: init_process_module_global,init_process_module_nbody
+  use scale_module, only: init_scale_module,compute_shower_scale_nbody, &
+       set_FxFx_shower_scale_nbody,shower_scale_hard,shower_scale_nbody, &
+       shower_scale_nbody_min,shower_scale_nbody_max,shower_scale_n1body,emsca_H
   implicit none
-  double precision :: p(0:3,7),rwgt
-  logical :: passcuts,passcuts_native_born
+  double precision :: p(0:3,7),rwgt,born_ref_scale,expected_hard,expected_scales(6,6,3)
+  double precision :: scale_factors(3)=[0.5d0,1d0,2d0]
+  integer :: k,calls_before
+  logical :: passcuts,passcuts_native_born,passed
   external passcuts,passcuts_native_born
   ickkw=3
   ptj=8d0
@@ -35,6 +42,7 @@ program check_mc_born_cuts
   gamma_is_j=.false.
   i_fks=6
   j_fks=2
+  nFKSprocess=1
   pdg=[2,-2,12,1,-11,-2,21]
   native_matching=[-99,-99,0,1,0,1,-99]
   need_matching_S=77
@@ -52,7 +60,8 @@ program check_mc_born_cuts
   ! Regression: real EW labels omit both a quark and the zero FKS slot,
   ! so the old cut accepts an unresolved gluon in the native Born state.
   if(.not.passcuts(p,rwgt))error stop 'fixture does not reproduce missing Born cut'
-  if(passcuts_native_born(p,rwgt))error stop 'accepted unresolved native Born gluon'
+  if(passcuts_native_born(p,rwgt,born_ref_scale))error stop 'accepted unresolved native Born gluon'
+  if(born_ref_scale.ne.30d0)error stop 'lost native minimum clustering scale'
   call check_restored()
 
   ! Restoring only the zero slot would still miss a quark incorrectly
@@ -62,19 +71,20 @@ program check_mc_born_cuts
   p(:,4)=[0.0012d0,0.0012d0,0d0,0d0]
   p(:,7)=[40d0,-40d0,0d0,0d0]
   if(.not.passcuts(p,rwgt))error stop 'fixture does not reproduce stale EW label'
-  if(passcuts_native_born(p,rwgt))error stop 'accepted unresolved native Born quark'
+  if(passcuts_native_born(p,rwgt,born_ref_scale))error stop 'accepted unresolved native Born quark'
   call check_restored()
 
   p(:,4)=[30d0,30d0,0d0,0d0]
-  if(.not.passcuts_native_born(p,rwgt))error stop 'rejected resolved native Born'
+  if(.not.passcuts_native_born(p,rwgt,born_ref_scale))error stop 'rejected resolved native Born'
   call check_restored()
   native_scales(1)=7d0
-  if(passcuts_native_born(p,rwgt))error stop 'ignored native Born clustering scale'
+  if(passcuts_native_born(p,rwgt,born_ref_scale))error stop 'ignored native Born clustering scale'
+  if(born_ref_scale.ne.7d0)error stop 'returned stale native minimum clustering scale'
   call check_restored()
   native_scales(1)=30d0
   FxFx_ren_scales(0)=1d0
   if(passcuts(p,rwgt))error stop 'fixture does not reproduce failing real cut'
-  if(.not.passcuts_native_born(p,rwgt))error stop 'applied real cut to native Born'
+  if(.not.passcuts_native_born(p,rwgt,born_ref_scale))error stop 'applied real cut to native Born'
   if(FxFx_ren_scales(0).ne.1d0)error stop 'failed to restore real central scale'
   call check_restored()
   FxFx_ren_scales(0)=100d0
@@ -86,15 +96,55 @@ program check_mc_born_cuts
   p(:,7)=0d0
   need_matching_H(6:7)=[1,-1]
   need_matching_cuts=need_matching_H
-  if(passcuts_native_born(p,rwgt))error stop 'wrong zero-slot insertion'
+  if(passcuts_native_born(p,rwgt,born_ref_scale))error stop 'wrong zero-slot insertion'
   call check_restored()
   if(cluster_calls.ne.6)error stop 'incorrect number of native clusterings'
 
   ickkw=0
-  if(.not.passcuts_native_born(p,rwgt))error stop 'changed non-FxFx cut path'
+  if(.not.passcuts_native_born(p,rwgt,born_ref_scale))error stop 'changed non-FxFx cut path'
+  if(born_ref_scale.ne.-1d0)error stop 'non-FxFx cut returned a clustering scale'
   if(cluster_calls.ne.6)error stop 'clustered non-FxFx point'
   call check_restored()
   if(rwgt.ne.0.375d0)error stop 'lost user cut weight'
+
+  ! Reusing the cut clustering must reproduce the ordinary native Born
+  ! shower calculation, including its damping bounds and scale factor,
+  ! with just one clustering for cuts and scales together and no RNG draw.
+  call init_process_module_global('PYTHIA8   ','all ',7,2,.false.,13000d0,1,1,3)
+  call init_process_module_nbody(6,[(0d0,k=1,6)],[3,8,1,3,1,8],1, &
+       reshape([(.false.,k=1,36)],[6,6,1]))
+  ickkw=3
+  p(:,6)=[40d0,-40d0,0d0,0d0]
+  do k=1,3
+    call init_scale_module(7,scale_factors(k),1,1)
+    native_scales=[100d0,30d0,40d0]
+    if(k.eq.2)native_scales(0)=12d0
+    if(k.eq.3)native_scales(2)=20d0
+    call compute_shower_scale_nbody(p(:,1:6),1,0d0)
+    expected_hard=shower_scale_hard
+    expected_scales(:,:,1)=shower_scale_nbody
+    expected_scales(:,:,2)=shower_scale_nbody_min
+    expected_scales(:,:,3)=shower_scale_nbody_max
+    shower_scale_hard=-111d0
+    shower_scale_nbody=-112d0
+    shower_scale_nbody_min=-113d0
+    shower_scale_nbody_max=-114d0
+    shower_scale_n1body=222d0
+    emsca_H=333d0
+    calls_before=cluster_calls
+    passed=passcuts_native_born(p,rwgt,born_ref_scale)
+    if(.not.passed)error stop 'resolved Born rejected during scale reuse'
+    call set_FxFx_shower_scale_nbody(born_ref_scale)
+    if(cluster_calls.ne.calls_before+1)error stop 'extra clustering for native Born scale'
+    if(shower_scale_hard.ne.expected_hard.or. &
+         any(shower_scale_nbody.ne.expected_scales(:,:,1)).or. &
+         any(shower_scale_nbody_min.ne.expected_scales(:,:,2)).or. &
+         any(shower_scale_nbody_max.ne.expected_scales(:,:,3))) &
+         error stop 'reused Born scale differs from ordinary native calculation'
+    if(any(shower_scale_n1body.ne.222d0).or.any(emsca_H.ne.333d0)) &
+         error stop 'native Born scale overwrote H-event scales'
+    call check_restored()
+  enddo
   write(*,*)'PASS native Born cuts'
 end program
 
@@ -104,7 +154,7 @@ subroutine cluster_and_reweight(iproc,sudakov,expanded,nscales,ren,fac,matching,
   integer :: iproc,nscales,matching(7)
   double precision :: sudakov,expanded,ren(0:7),fac
   logical :: scale_only
-  if(iproc.ne.0)error stop 'cuts requested real clustering'
+  if(iproc.ne.0.and.iproc.ne.-nFKSprocess)error stop 'requested real clustering'
   if(.not.scale_only)error stop 'cuts computed an unnecessary Sudakov'
   cluster_calls=cluster_calls+1
   matching=native_matching
@@ -134,4 +184,8 @@ logical function passcuts(p,rwgt)
   is_iso=.true.
   call identify_QCD_partons(is_iso,pp,status,pdg,is_a_j,pqcd,nqcd)
   passcuts=passcuts_fxfx(pp,pqcd,nqcd)
+end function
+
+double precision function ran2()
+  error stop 'FxFx Born scales drew a random number'
 end function

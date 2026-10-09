@@ -3,6 +3,7 @@
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -12,7 +13,7 @@ from tests.unit_tests.fks.test_momentum_maps import ROOT, TEMPLATE, fortran_rout
 @unittest.skipUnless(shutil.which('gfortran') and shutil.which('g++'),
                      'requires gfortran and g++')
 class TestMCBornCuts(unittest.TestCase):
-    def test_native_born_cuts_and_real_state_restoration(self):
+    def test_native_born_cuts_scale_reuse_and_real_state_restoration(self):
         with tempfile.TemporaryDirectory(prefix='mg5_mc_born_cuts_') as tmp:
             work = Path(tmp)
             includes = {
@@ -40,7 +41,15 @@ class TestMCBornCuts(unittest.TestCase):
                  str(TEMPLATE / 'fastjetfortran_madfks_core.cc'),
                  str(TEMPLATE / 'fjcore.cc')],
                 ['gfortran', '-O2', '-fcheck=all', '-fbacktrace',
+                 '-ffunction-sections', '-fdata-sections',
+                 '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',
                  '-ffixed-line-length-none', '-I', str(work), '-I', str(TEMPLATE),
+                 str(TEMPLATE / 'process_module.f90'),
+                 str(TEMPLATE / 'fks_phase_space_data.f'),
+                 str(TEMPLATE / 'genps_fks_helpers.f'),
+                 str(TEMPLATE / 'mcatnlo_delta_scales.f90'),
+                 str(TEMPLATE / 'herwig7_scales.f90'),
+                 str(TEMPLATE / 'scale_module.f90'),
                  str(work / 'cuts.f'),
                  str(ROOT / 'tests/input_files/check_mc_born_cuts.f90'),
                  str(TEMPLATE / 'fastjet_wrapper.f'),

@@ -1240,7 +1240,7 @@ c Sum the contributions that can be summed before taking the ABS value
      $     p_flipped(0:3,nexternal),pn(0:3,nexternal),
      $     pn_lab(0:3,nexternal),pn_cms(0:3,nexternal),probne_native,
      $     flow_factor_native,rwgt,outer_boost,gfun_save(3),
-     $     outer_channel,mc_outer_channel_weight
+     $     outer_channel,mc_outer_channel_weight,native_born_ref_scale
       double precision nbody_scales_save(nexternal-1,nexternal-1,3),
      $     n1body_scales_save(nexternal,nexternal),
      $     emsca_save(fks_configs,ndelH,ndelH),hard_scale_save
@@ -1432,15 +1432,9 @@ c Sum the contributions that can be summed before taking the ABS value
      $           flow_factor_native)
             call init_process_module_n1body_wrapper(born_flow_picked)
             if (ickkw.eq.3) then
-! Approximation: use the outer ij shower scale for every kl term rather
-! than reclustering each native underlying Born. FxFx Born damping
-! bounds are scalar, so their matrices need no relabelling. Preserve
-! the outer H dipole scales with the real-state particle permutation.
-! The native Born clustering used for cuts does not set these scales.
-               shower_scale_hard=hard_scale_save
-               shower_scale_nbody=nbody_scales_save(:,:,1)
-               shower_scale_nbody_min=nbody_scales_save(:,:,2)
-               shower_scale_nbody_max=nbody_scales_save(:,:,3)
+! Keep the common H event's dipole scales with its labels permuted.
+! The native Born starting scale and damping bounds are set below from
+! the same Born clustering that supplies the subtraction cuts.
                do j=1,nexternal
                   do i=1,nexternal
                      shower_scale_n1body(i,j)=n1body_scales_save(
@@ -1453,7 +1447,10 @@ c Sum the contributions that can be summed before taking the ABS value
                call compute_shower_scale_n1body(pn,i_fks,j_fks,
      $              mc_shower_scale_mass())
             endif
-            cuts_born=passcuts_native_born(p1_cnt(0,1,0),rwgt)
+            cuts_born=passcuts_native_born(p1_cnt(0,1,0),rwgt,
+     $           native_born_ref_scale)
+            if (ickkw.eq.3)call set_FxFx_shower_scale_nbody(
+     $           native_born_ref_scale)
             call set_cms_stuff(-100)
             if (ickkw.eq.3) call set_FxFx_scale(-3,pn)
             cuts_real=passcuts(pn,rwgt)
@@ -1561,18 +1558,20 @@ c Sum the contributions that can be summed before taking the ABS value
       mc_H_only=.false.
       end
 
-      logical function passcuts_native_born(p,rwgt)
+      logical function passcuts_native_born(p,rwgt,born_ref_scale)
 ! MC subtraction is cut on its own underlying Born process. In FxFx,
 ! Born momenta alone are not enough: passcuts also uses the clustering
 ! scales and the labels distinguishing QCD jets from EW decay products.
 ! The real-event labels can omit the zero-momentum FKS slot and leave
 ! an unresolved native Born jet uncut. Obtain the native Born cut data
 ! without replacing the outer Born/real caches or their weight factors.
+! Return its minimum clustering scale for the native shower bounds.
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       double precision p(0:3,nexternal),rwgt,sudakov,expanded_sudakov,
      $     fac_save(2),ren_save(0:nexternal)
+      double precision,intent(out) :: born_ref_scale
       double precision FxFx_fac_scale(2),FxFx_ren_scales(0:nexternal)
       integer nFxFx_ren_scales,nscales_save
       common/c_FxFx_scales/FxFx_fac_scale,FxFx_ren_scales,
@@ -1586,6 +1585,7 @@ c Sum the contributions that can be summed before taking the ABS value
       logical passcuts
       external passcuts
 
+      born_ref_scale=-1d0
       if(ickkw.ne.3)then
          passcuts_native_born=passcuts(p,rwgt)
          return
@@ -1600,6 +1600,7 @@ c Sum the contributions that can be summed before taking the ABS value
      $     nFxFx_ren_scales,FxFx_ren_scales,FxFx_fac_scale(1),
      $     born_matching,.true.)
       FxFx_fac_scale(2)=FxFx_fac_scale(1)
+      born_ref_scale=minval(FxFx_ren_scales(0:nFxFx_ren_scales))
 ! Jet counting expects the zero-momentum FKS slot to remain present.
       need_matching_cuts=[born_matching(1:i_fks-1),1,
      $     born_matching(i_fks:nexternal-1)]

@@ -23,7 +23,7 @@ module scale_module
   public :: compute_shower_scale_nbody,compute_shower_scale_n1body, &
        init_scale_module,Bornonly_shower_scale,get_random_shower_dipole_scale, &
        determine_partner,save_shower_scale_nbody,pythia8_S_scales, &
-       herwig7_S_scales,scalar_S_scales
+       herwig7_S_scales,scalar_S_scales,set_FxFx_shower_scale_nbody
   private
 contains
   
@@ -100,15 +100,11 @@ contains
     shower_scale_nbody_min=-1d0
     shower_scale_nbody_max=-1d0
     call get_global_ref_scale(next_n,p)
-    shower_scale_hard=shower_scale_factor*global_ref_scale
     if (ickkw_mod.eq.3) then
-       ! For FxFx, the scale should be the smallest clustering scale as
-       ! returned by the clustering routine. This is the global_ref_scale
-       shower_scale_nbody=shower_scale_factor*global_ref_scale
-       shower_scale_nbody_min=shower_scale_factor*global_ref_scale
-       shower_scale_nbody_max=shower_scale_factor*global_ref_scale+scaleMCdelta
+       call set_FxFx_shower_scale_nbody(global_ref_scale)
        return
     endif
+    shower_scale_hard=shower_scale_factor*global_ref_scale
     if (flow_picked.gt.0) then
        ! check valid_dipole only for the flow picked
        iflow_min=flow_picked
@@ -168,6 +164,17 @@ contains
       enddo
     endif
   end subroutine compute_shower_scale_nbody
+
+  subroutine set_FxFx_shower_scale_nbody(born_ref_scale)
+    ! FxFx uses the smallest Born clustering scale, with scalar damping
+    ! bounds. Native kl histories can reuse the clustering done for cuts.
+    ! This operation performs no clustering, Sudakov evaluation or RNG draw.
+    double precision, intent(in) :: born_ref_scale
+    shower_scale_hard=shower_scale_factor*born_ref_scale
+    shower_scale_nbody=shower_scale_hard
+    shower_scale_nbody_min=shower_scale_hard
+    shower_scale_nbody_max=shower_scale_hard+scaleMCdelta
+  end subroutine set_FxFx_shower_scale_nbody
 
   subroutine save_shower_scale_nbody(ifks,ifold,father,partner)
     integer, intent(in) :: ifks,ifold,father
