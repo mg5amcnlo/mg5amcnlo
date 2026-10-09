@@ -554,12 +554,16 @@ class Systematics(object):
             percent = lambda value: value / abs(all_cross[0]) * 100
         else:
             percent = lambda value: float('nan')
+        # a one-sided envelope (all the variations on the same side of the
+        # central value) is reported as 0% on the other side
+        up = lambda bound: percent(max(0., bound-all_cross[0]))
+        down = lambda bound: percent(max(0., all_cross[0]-bound))
         if max_scale is not None:
-            resume.write( '#     scale variation: +%2.3g%% -%2.3g%%\n' % (percent(max_scale-all_cross[0]),percent(all_cross[0]-min_scale)))
+            resume.write( '#     scale variation: +%2.3g%% -%2.3g%%\n' % (up(max_scale),down(min_scale)))
         if max_alps is not None:
-            resume.write( '#     emission scale variation: +%2.3g%% -%2.3g%%\n' % (percent(max_alps-all_cross[0]),percent(all_cross[0]-min_alps)))
+            resume.write( '#     emission scale variation: +%2.3g%% -%2.3g%%\n' % (up(max_alps),down(min_alps)))
         if max_dyn is not None and (max_dyn!= all_cross[0] or min_dyn != all_cross[0]):
-            resume.write( '#     central scheme variation: +%2.3g%% -%2.3g%%\n' % (percent(max_dyn-all_cross[0]),percent(all_cross[0]-min_dyn)))
+            resume.write( '#     central scheme variation: +%2.3g%% -%2.3g%%\n' % (up(max_dyn),down(min_dyn)))
         if self.banner.run_card['pdlabel']=='eva':
             resume.write( '# PDF variation not available for EVA.\n')
         elif self.orig_pdf.lhapdfID in pdfs:
@@ -604,7 +608,7 @@ class Systematics(object):
             if maxvalue is None:
                 resume.write("# dynamical scheme # %s : %g # %s\n" %(key, central, dyn_name[key]))
             else:
-                resume.write("# dynamical scheme # %s : %g +%2.3g%% -%2.3g%% # %s\n" %(key, central, (maxvalue-central)/abs(central)*100,(central-minvalue)/abs(central)*100, dyn_name[key]))
+                resume.write("# dynamical scheme # %s : %g +%2.3g%% -%2.3g%% # %s\n" %(key, central, max(0., maxvalue-central)/abs(central)*100,max(0., central-minvalue)/abs(central)*100, dyn_name[key]))
       
         resume.write('\n'.join(to_report))
 
