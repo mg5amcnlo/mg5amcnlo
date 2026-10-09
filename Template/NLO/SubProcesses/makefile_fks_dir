@@ -59,7 +59,7 @@ GENPS_OBJECTS = fks_phase_space_data.o genps_fks_helpers.o genps_fks_sampling.o 
 
 # Files for all executables
 FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
-	 process_module.o scale_module.o		\
+	 qed_shower_support.o process_module.o scale_module.o		\
 	 $(patsubst %.f,%.o,$(wildcard matrix_*.f)) 			\
 	 FKSParams.o real_me_chooser.o chooser_functions.o recmom.o	\
 	 $(GENPS_OBJECTS) resonance_recoil.o initial_recoil.o		\
@@ -211,8 +211,9 @@ add_write_info.o analysis_lhe.o BinothLHA.o BinothLHA_user.o \
     reweight_xsec_events.o sa_ewsudakov_dummyfcts.o setcuts.o \
     symmetry_fks_v3.o test_soft_col_limits.o veto_xsec.o write_event.o: fks_phase_space_data.o
 
+process_module.o : qed_shower_support.o
 scale_module.o : process_module.o genps_fks_helpers.o mcatnlo_delta_scales.o herwig7_scales.o
-montecarlocounter.o : scale_module.o genps_fks_helpers.o process_module.o mcatnlo_delta_scales.o
+montecarlocounter.o : scale_module.o genps_fks_helpers.o process_module.o mcatnlo_delta_scales.o FKSParams.o
 montecarlocounter.o : nexternal.inc born_nhel.inc orders.inc
 montecarlocounter.o : fks_powers.inc
 # Build the counterterm module before its callers need mc_counterterms.mod.

@@ -21,6 +21,7 @@ module FKSParams
   logical :: FKSExplicitSum=.false.
   integer :: FKSFinalRecoil=0
   integer :: FKSISRMapping=0
+  real*8 :: Pythia8MMaxGamma=10d0
 
 contains
 
@@ -92,6 +93,13 @@ contains
              read(68,*,end=999) FKSFinalRecoil
              if (FKSFinalRecoil.lt.0.or.FKSFinalRecoil.gt.2) then
                 write(*,*) 'FKSFinalRecoil must be 0, 1 or 2.'
+                stop 1
+             endif
+          else if (buff .eq. '#Pythia8MMaxGamma') then
+             read(68,*,end=999) Pythia8MMaxGamma
+             if (.not.(Pythia8MMaxGamma.ge.0.001d0.and. &
+                       Pythia8MMaxGamma.le.5000d0)) then
+                write(*,*) 'Pythia8MMaxGamma must be between 0.001 and 5000 GeV.'
                 stop 1
              endif
           else if (buff .eq. '#MCExplicitKLSum') then
@@ -230,6 +238,7 @@ contains
        write(*,*) ' > UsePolyVirtual            = ',use_poly_virtual
        write(*,*) ' > FKSFinalRecoil            = ',FKSFinalRecoil
        write(*,*) ' > FKSISRMapping             = ',FKSISRMapping
+       write(*,*) ' > Pythia8MMaxGamma           = ',Pythia8MMaxGamma
        write(*,*) ' > MCExplicitKLSum           = ',MCExplicitKLSum
        write(*,*) ' > MCSubtractionAtFixedFlow  = ',MCSubtractionAtFixedFlow
        write(*,*) ' > FKSExplicitSum            = ',FKSExplicitSum
@@ -258,6 +267,7 @@ contains
     use_poly_virtual=.true.
     FKSFinalRecoil=0
     FKSISRMapping=0
+    Pythia8MMaxGamma=10d0
     MCExplicitKLSum=.true.
     MCSubtractionAtFixedFlow=.true.
     FKSExplicitSum=.false.

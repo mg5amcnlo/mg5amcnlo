@@ -30,6 +30,7 @@ class TestMCDeadZones(unittest.TestCase):
             "      integer nexternal,nincoming\n"
             "      parameter (nexternal=6,nincoming=2)\n")
         (work / "orders.inc").write_text(
+            "      integer nsplitorders\n      parameter(nsplitorders=1)\n"
             "      integer amp_split_size\n"
             "      parameter (amp_split_size=1)\n")
         (work / "born_nhel.inc").write_text(
@@ -39,7 +40,8 @@ class TestMCDeadZones(unittest.TestCase):
         routines = [mc_counterterm_test_module(
                     ("compute_MCsubtraction_kl", "classify_mc_kernel_limits",
                      "compute_damping_weight",
-                     "emscafun", "get_dead_zone", "get_angle"))]
+                     "emscafun", "get_dead_zone", "py8_global_fsr_support", "py8_qed_isr_support", "get_angle",
+                     "find_qed_connector"))]
         routines.extend(fortran_routine(
             ROOT / "Template/NLO/Source/kin_functions.f", name)
                         for name in ("dot", "rho", "threedot"))
@@ -51,7 +53,9 @@ class TestMCDeadZones(unittest.TestCase):
                    "-ffixed-line-length-none", "-fcheck=bounds",
                    "-ffunction-sections", "-fdata-sections",
                    "-Wl,-dead_strip" if sys.platform == "darwin" else "-Wl,--gc-sections",
-                   "-I", str(work), str(TEMPLATE / "process_module.f90"),
+                   "-I", str(work), str(TEMPLATE / "qed_shower_support.f90"),
+                   str(TEMPLATE / "process_module.f90"),
+                   str(TEMPLATE / "FKSParams.f90"),
                    str(TEMPLATE / "fks_phase_space_data.f"),
                    str(TEMPLATE / "genps_fks_helpers.f"),
                    str(TEMPLATE / "mcatnlo_delta_scales.f90"),
@@ -70,6 +74,12 @@ class TestMCDeadZones(unittest.TestCase):
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("PASS " + name, result.stdout)
+
+    def test_qed_isr_channels_match_physical_beams(self):
+        self.check_case("qed_isr_channels")
+
+    def test_qed_conversion_and_charged_radiation_support(self):
+        self.check_case("qed_conversion")
 
     def test_massless_partner_roundoff(self):
         self.check_case("massless")

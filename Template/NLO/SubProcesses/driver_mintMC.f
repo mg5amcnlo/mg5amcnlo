@@ -854,6 +854,9 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             nFKS_picked_nbody=nFKS_out
          endif
          call update_fks_dir(nFKS_picked_nbody)
+c Native QED sectors can change the Born photon/fermion identity.
+c Refresh model charges and IDs before constructing recoil scales.
+         if (qed_matching) call init_process_module_nbody_wrapper()
 c Keep the Born sector even when later real-emission maps change nFKS.
          born_spread_sector_fold(ifold_counter)=nFKS_picked_nbody
          if (ini_fin_fks.eq.0) then
@@ -951,6 +954,7 @@ c for different nFKSprocess.
             wgt_me_born=0d0
             iFKS=proc_map(proc_map(0,1),i)
             call update_fks_dir(iFKS)
+            if (qed_matching) call init_process_module_nbody_wrapper()
             if (FKSExplicitSum.and.have_sum_born) then
 c The preceding sector may have rejected its radiation and invalidated
 c the active Born. Starting scales still belong to the shared sample.
@@ -1627,6 +1631,8 @@ c Sum the contributions that can be summed before taking the ABS value
       integer mothup(2,nexternal-1,maxproc)
       integer icolup(2,nexternal-1,max_bcol)
       include 'born_leshouche.inc'
+      double precision particle_charge_born(nexternal-1)
+      common /c_charges_born/particle_charge_born
 
       do i=1,nexternal-1
          mass(i)=get_mass_from_id(idup(i,1))
@@ -1649,7 +1655,7 @@ c Sum the contributions that can be summed before taking the ABS value
          enddo
       enddo
       call init_process_module_nbody(nexternal-1,mass,colour
-     $     ,max_bcol,valid_dipole)
+     $     ,max_bcol,valid_dipole,idup(:,1),particle_charge_born)
       
       end
 
@@ -1827,6 +1833,8 @@ c Sum the contributions that can be summed before taking the ABS value
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     dummy(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,dummy,niprocs
+      double precision particle_charge(nexternal)
+      common /c_charges/particle_charge
       integer nFKSprocess,fold,ifold_counter
       common/c_nFKSprocess/nFKSprocess
       common/cfl/fold,ifold_counter
@@ -1871,7 +1879,7 @@ c Sum the contributions that can be summed before taking the ABS value
       enddo
       
       call init_process_module_n1body(nexternal,mass,colour
-     $     ,maxflow,valid_dipole)
+     $     ,maxflow,valid_dipole,idup(:,1),particle_charge)
       
       end
       

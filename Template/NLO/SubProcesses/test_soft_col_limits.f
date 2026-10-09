@@ -830,6 +830,8 @@ c$$$         endif
       integer mothup(2,nexternal-1,maxproc)
       integer icolup(2,nexternal-1,max_bcol)
       include 'born_leshouche.inc'
+      double precision particle_charge_born(nexternal-1)
+      common /c_charges_born/particle_charge_born
 
       do i=1,nexternal-1
          mass(i)=get_mass_from_id(idup(i,1))
@@ -852,7 +854,7 @@ c$$$         endif
          enddo
       enddo
       call init_process_module_nbody(nexternal-1,mass,colour
-     $     ,max_bcol,valid_dipole)
+     $     ,max_bcol,valid_dipole,idup(:,1),particle_charge_born)
       
       end
 
@@ -872,6 +874,8 @@ c$$$         endif
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     dummy(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,dummy,niprocs
+      double precision particle_charge(nexternal)
+      common /c_charges/particle_charge
 
       call fill_icolor_H(bornflow,jpart,.true.)
       do i=1,nexternal
@@ -899,7 +903,7 @@ c$$$         endif
       enddo
       
       call init_process_module_n1body(nexternal,mass,colour
-     $     ,maxflow,valid_dipole)
+     $     ,maxflow,valid_dipole,idup(:,1),particle_charge)
       
       end
       

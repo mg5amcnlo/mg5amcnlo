@@ -1,0 +1,43 @@
+--- a/src/SimpleTimeShower.cc
++++ b/src/SimpleTimeShower.cc
+@@ -783,6 +783,10 @@
+   if (useSystems) {
+     for (int i = 0; i < partonSystemsPtr->sizeOut(iSys); ++i) {
+       int ii = partonSystemsPtr->getOut( iSys, i);
++      // A hard production system can contain only colourless particles.
++      // Such particles have no entry in hardPartons.
++      if (event[ii].status() == 23 && event[ii].colType() == 0)
++        isHard = true;
+       for (int iHard = 0; iHard < int(hardPartons.size()); ++iHard) {
+         if ( event[ii].isAncestor(hardPartons[iHard])
+           || ii == hardPartons[iHard]){
+@@ -2325,11 +2329,11 @@
+       for (int iS = 0; iS < partonSystemsPtr->sizeSys(); ++iS) {
+         for (int i = 0; i < partonSystemsPtr->sizeOut(iS); ++i) {
+           int ii = partonSystemsPtr->getOut( iS, i);
+-          bool hasHardAncestor = event[ii].statusAbs() < 23;
++          bool hasHardAncestor = event[ii].statusAbs() < 23
++            || (event[ii].status() == 23 && event[ii].colType() == 0);
+           for (int iHard = 0; iHard < int(hardPartons.size()); ++iHard) {
+             if ( event[ii].isAncestor(hardPartons[iHard])
+-              || ii == hardPartons[iHard]
+-              || (event[ii].status() == 23 && event[ii].colType() == 0) )
++              || ii == hardPartons[iHard] )
+               hasHardAncestor = true;
+           }
+           if (hasHardAncestor && ii !=  dip.iRadiator && event[ii].isFinal() )
+@@ -3940,11 +3944,11 @@
+     for (int iS = 0; iS < partonSystemsPtr->sizeSys(); ++iS) {
+       for (int i = 0; i < partonSystemsPtr->sizeOut(iS); ++i) {
+         int iG = partonSystemsPtr->getOut( iS, i);
+-        bool hasHardAncestor = event[iG].statusAbs() < 23;
++        bool hasHardAncestor = event[iG].statusAbs() < 23
++          || (event[iG].status() == 23 && event[iG].colType() == 0);
+         for (int iHard = 0; iHard < int(hardPartons.size()); ++iHard)
+           if ( event[iG].isAncestor(hardPartons[iHard])
+-            || iG == hardPartons[iHard]
+-            || (event[iG].status() == 23 && event[iG].colType() == 0))
++            || iG == hardPartons[iHard])
+             hasHardAncestor = true;
+         if (hasHardAncestor && iG != dipSel->iRadiator
+           && event[iG].isFinal() ) {

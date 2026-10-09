@@ -193,7 +193,7 @@ class TestPythia8Matching(unittest.TestCase):
                 'compute_splitting_kernel_icode1', 'compute_splitting_kernel_icode2',
                 'compute_splitting_kernel_icode3', 'compute_splitting_kernel_icode4',
                 'py8_gluon_recoil_weight', 'classify_mc_kernel_limits',
-                'get_dead_zone', 'get_angle',
+                'get_dead_zone', 'py8_global_fsr_support', 'py8_qed_isr_support', 'get_angle',
                 'compute_damping_weight', 'emscafun'),
             'fks_singular.f': ('AP_reduced', 'AP_reduced_SUSY', 'AP_reduced_massive',
                               'Qterms_reduced_timelike', 'Qterms_reduced_spacelike',
@@ -219,7 +219,8 @@ class TestPythia8Matching(unittest.TestCase):
                        '-ffixed-line-length-none', '-fno-automatic',
                        '-ffunction-sections', '-fdata-sections',
                        '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',
-                       '-I', str(work), str(TEMPLATE / 'process_module.f90'),
+                       '-I', str(work), str(TEMPLATE / 'qed_shower_support.f90'),
+                str(TEMPLATE / 'process_module.f90'),
                        str(TEMPLATE / 'fks_phase_space_data.f'),
                        str(TEMPLATE / 'genps_fks_helpers.f'), 'native.f90', 'scale.f90',
                        str(TEMPLATE / "FKSParams.f90"),
@@ -307,6 +308,20 @@ class TestPythia8Matching(unittest.TestCase):
                 for actual, wanted in zip(row, expected):
                     self.assertAlmostEqual(actual, wanted,
                                            delta=1e-12*max(abs(wanted), 1e-20))
+
+    def test_squark_and_quark_pythia_kernels_on_both_massive_branches(self):
+        # With identical momenta/colour, Pythia's no-MEC quark and squark
+        # shower densities agree, including the second massive FKS branch.
+        data = ''
+        for z, t in ((.8, 5000.), (.23921928965797884, 41764.76709871376)):
+            p, _ = fsr(173., 173., z, t)
+            data += ''.join(event_input(p, 173., kind, 'PYTHIA8')
+                            for kind in (2, 3))
+        for variant in ('optimized', 'checked'):
+            rows = self.run_driver('event', data, variant)
+            for quark, squark in zip(rows[::2], rows[1::2]):
+                self.assertGreater(quark[6], 0.)
+                self.assertRelative(squark[6], quark[6])
 
     def test_full_measure_on_both_massive_branches(self):
         rng = random.Random(8318)
@@ -425,6 +440,10 @@ class TestPythia8Matching(unittest.TestCase):
             expected = 1.
             if kind == 1:
                 expected = ordered_recoil(.8, 1e6, 160000., 93750.)
+            elif m and kind == 3:
+                expected = (1+.8**2)/(2*.8)  # PY8 squark numerator.
+            elif m and kind == 4:
+                expected = (4/3.)/(3/2.)  # PY8 gluino colour-end factor.
             self.assertRelative(pythia[6]/control[6], expected)
         p, _ = fsr(0., 400., .99, 1e-4)
         row = self.run_driver('event', event_input(p))[0]

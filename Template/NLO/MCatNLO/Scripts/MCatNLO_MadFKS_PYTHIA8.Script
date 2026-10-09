@@ -349,8 +349,36 @@ runMCMadFKS
 teststatus runMC
 }
 
+# Read the same photon-conversion bound used during MC subtraction.
+# Older FKS cards use the matching default. Do not use the shower card for
+# this parameter: changing it requires reintegrating the MC counterterms.
+function pythia8_mmaxgamma {
+local fks_card_path="$1"
+if [ ! -f "$fks_card_path" ]; then
+  echo 10
+  return
+fi
+awk '
+BEGIN { value = 10; want = 0 }
+$1 == "#Pythia8MMaxGamma" { want = 1; next }
+want {
+  value = $1
+  gsub(/[dD]/, "e", value)
+  if (value !~ /^[+]?([0-9]+([.][0-9]*)?|[.][0-9]+)([eE][-+]?[0-9]+)?$/ ||
+      value + 0 < 0.001 || value + 0 > 5000) exit 1
+  want = 0
+}
+END { if (want) exit 1; print value }
+' "$fks_card_path"
+}
+
 # compiles and runs the MC
 function runMCMadFKS {
+PY8_MMAXGAMMA=$(pythia8_mmaxgamma "../Cards/FKS_params.dat")
+if [ $? -ne 0 ]; then
+  echo "Invalid Pythia8MMaxGamma in Cards/FKS_params.dat" >&2
+  return 1
+fi
 ifile="MCATNLO_"$MCMODE"_input"
 exefile="MCATNLO_"$MCMODE"_EXE"
 if [ -f ./$ifile ]
@@ -569,6 +597,7 @@ TimeShower:limitPTmaxGlobal = on   ! Limits pT < min(SCALUP,mDipole/2).
 TimeShower:QEDshowerByQ = $QEDSHOWER     ! Prevent quarks from radiating photons
 TimeShower:QEDshowerByL = $QEDSHOWER      ! Prevent leptons from radiating photons
 TimeShower:QEDshowerByGamma = $QEDSHOWER  ! Prevent photons from branching
+TimeShower:mMaxGamma = $PY8_MMAXGAMMA     ! Same conversion bound as MC subtraction
 TimeShower:alphaSuseCMW = false    ! Use the CMW prescription in FSR
 TimeShower:weightGluonToQuark = 1  ! Use normal Altarelli-Parisi kernels for g -> q qbar
 TimeShower:recoilDeadCone = on     ! Gluon recoil weight included in the MC subtraction

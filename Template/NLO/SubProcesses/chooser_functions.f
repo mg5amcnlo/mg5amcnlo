@@ -148,6 +148,11 @@ c
          is_charged(i) = particle_type(i).ne.1.or.
      &                   particle_charge(i).ne.0d0
       enddo
+c Mother identity depends on the active splitting order. Refresh it
+c before reconstructing Born types, including when alternating sectors.
+      do i = 1, nsplitorders
+         split_type(i) = split_type_d(nFKSprocess,i)
+      enddo
       do i=1,nexternal
          if (i.lt.min(i_fks,j_fks)) then
             particle_type_born(i)=particle_type(i)
@@ -174,9 +179,6 @@ c
          endif
       enddo
       
-      do i = 1, nsplitorders
-         split_type(i) = split_type_d(nFKSprocess,i)
-      enddo
       iden_comp=iden_comp_FKS(nFKSprocess)
       return
       end
@@ -400,13 +402,19 @@ C the type and charges of the mother particle
       integer i_type, j_type, m_type
       double precision ch_i, ch_j, ch_m
       include 'nexternal.inc'
+      include 'orders.inc'
       integer i_fks,j_fks
+      logical split_type(nsplitorders)
+      common /c_split_type/split_type
 
       if (abs(i_type).eq.abs(j_type) .and. 
      &    abs(ch_i).eq.abs(ch_j) .and. 
      &    abs(i_type).gt.1) then
-        ! neutral color octet splitting
+        ! A quark pair has a photon mother for a QED-only splitting.
+        ! Retain the octet convention for QCD and mixed-order sectors.
          m_type=8
+         if (abs(i_type).eq.3.and.split_type(qed_pos).and.
+     &       .not.split_type(qcd_pos)) m_type=1
          ch_m = 0d0
          if ( (j_fks.le.nincoming .and.
      &         abs(i_type).eq.3 .and. j_type.ne.i_type) .or.

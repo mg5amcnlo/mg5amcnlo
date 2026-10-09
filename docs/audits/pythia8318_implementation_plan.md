@@ -1,9 +1,16 @@
 # Implementation plan for the PYTHIA8 subtraction audit
 
 Date: 27 September 2026. Baseline: `a9e1a51c5`, branch
-`MCcntRefactor_Sfun`. Updated 28 September 2026: packages A and D are
-implemented for the scoped hard-system PYTHIA8 scalar terms; the ISR and
-full process-level matching work remains outstanding.
+`MCcntRefactor_Sfun`. Packages A and D were implemented on 28 September
+2026 for the scoped hard-system PYTHIA8 scalar terms.
+
+Status correction, 9 October 2026: commit `4048df117` resolved the audited
+ISR projection mismatch by changing the shared FKS forward/inverse maps and
+finite endpoint corrections. This supersedes the separate MC projection
+and S-map repair proposed below. Commits `62dc0925b` and `85f6b30aa` retain
+the matching-compatible default and stabilize the inverse. See the
+[current mapping and validation notes](../native_fks_projection.md).
+Full process-level matching validation remains outstanding.
 
 This plan addresses [the PYTHIA 8.318 audit](pythia8318_matching.md). It
 preserves the fixed-order azimuthal correlations, the unregularized infrared
@@ -1159,4 +1166,5 @@ distinguishes repaired errors from retained matching effects.
 The baseline audit reproducer and the 30-emission PYTHIA 8.313 global-ISR
 kinematic/measure/PDF-argument check were executed. Packages A and D now
 have production fixes and compiled scalar regressions. The ISR projection
-repair and full S/H integration and matching validation remain outstanding.
+repair was subsequently implemented through the shared mapping changes
+noted above; full process-level S/H matching validation remains outstanding.

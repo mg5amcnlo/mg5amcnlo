@@ -13,6 +13,7 @@ program check_mc_dead_zones
   use scale_module
   use herwig7_scales
   use controlled_connections
+  use FKSParams, only: Pythia8MMaxGamma
   use, intrinsic :: ieee_arithmetic
   use, intrinsic :: ieee_exceptions
   implicit none
@@ -20,7 +21,13 @@ program check_mc_dead_zones
   double precision :: alsf,besf,alazi,beazi,xi,y,q,cap,z,xis,weight
   double precision :: shifts(3),coeff(3),a(3),gs(3),partner_mass,basepx
   double precision :: angular(5,5),effective(5,5)
+  double precision :: ch_i,ch_j,ch_m
+  integer :: i_type,j_type,m_type,j_pdg
+  common /cparticle_types/ ch_i,ch_j,ch_m,i_type,j_type,m_type,j_pdg
   integer :: k,j,ncon,i,status,imass
+  integer :: lpp(2)
+  double precision :: ebeam(2),xbk(2),q2fact(2)
+  common /to_collider/ ebeam,xbk,q2fact,lpp
   logical :: include_gfun,live,invalid,divzero,connected(5,5)
   logical :: softtest,colltest
   character(32) :: name
@@ -94,6 +101,144 @@ program check_mc_dead_zones
       call get_dead_zone(z,xis,pb,q,4,live,weight)
       call require(.not.live,'Herwig enforces independent scalar pT veto')
     enddo
+
+  case ('qed_isr_channels')
+    pb(:,1)=[500d0,0d0,0d0,500d0]
+    pb(:,2)=[500d0,0d0,0d0,-500d0]
+    fksfather=1
+    ileg=1
+    shat_n1=1d6
+    z=0.5d0
+    xis=1d0
+    q=1d0
+    lpp=[1,1]
+    j_type=3
+    ch_j=2d0/3d0
+    j_pdg=2
+    m_type=3
+    ch_m=ch_j
+    i_type=1
+    ch_i=0d0
+    call get_dead_zone(z,xis,pb,q,2,live,weight,2)
+    call require(live,'hadron quark photon radiation is supported')
+    m_type=1
+    ch_m=0d0
+    i_type=3
+    ch_i=ch_j
+    call get_dead_zone(z,xis,pb,q,2,live,weight,2)
+    call require(live,'hadron Born photon evolves backwards to a quark')
+    j_pdg=6
+    call get_dead_zone(z,xis,pb,q,2,live,weight,2)
+    call require(.not.live,'Born photon has no incoming top mother')
+    j_pdg=2
+    lpp=[0,0]
+    call get_dead_zone(z,xis,pb,q,2,live,weight,2)
+    call require(.not.live,'lepton beam Born photon has no backward quark evolution')
+    lpp=[1,1]
+    j_type=1
+    ch_j=-1d0
+    j_pdg=11
+    i_type=1
+    ch_i=-1d0
+    call get_dead_zone(z,xis,pb,q,2,live,weight,2)
+    call require(.not.live,'hadron Born photon has no backward lepton evolution')
+    j_pdg=22
+    ch_j=0d0
+    m_type=3
+    ch_m=2d0/3d0
+    i_type=3
+    ch_i=-ch_m
+    call get_dead_zone(z,xis,pb,q,2,live,weight,2)
+    call require(.not.live,'proton photon PDF cannot produce a backward photon mother')
+    call get_dead_zone(z,xis,pb,q,2,live,weight)
+    call require(live,'QCD support is independent of QED channel restrictions')
+    lpp=[0,0]
+    call get_dead_zone(z,xis,pb,q,2,live,weight,2)
+    call require(.not.live,'lepton beam cannot produce a backward photon mother')
+    j_pdg=11
+    ch_j=-1d0
+    m_type=1
+    ch_m=-1d0
+    i_type=1
+    ch_i=0d0
+    call get_dead_zone(z,xis,pb,q,2,live,weight,2)
+    call require(live,'ordinary lepton ISR photon radiation remains supported')
+    lpp=[2,2]
+    call get_dead_zone(z,xis,pb,q,2,live,weight,2)
+    call require(.not.live,'two UPC beams disable ISR as in launch script')
+    lpp=[2,1]
+    j_pdg=2
+    j_type=3
+    ch_j=2d0/3d0
+    m_type=1
+    ch_m=0d0
+    i_type=3
+    ch_i=ch_j
+    call get_dead_zone(z,xis,pb,q,2,live,weight,2)
+    call require(live,'one UPC beam does not disable ISR in launch script')
+    ! Restrict the active incoming side, independently of the opposite beam.
+    lpp=[0,1]
+    fksfather=2
+    ileg=2
+    call get_dead_zone(z,xis,pb,q,1,live,weight,2)
+    call require(live,'incoming side two uses its own physical beam type')
+
+  case ('qed_conversion')
+    pb(:,1)=[500d0,0d0,0d0,500d0]
+    pb(:,2)=[500d0,0d0,0d0,-500d0]
+    pb(:,3)=[400d0,400d0,0d0,0d0]
+    pb(:,4)=[300d0,-200d0,sqrt(50000d0),0d0]
+    pb(:,5)=[300d0,-200d0,-sqrt(50000d0),0d0]
+    fksfather=3
+    ileg=4
+    shat_n1=1d6
+    xm12=2d5
+    xm22=0d0
+    w1=0d0
+    w2=100d0
+    z=0.5d0
+    xis=w2*z*(1d0-z)
+    q=sqrt(xis)
+    m_type=1
+    ch_m=0d0
+    Pythia8MMaxGamma=10d0
+    call get_dead_zone(z,xis,pb,q,4,live,weight)
+    call require(live,'default QCD support ignores photon conversion bound')
+    call get_dead_zone(z,xis,pb,q,4,live,weight,2)
+    call require(.not.live,'QED conversion excludes exact upper mass bound')
+    ch_m=-1d0
+    call get_dead_zone(z,xis,pb,q,4,live,weight,2)
+    call require(live,'charged lepton radiation has no conversion mass bound')
+    ch_m=0d0
+    Pythia8MMaxGamma=11d0
+    call get_dead_zone(z,xis,pb,q,4,live,weight,2)
+    call require(live,'QED conversion uses configurable upper mass')
+    w2=1d-24
+    xis=w2*z*(1d0-z)
+    q=sqrt(xis)
+    call get_dead_zone(z,xis,pb,q,4,live,weight,2)
+    call require(live,'QED conversion subtraction retains the collinear limit')
+    ! Single massless spectator invariants in generated QED points can
+    ! be slightly spacelike. Keep their singular support without an FPE.
+    xm12=-1.3d-10
+    call ieee_set_flag(ieee_invalid,.false.)
+    call ieee_set_flag(ieee_divide_by_zero,.false.)
+    call get_dead_zone(z,xis,pb,q,4,live,weight,2)
+    call ieee_get_flag(ieee_invalid,invalid)
+    call ieee_get_flag(ieee_divide_by_zero,divzero)
+    call require(live,'massless global recoil roundoff keeps the collinear limit')
+    call require(.not.invalid.and..not.divzero,'massless global recoil has no FPE')
+    xm12=-1d-5
+    call get_dead_zone(z,xis,pb,q,4,live,weight,2)
+    call require(.not.live,'materially spacelike global recoil is rejected')
+    xm12=2d5
+    w2=100d0
+    xis=w2*z*(1d0-z)
+    q=sqrt(xis)
+    pb(:,4)=[100d0,100d0,0d0,0d0]
+    pb(:,5)=[500d0,-500d0,0d0,0d0]
+    call get_dead_zone(z,xis,pb,q,4,live,weight,2)
+    call require(.not.live,'QED conversion still obeys its local dipole scale cap')
 
   case ('massless','massive')
     partner_mass=0d0

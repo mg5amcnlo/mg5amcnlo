@@ -91,6 +91,7 @@ contains
 end module
 
 module process_module
+  logical :: qed_matching=.false.
   integer,parameter :: ndelH=5
 end module
 

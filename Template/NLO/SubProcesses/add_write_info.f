@@ -952,6 +952,16 @@ c The following works only if i_fks is always greater than j_fks.
             jpart(5,i_fks)=0
             jpart(4,j_fks)=0
             jpart(5,j_fks)=jpart(5,imother)
+         elseif (j_part.eq.1.and.i_part.eq.3) then ! q > a q
+            jpart(4,i_fks)=jpart(4,imother)
+            jpart(5,i_fks)=0
+            jpart(4,j_fks)=0
+            jpart(5,j_fks)=0
+         elseif (j_part.eq.1.and.i_part.eq.-3) then ! qb > a qb
+            jpart(4,i_fks)=0
+            jpart(5,i_fks)=jpart(5,imother)
+            jpart(4,j_fks)=0
+            jpart(5,j_fks)=0
          elseif (j_part.eq.8.and.i_part.eq.8) then ! g > g g
             if(jpart(4,imother).eq.0 .or. jpart(5,imother).eq.0)then
                write (*,*) 'Error #7 in fill_icolor_H',
@@ -1079,6 +1089,11 @@ c The following works only if i_fks is always greater than j_fks.
          elseif (j_part.eq.1.and.i_part.eq.-3) then ! qb > a qb
             jpart(4,i_fks)=0
             jpart(5,i_fks)=jpart(4,imother)
+            jpart(4,j_fks)=0
+            jpart(5,j_fks)=0
+         elseif (j_part.eq.1.and.i_part.eq.1) then ! lepton/photon ISR
+            jpart(4,i_fks)=0
+            jpart(5,i_fks)=0
             jpart(4,j_fks)=0
             jpart(5,j_fks)=0
          elseif (j_part.eq.8.and.i_part.eq.8) then

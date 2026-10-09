@@ -3,6 +3,14 @@
 Audit date: 27 September 2026. Repository revision: `a9e1a51c5`, branch
 `MCcntRefactor_Sfun`. This audit changes no production routines.
 
+Status correction, 9 October 2026: the ISR projection finding below is
+historical. Commit `4048df117` (1 October) replaced the shared FKS ISR
+forward/inverse maps with the Pythia-like recoil and emitter-only Bjorken
+rescaling, including finite endpoint corrections. Commit `62dc0925b`
+retained this map for shower matching; `85f6b30aa` stabilized its inverse.
+See [the current mapping and validation notes](../native_fks_projection.md).
+Full process-level QED matching validation remains outstanding.
+
 Implementation update, 28 September 2026: production fixes for findings
 **2, 3 and 5** are implemented. The findings and numerical values below
 describe the original audit revision. The new compiled regressions are in
@@ -44,8 +52,9 @@ is `8.8e-14`. The first Jacobian is `28658.690470045796` in both ordinary
 and infinity-initialized builds. The ordered recoil fixture remains
 `0.7530955643618137`; its production scalar sum is tested separately.
 These scalar regressions do not establish full process-level S/H matching.
-The ISR projection finding and the deliberately retained angular, infrared,
-mass-scheme and G-prescription differences still require their separate work.
+The ISR projection finding was addressed by the later mapping changes noted
+above. The deliberately retained angular, infrared, mass-scheme and
+G-prescription differences still require their separate validation.
 
 The nine matching tests and 49 selected existing FKS regressions pass. The full
 production counter and its module dependencies also compile against fresh

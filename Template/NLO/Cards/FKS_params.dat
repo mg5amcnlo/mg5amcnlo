@@ -214,6 +214,13 @@
 ! MC@NLO construction
 ! ==========================================================================
 !
+! Upper photon-conversion mass in PYTHIA8 QED MC subtraction (GeV).
+! The shower launch script uses the same value for TimeShower:mMaxGamma.
+! Rerun integration/grid setup after changing this setting.
+#Pythia8MMaxGamma
+10d0
+! Default :: 10d0
+!
 ! Use the refactored MC@NLO construction.  In this mode the complete
 ! explicit sum over native (kl) histories is formed before multiplying
 ! H-event subtraction terms by the outer S_ij function.

@@ -774,6 +774,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'orderstag_base.inc',
                      'orderstags_glob.dat',
                      'polfit.f',
+                     'qed_shower_support.f90',
                      'process_module.f90',
                      'scale_module.f90']
 

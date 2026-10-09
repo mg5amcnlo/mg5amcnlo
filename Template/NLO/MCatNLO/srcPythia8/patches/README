@@ -1,0 +1,137 @@
+PYTHIA 8.318 global recoil for QED matching
+
+The accompanying patch fixes three missing colourless hard-system cases in
+SimpleTimeShower.cc. A hard event containing only colourless particles has no
+entries in hardPartons. Stock 8.318 then fails to mark it as a hard shower
+system and omits its outgoing particles from the global recoil sum. The
+patch recognizes colourless hard-production particles when preparing the
+system and when constructing the trial and accepted recoil momenta.
+
+Target: https://gitlab.com/Pythia8/releases/-/blob/pythia8318/src/SimpleTimeShower.cc
+Original source SHA256:
+f20a26c9d6a52ea2330288b9558140cc70abb88cd5158c249c9221417120e49b
+
+Apply in a separate PYTHIA 8.318 source checkout with:
+  patch -p1 < /path/to/pythia8318-global-qed.patch
+Build that checkout normally and select its library when compiling the
+shower driver. This repository does not modify an installed PYTHIA library
+or substitute symbols into production shower executables.
+
+The QED global-recoil configuration for a fixed external multiplicity is:
+  TimeShower:globalRecoil = on
+  TimeShower:globalRecoilMode = 0
+  TimeShower:nMaxGlobalRecoil = N
+  TimeShower:pTmaxMatch = 1
+  TimeShower:pTmaxFudge = 1.
+  TimeShower:limitPTmaxGlobal = on
+  TimeShower:MEcorrections = off
+  TimeShower:weightGluonToQuark = 1
+  SpaceShower:pTmaxMatch = 1
+  SpaceShower:pTmaxFudge = 1.
+  SpaceShower:MEcorrections = off
+  SpaceShower:rapidityOrder = off
+
+Here N is the complete Born final-state multiplicity, including leptons,
+photons and neutral spectators. With mode 0, this permits global recoil for
+the first emission in an S event. An H event has N+1 outgoing particles and
+uses local recoil; so does an S event after an ISR or FSR emission. This
+selection follows event multiplicity. Mode 2 instead uses proposal and
+coloured-parton counters, correcting the proposal count for some rejected
+branchings. The modes can differ in shower competition and veto handling;
+they are not simply "first accepted" versus "first trial" prescriptions.
+The standard QCD mode-2 configuration in the launch script is unchanged.
+Modes 1 and 2 apply their special ancestry/counting rules only to coloured
+radiators in this PYTHIA release and must not be reused for QED matching.
+
+This configuration applies to a two-incoming hard process with stable
+external particles and a fixed Born multiplicity. Decay showers, changed
+resonance assignments, and samples with several Born multiplicities require
+separate recoil and S/H classification validation. In particular, do not
+infer N from the light-QCD npNLO attribute or nPartonsInBorn.
+
+The photon-conversion mass bound is controlled by #Pythia8MMaxGamma in
+Cards/FKS_params.dat (default 10 GeV). The launch script passes the same
+value to TimeShower:mMaxGamma. Reintegrate when changing it; overriding
+TimeShower:mMaxGamma later in pythia8_options would break that agreement.
+The MC subtraction retains its infrared limits and does not cut them off
+at the shower's nonperturbative termination scale.
+
+Initial-state QED support also follows SimpleSpaceShower 8.318. Its
+backward photon-mother -> fermion-daughter conversion exists only for a
+physical photon beam, which this launch script does not configure. A
+photon PDF inside a proton does not enable that channel. Backward evolution
+of a Born incoming photon is supported only with quark mothers (flavours
+1 through 5) in hadron beams, not lepton mothers or lepton beams. The raw MC
+subtraction is zero for these absent shower channels; the existing G
+replacement remains in place. Ordinary charged-fermion photon radiation
+remains supported. Both UPC beam codes equal to 2 disable all ISR, as in
+the launch script; a single such beam does not disable the other side.
+
+The NLO QED user-interface guard remains enabled. This source patch and the
+scalar kernel/support checks alone do not establish an end-to-end NLO QED
+S/H cancellation or the normalization of the shower's first-order expansion.
+In particular, zero raw subtraction for the absent ISR conversion channels
+reproduces the shower's support; it does not provide a finite exclusive
+MC@NLO H contribution in their collinear limit. Generated MC/ME limit tests
+for those channels fail. Processes containing them remain unsupported until
+their matching treatment is implemented; retain the launch guard.
+
+Validation against the actual shower
+
+From the MG5 source root, with an unmodified PYTHIA 8.318 shared-library
+build and g++ available, run:
+  python3 docs/audits/check_pythia8_qed_global.py /path/to/pythia8318
+The script verifies the reference source hash, patches a temporary copy,
+and compiles tests/input_files/check_pythia8_qed_global.cc. Only the test
+executable overrides the stock SimpleTimeShower definitions; all temporary
+files are removed and the installed source and library remain unchanged.
+
+The fixture showers 500 e+ e- -> mu+ mu- tau+ tau- S events and 500 H events
+with an extra photon, with massless stable leptons and ISR disabled. A
+UserHooks check distinguishes the first global recoil (all three Born
+spectators copied) from local recoil (one spectator copied), checks later
+emissions remain local, and verifies final-state energy and momentum.
+At seed 734612 the unpatched control gave 345 first-emission recoil
+failures. The patched shower gave 322 first and 184 later S emissions,
+330 first and 206 later H emissions, with zero recoil or event failures.
+The largest component-sum momentum residual was 1.85e-13 GeV. This verifies
+the recoil configuration and source patch; it does not test matched weights.
+
+Massive W and SUSY radiators
+
+The PYTHIA8 MC counterterms now use the no-MEC SimpleTimeShower numerator
+1+z^2 for W-to-W-photon and squark-to-squark-gluon radiation, replacing
+the scalar numerator 2z. Final-state W bosons are included in the QED
+recoil and shower-scale routing. Incoming W evolution is unsupported.
+Other showers retain their existing spin-dependent SUSY kernels.
+
+With MECs off, PYTHIA 8.318 assigns gluinos two ordinary triplet colour
+ends, each with CF, rather than CA/2. The raw PYTHIA8 gluino counterterm
+now reproduces that behavior. The physical SUSY splitting functions and
+the physical soft term supplied by the G replacement are unchanged.
+Matching the shower's 2 CF sum does not change it into the physical CA;
+full differential matching validation remains necessary.
+Soft finiteness relies on the retained G replacement: schematically the
+counterterm is G_soft D_PYTHIA + (1-G_soft) C_FKS, with G_soft -> 0 in the
+soft limit. C_FKS keeps the physical octet colour charge. Using the raw
+2 CF shower kernel alone in R-D would leave a soft mismatch. The G repair
+preserves local finiteness but does not repair PYTHIA's soft radiation;
+it leaves the usual soft-region G dependence for infrared-safe observables
+(see arXiv:1405.0301, eq. 2.117; that paper uses the complementary G).
+
+Run the reproducible massive-radiator shower probe with:
+  python3 docs/audits/check_pythia8_massive_radiators.py /path/to/pythia8318
+It uses the same isolated-source procedure, with MECs off and global
+recoil on (mode 0 for W pairs, mode 2 for coloured pairs). At seed 734612,
+all 1500 events passed: W radiation gave 475 checked QED trials and 382
+accepted emissions; squarks gave 4929 QCD trials/635 emissions and 130
+QED trials/39 emissions; gluinos gave 15292 QCD trials/1231 emissions.
+Both charge/colour ends, 1+z^2 numerators and per-end charge/colour factors
+were checked. The squark QED probe checks PYTHIA itself; MG5's QED routing
+still excludes arbitrary BSM resonances. These are kernel and routing
+checks, not a validation of complete matched event weights.
+
+The focused MG5 kernel, mapping, recoil, scale and support suite passed
+46 tests. A fresh e+ e- -> W+ W- [QED] export also built the production
+soft-limit executable and passed 20 random soft tests for each W emitter
+(40/40), including the existing G replacement.

@@ -67,6 +67,7 @@ class TestMCEventColours(unittest.TestCase):
                 '-ffixed-line-length-none', '-ffunction-sections', '-fdata-sections',
                 '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',
                 '-I', str(work), str(work / 'contexts.f90'),
+                str(TEMPLATE / 'qed_shower_support.f90'),
                 str(TEMPLATE / 'process_module.f90'),
                 str(TEMPLATE / 'fks_phase_space_data.f'),
                 str(TEMPLATE / 'genps_fks_helpers.f'),

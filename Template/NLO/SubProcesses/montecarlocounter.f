@@ -52,6 +52,7 @@ c   Shower maps and analytic kernels are private module procedures.
       subroutine set_QCD_flows
 c Refresh leading Born flows and double-gluon flags. Partner lists are
 c scratch data used only to validate these colour connections.
+      use process_module, only: qed_matching
       implicit none
       include "genps.inc"
       include 'nFKSconfigs.inc'
@@ -91,9 +92,10 @@ c
       ipartners=0
       colorflow=0
       notagluon=.true.
+      qed_matching=split_type(qed_pos)
 
 c This prepares QCD partners and the allowed Born colour flows.
-c QED connection selection is not supported by the matching driver.
+c QED recoil connections are computed from the current Born momenta.
 
 c ipartners(0): number of particles that can be colour or anticolour partner
 c   of the father, the Born-level particle to which i_fks and j_fks are
@@ -278,8 +280,7 @@ c so that the two connections can be restored when evaluating kernels.
         enddo
 
       else if (split_type(qed_pos)) then
-        ! do nothing, the partner will be assigned at run-time
-        ! (it is kinematics-dependent)
+        ! QED partners are selected from charges and momenta at run-time.
         continue
       endif
       call check_QCD_flows(notagluon,ipartners,colorflow)
@@ -444,14 +445,16 @@ c G replacement: Hhat_ij = S_ij sum_kl P_kl (S_kl R - M_kl).
      $     ,include_gfun)
 !     compute MC subtraction term for the 'kl' configuration
 
-!     find to which particle(s) fksfather connects in the colour flow
-      call find_color_connectors(born_flow_picked,fksfather,n_connect
-     $     ,i_connect)
-
 c Born amplitudes and the splitting order belong to the history and do
 c not depend on its colour connection. Prepare them once per history.
       call prepare_MCsubtraction_born(p,xi,y,p_born,kernel_index,
      $     born_weights,born_spin_weights)
+      if (kernel_index.eq.2) then
+         call find_qed_connector(p_born,fksfather,n_connect,i_connect)
+      else
+         call find_color_connectors(born_flow_picked,fksfather,n_connect
+     $        ,i_connect)
+      endif
       kernel_limits=classify_mc_kernel_limits(xi,y)
       qMC=get_qMC(xi,y)
 
@@ -498,6 +501,31 @@ c connected twice to the same partner, including their multiplicity.
          amp_split_xmcxsec(1:amp_split_size,1:2)=0d0
       endif
       end subroutine compute_MCsubtraction_kl
+
+      subroutine find_qed_connector(p_born,iparticle,n_connect,i_connect)
+      use process_module, only: refresh_qed_dipoles,qed_dipole_n
+      implicit none
+      double precision, intent(in) :: p_born(0:3,nexternal-1)
+      integer, intent(in) :: iparticle
+      integer, intent(out) :: n_connect,i_connect(2)
+      integer i
+      call refresh_qed_dipoles(p_born,.true.)
+      n_connect=0
+      i_connect=0
+      do i=1,nexternal-1
+         if (.not.qed_dipole_n(iparticle,i)) cycle
+         n_connect=n_connect+1
+         if (n_connect.gt.1) then
+            write(*,*) 'Multiple PYTHIA8 QED recoil connections'
+            stop 1
+         endif
+         i_connect(n_connect)=i
+      enddo
+      if (n_connect.ne.1) then
+         write(*,*) 'No PYTHIA8 QED recoil connection',iparticle
+         stop 1
+      endif
+      end subroutine find_qed_connector
 
       subroutine find_color_connectors(iflow,iparticle,n_connect
      $     ,i_connect)
@@ -568,6 +596,8 @@ c single correction order supported by MC@NLO.
       subroutine prepare_MCsubtraction_born(p,xi,y,p_born,
      $     kernel_index,born_weights,born_spin_weights)
       use scale_module, only: born_flow_picked
+      use process_module, only: shower_mc_mod,mcatnlo_delta_mod,
+     $     ickkw_mod
       implicit none
       include 'orders.inc'
       double precision, intent(in) :: p(0:3,nexternal),xi,y
@@ -593,11 +623,19 @@ c single correction order supported by MC@NLO.
          stop 1
       endif
       if (iord.eq.qed_pos) then
-         write (*,*) 'QED colour connections are not implemented ',
-     $        'in compute_MCsubtraction_kl'
-         stop 1
+         if (shower_mc_mod.ne.'PYTHIA8') then
+            write (*,*) 'QED MC subtraction requires PYTHIA8'
+            stop 1
+         endif
+         if (mcatnlo_delta_mod.or.ickkw_mod.eq.3) then
+            write (*,*) 'QED MC subtraction does not support ',
+     $           'MC@NLO-Delta or FxFx'
+            stop 1
+         endif
+         kernel_index=2
+      else
+         kernel_index=1
       endif
-      kernel_index=1
       call get_mbar(p,xi,y,p_born,ileg,born_flow_picked,iord,
      $     born_weights,born_spin_weights)
       end subroutine prepare_MCsubtraction_born
@@ -625,7 +663,8 @@ c classification. Damping is also retained by the caller for G replacement.
 
       E0sq=dot(p_born(0,fksfather),p_born(0,i_connect))
       call get_shower_variables(E0sq,z,xi,xjac)
-      call get_dead_zone(z,xi,p_born,qMC,i_connect,lzone,PY6PTweight)
+      call get_dead_zone(z,xi,p_born,qMC,i_connect,lzone,PY6PTweight,
+     $     kernel_index)
 
       xkern=0d0
       xkernazi=0d0
@@ -803,8 +842,8 @@ c collinear approximation and soft boundary. G-functions cover soft points.
       double precision xkern(1:2),xkernazi(1:2),s,z,xi,xfact
      $     ,ap(1:2),Q(1:2)
       integer N_P
-      double precision vca,one
-      parameter (vca=3d0)
+      double precision vca,vcf,one
+      parameter (vca=3d0,vcf=4d0/3d0)
       parameter (one=1d0)
 c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision       ch_i,ch_j,ch_m
@@ -848,6 +887,11 @@ c
             needs_shower_jacobian=.true.
             xfact=xfact_ileg3(N_p)
             call AP_reduced_SUSY(j_type,i_type,ch_m,ch_i,one,z,ap)
+! PYTHIA8 with MECs off gives each gluino colour end CF, not CA/2.
+! Match that shower normalization here without changing the physical
+! SUSY AP kernel or the FKS soft term supplied by the G replacement.
+            if(shower_mc_mod.eq.'PYTHIA8'.and.
+     &           abs(j_pdg).eq.1000021) ap(1)=ap(1)*N_p*vcf/vca
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
          endif
 c
@@ -906,8 +950,8 @@ c g->qq, a->qq, a->ee (icode=2)
          N_p=1
          if(kernel_limits%collinear)then
             xkern(1)=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
-            xkern(2)=xkern(1) * dble(gal(1))**2 / g**2 *
-     &           ch_i**2 * abs(i_type) / vtf
+            xkern(2)=(dble(gal(1))**2/N_p)*4*ch_i**2*
+     &           abs(i_type)*(1-x)*((1-x)**2+x**2)/(s*x)
          elseif(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg12(N_p)
@@ -917,21 +961,25 @@ c g->qq, a->qq, a->ee (icode=2)
 c
       elseif(ileg.eq.4)then
          N_p=2
+c A photon has one normalized recoil connection; a gluon has two.
+         if (m_type.eq.1) N_p=1
          if(kernel_limits%collinear)then
             xkern(1)=(g**2/N_p)*( 4*vtf*(1-x)*
      &           (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
      &           ( (s-xm12)**2*(s*x-xm12) )
-            xkern(2)=xkern(1) * dble(gal(1))**2 / g**2 *
-     &           ch_i**2 * abs(i_type) / vtf
+            xkern(2)=(dble(gal(1))**2/N_p)*(4*ch_i**2*
+     &           abs(i_type)*(1-x)*
+     &           (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2))/
+     &           ((s-xm12)**2*(s*x-xm12))
             xkernazi(1)=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
-            xkernazi(2)=xkernazi(1) * dble(gal(1))**2 / g**2 *
-     &           ch_i**2 * abs(i_type) / vtf
+            xkernazi(2)=(dble(gal(1))**2/N_p)*
+     &           (16*ch_i**2*abs(i_type)*s*(1-x)**2)/((s-xm12)**2)
          elseif(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg4(N_p)
-            call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
+            call AP_reduced(j_type,i_type,ch_j,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
-            call Qterms_reduced_timelike(j_type,i_type,ch_m,ch_i,one,z
+            call Qterms_reduced_timelike(j_type,i_type,ch_j,ch_i,one,z
      $           ,Q)
             xkernazi(1:2)=xfact*Q(1:2)/(xi*(1-z))
          endif
@@ -961,13 +1009,14 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 c q->gq, q->aq, e->ae (icode=3)
       if(ileg.le.2)then
          N_p=2
+         if (m_type.eq.1) N_p=1
          if(kernel_limits%collinear)then
             xkern(1)=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
-            xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) *
-     &           (ch_i**2 / vcf)
+            xkern(2)=(dble(gal(1))**2/N_p)*4*ch_i**2*
+     &           (1-x)*((1-x)**2+1)/(s*x**2)
             xkernazi(1)=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
-            xkernazi(2)=xkernazi(1) * (dble(gal(1))**2 / g**2) *
-     &           (ch_i**2 / vcf)
+            xkernazi(2)=-(dble(gal(1))**2/N_p)*
+     &           16*ch_i**2*(1-x)**2/(s*x**2)
          elseif(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg12(N_p)
@@ -983,7 +1032,7 @@ c
          if(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg3(N_p)
-            call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
+            call AP_reduced(j_type,i_type,ch_j,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
          endif
 c
@@ -993,12 +1042,13 @@ c
             xkern(1)=(g**2/N_p)*
      &           ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
      &           ( (s-xm12)*(s*x-xm12)**2 )
-            xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) *
-     &           (ch_i**2 / vcf)
+            xkern(2)=(dble(gal(1))**2/N_p)*
+     &           (4*ch_i**2*(1-x)*(s**2*(1-x)**2+(s-xm12)**2))/
+     &           ((s-xm12)*(s*x-xm12)**2)
          elseif(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg4(N_p)
-            call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
+            call AP_reduced(j_type,i_type,ch_j,ch_i,one,z,ap)
             xkern(1:2)=xfact*ap(1:2)/(xi*(1-z))
          endif
       endif
@@ -1029,8 +1079,8 @@ c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
          N_p=1
          if(kernel_limits%collinear)then
             xkern(1)=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
-            xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) *
-     &           (ch_m**2 / vcf)
+            xkern(2)=(dble(gal(1))**2/N_p)*4*ch_m**2*
+     &           (1+x**2)/(s*x)
          elseif(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg12(N_p)
@@ -1043,7 +1093,13 @@ c
          if(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg3(N_p)
-            if(abs(j_pdg).le.6)then
+! PYTHIA's no-MEC charged/triplet emission uses the same 1+z**2
+! numerator for quarks, leptons, squarks and charged resonances (W).
+! Keep the spin-dependent SUSY kernels for the other showers.
+            if(shower_mc_mod.eq.'PYTHIA8')then
+               call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
+            elseif(abs(j_pdg).le.6.or.abs(j_pdg).eq.11.or.
+     &           abs(j_pdg).eq.13.or.abs(j_pdg).eq.15)then
                if(shower_mc_mod(1:7).ne.'HERWIG7')
      &              call AP_reduced(j_type,i_type,ch_m,ch_i,one,z,ap)
                if(shower_mc_mod(1:7).eq.'HERWIG7')
@@ -1061,8 +1117,9 @@ c
             xkern(1)=(g**2/N_p)*4*vcf*
      &           ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
      &           ( s*(s-xm12)*(s*x-xm12) )
-            xkern(2)=xkern(1) * (dble(gal(1))**2 / g**2) *
-     &           (ch_j**2 / vcf)
+            xkern(2)=(dble(gal(1))**2/N_p)*4*ch_j**2*
+     &           (s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12))/
+     &           (s*(s-xm12)*(s*x-xm12))
          elseif(kernel_limits%nonsoft)then
             needs_shower_jacobian=.true.
             xfact=xfact_ileg4(N_p)
@@ -1923,8 +1980,9 @@ c polarization-vector phase. Keep the original multiplication order.
      $           amp_split_borntilde(iamp)*dconjg(azifact)
          enddo
       elseif (ileg.eq.3.or.ileg.eq.4) then
-         if ((abs(j_type).eq.3.or.ch_j.ne.0d0).and.
-     $       (i_type.eq.8.or.i_type.eq.1).and.ch_i.eq.0d0) then
+         if (abs(m_type).eq.3.or.ch_m.ne.0d0) then
+c A fermion mother has no azimuthal Born correlation, for either
+c ordering of the photon and fermion daughters.
             borntilde=czero
             amp_split_borntilde=czero
          elseif ((m_type.eq.8.or.m_type.eq.1).and.ch_m.eq.0d0) then
@@ -2880,16 +2938,28 @@ c
       end subroutine dinvariants_dFKS
 
 
-      subroutine get_dead_zone(z,xi,p_born,qMC,ipartner,lzone,PY6PTweight)
+      subroutine get_dead_zone(z,xi,p_born,qMC,ipartner,lzone,
+     $     PY6PTweight,kernel_index)
       use process_module
       use scale_module
+      use FKSParams, only: Pythia8MMaxGamma
       implicit none
       integer ipartner,i
+      integer, optional, intent(in) :: kernel_index
+      logical qed_conversion
+c Exact collider COMMON layout from run.inc; only beam types are needed.
+      integer lpp(2)
+      double precision ebeam(2),xbk(2),q2fact(2)
+      common/to_collider/ebeam,xbk,q2fact,lpp
+      double precision ch_i,ch_j,ch_m
+      integer i_type,j_type,m_type,j_pdg
+      common/cparticle_types/ch_i,ch_j,ch_m,
+     &                       i_type,j_type,m_type,j_pdg
       double precision z,xi,qMC,PY6PTweight
       logical lzone
 
       double precision p_born(0:3,nexternal-1)
-      double precision upscale2,xmp2,xmm2,xmr2,ww,Q2,lambda,e0sq,beta,ycc,mdip,mdip_g,zp1,zm1,zp2,zm2,zp3,zm3,theta2p
+      double precision upscale2,xmp2,xmm2,xmr2,ww,Q2,lambda,e0sq,beta,ycc,mdip,mdip_g,zp1,zm1,theta2p
      $     ,max_scale
 
       double precision ppartner(0:3),pfather(0:3)
@@ -2901,6 +2971,22 @@ c
 
 c Define the auxiliary weight even for an invalid shower point.
       PY6PTweight=1d0
+      qed_conversion=.false.
+      if (present(kernel_index)) then
+         if (kernel_index.eq.2.and.ileg.gt.2)
+     $        qed_conversion=m_type.eq.1.and.abs(ch_m).lt.tiny
+         if (kernel_index.eq.2.and.ileg.le.2.and.
+     $        shower_mc_mod.eq.'PYTHIA8') then
+c The launch script disables ISR for two elastic-photon/UPC beams.
+c Otherwise test channels against the physical beam, not its PDF species.
+            if ((lpp(1).eq.2.and.lpp(2).eq.2).or.
+     $          .not.py8_qed_isr_support(lpp(fksfather),j_type,ch_j,
+     $          m_type,ch_m,i_type,ch_i,j_pdg)) then
+               lzone=.false.
+               return
+            endif
+         endif
+      endif
 c Skip if unphysical shower variables
       if(z.lt.0d0.or.xi.lt.0d0) then
          lzone=.false.
@@ -2939,22 +3025,30 @@ c Definition and initialisation of variables
             zm1=(1+(xmm2-beta*ww)/(xmm2+ww))/2
          endif
          if (shower_mc_mod(1:7).eq.'PYTHIA8') then
-            beta=sqrt(1-4*shat_n1*(xmm2+ww)/(shat_n1-xmr2+xmm2+ww)**2)
-            mdip  =sqrt((sqrt(xmp2+xmm2+2*e0sq)-sqrt(xmp2))**2-xmm2)
+            if (.not.py8_global_fsr_support(z,xi,shat_n1,xmm2,
+     $           xmr2,xmm2+ww,qed_conversion,Pythia8MMaxGamma)) then
+               lzone=.false.
+               return
+            endif
+c The support helper permits only roundoff-sized spacelike recoil masses.
+c Clamp those before the square root of the global spectator mass.
+            xmr2=max(0d0,xmr2)
+            mdip  =sqrt(max(0d0,
+     $           (sqrt(xmp2+xmm2+2*e0sq)-sqrt(xmp2))**2-xmm2))
             ! mdip corresponds to sqrt(dip.m2DipCorr)
             ! (around line 2305 in Pythia TimeShower.cc)
             mdip_g=sqrt((sqrt(shat_n1) -sqrt(xmr2))**2-xmm2)
             ! Global-recoil adaption of the above
-            zp2=(1+beta)/2      ! These are the solutions of equation q2 s == z(1-z)(s+q2-xmr2)^2
-            zm2=(1-beta)/2      ! where q2 = (p_i_FKS + p_j_FKS)^2
-            ! Note that this is the global-recoil analogue of eq. (24) in 0408302
-            zp3=(1+sqrt(1-4*xi/mdip_g**2))/2 ! These are the analogous of eq. (23) in 0408302
-            zm3=(1-sqrt(1-4*xi/mdip_g**2))/2 ! for the global recoil
+            ! Both global z bounds were checked without square roots
+            ! in py8_global_fsr_support above.
          endif
       endif
 
 c Dead zones
-c IMPLEMENT QED DZ's!
+c QED photon radiation has the same global recoil support as QCD.
+c Photon conversion additionally has a maximum pair invariant mass.
+c Keep the singular limits: the shower infrared cutoff is not an MC
+c subtraction dead zone.
       if(shower_mc_mod(1:7).eq.'HERWIG6')then
          lzone=.false.
          if(ileg.le.2.and.z**2.ge.xi)lzone=.true.
@@ -2995,7 +3089,6 @@ c
    ! Pythia as well in the global recoil scheme, constrains radiation to be
    ! softer than local dipole mass divided by two
             max_scale=min(max_scale,mdip/2,mdip_g/2)
-            if(z.gt.min(zp2,zp3).or.z.lt.max(zm2,zm3))lzone=.false.
          endif
 
       endif
@@ -3006,6 +3099,78 @@ c
 
       return
       end subroutine get_dead_zone
+
+      logical function py8_qed_isr_support(beam_type,real_type,
+     $     real_charge,born_type,born_charge,emitted_type,
+     $     emitted_charge,real_pdg)
+c SimpleSpaceShower::pT2nextQED, PYTHIA 8.318. In backward evolution
+c the Born incoming leg is the daughter and the real incoming leg is
+c the mother. The launch script supplies proton/neutron or lepton beams;
+c it does not configure a physical photon beam.
+      implicit none
+      integer, intent(in) :: beam_type,real_type,born_type,
+     $     emitted_type,real_pdg
+      double precision, intent(in) :: real_charge,born_charge,
+     $     emitted_charge
+      logical hadron_beam,lepton_beam,quark_mother,lepton_mother
+      double precision, parameter :: charge_zero=1d-12
+      hadron_beam=abs(beam_type).eq.1.or.abs(beam_type).eq.2
+      lepton_beam=beam_type.eq.0.or.beam_type.eq.3.or.beam_type.eq.4
+      py8_qed_isr_support=.false.
+      if (.not.(hadron_beam.or.lepton_beam)) return
+c A photon mother -> fermion daughter is implemented only when the
+c physical beam itself is a photon. A photon PDF in a proton is not that.
+      if (real_type.eq.1.and.abs(real_charge).lt.charge_zero) return
+      quark_mother=abs(real_type).eq.3.and.abs(real_pdg).ge.1.and.
+     $     abs(real_pdg).le.5
+      lepton_mother=real_type.eq.1.and.
+     $     (abs(real_pdg).eq.11.or.abs(real_pdg).eq.13.or.
+     $      abs(real_pdg).eq.15)
+      if (.not.(quark_mother.or.lepton_mother)) return
+c An incoming Born photon evolves backwards only to quarks in hadron
+c beams. The lepton/photon-beam branch explicitly returns for this case.
+      if (born_type.eq.1.and.abs(born_charge).lt.charge_zero) then
+         py8_qed_isr_support=hadron_beam.and.quark_mother.and.
+     $        abs(emitted_type).eq.3
+         return
+      endif
+c Ordinary f -> f gamma radiation exists for charged fermions.
+      py8_qed_isr_support=abs(real_charge).gt.charge_zero.and.
+     $     abs(born_charge).gt.charge_zero.and.emitted_type.eq.1.and.
+     $     abs(emitted_charge).lt.charge_zero
+      end function py8_qed_isr_support
+
+
+      logical function py8_global_fsr_support(z,pt2,s,mrad2,mrec2,
+     $     mpair2,conversion,mmaxgamma)
+c SimpleTimeShower::pT2nextQED/QCD (PYTHIA 8.318): the dipole
+c mass and recoil mass are those of the complete hard final state.
+c Write both z boundaries as inequalities to avoid negative square roots
+c and cancellation in 1-sqrt(1-epsilon) near a singular limit.
+      implicit none
+      double precision, intent(in) :: z,pt2,s,mrad2,mrec2,mpair2,
+     $     mmaxgamma
+      logical, intent(in) :: conversion
+      double precision mdip2,zprod,mrec2_safe
+      py8_global_fsr_support=.false.
+      if (s.le.0d0.or.mrad2.lt.0d0.or.
+     $    mpair2.lt.0d0.or.pt2.lt.0d0.or.z.lt.0d0.or.z.gt.1d0)
+     $     return
+c A massless spectator invariant is obtained from a Minkowski dot
+c product and can be a few ulps below zero. Its components are bounded
+c by sqrt(s) in this frame; reject any negative value beyond roundoff.
+      if (mrec2.lt.-64d0*epsilon(1d0)*s) return
+      mrec2_safe=max(0d0,mrec2)
+      if (mrec2_safe.ge.s) return
+      mdip2=(sqrt(s)-sqrt(mrec2_safe))**2-mrad2
+      if (mdip2.le.0d0) return
+      zprod=z*(1d0-z)
+      if (pt2.gt.zprod*mdip2) return
+      if (mpair2*s.gt.zprod*(s+mpair2-mrec2_safe)**2) return
+      if (conversion.and.mpair2.ge.mmaxgamma**2) return
+      py8_global_fsr_support=.true.
+      end function py8_global_fsr_support
+
 
 
 

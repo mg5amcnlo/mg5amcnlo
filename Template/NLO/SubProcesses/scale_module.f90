@@ -95,10 +95,12 @@ contains
     double precision,dimension(0:3,next_n) :: p
     double precision, intent(in) :: emitter_mass
     double precision :: ref_scale,scalemin,scalemax,rrnd
+    logical :: connected(next_n,next_n)
     double precision, external :: ran2
     shower_scale_nbody=-1d0
     shower_scale_nbody_min=-1d0
     shower_scale_nbody_max=-1d0
+    call refresh_qed_dipoles(p,.true.)
     call get_global_ref_scale(next_n,p)
     if (ickkw_mod.eq.3) then
        call set_FxFx_shower_scale_nbody(global_ref_scale)
@@ -114,6 +116,8 @@ contains
        iflow_min=1
        iflow_max=max_flows_n
     endif
+    connected=any(valid_dipole_n(:,:,iflow_min:iflow_max),dim=3)
+    if (qed_matching) connected=qed_dipole_n
     if (scalar_S_scales()) then
        ! One damping draw sets SCALUP. The shower limits each directed
        ! dipole by its kinematics. Damping a capped dipole independently
@@ -123,7 +127,7 @@ contains
        scalemax=max(scalemax,scalemin+scaleMCdelta)
        rrnd=damping_inv(ran2(),1d0)
        shower_scale_hard=scalemin+rrnd*(scalemax-scalemin)
-       call native_S_scales(p,any(valid_dipole_n(:,:,iflow_min:iflow_max),dim=3))
+       call native_S_scales(p,connected)
        ! These are the bounds of the HARD-scale damping distribution.
        ! The physical dipole ceiling is a separate veto in get_dead_zone;
        ! clipping these bounds would change the subtraction below it.
@@ -197,10 +201,14 @@ contains
     double precision, intent(in) :: emitter_mass
     integer i,j,ii,i_fks,j_fks
     double precision ref_scale,scalemin,scalemax
+    logical :: connected(next_n1,next_n1)
+    call refresh_qed_dipoles(p,.false.)
+    connected=valid_dipole_n1
+    if (qed_matching) connected=qed_dipole_n1
     call get_global_ref_scale(next_n1,p)
     do i=1,next_n1
        do j=1,next_n1
-          if (valid_dipole_n1(i,j)) then
+          if (connected(i,j)) then
              ref_scale=get_ref_scale_dipole(next_n1,p,i,j)
              call get_scaleminmax(ref_scale,scalemin,scalemax,emitter_mass)
              scalemax=max(scalemax,scaleMCcut)
@@ -209,9 +217,13 @@ contains
              ! find the partner of i_fks and j_fks
              ref_scale=99d99
              do ii=1,next_n1
-                if (valid_dipole_n1(ii,i_fks)) then
+                if (connected(i_fks,ii)) then
                    ref_scale=min(get_ref_scale_dipole(next_n1,p,ii,i_fks),ref_scale)
-                elseif( valid_dipole_n1(ii,j_fks)) then
+                endif
+                ! Directed QED daughters can select the same recoiler.
+                ! Include both invariants in their common H-event bound.
+                if (connected(j_fks,ii).and. &
+                     (qed_matching.or..not.connected(i_fks,ii))) then
                    ref_scale=min(get_ref_scale_dipole(next_n1,p,ii,j_fks),ref_scale)
                 endif
              enddo
@@ -229,11 +241,15 @@ contains
     implicit none
     integer :: i,j,flow_picked
     double precision,dimension(0:3,next_n) :: p
+    logical :: connected(next_n,next_n)
+    call refresh_qed_dipoles(p,.true.)
     call get_global_ref_scale(next_n,p)
     shower_scale_hard=shower_scale_factor*global_ref_scale
     if (scalar_S_scales()) then
+       connected=valid_dipole_n(:,:,flow_picked)
+       if (qed_matching) connected=qed_dipole_n
        shower_scale_hard=max(shower_scale_hard,scaleMCcut)
-       call native_S_scales(p,valid_dipole_n(:,:,flow_picked))
+       call native_S_scales(p,connected)
        shower_scale_nbody_min=-1d0
        shower_scale_nbody_max=-1d0
        return
@@ -312,6 +328,12 @@ contains
     logical,parameter :: for_mcatnlo_scale=.true.
     INTEGER              NFKSPROCESS
     COMMON/C_NFKSPROCESS/NFKSPROCESS
+    if (qed_matching) then
+       ! QED recoil systems need a hard reference even with no QCD jets.
+       ! Both S and H use the invariant mass of the incoming hard system.
+       global_ref_scale=sqrt(max(0d0,sumdot(p(:,1),p(:,2),1d0)))
+       return
+    endif
     if (n.eq.next_n1) then
        iproc=nFKSprocess
     else
@@ -348,6 +370,19 @@ contains
     integer, intent(in) :: father
     double precision,external :: ran2
     ndip(0)=0
+    if (qed_matching) then
+       do i=1,next_n
+          if (.not.qed_dipole_n(father,i)) cycle
+          ndip(0)=ndip(0)+1
+          ndip(ndip(0))=i
+       enddo
+       if (ndip(0).ne.1) then
+          write (*,*) 'Inconsistent QED recoil connection',father,ndip
+          stop 1
+       endif
+       partner_picked=ndip(1)
+       return
+    endif
     do i=1,next_n
        if (valid_dipole_n(i,father,flow_picked)) then
           ndip(0)=ndip(0)+1
