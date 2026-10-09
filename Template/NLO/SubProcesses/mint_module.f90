@@ -273,17 +273,9 @@ contains
     call finalise_mint
   end subroutine mint
 
-  subroutine calibrate_born_spreading(fun,sample_point)
+  subroutine calibrate_born_spreading(fun)
     implicit none
     double precision, external :: fun
-    interface
-       subroutine sample_point(x,vol,kfold)
-         import ndimmax
-         double precision :: x(ndimmax),vol
-         integer :: kfold(ndimmax)
-       end subroutine sample_point
-    end interface
-    optional :: sample_point
     double precision :: x(ndimmax),vol,dummy
     integer :: kfold(ndimmax),ipoint
     logical :: old_even_rn
@@ -305,11 +297,7 @@ contains
          born_spread_train_points,' independent phase-space points'
     do ipoint=1,born_spread_train_points
        new_point=.true.
-       if (present(sample_point)) then
-          call sample_point(x,vol,kfold)
-       else
-          call get_random_x(x,vol,kfold)
-       endif
+       call get_random_x(x,vol,kfold)
        call compute_integrand(fun,x,vol)
     enddo
     call solve_born_spreading_table
@@ -318,11 +306,7 @@ contains
          born_spread_validation_points,' independent phase-space points'
     do ipoint=1,born_spread_validation_points
        new_point=.true.
-       if (present(sample_point)) then
-          call sample_point(x,vol,kfold)
-       else
-          call get_random_x(x,vol,kfold)
-       endif
+       call get_random_x(x,vol,kfold)
        call compute_integrand(fun,x,vol)
     enddo
     born_spread_calibrating=.false.
@@ -930,129 +914,6 @@ contains
     write(*,*) 'ERROR: ',trim(message)
     stop 1
   end subroutine born_spread_table_error
-
-  ! Shared MC@NLO services for numerical backends.  These routines deliberately
-  ! do not sample, adapt or persist a MINT integration grid.
-  subroutine nlops_init_auxiliary(fresh)
-    logical, intent(in) :: fresh
-    if (fixed_order.or.nchans.ne.1) error stop 'NLO+PS auxiliary state requires one channel'
-    nint_used=nintervals
-    nint_used_virt=nintervals_virt
-    vol_chan=1d0
-    ichan=1
-    even_rn=.false.
-    double_events=.false.
-    chi2=0d0
-    if (fresh) then
-       call reset_mint_grids
-       call setup_common
-    endif
-  end subroutine nlops_init_auxiliary
-
-  subroutine nlops_next_fold(folds,iret)
-    integer, intent(inout) :: folds(ndimmax)
-    integer, intent(out) :: iret
-    call nextlexi(ifold,folds,iret)
-  end subroutine nlops_next_fold
-
-  subroutine nlops_write_results(absolute_error)
-    double precision, intent(in) :: absolute_error
-    double precision :: save_one,save_five
-    save_one=unc(1,1)
-    save_five=unc(5,1)
-    unc(1,1)=absolute_error
-    unc(5,1)=0d0
-    call write_results
-    unc(1,1)=save_one
-    unc(5,1)=save_five
-  end subroutine nlops_write_results
-
-  subroutine nlops_prepare_point(x)
-    double precision, intent(in) :: x(ndimmax)
-    integer :: i
-    ichan=1
-    do i=0,n_ord_virt
-       if (use_poly_virtual) then
-          call get_polyfit(1,i,x(1:ndim-3),polyfit(i))
-       else
-          call get_ave_virt(x,i)
-       endif
-    enddo
-  end subroutine nlops_prepare_point
-
-  subroutine nlops_train_virtual(x,values)
-    double precision, intent(in) :: x(ndimmax),values(nintegrals)
-    double precision :: virtual,born
-    integer :: i,iv,ib
-    do i=0,n_ord_virt
-       iv=2*i+5
-       ib=iv+1
-       if (i.eq.0) then
-          iv=3
-          ib=6
-       endif
-       born=values(ib)
-       if (values(iv).eq.0d0.or.born.eq.0d0) cycle
-       if (use_poly_virtual) then
-          virtual=values(iv)*virtual_fraction(1)+polyfit(i)*born
-          call add_point_polyfit(1,i,x(1:ndim-3),virtual/born,born/wgt_mult)
-       else
-          virtual=values(iv)*virtual_fraction(1)+average_virtual(i,1)*born
-          call fill_ave_virt(x,i,virtual,born)
-       endif
-    enddo
-  end subroutine nlops_train_virtual
-
-  subroutine nlops_update_auxiliary(errors)
-    double precision, intent(in) :: errors(nintegrals)
-    integer :: i
-    etot(:,1)=errors
-    if (errors(1).gt.0d0) call update_virtual_fraction
-    if (use_poly_virtual) then
-       call do_polyfit()
-    else
-       do i=0,n_ord_virt
-          call regrid_ave_virt(i)
-       enddo
-    endif
-    call regrid_MC_integer
-  end subroutine nlops_update_auxiliary
-
-  subroutine nlops_save_auxiliary(iunit)
-    integer, intent(in) :: iunit
-    write(iunit,*) use_poly_virtual,n_ord_virt,nint_used_virt
-    write(iunit,*) virtual_fraction(1),average_virtual(:,1)
-    if (use_poly_virtual) then
-       call save_polyfit(iunit)
-    else
-       write(iunit,*) ave_virt(:,:,:,1)
-       write(iunit,*) nvirt(:,:,:,1)
-    endif
-  end subroutine nlops_save_auxiliary
-
-  subroutine nlops_load_auxiliary(iunit)
-    integer, intent(in) :: iunit
-    integer :: orders,bins,points,ios
-    logical :: poly
-    character(len=3) :: tag
-    read(iunit,*,iostat=ios) poly,orders,bins
-    if (ios.ne.0) error stop 'Invalid AmpliCol auxiliary checkpoint'
-    if ((poly.neqv.use_poly_virtual).or.orders.ne.n_ord_virt.or.bins.ne.nintervals_virt) &
-         error stop 'AmpliCol virtual settings differ from checkpoint'
-    nint_used_virt=bins
-    read(iunit,*) virtual_fraction(1),average_virtual(:,1)
-    if (poly) then
-       read(iunit,*) tag,points
-       backspace(iunit)
-       call init_polyfit(ndim-3,1,n_ord_virt,max(points,1))
-       call restore_polyfit(iunit)
-       call do_polyfit()
-    else
-       call init_ave_virt
-       read(iunit,*) ave_virt(:,:,:,1)
-       read(iunit,*) nvirt(:,:,:,1)
-    endif
-  end subroutine nlops_load_auxiliary
 
   subroutine initialise_mint
     implicit none

@@ -1,6 +1,0 @@
-{
-  "source": "validation/ampli_stable_history_20261008/physics/candidate",
-  "reason": "Exact source hashes match current production baseline, including stable adaptation and useful-history retention.",
-  "source_hashes_match": true,
-  "collection_validation": "validation/ampli_stable_history_20261008/physics/collection_validation.json"
-}

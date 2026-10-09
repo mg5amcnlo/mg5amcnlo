@@ -1,6 +1,0 @@
-{
-  "note": "Consecutive initial trials with identical trial/epoch/stream/probability/physics weights; stored flags and running candidate counts excluded.",
-  "matching_prefix": 17270,
-  "baseline_trials": 18294,
-  "quantile_trials": 17270
-}

@@ -1,1 +1,0 @@
-Stopped during survey after detecting that the archived post-launch card had iseed reset to0. This preliminary attempt is excluded from all numerical and timing results. Final run explicitly restores original benchmark seed19727.

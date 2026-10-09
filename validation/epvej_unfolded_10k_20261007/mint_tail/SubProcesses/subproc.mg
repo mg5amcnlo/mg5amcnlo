@@ -1,6 +1,0 @@
-P0_gu_vedep
-P0_gdx_veuxep
-P0_ug_vedep
-P0_udx_veepg
-P0_dxg_veuxep
-P0_dxu_veepg

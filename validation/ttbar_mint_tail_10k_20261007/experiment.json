@@ -1,9 +1,0 @@
-{
-  "work_directory": "/tmp/mg5-ttbar-mint-tail-10k-xnxmacfu",
-  "baseline": "/tmp/mg5-ttbar-native-10k-i2y8wskw/mint",
-  "events": 10000,
-  "seed": 19727,
-  "scope": "Fresh MINT repeat with diagnostics only in isolated exported module; production workspace unchanged.",
-  "original_mint_sha256": "244411ea120d7fcec35d29bbc2782850db7c0b1e4755e53deda9b5f1f4613416",
-  "instrumented_mint_sha256": "71bf022158bcd55cc624740c7ef99b104870bcc95d06d6e9f57367bc11666ed5"
-}

@@ -130,15 +130,6 @@
 ! Parameters defining the techniques used for the MC integration
 ! ==========================================================================
 !
-! Integrator for (N)LO+PS event generation: 0 uses MINT, 1 uses the
-! AmpliCol integrator. Each subprocess/integration channel remains a
-! separate job; event counts are allocated by the run coordinator.
-! Ignored in fixed-order runs, which always use MINT. Rerun grid setup
-! and integration after changing this setting.
-#NLOPSIntegrator
-0
-! Default :: 0
-!
 ! This integer sets what is the minimum number of contributing
 ! helicities (in a given subrpocess) which is necessary for MadFKS to
 ! switch to the Monte-Carlo over helicity configurations method. Set

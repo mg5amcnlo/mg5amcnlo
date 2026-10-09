@@ -21,8 +21,6 @@ from __future__ import absolute_import
 import atexit
 import collections
 import glob
-import hashlib
-import json
 import logging
 import math
 import optparse
@@ -83,7 +81,6 @@ except ImportError:
     import internal.FO_analyse_card as analyse_card 
     import internal.lhe_parser as lhe_parser
     import internal.collect_events as collect_events
-    import internal.ampli_pool as ampli_pool
 else:
     # import from madgraph directory
     aMCatNLO = False
@@ -101,7 +98,6 @@ else:
     import madgraph.various.lhe_parser as lhe_parser
     from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error,MG5DIR
     import madgraph.various.collect_events as collect_events
-    import madgraph.various.ampli_pool as ampli_pool
 
 class aMCatNLOError(Exception):
     pass
@@ -1938,9 +1934,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         #Clean previous results
         self.clean_previous_results(options,p_dirs,folder_names[mode])
 
-        mcatnlo_steps = [(0, 'Setting up grids'),
-                         (1, 'Computing upper envelope'),
-                         (2, 'Generating events')]
+        mcatnlo_status = ['Setting up grids', 'Computing upper envelope', 'Generating events']
 
 
         if options['reweightonly']:
@@ -2020,11 +2014,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             
             jobs_to_run,jobs_to_collect,integration_step = self.create_jobs_to_run(options,p_dirs, \
                                             req_acc,mode_dict[mode],1,mode,fixed_order=False)
-            if jobs_to_run and jobs_to_run[0].get('nlops_integrator', 0) == 1:
-                # The survey trains its own grids and envelope. Retain IDs 1/2
-                # for the saved-survey and generation-only restart contracts.
-                mcatnlo_steps = [(1, 'Surveying channel rates and adapting grids'),
-                                 (2, 'Generating channel event samples')]
             # Make sure to update all the jobs to be ready for the event generation step
             if options['only_generation']:
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
@@ -2033,8 +2022,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 self.prepare_directories(jobs_to_run,mode,fixed_order=False)
 
 
-            # MINT has three stages; AmpliCol surveys then generates directly.
-            for mint_step, status in mcatnlo_steps:
+            # Main loop over the three MINT generation steps:
+            for mint_step, status in enumerate(mcatnlo_status):
                 if options['only_generation'] and mint_step < 2:
                     continue
                 self.update_status(status, level='parton')
@@ -2046,7 +2035,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     self.print_summary(options,2,mode)
                     return
 
-            # AmpliCol pools have been finalized before either reweighting or collection.
             # Sanity check on the event files. If error the jobs are resubmitted
             self.check_event_files(jobs_to_collect)
 
@@ -2097,91 +2085,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         return
 
 
-    def get_nlops_integrator(self):
-        """Read the NLO+PS backend; older FKS cards select MINT."""
-        return self._read_nlops_integrator()[0]
-
-    def _read_nlops_integrator(self):
-        """Return the backend and FKS settings used to validate saved grids."""
-        filename = pjoin(self.me_dir, 'Cards', 'FKS_params.dat')
-        try:
-            with open(filename) as card:
-                entries = [' '.join(line.split('!', 1)[0].split())
-                           for line in card]
-        except FileNotFoundError:
-            return 0, ()
-        entries = [line for line in entries if line]
-        backend = 0
-        settings = []
-        found = False
-        index = 0
-        while index < len(entries):
-            if entries[index] == '#NLOPSIntegrator':
-                if found:
-                    raise aMCatNLOError('Duplicate #NLOPSIntegrator in %s' % filename)
-                found = True
-                index += 1
-                try:
-                    backend = int(entries[index])
-                except (IndexError, ValueError):
-                    raise aMCatNLOError('#NLOPSIntegrator in %s must be 0 (MINT) '
-                                        'or 1 (AmpliCol)' % filename)
-                if backend not in (0, 1):
-                    raise aMCatNLOError('#NLOPSIntegrator in %s must be 0 (MINT) '
-                                        'or 1 (AmpliCol)' % filename)
-            else:
-                settings.append(entries[index])
-            index += 1
-        return backend, tuple(settings)
-
-    def _ampli_integrator_config(self, fks_settings):
-        """Identify the target represented by an AmpliCol integration checkpoint.
-
-        Generation budgets and output/reweight controls may change. The first
-        PDF and scale choices define the central rate; subsequent choices are
-        evaluated by reweighting. Bias mode changes the sampled target itself.
-        """
-        generation_settings = {
-            'run_tag', 'nevents', 'req_acc', 'nevt_job', 'time_of_flight',
-            'event_norm', 'iseed', 'seed', 'req_acc_fo', 'npoints_fo_grid',
-            'niters_fo_grid', 'npoints_fo', 'niters_fo', 'reweight_scale',
-            'reweight_pdf', 'rw_rscale_down', 'rw_rscale_up', 'rw_fscale_down',
-            'rw_fscale_up', 'rw_rscale', 'rw_fscale', 'pdf_set_min', 'pdf_set_max',
-            'store_rwgt_info', 'systematics_program', 'systematics_arguments',
-            'pineappl', 'lhe_version', 'fo_lhe_weight_ratio', 'fo_lhe_postprocessing',
-        }
-        central_choices = {'lhaid', 'lhapdfsetname', 'dynamical_scale_choice'}
-        run_settings = {}
-        for key in self.run_card:
-            name = key.lower()
-            if name in generation_settings:
-                continue
-            value = self.run_card[key]
-            if name in central_choices and isinstance(value, (list, tuple)):
-                value = value[:1]
-            run_settings[name] = copy.deepcopy(value)
-        run_settings['bias_mode'] = ('event_norm' in self.run_card and
-                                     self.run_card['event_norm'].lower() == 'bias')
-        try:
-            with open(pjoin(self.me_dir, 'Cards', 'param_card.dat'), 'rb') as card:
-                param_checksum = hashlib.sha256(card.read()).hexdigest()
-        except FileNotFoundError:
-            param_checksum = None
-        return {
-            'version': 1,
-            'run_settings': run_settings,
-            'fks_settings': fks_settings,
-            'param_card_sha256': param_checksum,
-        }
-
     def create_jobs_to_run(self,options,p_dirs,req_acc,run_mode,\
                            integration_step,mode,fixed_order=True):
         """Creates a list of dictionaries with all the jobs to be run"""
         jobs_to_run=[]
-        if not fixed_order:
-            backend, fks_settings = self._read_nlops_integrator()
-            integrator_config = (self._ampli_integrator_config(fks_settings)
-                                 if backend == 1 else None)
         if not options['only_generation']:
             # Fresh, new run. Check all the P*/channels.txt files
             # (created by the 'gensym' executable) to set-up all the
@@ -2237,11 +2144,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         job['accuracy']=0.03
                         job['niters']=12
                         job['npoints']=-1
-                        job['mint_mode']=(1 if backend == 1 else 0)
+                        job['mint_mode']=0
                         job['run_mode']=run_mode
                         job['wgt_frac']=1.0
-                        job['nlops_integrator']=backend
-                        job['integrator_config']=integrator_config
                         jobs_to_run.append(job)
             jobs_to_collect=copy.copy(jobs_to_run) # These are all jobs
         else:
@@ -2266,21 +2171,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         integration_step=integration_step+1
                 integration_step=integration_step-1
             else:
-                for job in jobs_to_collect:
-                    if job.get('nlops_integrator', 0) != backend:
-                        raise aMCatNLOError('The NLO+PS integrator differs from the '
-                                            'saved integration. Run integration again '
-                                            'before using --only_generation.')
-                    if (backend == 1 and (job['run_mode'] != run_mode or
-                            job.get('integrator_config') != integrator_config)):
-                        raise aMCatNLOError('The physics settings (including folding, '
-                                            'Born spreading, FKS settings, run mode or '
-                                            'param_card.dat) differ from the saved integration. '
-                                            'Run integration again before using '
-                                            '--only_generation.')
-                    # Jobs saved before backend selection was introduced are MINT jobs.
-                    job['nlops_integrator'] = backend
-                    job['integrator_config'] = integrator_config
                 self.append_the_results(jobs_to_collect,integration_step)
         return jobs_to_run,jobs_to_collect,integration_step
 
@@ -2309,9 +2199,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             # link or copy the grids from the base directory to the split directory:
             if not fixed_order:
                 if job['split'] != 0:
-                    grid_file = ('ampli_grids' if job.get('nlops_integrator', 0) == 1
-                                 else 'mint_grids')
-                    files_to_link = ['grid.MC_integer',grid_file,'res_1']
+                    files_to_link = ['grid.MC_integer','mint_grids','res_1']
                     if ('born_spreading' in self.run_card and
                             self.run_card['born_spreading']):
                         files_to_link.append('born_spreading.dat')
@@ -2377,13 +2265,6 @@ RESTART = %(mint_mode)s
                     
         with open(pjoin(job['dirname'], 'input_app.txt'), 'w') as input_file:
             input_file.write(content)
-        if (not fixed_order and job.get('nlops_integrator', 0) == 1 and
-                job['mint_mode'] == 2 and 'ampli_final_quota' in job):
-            # The native worker controls its own event-generation stopping.
-            # These initial quotas are revisited after its integration results.
-            with open(pjoin(job['dirname'], 'ampli_job.dat'), 'w') as plan_file:
-                plan_file.write('MG5_AMPLI_JOB 2\n%d %d\n' %
-                                (job['nevents'], job['ampli_final_quota']))
 
 
     def run_all_jobs(self,jobs_to_run,integration_step,fixed_order=True):
@@ -2397,9 +2278,6 @@ RESTART = %(mint_mode)s
         name_suffix={'born' :'B', 'all':'F'}
         if fixed_order:
             run_type="Fixed order integration step %s" % integration_step
-        elif jobs_to_run and jobs_to_run[0].get('nlops_integrator', 0) == 1:
-            run_type = ('AmpliCol survey' if integration_step == 1
-                        else 'AmpliCol event generation')
         else:
             run_type="MINT step %s" % integration_step
         self.njobs=len(jobs_to_run)            
@@ -2428,12 +2306,6 @@ RESTART = %(mint_mode)s
            final answer.
         """
 # Get the results of the current integration/MINT step
-        if (not fixed_order and integration_step == 2 and jobs_to_run and
-                jobs_to_run[0].get('nlops_integrator', 0) == 1):
-            try:
-                return self.finalize_ampli_pools(jobs_to_run, mode)
-            except ampli_pool.PoolError as error:
-                raise aMCatNLOError(str(error)) from error
         self.append_the_results(jobs_to_run,integration_step)
         self.cross_sect_dict = self.write_res_txt_file(jobs_to_collect,integration_step)
 # Update HTML pages
@@ -2478,14 +2350,8 @@ RESTART = %(mint_mode)s
             with open(pjoin(self.me_dir,"SubProcesses","job_status.pkl"),'wb') as f:
                 pickle.dump(jobs_to_collect,f)
             # next step is event generation (mint_step 2)
-            if jobs_to_run_new and jobs_to_run_new[0].get('nlops_integrator', 0) == 1:
-                self._ampli_next_split = {}
-                jobs_to_run_new = self.split_ampli_batch(jobs_to_run_new)
-                self._ampli_channels = copy.deepcopy(jobs_to_collect)
-                jobs_to_collect_new = jobs_to_run_new
-            else:
-                jobs_to_run_new,jobs_to_collect_new= \
-                        self.check_the_need_to_split(jobs_to_run_new,jobs_to_collect)
+            jobs_to_run_new,jobs_to_collect_new= \
+                    self.check_the_need_to_split(jobs_to_run_new,jobs_to_collect)
             self.prepare_directories(jobs_to_run_new,mode,fixed_order)
             self.write_nevents_unweighted_file(jobs_to_collect_new,jobs_to_collect)
         else:
@@ -2850,19 +2716,8 @@ RESTART = %(mint_mode)s
             if step+1 == 1 or step+1 == 2 :
                 # determine the req. accuracy for each of the jobs for Mint-step = 1
                 for job in jobs:
-                    if job.get('nlops_integrator', 0) == 1:
-                        # Each channel is surveyed independently before quotas
-                        # are assigned, including channels with small rates.
-                        accuracy = 0.03
-                    elif job['resultABS'] == 0. or req_acc2_inv == 0:
-                        accuracy = 0.2
-                    else:
-                        accuracy=min(math.sqrt(totABS/(req_acc2_inv*job['resultABS'])),0.2)
+                    accuracy=min(math.sqrt(totABS/(req_acc2_inv*job['resultABS'])),0.2)
                     job['accuracy']=accuracy
-            if (step+1 == 2 and nevents > 0 and jobs and
-                    jobs[0].get('nlops_integrator', 0) == 1):
-                self.plan_ampli_production(jobs, req_acc)
-                return jobs
             if step+1 == 2:
                 # Randomly (based on the relative ABS Xsec of the job) determine the 
                 # number of events each job needs to generate for MINT-step = 2.
@@ -2873,427 +2728,23 @@ RESTART = %(mint_mode)s
                 totevts=nevents
                 for job in jobs:
                     job['nevents'] = 0
-                positive_jobs = [job for job in jobs if job['resultABS'] > 0.]
-                if totevts and (not positive_jobs or totABS <= 0.):
-                    raise aMCatNLOError('Cannot generate events: the total absolute '
-                                        'cross section is zero.')
                 while totevts :
                     target = random.random() * totABS
                     crosssum = 0.
-                    for job in positive_jobs:
+                    i = 0
+                    while i<len(jobs) and crosssum < target:
+                        job = jobs[i]
                         crosssum += job['resultABS']
-                        if target < crosssum:
-                            break
+                        i += 1            
                     totevts -= 1
-                    job['nevents'] += 1
+                    i -= 1
+                    jobs[i]['nevents'] += 1
             for job in jobs:
                 job['mint_mode']=step+1 # next step
             return jobs
         else:
             return []
 
-
-    def plan_ampli_production(self, jobs, req_acc):
-        """Allocate initial production quotas from three-percent surveys.
-
-        The extra ten percent supplies a reserve for native re-evaluation and
-        collection. No production trial budget or requested total-rate accuracy
-        enters this allocation. Completed production iterations subsequently
-        update channel rates and the final collection quotas.
-        """
-        nevents = self.run_card['nevents']
-        absolute = self.cross_sect_dict['xseca']
-        for job in jobs:
-            rate, error = job['resultABS'], job['errorABS']
-            if (not math.isfinite(rate) or not math.isfinite(error) or
-                    rate < 0. or error < 0. or
-                    error > .03 * rate * (1. + 1.e-12)):
-                raise aMCatNLOError('AmpliCol survey did not reach 3%% absolute-rate '
-                    'accuracy in %s channel %s (rate=%g, error=%g). '
-                    'Run the survey again before generating events.' %
-                    (job.get('p_dir', '?'), job.get('channel', '?'), rate, error))
-            if job.get('niters_done', 0) < 4:
-                raise aMCatNLOError('AmpliCol survey requires at least 4 iterations '
-                    'in %s channel %s (completed=%s). Run the survey again '
-                    'before generating events.' %
-                    (job.get('p_dir', '?'), job.get('channel', '?'),
-                     job.get('niters_done', 0)))
-        if absolute <= 0. or not any(job['resultABS'] > 0. for job in jobs):
-            raise aMCatNLOError('Cannot generate events: the total absolute '
-                                'cross section is zero.')
-        allocation_rng = random.Random(self.get_randinit_seed() ^ 0x414D504C)
-        positive_jobs = [job for job in jobs if job['resultABS'] > 0.]
-        for job in jobs:
-            job['nevents'] = 0
-        for unused in range(nevents):
-            target = allocation_rng.random() * absolute
-            cumulative = 0.
-            for job in positive_jobs:
-                cumulative += job['resultABS']
-                if target < cumulative:
-                    break
-            job['nevents'] += 1
-        for allocation_index, job in enumerate(jobs):
-            job['ampli_final_quota'] = job['nevents']
-            job['ampli_initial_quota'] = job['nevents']
-            # jobs_to_run and jobs_to_collect can be distinct lists, and the
-            # reporting code sorts the latter. Persist the CDF order itself.
-            job['ampli_allocation_order'] = allocation_index
-            job['ampli_generated_target'] = (11 * job['nevents'] + 9) // 10
-            job['ampli_survey_absolute'] = job['resultABS']
-            job['mint_mode'] = 2
-        logger.info('AmpliCol production: %d final events, %d events including reserves',
-                    nevents, sum(job['ampli_generated_target'] for job in jobs))
-
-    def split_ampli_batch(self, channels):
-        """Split accepted-event quotas, retaining independent saved-grid workers.
-
-        Each worker keeps a final quota and generates ten percent extra, rounded
-        up. This rounding can add a few reserve events at split boundaries. Fresh
-        directory indices prevent a generation-only restart from reusing streams
-        or overwriting previously generated events or the unsplit survey.
-        """
-        jobs = []
-        nevt_job = self.run_card['nevt_job']
-        if 0 < nevt_job < 2:
-            raise aMCatNLOError('AmpliCol nevt_job must be at least 2 to include '
-                                'the event-generation reserve, or negative for no splitting.')
-        max_quota = (10 * nevt_job) // 11 if nevt_job > 0 else None
-        if not hasattr(self, '_ampli_next_split'):
-            self._ampli_next_split = {}
-        for channel in channels:
-            quota = channel['ampli_final_quota']
-            if quota <= 0:
-                continue
-            count = (quota + max_quota - 1) // max_quota if max_quota else 1
-            key = (channel['p_dir'], channel['channel'])
-            index = self._ampli_next_split.get(key, 0)
-            generated = 0
-            for part in range(count):
-                job = copy.copy(channel)
-                index += 1
-                while os.path.exists(channel['dirname'] + '_%d' % index):
-                    index += 1
-                job['split'] = index
-                job['dirname'] = channel['dirname'] + '_%d' % index
-                job['ampli_final_quota'] = quota // count + (part < quota % count)
-                job['nevents'] = (11 * job['ampli_final_quota'] + 9) // 10
-                job['ampli_generated_target'] = job['nevents']
-                job['ampli_parent'] = channel['dirname']
-                job['wgt_frac'] = float(job['ampli_final_quota']) / quota
-                generated += job['nevents']
-                jobs.append(job)
-            channel['ampli_generated_target'] = generated
-            self._ampli_next_split[key] = index
-        return jobs
-
-    def finalize_ampli_pools(self, jobs, mode):
-        """Update native rates, fill changed quotas, then collect each channel."""
-        initial_pools = [ampli_pool.read_pool(job['dirname']) for job in jobs]
-        versions = {pool.get('version', 2) for pool in initial_pools}
-        if versions <= {2, 3}:
-            return self._finalize_ampli_pools_legacy(jobs, mode)
-        if not versions <= {4, 5}:
-            raise aMCatNLOError('Cannot mix native and legacy AmpliCol production pools.')
-        channels = self._ampli_channels
-        surveys = {channel['dirname']: copy.deepcopy(channel) for channel in channels}
-        all_jobs = list(jobs)
-        native_pools = dict(zip((job['dirname'] for job in jobs), initial_pools))
-        collection_pools = dict(native_pools)
-        rounds = []
-        current_jobs = list(jobs)
-        for generation_round in range(100):
-            self.append_the_results(current_jobs, 2)
-            for job in current_jobs:
-                pool = native_pools[job['dirname']]
-                if (pool['generated_target'] != job['nevents'] or
-                        pool['final_quota'] != job['ampli_final_quota']):
-                    raise aMCatNLOError('Native AmpliCol worker quotas disagree with the generation plan.')
-            grouped = collections.defaultdict(list)
-            grouped_jobs = collections.defaultdict(list)
-            for job in all_jobs:
-                grouped[job['ampli_parent']].append(native_pools[job['dirname']])
-                grouped_jobs[job['ampli_parent']].append(job)
-            for channel in channels:
-                survey = surveys[channel['dirname']]
-                rates = ampli_pool.combine_native_rates(dict(trials=survey['npoints_done'],
-                    absolute=survey['resultABS'], signed=survey['result'],
-                    error_abs=survey['errorABS'], error_signed=survey['error']),
-                    grouped[channel['dirname']])
-                channel.update(resultABS=rates['absolute'], result=rates['signed'],
-                    errorABS=rates['error_abs'], error=rates['error_signed'],
-                    npoints_done=rates['trials'],
-                    niters_done=survey['niters_done']+rates['production_iterations'],
-                    ampli_updated_rates=rates)
-                channel['err_percABS'] = 100.*channel['errorABS']/channel['resultABS'] if channel['resultABS'] else 0.
-                channel['err_perc'] = (100.*channel['error']/abs(channel['result']) if channel['result']
-                                       else float('inf') if channel['error'] else 0.)
-            self._allocate_updated_ampli_quotas(channels)
-            self.cross_sect_dict = self.write_res_txt_file(list(channels), 2)
-            shortages, decisions = [], []
-            for channel in channels:
-                workers = grouped_jobs[channel['dirname']]
-                pools = [collection_pools[job['dirname']] for job in workers]
-                requested = channel['ampli_final_quota']
-                available = ampli_pool.available_events(pools)
-                status = None
-                if requested and available >= requested:
-                    status = ampli_pool.pool_status(pools, requested)
-                    if status['overweight'] >= ampli_pool.ALLOWED_OVERWEIGHT_FACTOR:
-                        for job in workers:
-                            collection_pools[job['dirname']] = ampli_pool.tighten_native_pool(
-                                collection_pools[job['dirname']])
-                        pools = [collection_pools[job['dirname']] for job in workers]
-                        available = ampli_pool.available_events(pools)
-                        status = (ampli_pool.pool_status(pools, requested)
-                                  if available >= requested else None)
-                if requested > available:
-                    # A fresh worker fills the actual deficit, plus its own
-                    # ten-percent reserve. Existing events and rate estimates
-                    # remain in the channel pool; no final quota is capped.
-                    extra = copy.copy(surveys[channel['dirname']])
-                    extra['ampli_final_quota'] = requested-available
-                    extra['mint_mode'] = 2
-                    shortages.append(extra)
-                elif requested and status['overweight'] >= ampli_pool.ALLOWED_OVERWEIGHT_FACTOR:
-                    raise aMCatNLOError('Native AmpliCol rethresholding did not satisfy the one-percent tail bound.')
-                decisions.append(dict(subprocess=channel['p_dir'], channel=channel['channel'],
-                    absolute=channel['resultABS'], signed=channel['result'],
-                    quota=requested, available=available,
-                    additional_quota=max(0, requested-available)))
-            rounds.append(dict(round=generation_round+1, channels=decisions))
-            if not shortages:
-                break
-            current_jobs = self.split_ampli_batch(shortages)
-            logger.info('AmpliCol updated rates require %d additional events in %d workers',
-                        sum(job['nevents'] for job in current_jobs), len(current_jobs))
-            self.prepare_directories(current_jobs, mode, fixed_order=False)
-            self.run_all_jobs(current_jobs, 2, fixed_order=False)
-            self.collect_log_files(current_jobs, 2)
-            for job in current_jobs:
-                pool = ampli_pool.read_pool(job['dirname'])
-                if pool.get('version') not in (4, 5):
-                    raise aMCatNLOError('Native AmpliCol top-up produced an incompatible pool.')
-                native_pools[job['dirname']] = pool
-                collection_pools[job['dirname']] = pool
-            all_jobs.extend(current_jobs)
-        else:
-            raise aMCatNLOError('AmpliCol updated channel quotas did not stabilize after 100 generation rounds.')
-
-        # All channels pass the deterministic count and tail checks before any
-        # final selection draw. Each channel is uniformly trimmed exactly once.
-        total = self.cross_sect_dict['xseca']
-        event_norm = self.run_card['event_norm'].lower()
-        normalization = (total/self.run_card['nevents'] if event_norm == 'sum'
-                         else 1. if event_norm == 'unity' else total)
-        process_rates = [(int(label), self.cross_sect_dict[label]['xsect'],
-                          self.cross_sect_dict[label]['errt']) for label in self.cross_sect_dict['p_labels']]
-        selection_rng = random.Random(self.get_randinit_seed() ^ 0x504F4F4C)
-        manifest = dict(version=4, requested_events=self.run_card['nevents'],
-            seed=self.get_randinit_seed(), rate_source='survey_plus_production',
-            integration_stages=['survey', 'generation'],
-            survey_relative_accuracy=.03, survey_min_iterations=4,
-            sampling='native_adaptive_unfolded',
-            weight_convention='native_iteration_envelopes',
-            uncertainty_convention='native_trial_weighted_iteration_errors',
-            allowed_overweight_factor=ampli_pool.ALLOWED_OVERWEIGHT_FACTOR,
-            overweight_definition='full absolute cross section belonging to weights above their iteration threshold',
-            rounds=rounds, channels=[])
-        finalized = []
-        for channel in channels:
-            dirname = channel['dirname']
-            workers = grouped_jobs[dirname]
-            pools = [collection_pools[job['dirname']] for job in workers]
-            requested = channel['ampli_final_quota']
-            selection = None
-            channel.update(nevents=requested, wgt_frac=1.)
-            if requested:
-                selection = ampli_pool.finalize_channel(pools, requested,
-                    pjoin(dirname, 'events.lhe'), normalization, selection_rng,
-                    cross_sections=process_rates)
-                channel['ampli_finalized'] = True
-                finalized.append(channel)
-            generation_cpu = sum(job.get('time_spend', 0.) for job in workers)
-            with open(pjoin(dirname, 'results.dat'), 'w') as stream:
-                stream.write('%.16e %.16e 0 0 0 0 0 0 0 %.16e\n' %
-                             (channel['resultABS'], channel['error'], channel['result']))
-            with open(pjoin(dirname, 'res_2.dat'), 'w') as stream:
-                stream.write('%.16e %.16e %.16e %.16e %d %d %.8g\n' %
-                    (channel['resultABS'], channel['errorABS'], channel['result'], channel['error'],
-                     channel['niters_done'], channel['npoints_done'], generation_cpu))
-            manifest['channels'].append(dict(subprocess=channel['p_dir'], channel=channel['channel'],
-                quota=requested, initial_quota=surveys[dirname].get('ampli_initial_quota', surveys[dirname]['ampli_final_quota']),
-                allocation_order=channel.get('ampli_allocation_order'),
-                generated_target=sum(native_pools[job['dirname']]['generated_target'] for job in workers),
-                absolute=channel['resultABS'], signed=channel['result'],
-                error_abs=channel['errorABS'], error_signed=channel['error'],
-                survey_points=surveys[dirname]['npoints_done'],
-                survey_iterations=surveys[dirname]['niters_done'],
-                survey_absolute=surveys[dirname]['resultABS'], survey_signed=surveys[dirname]['result'],
-                updated_rates=channel['ampli_updated_rates'],
-                batches=[dict(directory=os.path.relpath(job['dirname'], self.me_dir),
-                    trials=pool['trials'], generated_target=native_pools[job['dirname']]['generated_target'],
-                    nominal_final_quota=pool['final_quota'], pool_protocol=4,
-                    adaptation=pool['adaptation'], native_log_z=native_pools[job['dirname']]['log_z'],
-                    collection_log_z=pool['log_z'], available=ampli_pool.available_events([pool]))
-                    for job, pool in zip(workers, pools)],
-                available_candidates=ampli_pool.available_events(pools), selection=selection,
-                generation_trials=sum(pool['trials'] for pool in pools), generation_cpu_seconds=generation_cpu))
-        self.write_nevents_unweighted_file(finalized, channels)
-        manifest.update(cross_section=self.cross_sect_dict['xsect'], uncertainty=self.cross_sect_dict['errt'],
-            absolute_cross_section=total,
-            generation_trials=sum(row['generation_trials'] for row in manifest['channels']),
-            generation_cpu_seconds=sum(row['generation_cpu_seconds'] for row in manifest['channels']))
-        path = pjoin(self.me_dir, 'SubProcesses', 'ampli_production.json')
-        with open(path, 'w') as stream:
-            json.dump(manifest, stream, indent=2, sort_keys=True)
-            stream.write('\n')
-        event_directory = pjoin(self.me_dir, 'Events', self.run_name)
-        if os.path.isdir(event_directory):
-            files.cp(path, event_directory)
-        cross, error = self.make_make_all_html_results(jobs=channels)
-        self.results.add_detail('cross', cross)
-        self.results.add_detail('error', error)
-        logger.info('AmpliCol collected %d events after %d rounds; rates combine survey and production',
-                    self.run_card['nevents'], len(rounds))
-        return [], finalized
-
-    def _allocate_updated_ampli_quotas(self, channels):
-        """Reuse the same allocation uniforms with the updated absolute rates."""
-        ordered = sorted(enumerate(channels),
-                         key=lambda item: item[1].get('ampli_allocation_order', item[0]))
-        positive = [channel for unused, channel in ordered if channel['resultABS'] > 0.]
-        total = math.fsum(channel['resultABS'] for channel in positive)
-        if not math.isfinite(total) or total <= 0.:
-            raise aMCatNLOError('AmpliCol updated absolute cross section is not positive and finite.')
-        if any(not math.isfinite(channel['resultABS']) or channel['resultABS'] < 0. for channel in channels):
-            raise aMCatNLOError('Invalid updated AmpliCol channel rate.')
-        for channel in channels:
-            channel['ampli_final_quota'] = 0
-        allocation_rng = random.Random(self.get_randinit_seed() ^ 0x414D504C)
-        for unused in range(self.run_card['nevents']):
-            target = allocation_rng.random()*total
-            cumulative = 0.
-            for channel in positive:
-                cumulative += channel['resultABS']
-                if target < cumulative:
-                    break
-            channel['ampli_final_quota'] += 1
-
-    def _finalize_ampli_pools_legacy(self, jobs, mode):
-        """Collect native event samples while preserving the independent survey.
-
-        Each worker has already generated its reserve and met the full-tail
-        criterion, including its final quota's worst possible subset. Collection
-        validates those facts and uniformly trims each reserve once. Production
-        moments are diagnostics: event-count stopping never changes channel
-        probabilities, published cross sections, or their uncertainties.
-        """
-        channels = self._ampli_channels
-        self.append_the_results(jobs, 2)
-        pools = collections.defaultdict(list)
-        channel_jobs = collections.defaultdict(list)
-        for job in jobs:
-            pool = ampli_pool.read_pool(job['dirname'])
-            if (pool['generated_target'] != job['nevents'] or
-                    pool['final_quota'] != job['ampli_final_quota']):
-                raise aMCatNLOError('AmpliCol worker event quotas disagree with '
-                                    'the generation plan: %s' % job['dirname'])
-            pools[job['ampli_parent']].append(pool)
-            channel_jobs[job['ampli_parent']].append(job)
-        if sum(channel['ampli_final_quota'] for channel in channels) != self.run_card['nevents']:
-            raise aMCatNLOError('AmpliCol final channel quotas do not sum to the requested events.')
-        # Restore survey totals even though append_the_results read worker diagnostics.
-        self.cross_sect_dict = self.write_res_txt_file(channels, 2)
-        total = self.cross_sect_dict['xseca']
-        normalization = total
-        event_norm = self.run_card['event_norm'].lower()
-        if event_norm == 'sum':
-            normalization /= self.run_card['nevents']
-        elif event_norm == 'unity':
-            normalization = 1.
-        process_rates = [(int(label), self.cross_sect_dict[label]['xsect'],
-                           self.cross_sect_dict[label]['errt'])
-                         for label in self.cross_sect_dict['p_labels']]
-        selection_rng = random.Random(self.get_randinit_seed() ^ 0x504F4F4C)
-        sampling_modes = {pool.get('adaptation', {}).get('mode', 'frozen')
-                          for channel_pools in pools.values() for pool in channel_pools}
-        manifest = {
-            'version': 2, 'requested_events': self.run_card['nevents'],
-            'seed': self.get_randinit_seed(), 'channels': [],
-            'rate_source': 'survey', 'survey_relative_accuracy': .03,
-            'sampling': (next(iter(sampling_modes)) if len(sampling_modes) == 1
-                         else 'mixed' if sampling_modes else 'adaptive_unfolded'),
-            'weight_convention': 'draw_time_importance',
-            'allowed_overweight_factor': ampli_pool.ALLOWED_OVERWEIGHT_FACTOR,
-            'overweight_definition': 'full absolute cross section belonging to weights above the threshold',
-        }
-        finalized = []
-        for channel in channels:
-            dirname = channel['dirname']
-            channel_pools = pools[dirname]
-            workers = channel_jobs[dirname]
-            requested = channel['ampli_final_quota']
-            if sum(pool['final_quota'] for pool in channel_pools) != requested:
-                raise aMCatNLOError('AmpliCol worker quotas do not fill channel %s' % dirname)
-            channel['nevents'] = requested
-            channel['wgt_frac'] = 1.
-            generation_cpu = sum(job.get('time_spend', 0.) for job in workers)
-            trials = sum(pool['trials'] for pool in channel_pools)
-            selection_diagnostics = None
-            if requested:
-                selection_diagnostics = ampli_pool.finalize_channel(
-                    channel_pools, requested, pjoin(dirname, 'events.lhe'),
-                    normalization, selection_rng, cross_sections=process_rates)
-                channel['ampli_finalized'] = True
-                finalized.append(channel)
-            # res_2 and HTML retain the same survey rate and error as the LHE init.
-            with open(pjoin(dirname, 'results.dat'), 'w') as result_file:
-                result_file.write('%.16e %.16e 0 0 0 0 0 0 0 %.16e\n' %
-                                  (channel['resultABS'], channel['error'], channel['result']))
-            with open(pjoin(dirname, 'res_2.dat'), 'w') as result_file:
-                result_file.write('%.16e %.16e %.16e %.16e %d %d %.8g\n' %
-                    (channel['resultABS'], channel['errorABS'], channel['result'],
-                     channel['error'], channel['niters_done'], channel['npoints_done'],
-                     generation_cpu))
-            manifest['channels'].append({
-                'subprocess': channel['p_dir'], 'channel': channel['channel'],
-                'quota': requested,
-                'generated_target': sum(pool['generated_target'] for pool in channel_pools),
-                'absolute': channel['resultABS'], 'signed': channel['result'],
-                'error_abs': channel['errorABS'], 'error_signed': channel['error'],
-                'survey_points': channel['npoints_done'],
-                'production_moments_diagnostic': ampli_pool.combine_moments(channel_pools),
-                'batches': [{'directory': os.path.relpath(job['dirname'], self.me_dir),
-                            'trials': pool['trials'],
-                            'generated_target': pool['generated_target'],
-                            'final_quota': pool['final_quota'],
-                            'pool_protocol': pool.get('version', 2),
-                            'adaptation': pool.get('adaptation', {'mode': 'frozen'})}
-                            for job, pool in zip(workers, channel_pools)],
-                'available_candidates': ampli_pool.available_events(channel_pools),
-                'selection': selection_diagnostics,
-                'generation_trials': trials, 'generation_cpu_seconds': generation_cpu,
-            })
-        self.write_nevents_unweighted_file(finalized, channels)
-        manifest['cross_section'] = self.cross_sect_dict['xsect']
-        manifest['uncertainty'] = self.cross_sect_dict['errt']
-        manifest['absolute_cross_section'] = total
-        manifest['generation_trials'] = sum(channel['generation_trials'] for channel in manifest['channels'])
-        manifest['generation_cpu_seconds'] = sum(channel['generation_cpu_seconds'] for channel in manifest['channels'])
-        manifest_path = pjoin(self.me_dir, 'SubProcesses', 'ampli_production.json')
-        with open(manifest_path, 'w') as output:
-            json.dump(manifest, output, indent=2, sort_keys=True)
-            output.write('\n')
-        run_directory = pjoin(self.me_dir, 'Events', self.run_name)
-        if os.path.isdir(run_directory):
-            files.cp(manifest_path, run_directory)
-        cross, error = self.make_make_all_html_results(jobs=channels)
-        self.results.add_detail('cross', cross)
-        self.results.add_detail('error', error)
-        logger.info('AmpliCol collected %d events from %d evaluations; rates use the 3%% survey',
-                    sum(channel['nevents'] for channel in channels), manifest['generation_trials'])
-        return [], finalized
 
     def get_randinit_seed(self):
         """ Get the random number seed from the randinit file """
@@ -3331,9 +2782,7 @@ RESTART = %(mint_mode)s
             job['time_spend']=float(results[6])
             if job['resultABS'] != 0:
                 job['err_percABS'] = job['errorABS']/job['resultABS']*100.
-                job['err_perc'] = (job['error']/job['result']*100.
-                                   if job['result'] != 0. else
-                                   (float('inf') if job['error'] != 0. else 0.))
+                job['err_perc'] = job['error']/job['result']*100.
             else:
                 job['err_percABS'] = 0.
                 job['err_perc'] = 0.
@@ -5551,9 +5000,6 @@ RESTART = %(mint_mode)s
             except IOError:
                 pass
             if last_line != "</LesHouchesEvents>":
-                if job.get('ampli_finalized'):
-                    raise aMCatNLOError('Finalized AmpliCol event file is incomplete: %s' %
-                                        pjoin(job['dirname'], 'events.lhe'))
                 jobs_to_resubmit.append(job)
         self.njobs = 0
         if jobs_to_resubmit:
@@ -5771,22 +5217,9 @@ RESTART = %(mint_mode)s
                 required_output.append('%s/log_MINT%s.txt' % (current,args[3]))
             if args[3] in ['0','1']:
                 required_output.append('%s/results.dat' % current)
-                if self.get_nlops_integrator() == 1:
-                    required_output.extend([
-                        '%s/ampli_grids' % current,
-                        '%s/grid.MC_integer' % current,
-                        '%s/res_%s.dat' % (current, args[3]),
-                    ])
-            if args[3] == '2' and self.get_nlops_integrator() == 1:
-                required_output.extend([
-                    '%s/ampli_pool.dat' % current,
-                    '%s/ampli_candidates.lhe' % current,
-                    '%s/res_2.dat' % current,
-                ])
             if args[3] == '1':
                 output_files.append('%s/results.dat' % current)
-            survey_step = '1' if self.get_nlops_integrator() == 1 else '0'
-            if args[1] == 'F' and args[3] == survey_step and \
+            if args[1] == 'F' and args[3] == '0' and \
                     'born_spreading' in self.run_card and \
                     self.run_card['born_spreading']:
                 required_output.append('%s/born_spreading.dat' % current)

@@ -182,9 +182,6 @@ class TestMomentumMaps(unittest.TestCase):
     def test_native_projection_and_shared_state(self):
         self.check_map("native_projection")
 
-    def test_native_massless_projection_with_soft_recoil(self):
-        self.check_map("ee_soft_recoil")
-
     def test_dijet_native_isr_projection_preserves_mass_shell(self):
         self.check_map("dijet_isr_boundary")
 

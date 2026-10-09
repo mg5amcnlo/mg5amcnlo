@@ -4,7 +4,6 @@ c     This is the driver for the whole calculation
 c**************************************************************************
       use extra_weights
       use mint_module
-      use ampli_mint_adapter
       use FKSParams
       use process_module
       use scale_module
@@ -26,17 +25,6 @@ C
 C     LOCAL
 C
       integer i,j,k,l,l1,l2,nndim,nevts,p_label
-      logical ampli_write,ampli_done
-      double precision ampli_candidate_factor
-      interface
-         subroutine write_current_mcatnlo_event(lunlhe,p_label,
-     $        event_weight,putonshell,absolute_weight)
-         integer lunlhe,p_label
-         double precision event_weight
-         logical putonshell
-         double precision,optional,intent(out) :: absolute_weight
-         end subroutine write_current_mcatnlo_event
-      end interface
 
       integer lunlhe
       parameter (lunlhe=98)
@@ -166,7 +154,7 @@ c Only do the reweighting when actually generating the events
          only_virt=.false.
       endif
 
-      if(imode.eq.0.or.(NLOPSIntegrator.eq.1.and.imode.eq.1))then
+      if(imode.eq.0)then
         flat_grid=.true.
       else
         flat_grid=.false.
@@ -178,8 +166,7 @@ c Only do the reweighting when actually generating the events
       call born_spread_configure(born_spreading.and..not.only_virt
      $     .and.(abrv.eq.'all'.or.abrv.eq.'novi'),nexternal,
      $     nincoming,fks_configs,ndim)
-      if (born_spread_active.and.imode.gt.0.and.
-     $     .not.(NLOPSIntegrator.eq.1.and.imode.eq.1))
+      if (born_spread_active.and.imode.gt.0)
      $     call born_spread_load_table
 c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
 c at the NLO)
@@ -225,25 +212,17 @@ c     setting of the grids
 c*************************************************************
       if (imode.eq.-1.or.imode.eq.0) then
          write (*,*) 'imode is ',imode
-         if (NLOPSIntegrator.eq.1) then
-            call ampli_integrate(sigintF)
-         else
-            call mint(sigintF)
-         endif
+         call mint(sigintF)
          call deallocate_weight_lines
          open(unit=58,file='results.dat',status='unknown')
          write(58,*) ans(1,1),unc(2,1),0d0,0,0,0,0,0d0,0d0,ans(2,1)
          close(58)
 c*************************************************************
-c     MINT envelope construction or the single adaptive AmpliCol survey
+c     computation of upper bounding envelope
 c*************************************************************
       elseif(imode.eq.1) then
          write (*,*) 'imode is ',imode
-         if (NLOPSIntegrator.eq.1) then
-            call ampli_integrate(sigintF)
-         else
-            call mint(sigintF)
-         endif
+         call mint(sigintF)
          call deallocate_weight_lines
          open(unit=58,file='results.dat',status='unknown')
          write(58,*) ans(1,1)+ans(5,1),unc(2,1),0d0,0,0,0,0,0d0,0d0
@@ -268,11 +247,7 @@ c Mass-shell stuff. This is MC-dependent
 
 c     to restore grids:
 
-         if (NLOPSIntegrator.eq.1) then
-            call ampli_load_production
-         else
-            call read_grids_from_file
-         endif
+         call read_grids_from_file
 
 c determine how many events for the virtual and how many for the no-virt
          ncall_virt=int(ans(5,1)/(ans(1,1)+ans(5,1)) * ncalls0)
@@ -281,12 +256,7 @@ c determine how many events for the virtual and how many for the no-virt
          write (*,*) "Generating virt :: novi approx.",ncall_virt
      $        ,ncall_novi
 
-         if (NLOPSIntegrator.eq.1) then
-            open(unit=lunlhe,file='ampli_candidates.lhe',
-     $           status='replace')
-         else
-            open(unit=lunlhe,file='events.lhe',status='unknown')
-         endif
+         open(unit=lunlhe,file='events.lhe',status='unknown')
 
 c fill the information for the write_header_init common block
          ifile=lunlhe
@@ -303,24 +273,6 @@ c fill the information for the write_header_init common block
          endif
 
          write (*,*) 'imode is ',imode
-         if (NLOPSIntegrator.eq.1) then
-            call ampli_start_generation(nevts)
-            ampli_done=.false.
-            do while (.not.ampli_done)
-               call ampli_next_candidate(sigintF,ampli_write,ampli_done)
-               if (ampli_write) then
-                  call write_current_mcatnlo_event(
-     $                 lunlhe,p_label,1d0,putonshell,
-     $                 ampli_candidate_factor)
-                  call ampli_record_candidate_factor(
-     $                 ampli_candidate_factor,ampli_done)
-               endif
-            enddo
-            write(lunlhe,'(a)') '</LesHouchesEvents>'
-            close(lunlhe)
-            call ampli_finish_pool
-            call deallocate_weight_lines
-         else
          vn=-1
          call gen(sigintF,0,vn,x)
          do j=1,ncalls0
@@ -359,7 +311,6 @@ c Randomly pick the contribution that will be written in the event file
          call gen(sigintF,3,vn,x) ! print counters generation efficiencies
          write (lunlhe,'(a)') "</LesHouchesEvents>"
          close(lunlhe)
-         endif
       endif
 
       if(rejected_born_flow_points.gt.0)write(*,*)
@@ -434,12 +385,7 @@ c Randomly pick the contribution that will be written in the event file
       write(*,*) 'Time spent in Total : ',tTot
 
       open (unit=12, file='res.dat',status='unknown')
-      if (NLOPSIntegrator.eq.1) then
-         weight=ans(1,1)
-         if (imode.ne.0) weight=weight+ans(5,1)
-         write(12,*) weight,ampli_absolute_uncertainty,ans(2,1),
-     $        unc(2,1),itmax,ncalls0,tTot
-      elseif (imode.eq.0) then
+      if (imode.eq.0) then
          write (12,*)ans(1,1),unc(1,1),ans(2,1),unc(2,1),itmax,ncalls0,tTot
       else
          write (12,*)ans(1,1)+ans(5,1),sqrt(unc(1,1)**2+unc(5,1)**2),ans(2,1)
@@ -2232,36 +2178,4 @@ c     if there are no soft singularities at all, just do something trivial
          call add_wgt(2,1d-199,0d0,0d0)
       endif
       return
-      end
-
-      subroutine write_current_mcatnlo_event(lunlhe,p_label,
-     $     event_weight,putonshell,absolute_weight)
-c Store the full event while its contribution/fold state is still live.
-      use mint_module, only: ndimmax,max_fold
-      implicit none
-      integer lunlhe,p_label,iFKS_picked,ifold_picked
-      double precision event_weight,weight,inv_bias
-      double precision,optional,intent(out) :: absolute_weight
-      character*14 formatted_weight
-      double precision x_save(ndimmax,max_fold)
-      common /c_vegas_x_fold/x_save,ifold_picked
-      character*7 event_norm
-      common /event_normalisation/event_norm
-      logical putonshell
-      call pick_unweight_contr(iFKS_picked,ifold_picked)
-      call update_fks_dir(iFKS_picked)
-      weight=event_weight
-      if (event_norm(1:4).eq.'bias') then
-         call include_inverse_bias_wgt(inv_bias)
-         weight=weight*inv_bias
-      endif
-c Match the magnitude emitted by handling_lhe_events.f format 503.
-c Tail guarantees must apply to the actual rounded LHE payload.
-      if (present(absolute_weight)) then
-         write(formatted_weight,'(e14.8)') abs(weight)
-         read(formatted_weight,*) absolute_weight
-      endif
-      call fill_rwgt_lines
-      call finalize_event(x_save(1,ifold_picked),weight,lunlhe,
-     $     putonshell,p_label)
       end
