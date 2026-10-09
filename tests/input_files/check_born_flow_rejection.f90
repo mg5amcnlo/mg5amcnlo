@@ -67,7 +67,26 @@ program check_born_flow_rejection
     x=0.5d0
     call weight_lines_allocated(5,32,1,1)
     fail_kinematics=index(mode,'kinematics').eq.1
-    if(trim(mode).eq.'native'.or.trim(mode).eq.'explicit'.or.fail_kinematics)then
+    if(index(mode,'weight_').eq.1)then
+      fail_weight_fold=2
+      fail_weight_stage=1
+      bad_weight=nan
+      select case(trim(mode))
+      case('weight_inf')
+        bad_weight=inf
+      case('weight_neginf')
+        bad_weight=-inf
+      case('weight_scaled')
+        fail_weight_stage=2
+        bad_weight=inf
+      case('weight_pdf')
+        fail_weight_stage=3
+      case('weight_parton')
+        fail_weight_stage=4
+      case('weight_sum')
+        fail_weight_stage=5
+      end select
+    elseif(trim(mode).eq.'native'.or.trim(mode).eq.'explicit'.or.fail_kinematics)then
       fail_native_fold=2
       if(trim(mode).eq.'explicit'.or.trim(mode).eq.'kinematics_exp')FKSExplicitSum=.true.
     else
@@ -91,7 +110,8 @@ program check_born_flow_rejection
     dummy=sigintF(x,1d0,1,answer)
     old_calls=born_calls
     dummy=sigintF(x,1d0,1,answer)
-    if(born_calls.ne.old_calls)error stop 'evaluated a later fold of a rejected point'
+    if(fail_weight_stage.lt.3.and.born_calls.ne.old_calls) &
+         error stop 'evaluated a later fold of a rejected point'
     dummy=sigintF(x,1d0,2,answer)
     if(any(answer.ne.0d0).or.icontr.ne.0)error stop 'retained part of a rejected point'
     if(any(virt_wgt_mint.ne.0d0).or.any(born_wgt_mint.ne.0d0).or.virtual_over_born.ne.0d0) &
@@ -99,12 +119,15 @@ program check_born_flow_rejection
     if(pass_cuts_check.or.real_point_active)error stop 'retained point/cache flags'
     if(last_grid_weight.ne.0d0)error stop 'nonzero adaptive weight after rejection'
     if(ifold_counter.ne.3)error stop 'lost folding position'
-    if(rejected_born_flow_points.ne.merge(0,1,fail_kinematics).or. &
-         rejected_mc_kinematics_points.ne.merge(1,0,fail_kinematics)) &
+    if(rejected_born_flow_points.ne.merge(0,1,fail_kinematics.or.fail_weight_stage.gt.0).or. &
+         rejected_mc_kinematics_points.ne.merge(1,0,fail_kinematics).or. &
+         rejected_nonfinite_points.ne.merge(1,0,fail_weight_stage.gt.0)) &
          error stop 'counted rejected point more than once'
     ! The next point must be evaluated normally, with no stale records.
     values=[1d0,3d0,0d0]
     fail_native_fold=0
+    fail_weight_fold=0
+    fail_weight_stage=0
     abrv='all'
     born_cuts=.true.
     dummy=sigintF(x,1d0,0,answer)
@@ -213,6 +236,10 @@ subroutine repartition_MC_H(first,p,pl,pc,jac,vw,sw,bf,point,valid)
   type(fks_phase_space_point),intent(in) :: point
   logical,intent(out) :: valid
   call add_record(4d0)
+  if(ifold_counter.eq.fail_weight_fold)then
+    if(fail_weight_stage.eq.1)nonfinite_contribution=.true.
+    if(fail_weight_stage.eq.2)wgt(1,icontr)=bad_weight
+  endif
   if(ifold_counter.eq.fail_native_fold.and.fail_kinematics)then
     valid=.false.
     rejected_mc_kinematics_points=rejected_mc_kinematics_points+1
@@ -220,11 +247,21 @@ subroutine repartition_MC_H(first,p,pl,pc,jac,vw,sw,bf,point,valid)
   endif
   if(ifold_counter.eq.fail_native_fold)values(2)=ieee_value(0d0,ieee_quiet_nan)
   call get_born_flow(flow,factor)
-  valid=flow.ne.0
+  valid=flow.ne.0.and..not.nonfinite_contribution
 end subroutine
 subroutine fill_mint_function_NLOPS(answer,n1body)
   use flow_fixture
   double precision :: answer(6),n1body
+  if(fail_weight_stage.eq.5)then
+    nonfinite_contribution=.true.
+    return
+  endif
   answer=sum(wgt(1,1:icontr))
   n1body=answer(1)
+end subroutine
+
+subroutine include_PDF_and_alphas
+  use flow_fixture
+  if(fail_weight_stage.eq.3)wgts(1,icontr)=bad_weight
+  if(fail_weight_stage.eq.4)parton_iproc(1,icontr)=bad_weight
 end subroutine

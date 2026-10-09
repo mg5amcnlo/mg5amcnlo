@@ -8,7 +8,7 @@ c**************************************************************************
       use process_module
       use scale_module
       use weight_lines, only: rejected_born_flow_points,
-     $     rejected_mc_kinematics_points
+     $     rejected_mc_kinematics_points,rejected_nonfinite_points
       implicit none
 C
 C     CONSTANTS
@@ -319,6 +319,9 @@ c Randomly pick the contribution that will be written in the event file
       if(rejected_mc_kinematics_points.gt.0)write(*,*)
      $     'Total phase-space points rejected for invalid MC kinematics:',
      $     rejected_mc_kinematics_points
+      if(rejected_nonfinite_points.gt.0)write(*,*)
+     $     'Total phase-space points rejected for nonfinite weights:',
+     $     rejected_nonfinite_points
       if(i_momcmp_count.ne.0)then
         write(*,*)'     '
         write(*,*)'WARNING: genps_fks code 555555'
@@ -693,6 +696,7 @@ c
 
 
       function sigintF(xx,vegas_wgt,ifl,f)
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       use fks_phase_space_data, only: p_born,p1_cnt,jac_cnt
       use fks_phase_space, only: fks_phase_space_point,
      $     generate_born_contribution,generate_real_phase_space
@@ -802,6 +806,10 @@ c "npNLO".
       if (ifl.eq.0) then
          ifold_counter=1
          rejected_point=.false.
+         nonfinite_contribution=.false.
+         nonfinite_type=0
+         nonfinite_sector=0
+         nonfinite_history=0
       elseif(ifl.eq.1) then
          ifold_counter=ifold_counter+1
       endif
@@ -1103,6 +1111,12 @@ c check if event or counter-event passes cuts
          enddo
          call apply_born_spread_weight(ifold_counter)
  12      continue
+! Also catch overflow in history/flow rescaling after add_wgt returned.
+         if (icontr.gt.0) then
+            if (.not.all(ieee_is_finite(wgt(:,1:icontr))))
+     $           nonfinite_contribution=.true.
+         endif
+         if(nonfinite_contribution)goto 900
       elseif(ifl.eq.2) then
          if (ifold_counter .ne.
      $       ifold(ifold_energy)*ifold(ifold_yij)*ifold(ifold_phi)) then
@@ -1124,9 +1138,18 @@ c Include PDFs and alpha_S and reweight to include the uncertainties
          call include_PDF_and_alphas
 c Include the weight from the bias_function
          call include_bias_wgt
+! PDF, coupling and bias factors are applied after all folds. Check the
+! central and flavour weights before combining events or fitting grids.
+         do i=1,icontr
+            if (.not.ieee_is_finite(wgts(1,i)).or.
+     $          .not.all(ieee_is_finite(parton_iproc(1:niproc(i),i))))
+     $           nonfinite_contribution=.true.
+         enddo
+         if(nonfinite_contribution)goto 900
 c Sum the contributions that can be summed before taking the ABS value
          call sum_identical_contributions
          call fill_mint_function_NLOPS(f,n1body_wgt)
+         if(nonfinite_contribution)goto 900
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
       endif
 
@@ -1134,7 +1157,22 @@ c Sum the contributions that can be summed before taking the ABS value
  900  continue
 ! Nothing from this point may enter integration, unweighting, or the
 ! Born-spreading fit, including records made before the failure.
+      if(nonfinite_contribution.and..not.rejected_point)then
+         rejected_nonfinite_points=rejected_nonfinite_points+1
+         if(rejected_nonfinite_points.le.5.or.
+     $        mod(rejected_nonfinite_points,100).eq.0)then
+            write(*,*) 'Rejecting phase-space point: nonfinite weight',
+     $           '; count =',rejected_nonfinite_points
+            write(*,*) 'Contribution type, sector, native history:',
+     $           nonfinite_type,nonfinite_sector,nonfinite_history
+         endif
+         if(rejected_nonfinite_points.eq.1)then
+            write(*,*) 'Rejected fold and integration coordinates:',
+     $           ifold_counter,x_save(1:nndim,ifold_counter)
+         endif
+      endif
       rejected_point=.true.
+      call mc_set_history(0)
       icontr=0
       born_flow_picked=0
       born_flow_factor=0d0
@@ -1211,10 +1249,11 @@ c Sum the contributions that can be summed before taking the ABS value
       common/factor_n1body/factors
       common/factor_n1body_NLOPS/mc_factors
       common/factor_pdfsch/pdf_factors
-      logical cuts_born,cuts_real,passcuts,native_valid
+      logical cuts_born,cuts_real,passcuts,passcuts_native_born,
+     $     native_valid
       character(len=48) rejection_reason
       double precision fks_Sij
-      external fks_Sij,passcuts
+      external fks_Sij,passcuts,passcuts_native_born
       double precision born_weight
       external mc_outer_channel_weight
       integer nFKSprocess,i_fks,j_fks
@@ -1370,7 +1409,7 @@ c Sum the contributions that can be summed before taking the ABS value
             if (ickkw.eq.3) then
 ! All kl terms describe the same n+1-body H event. Reuse its outer ij
 ! FxFx Sudakov and scales; only the particle labels need permuting.
-! No native Born clustering belongs in this H-only sum, including G.
+! The native Born clustering is needed separately for subtraction cuts.
                need_matching_H=owner_match(MC_HIST_PERM(:,ihist))
                call set_FxFx_scale(4,pn)
             endif
@@ -1397,7 +1436,7 @@ c Sum the contributions that can be summed before taking the ABS value
 ! than reclustering each native underlying Born. FxFx Born damping
 ! bounds are scalar, so their matrices need no relabelling. Preserve
 ! the outer H dipole scales with the real-state particle permutation.
-! This makes the kl sum independent of the FxFx clustering work.
+! The native Born clustering used for cuts does not set these scales.
                shower_scale_hard=hard_scale_save
                shower_scale_nbody=nbody_scales_save(:,:,1)
                shower_scale_nbody_min=nbody_scales_save(:,:,2)
@@ -1414,7 +1453,7 @@ c Sum the contributions that can be summed before taking the ABS value
                call compute_shower_scale_n1body(pn,i_fks,j_fks,
      $              mc_shower_scale_mass())
             endif
-            cuts_born=passcuts(p1_cnt(0,1,0),rwgt)
+            cuts_born=passcuts_native_born(p1_cnt(0,1,0),rwgt)
             call set_cms_stuff(-100)
             if (ickkw.eq.3) call set_FxFx_scale(-3,pn)
             cuts_real=passcuts(pn,rwgt)
@@ -1522,6 +1561,55 @@ c Sum the contributions that can be summed before taking the ABS value
       mc_H_only=.false.
       end
 
+      logical function passcuts_native_born(p,rwgt)
+! MC subtraction is cut on its own underlying Born process. In FxFx,
+! Born momenta alone are not enough: passcuts also uses the clustering
+! scales and the labels distinguishing QCD jets from EW decay products.
+! The real-event labels can omit the zero-momentum FKS slot and leave
+! an unresolved native Born jet uncut. Obtain the native Born cut data
+! without replacing the outer Born/real caches or their weight factors.
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      double precision p(0:3,nexternal),rwgt,sudakov,expanded_sudakov,
+     $     fac_save(2),ren_save(0:nexternal)
+      double precision FxFx_fac_scale(2),FxFx_ren_scales(0:nexternal)
+      integer nFxFx_ren_scales,nscales_save
+      common/c_FxFx_scales/FxFx_fac_scale,FxFx_ren_scales,
+     $     nFxFx_ren_scales
+      integer need_matching_S(nexternal),need_matching_H(nexternal),
+     $     need_matching_cuts(nexternal),born_matching(nexternal),
+     $     matching_save(nexternal),i_fks,j_fks
+      common/c_need_matching/need_matching_S,need_matching_H,
+     $     need_matching_cuts
+      common/fks_indices/i_fks,j_fks
+      logical passcuts
+      external passcuts
+
+      if(ickkw.ne.3)then
+         passcuts_native_born=passcuts(p,rwgt)
+         return
+      endif
+      fac_save=FxFx_fac_scale
+      ren_save=FxFx_ren_scales
+      nscales_save=nFxFx_ren_scales
+      matching_save=need_matching_cuts
+! Clustering-only mode returns the Born labels/scales without computing
+! a Sudakov factor. It does not change the set_FxFx_scale caches.
+      call cluster_and_reweight(0,sudakov,expanded_sudakov,
+     $     nFxFx_ren_scales,FxFx_ren_scales,FxFx_fac_scale(1),
+     $     born_matching,.true.)
+      FxFx_fac_scale(2)=FxFx_fac_scale(1)
+! Jet counting expects the zero-momentum FKS slot to remain present.
+      need_matching_cuts=[born_matching(1:i_fks-1),1,
+     $     born_matching(i_fks:nexternal-1)]
+      passcuts_native_born=passcuts(p,rwgt)
+      FxFx_fac_scale=fac_save
+      FxFx_ren_scales=ren_save
+      nFxFx_ren_scales=nscales_save
+      need_matching_cuts=matching_save
+      end
+
       subroutine init_process_module_nbody_wrapper()
       use fks_phase_space_data, only: p_born
       use process_module
@@ -1575,7 +1663,7 @@ c Sum the contributions that can be summed before taking the ABS value
       use fks_phase_space_data, only: p_born,p1_cnt
       use scale_module, only: born_flow_picked,shower_scale_n1body,
      $     emsca_H,compute_shower_scale_n1body
-      use weight_lines, only: mc_H_only
+      use weight_lines, only: mc_H_only,nonfinite_contribution
       use process_module, only: ndelH,valid_dipole_n1
       use mc_counterterms, only: mc_shower_scale_mass,
      $     gfactsf,gfactcl,gfactazi
@@ -1620,6 +1708,7 @@ c Sum the contributions that can be summed before taking the ABS value
      $     abrv.eq.'real'.or.ickkw.eq.4) then
          call compute_native_NLOPS_weights(p,p_lab,p_cms,jacPS,
      $        passcuts_nbody,passcuts_n1body,probne)
+         weights_valid=.not.nonfinite_contribution
          return
       endif
 
@@ -1680,6 +1769,10 @@ c Sum the contributions that can be summed before taking the ABS value
          emsca_H(nFKSprocess,ifold_counter,:,:)=emsca_base
          call compute_native_NLOPS_weights(p,p_lab,p_cms,jacPS,
      $        passcuts_nbody,passcuts_n1body,probne_flow)
+         if(nonfinite_contribution)then
+            weights_valid=.false.
+            exit
+         endif
          probne=probne+flow_fraction*probne_flow
          if (flow.eq.flow_owner) then
 ! Delta replaces the H scale with this owner's stopping scales. Retain

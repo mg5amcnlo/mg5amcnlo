@@ -5,11 +5,16 @@ module flow_fixture
   integer :: draws=0,born_calls=0,fail_native_fold=0
   logical :: real_point_active=.false.,born_cuts=.true.
   logical :: fail_kinematics=.false.
+  integer :: fail_weight_fold=0,fail_weight_stage=0
+  double precision :: bad_weight=0d0
 contains
   subroutine add_record(value)
     double precision :: value
     icontr=icontr+1
     wgt(:,icontr)=value
+    wgts(1,icontr)=value
+    niproc(icontr)=1
+    parton_iproc(1,icontr)=value
   end subroutine
 end module
 

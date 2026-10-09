@@ -2023,6 +2023,7 @@ c equal to ione, so no need to define separate factors.
 
       
       subroutine add_wgt(type,orders,wgt1,wgt2,wgt3)
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       use fks_phase_space_data,only: p_born,p_ev,ybst_til_tolab,ybst_til_tocm,sqrtshat,shat,p1_cnt,
      $     jac_cnt
 c Adds a contribution to the list in weight_lines. 'type' sets the type
@@ -2162,10 +2163,6 @@ c        contribution
      $        (type.ge.8 .and. type.le.10)) return
       endif
       if (wgt1.eq.0d0 .and. wgt2.eq.0d0 .and. wgt3.eq.0d0) return
-c Check for NaN's and INF's. Simply skip the contribution
-      if (wgt1.ne.wgt1) return
-      if (wgt2.ne.wgt2) return
-      if (wgt3.ne.wgt3) return
 
 C Apply user-defined (in FKS_params.dat) contribution type filters if necessary
       if (VetoedContributionTypes(0).gt.0) then
@@ -2229,6 +2226,18 @@ c$$$            write (*,*) p_ev(0:3,i)
 c$$$         enddo
 c$$$      endif
       
+c Report invalid weights to the NLOPS driver, which rejects all folds
+c after restoring the native state. A partial subtraction is not valid.
+      if (.not.all(ieee_is_finite([wgt1,wgt2,wgt3]))) then
+         if (.not.nonfinite_contribution) then
+            nonfinite_type=type
+            nonfinite_sector=nFKSprocess
+            nonfinite_history=active_history
+         endif
+         nonfinite_contribution=.true.
+         return
+      endif
+
       icontr=icontr+1
       call weight_lines_allocated(nexternal,icontr,max_wgt,max_iproc)
       itype(icontr)=type
@@ -3858,6 +3867,7 @@ c instead.
 
 
       subroutine fill_mint_function_NLOPS(f,n1body_wgt)
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
 c Fills the function that is returned to the MINT integrator. Depending
 c on the imode we should or should not include the virtual corrections.
       use weight_lines
@@ -3892,6 +3902,10 @@ c on the imode we should or should not include the virtual corrections.
                max_weight=max(max_weight,abs(unwgt(j,i)))
             enddo
          enddo
+! Check before the consistency test: overflow is a rejected numerical
+! point, not evidence of an inconsistent subtraction prescription.
+         if (.not.all(ieee_is_finite([sigint,sigint1,sigint_ABS])))
+     $        goto 900
 c check the consistency of the results up to machine precision (10^-10 here)
          if (imode.ne.1 .or. only_virt) then
             if (abs((sigint-sigint1)/max_weight).gt.1d-10) then
@@ -3909,6 +3923,7 @@ c check the consistency of the results up to machine precision (10^-10 here)
             endif
          else
             sigint1=sigint1+virt_wgt_mint(0)
+            if (.not.ieee_is_finite(sigint1)) goto 900
             if (abs((sigint-sigint1)/max_weight).gt.1d-10) then
                write (*,*) 'ERROR: inconsistent integrals #1',sigint
      $              ,sigint1,max_weight,abs((sigint-sigint1)/max_weight)
@@ -3936,26 +3951,6 @@ c n1body_wgt is used for the importance sampling over FKS directories
             n1body_wgt=n1body_wgt+abs(tmp_wgt)
          enddo
       endif
-      if (born_spread_phase.eq.1.or.born_spread_phase.eq.2) then
-         found_s_sample=.false.
-         do i=1,icontr
-            if (H_event(i).or.group_size(i).eq.0) cycle
-            n_sproc=niproc(i)
-            found_s_sample=.true.
-            exit
-         enddo
-         nfolds=product(ifold(1:ndim))
-         if (.not.found_s_sample) n_sproc=0
-         do ifold_sample=1,nfolds
-            born_spread_current_bin=born_spread_bin_fold(ifold_sample)
-            born_spread_current_sector=
-     $           born_spread_sector_fold(ifold_sample)
-            call born_spread_observe_sample(
-     $           unwgt_B(1:max(1,n_sproc),ifold_sample),
-     $           unwgt_noB(1:max(1,n_sproc),ifold_sample),n_sproc,
-     $           ifold_sample.eq.nfolds)
-         enddo
-      endif
       f(1)=sigint_ABS
       f(2)=sigint
       f(4)=virtual_over_born
@@ -3976,6 +3971,34 @@ c n1body_wgt is used for the importance sampling over FKS directories
             f(isix)=born_wgt_mint(iamp)
          endif
       enddo
+! Reject before the Born-spreading observations as well as before MINT.
+      if (.not.all(ieee_is_finite(f)).or.
+     $    .not.ieee_is_finite(n1body_wgt)) goto 900
+      if (born_spread_phase.eq.1.or.born_spread_phase.eq.2) then
+         found_s_sample=.false.
+         do i=1,icontr
+            if (H_event(i).or.group_size(i).eq.0) cycle
+            n_sproc=niproc(i)
+            found_s_sample=.true.
+            exit
+         enddo
+         nfolds=product(ifold(1:ndim))
+         if (.not.found_s_sample) n_sproc=0
+         do ifold_sample=1,nfolds
+            born_spread_current_bin=born_spread_bin_fold(ifold_sample)
+            born_spread_current_sector=
+     $           born_spread_sector_fold(ifold_sample)
+            call born_spread_observe_sample(
+     $           unwgt_B(1:max(1,n_sproc),ifold_sample),
+     $           unwgt_noB(1:max(1,n_sproc),ifold_sample),n_sproc,
+     $           ifold_sample.eq.nfolds)
+         enddo
+      endif
+      return
+ 900  continue
+      nonfinite_contribution=.true.
+      f=0d0
+      n1body_wgt=0d0
       return
       end
 
@@ -5712,6 +5735,10 @@ c Factor two to fix the limits.
 
 
       subroutine eikonal_reduced(pp,m,n,i_fks,j_fks,xi_i_fks,y_ij_fks,eik)
+! The legacy external dot rounds |p.q|<1d-6 to zero. Soft native Born
+! legs can give smaller, well-resolved products: retain them in both
+! the numerator and denominators instead of introducing a zero pole.
+      use fks_phase_space_helpers, only: dot
       use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
      $     resonance_members,initial_recoil_leg,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt,ybst_til_tolab,
      $     ybst_til_tocm,sqrtshat,shat
@@ -5720,13 +5747,11 @@ c     Returns the eikonal factor
 
       include "nexternal.inc"
       double precision eik,pp(0:3,nexternal),xi_i_fks,y_ij_fks
-      double precision dot,dotnm,dotni,dotmi,fact
+      double precision dotnm,dotni,dotmi,fact
       integer n,m,i_fks,j_fks,i
       integer softcol
 
       include "coupl.inc"
-
-      external dot
 
       real*8 phat_i_fks(0:3)
       double precision zero,pmass(nexternal),tiny

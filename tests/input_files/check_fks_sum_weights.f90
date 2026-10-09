@@ -1,4 +1,5 @@
 program check_fks_sum_weights
+  use, intrinsic :: ieee_arithmetic
   use mint_module
   use weight_lines
   implicit none
@@ -9,7 +10,7 @@ program check_fks_sum_weights
   double precision :: virtual_over_born
   common/c_vob/virtual_over_born
   double precision :: f(nintegrals),n1body,mc_signed,mc_abs,prob(2),negative_mc,negative_sum
-  integer :: sector
+  integer :: sector,mode
 
   ndim=1
   ifold=1
@@ -71,7 +72,27 @@ program check_fks_sum_weights
   negative_sum=(f(1)-f(2))/(2d0*f(1))
   if(abs(negative_mc-0.4d0).gt.1d-12.or.abs(negative_sum-0.25d0).gt.1d-12) &
     error stop 'unweighted negative fractions'
-  write(*,*) 'PASS signed integral and negative fractions',mc_signed,negative_mc,negative_sum
+  ! These invalid points must return before the Born-spreading fit;
+  ! no training storage is allocated, so observing them is also an error.
+  born_spread_phase=1
+  do mode=1,3
+    nonfinite_contribution=.false.
+    wgts(1,1:5)=parton_iproc(1,1:5)
+    unwgt(1,1)=1d0
+    virtual_over_born=0d0
+    select case(mode)
+    case(1)
+      unwgt(1,1)=ieee_value(0d0,ieee_quiet_nan)
+    case(2)
+      wgts(1,1:2)=huge(0d0)
+    case(3)
+      virtual_over_born=ieee_value(0d0,ieee_positive_inf)
+    end select
+    call fill_mint_function_NLOPS(f,n1body)
+    if(.not.nonfinite_contribution.or.any(f.ne.0d0).or.n1body.ne.0d0) &
+      error stop 'nonfinite combined weight reached integration or training'
+  enddo
+  write(*,*) 'PASS signed integral and negative fractions' ,mc_signed,negative_mc,negative_sum
 end program
 
 double precision function ran2()

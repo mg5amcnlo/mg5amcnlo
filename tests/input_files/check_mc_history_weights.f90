@@ -30,11 +30,14 @@ module history_test_state
 end module
 
 program check_mc_history_weights
+  use, intrinsic :: ieee_arithmetic
   use history_test_state
+  use FKSParams, only: VetoedContributionTypes
   use weight_lines
   implicit none
   double precision :: baseline(3,15,3),specialized(3,15,3),probne
-  double precision :: probabilities(3),gvalues(3)
+  double precision :: probabilities(3),gvalues(3),bad(3),bad_values(3)
+  integer :: j,k,old_icontr
   integer :: imass,ip,igs,igc,icuts,mode,i,cases,baseline_reals
   logical :: cuts_born,cuts_real
   call allocate_weight_lines(nexternal)
@@ -144,7 +147,36 @@ program check_mc_history_weights
       enddo
     enddo
   enddo
-  write(*,*) 'PASS native H and S weights',cases,' cases'
+  mc_H_only=.false.
+  mc_S_only=.false.
+  old_icontr=icontr
+  bad_values=[ieee_value(0d0,ieee_quiet_nan),ieee_value(0d0,ieee_positive_inf), &
+              ieee_value(0d0,ieee_negative_inf)]
+  do j=1,3
+    do k=1,3
+      bad=0d0
+      bad(k)=bad_values(j)
+      nonfinite_contribution=.false.
+      call add_wgt(8,[2,0],bad(1),bad(2),bad(3))
+      if(.not.nonfinite_contribution.or.icontr.ne.old_icontr) &
+        error stop 'nonfinite weight accepted or not reported'
+      if(nonfinite_type.ne.8.or.nonfinite_sector.ne.nFKSprocess) &
+        error stop 'lost nonfinite weight source'
+    enddo
+  enddo
+  ! Suppressed S/H records are not part of this history's contribution.
+  nonfinite_contribution=.false.
+  mc_S_only=.true.
+  call add_wgt(8,[2,0],bad_values(1),0d0,0d0)
+  if(nonfinite_contribution)error stop 'rejected suppressed H record'
+  mc_S_only=.false.
+  VetoedContributionTypes=[1,8]
+  call add_wgt(8,[2,0],bad_values(1),0d0,0d0)
+  if(nonfinite_contribution)error stop 'rejected intentionally vetoed record'
+  VetoedContributionTypes=0
+  call add_wgt(8,[2,0],1d0,0d0,0d0)
+  if(nonfinite_contribution.or.icontr.ne.old_icontr+1)error stop 'valid weight did not recover'
+  write(*,*) 'PASS native H and S weights' ,cases,' cases'
 end program
 
 subroutine compute_MC_subt_term(p,p_lab,p_cms,jacPS,passcuts,probne)

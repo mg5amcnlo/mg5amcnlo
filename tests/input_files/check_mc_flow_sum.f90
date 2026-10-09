@@ -36,10 +36,12 @@ end module
 module weight_lines
   implicit none
   logical :: mc_H_only=.false.,mc_S_only=.false.
+  logical :: nonfinite_contribution=.false.
   integer :: rejected_born_flow_points=0
 end module
 
 module flow_test_state
+  use weight_lines, only: nonfinite_contribution
   use scale_module
   use process_module
   use mc_counterterms
@@ -69,7 +71,7 @@ module flow_test_state
   real(8) :: raw_weights(3),kernel(3),probabilities(3),gsoft(3),gcoll(3)
   real(8) :: real_me=40d0,subtraction=6d0
   real(8) :: totals(2),by_flow(2,3),seen_factors(20,3)
-  integer :: evaluations(3),refreshes=0
+  integer :: evaluations(3),refreshes=0,fail_flow=0
   logical :: mutate_prefactors=.false.
 contains
   subroutine setup()
@@ -92,6 +94,8 @@ contains
     evaluations=0
     refreshes=0
     mutate_prefactors=.false.
+    nonfinite_contribution=.false.
+    fail_flow=0
     is_leading_cflow=[.true.,.true.,.false.]
     num_leading_cflows=2
     born_flow_picked=2
@@ -247,6 +251,27 @@ program check_mc_flow_sum
   raw_weights=[-1d0,3d0,0d0]
   call compute_NLOPS_flow_weights(p,p,p,1d0,.true.,.true.,probne,weights_valid)
   if (weights_valid.or.any(evaluations.ne.0)) error stop 'invalid colour weights accepted'
+  ! An invalid evaluated flow propagates failure after the dispatcher
+  ! restores all saved state, including when earlier flows were valid.
+  do mode=1,2
+    call setup()
+    MCSubtractionAtFixedFlow=mode.eq.1
+    fail_flow=2
+    mutate_prefactors=.true.
+    base=[ordinary,matching,pdfscheme]
+    saved_scales=shower_scale_n1body
+    saved_dipoles=valid_dipole_n1
+    call compute_NLOPS_flow_weights(p,p,p,1d0,.true.,.true.,probne,weights_valid)
+    if(weights_valid.or..not.nonfinite_contribution)error stop 'invalid native flow accepted'
+    if(mode.eq.2)then
+      if(maxval(abs([ordinary,matching,pdfscheme]-base)).gt.1d-12) &
+        error stop 'invalid flow leaked prefactors'
+      if(any(shower_scale_n1body.ne.saved_scales).or.any(valid_dipole_n1.neqv.saved_dipoles)) &
+        error stop 'invalid flow leaked scales or dipoles'
+      if(born_flow_picked.ne.2.or.any(icolup_s.ne.123).or.any(icolup_h.ne.456)) &
+        error stop 'invalid flow leaked colours'
+    endif
+  enddo
   print *, 'PASS Born-flow sum, sampling, compensation and owner restoration'
 end program
 
@@ -258,6 +283,7 @@ subroutine compute_native_NLOPS_weights(p,p_lab,p_cms,jacPS,cuts_born,cuts_real,
   real(8) :: real_weight,mc_weight,g_weight,c_weight,contribution(2)
   integer :: flow
   flow=born_flow_picked
+  if(flow.eq.fail_flow)nonfinite_contribution=.true.
   evaluations(flow)=evaluations(flow)+1
   MCcntcalled=flow
   seen_factors(:,flow)=[ordinary,matching,pdfscheme]

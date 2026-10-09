@@ -42,7 +42,7 @@ class TestBornFlowRejection(unittest.TestCase):
                  'compute_shower_scale_nbody', 'save_shower_scale_nbody',
                  'Bornonly_shower_scale', 'compute_shower_scale_n1body',
                  'compute_prefactors_nbody', 'compute_prefactors_n1body',
-                 'special_check_SoftSing', 'include_PDF_and_alphas',
+                 'special_check_SoftSing', 'mc_set_history',
                  'include_bias_wgt', 'sum_identical_contributions',
                  'apply_born_spread_weight')
         (work / 'noops.f90').write_text('\n'.join(
@@ -94,3 +94,9 @@ class TestBornFlowRejection(unittest.TestCase):
 
     def test_outer_rejection_with_native_sector_matching(self):
         self.check_mode('legacy')
+
+    def test_nonfinite_weights_discard_all_folds_and_recover(self):
+        for mode in ('weight_nan', 'weight_inf', 'weight_neginf', 'weight_scaled',
+                     'weight_pdf', 'weight_parton', 'weight_sum'):
+            with self.subTest(mode=mode):
+                self.check_mode(mode)

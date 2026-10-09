@@ -10,6 +10,10 @@
          logical :: mc_S_only=.false.
          integer :: rejected_born_flow_points=0
          integer :: rejected_mc_kinematics_points=0
+         integer :: rejected_nonfinite_points=0
+         logical :: nonfinite_contribution=.false.
+         integer :: nonfinite_type=0,nonfinite_sector=0,
+     $        nonfinite_history=0
          logical, allocatable :: H_event(:)
          integer, allocatable :: itype(:),nFKS(:),QCDpower(:),pdg(:,:)
      $        ,pdg_uborn(:,:),parton_pdg_uborn(:,:,:),parton_pdg(:,:,:)
