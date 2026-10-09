@@ -27,6 +27,8 @@ ANNOUNCEMENT:
       squared were mixed and the width entered as Re(1/D^2) instead of 1/|D|^2). The weights did not follow
       the resonances, leading to slow integration and biased results (e.g. p p > e+ e- j 3.5% too low,
       single top 1% too low).
+  RF: (NLO) Fix compilation of every NLO process with gfortran 16 (virtgranny_red not declared external
+      in genps_fks.f)
 
 
 3.5.16 (3/7/26):
