@@ -471,9 +471,14 @@ class Systematics(object):
         #print "normalisation is ", norm
         #print "nb_event is ", nb_event
     
-        max_scale, min_scale = 0,sys.maxsize
-        max_alps, min_alps = 0, sys.maxsize
-        max_dyn, min_dyn = 0,sys.maxsize
+        # Bounds of each envelope, None until a variation is met: a
+        # cross-section can be negative (an interference, for instance), so
+        # neither 0 nor sys.maxsize is a neutral starting value.
+        max_scale, min_scale = None, None
+        max_alps, min_alps = None, None
+        max_dyn, min_dyn = None, None
+        upper = lambda bound, value: value if bound is None else max(bound, value)
+        lower = lambda bound, value: value if bound is None else min(bound, value)
         pdfs = {}
         dyns = {} # dyn : {'max': , 'min':}
 
@@ -501,28 +506,28 @@ class Systematics(object):
             mur, muf, alps, dyn, pdf = arg[:5]
             if pdf == self.orig_pdf and (dyn==self.orig_dyn or dyn==-1)\
                                               and (mur!=1 or muf!=1 or alps!=1):
-                max_scale = max(max_scale,all_cross[i])
-                min_scale = min(min_scale,all_cross[i])
+                max_scale = upper(max_scale,all_cross[i])
+                min_scale = lower(min_scale,all_cross[i])
             if pdf == self.orig_pdf and mur==1 and muf==1 and \
                                     (dyn==self.orig_dyn or dyn==-1) and alps!=1:
-                max_alps = max(max_alps,all_cross[i])
-                min_alps = min(min_alps,all_cross[i]) 
+                max_alps = upper(max_alps,all_cross[i])
+                min_alps = lower(min_alps,all_cross[i])
             
             if pdf == self.orig_pdf and mur==1 and muf==1 and alps==1:
-                max_dyn = max(max_dyn,all_cross[i])
-                min_dyn = min(min_dyn,all_cross[i])
+                max_dyn = upper(max_dyn,all_cross[i])
+                min_dyn = lower(min_dyn,all_cross[i])
                                             
             if pdf == self.orig_pdf and (alps!=1 or mur!=1 or muf!=1) and \
                                                 (dyn!=self.orig_dyn or dyn!=-1):
                 if dyn not in dyns:
-                    dyns[dyn] = {'max':0, 'min':sys.maxsize,'central':0}
+                    dyns[dyn] = {'max':None, 'min':None,'central':0}
                 curr = dyns[dyn]
-                curr['max'] = max(curr['max'],all_cross[i])
-                curr['min'] = min(curr['min'],all_cross[i])
+                curr['max'] = upper(curr['max'],all_cross[i])
+                curr['min'] = lower(curr['min'],all_cross[i])
             if pdf == self.orig_pdf and (alps==1 and mur==1 and muf==1) and \
                                                 (dyn!=self.orig_dyn or dyn!=-1):
                 if dyn not in dyns:
-                    dyns[dyn] = {'max':0, 'min':sys.maxsize,'central':all_cross[i]}
+                    dyns[dyn] = {'max':None, 'min':None,'central':all_cross[i]}
                 else:
                     dyns[dyn]['central'] = all_cross[i]          
                 
@@ -542,12 +547,16 @@ class Systematics(object):
         resume.write( '#***************************************************************************\n')
         resume.write( "#\n")
         resume.write( '# original cross-section: %s\n' % all_cross[0])
-        if max_scale:
-            resume.write( '#     scale variation: +%2.3g%% -%2.3g%%\n' % ((max_scale-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_scale)/all_cross[0]*100))
-        if max_alps:
-            resume.write( '#     emission scale variation: +%2.3g%% -%2.3g%%\n' % ((max_alps-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_alps)/all_cross[0]*100))
-        if max_dyn and (max_dyn!= all_cross[0] or min_dyn != all_cross[0]):
-            resume.write( '#     central scheme variation: +%2.3g%% -%2.3g%%\n' % ((max_dyn-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_dyn)/all_cross[0]*100))
+        # variations in percent of the size of the central value: '+' is the
+        # increase of the cross-section, also when it is negative
+        central_size = abs(all_cross[0]) if all_cross[0] else 1.
+        percent = lambda value: value / central_size * 100
+        if max_scale is not None:
+            resume.write( '#     scale variation: +%2.3g%% -%2.3g%%\n' % (percent(max_scale-all_cross[0]),percent(all_cross[0]-min_scale)))
+        if max_alps is not None:
+            resume.write( '#     emission scale variation: +%2.3g%% -%2.3g%%\n' % (percent(max_alps-all_cross[0]),percent(all_cross[0]-min_alps)))
+        if max_dyn is not None and (max_dyn!= all_cross[0] or min_dyn != all_cross[0]):
+            resume.write( '#     central scheme variation: +%2.3g%% -%2.3g%%\n' % (percent(max_dyn-all_cross[0]),percent(all_cross[0]-min_dyn)))
         if self.banner.run_card['pdlabel']=='eva':
             resume.write( '# PDF variation not available for EVA.\n')
         elif self.orig_pdf.lhapdfID in pdfs:
@@ -559,7 +568,7 @@ class Systematics(object):
             except RuntimeError:
                 resume.write( '# PDF variation: missing combination\n')
             else:
-                resume.write( '# PDF variation: +%2.3g%% -%2.3g%%\n' % (pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0]))       
+                resume.write( '# PDF variation: +%2.3g%% -%2.3g%%\n' % (percent(pdferr.errplus), percent(pdferr.errminus)))       
         # report error/central not directly linked to the central
         resume.write( "#\n")        
         for lhapdfid,values in pdfs.items():
@@ -580,7 +589,7 @@ class Systematics(object):
                 # the same error can happend to some other type of error like custom.
                 pass
             else:
-                resume.write( '#PDF %s: %g +%2.3g%% -%2.3g%%\n' % (pdfset.name, pdferr.central,pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0]))
+                resume.write( '#PDF %s: %g +%2.3g%% -%2.3g%%\n' % (pdfset.name, pdferr.central,percent(pdferr.errplus), percent(pdferr.errminus)))
 
         dyn_name = {1: r'\sum ET', 2:r'\sum\sqrt{m^2+pt^2}', 3:r'0.5 \sum\sqrt{m^2+pt^2}',4:r'\sqrt{\hat s}' }
         for key, curr in dyns.items():
@@ -589,10 +598,10 @@ class Systematics(object):
             central, maxvalue, minvalue = curr['central'], curr['max'], curr['min']
             if central == 0:
                 continue
-            if maxvalue == 0:
+            if maxvalue is None:
                 resume.write("# dynamical scheme # %s : %g # %s\n" %(key, central, dyn_name[key]))
             else:
-                resume.write("# dynamical scheme # %s : %g +%2.3g%% -%2.3g%% # %s\n" %(key, central, (maxvalue-central)/central*100,(central-minvalue)/central*100, dyn_name[key]))
+                resume.write("# dynamical scheme # %s : %g +%2.3g%% -%2.3g%% # %s\n" %(key, central, (maxvalue-central)/abs(central)*100,(central-minvalue)/abs(central)*100, dyn_name[key]))
       
         resume.write('\n'.join(to_report))
 
