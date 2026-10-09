@@ -64,9 +64,10 @@ class FakeBanner(object):
 class TestPrintCrossSections(unittest.TestCase):
     """check the envelope summary of Systematics.print_cross_sections"""
 
-    def get_summary(self, sign):
+    def get_summary(self, sign, central=None):
         """run print_cross_sections on a fixed set of variations, all the
-        cross-sections being multiplied by sign"""
+        cross-sections being multiplied by sign (and the central one
+        replaced by central if given)"""
 
         pdfset = FakePDFSet(1000, 3, 'FakeSet')
         pdf0, pdf1, pdf2 = [FakePDF(pdfset, i) for i in range(3)]
@@ -89,6 +90,8 @@ class TestPrintCrossSections(unittest.TestCase):
                       ((1, 1, 1, -1, pdf2), 98.)]
         obj.args = [arg for arg, _ in variations]
         all_cross = [sign * cross for _, cross in variations]
+        if central is not None:
+            all_cross[0] = central
         stdout = StringIO()
         obj.print_cross_sections(all_cross, len(all_cross), stdout)
         return stdout.getvalue()
@@ -118,3 +121,16 @@ class TestPrintCrossSections(unittest.TestCase):
         self.assertIn('# dynamical scheme # 1 : -80 +10% -20% #', text)
         self.assertNotIn('+-', text)
         self.assertNotIn('--', text)
+
+    def test_zero_central_cross_section(self):
+        """no relative variation around a zero central cross-section: the
+        percentages are undefined (nan), the dynamical schemes with a non
+        zero central value of their own are still reported"""
+
+        text = self.get_summary(1, central=0.)
+        self.assertIn('# original cross-section: 0.0\n', text)
+        self.assertIn('#     scale variation: +nan% -nan%\n', text)
+        self.assertIn('#     emission scale variation: +nan% -nan%\n', text)
+        self.assertIn('#     central scheme variation: +nan% -nan%\n', text)
+        self.assertIn('# PDF variation: +nan% -nan%\n', text)
+        self.assertIn('# dynamical scheme # 1 : 80 +20% -10% #', text)

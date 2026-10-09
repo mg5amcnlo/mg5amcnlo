@@ -548,9 +548,12 @@ class Systematics(object):
         resume.write( "#\n")
         resume.write( '# original cross-section: %s\n' % all_cross[0])
         # variations in percent of the size of the central value: '+' is the
-        # increase of the cross-section, also when it is negative
-        central_size = abs(all_cross[0]) if all_cross[0] else 1.
-        percent = lambda value: value / central_size * 100
+        # increase of the cross-section, also when it is negative. They are
+        # undefined (printed as nan) for a zero central value.
+        if all_cross[0]:
+            percent = lambda value: value / abs(all_cross[0]) * 100
+        else:
+            percent = lambda value: float('nan')
         if max_scale is not None:
             resume.write( '#     scale variation: +%2.3g%% -%2.3g%%\n' % (percent(max_scale-all_cross[0]),percent(all_cross[0]-min_scale)))
         if max_alps is not None:
