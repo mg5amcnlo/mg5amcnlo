@@ -4802,25 +4802,22 @@ class decay_all_events_onshell(decay_all_events):
         source = pjoin(self.path_me, 'param_card.dat')
         if not os.path.exists(source):
             return
-        # zero_width_pdg (density modes only): the widths it names are set to
-        # zero in these copies *only*. path_me/param_card.dat -- and the banner,
-        # which drives the Breit-Wigner sampling, the branching ratios and the
-        # decay gridpacks -- keep the physical widths.
+        # spinmode=PA with auto_zero_width_PA: the widths of the decayed
+        # particles are set to zero in these copies *only*. path_me/param_card
+        # .dat -- and the banner, which drives the Breit-Wigner sampling, the
+        # reshuffling, the propagator factor and the branching ratios -- keep
+        # the physical widths.
         zero_width = set()
-        if getattr(self, 'mode', None) == 'density':
-            options = getattr(self, 'options', None) or {}
-            pdgs = options['zero_width_pdg'] if 'zero_width_pdg' in options \
-                   else []
-            zero_width = set(abs(int(pid)) for pid in pdgs or [])
+        if getattr(self, 'mode', None) == 'density' and \
+                hasattr(getattr(self, 'mscmd', None), '_zero_width_pdgs'):
+            zero_width = set(self.mscmd._zero_width_pdgs())
         text = None
         if zero_width:
             text, found = decay_misc.zero_widths_in_card(open(source).read(),
                                                          zero_width)
             if zero_width - found:
-                raise MadSpinError(
-                    "zero_width_pdg: no DECAY entry for pdg %s in %s"
-                    % (', '.join(str(p) for p in sorted(zero_width - found)),
-                       source))
+                logger.debug('no DECAY entry to zero for pdg %s in %s',
+                             sorted(zero_width - found), source)
         ms_me_subdir = getattr(self.mscmd, 'ms_me_subdir', 'madspin_me')
         ms_me_decay_subdir = getattr(self.mscmd, 'ms_me_decay_subdir', 'madspin_decay')
         for subdir in (ms_me_subdir, ms_me_decay_subdir):

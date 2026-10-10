@@ -5,9 +5,9 @@ ANNOUNCEMENT:
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
 3.8.2 (XX/XX/XX):
-    OM: MadSpin (density modes): new option 'zero_width_pdg' (list of pdg) setting those
-        widths to zero in the matrix elements used for the spin density matrices only
-        (Breit-Wigner sampling, branching ratios and decay events keep the param_card widths).
+    OM: MadSpin (spinmode=PA): new option 'auto_zero_width_PA' (default True) setting the width
+        of the decayed particles to zero in the matrix elements used for the spin density matrices
+        only (Breit-Wigner sampling, reshuffling and branching ratios keep the param_card widths).
 
 3.8.1 (XX/XX/XX):
     OM: LO: the final unweighting no longer truncates the events above the maximum

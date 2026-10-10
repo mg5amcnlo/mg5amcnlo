@@ -11525,10 +11525,10 @@ class TestReusedMsDirParameters(unittest.TestCase):
                                              'ms_param_card.dat')))
 
 
-class TestZeroWidthPdg(unittest.TestCase):
-    """zero_width_pdg: the widths it names are set to zero in the param_card
-    of the density matrix elements (madspin_me/madspin_decay), and nowhere
-    else; the option is refused outside the density spin modes."""
+class TestAutoZeroWidthPA(unittest.TestCase):
+    """auto_zero_width_PA: with spinmode = PA the widths of the decayed
+    particles are set to zero in the param_card of the density matrix elements
+    (madspin_me/madspin_decay), and nowhere else."""
 
     RUN_CARD = (
         'Block mass\n'
@@ -11540,6 +11540,7 @@ class TestZeroWidthPdg(unittest.TestCase):
         'decay  23 2.495200e+00 # WZ\n'
         'DECAY  24 2.085000e+00 # WW\n'
     )
+    NAME2PDG = {'t': 6, 't~': -6, 'z': 23, 'w+': 24, 'w-': -24}
 
     def setUp(self):
         import tempfile
@@ -11551,149 +11552,135 @@ class TestZeroWidthPdg(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
-    def _generator(self, pdgs, mode='density'):
+    def _interface(self, spinmode='PA', auto=True, branches=('t', 't~'),
+                   multiparticles=None, ms_dir=None):
+        interface = interface_madspin.MadSpinInterface
+
+        class Stub(object):
+            ZERO_WIDTH_STAMP = interface.ZERO_WIDTH_STAMP
+            _zero_width_pdgs = interface._zero_width_pdgs
+            _announce_zero_width = interface._announce_zero_width
+            _reused_directory = interface._reused_directory
+            _check_reused_zero_width = interface._check_reused_zero_width
+
+        class MG5(object):
+            _multiparticles = multiparticles or {}
+        stub = Stub()
+        stub.options = interface_madspin.MadSpinOptions()
+        stub.options['spinmode'] = spinmode
+        stub.options['auto_zero_width_PA'] = auto
+        stub.options['ms_dir'] = ms_dir or ''
+        stub.options['curr_dir'] = ''
+        stub.model = {'name2pdg': self.NAME2PDG}
+        stub.mg5cmd = MG5()
+        stub.list_branches = dict((b, ['%s > x y' % b]) for b in branches)
+        return stub
+
+    def _refresh(self, mscmd, mode='density'):
         class Gen(object):
             refresh_me_param_cards = \
                 madspin.decay_all_events_onshell.refresh_me_param_cards
         gen = Gen()
         gen.mode = mode
-        gen.options = {'zero_width_pdg': pdgs}
         gen.path_me = self.tmpdir
+        gen.mscmd = mscmd
+        mscmd.ms_me_subdir = 'madspin_me'
+        mscmd.ms_me_decay_subdir = 'madspin_decay'
+        gen.refresh_me_param_cards()
 
-        class MsCmd(object):
-            ms_me_subdir = 'madspin_me'
-            ms_me_decay_subdir = 'madspin_decay'
-        gen.mscmd = MsCmd()
-        return gen
-
-    def _me_card(self, subdir):
-        return check_param_card.ParamCard(
-            pjoin(self.tmpdir, subdir, 'Cards', 'param_card.dat'))
-
-    def test_the_listed_widths_are_zero_in_both_me_cards(self):
-        self._generator([-6, 23]).refresh_me_param_cards()
-        for subdir in ('madspin_me', 'madspin_decay'):
-            card = self._me_card(subdir)
-            self.assertEqual(card['decay'].get((6,)).value, 0.)
-            self.assertEqual(card['decay'].get((23,)).value, 0.)
-            self.assertEqual(card['decay'].get((24,)).value, 2.085)
-
-    def test_the_rest_of_the_card_is_untouched(self):
-        """A line edit: no parameter loses digits, and the source of truth
-        (which drives the Breit-Wigner sampling) keeps its widths."""
-        self._generator([6]).refresh_me_param_cards()
-        text = open(pjoin(self.tmpdir, 'madspin_me', 'Cards',
+    def _me_text(self, subdir):
+        return open(pjoin(self.tmpdir, subdir, 'Cards',
                           'param_card.dat')).read()
-        self.assertEqual(text, self.RUN_CARD.replace(
-            'DECAY   6 1.330000e+00', 'DECAY   6 0.000000e+00'))
+
+    # ------------------------------------------------------------------
+    # which widths
+    # ------------------------------------------------------------------
+
+    def test_default_is_true(self):
+        self.assertTrue(interface_madspin.MadSpinOptions()['auto_zero_width_PA'])
+
+    def test_pa_zeroes_the_decayed_particles(self):
+        self.assertEqual(self._interface()._zero_width_pdgs(), [6])
+        self.assertEqual(self._interface(branches=('t', 'z'))
+                         ._zero_width_pdgs(), [6, 23])
+
+    def test_multiparticle_labels_count_for_all_members(self):
+        stub = self._interface(branches=('wpm',),
+                               multiparticles={'wpm': [24, -24]})
+        self.assertEqual(stub._zero_width_pdgs(), [24])
+
+    def test_nothing_outside_pa_or_when_switched_off(self):
+        for spinmode in ('madspin', 'full', 'onshell', 'none', 'madspin_v1',
+                         'onshell_v1'):
+            self.assertEqual(self._interface(spinmode=spinmode)
+                             ._zero_width_pdgs(), [])
+        self.assertEqual(self._interface(auto=False)._zero_width_pdgs(), [])
+
+    # ------------------------------------------------------------------
+    # what ends up in the cards
+    # ------------------------------------------------------------------
+
+    def test_both_me_cards_have_zero_width_and_nothing_else_moves(self):
+        """A line edit: no parameter loses digits, an internal chain resonance
+        (the W) keeps its width, and the source of truth -- which drives the
+        Breit-Wigner sampling and the reshuffling -- is untouched."""
+        self._refresh(self._interface())
+        expected = self.RUN_CARD.replace('DECAY   6 1.330000e+00',
+                                         'DECAY   6 0.000000e+00')
+        for subdir in ('madspin_me', 'madspin_decay'):
+            self.assertEqual(self._me_text(subdir), expected)
         self.assertEqual(open(pjoin(self.tmpdir, 'param_card.dat')).read(),
                          self.RUN_CARD)
 
-    def test_an_empty_list_copies_the_card_verbatim(self):
-        self._generator([]).refresh_me_param_cards()
-        self.assertEqual(open(pjoin(self.tmpdir, 'madspin_decay', 'Cards',
-                                    'param_card.dat')).read(), self.RUN_CARD)
+    def test_switched_off_copies_the_card_verbatim(self):
+        self._refresh(self._interface(auto=False))
+        self.assertEqual(self._me_text('madspin_me'), self.RUN_CARD)
 
-    def test_not_applied_outside_the_density_class(self):
-        """decay_all_events_onshell also serves onshell_v1."""
-        self._generator([6], mode='onshell').refresh_me_param_cards()
-        self.assertEqual(self._me_card('madspin_me')['decay'].get((6,)).value,
-                         1.33)
+    def test_other_modes_copy_the_card_verbatim(self):
+        self._refresh(self._interface(spinmode='madspin'))
+        self.assertEqual(self._me_text('madspin_me'), self.RUN_CARD)
+        # decay_all_events_onshell also serves onshell_v1
+        self._refresh(self._interface(), mode='onshell')
+        self.assertEqual(self._me_text('madspin_decay'), self.RUN_CARD)
 
-    def test_a_pdg_without_decay_line_is_refused(self):
-        self.assertRaises(madspin.MadSpinError,
-                          self._generator([25]).refresh_me_param_cards)
-
-    # ------------------------------------------------------------------
-    # option parsing and validation
-    # ------------------------------------------------------------------
-
-    def test_the_option_parses_as_a_list_of_int(self):
-        options = interface_madspin.MadSpinOptions()
-        self.assertEqual(options['zero_width_pdg'], [])
-        for value in ('6 23', '6, 23', '[6, 23]'):
-            options['zero_width_pdg'] = value
-            self.assertEqual(options['zero_width_pdg'], [6, 23])
-
-    def _validator(self, spinmode, pdgs):
-        interface = interface_madspin.MadSpinInterface
-
-        class Stub(object):
-            InvalidCmd = interface.InvalidCmd
-            _zero_width_pdgs = interface._zero_width_pdgs
-            _density_spinmode = interface._density_spinmode
-            _validate_zero_width_pdg = interface._validate_zero_width_pdg
-        stub = Stub()
-        stub.options = {'spinmode': spinmode, 'zero_width_pdg': pdgs}
-        stub.banner = banner.Banner()
-        stub.banner['slha'] = self.RUN_CARD
-        return stub
-
-    def test_refused_outside_the_density_modes(self):
-        for spinmode in ('madspin_v1', 'onshell_v1', 'none'):
-            stub = self._validator(spinmode, [6])
-            self.assertRaises(interface_madspin.MadSpinInterface.InvalidCmd,
-                              stub._validate_zero_width_pdg, spinmode)
-            # an empty list is fine everywhere
-            self._validator(spinmode, [])._validate_zero_width_pdg(spinmode)
-
-    def test_accepted_in_the_density_modes(self):
-        for spinmode in ('madspin', 'full', 'PA', 'onshell'):
-            with misc.TMP_variable(interface_madspin.logger, 'info',
-                                   lambda *a, **k: None):
-                self._validator(spinmode, [6, -23])._validate_zero_width_pdg(
-                    spinmode)
-
-    def test_a_pdg_without_width_is_refused_early(self):
-        stub = self._validator('madspin', [25])
-        self.assertRaises(interface_madspin.MadSpinInterface.InvalidCmd,
-                          stub._validate_zero_width_pdg, 'madspin')
+    def test_the_line_edit(self):
+        text, found = madspin.decay_misc.zero_widths_in_card(
+            self.RUN_CARD, [-23, 25])
+        self.assertEqual(found, set([23]))
+        self.assertIn('decay  23 0.000000e+00 # WZ\n', text)
 
     # ------------------------------------------------------------------
     # reuse of an ms_dir
     # ------------------------------------------------------------------
 
-    def _reuse_stub(self, pdgs, ms_dir):
-        interface = interface_madspin.MadSpinInterface
-
-        class Stub(object):
-            ZERO_WIDTH_STAMP = interface.ZERO_WIDTH_STAMP
-            _reused_directory = interface._reused_directory
-            _zero_width_pdgs = interface._zero_width_pdgs
-            _check_reused_zero_width_pdg = \
-                interface._check_reused_zero_width_pdg
-        stub = Stub()
-        stub.options = {'ms_dir': ms_dir, 'use_old_dir': False,
-                        'curr_dir': None, 'zero_width_pdg': pdgs}
-        return stub
-
     def test_cached_max_weight_with_another_setting_is_refused(self):
         ms_dir = pjoin(self.tmpdir, 'ms_dir')
-        self._reuse_stub([6], ms_dir)._check_reused_zero_width_pdg()
-        self.assertTrue(os.path.exists(pjoin(ms_dir, 'ms_zero_width_pdg.dat')))
+        self._interface(ms_dir=ms_dir)._check_reused_zero_width()
+        self.assertEqual(open(pjoin(ms_dir, 'ms_zero_width.dat')).read(),
+                         '6\n')
         open(pjoin(ms_dir, 'max_wgt'), 'w').write('1.0')
-        # same setting (other sign/order): fine
-        self._reuse_stub([-6], ms_dir)._check_reused_zero_width_pdg()
-        for other in ([], [6, 23]):
+        self._interface(ms_dir=ms_dir)._check_reused_zero_width()
+        for stub in (self._interface(ms_dir=ms_dir, auto=False),
+                     self._interface(ms_dir=ms_dir, branches=('t', 'z'))):
             self.assertRaises(interface_madspin.MadSpinStaleParameters,
-                              self._reuse_stub(other, ms_dir)
-                              ._check_reused_zero_width_pdg)
+                              stub._check_reused_zero_width)
 
     def test_an_unstamped_cache_means_no_zero_width(self):
         ms_dir = pjoin(self.tmpdir, 'ms_dir')
         os.makedirs(ms_dir)
         open(pjoin(ms_dir, 'max_wgt'), 'w').write('1.0')
-        self._reuse_stub([], ms_dir)._check_reused_zero_width_pdg()
+        self._interface(ms_dir=ms_dir, auto=False)._check_reused_zero_width()
+        self._interface(ms_dir=ms_dir, spinmode='madspin')\
+            ._check_reused_zero_width()
         self.assertRaises(interface_madspin.MadSpinStaleParameters,
-                          self._reuse_stub([6], ms_dir)
-                          ._check_reused_zero_width_pdg)
+                          self._interface(ms_dir=ms_dir)
+                          ._check_reused_zero_width)
 
     def test_decay_gridpacks_alone_do_not_depend_on_it(self):
         ms_dir = pjoin(self.tmpdir, 'ms_dir')
         os.makedirs(pjoin(ms_dir, 'decay_6_1'))
-        self._reuse_stub([6], ms_dir)._check_reused_zero_width_pdg()
-        self.assertEqual(open(pjoin(ms_dir, 'ms_zero_width_pdg.dat')).read(),
-                         '6\n')
+        self._interface(ms_dir=ms_dir)._check_reused_zero_width()
+        self.assertTrue(os.path.exists(pjoin(ms_dir, 'ms_zero_width.dat')))
 
 
 class TestDecayChainIdenticalFactor(unittest.TestCase):
