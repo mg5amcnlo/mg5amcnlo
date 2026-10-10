@@ -257,10 +257,12 @@ class MadSpinOptions(banner.ConfigFile):
                        "the width of every particle MadSpin decays (the particles "
                        "of the 'decay' lines) in the param_card of the production "
                        "and decay matrix elements used for the spin density "
-                       "matrices, as the pole approximation requires. The "
+                       "matrices, as the pole approximation requires. A resonance "
+                       "internal to a decay chain ('w+' in 't > w+ b, w+ > e+ "
+                       "ve') is decayed by MG5, not MadSpin, and keeps its width "
+                       "in the decay matrix elements. So do the "
                        "Breit-Wigner sampling, the reshuffling, the propagator "
-                       "factor applied by MadSpin and the branching ratios keep "
-                       "the param_card widths.")
+                       "factor applied by MadSpin and the branching ratios.")
         self.add_param('decay_output', 'auto',
                        allowed=['auto', 'unweighted', 'weighted'],
                        comment="whether MadSpin unweights its decays at all. 'auto' "
@@ -2812,38 +2814,73 @@ class MadSpinInterface(extended_cmd.Cmd):
             logger.debug('could not record the parameters of %s: %s',
                          directory, error)
 
-    def _zero_width_pdgs(self):
+    def _zero_width_pdgs(self, side='prod'):
         """The sorted, sign-less pdg codes whose width is set to zero in the
-        param_card of the density matrix elements (madspin_me/madspin_decay).
+        param_card of the production (``side='prod'``, madspin_me) or decay
+        (``side='decay'``, madspin_decay) density matrix elements; see
+        decay_all_events_onshell.refresh_me_param_cards.
 
         Non-empty only for spinmode = PA with auto_zero_width_PA: then every
         particle MadSpin decays, i.e. the initial particle of each 'decay'
-        line (a multiparticle label counts for all its members). Resonances
-        internal to a decay chain ('w+' in 't > w+ b, w+ > e+ ve') are not
-        decayed by MadSpin, keep their Breit-Wigner in the decay events, and
-        keep their width.
+        line (a multiparticle label counts for all its members). The
+        Python-side propagator of those particles keeps its width.
+
+        On the decay side, a species that is also a resonance internal to a
+        decay chain ('w+' in 't > w+ b, w+ > e+ ve') is left out: that
+        resonance is decayed by MG5 inside the decay matrix element, not by
+        MadSpin, and keeps its width -- even when a W- is decayed by MadSpin
+        too. The production side has no decay chain.
         """
         if self.options['spinmode'] != 'PA' or \
                 not self.options['auto_zero_width_PA']:
             return []
-        name2pdg = self.model.get('name2pdg') if self.model else {}
-        multiparticles = getattr(self.mg5cmd, '_multiparticles', {}) or {}
         pdgs = set()
         for label in self.list_branches:
-            if label in multiparticles:
-                pdgs.update(abs(int(pid)) for pid in multiparticles[label])
-            elif label in name2pdg:
-                pdgs.add(abs(int(name2pdg[label])))
+            pdgs.update(self._label_to_abs_pdgs(label))
+        if side == 'decay':
+            pdgs -= self._decay_chain_resonance_pdgs()
         return sorted(pdgs)
+
+    def _label_to_abs_pdgs(self, label):
+        """The sign-less pdgs a particle or multiparticle label stands for."""
+        multiparticles = getattr(self.mg5cmd, '_multiparticles', {}) or {}
+        if label in multiparticles:
+            return set(abs(int(pid)) for pid in multiparticles[label])
+        name2pdg = self.model.get('name2pdg') if self.model else {}
+        if label in name2pdg:
+            return set([abs(int(name2pdg[label]))])
+        return set()
+
+    def _decay_chain_resonance_pdgs(self):
+        """The sign-less pdgs of the resonances internal to the decay chains of
+        the 'decay' lines: the initial particle of every comma-separated
+        sub-decay after the first ('w+' in 't > w+ b, w+ > e+ ve')."""
+        pdgs = set()
+        for decays in self.list_branches.values():
+            for decay in decays:
+                decay = decay.split('@', 1)[0]
+                for segment in decay.split(',')[1:]:
+                    initial = segment.split('>', 1)[0]
+                    initial = initial.replace('(', ' ').replace(')', ' ').split()
+                    if initial:
+                        pdgs.update(self._label_to_abs_pdgs(initial[0]))
+        return pdgs
 
     def _announce_zero_width(self):
         """Say which widths auto_zero_width_PA zeroes (PA only)."""
-        pdgs = self._zero_width_pdgs()
-        if pdgs:
-            logger.info("MadSpin PA: width of pdg %s set to zero in the "
-                        "density matrix elements (auto_zero_width_PA; "
-                        "'set auto_zero_width_PA False' to keep it)",
-                        ', '.join(str(pid) for pid in pdgs))
+        prod = self._zero_width_pdgs('prod')
+        if not prod:
+            return
+        decay = self._zero_width_pdgs('decay')
+        fmt = lambda pdgs: ', '.join(str(pid) for pid in pdgs) or 'none'
+        if decay == prod:
+            where = "pdg %s in the density matrix elements" % fmt(prod)
+        else:
+            where = ("pdg %s in the production and pdg %s in the decay density "
+                     "matrix elements (decay-chain resonances keep their width)"
+                     % (fmt(prod), fmt(decay)))
+        logger.info("MadSpin PA: width of %s set to zero (auto_zero_width_PA; "
+                    "'set auto_zero_width_PA False' to keep it)", where)
 
     # Record of the widths a reusable directory zeroed in its density matrix
     # elements (see _zero_width_pdgs). Kept out of PARAM_CARD_STAMP on purpose:
@@ -2859,9 +2896,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         option changes; the rest of the cache (decay gridpacks, partial widths)
         does not depend on it. A missing stamp means an empty list: either the
         directory predates the option or nothing was zeroed, and in both cases
-        the matrix elements had the param_card widths.
+        the matrix elements had the param_card widths. The stamp lists the
+        production pdgs, then the decay ones with a minus sign.
         """
-        current = self._zero_width_pdgs()
+        current = self._zero_width_pdgs() + \
+            [-pid for pid in self._zero_width_pdgs('decay')]
         reusing = self._reused_directory()
         directory = reusing or (self.options['curr_dir'] and
                                 os.path.realpath(self.options['curr_dir']))
@@ -2873,7 +2912,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             previous = []
             if os.path.exists(stamp):
                 try:
-                    previous = sorted(int(tok) for tok in open(stamp).read().split())
+                    previous = [int(tok) for tok in open(stamp).read().split()]
                 except (IOError, OSError, ValueError) as error:
                     logger.debug('unreadable %s (%s)', stamp, error)
                     previous = None
@@ -2881,7 +2920,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 raise MadSpinStaleParameters(
                     "MadSpin is reusing %s, whose density matrix elements "
                     "had the width of pdg %s set to zero, while this run zeroes "
-                    "pdg %s (auto_zero_width_PA, spinmode=PA).\n"
+                    "pdg %s (auto_zero_width_PA, spinmode=PA; a negative pdg "
+                    "is the decay side).\n"
                     "\n"
                     "The maximum weights cached there were measured with those "
                     "other matrix elements and are not re-measured on reuse. "

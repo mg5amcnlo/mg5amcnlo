@@ -11559,6 +11559,8 @@ class TestAutoZeroWidthPA(unittest.TestCase):
         class Stub(object):
             ZERO_WIDTH_STAMP = interface.ZERO_WIDTH_STAMP
             _zero_width_pdgs = interface._zero_width_pdgs
+            _label_to_abs_pdgs = interface._label_to_abs_pdgs
+            _decay_chain_resonance_pdgs = interface._decay_chain_resonance_pdgs
             _announce_zero_width = interface._announce_zero_width
             _reused_directory = interface._reused_directory
             _check_reused_zero_width = interface._check_reused_zero_width
@@ -11573,7 +11575,10 @@ class TestAutoZeroWidthPA(unittest.TestCase):
         stub.options['curr_dir'] = ''
         stub.model = {'name2pdg': self.NAME2PDG}
         stub.mg5cmd = MG5()
-        stub.list_branches = dict((b, ['%s > x y' % b]) for b in branches)
+        if isinstance(branches, dict):
+            stub.list_branches = branches
+        else:
+            stub.list_branches = dict((b, ['%s > x y' % b]) for b in branches)
         return stub
 
     def _refresh(self, mscmd, mode='density'):
@@ -11603,6 +11608,38 @@ class TestAutoZeroWidthPA(unittest.TestCase):
         self.assertEqual(self._interface()._zero_width_pdgs(), [6])
         self.assertEqual(self._interface(branches=('t', 'z'))
                          ._zero_width_pdgs(), [6, 23])
+
+    def test_a_decay_chain_resonance_keeps_its_width_on_the_decay_side(self):
+        """The W+ inside 't > w+ b, w+ > e+ ve' is decayed by MG5, not
+        MadSpin: with a W- decayed by MadSpin next to it, 24 is zeroed in the
+        production card only."""
+        stub = self._interface(branches={
+            't': ['t > w+ b, w+ > e+ ve @1'],
+            'w-': ['w- > mu- vm~']})
+        self.assertEqual(stub._zero_width_pdgs('prod'), [6, 24])
+        self.assertEqual(stub._zero_width_pdgs('decay'), [6])
+        stub = self._interface(branches={
+            't': ['t > b w+, (w+ > e+ ve, e+ > x y)']})
+        self.assertEqual(stub._decay_chain_resonance_pdgs(), set([24]))
+
+    def test_chain_resonance_in_the_cards(self):
+        self._refresh(self._interface(branches={
+            't': ['t > w+ b, w+ > e+ ve'], 'w-': ['w- > mu- vm~']}))
+        self.assertIn('DECAY  24 0.000000e+00', self._me_text('madspin_me'))
+        self.assertIn('DECAY   6 0.000000e+00', self._me_text('madspin_me'))
+        self.assertIn('DECAY  24 2.085000e+00', self._me_text('madspin_decay'))
+        self.assertIn('DECAY   6 0.000000e+00', self._me_text('madspin_decay'))
+
+    def test_a_missing_cards_directory_is_created(self):
+        """me_param_card falls back to the unedited source card when an ME
+        directory has no Cards/, which would bypass the zeroing."""
+        shutil.rmtree(pjoin(self.tmpdir, 'madspin_me', 'Cards'))
+        self._refresh(self._interface())
+        self.assertIn('DECAY   6 0.000000e+00', self._me_text('madspin_me'))
+        self.assertEqual(
+            interface_madspin.MadSpinInterface.me_param_card(
+                type('S', (), {'path_me': self.tmpdir})(), 'madspin_me'),
+            pjoin(self.tmpdir, 'madspin_me', 'Cards', 'param_card.dat'))
 
     def test_multiparticle_labels_count_for_all_members(self):
         stub = self._interface(branches=('wpm',),
@@ -11657,7 +11694,7 @@ class TestAutoZeroWidthPA(unittest.TestCase):
         ms_dir = pjoin(self.tmpdir, 'ms_dir')
         self._interface(ms_dir=ms_dir)._check_reused_zero_width()
         self.assertEqual(open(pjoin(ms_dir, 'ms_zero_width.dat')).read(),
-                         '6\n')
+                         '6 -6\n')
         open(pjoin(ms_dir, 'max_wgt'), 'w').write('1.0')
         self._interface(ms_dir=ms_dir)._check_reused_zero_width()
         for stub in (self._interface(ms_dir=ms_dir, auto=False),
