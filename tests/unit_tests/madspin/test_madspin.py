@@ -11641,6 +11641,15 @@ class TestAutoZeroWidthPA(unittest.TestCase):
                 type('S', (), {'path_me': self.tmpdir})(), 'madspin_me'),
             pjoin(self.tmpdir, 'madspin_me', 'Cards', 'param_card.dat'))
 
+    def test_only_particles_of_the_production_final_state(self):
+        """The default card decays the z of every process: a sample without
+        a Z must keep its Z width."""
+        stub = self._interface(branches=('t', 't~', 'w+', 'z'))
+        stub.final_state = set([6, -6, 24])
+        self.assertEqual(stub._zero_width_pdgs('prod'), [6, 24])
+        stub.final_state = set()  # no proc_card: no restriction
+        self.assertEqual(stub._zero_width_pdgs('prod'), [6, 23, 24])
+
     def test_multiparticle_labels_count_for_all_members(self):
         stub = self._interface(branches=('wpm',),
                                multiparticles={'wpm': [24, -24]})

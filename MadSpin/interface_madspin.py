@@ -2822,8 +2822,9 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         Non-empty only for spinmode = PA with auto_zero_width_PA: then every
         particle MadSpin decays, i.e. the initial particle of each 'decay'
-        line (a multiparticle label counts for all its members). The
-        Python-side propagator of those particles keeps its width.
+        line (a multiparticle label counts for all its members) that is in
+        the final state of the production. The Python-side propagator of
+        those particles keeps its width.
 
         On the decay side, a species that is also a resonance internal to a
         decay chain ('w+' in 't > w+ b, w+ > e+ ve') is left out: that
@@ -2834,9 +2835,17 @@ class MadSpinInterface(extended_cmd.Cmd):
         if self.options['spinmode'] != 'PA' or \
                 not self.options['auto_zero_width_PA']:
             return []
+        # Only particles the production does have in its final state: the
+        # default card carries 'decay z > ...' for every process, which must
+        # not zero the Z width of a sample without a Z. Without a proc_card
+        # (hepmc/lhe_no_banner input) nothing restricts the list.
+        final_state = set(abs(int(pid)) for pid in
+                          (getattr(self, 'final_state', None) or ()))
         pdgs = set()
         for label in self.list_branches:
             pdgs.update(self._label_to_abs_pdgs(label))
+        if final_state:
+            pdgs &= final_state
         if side == 'decay':
             pdgs -= self._decay_chain_resonance_pdgs()
         return sorted(pdgs)
@@ -2873,14 +2882,12 @@ class MadSpinInterface(extended_cmd.Cmd):
             return
         decay = self._zero_width_pdgs('decay')
         fmt = lambda pdgs: ', '.join(str(pid) for pid in pdgs) or 'none'
-        if decay == prod:
-            where = "pdg %s in the density matrix elements" % fmt(prod)
-        else:
-            where = ("pdg %s in the production and pdg %s in the decay density "
-                     "matrix elements (decay-chain resonances keep their width)"
-                     % (fmt(prod), fmt(decay)))
-        logger.info("MadSpin PA: width of %s set to zero (auto_zero_width_PA; "
-                    "'set auto_zero_width_PA False' to keep it)", where)
+        logger.info("MadSpin PA: zero width for pdg %s in the production "
+                    "density matrix element and for pdg %s in all the decay "
+                    "ones (one param_card for all of them; decay-chain "
+                    "resonances keep their width). "
+                    "'set auto_zero_width_PA False' to keep the widths.",
+                    fmt(prod), fmt(decay))
 
     # Record of the widths a reusable directory zeroed in its density matrix
     # elements (see _zero_width_pdgs). Kept out of PARAM_CARD_STAMP on purpose:
