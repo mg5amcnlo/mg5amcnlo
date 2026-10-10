@@ -31,8 +31,8 @@
 #         section of every event for each COMBINATION 
 #
 # set auto_zero_width_PA False # PA only (default True): the decayed particles have
-#         zero width in the matrix elements of the production/decay density matrices
-#         (except resonances internal to a decay chain, decayed by MG5 not MadSpin)
+#         zero width in the matrix element of the production density matrix, and each
+#         one in the matrix element of its own decay density matrix only
 #         (the Breit-Wigner sampling, reshuffling and branching ratios keep the param_card)
 #
 # Polarisation of the PRODUCTION process ('generate p p > w+{0} w-'):

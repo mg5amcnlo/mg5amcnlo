@@ -6,9 +6,9 @@ ANNOUNCEMENT:
 
 3.8.2 (XX/XX/XX):
     OM: MadSpin (spinmode=PA): new option 'auto_zero_width_PA' (default True) setting the width
-        of the particles decayed by MadSpin to zero in the matrix elements used for the spin density
-        matrices only (decay-chain resonances, Breit-Wigner sampling, reshuffling, propagator factor
-        and branching ratios keep the param_card widths).
+        of the particles decayed by MadSpin to zero in the matrix element of the production density
+        matrix, and each one in the matrix element of its own decay density matrix only (Breit-Wigner
+        sampling, reshuffling, propagator factor and branching ratios keep the param_card widths).
 
 3.8.1 (XX/XX/XX):
     OM: LO: the final unweighting no longer truncates the events above the maximum

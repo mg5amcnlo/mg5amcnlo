@@ -4803,33 +4803,32 @@ class decay_all_events_onshell(decay_all_events):
         if not os.path.exists(source):
             return
         # spinmode=PA with auto_zero_width_PA: the widths of the particles
-        # MadSpin decays are set to zero in these copies *only* -- minus, on
-        # the decay side, the resonances internal to a decay chain, which MG5
-        # decays and which keep their width (see _zero_width_pdgs).
-        # path_me/param_card.dat -- and the banner, which drives the
-        # Breit-Wigner sampling, the reshuffling, the propagator factor and the
-        # branching ratios -- keep the physical widths.
-        zero_width = {}
+        # MadSpin decays are set to zero in the *production* copy only. The
+        # decay library shares one card between all decays, while a width is
+        # to be zeroed in the decay of that particle only: that is done at run
+        # time (MadSpinInterface._select_decay_width). path_me/param_card.dat
+        # -- and the banner, which drives the Breit-Wigner sampling, the
+        # reshuffling, the propagator factor and the branching ratios -- keep
+        # the physical widths.
+        zero_width = set()
         if getattr(self, 'mode', None) == 'density' and \
                 hasattr(getattr(self, 'mscmd', None), '_zero_width_pdgs'):
-            zero_width = {'prod': set(self.mscmd._zero_width_pdgs('prod')),
-                          'decay': set(self.mscmd._zero_width_pdgs('decay'))}
+            zero_width = set(self.mscmd._zero_width_pdgs())
         ms_me_subdir = getattr(self.mscmd, 'ms_me_subdir', 'madspin_me')
         ms_me_decay_subdir = getattr(self.mscmd, 'ms_me_decay_subdir', 'madspin_decay')
-        for side, subdir in (('prod', ms_me_subdir), ('decay', ms_me_decay_subdir)):
+        for subdir in (ms_me_subdir, ms_me_decay_subdir):
             cards = pjoin(self.path_me, subdir, 'Cards')
-            pdgs = zero_width.get(side)
-            if not pdgs:
+            if subdir != ms_me_subdir or not zero_width:
                 if os.path.isdir(cards):
                     shutil.copyfile(source, pjoin(cards, 'param_card.dat'))
                 continue
             if not os.path.isdir(pjoin(self.path_me, subdir)):
                 continue
             text, found = decay_misc.zero_widths_in_card(open(source).read(),
-                                                         pdgs)
-            if pdgs - found:
+                                                         zero_width)
+            if zero_width - found:
                 logger.debug('no DECAY entry to zero for pdg %s in %s',
-                             sorted(pdgs - found), source)
+                             sorted(zero_width - found), source)
             # me_param_card falls back to the unedited source when there is no
             # Cards/: create it so the edit cannot be bypassed.
             if not os.path.isdir(cards):

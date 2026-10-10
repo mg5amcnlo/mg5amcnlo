@@ -11560,7 +11560,7 @@ class TestAutoZeroWidthPA(unittest.TestCase):
             ZERO_WIDTH_STAMP = interface.ZERO_WIDTH_STAMP
             _zero_width_pdgs = interface._zero_width_pdgs
             _label_to_abs_pdgs = interface._label_to_abs_pdgs
-            _decay_chain_resonance_pdgs = interface._decay_chain_resonance_pdgs
+            _select_decay_width = interface._select_decay_width
             _announce_zero_width = interface._announce_zero_width
             _reused_directory = interface._reused_directory
             _check_reused_zero_width = interface._check_reused_zero_width
@@ -11575,6 +11575,8 @@ class TestAutoZeroWidthPA(unittest.TestCase):
         stub.options['curr_dir'] = ''
         stub.model = {'name2pdg': self.NAME2PDG}
         stub.mg5cmd = MG5()
+        stub.banner = banner.Banner()
+        stub.banner['slha'] = self.RUN_CARD
         if isinstance(branches, dict):
             stub.list_branches = branches
         else:
@@ -11609,26 +11611,45 @@ class TestAutoZeroWidthPA(unittest.TestCase):
         self.assertEqual(self._interface(branches=('t', 'z'))
                          ._zero_width_pdgs(), [6, 23])
 
-    def test_a_decay_chain_resonance_keeps_its_width_on_the_decay_side(self):
-        """The W+ inside 't > w+ b, w+ > e+ ve' is decayed by MG5, not
-        MadSpin: with a W- decayed by MadSpin next to it, 24 is zeroed in the
-        production card only."""
-        stub = self._interface(branches={
-            't': ['t > w+ b, w+ > e+ ve @1'],
-            'w-': ['w- > mu- vm~']})
-        self.assertEqual(stub._zero_width_pdgs('prod'), [6, 24])
-        self.assertEqual(stub._zero_width_pdgs('decay'), [6])
-        stub = self._interface(branches={
-            't': ['t > b w+, (w+ > e+ ve, e+ > x y)']})
-        self.assertEqual(stub._decay_chain_resonance_pdgs(), set([24]))
+    class _DecayLib(object):
+        """Stands in for the decay f2py library: records the width changes."""
+        def __init__(self):
+            self.calls = []
+        def change_para(self, name, value):
+            self.calls.append((name, value))
+        def update_all_coup(self):
+            self.calls.append('coup')
 
-    def test_chain_resonance_in_the_cards(self):
-        self._refresh(self._interface(branches={
-            't': ['t > w+ b, w+ > e+ ve'], 'w-': ['w- > mu- vm~']}))
-        self.assertIn('DECAY  24 0.000000e+00', self._me_text('madspin_me'))
+    def test_only_the_decaying_particle_is_zeroed_in_its_decay(self):
+        """One library serves every decay: the top width is zero while a top
+        decays (internal top of 't > w+ b g') and back for the W decay, whose
+        width is then the one zeroed (and the W of 't > e+ ve b' kept its
+        width while the top decayed)."""
+        stub = self._interface(branches=('t', 't~', 'w+'))
+        stub.final_state = set([6, -6, 24])
+        lib = self._DecayLib()
+        stub._select_decay_width(lib, 6)
+        self.assertEqual(lib.calls, [('DECAY_6', 0.), 'coup'])
+        stub._select_decay_width(lib, -6)   # same particle: nothing to do
+        self.assertEqual(len(lib.calls), 2)
+        stub._select_decay_width(lib, 24)
+        self.assertEqual(lib.calls[2:], [('DECAY_6', 1.33), ('DECAY_24', 0.),
+                                         'coup'])
+        stub._select_decay_width(lib, 23)   # not decayed: everything restored
+        self.assertEqual(lib.calls[5:], [('DECAY_24', 2.085), 'coup'])
+
+    def test_no_switch_when_off_or_outside_pa(self):
+        for stub in (self._interface(auto=False),
+                     self._interface(spinmode='madspin')):
+            lib = self._DecayLib()
+            stub._select_decay_width(lib, 6)
+            self.assertEqual(lib.calls, [])
+
+    def test_the_decay_card_is_never_edited(self):
+        self._refresh(self._interface(branches=('t', 't~', 'w+')))
         self.assertIn('DECAY   6 0.000000e+00', self._me_text('madspin_me'))
-        self.assertIn('DECAY  24 2.085000e+00', self._me_text('madspin_decay'))
-        self.assertIn('DECAY   6 0.000000e+00', self._me_text('madspin_decay'))
+        self.assertIn('DECAY  24 0.000000e+00', self._me_text('madspin_me'))
+        self.assertEqual(self._me_text('madspin_decay'), self.RUN_CARD)
 
     def test_a_missing_cards_directory_is_created(self):
         """me_param_card falls back to the unedited source card when an ME
@@ -11646,9 +11667,9 @@ class TestAutoZeroWidthPA(unittest.TestCase):
         a Z must keep its Z width."""
         stub = self._interface(branches=('t', 't~', 'w+', 'z'))
         stub.final_state = set([6, -6, 24])
-        self.assertEqual(stub._zero_width_pdgs('prod'), [6, 24])
+        self.assertEqual(stub._zero_width_pdgs(), [6, 24])
         stub.final_state = set()  # no proc_card: no restriction
-        self.assertEqual(stub._zero_width_pdgs('prod'), [6, 23, 24])
+        self.assertEqual(stub._zero_width_pdgs(), [6, 23, 24])
 
     def test_multiparticle_labels_count_for_all_members(self):
         stub = self._interface(branches=('wpm',),
@@ -11666,15 +11687,15 @@ class TestAutoZeroWidthPA(unittest.TestCase):
     # what ends up in the cards
     # ------------------------------------------------------------------
 
-    def test_both_me_cards_have_zero_width_and_nothing_else_moves(self):
-        """A line edit: no parameter loses digits, an internal chain resonance
-        (the W) keeps its width, and the source of truth -- which drives the
-        Breit-Wigner sampling and the reshuffling -- is untouched."""
+    def test_the_production_card_has_zero_width_and_nothing_else_moves(self):
+        """A line edit: no parameter loses digits, and the source of truth --
+        which drives the Breit-Wigner sampling and the reshuffling -- is
+        untouched."""
         self._refresh(self._interface())
         expected = self.RUN_CARD.replace('DECAY   6 1.330000e+00',
                                          'DECAY   6 0.000000e+00')
-        for subdir in ('madspin_me', 'madspin_decay'):
-            self.assertEqual(self._me_text(subdir), expected)
+        self.assertEqual(self._me_text('madspin_me'), expected)
+        self.assertEqual(self._me_text('madspin_decay'), self.RUN_CARD)
         self.assertEqual(open(pjoin(self.tmpdir, 'param_card.dat')).read(),
                          self.RUN_CARD)
 
@@ -11703,7 +11724,7 @@ class TestAutoZeroWidthPA(unittest.TestCase):
         ms_dir = pjoin(self.tmpdir, 'ms_dir')
         self._interface(ms_dir=ms_dir)._check_reused_zero_width()
         self.assertEqual(open(pjoin(ms_dir, 'ms_zero_width.dat')).read(),
-                         '6 -6\n')
+                         '6\n')
         open(pjoin(ms_dir, 'max_wgt'), 'w').write('1.0')
         self._interface(ms_dir=ms_dir)._check_reused_zero_width()
         for stub in (self._interface(ms_dir=ms_dir, auto=False),
