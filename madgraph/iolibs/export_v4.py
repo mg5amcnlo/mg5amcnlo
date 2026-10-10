@@ -3159,6 +3159,18 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         self.prefix_info = {}
         ProcessExporterFortran.__init__(self, *args, **opts)
 
+    # helper function for customise helas writter
+    def custom_helas_call(self, call, arg):
+        """For standalone_rw (reweighting), tag the propagator width with fk_
+        as madevent does, such that the HelasCallWriter sets the t-channel
+        widths to zero (zerowidth_tchannel) like in the generated sample.
+        The remaining tags are removed in write_matrix_element_v4."""
+
+        if self.opt['export_format'] == 'standalone_rw' and \
+                                               arg['mass'] == '%(M)s,%(W)s,':
+            arg['mass'] = '%(M)s,fk_%(W)s,'
+        return call, arg
+
     def copy_template(self, model):
         """Additional actions needed for setup of Template
         """
@@ -3867,6 +3879,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
+        if self.opt['export_format'] == 'standalone_rw':
+            # t-channel widths are already zeroed, no fake width in standalone
+            helas_calls = [call.replace(',fk_', ',') for call in helas_calls]
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
