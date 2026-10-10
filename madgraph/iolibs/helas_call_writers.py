@@ -287,13 +287,6 @@ class HelasCallWriter(base_objects.PhysicsObject):
         
         if  self.options['zerowidth_tchannel'] and wavefunction.is_t_channel():
             call, n = re.subn(r',\s*fk_(?!ZERO)\w*\s*,', ', ZERO,', str(call), flags=re.I)
-            if self.options['zerowidth_tchannel_plain']:
-                # standalone_rw writes the plain width name (no fk_ wrapper)
-                width = wavefunction.get('width')
-                if width.lower() != 'zero':
-                    call, n2 = re.subn(r',\s*%s\s*,' % re.escape(width), ', ZERO,',
-                                       str(call), flags=re.I)
-                    n += n2
             if n:
                 self.width_tchannel_set_tozero = True
         return call
@@ -347,8 +340,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
         """Allow generating a HelasCallWriter from a Model
         """
 
-        default_options = {'zerowidth_tchannel': True,
-                           'zerowidth_tchannel_plain': False}
+        default_options = {'zerowidth_tchannel': True}
         
         self.options = dict(default_options)
         self.options.update(options)

@@ -949,9 +949,10 @@ class UFOHELASCallWriterTest(unittest.TestCase):
             self.assertEqual(line, result[i])
 
 
-    def test_UFO_fortran_tchannel_plain_width(self):
-        """Test that the plain t-channel width (standalone_rw) is zeroed
-        only when zerowidth_tchannel_plain is set"""
+    def test_UFO_fortran_tchannel_width_standalone_rw(self):
+        """Test that the t-channel width is set to zero for standalone_rw
+        (reweighting), using the fk_ tagging of madevent, but not for
+        standalone"""
 
         solution =['CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))',
                    'CALL VXXXXX(P(0,2),wmas,NHEL(2),-1*IC(2),W(1,2))',
@@ -965,28 +966,37 @@ class UFOHELASCallWriterTest(unittest.TestCase):
                    '# Amplitude(s) for diagram number 2',
                    'CALL VVV1_0(W(1,2),W(1,6),W(1,5),GC_12,AMP(2))']
 
-        # standalone: plain width is kept
-        fortran_model = helas_call_writers.FortranUFOHelasCallWriter(\
-            self.mybasemodel)
-        result = fortran_model.get_matrix_element_calls(self.mymatrixelement)
+        # the exporter monkey-patches the HelasCallWriter: restore it
+        self.addCleanup(setattr, helas_call_writers.HelasCallWriter,
+                        'customize_argument_for_all_other_helas_object',
+                        helas_call_writers.HelasCallWriter.__dict__[
+                            'customize_argument_for_all_other_helas_object'])
+
+        def get_calls(export_format, options={}):
+            exporter = export_v4.ProcessExporterFortranSA('',
+                            {'export_format': export_format}, format=export_format)
+            fortran_model = helas_call_writers.FortranUFOHelasCallWriter(\
+                self.mybasemodel, options=options)
+            replace_dict = exporter.write_matrix_element_v4(None,
+                            self.mymatrixelement, fortran_model, write=False)
+            return replace_dict['helas_calls'].split('\n'), fortran_model
+
+        # standalone: the width is kept
+        result, fortran_model = get_calls('standalone')
+        self.assertEqual(solution, result)
+        self.assertFalse(fortran_model.width_tchannel_set_tozero)
+
+        # zerowidth_tchannel False: the width is kept for standalone_rw
+        result, fortran_model = get_calls('standalone_rw',
+                                          {'zerowidth_tchannel': False})
         self.assertEqual(solution, result)
         self.assertFalse(fortran_model.width_tchannel_set_tozero)
 
         # standalone_rw: the t-channel W width (diagram 2) becomes ZERO
         solution[8] = 'CALL VVVV1_3(W(1,1),W(1,3),W(1,4),GC_51,wmas, ZERO,W(1,6))'
-        fortran_model = helas_call_writers.FortranUFOHelasCallWriter(\
-            self.mybasemodel, options={'zerowidth_tchannel_plain': True})
-        result = fortran_model.get_matrix_element_calls(self.mymatrixelement)
+        result, fortran_model = get_calls('standalone_rw')
         self.assertEqual(solution, result)
         self.assertTrue(fortran_model.width_tchannel_set_tozero)
-
-        # zerowidth_tchannel False disables both spellings
-        fortran_model = helas_call_writers.FortranUFOHelasCallWriter(\
-            self.mybasemodel, options={'zerowidth_tchannel': False,
-                                       'zerowidth_tchannel_plain': True})
-        result = fortran_model.get_matrix_element_calls(self.mymatrixelement)
-        self.assertEqual('CALL VVVV1_3(W(1,1),W(1,3),W(1,4),GC_51,wmas,wwid,W(1,6))',
-                         result[8])
 
         
     def test_UFO_CPP_helas_call_writer(self):
