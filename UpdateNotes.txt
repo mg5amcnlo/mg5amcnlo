@@ -4,6 +4,15 @@ ANNOUNCEMENT:
    The 2.9.X LONG TERM STABLE version is now at end of life for bug fixing/support since December 2025.
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
+3.8.2 (XX/XX/XX):
+    OM: MadSpin (spinmode=PA): new option 'auto_zero_width_PA' (default True) setting the width
+        of the particles decayed by MadSpin to zero in the matrix element of the production density
+        matrix, and each one in the matrix element of its own decay density matrix only (Breit-Wigner
+        sampling, reshuffling, propagator factor and branching ratios keep the param_card widths).
+    OM: output standalone: new option --zerowidth=<pdg>,<pdg>,... writing the propagators of those
+        particles with a zero width (param_card untouched): in a 2>N process for the listed final-state
+        particles, in a 1>N process (decay) for the decaying particle only.
+
 3.8.1 (XX/XX/XX):
     OM: LO: the final unweighting no longer truncates the events above the maximum
         weight; they keep the weight w/w_max in units of the common weight

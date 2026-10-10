@@ -11525,6 +11525,135 @@ class TestReusedMsDirParameters(unittest.TestCase):
                                              'ms_param_card.dat')))
 
 
+class TestAutoZeroWidthPA(unittest.TestCase):
+    """auto_zero_width_PA: with spinmode = PA the propagators of the particles
+    MadSpin decays are written with a zero width (output standalone
+    --zerowidth=, see tests/unit_tests/iolibs/test_helas_call_writers.py and
+    the acceptance test test_standalone_zerowidth). Here: which particles,
+    the option passed to MG5, and the reuse guard."""
+
+    NAME2PDG = {'t': 6, 't~': -6, 'z': 23, 'w+': 24, 'w-': -24}
+
+    def setUp(self):
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp(prefix='ms_zero_width_')
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _interface(self, spinmode='PA', auto=True, branches=('t', 't~'),
+                   multiparticles=None, ms_dir=None, final_state=None):
+        interface = interface_madspin.MadSpinInterface
+
+        class Stub(object):
+            ZERO_WIDTH_STAMP = interface.ZERO_WIDTH_STAMP
+            _zero_width_pdgs = interface._zero_width_pdgs
+            _label_to_abs_pdgs = interface._label_to_abs_pdgs
+            _announce_zero_width = interface._announce_zero_width
+            _reused_directory = interface._reused_directory
+            _check_reused_zero_width = interface._check_reused_zero_width
+
+        class MG5(object):
+            _multiparticles = multiparticles or {}
+        stub = Stub()
+        stub.options = interface_madspin.MadSpinOptions()
+        stub.options['spinmode'] = spinmode
+        stub.options['auto_zero_width_PA'] = auto
+        stub.options['ms_dir'] = ms_dir or ''
+        stub.options['curr_dir'] = ''
+        stub.model = {'name2pdg': self.NAME2PDG}
+        stub.mg5cmd = MG5()
+        stub.final_state = set(final_state or ())
+        stub.list_branches = dict((b, ['%s > x y' % b]) for b in branches)
+        return stub
+
+    def _option(self, mscmd):
+        class Gen(object):
+            zerowidth_output_option = \
+                madspin.decay_all_events_onshell.zerowidth_output_option
+        gen = Gen()
+        gen.mscmd = mscmd
+        return gen.zerowidth_output_option()
+
+    # ------------------------------------------------------------------
+    # which particles
+    # ------------------------------------------------------------------
+
+    def test_default_is_true(self):
+        self.assertTrue(interface_madspin.MadSpinOptions()['auto_zero_width_PA'])
+
+    def test_pa_zeroes_the_decayed_particles(self):
+        self.assertEqual(self._interface()._zero_width_pdgs(), [6])
+        self.assertEqual(self._interface(branches=('t', 'z'))
+                         ._zero_width_pdgs(), [6, 23])
+
+    def test_only_particles_of_the_production_final_state(self):
+        """The default card decays the z of every process: a sample without
+        a Z must keep its Z width."""
+        stub = self._interface(branches=('t', 't~', 'w+', 'z'),
+                               final_state=[6, -6, 24])
+        self.assertEqual(stub._zero_width_pdgs(), [6, 24])
+        stub.final_state = set()  # no proc_card: no restriction
+        self.assertEqual(stub._zero_width_pdgs(), [6, 23, 24])
+
+    def test_multiparticle_labels_count_for_all_members(self):
+        stub = self._interface(branches=('wpm',),
+                               multiparticles={'wpm': [24, -24]})
+        self.assertEqual(stub._zero_width_pdgs(), [24])
+
+    def test_nothing_outside_pa_or_when_switched_off(self):
+        for spinmode in ('madspin', 'full', 'onshell', 'none', 'madspin_v1',
+                         'onshell_v1'):
+            self.assertEqual(self._interface(spinmode=spinmode)
+                             ._zero_width_pdgs(), [])
+        self.assertEqual(self._interface(auto=False)._zero_width_pdgs(), [])
+
+    # ------------------------------------------------------------------
+    # what MG5 is asked for
+    # ------------------------------------------------------------------
+
+    def test_the_output_option(self):
+        self.assertEqual(self._option(self._interface(
+            branches=('t', 't~', 'w+'), final_state=[6, -6, 24])),
+            ' --zerowidth=6,24')
+        self.assertEqual(self._option(self._interface(auto=False)), '')
+        self.assertEqual(self._option(self._interface(spinmode='madspin')), '')
+        self.assertEqual(self._option(object()), '')
+
+    # ------------------------------------------------------------------
+    # reuse of an ms_dir
+    # ------------------------------------------------------------------
+
+    def test_cached_max_weight_with_another_setting_is_refused(self):
+        ms_dir = pjoin(self.tmpdir, 'ms_dir')
+        self._interface(ms_dir=ms_dir)._check_reused_zero_width()
+        self.assertEqual(open(pjoin(ms_dir, 'ms_zero_width.dat')).read(),
+                         '6\n')
+        open(pjoin(ms_dir, 'max_wgt'), 'w').write('1.0')
+        self._interface(ms_dir=ms_dir)._check_reused_zero_width()
+        for stub in (self._interface(ms_dir=ms_dir, auto=False),
+                     self._interface(ms_dir=ms_dir, branches=('t', 'z'))):
+            self.assertRaises(interface_madspin.MadSpinStaleParameters,
+                              stub._check_reused_zero_width)
+
+    def test_an_unstamped_cache_means_no_zero_width(self):
+        ms_dir = pjoin(self.tmpdir, 'ms_dir')
+        os.makedirs(ms_dir)
+        open(pjoin(ms_dir, 'max_wgt'), 'w').write('1.0')
+        self._interface(ms_dir=ms_dir, auto=False)._check_reused_zero_width()
+        self._interface(ms_dir=ms_dir, spinmode='madspin')\
+            ._check_reused_zero_width()
+        self.assertRaises(interface_madspin.MadSpinStaleParameters,
+                          self._interface(ms_dir=ms_dir)
+                          ._check_reused_zero_width)
+
+    def test_decay_gridpacks_alone_do_not_depend_on_it(self):
+        ms_dir = pjoin(self.tmpdir, 'ms_dir')
+        os.makedirs(pjoin(ms_dir, 'decay_6_1'))
+        self._interface(ms_dir=ms_dir)._check_reused_zero_width()
+        self.assertTrue(os.path.exists(pjoin(ms_dir, 'ms_zero_width.dat')))
+
+
 class TestDecayChainIdenticalFactor(unittest.TestCase):
     """_decay_chain_identical_factor: the identical-particle bookkeeping the
     legacy on-shell mode (`spinmode onshell_v1`) has to undo.

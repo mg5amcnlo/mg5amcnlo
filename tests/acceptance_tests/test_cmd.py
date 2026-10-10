@@ -990,6 +990,44 @@ class TestCmdShell2(unittest.TestCase,
             self.assertAlmostEqual(original_sol[key][0] if abs(original_sol[key][0]) > 1e-12 else 0, sol[key][0])
             self.assertAlmostEqual(original_sol[key][1] if abs(original_sol[key][1]) > 1e-12 else 0, sol[key][1])
 
+    def test_standalone_zerowidth(self):
+        """output standalone --zerowidth=: in a decay only the decaying
+        particle's propagators get a zero width, in a production the listed
+        final-state particles' ones; nothing changes without the option."""
+
+        def calls(out_dir, pdir):
+            # the P<n>_ numbering depends on the generation, not the suffix
+            sub = os.path.join(out_dir, 'SubProcesses')
+            pdir = [d for d in os.listdir(sub) if d.split('_', 1)[-1] == pdir][0]
+            text = open(os.path.join(sub, pdir, 'matrix.f')).read()
+            return [l.strip() for l in text.split('\n')
+                    if l.strip().startswith('CALL') and 'XXXXX' not in l]
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmtree(self.out_dir)
+        self.do('set group_subprocesses False')
+        self.do('generate t > e+ ve b')
+        self.do('add process t > w+ b g')
+        self.do('output standalone %s --prefix=int --density=1 --zerowidth=6,24 -f'
+                % self.out_dir)
+        # the internal W of the top decay keeps its width
+        self.assertIn('CALL FFV2_3(W(1,2),W(1,3),GC_100,MDL_MW,MDL_WW,W(1,5))',
+                      calls(self.out_dir, 't_epveb'))
+        # the internal top of t > w+ b g does not
+        self.assertIn('CALL FFV2_1(W(1,3),W(1,2),GC_100,MDL_MT, ZERO,W(1,5))',
+                      calls(self.out_dir, 't_wpbg'))
+
+        self.do('generate e+ e- > t t~ z')
+        self.do('output standalone %s --prefix=int --density=1 --zerowidth=6,24 -f'
+                % self.out_dir)
+        zeroed = [c for c in calls(self.out_dir, 'epem_ttxz') if 'MDL_MT' in c]
+        self.assertEqual(len(zeroed), 2)
+        self.assertTrue(all('MDL_MT, ZERO,' in c for c in zeroed), zeroed)
+
+        self.do('output standalone %s --prefix=int --density=1 -f' % self.out_dir)
+        kept = [c for c in calls(self.out_dir, 'epem_ttxz') if 'MDL_MT' in c]
+        self.assertTrue(all('MDL_MT,MDL_WT,' in c for c in kept), kept)
+
     def test_standalone_density_uu(self):
         ############################################################################
         # Check convolution of density matrix with decay matrix 
