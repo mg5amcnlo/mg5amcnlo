@@ -252,6 +252,15 @@ class MadSpinOptions(banner.ConfigFile):
         self.add_param('global_order_coupling', '')
         self.add_param('identical_particle_in_prod_and_decay', 'average')
         self.add_param('beampol', [0., 0.], comment='beam polarisation of each beam in percent, -100 .. 100, exactly as the run_card polbeam1/polbeam2 (0 is unpolarised). Taken from the run_card of the production when it has one.')
+        self.add_param('zero_width_pdg', [], typelist=int,
+                       comment="density spin modes only (madspin/full, PA, "
+                       "onshell). List of pdg codes ('set zero_width_pdg 6 23'; "
+                       "the sign is ignored) whose width is set to ZERO in the "
+                       "param_card of the production and decay matrix elements "
+                       "used to evaluate the spin density matrices. Only those "
+                       "matrix elements are affected: the Breit-Wigner sampling "
+                       "of the masses, the branching ratios and the decay "
+                       "events themselves keep the param_card widths.")
         self.add_param('decay_output', 'auto',
                        allowed=['auto', 'unweighted', 'weighted'],
                        comment="whether MadSpin unweights its decays at all. 'auto' "
@@ -2009,6 +2018,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 "density matrix to restrict, so they are only available in the "
                 "density spin modes (madspin/full, PA, onshell). Got "
                 "spinmode=%s." % spinmode)
+        self._validate_zero_width_pdg(spinmode)
         # The density modes decide about the '@' grouping later, in run_onshell,
         # where the production events say how many of each particle an event
         # carries. These two never can, so say it now rather than after the
@@ -2020,6 +2030,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         # directory is read back: everything in there was computed from a
         # param_card, and none of it is re-measured on reuse.
         self._check_reused_param_card()
+        self._check_reused_zero_width_pdg()
 
         if spinmode in ["none"]:
             out = self.run_bridge(line)
@@ -2799,6 +2810,96 @@ class MadSpinInterface(extended_cmd.Cmd):
             current.write(stamp)
         except (IOError, OSError) as error:
             logger.debug('could not record the parameters of %s: %s',
+                         directory, error)
+
+    def _zero_width_pdgs(self):
+        """The sorted, sign-less pdg codes of the zero_width_pdg option."""
+        return sorted(set(abs(int(pid)) for pid in
+                          self.options['zero_width_pdg'] or []))
+
+    def _validate_zero_width_pdg(self, spinmode):
+        """zero_width_pdg acts on the param_card of the density matrix
+        elements, so it is refused where there are none, and every pdg it
+        names must have a width to zero."""
+        pdgs = self._zero_width_pdgs()
+        if not pdgs:
+            return
+        if not self._density_spinmode():
+            raise self.InvalidCmd(
+                "zero_width_pdg sets widths to zero in the matrix elements "
+                "used for the spin density matrices, so it is only available "
+                "in the density spin modes (madspin/full, PA, onshell). Got "
+                "spinmode=%s." % spinmode)
+        # same guard as _check_reused_param_card: no banner, nothing to check
+        # here (decay.refresh_me_param_cards refuses a missing DECAY line).
+        if 'slha' in self.banner:
+            if not hasattr(self.banner, 'param_card'):
+                self.banner.charge_card('param_card')
+            decay = self.banner.param_card['decay']
+            missing = [pid for pid in pdgs if (pid,) not in decay.param_dict]
+            if missing:
+                raise self.InvalidCmd(
+                    "zero_width_pdg: the param_card has no DECAY entry for "
+                    "pdg %s." % ', '.join(str(pid) for pid in missing))
+        logger.info("MadSpin: width of pdg %s set to zero in the density "
+                    "matrix elements (zero_width_pdg)",
+                    ', '.join(str(pid) for pid in pdgs))
+
+    # Record of the zero_width_pdg a reusable directory was built with. Kept
+    # out of PARAM_CARD_STAMP on purpose: that stamp is the banner's card, which
+    # zero_width_pdg does not touch.
+    ZERO_WIDTH_STAMP = 'ms_zero_width_pdg.dat'
+
+    def _check_reused_zero_width_pdg(self):
+        """Refuse to reuse a directory whose cached maximum weights were
+        measured with another zero_width_pdg.
+
+        The maximum weights (max_wgt*, pure_interference*) are ratios of
+        density-matrix contractions, i.e. of exactly the matrix elements this
+        option changes; the rest of the cache (decay gridpacks, partial widths)
+        does not depend on it. A missing stamp means an empty list: either the
+        directory predates the option or it was built without it, and in both
+        cases no width was zeroed.
+        """
+        current = self._zero_width_pdgs()
+        reusing = self._reused_directory()
+        directory = reusing or (self.options['curr_dir'] and
+                                os.path.realpath(self.options['curr_dir']))
+        if not directory:
+            return
+        stamp = pjoin(directory, self.ZERO_WIDTH_STAMP)
+        if reusing and any(misc.glob(pattern, directory)
+                           for pattern in ('max_wgt*', 'pure_interference*')):
+            previous = []
+            if os.path.exists(stamp):
+                try:
+                    previous = sorted(int(tok) for tok in open(stamp).read().split())
+                except (IOError, OSError, ValueError) as error:
+                    logger.debug('unreadable %s (%s)', stamp, error)
+                    previous = None
+            if previous is not None and previous != current:
+                raise MadSpinStaleParameters(
+                    "MadSpin is reusing %s, which was built with "
+                    "zero_width_pdg = %s, while this run asks for "
+                    "zero_width_pdg = %s.\n"
+                    "\n"
+                    "The maximum weights cached there were measured with the "
+                    "density matrix elements of the other setting and are not "
+                    "re-measured on reuse. Point 'ms_dir'/'use_old_dir' at a "
+                    "fresh directory (or remove %s) and rerun."
+                    % (directory, previous or '[]', current or '[]', directory))
+            return
+        # (re)built from scratch: record what it is built with
+        try:
+            if current:
+                if not os.path.isdir(directory):
+                    os.makedirs(directory)
+                with open(stamp, 'w') as fsock:
+                    fsock.write(' '.join(str(pid) for pid in current) + '\n')
+            elif os.path.exists(stamp):
+                os.remove(stamp)
+        except (IOError, OSError) as error:
+            logger.debug('could not record zero_width_pdg in %s: %s',
                          directory, error)
 
     @classmethod

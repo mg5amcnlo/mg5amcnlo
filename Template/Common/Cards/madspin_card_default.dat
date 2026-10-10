@@ -30,6 +30,10 @@
 #         its own spin, and one EXTRA weight is added to the LHEF v3 <rwgt>
 #         section of every event for each COMBINATION 
 #
+# set zero_width_pdg 6 23 # density spin modes only: those widths are set to
+#         zero in the matrix elements of the production/decay density matrices
+#         (the Breit-Wigner sampling and branching ratios keep the param_card)
+#
 # Polarisation of the PRODUCTION process ('generate p p > w+{0} w-'):
 #         the density spin modes restrict the production/decay convolution to
 #         the polarisation each brace asks for, so the decay products follow

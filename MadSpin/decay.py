@@ -1916,6 +1916,31 @@ class decay_misc:
                         topo["branchings"][-2]["m2"]=math.sqrt(topo["get_mass2"][part])
 
     @staticmethod
+    def zero_widths_in_card(text, pdgs):
+        """Return (``text`` with the width on the DECAY line of every pdg in
+        ``pdgs`` set to zero, set of the pdgs whose DECAY line was found).
+
+        A line edit rather than a ParamCard round trip: ParamCard.write prints
+        every parameter with 6 significant digits, which would silently perturb
+        every other parameter of the card. The branching-ratio lines below a
+        zeroed DECAY line are left alone; the matrix element ignores them.
+        """
+        pdgs = set(abs(int(pid)) for pid in pdgs)
+        pattern = re.compile(r'^(\s*decay\s+)([+-]?\d+)(\s+)(\S+)(.*)$',
+                             re.I | re.S)
+        found = set()
+        out = []
+        for line in text.splitlines(True):
+            match = pattern.match(line)
+            if match and abs(int(match.group(2))) in pdgs:
+                found.add(abs(int(match.group(2))))
+                line = '%s%s%s%s%s' % (match.group(1), match.group(2),
+                                       match.group(3), '0.000000e+00',
+                                       match.group(5))
+            out.append(line)
+        return ''.join(out), found
+
+    @staticmethod
     def modify_param_card(pid2widths, path_me):
         """Modify the param_card w/r to what is read from the banner:
              if the value of a width is set to zero in the banner, 
@@ -4777,13 +4802,36 @@ class decay_all_events_onshell(decay_all_events):
         source = pjoin(self.path_me, 'param_card.dat')
         if not os.path.exists(source):
             return
+        # zero_width_pdg (density modes only): the widths it names are set to
+        # zero in these copies *only*. path_me/param_card.dat -- and the banner,
+        # which drives the Breit-Wigner sampling, the branching ratios and the
+        # decay gridpacks -- keep the physical widths.
+        zero_width = set()
+        if getattr(self, 'mode', None) == 'density':
+            options = getattr(self, 'options', None) or {}
+            pdgs = options['zero_width_pdg'] if 'zero_width_pdg' in options \
+                   else []
+            zero_width = set(abs(int(pid)) for pid in pdgs or [])
+        text = None
+        if zero_width:
+            text, found = decay_misc.zero_widths_in_card(open(source).read(),
+                                                         zero_width)
+            if zero_width - found:
+                raise MadSpinError(
+                    "zero_width_pdg: no DECAY entry for pdg %s in %s"
+                    % (', '.join(str(p) for p in sorted(zero_width - found)),
+                       source))
         ms_me_subdir = getattr(self.mscmd, 'ms_me_subdir', 'madspin_me')
         ms_me_decay_subdir = getattr(self.mscmd, 'ms_me_decay_subdir', 'madspin_decay')
         for subdir in (ms_me_subdir, ms_me_decay_subdir):
             cards = pjoin(self.path_me, subdir, 'Cards')
             if not os.path.isdir(cards):
                 continue
-            shutil.copyfile(source, pjoin(cards, 'param_card.dat'))
+            if text is None:
+                shutil.copyfile(source, pjoin(cards, 'param_card.dat'))
+            else:
+                with open(pjoin(cards, 'param_card.dat'), 'w') as fsock:
+                    fsock.write(text)
 
     def compile(self):
         logger.info('Compiling code')
