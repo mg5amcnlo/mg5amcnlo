@@ -2018,7 +2018,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 "density matrix to restrict, so they are only available in the "
                 "density spin modes (madspin/full, PA, onshell). Got "
                 "spinmode=%s." % spinmode)
-        self._announce_zero_width(spinmode)
+        self._announce_zero_width()
         # The density modes decide about the '@' grouping later, in run_onshell,
         # where the production events say how many of each particle an event
         # carries. These two never can, so say it now rather than after the
@@ -2836,15 +2836,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 pdgs.add(abs(int(name2pdg[label])))
         return sorted(pdgs)
 
-    def _announce_zero_width(self, spinmode):
-        """Say which widths auto_zero_width_PA zeroes, or that it is ignored
-        when it was asked for outside PA."""
-        if spinmode != 'PA':
-            if self.options['auto_zero_width_PA'] and \
-                    'auto_zero_width_pa' in self.options.user_set:
-                logger.info("auto_zero_width_PA only acts with spinmode=PA; "
-                            "ignored with spinmode=%s.", spinmode)
-            return
+    def _announce_zero_width(self):
+        """Say which widths auto_zero_width_PA zeroes (PA only)."""
         pdgs = self._zero_width_pdgs()
         if pdgs:
             logger.info("MadSpin PA: width of pdg %s set to zero in the "
