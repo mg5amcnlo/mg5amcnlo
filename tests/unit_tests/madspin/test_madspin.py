@@ -11526,41 +11526,29 @@ class TestReusedMsDirParameters(unittest.TestCase):
 
 
 class TestAutoZeroWidthPA(unittest.TestCase):
-    """auto_zero_width_PA: with spinmode = PA the widths of the decayed
-    particles are set to zero in the param_card of the density matrix elements
-    (madspin_me/madspin_decay), and nowhere else."""
+    """auto_zero_width_PA: with spinmode = PA the propagators of the particles
+    MadSpin decays are written with a zero width (output standalone
+    --zerowidth=, see tests/unit_tests/iolibs/test_helas_call_writers.py and
+    the acceptance test test_standalone_zerowidth). Here: which particles,
+    the option passed to MG5, and the reuse guard."""
 
-    RUN_CARD = (
-        'Block mass\n'
-        '    6 1.727612345678e+02 # MT\n'
-        '   23 9.118760e+01 # MZ\n'
-        'DECAY   6 1.330000e+00 # WT\n'
-        '#  BR             NDA  ID1    ID2\n'
-        '   1.000000e+00   2    5  24 # 1.33\n'
-        'decay  23 2.495200e+00 # WZ\n'
-        'DECAY  24 2.085000e+00 # WW\n'
-    )
     NAME2PDG = {'t': 6, 't~': -6, 'z': 23, 'w+': 24, 'w-': -24}
 
     def setUp(self):
         import tempfile
         self.tmpdir = tempfile.mkdtemp(prefix='ms_zero_width_')
-        open(pjoin(self.tmpdir, 'param_card.dat'), 'w').write(self.RUN_CARD)
-        for subdir in ('madspin_me', 'madspin_decay'):
-            os.makedirs(pjoin(self.tmpdir, subdir, 'Cards'))
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def _interface(self, spinmode='PA', auto=True, branches=('t', 't~'),
-                   multiparticles=None, ms_dir=None):
+                   multiparticles=None, ms_dir=None, final_state=None):
         interface = interface_madspin.MadSpinInterface
 
         class Stub(object):
             ZERO_WIDTH_STAMP = interface.ZERO_WIDTH_STAMP
             _zero_width_pdgs = interface._zero_width_pdgs
             _label_to_abs_pdgs = interface._label_to_abs_pdgs
-            _select_decay_width = interface._select_decay_width
             _announce_zero_width = interface._announce_zero_width
             _reused_directory = interface._reused_directory
             _check_reused_zero_width = interface._check_reused_zero_width
@@ -11575,32 +11563,20 @@ class TestAutoZeroWidthPA(unittest.TestCase):
         stub.options['curr_dir'] = ''
         stub.model = {'name2pdg': self.NAME2PDG}
         stub.mg5cmd = MG5()
-        stub.banner = banner.Banner()
-        stub.banner['slha'] = self.RUN_CARD
-        if isinstance(branches, dict):
-            stub.list_branches = branches
-        else:
-            stub.list_branches = dict((b, ['%s > x y' % b]) for b in branches)
+        stub.final_state = set(final_state or ())
+        stub.list_branches = dict((b, ['%s > x y' % b]) for b in branches)
         return stub
 
-    def _refresh(self, mscmd, mode='density'):
+    def _option(self, mscmd):
         class Gen(object):
-            refresh_me_param_cards = \
-                madspin.decay_all_events_onshell.refresh_me_param_cards
+            zerowidth_output_option = \
+                madspin.decay_all_events_onshell.zerowidth_output_option
         gen = Gen()
-        gen.mode = mode
-        gen.path_me = self.tmpdir
         gen.mscmd = mscmd
-        mscmd.ms_me_subdir = 'madspin_me'
-        mscmd.ms_me_decay_subdir = 'madspin_decay'
-        gen.refresh_me_param_cards()
-
-    def _me_text(self, subdir):
-        return open(pjoin(self.tmpdir, subdir, 'Cards',
-                          'param_card.dat')).read()
+        return gen.zerowidth_output_option()
 
     # ------------------------------------------------------------------
-    # which widths
+    # which particles
     # ------------------------------------------------------------------
 
     def test_default_is_true(self):
@@ -11611,62 +11587,11 @@ class TestAutoZeroWidthPA(unittest.TestCase):
         self.assertEqual(self._interface(branches=('t', 'z'))
                          ._zero_width_pdgs(), [6, 23])
 
-    class _DecayLib(object):
-        """Stands in for the decay f2py library: records the width changes."""
-        def __init__(self):
-            self.calls = []
-        def change_para(self, name, value):
-            self.calls.append((name, value))
-        def update_all_coup(self):
-            self.calls.append('coup')
-
-    def test_only_the_decaying_particle_is_zeroed_in_its_decay(self):
-        """One library serves every decay: the top width is zero while a top
-        decays (internal top of 't > w+ b g') and back for the W decay, whose
-        width is then the one zeroed (and the W of 't > e+ ve b' kept its
-        width while the top decayed)."""
-        stub = self._interface(branches=('t', 't~', 'w+'))
-        stub.final_state = set([6, -6, 24])
-        lib = self._DecayLib()
-        stub._select_decay_width(lib, 6)
-        self.assertEqual(lib.calls, [('DECAY_6', 0.), 'coup'])
-        stub._select_decay_width(lib, -6)   # same particle: nothing to do
-        self.assertEqual(len(lib.calls), 2)
-        stub._select_decay_width(lib, 24)
-        self.assertEqual(lib.calls[2:], [('DECAY_6', 1.33), ('DECAY_24', 0.),
-                                         'coup'])
-        stub._select_decay_width(lib, 23)   # not decayed: everything restored
-        self.assertEqual(lib.calls[5:], [('DECAY_24', 2.085), 'coup'])
-
-    def test_no_switch_when_off_or_outside_pa(self):
-        for stub in (self._interface(auto=False),
-                     self._interface(spinmode='madspin')):
-            lib = self._DecayLib()
-            stub._select_decay_width(lib, 6)
-            self.assertEqual(lib.calls, [])
-
-    def test_the_decay_card_is_never_edited(self):
-        self._refresh(self._interface(branches=('t', 't~', 'w+')))
-        self.assertIn('DECAY   6 0.000000e+00', self._me_text('madspin_me'))
-        self.assertIn('DECAY  24 0.000000e+00', self._me_text('madspin_me'))
-        self.assertEqual(self._me_text('madspin_decay'), self.RUN_CARD)
-
-    def test_a_missing_cards_directory_is_created(self):
-        """me_param_card falls back to the unedited source card when an ME
-        directory has no Cards/, which would bypass the zeroing."""
-        shutil.rmtree(pjoin(self.tmpdir, 'madspin_me', 'Cards'))
-        self._refresh(self._interface())
-        self.assertIn('DECAY   6 0.000000e+00', self._me_text('madspin_me'))
-        self.assertEqual(
-            interface_madspin.MadSpinInterface.me_param_card(
-                type('S', (), {'path_me': self.tmpdir})(), 'madspin_me'),
-            pjoin(self.tmpdir, 'madspin_me', 'Cards', 'param_card.dat'))
-
     def test_only_particles_of_the_production_final_state(self):
         """The default card decays the z of every process: a sample without
         a Z must keep its Z width."""
-        stub = self._interface(branches=('t', 't~', 'w+', 'z'))
-        stub.final_state = set([6, -6, 24])
+        stub = self._interface(branches=('t', 't~', 'w+', 'z'),
+                               final_state=[6, -6, 24])
         self.assertEqual(stub._zero_width_pdgs(), [6, 24])
         stub.final_state = set()  # no proc_card: no restriction
         self.assertEqual(stub._zero_width_pdgs(), [6, 23, 24])
@@ -11684,37 +11609,16 @@ class TestAutoZeroWidthPA(unittest.TestCase):
         self.assertEqual(self._interface(auto=False)._zero_width_pdgs(), [])
 
     # ------------------------------------------------------------------
-    # what ends up in the cards
+    # what MG5 is asked for
     # ------------------------------------------------------------------
 
-    def test_the_production_card_has_zero_width_and_nothing_else_moves(self):
-        """A line edit: no parameter loses digits, and the source of truth --
-        which drives the Breit-Wigner sampling and the reshuffling -- is
-        untouched."""
-        self._refresh(self._interface())
-        expected = self.RUN_CARD.replace('DECAY   6 1.330000e+00',
-                                         'DECAY   6 0.000000e+00')
-        self.assertEqual(self._me_text('madspin_me'), expected)
-        self.assertEqual(self._me_text('madspin_decay'), self.RUN_CARD)
-        self.assertEqual(open(pjoin(self.tmpdir, 'param_card.dat')).read(),
-                         self.RUN_CARD)
-
-    def test_switched_off_copies_the_card_verbatim(self):
-        self._refresh(self._interface(auto=False))
-        self.assertEqual(self._me_text('madspin_me'), self.RUN_CARD)
-
-    def test_other_modes_copy_the_card_verbatim(self):
-        self._refresh(self._interface(spinmode='madspin'))
-        self.assertEqual(self._me_text('madspin_me'), self.RUN_CARD)
-        # decay_all_events_onshell also serves onshell_v1
-        self._refresh(self._interface(), mode='onshell')
-        self.assertEqual(self._me_text('madspin_decay'), self.RUN_CARD)
-
-    def test_the_line_edit(self):
-        text, found = madspin.decay_misc.zero_widths_in_card(
-            self.RUN_CARD, [-23, 25])
-        self.assertEqual(found, set([23]))
-        self.assertIn('decay  23 0.000000e+00 # WZ\n', text)
+    def test_the_output_option(self):
+        self.assertEqual(self._option(self._interface(
+            branches=('t', 't~', 'w+'), final_state=[6, -6, 24])),
+            ' --zerowidth=6,24')
+        self.assertEqual(self._option(self._interface(auto=False)), '')
+        self.assertEqual(self._option(self._interface(spinmode='madspin')), '')
+        self.assertEqual(self._option(object()), '')
 
     # ------------------------------------------------------------------
     # reuse of an ms_dir

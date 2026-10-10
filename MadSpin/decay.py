@@ -1916,31 +1916,6 @@ class decay_misc:
                         topo["branchings"][-2]["m2"]=math.sqrt(topo["get_mass2"][part])
 
     @staticmethod
-    def zero_widths_in_card(text, pdgs):
-        """Return (``text`` with the width on the DECAY line of every pdg in
-        ``pdgs`` set to zero, set of the pdgs whose DECAY line was found).
-
-        A line edit rather than a ParamCard round trip: ParamCard.write prints
-        every parameter with 6 significant digits, which would silently perturb
-        every other parameter of the card. The branching-ratio lines below a
-        zeroed DECAY line are left alone; the matrix element ignores them.
-        """
-        pdgs = set(abs(int(pid)) for pid in pdgs)
-        pattern = re.compile(r'^(\s*decay\s+)([+-]?\d+)(\s+)(\S+)(.*)$',
-                             re.I | re.S)
-        found = set()
-        out = []
-        for line in text.splitlines(True):
-            match = pattern.match(line)
-            if match and abs(int(match.group(2))) in pdgs:
-                found.add(abs(int(match.group(2))))
-                line = '%s%s%s%s%s' % (match.group(1), match.group(2),
-                                       match.group(3), '0.000000e+00',
-                                       match.group(5))
-            out.append(line)
-        return ''.join(out), found
-
-    @staticmethod
     def modify_param_card(pid2widths, path_me):
         """Modify the param_card w/r to what is read from the banner:
              if the value of a width is set to zero in the banner, 
@@ -4636,8 +4611,9 @@ class decay_all_events_onshell(decay_all_events):
             mgcmd.exec_cmd(commandline, precmd=True)
             fill_all_me(self, "production")
         else:
+            zero_width = self.zerowidth_output_option()
             commandline_production = commandline.replace('add process', 'generate',1)
-            commandline_production += 'output standalone %s --prefix=int --density=1' % pjoin(path_me, ms_me_subdir)
+            commandline_production += 'output standalone %s --prefix=int --density=1%s' % (pjoin(path_me, ms_me_subdir), zero_width)
 
             logger.info(commandline_production)
             mgcmd.exec_cmd(commandline_production, precmd=True)
@@ -4646,7 +4622,7 @@ class decay_all_events_onshell(decay_all_events):
             fill_all_me(self, "production")
 
             commandline_decay = self.get_decay_command()
-            commandline_decay += 'output standalone %s --prefix=int --density=1 -f' % pjoin(path_me, ms_me_decay_subdir) #we add -f, else it would ask us if we want to clean the folder madspin_decay and madspin_me
+            commandline_decay += 'output standalone %s --prefix=int --density=1%s -f' % (pjoin(path_me, ms_me_decay_subdir), zero_width) #we add -f, else it would ask us if we want to clean the folder madspin_decay and madspin_me
             commandline_decay = commandline_decay.replace('add process', 'generate',1)
 
             logger.info(commandline_decay)
@@ -4773,6 +4749,22 @@ class decay_all_events_onshell(decay_all_events):
                 i+=1
         return commandline
 
+    def zerowidth_output_option(self):
+        """The ``output standalone`` option of auto_zero_width_PA, or ''.
+
+        With spinmode=PA, the propagators of the particles MadSpin decays are
+        written with a zero width -- in the production, and in each particle's
+        own decay only (ProcessExporterFortranSA.get_zerowidth_pdgs). The
+        param_card, and so every width MadSpin reads (Breit-Wigner,
+        reshuffling, branching ratios), is untouched.
+        """
+        pdgs = []
+        if hasattr(getattr(self, 'mscmd', None), '_zero_width_pdgs'):
+            pdgs = self.mscmd._zero_width_pdgs()
+        if not pdgs:
+            return ''
+        return ' --zerowidth=%s' % ','.join(str(pid) for pid in pdgs)
+
     def refresh_me_param_cards(self):
         """Put MadSpin's parameters inside every matrix-element directory.
 
@@ -4802,39 +4794,13 @@ class decay_all_events_onshell(decay_all_events):
         source = pjoin(self.path_me, 'param_card.dat')
         if not os.path.exists(source):
             return
-        # spinmode=PA with auto_zero_width_PA: the widths of the particles
-        # MadSpin decays are set to zero in the *production* copy only. The
-        # decay library shares one card between all decays, while a width is
-        # to be zeroed in the decay of that particle only: that is done at run
-        # time (MadSpinInterface._select_decay_width). path_me/param_card.dat
-        # -- and the banner, which drives the Breit-Wigner sampling, the
-        # reshuffling, the propagator factor and the branching ratios -- keep
-        # the physical widths.
-        zero_width = set()
-        if getattr(self, 'mode', None) == 'density' and \
-                hasattr(getattr(self, 'mscmd', None), '_zero_width_pdgs'):
-            zero_width = set(self.mscmd._zero_width_pdgs())
         ms_me_subdir = getattr(self.mscmd, 'ms_me_subdir', 'madspin_me')
         ms_me_decay_subdir = getattr(self.mscmd, 'ms_me_decay_subdir', 'madspin_decay')
         for subdir in (ms_me_subdir, ms_me_decay_subdir):
             cards = pjoin(self.path_me, subdir, 'Cards')
-            if subdir != ms_me_subdir or not zero_width:
-                if os.path.isdir(cards):
-                    shutil.copyfile(source, pjoin(cards, 'param_card.dat'))
-                continue
-            if not os.path.isdir(pjoin(self.path_me, subdir)):
-                continue
-            text, found = decay_misc.zero_widths_in_card(open(source).read(),
-                                                         zero_width)
-            if zero_width - found:
-                logger.debug('no DECAY entry to zero for pdg %s in %s',
-                             sorted(zero_width - found), source)
-            # me_param_card falls back to the unedited source when there is no
-            # Cards/: create it so the edit cannot be bypassed.
             if not os.path.isdir(cards):
-                os.makedirs(cards)
-            with open(pjoin(cards, 'param_card.dat'), 'w') as fsock:
-                fsock.write(text)
+                continue
+            shutil.copyfile(source, pjoin(cards, 'param_card.dat'))
 
     def compile(self):
         logger.info('Compiling code')

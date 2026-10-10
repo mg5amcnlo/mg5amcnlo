@@ -256,14 +256,15 @@ class MadSpinOptions(banner.ConfigFile):
                        comment="spinmode = PA only (ignored otherwise). Set to zero "
                        "the width of every particle MadSpin decays (the particles "
                        "of the 'decay' lines present in the production) in the "
-                       "matrix element of the production density matrix, and, in "
-                       "the decay density matrix of each such particle, the width "
-                       "of that particle only (the top in 't > w+ b g'; the W "
-                       "propagator of 't > e+ ve b' keeps its width even when a W "
-                       "is decayed too), as the pole approximation requires. So "
-                       "do the "
-                       "Breit-Wigner sampling, the reshuffling, the propagator "
-                       "factor applied by MadSpin and the branching ratios.")
+                       "propagators of the matrix element of the production "
+                       "density matrix, and, in the decay density matrix of each "
+                       "such particle, in the propagators of that particle only "
+                       "(the top in 't > w+ b g'; the W propagator of "
+                       "'t > e+ ve b' keeps its width even when a W is decayed "
+                       "too), as the pole approximation requires. The param_card "
+                       "is untouched, so the Breit-Wigner sampling, the "
+                       "reshuffling, the propagator factor applied by MadSpin "
+                       "and the branching ratios keep the physical widths.")
         self.add_param('decay_output', 'auto',
                        allowed=['auto', 'unweighted', 'weighted'],
                        comment="whether MadSpin unweights its decays at all. 'auto' "
@@ -2816,11 +2817,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                          directory, error)
 
     def _zero_width_pdgs(self):
-        """The sorted, sign-less pdg codes of the particles whose width
-        auto_zero_width_PA sets to zero: in the param_card of the production
-        density matrix element (madspin_me; see decay_all_events_onshell
-        .refresh_me_param_cards), and, at run time, in the decay density
-        matrix element of that same particle only (_select_decay_width).
+        """The sorted, sign-less pdg codes of the particles whose propagators
+        auto_zero_width_PA writes with a zero width (``output standalone
+        --zerowidth=``, see decay_all_events_onshell.generate_all_matrix_element
+        and ProcessExporterFortranSA.get_zerowidth_pdgs): in the production
+        density matrix element, and each one in its own decay density matrix
+        element only.
 
         Non-empty only for spinmode = PA with auto_zero_width_PA: then every
         particle MadSpin decays, i.e. the initial particle of each 'decay'
@@ -2854,53 +2856,13 @@ class MadSpinInterface(extended_cmd.Cmd):
             return set([abs(int(name2pdg[label]))])
         return set()
 
-    def _select_decay_width(self, mymod, pdg):
-        """Before a decay density matrix of particle ``pdg`` is evaluated: give
-        that particle -- and no other -- a zero width in the decay library.
-
-        All decay matrix elements share one library, hence one set of
-        parameters, so a width cannot be zeroed in "the decay of X only"
-        through the param_card: X can be an internal propagator in its own
-        decay (the top radiating the gluon in 't > w+ b g') and in the decay
-        of another particle (the W in 't > e+ ve b' next to a decayed W+),
-        where it must keep its width. The library is switched instead, and
-        only when the decaying particle changes; COUP() recomputes the
-        internal parameters, which depend on the widths in the complex-mass
-        scheme.
-        """
-        zero = getattr(self, '_zero_width_set', None)
-        if zero is None:
-            zero = self._zero_width_set = frozenset(self._zero_width_pdgs())
-        target = abs(int(pdg)) if abs(int(pdg)) in zero else None
-        current = getattr(self, '_decay_zeroed_width', None)
-        if target == current:
-            return
-        if not hasattr(mymod, 'change_para'):
-            if not getattr(self, '_decay_width_warned', False):
-                self._decay_width_warned = True
-                logger.warning("auto_zero_width_PA: this decay library cannot "
-                               "change a width at run time; the decay density "
-                               "matrices keep the param_card widths.")
-            self._decay_zeroed_width = target
-            return
-        if current is not None:
-            mymod.change_para('DECAY_%d' % current,
-                              self.banner.get('param_card', 'decay', current).value)
-        if target is not None:
-            mymod.change_para('DECAY_%d' % target, 0.)
-        mymod.update_all_coup()
-        self._decay_zeroed_width = target
-
     def _announce_zero_width(self):
-        """Say which widths auto_zero_width_PA zeroes (PA only), and fix the
-        list _select_decay_width uses for this run."""
+        """Say which widths auto_zero_width_PA zeroes (PA only)."""
         pdgs = self._zero_width_pdgs()
-        self._zero_width_set = frozenset(pdgs)
-        self._decay_zeroed_width = None
         if pdgs:
-            logger.info("MadSpin PA: zero width for pdg %s in the production "
-                        "density matrix element, and for the decaying particle "
-                        "only in each decay density matrix element "
+            logger.info("MadSpin PA: propagators of pdg %s have a zero width "
+                        "in the production density matrix element, and each "
+                        "one in its own decay density matrix element only "
                         "('set auto_zero_width_PA False' to keep the widths).",
                         ', '.join(str(pid) for pid in pdgs))
 
@@ -11000,10 +10962,6 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         with misc.chdir(sp_path): #changed the search of the card to the subdirectories madspin_me and madspin_decay
             mymod.initialise(self.me_param_card(folder_name))
-            if prod_or_decay == 'decay':
-                # the card's widths are back: nothing is zeroed any more
-                # (see _select_decay_width)
-                self._decay_zeroed_width = None
             # If the module is loop-induced, we also need to set the directory in which the MadLoop param card is present
             MadLoopCardPath = pjoin(self.path_me, folder_name, 'SubProcesses', 'MadLoop5_resources')
             if os.path.exists(MadLoopCardPath):
@@ -11685,7 +11643,6 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         elif self.all_me[tag]['type'] == 'decay':
             # misc.sprint("Computation of the decay density matrix")
-            self._select_decay_width(self.f2py_module[1], pdgs[0])
             density_array = self.f2py_module[1].py_get_density(pdgs=pdgs, 
                                                                 procid=-1, 
                                                                 p=P, 

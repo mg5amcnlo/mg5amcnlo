@@ -1191,3 +1191,95 @@ w[9]= VVVV5_2(w[0],w[3],w[4],GC_57,CMASS_mdl_MW)
 amp[11]= VVV1_0(w[2],w[1],w[9],-GC_3)"""
         
         self.assertEqual(solution.split('\n'), result)        
+
+
+class TestZeroWidthPdgs(unittest.TestCase):
+    """output standalone --zerowidth=: the HelasCallWriter writes the listed
+    propagators with a zero width, and the standalone exporter decides per
+    matrix element which of the listed particles apply."""
+
+    class _WF(object):
+        def __init__(self, pdg, width, t_channel=False):
+            self.data = {'pdg_code': pdg, 'width': width}
+            self.t_channel = t_channel
+        def get(self, key):
+            return self.data[key]
+        def get_call_key(self):
+            return 'key'
+        def is_t_channel(self):
+            return self.t_channel
+
+    CALL = 'CALL FFV1_1(W(1,3),W(1,1),GC_11,MDL_MT,MDL_WT,W(1,5))'
+
+    def _writer(self, zero):
+        writer = helas_call_writers.HelasCallWriter(
+            options={'zerowidth_pdgs': frozenset(zero)})
+        writer['wavefunctions']['key'] = lambda wf: self.CALL
+        return writer
+
+    def test_listed_propagator_gets_zero_width(self):
+        call = self._writer([6]).get_wavefunction_call(self._WF(-6, 'MDL_WT'))
+        self.assertEqual(call, 'CALL FFV1_1(W(1,3),W(1,1),GC_11,MDL_MT, ZERO,W(1,5))')
+
+    def test_other_propagators_are_untouched(self):
+        for zero in ([], [24]):
+            self.assertEqual(self._writer(zero).get_wavefunction_call(
+                self._WF(6, 'MDL_WT')), self.CALL)
+
+    def test_the_mass_is_never_touched(self):
+        """Only the width argument: a width name that is a prefix of the mass
+        name (or equal to nothing in the call) must not hit the mass."""
+        writer = self._writer([6])
+        writer['wavefunctions']['key'] = lambda wf: \
+            'CALL FFV1_1(W(1,3),W(1,1),GC_11,MDL_WT2,MDL_WT,W(1,5))'
+        self.assertEqual(writer.get_wavefunction_call(self._WF(6, 'MDL_WT')),
+                         'CALL FFV1_1(W(1,3),W(1,1),GC_11,MDL_WT2, ZERO,W(1,5))')
+
+    class _Leg(dict):
+        pass
+
+    class _Proc(object):
+        def __init__(self, ids, ninitial):
+            self.legs = []
+            for i, pid in enumerate(ids):
+                leg = TestZeroWidthPdgs._Leg(id=pid, state=i >= ninitial)
+                self.legs.append(leg)
+            self.ninitial = ninitial
+        def get(self, key):
+            return self.legs
+        def get_ninitial(self):
+            return self.ninitial
+
+    class _ME(object):
+        def __init__(self, *procs):
+            self.procs = list(procs)
+        def get(self, key):
+            return self.procs
+
+    def _active(self, option, *procs):
+        class Exporter(object):
+            get_zerowidth_pdgs = export_v4.ProcessExporterFortranSA.get_zerowidth_pdgs
+        exporter = Exporter()
+        exporter.cmd_options = {} if option is None else {'zerowidth': option}
+        return exporter.get_zerowidth_pdgs(self._ME(*procs))
+
+    def test_production_uses_the_listed_final_state_particles(self):
+        ttz = self._Proc([-11, 11, 6, -6, 23], 2)
+        self.assertEqual(self._active('6,24', ttz), frozenset([6]))
+        self.assertEqual(self._active('6,23', ttz), frozenset([6, 23]))
+
+    def test_a_decay_uses_its_decaying_particle_only(self):
+        """The W of t > e+ ve b keeps its width even when 24 is listed; the
+        top of t > w+ b g is zeroed."""
+        self.assertEqual(self._active('6,24', self._Proc([6, -11, 12, 5], 1)),
+                         frozenset([6]))
+        self.assertEqual(self._active('24', self._Proc([6, -11, 12, 5], 1)),
+                         frozenset())
+        self.assertEqual(self._active('6,24', self._Proc([-24, 11, -12], 1)),
+                         frozenset([24]))
+
+    def test_no_option_no_zero(self):
+        self.assertEqual(self._active(None, self._Proc([6, 24, 5, 21], 1)),
+                         frozenset())
+        self.assertEqual(self._active('', self._Proc([6, 24, 5, 21], 1)),
+                         frozenset())
