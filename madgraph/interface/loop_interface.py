@@ -613,8 +613,9 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
     def ML5export(self, nojpeg = False, main_file_name = ""):
         """Export a generated amplitude to file"""
 
-        if not self._curr_helas_model:
-            self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
+        # Always use a new writer: the one of a previous output caches calls
+        # formatted for that exporter (e.g. fk_ widths of madevent/standalone_rw)
+        self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
         def generate_matrix_elements(self):
             """Helper function to generate the matrix elements before exporting"""
 
