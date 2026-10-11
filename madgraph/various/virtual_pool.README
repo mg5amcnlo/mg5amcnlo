@@ -77,10 +77,13 @@ diagnostics are not independent performance measurements.
 At least 60 observations and ten observations in every validation fold are
 required. Each fitting fold must have at least five rows per candidate
 coefficient; at most 512 coefficients are allowed. Higher multiplicities or
-small samples therefore use a linear model or MINT automatically. Missing
-NumPy, zero Born/virtual orders, unsuccessful fits or no admissible improvement
-produce an explicit zero-blend MINT fallback. NumPy is only needed on the
-controller; workers use Fortran. Captures and models use format version 2.
+small samples therefore use a linear model or MINT automatically. Zero
+Born/virtual orders, unsuccessful fits or no admissible improvement produce an
+explicit zero-blend MINT fallback. Without NumPy on the controller, no model is
+installed: ordinary MINT marginals and adaptive virtual-call fractions remain
+active, including on later split jobs and resumes. Resuming a previously fitted
+model does not need NumPy; workers evaluate it in Fortran and retain its frozen
+event envelope. Captures and models use format version 2.
 Earlier experimental formats are rejected; restart their integration from
 grid setup before using this implementation.
 

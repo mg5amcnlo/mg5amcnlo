@@ -5,7 +5,10 @@ import subprocess
 import tempfile
 import unittest
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -68,6 +71,7 @@ class TestVirtualPooled(unittest.TestCase):
         self.mode(0)
         self.run_case('inactive')
 
+    @unittest.skipUnless(np is not None, 'requires numpy')
     def test_collection_reconstructs_virtual_and_iteration_resets(self):
         self.mode(1)
         self.run_case('collect')
@@ -130,6 +134,7 @@ class TestVirtualPooled(unittest.TestCase):
                 (self.path / 'virtual_pool_model.dat').write_text(content)
                 self.assertIn('Pooled virtual:', self.run_case('bad_model', success=False))
 
+    @unittest.skipUnless(np is not None, 'requires numpy')
     def test_invariants_are_process_independent_and_lorentz_invariant(self):
         cases = [
             ([6, -6], [172.5, 172.5], [[100, 50, 90], [-100, -50, -90]]),

@@ -672,6 +672,30 @@ jobs:
         run: |
           ./tests/test_manager.py test_born_support test_real_helicity_filter test_mcatnlo_delta_scales test_herwig7_scales test_soft_col_limits test_momentum_maps test_mc_dead_zones test_mc_kernels test_mc_event_colours test_mc_history_weights test_pdf_luminosity_cache test_cluster test_pythia8 test_pythia8_matching test_qed_mc_kernels test_pythia8_qed_dipoles test_qed_shower_scales test_pythia8_qed_support -t0
 
+  unittest_virtual_pool:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    env:
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check discovery and fallback without optional dependencies
+        run: |
+          python3 -S tests/test_manager.py test_phi4_vertex test_virtual_pool \
+            test_amcatnlo_virtual_pool test_pooled_mint -t0
+      - name: Check pooled virtual fitting and native integration
+        run: |
+          gfortran --version
+          python3 -m venv "$RUNNER_TEMP/virtual-pool-venv"
+          "$RUNNER_TEMP/virtual-pool-venv/bin/python" -m pip install numpy
+          "$RUNNER_TEMP/virtual-pool-venv/bin/python" tests/test_manager.py \
+            test_virtual_pool test_virtual_pool_polynomial test_virtual_pooled \
+            test_pooled_mint test_pooled_mint_targets \
+            test_pooled_virtual_selection test_pooled_virtual_weights \
+            test_amcatnlo_split_grids test_amcatnlo_virtual_pool \
+            test_born_spreading test_pdf_luminosity_cache -t0
+
   unittest_uncovered:
     # unit tests that were not listed in any workflow (CI coverage audit).
     # test_fks_ppzz_in_RS is left out: the RS UFO model is still python2 only.

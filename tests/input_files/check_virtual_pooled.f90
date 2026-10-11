@@ -60,9 +60,13 @@ program check_virtual_pooled
      stop
   case('inactive')
      call pooled_virtual_init(2,2)
-     if(pooled_virtual_enabled.or.pooled_virtual_collecting) stop 3
+     if(pooled_virtual_enabled.or.pooled_virtual_collecting.or.pooled_virtual_applying) stop 3
      call pooled_virtual_prepare(p,mass,incoming,pdg,10000d0,ratio)
      call check(pooled_virtual_ratio,ratio,'disabled fallback')
+     ratio=ratio*2d0
+     call pooled_virtual_prepare(p,mass,incoming,pdg,10000d0,ratio)
+     call check(pooled_virtual_ratio,ratio,'disabled fallback follows MINT')
+     if(pooled_virtual_call_probability(.125d0)/=.125d0) stop 12
      call pooled_virtual_mark_sampled(0.2d0)
      if(pooled_virtual_sampled) stop 4
   case('collect')

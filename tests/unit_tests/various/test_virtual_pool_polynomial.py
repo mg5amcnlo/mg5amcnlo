@@ -3,12 +3,14 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
-import sys
 import tempfile
 import unittest
 from unittest import mock
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 from madgraph.various import virtual_pool as pool
 from madgraph.various import virtual_pool_polynomial as poly
@@ -16,6 +18,7 @@ from madgraph.various import virtual_pool_polynomial as poly
 ROOT = Path(__file__).resolve().parents[3]
 
 
+@unittest.skipUnless(np is not None, 'requires numpy')
 class PolynomialPoolTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix='polynomial_pool_')
@@ -87,14 +90,11 @@ class PolynomialPoolTests(unittest.TestCase):
             if candidate['eligible']:
                 self.assertLessEqual(candidate['cv_rms'],report['baseline_cv_rms'])
 
-    def test_small_samples_zero_orders_and_missing_numpy_use_mint(self):
+    def test_small_samples_and_zero_orders_use_mint(self):
         rows=self.records(40)
         entry,_=poly.fit_order(rows,[i%3 for i in range(len(rows))],self.metadata,1)
         self.assertEqual(entry['blend'],0)
         rows=self.records()
-        with mock.patch.dict(sys.modules,{'numpy':None}):
-            entry,_=poly.fit_order(rows,[i%3 for i in range(len(rows))],self.metadata,1)
-        self.assertEqual(entry['reason'],'numpy_unavailable')
         for r in rows:r['virtual']=0.
         entry,_=poly.fit_order(rows,[i%3 for i in range(len(rows))],self.metadata,1)
         self.assertEqual(entry['reason'],'zero_born_or_virtual_order')

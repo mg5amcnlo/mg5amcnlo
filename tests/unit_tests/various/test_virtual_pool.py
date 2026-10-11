@@ -5,8 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-
-import numpy as np
+from unittest import mock
 
 from madgraph.various import virtual_pool as pool
 
@@ -58,8 +57,12 @@ class VirtualPoolTests(unittest.TestCase):
         incomplete = self.write_job('incomplete', [(1, 1, 1, 1, 1., 1., 2., 1., 0., 0.)], ledger=None)
         report = pool.train_pool([incomplete], output, report_path)
         self.assertEqual(report['status'], 'fallback')
-        self.assertTrue(report['model_written'])
-        self.assertEqual(pool.load_model(output)['orders'][0]['blend'], 0.)
+        if report.get('reason') == 'numpy_unavailable':
+            self.assertFalse(report['model_written'])
+            self.assertFalse(output.exists())
+        else:
+            self.assertTrue(report['model_written'])
+            self.assertEqual(pool.load_model(output)['orders'][0]['blend'], 0.)
         self.assertEqual(report['accepted_rows'], 0)
 
     def test_empty_replicas_still_contribute_attempted_point_normalization(self):
@@ -80,8 +83,8 @@ class VirtualPoolTests(unittest.TestCase):
         # these Born/virtual/baseline values, before attempts are combined.
         canonical_rows = []
         for row in rows:
-            runtime_values = np.asarray(row[5:8]) * .5
-            canonical_rows.append(row[:5] + tuple(runtime_values / .5) + row[8:])
+            runtime_values = tuple(value * .5 for value in row[5:8])
+            canonical_rows.append(row[:5] + tuple(value / .5 for value in runtime_values) + row[8:])
         split1 = self.write_job('split1', canonical_rows[:4], ledger='1 1 40\n')
         split2 = self.write_job('split2', canonical_rows[4:], ledger='1 1 40\n')
         other = self.write_job('other', [(1, 8, 1, 1, .2, 7., -9., 5., .6, .7)],
@@ -92,7 +95,7 @@ class VirtualPoolTests(unittest.TestCase):
         key = lambda r: (r['channel'], r['sample'])
         unsplit, split = sorted(unsplit, key=key), sorted(split, key=key)
         for field in ('born', 'virtual', 'baseline', 'weight'):
-            np.testing.assert_array_equal([r[field] for r in unsplit], [r[field] for r in split])
+            self.assertEqual([r[field] for r in unsplit], [r[field] for r in split])
         for power in (1, 2):
             objective = lambda data: sum(r['weight'] * abs(r['virtual'] - r['baseline']) ** power
                                          for r in data)
@@ -135,6 +138,31 @@ class VirtualPoolTests(unittest.TestCase):
     def test_import_does_not_load_optional_numpy(self):
         code = "import sys; import madgraph.various.virtual_pool; assert 'numpy' not in sys.modules"
         subprocess.check_call([sys.executable, '-c', code], cwd=str(Path(__file__).resolve().parents[3]))
+
+    def test_discovery_without_optional_numpy(self):
+        # The CI shards import every test module before selecting their tests.
+        # -S excludes installed optional packages, as on the minimal runners.
+        result = subprocess.run(
+            [sys.executable, '-S', 'tests/test_manager.py', 'test_phi4_vertex', '-t0'],
+            cwd=Path(__file__).resolve().parents[3], capture_output=True,
+            text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('Ran 1 test', result.stdout + result.stderr)
+
+    def test_missing_numpy_keeps_adaptive_mint_without_a_model(self):
+        for size in (0, 1, 60):
+            with self.subTest(rows=size):
+                rows = [(i + 1, 1, 1, 1, .5, 1., 2., 1., i / 60., .3)
+                        for i in range(size)]
+                job = self.write_job('no_numpy_%d' % size, rows)
+                output = self.root / 'model'
+                with mock.patch.dict(sys.modules, {'numpy': None}):
+                    report = pool.train_pool([job], output)
+                self.assertEqual(report['status'], 'fallback')
+                self.assertFalse(report['model_written'])
+                self.assertFalse(report['enabled'])
+                self.assertEqual(report['reason'], 'numpy_unavailable')
+                self.assertFalse(output.exists())
 
     def test_retired_capture_format_requires_new_integration(self):
         job = self.write_job('obsolete', [])

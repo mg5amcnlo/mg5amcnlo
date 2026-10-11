@@ -211,11 +211,12 @@ def _model_text(metadata, orders):
 def train_pool(job_dirs, output_model, report_path=None, job_groups=None):
     """Fit one frozen model per coupling order after the first-stage barrier.
 
-    Missing or insufficient captures give an explicit MINT fallback. Malformed
-    files or incompatible Born metadata raise ValueError, never a silent merge.
+    Missing NumPy or captures give an explicit MINT fallback. Malformed files
+    or incompatible Born metadata raise ValueError, never a silent merge.
     ``model_written`` indicates whether inference may load the model; ``enabled``
     indicates whether any order selected a nonzero blend. An all-zero model is
-    a valid frozen fallback. No held-out evaluation data are accepted here.
+    a valid frozen fallback. Without NumPy no model is installed, so ordinary
+    MINT adaptation remains active. No held-out evaluation data are accepted here.
     """
     from . import virtual_pool_polynomial as polynomial
 
@@ -233,17 +234,27 @@ def train_pool(job_dirs, output_model, report_path=None, job_groups=None):
     if metadata is None:
         report['reason'] = 'no_sample_headers'
     else:
-        folds = _folds(rows, 3)
-        orders = []
-        for order in range(1, metadata['norders'] + 1):
-            entry, diagnostics = polynomial.fit_order(rows, folds, metadata, order)
-            orders.append(entry)
-            diagnostics.update(blend=entry['blend'], reason=entry['reason'])
-            report['orders'].append(diagnostics)
-        _atomic_write(output_model, _model_text(metadata, orders))
-        report.update(metadata=metadata, model_written=True,
-                      enabled=any(o['blend'] > 0 for o in orders))
-        report['status'] = 'trained' if report['enabled'] else 'fallback'
+        report['metadata'] = metadata
+        try:
+            import numpy
+        except ImportError:
+            # A zero-blend model would also freeze the loop-call budget.
+            # No model lets the controller keep ordinary adaptive MINT.
+            report.update(status='fallback', reason='numpy_unavailable')
+        else:
+            folds = _folds(rows, 3)
+            orders = []
+            for order in range(1, metadata['norders'] + 1):
+                entry, diagnostics = polynomial.fit_order(rows, folds, metadata, order)
+                orders.append(entry)
+                diagnostics.update(blend=entry['blend'], reason=entry['reason'])
+                report['orders'].append(diagnostics)
+            _atomic_write(output_model, _model_text(metadata, orders))
+            report.update(model_written=True,
+                          enabled=any(o['blend'] > 0 for o in orders))
+            report['status'] = 'trained' if report['enabled'] else 'fallback'
+    if not report['model_written']:
+        report['call_probability'] = 'adaptive MINT'
     report['training_seconds'] = time.monotonic()-started
     if report_path is not None:
         _atomic_write(report_path, json.dumps(report, sort_keys=True, indent=2, allow_nan=False) + '\n')

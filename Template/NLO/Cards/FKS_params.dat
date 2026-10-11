@@ -164,9 +164,10 @@
 ! Subsequent jobs use a regularized linear/quadratic invariant-logarithm
 ! approximation blended with MINT. Matched cross-validation selects the fit
 ! or retains MINT. NumPy is needed on the controller to train; without it
-! the run uses MINT. Helicity sampling and exact residuals are retained.
-! The first-stage virtual-call fraction is kept; far outside the fitted
-! domain, exact loops protect against uncontrolled extrapolation.
+! the run uses ordinary adaptive MINT. Helicity sampling and exact
+! residuals are retained.
+! With a frozen model, the first-stage virtual-call fraction is kept;
+! far outside its domain, exact loops protect against extrapolation.
 ! Takes precedence over UsePolyVirtual. Restart the run from
 ! grid setup after changing this option.
 #UsePooledVirtual

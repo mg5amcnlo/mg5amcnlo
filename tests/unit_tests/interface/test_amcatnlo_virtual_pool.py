@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -134,9 +135,12 @@ class TestVirtualPoolController(unittest.TestCase):
         job = self.job()
         with mock.patch('madgraph.various.virtual_pool.train_pool', side_effect=self.fit) as fit:
             self.command.collect_virtual_pool([job], 0, False)
-            self.configure(resume=True)
-            self.command.collect_virtual_pool([job], 1, False)
-            self.command.stage_virtual_pool(job, 2, False)
+            # Workers evaluate frozen models in Fortran; losing NumPy on
+            # the controller must not change an existing event envelope.
+            with mock.patch.dict(sys.modules, {'numpy': None}):
+                self.configure(resume=True)
+                self.command.collect_virtual_pool([job], 1, False)
+                self.command.stage_virtual_pool(job, 2, False)
             fit.assert_called_once()
         self.assertEqual((Path(job['dirname']) / 'virtual_pool_mode.dat').read_text(), '2\n')
 
@@ -202,6 +206,45 @@ class TestVirtualPoolController(unittest.TestCase):
         self.configure(resume=True)
         self.command.stage_virtual_pool(job, 2, False)
         self.assertEqual((Path(job['dirname']) / 'virtual_pool_mode.dat').read_text(), '2\n')
+
+    def test_missing_numpy_keeps_mint_through_barrier_and_resume(self):
+        for fixed in (False, True):
+            with self.subTest(fixed_order=fixed):
+                mode = 'NLO' if fixed else 'aMC@NLO'
+                stage = 1 if fixed else 0
+                self.configure(mode=mode)
+                job = self.job(fixed=fixed)
+                directory = Path(job['dirname'])
+                parent = directory.parent
+                self.command.stage_virtual_pool(job, stage, fixed)
+                header = ('VIRTUAL_POOL_SAMPLES 2\n5 8 1 4 2\n'
+                          '21 21 6 -6\n0 0 173 173\n1 1 0 0\n')
+                rows = ['%d 1 1 1 8 .5 1 2 1 0 0 0 0 0 0 0 0 .3 .7\n' % i
+                        for i in range(1, 61)]
+                (directory / 'virtual_pool_samples.dat').write_text(header + ''.join(rows))
+                (directory / 'virtual_pool_iterations.dat').write_text('1 1 100\n')
+                # An old file must not turn a missing-NumPy fallback into apply mode.
+                (parent / 'virtual_pool_model.dat').write_text('stale\n')
+                (directory / 'virtual_pool_model.dat').write_text('stale\n')
+                with mock.patch.dict(sys.modules, {'numpy': None}):
+                    self.command.collect_virtual_pool([job], stage, fixed)
+                    self.command.stage_virtual_pool(job, stage + 1, fixed)
+                    self.assertEqual((directory / 'virtual_pool_mode.dat').read_text(), '0\n')
+                    self.assertFalse((directory / 'virtual_pool_model.dat').exists())
+                    self.assertFalse((parent / 'virtual_pool_model.dat').exists())
+                    state = json.loads((parent / 'virtual_pool_manifest.json').read_text())
+                    self.assertEqual(state['status'], 'fallback')
+                    self.assertIsNone(state['model_sha256'])
+                    report = json.loads((parent / 'virtual_pool_report.json').read_text())
+                    self.assertEqual(report['accepted_rows'], 60)
+                    self.assertEqual(report['reason'], 'numpy_unavailable')
+                    self.configure(mode=mode, resume=True)
+                    split = self.job(split=2, fixed=fixed)
+                    with mock.patch('madgraph.various.virtual_pool.train_pool') as fit:
+                        self.command.collect_virtual_pool([split], stage + 1, fixed)
+                        self.command.stage_virtual_pool(split, stage + 2, fixed)
+                        fit.assert_not_called()
+                    self.assertEqual((Path(split['dirname']) / 'virtual_pool_mode.dat').read_text(), '0\n')
 
     def test_fresh_run_discards_stale_fits_and_capture_files(self):
         parent = self.root / 'SubProcesses' / 'P0_gg'
