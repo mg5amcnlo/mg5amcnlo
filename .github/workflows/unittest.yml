@@ -665,7 +665,9 @@ jobs:
 
   unittest_uncovered:
     # unit tests that were not listed in any workflow (CI coverage audit).
-    # test_fks_ppzz_in_RS is left out: the RS UFO model is still python2 only.
+    # test_fks_ppzz_in_RS is left out: the RS model downloaded from the model
+    # database is python2 only and import_ufo.import_model does not convert it
+    # (the auto-conversion of PR #328 was only merged on untriggered-tests-3.7.3).
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
@@ -676,6 +678,54 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_CF_simple test_cf_computation test_generate_ewsud_ttbar test_generate_ewsud_ww test_generate_ewsud_zz testIO_test_pptt_ewsudakovSA testIO_test_ppzz_ewsudakov testIO_test_ppw_fksall testIO_Loop_sqso_uux_ddx test_check_import_model test_schedular test_dummy_fcts test_UFO_Python_helas_call_writer_fd test_get_symmetric_color test_get_symmetric_lorentz test_remove_interactions2 test_remove_interactions3 test_fd_python_value_matches_unitary_fixed_point test_shower_card_write -t0
+
+
+  unittest_run_output:
+    # event collection (collect_events), combine_runs, histogram and
+    # systematics output. These modules were not listed in any workflow
+    # (CI coverage audit).
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: test event collection, histograms and systematics output
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_collect_events test_combine_runs test_histograms test_systematics -t0
+
+
+  unittest_madevent_run:
+    # madevent run helpers: Delphes split fusion and LHAPDF info patching
+    # (madevent_interface), atomic make_opts update and the transpole s-hat map
+    # (compiled with gfortran). These modules were not fully listed in any
+    # workflow (CI coverage audit).
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: test madevent interface, make_opts and transpole helpers
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_madevent test_make_opts test_transpole -t0
+
+
+  unittest_polarisation:
+    # printing and parsing of offshell/polarised legs, incl. the
+    # propagator-only braces {G},{H},{Q},{W},{S} (CI coverage audit)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: test offshell/polarised process strings
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_nice_string_offshell_and_polarization test_nice_string_offshell_last_leg test_generate_propagator_only_polarisation test_propagator_polarisation_round_trip -t0
 
 
   unittest_write_model:
