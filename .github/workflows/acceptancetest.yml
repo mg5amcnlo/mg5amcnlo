@@ -1968,8 +1968,10 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_standalone_density_uu -pA -t0 -l INFO
-      # test_standalone_density_f2py is not run: it expects m0_* f2py symbols
-      # while the current wrapper exposes py_m0_* (part of unfinished density work)
+      - name: test test_standalone_density_f2py (f2py density vs fortran)
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_standalone_density_f2py -pA -t0 -l INFO
 
 
   acceptancetest_density_interface:
