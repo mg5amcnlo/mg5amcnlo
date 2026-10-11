@@ -67,6 +67,11 @@
 module mint_module
   use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
   use FKSParams ! contains use_poly_virtual
+  use virtual_pooled, only: pooled_virtual_init, pooled_virtual_begin_point, &
+       pooled_virtual_prepare, pooled_virtual_ratio, pooled_virtual_sampled, &
+       pooled_virtual_mark_sampled, pooled_virtual_observe, pooled_virtual_iteration, &
+       pooled_virtual_collecting, pooled_virtual_applying, pooled_virtual_probability, &
+       pooled_virtual_call_probability
   implicit none
   integer, parameter, private :: nintervals=32    ! max number of intervals in the integration grids
   integer, parameter, public  :: ndimmax=60       ! max number of dimensions of the integral
@@ -264,6 +269,9 @@ contains
             80*ndim*(nchans/3+1)
        ncalls0=born_spread_restart_ncalls
        call setup_common
+       ! Discard pre-calibration training when the Born-spreading restart
+       ! changes the integrand and starts iteration numbering again.
+       if (use_pooled_virtual) call pooled_virtual_init(n_ord_virt,ndim-3)
        call reset_MC_grid
        call reset_accumulated_grids_for_updating
        if (even_rn) call initialize_even_random_numbers
@@ -965,6 +973,7 @@ contains
     call compute_fractional_uncertainty(efrac)
     call print_results_current_iteration(efrac)
     call check_fractional_uncertainty(efrac)
+    if (use_pooled_virtual) call pooled_virtual_iteration(nit,.not.reset,ncalls*kpoint_iter)
     if (reset) return ! iteration was not accurate enough: do not include it
     call combine_iterations
     call combine_final_three_iterations
@@ -1113,6 +1122,9 @@ contains
     implicit none
     integer kchan,k_ord_virt
     double precision :: error_virt
+    ! Keep the first-stage loop budget after the frozen model is installed.
+    ! Accuracy gains must not automatically be spent on stronger roulette.
+    if (use_pooled_virtual.and.pooled_virtual_applying) return
     do kchan=1,nchans
        error_virt=0d0
        do k_ord_virt=1,n_ord_virt
@@ -1379,7 +1391,7 @@ contains
 
   subroutine add_point_to_grids(x)
     implicit none
-    integer :: kdim,k_ord_virt,ithree,isix
+    integer :: kdim,k_ord_virt,ithree,isix,j_ord_virt
     double precision, dimension(ndimmax) :: x
     double precision :: virtual,born
 ! accumulate the function in xacc(icell(kdim),kdim) to adjust the grid later
@@ -1397,10 +1409,21 @@ contains
           ithree=2*k_ord_virt+5
           isix=2*k_ord_virt+6
        endif
-       if (f(ithree).ne.0d0) then
+       if (f(ithree).ne.0d0.or.(use_pooled_virtual.and.pooled_virtual_sampled)) then
           born=f(isix)
           ! virt_wgt_mint=(virtual-average_virtual*born)/virtual_fraction. Compensate:
-          if (use_poly_virtual) then
+          if (use_pooled_virtual) then
+             if (k_ord_virt==0) then
+                virtual=0d0
+                do j_ord_virt=1,n_ord_virt
+                   virtual=virtual+pooled_virtual_probability*f(2*j_ord_virt+5) &
+                        +pooled_virtual_ratio(j_ord_virt)*f(2*j_ord_virt+6)
+                enddo
+             else
+                virtual=f(ithree)*pooled_virtual_probability+pooled_virtual_ratio(k_ord_virt)*born
+             endif
+             call fill_ave_virt(x,k_ord_virt,virtual,born)
+          elseif (use_poly_virtual) then
              virtual=f(ithree)*virtual_fraction(ichan)+ &
                   polyfit(k_ord_virt)*f(isix)
              call add_point_polyfit(ichan,k_ord_virt,x(1:ndim-3), &
@@ -1419,7 +1442,7 @@ contains
   subroutine add_point_to_bounding_envelope
     implicit none
     integer :: kdim,k_ord_virt,ithree,isix
-    double precision :: prod
+    double precision :: prod,probability
 ! update the upper bounding envelope total rate
     prod=1d0
     do kdim=1,ndim
@@ -1441,8 +1464,10 @@ contains
 ! Update the upper bounding envelope virtual. Do not include the
 ! enhancement due to the virtual_fraction. (And again limit by factor 2
 ! at most).
-    if (f(5)*virtual_fraction(ichan).gt.ymax_virt(ichan)) &
-         ymax_virt(ichan) = min(f(5)*virtual_fraction(ichan),ymax_virt(ichan)*2d0)
+    probability=virtual_fraction(ichan)
+    if(use_pooled_virtual.and.pooled_virtual_sampled) probability=pooled_virtual_probability
+    if (f(5)*probability.gt.ymax_virt(ichan)) &
+         ymax_virt(ichan) = min(f(5)*probability,ymax_virt(ichan)*2d0)
 ! for consistent printing in the log files (in particular when doing LO
 ! runs), set also f(6) to zero when imode.eq.1 and the virtuals are not
 ! included.
@@ -1454,7 +1479,7 @@ contains
           ithree=2*k_ord_virt+5
           isix=2*k_ord_virt+6
        endif
-       if (f(ithree).eq.0) f(isix)=0d0
+       if (f(ithree).eq.0.and..not.(use_pooled_virtual.and.pooled_virtual_sampled)) f(isix)=0d0
     enddo
   end subroutine add_point_to_bounding_envelope
      
@@ -1462,6 +1487,19 @@ contains
     implicit none
     integer :: i
     double precision, dimension(ndimmax) :: x
+    ! Record the weighted, sampled-helicity observation before the grid
+    ! bookkeeping may clear Born entries belonging to a zero residual.
+    if (use_pooled_virtual.and.pooled_virtual_collecting) then
+       if (.not.ieee_is_finite(wgt_mult).or.wgt_mult<=0d0) then
+          write(*,*) 'ERROR: pooled virtual collection requires a positive finite WGT_MULT.'
+          stop 1
+       endif
+       ! Split FO replicas carry WGT_MULT=1/nsplit for result bookkeeping.
+       ! Pooling already combines their attempted-point denominators. Strip
+       ! only that replica factor, keeping the physical integration weights.
+       call pooled_virtual_observe(f(8:6+2*n_ord_virt:2)/wgt_mult, &
+            f(7:5+2*n_ord_virt:2)/wgt_mult,iconfigs(ichan),nit,x(1:ndim-3),nint_used_virt)
+    endif
     if(imode.eq.0) then
        call add_point_to_grids(x)
     else
@@ -1487,6 +1525,9 @@ contains
     double precision, dimension(nintegrals) :: f1
     double precision, dimension(ndimmax) :: x
     double precision, external :: fun
+    ! Also reached by event generation, whose cell selectors bypass
+    ! get_random_x. Clear sampling state once, before all folds.
+    if (use_pooled_virtual) call pooled_virtual_begin_point
     ! contribution to integral
     ifirst=0
     if(imode.eq.0) then
@@ -1541,6 +1582,7 @@ contains
     double precision :: vol,dx
     double precision, dimension(ndimmax) :: x
     call get_channel
+    if (use_pooled_virtual) call pooled_virtual_begin_point
 ! find random x, and its random cell
     do kdim=1,ndim
 ! if(even_rn), we should compute the ncell and the rand from the ran3()
@@ -1754,6 +1796,7 @@ contains
     implicit none
     even_rn=.true.
     min_it=min_it0
+    if (use_pooled_virtual) call pooled_virtual_init(n_ord_virt,ndim-3)
     call reset_mint_grids
   end subroutine setup_imode_0
 
@@ -1834,16 +1877,34 @@ contains
        write (12,*) 'AVE',virtual_fraction(kchan),average_virtual(0,kchan)
     enddo
     if (use_poly_virtual) call save_polyfit(12)
+    if (use_pooled_virtual) write(12,'(a)') 'PVP 1'
     close (12)
   end subroutine write_grids_to_file
   
   subroutine read_grids_from_file
 ! Read the MINT integration grids from file
     implicit none
-    integer :: i,j,k,kchan,idum
+    integer :: i,j,k,kchan,idum,ios
     integer,dimension(maxchannels) :: points
     character(len=3) :: dummy
+    logical :: saved_pooled
     open (unit=12, file='mint_grids',status='old')
+    ! Check the approximation mode before parsing its different grid layout.
+    saved_pooled=.false.
+    do
+       read(12,'(a)',iostat=ios) dummy
+       if (ios.lt.0) exit
+       if (ios.ne.0) then
+          write(*,*) 'ERROR: cannot inspect mint_grids.'
+          stop 1
+       endif
+       if (dummy.eq.'PVP') saved_pooled=.true.
+    enddo
+    rewind(12)
+    if (saved_pooled.neqv.use_pooled_virtual) then
+       write(*,*) 'ERROR: pooled virtual mode differs from mint_grids; repeat integration from step zero.'
+       stop 1
+    endif
     ans(1,0)=0d0
     unc(1,0)=0d0
     do kchan=1,nchans
@@ -1886,6 +1947,7 @@ contains
        call do_polyfit()
     endif
     close (12)
+    if (use_pooled_virtual) call pooled_virtual_init(n_ord_virt,ndim-3)
 ! check for zero cross-section: if restoring grids corresponding to
 ! sigma=0, just terminate the run
     if (imode.ne.0.and.ans(1,0).eq.0d0.and.unc(1,0).eq.0d0) then

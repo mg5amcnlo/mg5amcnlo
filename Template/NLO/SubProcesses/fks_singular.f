@@ -533,6 +533,12 @@ c and not be part of the plots nor computation of the cross section.
       virt_wgt_mint(0)=virt_wgt_mint(0)+virt_wgt*f_nb
       born_wgt_mint(0)=born_wgt_mint(0)+born_wgt*f_b
       do iamp=1, amp_split_size
+        if (use_pooled_virtual.and.pooled_virtual_sampled) then
+c Keep zero residual observations: a perfect approximation still
+c supplies a Born weight to the pooled fit.
+           born_wgt_mint(iamp)=born_wgt_mint(iamp)
+     $          +amp_split_born_for_virt(iamp)*f_nb
+        endif
         if (amp_split_virt(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
@@ -543,8 +549,10 @@ c and not be part of the plots nor computation of the cross section.
         wgt1=amp_split_virt(iamp)*f_nb
         virt_wgt_mint(iamp)=virt_wgt_mint(iamp)
      $       +wgt1
-        born_wgt_mint(iamp)=born_wgt_mint(iamp)
-     $       +amp_split_born_for_virt(iamp)*f_nb
+        if (.not.(use_pooled_virtual.and.pooled_virtual_sampled)) then
+           born_wgt_mint(iamp)=born_wgt_mint(iamp)
+     $          +amp_split_born_for_virt(iamp)*f_nb
+        endif
         wgt1=wgt1/g**(QCD_power)
         call add_wgt(14,orders,wgt1,0d0,0d0)
       enddo
@@ -2376,7 +2384,9 @@ c or to fill histograms.
       include 'orders.inc'
       include 'q_es.inc'
       integer orders(nsplitorders)
-      integer i,j,k,iamp,icontr_orig
+      integer i,j,k,iamp,icontr_orig,mint_carrier
+      integer find_virtual_mint_carrier
+      external find_virtual_mint_carrier
       logical virt_found
       double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac
      $     ,wgt_wo_pdf,conv
@@ -2399,6 +2409,15 @@ c or to fill histograms.
       save lum_fks,lum_history,lum_iproc,lum_x,lum_q2,lum_value,lum_pd
       parameter (conv=389379660d0) ! conversion to picobarns
       call cpu_time(tBefore)
+      mint_carrier=0
+      if (use_pooled_virtual.and.pooled_virtual_sampled) then
+         mint_carrier=find_virtual_mint_carrier()
+c With no n-body contribution there is no PDF/bias carrier for this
+c fit observation. Do not train on its unnormalised Born weight.
+         if (mint_carrier.eq.0) then
+            pooled_virtual_sampled=.false.
+         endif
+      endif
       if (icontr.eq.0) return
       virt_found=.false.
 c Cache only within this call: PDF set/member and run/model inputs stay
@@ -2485,7 +2504,8 @@ c overwrite the relevant information.]
          do j=1,iproc
             parton_iproc(j,i)=parton_iproc(j,i) * wgt_wo_pdf
          enddo
-         if (itype(i).eq.14 .and. .not.virt_found) then
+         if ((itype(i).eq.14.or.i.eq.mint_carrier)
+     $        .and..not.virt_found) then
             virt_found=.true.
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
@@ -2543,6 +2563,25 @@ c and not be part of the plots nor computation of the cross section.
       enddo
       end
       
+      integer function find_virtual_mint_carrier()
+c A vanishing virtual residual has no type-14 weight line. Its Born
+c fit weight still needs the luminosity and bias of the same n-body
+c point. Prefer the residual, then its approximation, integrated
+c counterterms and Born. The latter three have identical n-body PDFs.
+      use weight_lines
+      implicit none
+      integer i,j
+      integer, parameter :: preferred(4)=[14,15,3,2]
+      find_virtual_mint_carrier=0
+      do j=1,4
+         do i=1,icontr
+            if (itype(i).ne.preferred(j)) cycle
+            find_virtual_mint_carrier=i
+            return
+         enddo
+      enddo
+      end
+
       subroutine include_bias_wgt
 c Include the weight from the bias_wgt_function to all the contributions
 c in icontr. This only changes the weight of the central value (after
@@ -2559,7 +2598,9 @@ c coefficients for PDF and scale computations.
       include 'orders.inc'
       include 'run.inc'
       integer orders(nsplitorders)
-      integer i,j,iamp
+      integer i,j,iamp,mint_carrier
+      integer find_virtual_mint_carrier
+      external find_virtual_mint_carrier
       logical virt_found
       double precision bias
       character*7 event_norm
@@ -2572,6 +2613,9 @@ c Set the bias_wgt to 1 in case we do not have to do any biassing
          return
       endif
       virt_found=.false.
+      mint_carrier=0
+      if (use_pooled_virtual.and.pooled_virtual_sampled)
+     $     mint_carrier=find_virtual_mint_carrier()
 c loop over all contributions
       do i=1,icontr
          if (itype(i).eq.1) then
@@ -2609,7 +2653,8 @@ c Update the weights:
             ! the events that are written out). In practice, we can do
             ! it in the include_inverse_bias_wgt() subroutine.
          enddo
-         if (itype(i).eq.14 .and. .not.virt_found) then
+         if ((itype(i).eq.14.or.i.eq.mint_carrier)
+     $        .and..not.virt_found) then
             virt_found=.true.
             virt_wgt_mint(0)=virt_wgt_mint(0)*bias_wgt(i)
             born_wgt_mint(0)=born_wgt_mint(0)*bias_wgt(i)
@@ -6651,6 +6696,7 @@ c
 
       subroutine bornsoftvirtual(p,bsv_wgt,virt_wgt,born_wgt)
       use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat,p_born
+      use mc_native_context, only: native_metadata
       use extra_weights
       use mint_module
       implicit none
@@ -6711,7 +6757,7 @@ c For tests of virtuals
       common/cxnormsv/xnormsv
       double precision vrat
 
-      double precision virt_wgt,ran2
+      double precision virt_wgt,ran2,virtual_prob
       external ran2
 
       character*4 abrv
@@ -6785,6 +6831,9 @@ C to keep track of the various split orders
       double precision coupl_wgtwnstmpmuf
 
       double precision amp_tot
+      double precision feature_mass(nexternal-1)
+      logical feature_incoming(nexternal-1)
+      integer feature_pdg(nexternal-1)
 
       include "pmass.inc"
       
@@ -7036,22 +7085,58 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       enddo
 
       if (fold.eq.0) then
+         if (use_pooled_virtual.and.ickkw.ne.-1) then
+            do i=1,nexternal-1
+               if (i.lt.i_fks) then
+                  feature_mass(i)=pmass(i)
+               else
+                  feature_mass(i)=pmass(i+1)
+               endif
+               feature_incoming(i)=i.le.nincoming
+            enddo
+            feature_pdg=native_metadata%born_ids(:,1)
+            call pooled_virtual_prepare(p_born,feature_mass,
+     $           feature_incoming,feature_pdg,scale**2,
+     $           average_virtual(1:amp_split_size,ichan))
+         endif
          ! Training and validation keep the Born-based approximate
          ! virtual below, but exclude the one-loop residual from the fit.
          if (born_spread_phase.ne.1.and.born_spread_phase.ne.2) then
-          if ((ran2().le.virtual_fraction(ichan) .and.
+          virtual_prob=virtual_fraction(ichan)
+          if (use_pooled_virtual.and.ickkw.ne.-1)
+     $         virtual_prob=pooled_virtual_call_probability(virtual_prob)
+          if ((ran2().le.virtual_prob .and.
      $         abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
             call cpu_time(tBefore)
             Call BinothLHA(p_born,born_wgt,virt_wgt)
+            if (use_pooled_virtual.and.ickkw.ne.-1) then
+               if (abrv.eq.'virt') then
+                  call pooled_virtual_mark_sampled(1d0)
+               else
+                  call pooled_virtual_mark_sampled(
+     $                 virtual_prob)
+               endif
+            endif
             do iamp=1,amp_split_size
                amp_split_virt(iamp)=amp_split_finite_ML(iamp)
             enddo
-            virtual_over_born=virt_wgt/born_wgt
+            if (use_pooled_virtual) then
+               virtual_over_born=0d0
+               if (born_wgt.ne.0d0)
+     $              virtual_over_born=virt_wgt/born_wgt
+            else
+               virtual_over_born=virt_wgt/born_wgt
+            endif
             if (ickkw.ne.-1) then
                virt_wgt = 0d0
                do iamp=1,amp_split_size
-                  if (amp_split_virt(iamp).eq.0d0) cycle
-                  if (use_poly_virtual) then
+                  if (.not.use_pooled_virtual.and.
+     $                 amp_split_virt(iamp).eq.0d0) cycle
+                  if (use_pooled_virtual) then
+                     amp_split_virt(iamp)=amp_split_virt(iamp)-
+     $                    pooled_virtual_ratio(iamp)
+     $                    *amp_split_born_for_virt(iamp)
+                  elseif (use_poly_virtual) then
                      amp_split_virt(iamp)=amp_split_virt(iamp)-
      $                    polyfit(iamp)
      $                    *amp_split_born_for_virt(iamp)
@@ -7064,10 +7149,10 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
                enddo
             endif
             if (abrv.ne.'virt') then
-               virt_wgt=virt_wgt/virtual_fraction(ichan)
+               virt_wgt=virt_wgt/virtual_prob
                do iamp=1,amp_split_size
                   amp_split_virt(iamp)=amp_split_virt(iamp)
-     &                 /virtual_fraction(ichan)
+     &                 /virtual_prob
                enddo
             endif
             call cpu_time(tAfter)
@@ -7083,7 +7168,11 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
      $        amp_split_virt_save(1:amp_split_size)
       endif
       if (abrv(1:4).ne.'virt' .and. ickkw.ne.-1) then
-         if (use_poly_virtual) then
+         if (use_pooled_virtual) then
+            amp_split_avv=pooled_virtual_ratio
+     $           *amp_split_born_for_virt
+            avv_wgt=sum(amp_split_avv)
+         elseif (use_poly_virtual) then
             avv_wgt=polyfit(0)*born_wgt
             do iamp=1, amp_split_size
                if (amp_split_born_for_virt(iamp).eq.0d0) cycle

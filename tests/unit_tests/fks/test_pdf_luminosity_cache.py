@@ -32,11 +32,13 @@ class TestPDFLuminosityCache(unittest.TestCase):
             (work / 'modules.f90').write_text(
                 'module mint_module\n'
                 'double precision :: virt_wgt_mint(0:1)=0d0,born_wgt_mint(0:1)=0d0\n'
+                'logical :: use_pooled_virtual=.false.,pooled_virtual_sampled=.false.\n'
                 'end module\n'
                 'module FKSParams\nlogical :: separate_flavour_configs=.false.\nend module\n')
             (work / 'weights.f').write_text('\n'.join(
                 fortran_routine(TEMPLATE / 'fks_singular.f', name)
-                for name in ('include_PDF_and_alphas', 'separate_flavour_config')))
+                for name in ('include_PDF_and_alphas', 'separate_flavour_config',
+                             'find_virtual_mint_carrier')))
             executable = work / 'check_pdf_cache'
             result = subprocess.run([
                 shutil.which('gfortran'), '-O2', '-std=legacy', '-fcheck=all',

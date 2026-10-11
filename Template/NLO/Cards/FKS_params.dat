@@ -159,6 +159,20 @@
 .False.
 ! Default :: .True.
 !
+! Pool sampled-helicity virtual observations across integration channels
+! once all first-stage jobs have returned: MC@NLO step 0, fNLO step 1.
+! Subsequent jobs use a regularized linear/quadratic invariant-logarithm
+! approximation blended with MINT. Matched cross-validation selects the fit
+! or retains MINT. NumPy is needed on the controller to train; without it
+! the run uses MINT. Helicity sampling and exact residuals are retained.
+! The first-stage virtual-call fraction is kept; far outside the fitted
+! domain, exact loops protect against uncontrolled extrapolation.
+! Takes precedence over UsePolyVirtual. Restart the run from
+! grid setup after changing this option.
+#UsePooledVirtual
+.True.
+! Default for new run cards :: .True. (old cards retain their previous mode)
+!
 ! ==========================================================================
 ! Combination of matrix elements
 ! ==========================================================================

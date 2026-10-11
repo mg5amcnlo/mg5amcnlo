@@ -21,6 +21,8 @@ from __future__ import absolute_import
 import atexit
 import collections
 import glob
+import hashlib
+import json
 import logging
 import math
 import optparse
@@ -1942,6 +1944,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             nevents=self.run_card['nevents']
             return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
+        self.configure_virtual_pool(options, p_dirs, mode)
+
         if mode in ['LO', 'NLO']:
             # this is for fixed order runs
             mode_dict = {'NLO': 'all', 'LO': 'born'}
@@ -2174,6 +2178,152 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 self.append_the_results(jobs_to_collect,integration_step)
         return jobs_to_run,jobs_to_collect,integration_step
 
+    def configure_virtual_pool(self, options, p_dirs, mode):
+        """Configure the guarded fit collected at the existing global barrier.
+
+        Fixed-order step 0 only prepares grids. Records come from step 1;
+        MC@NLO records come from step 0. No worker communicates during a step.
+        """
+        self._virtual_pool_enabled = False
+        self._virtual_pool_states = {}
+        card = pjoin(self.me_dir, 'Cards', 'FKS_params.dat')
+        if not os.path.isfile(card):
+            return
+        with open(card) as stream:
+            lines = [line.split('!', 1)[0].strip() for line in stream]
+        lines = [line for line in lines if line]
+        for index, line in enumerate(lines):
+            if line.split()[0] == '#UsePooledVirtual':
+                if index + 1 == len(lines):
+                    raise aMCatNLOError('Missing UsePooledVirtual value in %s' % card)
+                value = lines[index + 1].split()[0].lower().strip('.')
+                if value not in ('t', 'true', 'f', 'false'):
+                    raise aMCatNLOError('Invalid UsePooledVirtual value in %s' % card)
+                self._virtual_pool_enabled = value in ('t', 'true')
+        if not self._virtual_pool_enabled:
+            return
+        self._virtual_pool_resume = options['only_generation']
+        self._virtual_pool_fixed_order = mode in ('LO', 'NLO')
+        self._virtual_pool_stage = 0
+        if not self._virtual_pool_resume:
+            for p_dir in p_dirs:
+                for name in ('virtual_pool_model.dat', 'virtual_pool_report.json',
+                             'virtual_pool_manifest.json'):
+                    path = pjoin(self.me_dir, 'SubProcesses', p_dir, name)
+                    if os.path.lexists(path):
+                        os.remove(path)
+
+    def virtual_pool_state(self, p_dir):
+        """Load a frozen subprocess model, including an explicit empty fallback."""
+        states = self._virtual_pool_states
+        if p_dir in states:
+            return states[p_dir]
+        if not self._virtual_pool_resume:
+            states[p_dir] = None
+            return None
+        directory = pjoin(self.me_dir, 'SubProcesses', p_dir)
+        manifest = pjoin(directory, 'virtual_pool_manifest.json')
+        try:
+            with open(manifest) as stream:
+                state = json.load(stream)
+            if (state['version'] != 1 or
+                    state['fixed_order'] != self._virtual_pool_fixed_order or
+                    state['status'] not in ('trained', 'fallback')):
+                raise ValueError('incompatible manifest')
+            if state['model_sha256'] is not None:
+                with open(pjoin(directory, 'virtual_pool_model.dat'), 'rb') as stream:
+                    digest = hashlib.sha256(stream.read()).hexdigest()
+                if digest != state['model_sha256']:
+                    raise ValueError('model checksum differs from frozen manifest')
+            elif state['status'] != 'fallback':
+                raise ValueError('trained model is missing')
+        except (IOError, ValueError, KeyError, TypeError) as error:
+            raise aMCatNLOError('Cannot resume pooled virtuals for %s: %s. '
+                                'Restart the integration to collect a new fit.' %
+                                (p_dir, error))
+        states[p_dir] = state
+        return state
+
+    def stage_virtual_pool(self, job, integration_step, fixed_order,
+                           clear_records=False):
+        """Put ordinary files in the job directory, also for grid transfers."""
+        if not getattr(self, '_virtual_pool_enabled', False):
+            return
+        state = self.virtual_pool_state(job['p_dir'])
+        collection_step = 1 if fixed_order else 0
+        model = pjoin(job['dirname'], 'virtual_pool_model.dat')
+        if state is not None:
+            if state['model_sha256'] is not None:
+                source = pjoin(self.me_dir, 'SubProcesses', job['p_dir'],
+                               'virtual_pool_model.dat')
+                if os.path.islink(model):
+                    os.remove(model)
+                shutil.copyfile(source, model)
+                mode = 2
+            else:
+                mode = 0
+        elif integration_step <= collection_step:
+            mode = int(integration_step == collection_step)
+        else:
+            raise aMCatNLOError('Pooled virtual barrier was not completed for %s' %
+                                job['p_dir'])
+        if mode != 2 and os.path.lexists(model):
+            os.remove(model)
+        with open(pjoin(job['dirname'], 'virtual_pool_mode.dat'), 'w') as stream:
+            stream.write('%d\n' % mode)
+        if clear_records and mode == 1:
+            for name in ('virtual_pool_samples.dat', 'virtual_pool_iterations.dat'):
+                records = pjoin(job['dirname'], name)
+                if os.path.lexists(records):
+                    os.remove(records)
+
+    def collect_virtual_pool(self, jobs, integration_step, fixed_order):
+        """Fit once, after all workers return and before jobs are combined/split."""
+        if not getattr(self, '_virtual_pool_enabled', False):
+            return
+        self._virtual_pool_stage = integration_step + 1
+        if (self._virtual_pool_resume or
+                integration_step != (1 if fixed_order else 0)):
+            return
+        if aMCatNLO:
+            from internal.virtual_pool import train_pool
+        else:
+            from madgraph.various.virtual_pool import train_pool
+        groups = collections.defaultdict(dict)
+        for job in jobs:
+            # A repeated job dictionary must never count a capture twice.
+            directory = os.path.realpath(job['dirname'])
+            groups[job['p_dir']][directory] = str(job['channel'])
+        for p_dir, job_groups in sorted(groups.items()):
+            if self.virtual_pool_state(p_dir) is not None:
+                continue
+            directory = pjoin(self.me_dir, 'SubProcesses', p_dir)
+            model = pjoin(directory, 'virtual_pool_model.dat')
+            report = pjoin(directory, 'virtual_pool_report.json')
+            try:
+                result = train_pool(sorted(job_groups), model, report,
+                                    job_groups=job_groups)
+                digest = None
+                if result['model_written']:
+                    with open(model, 'rb') as stream:
+                        digest = hashlib.sha256(stream.read()).hexdigest()
+                elif os.path.lexists(model):
+                    os.remove(model)
+            except (IOError, ValueError, KeyError) as error:
+                raise aMCatNLOError('Cannot fit pooled virtuals for %s: %s' %
+                                    (p_dir, error))
+            state = dict(version=1, fixed_order=fixed_order,
+                         collection_step=integration_step,
+                         status='trained' if digest and result['status']=='trained' else 'fallback',
+                         model_sha256=digest)
+            manifest = pjoin(directory, 'virtual_pool_manifest.json')
+            with open(manifest + '.tmp', 'w') as stream:
+                json.dump(state, stream, sort_keys=True, indent=2)
+                stream.write('\n')
+            os.replace(manifest + '.tmp', manifest)
+            self._virtual_pool_states[p_dir] = state
+            logger.info('Pooled virtual fit for %s: %s', p_dir, result['status'])
+
     def prepare_directories(self,jobs_to_run,mode,fixed_order=True):
         """Set-up the G* directories for running"""
         name_suffix={'born' :'B' , 'all':'F'}
@@ -2210,6 +2360,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 if job['split'] != 0:
                     for f in ['grid.MC_integer','mint_grids']:
                         files.cp(pjoin(job['dirname'].rsplit("_",1)[0],f),job['dirname'])
+            self.stage_virtual_pool(job, getattr(self, '_virtual_pool_stage', 0),
+                                    fixed_order)
 
 
     def write_input_file(self,job,fixed_order):
@@ -2269,6 +2421,9 @@ RESTART = %(mint_mode)s
 
     def run_all_jobs(self,jobs_to_run,integration_step,fixed_order=True):
         """Loops over the jobs_to_run and executes them using the function 'run_exe'"""
+        for job in jobs_to_run:
+            self.stage_virtual_pool(job, integration_step, fixed_order,
+                                    clear_records=True)
         if fixed_order:
             if integration_step == 0:
                 self.update_status('Setting up grids', level=None)
@@ -2306,6 +2461,7 @@ RESTART = %(mint_mode)s
            final answer.
         """
 # Get the results of the current integration/MINT step
+        self.collect_virtual_pool(jobs_to_run, integration_step, fixed_order)
         self.append_the_results(jobs_to_run,integration_step)
         self.cross_sect_dict = self.write_res_txt_file(jobs_to_collect,integration_step)
 # Update HTML pages
@@ -2468,11 +2624,19 @@ RESTART = %(mint_mode)s
         for j,fs in enumerate([files_mint_grids,files_MC_integer]):
             linesoffiles=[]
             polyfit_data=[]
+            pooled_data=[]
             for f in fs:
-                with open(f,'r+') as fi:
+                with open(f,'r',newline='') as fi:
                     data=fi.readlines()
-                    linesoffiles.append([ dat for dat in data if 'POL' not in dat.split()[0] ])
-                    polyfit_data.append([ dat for dat in data if 'POL'     in dat.split()[0] ])
+                    pooled_data.append([dat for dat in data
+                                        if dat.split()[0] == 'PVP'])
+                    data=[dat for dat in data if dat.split()[0] != 'PVP']
+                    linesoffiles.append([dat for dat in data if 'POL' not in dat.split()[0]])
+                    polyfit_data.append([dat for dat in data if 'POL' in dat.split()[0]])
+            if any(block != pooled_data[0] for block in pooled_data[1:]):
+                raise aMCatNLOError('Pooled virtual modes differ or are missing in '
+                                    'split grid files. Cannot combine them; rerun '
+                                    'integration from a common grid setup.')
             to_write=[]
             for rowgrp in zip(*linesoffiles):
                 action=misc.make_unique([row.strip().split()[0] for row in rowgrp]) 
@@ -2533,12 +2697,15 @@ RESTART = %(mint_mode)s
                     for dat in ch:
                         to_write.append(dat)
 
+            if pooled_data:
+                to_write.extend(pooled_data[0])
+
             # write the data over the master location
             if j==0:
-                with open(pjoin(location,'mint_grids'),'w') as f:
+                with open(pjoin(location,'mint_grids'),'w',newline='') as f:
                     f.writelines(to_write)
             elif j==1:
-                with open(pjoin(location,'grid.MC_integer'),'w') as f:
+                with open(pjoin(location,'grid.MC_integer'),'w',newline='') as f:
                     f.writelines(to_write)
 
                 
@@ -5226,6 +5393,17 @@ RESTART = %(mint_mode)s
 
         else:
             raise aMCatNLOError('not valid arguments: %s' %(', '.join(args)))
+
+        # The whole job directory is already transferred in both directions.
+        # Require its control files as well, but allow genuinely empty captures.
+        if getattr(self, '_virtual_pool_enabled', False):
+            marker = pjoin(cwd, current, 'virtual_pool_mode.dat')
+            if os.path.isfile(marker):
+                required_output.append('%s/virtual_pool_mode.dat' % current)
+                with open(marker) as stream:
+                    pool_mode = stream.read().strip()
+                if pool_mode == '2':
+                    required_output.append('%s/virtual_pool_model.dat' % current)
 
         #Find the correct PDF input file
         pdfinput = self.get_pdf_input_filename()

@@ -17,6 +17,7 @@ def mint_support(work, real_weight_lines=False, real_fks_params=False):
     (work / 'params.f90').write_text(
         ('' if real_fks_params else 'module FKSParams\n'
         'logical :: use_poly_virtual=.false.\n'
+        'logical :: use_pooled_virtual=.false.\n'
         'double precision :: virt_fraction=1d0,min_virt_fraction=0.01d0\n'
         'end module\n') +
         'module mc_native_context\n'
@@ -37,7 +38,9 @@ def mint_support(work, real_weight_lines=False, real_fks_params=False):
         (work / 'orders.inc').write_text(
             '      integer nsplitorders\n      parameter(nsplitorders=1)\n')
         support.append(str(TEMPLATE / 'FKSParams.f90'))
-    return support + [str(work / 'params.f90'), str(TEMPLATE / 'mint_module.f90'),
+    return support + [str(work / 'params.f90'),
+            str(TEMPLATE / 'virtual_pooled.f90'),
+            str(TEMPLATE / 'mint_module.f90'),
             str(work / 'stubs.f90')]
 
 

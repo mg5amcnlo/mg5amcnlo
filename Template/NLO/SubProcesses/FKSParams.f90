@@ -16,6 +16,7 @@ module FKSParams
               SelectedCouplingOrders(maxCouplingTypes,0:maxCouplingsSelected), &
               QCD_squared_selected
   logical :: separate_flavour_configs,IncludeBornContributions,use_poly_virtual
+  logical :: use_pooled_virtual
   logical :: MCExplicitKLSum=.true.
   logical :: MCSubtractionAtFixedFlow=.true.
   logical :: FKSExplicitSum=.false.
@@ -110,6 +111,8 @@ contains
              read(68,*,end=999) FKSExplicitSum
           else if (buff .eq. '#UsePolyVirtual') then
              read(68,*,end=999) use_poly_virtual
+          else if (buff .eq. '#UsePooledVirtual') then
+             read(68,*,end=999) use_pooled_virtual
           else if (buff .eq. '#VetoedContributionTypes') then
              read(68,*,end=999) VetoedContributionTypes(0)
              if (VetoedContributionTypes(0) .lt. 0.or. &
@@ -188,6 +191,8 @@ contains
     call DefaultFKSParam()
     goto 998
 998 continue
+    ! Resolve precedence after all card options, independently of order.
+    if (use_pooled_virtual) use_poly_virtual=.false.
 
     if(printParam.and..not.paramPrinted) then
        write(*,*) &
@@ -236,6 +241,7 @@ contains
        write(*,*) ' > MinVirtualFraction        = ',Min_virt_fraction
        write(*,*) ' > SeparateFlavourConfigs    = ',separate_flavour_configs
        write(*,*) ' > UsePolyVirtual            = ',use_poly_virtual
+       write(*,*) ' > UsePooledVirtual          = ',use_pooled_virtual
        write(*,*) ' > FKSFinalRecoil            = ',FKSFinalRecoil
        write(*,*) ' > FKSISRMapping             = ',FKSISRMapping
        write(*,*) ' > Pythia8MMaxGamma           = ',Pythia8MMaxGamma
@@ -265,6 +271,7 @@ contains
     Min_virt_fraction=0.005d0
     separate_flavour_configs=.false.
     use_poly_virtual=.true.
+    use_pooled_virtual=.false.
     FKSFinalRecoil=0
     FKSISRMapping=0
     Pythia8MMaxGamma=10d0

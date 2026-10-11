@@ -1,0 +1,151 @@
+Barrier-pooled virtual approximation: invariant polynomials, format version 2
+============================================================================
+
+New NLO exports enable #UsePooledVirtual in Cards/FKS_params.dat. Old cards
+without that key retain the previous default. Set it false to disable pooling
+and use the existing UsePolyVirtual selection or MINT marginals. Restart from
+grid setup after changing the mode or physics inputs; never reuse an old
+unweighting envelope with a changed model.
+
+Workflow and normalization
+--------------------------
+Workers independently record virtuals already evaluated during MC@NLO step 0
+or fixed-order NLO step 1. Only after the entire stage finishes does the
+controller call train_pool(job_dirs, output_model, report_path, job_groups).
+It pools integration channels and split replicas within the same actual Born
+subprocess and fits each coupling order separately. There is no communication
+among workers during a stage. Frozen models are copied into subsequent job
+directories, including cluster transfers. Controller resumes verify checksums.
+
+job_groups maps each directory to its physical integration-channel batch.
+Split replicas share an attempted-point denominator. Different batches have
+separate denominators. Without this mapping, each directory is its own group.
+The arbitrary fixed-order replica multiplier WGT_MULT is removed at capture;
+all physical integration, PDF, bias and native helicity factors remain.
+
+B is the original native Born carrier used for the virtual correction. V is
+the sampled-helicity estimator, with its existing proposal weight included.
+A is the contemporaneous MINT approximation, retained for reconstruction and
+diagnostics. V is reconstructed as probability*residual+A, before bookkeeping
+can clear a Born entry with zero residual. No additional helicity factor is
+applied. All orders of a phase-space observation share its sample ID and fold.
+Neither V nor B is divided by the per-point Born or by the loop probability
+in the file. A training row has statistical weight
+
+  1 / (accepted attempted points in its integration group * loop probability).
+
+Failed cuts and unevaluated virtuals remain in the attempted-point denominator.
+Rejected and uncommitted iterations are discarded. A monotonically increasing
+iteration ordinal remains unique even when native MINT restarts its counter.
+Born-spreading calibration restarts discard pre-calibration observations.
+
+Model and conservative selection
+--------------------------------
+The candidate is A_new=(1-lambda) A_MINT + lambda B P(z). P is linear or
+quadratic, including all cross terms. The invariant coordinate catalog is:
+  log(shat/muR^2),
+  log(max(abs(2*pi.pj)/shat,1e-15)) for all i<j in native Born order,
+  log(shat/m^2) for distinct positive external masses in ascending order.
+The renormalization scale is the actual runtime scale. Coordinates do not
+require a particular spin, colour representation, or particle identity.
+This is a generic fitting basis, not an exact formula for arbitrary virtuals.
+
+Scalers use fitting rows only and map nonconstant coordinates to [-1,1].
+Constants and negligible columns are removed. Regression fits weighted V
+through V-B*P without per-point Born division. Born/target/column normalization
+keeps the small linear systems well scaled. The fixed candidate scan is:
+  degree 1 or 2; ridge 1e-4,0.01,1; Huber or squared loss;
+  blend 0,0.25,0.5,0.75,1. Huber IRLS has eight iterations and a fixed
+  residual threshold of 0.25 times the weighted mean absolute target scale.
+
+Three-fold CV is stratified by job/channel/iteration, keeping coupling orders
+of the same point together. Each validation baseline is a frozen native MINT
+reconstruction from that same fold complement, including the recorded 4-to-8
+bin schedule. The stored causal A is NOT the validation baseline. Worker and
+channel histories remain distinct, as in the native grids. All sampled rows,
+including exact zero residuals, enter the MINT reconstruction.
+
+A candidate must reduce weighted L1 by more than both 2% and twice a
+conservative paired standard-error estimate. Its aggregate RMS must not
+increase; no individual fold may increase RMS by more than 5%. A linear
+candidate within one paired error estimate of the best L1 is preferred over
+quadratic complexity. The error estimate is sqrt(sum((w_i*delta_i)^2)), with
+normalized weights and paired absolute-residual differences. It prevents one
+large observed gain from establishing significance by itself. These tuning
+diagnostics are not independent performance measurements.
+
+At least 60 observations and ten observations in every validation fold are
+required. Each fitting fold must have at least five rows per candidate
+coefficient; at most 512 coefficients are allowed. Higher multiplicities or
+small samples therefore use a linear model or MINT automatically. Missing
+NumPy, zero Born/virtual orders, unsuccessful fits or no admissible improvement
+produce an explicit zero-blend MINT fallback. NumPy is only needed on the
+controller; workers use Fortran. Captures and models use format version 2.
+Earlier experimental formats are rejected; restart their integration from
+grid setup before using this implementation.
+
+Exact correction, boundaries and call budget
+-------------------------------------------
+The original helicity sampler and RNG are unchanged. The estimator remains
+A + I*(V_h-A)/p with the actual positive loop-call probability p. Models are
+frozen at the barrier. The first-stage channel probabilities are retained
+while applying them, so better residuals do not automatically lower the loop
+budget. Native driver policies can still explicitly require exact loops.
+
+Features clamp to their training boundaries. If any coordinate of an active
+model lies more than 10% of its training range beyond a boundary, that order
+uses MINT and the point requests an exact virtual (p=1). A constant coordinate
+has tolerance 1e-10*max(1,abs(value)). Invalid coordinates in apply mode also
+request an exact loop. The point's actual probability is used for residual
+normalization, exact-V reconstruction and virtual-envelope bookkeeping.
+Folded evaluations reuse the same approximation and sampled residual.
+No positivity clipping or deletion of negative weights is performed.
+
+The collection stage itself cannot benefit from the model. Short fixed-order
+runs ending at step 1 only train; later integration stages consume the fit.
+A better residual does not guarantee fewer negative unweighted events or a
+net timing gain. Full-event tests and total fitting/inference overhead matter.
+
+Version-2 files
+---------------
+virtual_pool_samples.dat has five header lines:
+  VIRTUAL_POOL_SAMPLES 2
+  5 nf norders nlegs nx
+  pdg(1:nlegs)
+  mass(1:nlegs)
+  incoming(1:nlegs)
+
+nx is the number of Born MINT random coordinates (ndim-3). Exactly two legs
+are incoming. Each subsequent row is:
+  sampleid channel iteration order bins probability B V A features(1:nf) x(1:nx)
+
+bins is 4 or 8. All numerical fields are finite, x is in [0,1], and probability
+is in (0,1]. Metadata and native Born ordering must match across workers.
+
+virtual_pool_iterations.dat uses the iteration ledger format:
+  iteration accepted attemptedpoints
+where accepted is 0 or 1. Missing ledgers contribute no uncommitted rows.
+
+virtual_pool_model.dat has the same header layout, beginning with
+VIRTUAL_POOL_MODEL 2. For each coupling order it then stores:
+  order lambda born_scale target_scale nterms degree
+  lower(1:nf)
+  upper(1:nf)
+  a b coefficient             [one row per term]
+
+Feature indices are one-based; index zero means the constant 1. Thus (0,0)
+is a constant, (a,0) a linear term, and (a,b) a quadratic product. The raw
+Born multiplier is target_scale/born_scale times the polynomial sum.
+Degree is 0,1,2; zero blend reproduces MINT exactly. Constant boundary scaling,
+out-of-domain fallback and polynomial ordering agree between Python/Fortran.
+
+Models and JSON reports are written atomically. Per-job mode markers remain
+0=inactive,1=collect,2=apply. A no-header fallback needs no model. Reports give
+actual point counts, candidate diagnostics, selected models and fit wall time.
+A subprocess manifest binds the model checksum to the integration workflow.
+
+Implementation
+--------------
+virtual_pool.py: accepted-record pooling, serialization and diagnostics.
+virtual_pool_polynomial.py: regression, matched MINT replay and CV selection.
+virtual_pooled.f90: generic coordinates, capture and frozen native inference.
