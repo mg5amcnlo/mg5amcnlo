@@ -3864,8 +3864,11 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         replace_dict = {'global_variable':'', 'amp2_lines':'',
                                        'proc_prefix':proc_prefix, 'proc_id':''}
 
-        # Extract helas calls
-        helas_calls = fortran_model.get_matrix_element_calls(\
+        # Extract helas calls (with the propagators of the --zerowidth_decay
+        # particles of this matrix element, if any, written with a zero width)
+        with misc.TMP_variable(fortran_model, 'zerowidth_pdgs',
+                               self.get_zerowidth_pdgs(matrix_element)):
+            helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
@@ -4037,6 +4040,39 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         else:
             replace_dict['return_value'] = len([call for call in helas_calls if call.find('#') != 0])
             return replace_dict # for subclass update
+
+    def get_zerowidth_pdgs(self, matrix_element):
+        """The |pdg| whose propagators are written with a zero width in this
+        matrix element, from the output option --zerowidth_decay=, which is
+        either True/False or a list <pdg>,<pdg>,...
+
+        A particle is zeroed in a process where it is an external leg: in a
+        2 > N process where it is in the final state, and in a 1 > N process
+        (a decay) where it is the decaying particle -- and only then, so that
+        the decay of one particle keeps the width of any other particle it
+        propagates (the W of t > e+ ve b). True takes every such particle (in
+        a decay: the decaying particle), a list only those listed, False or
+        an empty list none. This is what MadSpin's pole approximation needs
+        for its production (list) and decay (True) density matrices; the
+        param_card, and hence every other use of the width, is untouched.
+        """
+        option = self.cmd_options.get('zerowidth_decay')
+        if option is True or str(option).strip().lower() == 'true':
+            asked = None
+        elif not option or str(option).strip().lower() == 'false':
+            return frozenset()
+        else:
+            asked = set(abs(int(pid)) for pid in str(option).split(',')
+                        if pid.strip())
+        active = set()
+        for proc in matrix_element.get('processes'):
+            legs = proc.get('legs')
+            if proc.get_ninitial() == 1:
+                active.add(abs(legs[0].get('id')))
+            else:
+                active.update(abs(leg.get('id')) for leg in legs
+                              if leg.get('state'))
+        return frozenset(active if asked is None else active & asked)
 
     #===========================================================================
     # write_check_sa   
