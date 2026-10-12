@@ -2201,9 +2201,10 @@ jobs:
 
 
   # test_ieva_collision and test_eva_oldrelease_collision are not run: they
-  # assert run_card defaults (evaorder=1, eva_xcut=0) that do not match the
-  # current ones, and test_ieva_collision uses an undefined variable
-  # (err1 = results['error']) after the run
+  # assert run_card defaults (evaorder=1, resp. eva_xcut=0) that do not match
+  # the current ones (evaorder=0, eva_xcut=1).
+  # test_mw_wproduction and test_mw_wjjproduction (test_madweight) are not
+  # run: MadWeight is excluded from CI on request.
 
 
   acceptancetest_dy3j_mlm:
