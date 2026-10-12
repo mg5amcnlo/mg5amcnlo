@@ -4611,6 +4611,8 @@ class decay_all_events_onshell(decay_all_events):
             mgcmd.exec_cmd(commandline, precmd=True)
             fill_all_me(self, "production")
         else:
+            # auto_zero_width_PA: the decayed particles in the production
+            # (pdg list), the decaying particle in each decay (True/False)
             zero_width = self.zerowidth_decay_pdgs()
             commandline_production = commandline.replace('add process', 'generate',1)
             commandline_production += 'output standalone %s --prefix=int --density=1 --zerowidth_decay=%s' % (pjoin(path_me, ms_me_subdir), zero_width)
@@ -4622,7 +4624,7 @@ class decay_all_events_onshell(decay_all_events):
             fill_all_me(self, "production")
 
             commandline_decay = self.get_decay_command()
-            commandline_decay += 'output standalone %s --prefix=int --density=1 --zerowidth_decay=%s -f' % (pjoin(path_me, ms_me_decay_subdir), zero_width) #we add -f, else it would ask us if we want to clean the folder madspin_decay and madspin_me
+            commandline_decay += 'output standalone %s --prefix=int --density=1 --zerowidth_decay=%s -f' % (pjoin(path_me, ms_me_decay_subdir), bool(zero_width)) #we add -f, else it would ask us if we want to clean the folder madspin_decay and madspin_me
             commandline_decay = commandline_decay.replace('add process', 'generate',1)
 
             logger.info(commandline_decay)
@@ -4750,8 +4752,9 @@ class decay_all_events_onshell(decay_all_events):
         return commandline
 
     def zerowidth_decay_pdgs(self):
-        """The value of ``output standalone --zerowidth_decay=`` for
-        auto_zero_width_PA: comma-separated |pdg|, empty for none.
+        """The value of ``output standalone --zerowidth_decay=`` of the
+        production for auto_zero_width_PA: comma-separated |pdg|, empty for
+        none. The decay output gets True when this is not empty.
 
         With spinmode=PA, the propagators of the particles MadSpin decays are
         written with a zero width -- in the production, and in each particle's

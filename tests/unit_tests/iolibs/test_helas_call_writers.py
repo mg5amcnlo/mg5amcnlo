@@ -1278,6 +1278,21 @@ class TestZeroWidthPdgs(unittest.TestCase):
         self.assertEqual(self._active('6,24', self._Proc([-24, 11, -12], 1)),
                          frozenset([24]))
 
+    def test_true_takes_every_external_particle(self):
+        """True: the decaying particle of a decay (never the W it
+        propagates), every final-state particle of a production."""
+        for option in (True, 'True', 'true'):
+            self.assertEqual(self._active(option, self._Proc([6, -11, 12, 5], 1)),
+                             frozenset([6]))
+            self.assertEqual(self._active(option, self._Proc([6, 24, 5, 21], 1)),
+                             frozenset([6]))
+            self.assertEqual(self._active(option,
+                                          self._Proc([-11, 11, 6, -6, 23], 2)),
+                             frozenset([6, 23]))
+        for option in (False, 'False'):
+            self.assertEqual(self._active(option, self._Proc([6, 24, 5, 21], 1)),
+                             frozenset())
+
     def test_no_option_no_zero(self):
         self.assertEqual(self._active(None, self._Proc([6, 24, 5, 21], 1)),
                          frozenset())
