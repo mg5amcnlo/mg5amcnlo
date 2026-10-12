@@ -1801,9 +1801,13 @@ set boost_choice [6, -6]
             density_check = event.density
 
         #reference density matrix
-        density_ref = [(0.4526973360805629+0j), (-2.1317321205040213e-05+0.0024340905341333923j), (2.13173212052136e-05-0.002434090538628891j),
-                          (0.28550869973262555+0j), (0.04730266391943712+0j), (0.04700262219476668+0j), (2.1317321205213577e-05+0.0024340905386288922j),
-                          (0.04730266391943711+0j), (-2.1317321205040145e-05-0.0024340905341333906j), (0.45269733608056295+0j)]
+        # Regenerated when the reweighting (standalone_rw) started to set the
+        # t-channel widths to zero, as madevent did for the input events
+        # (zerowidth_tchannel): the t-channel top propagator lost MDL_WT.
+        density_ref = [(0.45270438876343766+0.0j), (0.0+0.0024345422714880808j), (-0.0-0.002434542275983678j),
+                       (0.28551318353826904+0.0j), (0.047295611236562354+0.0j), (0.047011148655689436+0.0j),
+                       (0.0+0.0024345422759837264j), (0.047295611236562354+0.0j), (-0.0-0.0024345422714880972j),
+                       (0.45270438876343766+0.0j)]
 
         #1) here we check that the density matrix is computed properly
         for i in range(len(density_ref)):
@@ -1813,17 +1817,17 @@ set boost_choice [6, -6]
         rho_instance = dens.DensityMatrixObservables(density_check)
 
         #2) here we check that the concurrence is computed properly
-        concurrence_ref = 0.47641209333195317
+        concurrence_ref = 0.47643514460330366
         concurrence_check = rho_instance.Get_Concurrence()
         self.assertAlmostEqual(concurrence_ref, concurrence_check, places=7)
 
         #3) here we check that purity is computed properly
-        purity_ref = 0.5818411704583635
+        purity_ref = 0.5818593450086657
         purity_check = rho_instance.Get_Purity()
         self.assertAlmostEqual(purity_ref, purity_check, places=7)
 
         #4) here we check that magic is computed properly
-        magic_ref = 0.4706552252614239
+        magic_ref = 0.4706253424888031
         magic_check = rho_instance.Magic_Mixed()
         self.assertAlmostEqual(magic_ref, magic_check, places=7)
 
@@ -1984,10 +1988,13 @@ set boost_choice [5, -6]
         # legs it names: it used to count LHE lines, status-2 ones included, so
         # the status-2 top of this decay chain shifted it onto t (the resonance
         # line) + W+ instead of b + t~. The previous numbers were in that frame.
-        density_ref = [(0.0025697944663450214+0j), (0.00022583206322766304+0.0002724023671240153j), (0.03458000936877068-0.003111931365020864j),
-                            (0.003535839291923179+0.0031321719755733556j), (0.002495767955975634+0j), (0.002308240777864438-0.002551169179285921j),
-                            (0.03333888343971259-0.0016718211497894133j), (0.5116911466377606+0j), (0.04414462084336885+0.031496541741920014j),
-                            (0.48324329093991875+0j)]
+        # Regenerated when the reweighting (standalone_rw) started to set the
+        # t-channel widths to zero, as madevent did for the input events
+        # (zerowidth_tchannel): the t-channel top propagator lost MDL_WT.
+        density_ref = [(0.002572819258503627+0.0j), (0.00022287625051417933+0.000269373544283043j), (0.034620381554042186-0.0031148240475356633j),
+                       (0.003493349987547038+0.0030943536658021155j), (0.002492794223097223+0.0j), (0.0022714731159374324-0.0025077711911968975j),
+                       (0.03329882105505325-0.001669052089828375j), (0.5122804070927276+0.0j), (0.043564252872336236+0.03090169904947277j),
+                       (0.48265397942567173+0.0j)]
 
 
         event_of_reference = """<event>
@@ -1998,7 +2005,7 @@ set boost_choice [5, -6]
         5  1    3    3  501    0 +4.3637392514e+01 +4.9281743782e+00 -1.3060449857e+01 4.6056207819e+01 4.7000000000e+00 0.0000e+00 -1.0000e+00
        24  1    3    3    0    0 -5.4634276257e+01 +1.8631606795e+02 -1.6969165851e+02 2.7011304345e+02 8.0419002446e+01 0.0000e+00 -1.0000e+00
        -6  1    1    2    0  503 +1.0996883743e+01 -1.9124424233e+02 -3.5723989432e+02 4.4073192960e+02 1.7300000000e+02 0.0000e+00 -1.0000e+00
-<density> (0.0025697944663450214+0j) (0.00022583206322766304+0.0002724023671240153j) (0.03458000936877068-0.003111931365020864j) (0.003535839291923179+0.0031321719755733556j) (0.002495767955975634+0j) (0.002308240777864438-0.002551169179285921j) (0.03333888343971259-0.0016718211497894133j) (0.5116911466377606+0j) (0.04414462084336885+0.031496541741920014j) (0.48324329093991875+0j) </density>
+<density> (0.002572819258503627+0.0j) (0.00022287625051417933+0.000269373544283043j) (0.034620381554042186-0.0031148240475356633j) (0.003493349987547038+0.0030943536658021155j) (0.002492794223097223+0.0j) (0.0022714731159374324-0.0025077711911968975j) (0.03329882105505325-0.001669052089828375j) (0.5122804070927276+0.0j) (0.043564252872336236+0.03090169904947277j) (0.48265397942567173+0.0j) </density>
 </event>
 """
         
@@ -2015,12 +2022,12 @@ set boost_choice [5, -6]
         self.assertAlmostEqual(concurrence_ref, concurrence_check, places=7)
       
         #3) here we check that purity is computed properly
-        purity_ref = 0.5059543230761125
+        purity_ref = 0.505810869888376
         purity_check = rho_instance.Get_Purity()
         self.assertAlmostEqual(purity_ref, purity_check, places=7)
 
         #4) here we check that magic is computed properly
-        magic_ref = 0.045797020165311494
+        magic_ref = 0.04539434702919854
         magic_check = rho_instance.Magic_Mixed()
         self.assertAlmostEqual(magic_ref, magic_check, places=7)
 
@@ -2082,13 +2089,16 @@ set boost_choice [24, -6]
         # legs it names: it used to count LHE lines, status-2 ones included, so
         # the status-2 top of this decay chain shifted it onto b + W+ instead of
         # W+ + t~. The previous numbers were in that frame.
-        density_ref = [(0.03463053018280333+0j), (0.004239768679509782-6.107094544726455e-06j), (-0.09316199935947835-0.0642487039633136j),
-                            (-0.012210969227695868-0.007878922646928346j), (-0.002124188268916235-0.02297486682150409j), (0.003995508129090404+0.0004157871358009479j),
-                            (0.022117113597568305+0j), (-0.00501677525377969-0.007670018167320941j), (-0.05782633417873876-0.041591356606323786j),
-                            (-0.0345671307549972-0.028610030448355993j), (-0.012725299997169235-0.018055903954330738j), (0.37490761451895765+0j),
-                            (0.029901925820799556-0.012796932628922494j), (0.034730980413616615+0.048482547570504436j), (-0.010620049324088833+0.0038059883057455558j),
-                            (0.23499754842424148+0j), (0.1492214808480949+0.014281754024531749j), (0.04586173454409796+0.00814618965628759j),
-                            (0.1307089935801734+0j), (0.003896314151841825+0.020473298367979682j), (0.20263819969625585+0j)]
+        # Regenerated when the reweighting (standalone_rw) started to set the
+        # t-channel widths to zero, as madevent did for the input events
+        # (zerowidth_tchannel): the t-channel top propagator lost MDL_WT.
+        density_ref = [(0.03462856093584298+0.0j), (0.004222692552048597-3.914851804525198e-06j), (-0.09315136922763956-0.06424541106056061j),
+                       (-0.012161343076623666-0.007852907982114157j), (-0.0021548339817954705-0.02299216606257348j), (0.004000989959849888+0.0004271687621753295j),
+                       (0.022124992142446936+0.0j), (-0.004976106543712062-0.007632363502328344j), (-0.05784211938393767-0.041606353301745905j),
+                       (-0.034560622408768275-0.028594347672533223j), (-0.012757048104007053-0.018079926753134273j), (0.374857868204696+0.0j),
+                       (0.029720084211203073-0.012771984245079535j), (0.03485290974186369+0.0484732992793134j), (-0.01064461469034376+0.0037920989793522506j),
+                       (0.2350541853144974+0.0j), (0.14918389804980686+0.014260521941388894j), (0.045994627672498976+0.008149821823945263j),
+                       (0.1306812643391364+0.0j), (0.0037983745012122867+0.02048399076640624j), (0.20265312906338015+0.0j)]
 
         
         #1) here we check that the density matrix is computed properly
@@ -2099,14 +2109,14 @@ set boost_choice [24, -6]
         rho_instance = dens.DensityMatrixObservables(density_check)
 
         #2) here we check that the smaller eigenvalue of the partialy transposed density matrix is computed properly
-        flag_ref, eigval_ref = False, [0.00013081840995776112, 0.00023375814738743806, 0.10060517756525891, 0.1278032913859491, 0.25544825447210895, 0.5157787000193378]
+        flag_ref, eigval_ref = False, [0.0001309474273079456, 0.00023369563417047353, 0.10046843670831423, 0.1278389488146789, 0.25565138370380525, 0.5156765877117229]
         flag_check, eigval_check = rho_instance.PeresHorodecki_criterion(['boson', 'fermion'])
         self.assertEqual(flag_ref, flag_check)
         for i in range(len(eigval_ref)):
             self.assertAlmostEqual(eigval_ref[i], eigval_check[i], places=7)
       
         #3) here we check that purity is computed properly
-        purity_ref = 0.3577366329048327
+        purity_ref = 0.35771674847320956
         purity_check = rho_instance.Get_Purity()
         self.assertAlmostEqual(purity_ref, purity_check, places=7)
 
@@ -2169,7 +2179,7 @@ set boost_choice [6, -6] pt [0, 0]
         6  1    1    2  502    0 -3.1599447381e+02 +3.9628896508e+02 +1.0466750690e+02 5.4569381371e+02 1.7300000000e+02 0.0000e+00 -1.0000e+00
        -6  1    1    2    0  501 -2.8790168023e+02 -5.3212030280e+01 +2.4116702458e+02 4.1690458307e+02 1.7300000000e+02 0.0000e+00 -1.0000e+00
        -6  1    1    2    0  503 +2.3766404453e+02 -1.6598323661e+02 +7.5634541823e+01 3.4595406749e+02 1.7300000000e+02 0.0000e+00 -1.0000e+00
-<density> (0.41585128247332614+0j) (-0.03826754879773473-0.08665010160467382j) (0.01819843853040962+0.0694772074195328j) (-0.006036323974019095+0.028318452797874368j) (0.08409384779983874+0j) (-0.051323966834621225-0.010218484907272918j) (-0.018157600093053276-0.06950829298296718j) (0.0841062677380868+0j) (0.0382601151338116+0.08669345314193963j) (0.41594860198874833+0j) </density>
+<density> (0.4158995551694228+0.0j) (-0.038266416707557815-0.08667282347919017j) (0.018177344236518424+0.06949114218724137j) (-0.006036326465490495+0.02831843465941133j) (0.08410102856179515+0.0j) (-0.051324023693436596-0.010218495226221291j) (-0.018178695623423707-0.06949438656775611j) (0.0840990482542204+0.0j) (0.03826126259622656+0.08667076377998419j) (0.4159003680145617+0.0j) </density>
 </event>
 """
 
@@ -2179,10 +2189,13 @@ set boost_choice [6, -6] pt [0, 0]
             density_check = event.density
 
         #reference density matrix
-        density_ref = [(0.41585128247332614+0j), (-0.03826754879773473-0.08665010160467382j), (0.01819843853040962+0.0694772074195328j), 
-                            (-0.006036323974019095+0.028318452797874368j), (0.08409384779983874+0j), (-0.051323966834621225-0.010218484907272918j), 
-                            (-0.018157600093053276-0.06950829298296718j), (0.0841062677380868+0j), (0.0382601151338116+0.08669345314193963j), 
-                            (0.41594860198874833+0j)]
+        # Regenerated when the reweighting (standalone_rw) started to set the
+        # t-channel widths to zero, as madevent did for the input events
+        # (zerowidth_tchannel): the t-channel top propagator lost MDL_WT.
+        density_ref = [(0.4158995551694228+0.0j), (-0.038266416707557815-0.08667282347919017j), (0.018177344236518424+0.06949114218724137j),
+                       (-0.006036326465490495+0.02831843465941133j), (0.08410102856179515+0.0j), (-0.051324023693436596-0.010218495226221291j),
+                       (-0.018178695623423707-0.06949438656775611j), (0.0840990482542204+0.0j), (0.03826126259622656+0.08667076377998419j),
+                       (0.4159003680145617+0.0j)]
 
         lhe_path = pjoin(self.out_dir + '_density5/Events/run_01/unweighted_events.lhe.gz')
         for event in lhe_parser.EventFile(lhe_path):
@@ -2196,17 +2209,17 @@ set boost_choice [6, -6] pt [0, 0]
         rho_instance = dens.DensityMatrixObservables(density_check)
 
         #2) here we check that the bounds of concurrence is computed properly
-        concurrence_ref = 0.028913810451469873
+        concurrence_ref = 0.028913877218595573
         concurrence_check = rho_instance.Get_Concurrence()
         self.assertAlmostEqual(concurrence_ref, concurrence_check, places=7)
       
         # #3) here we check that purity is computed properly
-        purity_ref = 0.42378825285881117
+        purity_ref = 0.4237883009145146
         purity_check = rho_instance.Get_Purity()
         self.assertAlmostEqual(purity_ref, purity_check, places=7)
 
         # #4) here we check that magic is computed properly
-        magic_ref = 0.480231580151087
+        magic_ref = 0.4802316159074085
         magic_check = rho_instance.Magic_Mixed()
         self.assertAlmostEqual(magic_ref, magic_check, places=7)
 
