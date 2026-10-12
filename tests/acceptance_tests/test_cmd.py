@@ -991,7 +991,7 @@ class TestCmdShell2(unittest.TestCase,
             self.assertAlmostEqual(original_sol[key][1] if abs(original_sol[key][1]) > 1e-12 else 0, sol[key][1])
 
     def test_standalone_zerowidth(self):
-        """output standalone --zerowidth=: in a decay only the decaying
+        """output standalone --zerowidth_decay=: in a decay only the decaying
         particle's propagators get a zero width, in a production the listed
         final-state particles' ones; nothing changes without the option."""
 
@@ -1008,7 +1008,7 @@ class TestCmdShell2(unittest.TestCase,
         self.do('set group_subprocesses False')
         self.do('generate t > e+ ve b')
         self.do('add process t > w+ b g')
-        self.do('output standalone %s --prefix=int --density=1 --zerowidth=6,24 -f'
+        self.do('output standalone %s --prefix=int --density=1 --zerowidth_decay=6,24 -f'
                 % self.out_dir)
         # the internal W of the top decay keeps its width
         self.assertIn('CALL FFV2_3(W(1,2),W(1,3),GC_100,MDL_MW,MDL_WW,W(1,5))',
@@ -1018,7 +1018,7 @@ class TestCmdShell2(unittest.TestCase,
                       calls(self.out_dir, 't_wpbg'))
 
         self.do('generate e+ e- > t t~ z')
-        self.do('output standalone %s --prefix=int --density=1 --zerowidth=6,24 -f'
+        self.do('output standalone %s --prefix=int --density=1 --zerowidth_decay=6,24 -f'
                 % self.out_dir)
         zeroed = [c for c in calls(self.out_dir, 'epem_ttxz') if 'MDL_MT' in c]
         self.assertEqual(len(zeroed), 2)

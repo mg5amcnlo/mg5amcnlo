@@ -1194,7 +1194,7 @@ amp[11]= VVV1_0(w[2],w[1],w[9],-GC_3)"""
 
 
 class TestZeroWidthPdgs(unittest.TestCase):
-    """output standalone --zerowidth=: the HelasCallWriter writes the listed
+    """output standalone --zerowidth_decay=: the HelasCallWriter writes the listed
     propagators with a zero width, and the standalone exporter decides per
     matrix element which of the listed particles apply."""
 
@@ -1212,8 +1212,8 @@ class TestZeroWidthPdgs(unittest.TestCase):
     CALL = 'CALL FFV1_1(W(1,3),W(1,1),GC_11,MDL_MT,MDL_WT,W(1,5))'
 
     def _writer(self, zero):
-        writer = helas_call_writers.HelasCallWriter(
-            options={'zerowidth_pdgs': frozenset(zero)})
+        writer = helas_call_writers.HelasCallWriter()
+        writer.zerowidth_pdgs = frozenset(zero)
         writer['wavefunctions']['key'] = lambda wf: self.CALL
         return writer
 
@@ -1260,7 +1260,7 @@ class TestZeroWidthPdgs(unittest.TestCase):
         class Exporter(object):
             get_zerowidth_pdgs = export_v4.ProcessExporterFortranSA.get_zerowidth_pdgs
         exporter = Exporter()
-        exporter.cmd_options = {} if option is None else {'zerowidth': option}
+        exporter.cmd_options = {} if option is None else {'zerowidth_decay': option}
         return exporter.get_zerowidth_pdgs(self._ME(*procs))
 
     def test_production_uses_the_listed_final_state_particles(self):

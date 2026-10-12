@@ -2819,7 +2819,7 @@ class MadSpinInterface(extended_cmd.Cmd):
     def _zero_width_pdgs(self):
         """The sorted, sign-less pdg codes of the particles whose propagators
         auto_zero_width_PA writes with a zero width (``output standalone
-        --zerowidth=``, see decay_all_events_onshell.generate_all_matrix_element
+        --zerowidth_decay=``, see decay_all_events_onshell.generate_all_matrix_element
         and ProcessExporterFortranSA.get_zerowidth_pdgs): in the production
         density matrix element, and each one in its own decay density matrix
         element only.

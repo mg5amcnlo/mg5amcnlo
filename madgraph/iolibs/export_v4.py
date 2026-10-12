@@ -3864,18 +3864,12 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         replace_dict = {'global_variable':'', 'amp2_lines':'',
                                        'proc_prefix':proc_prefix, 'proc_id':''}
 
-        # Extract helas calls (with the --zerowidth propagators of this
-        # matrix element, if any, written with a zero width)
-        writer_options = getattr(fortran_model, 'options', None)
-        if writer_options is not None:
-            previous = writer_options.get('zerowidth_pdgs')
-            writer_options['zerowidth_pdgs'] = self.get_zerowidth_pdgs(matrix_element)
-        try:
+        # Extract helas calls (with the propagators of the --zerowidth_decay
+        # particles of this matrix element, if any, written with a zero width)
+        with misc.TMP_variable(fortran_model, 'zerowidth_pdgs',
+                               self.get_zerowidth_pdgs(matrix_element)):
             helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
-        finally:
-            if writer_options is not None:
-                writer_options['zerowidth_pdgs'] = previous
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 
@@ -4049,7 +4043,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
     def get_zerowidth_pdgs(self, matrix_element):
         """The |pdg| whose propagators are written with a zero width in this
-        matrix element, from the output option --zerowidth=<pdg>,<pdg>,...
+        matrix element, from the output option --zerowidth_decay=<pdg>,<pdg>,...
 
         A listed particle is zeroed in a process where it is an external leg:
         in a 2 > N process where it is in the final state, and in a 1 > N
@@ -4060,10 +4054,11 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         matrices; the param_card, and hence every other use of the width,
         is untouched.
         """
-        if not self.cmd_options.get('zerowidth'):
+        if not self.cmd_options.get('zerowidth_decay'):
             return frozenset()
         asked = set(abs(int(pid)) for pid in
-                    str(self.cmd_options['zerowidth']).split(',') if pid.strip())
+                    str(self.cmd_options['zerowidth_decay']).split(',')
+                    if pid.strip())
         active = set()
         for proc in matrix_element.get('processes'):
             legs = proc.get('legs')

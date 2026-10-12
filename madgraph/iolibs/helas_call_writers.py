@@ -48,6 +48,11 @@ class HelasCallWriter(base_objects.PhysicsObject):
     mother_dict = {1: 'S', 2: 'O', -2: 'I', 3: 'V', 5: 'T', 4:'OR', -4:'IR',
                    99:'P'}
     
+    # |pdg| of the particles whose propagators are written with a zero width
+    # (see get_wavefunction_call). Set for one matrix element at a time by the
+    # exporter (output standalone --zerowidth_decay=).
+    zerowidth_pdgs = frozenset()
+
     @staticmethod
     def customize_argument_for_all_other_helas_object(call, arg):
         """ Place holder for PLUGIN/...
@@ -291,10 +296,9 @@ class HelasCallWriter(base_objects.PhysicsObject):
                 self.width_tchannel_set_tozero = True
         # zerowidth_pdgs: propagators of these particles (|pdg|) get a zero
         # width in this call only -- the model parameter itself is untouched.
-        # The exporter sets the set per matrix element (output standalone
-        # --zerowidth=). Nothing to do in the complex-mass scheme, where the
-        # call carries a complex mass instead of a (mass, width) pair.
-        zero = self.options.get('zerowidth_pdgs')
+        # Nothing to do in the complex-mass scheme, where the call carries a
+        # complex mass instead of a (mass, width) pair.
+        zero = self.zerowidth_pdgs
         if zero and abs(wavefunction.get('pdg_code')) in zero:
             width = str(wavefunction.get('width'))
             if width.upper() != 'ZERO':
@@ -351,8 +355,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
         """Allow generating a HelasCallWriter from a Model
         """
 
-        default_options = {'zerowidth_tchannel': True,
-                           'zerowidth_pdgs': frozenset()}
+        default_options = {'zerowidth_tchannel': True}
         
         self.options = dict(default_options)
         self.options.update(options)

@@ -11528,7 +11528,7 @@ class TestReusedMsDirParameters(unittest.TestCase):
 class TestAutoZeroWidthPA(unittest.TestCase):
     """auto_zero_width_PA: with spinmode = PA the propagators of the particles
     MadSpin decays are written with a zero width (output standalone
-    --zerowidth=, see tests/unit_tests/iolibs/test_helas_call_writers.py and
+    --zerowidth_decay=, see tests/unit_tests/iolibs/test_helas_call_writers.py and
     the acceptance test test_standalone_zerowidth). Here: which particles,
     the option passed to MG5, and the reuse guard."""
 
@@ -11569,11 +11569,11 @@ class TestAutoZeroWidthPA(unittest.TestCase):
 
     def _option(self, mscmd):
         class Gen(object):
-            zerowidth_output_option = \
-                madspin.decay_all_events_onshell.zerowidth_output_option
+            zerowidth_decay_pdgs = \
+                madspin.decay_all_events_onshell.zerowidth_decay_pdgs
         gen = Gen()
         gen.mscmd = mscmd
-        return gen.zerowidth_output_option()
+        return gen.zerowidth_decay_pdgs()
 
     # ------------------------------------------------------------------
     # which particles
@@ -11615,7 +11615,7 @@ class TestAutoZeroWidthPA(unittest.TestCase):
     def test_the_output_option(self):
         self.assertEqual(self._option(self._interface(
             branches=('t', 't~', 'w+'), final_state=[6, -6, 24])),
-            ' --zerowidth=6,24')
+            '6,24')
         self.assertEqual(self._option(self._interface(auto=False)), '')
         self.assertEqual(self._option(self._interface(spinmode='madspin')), '')
         self.assertEqual(self._option(object()), '')
