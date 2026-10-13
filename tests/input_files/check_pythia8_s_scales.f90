@@ -14,7 +14,8 @@ program check_pythia8_s_scales
   implicit none
   character(len=32) :: mode
   double precision :: p(0:3,4),saved(4,4),saved_hard,q,expected,observed,ff_cap,fi_cap
-  integer :: i,nabove,selected_fold
+  double precision :: fraction,thresholds(5)=[80d0,280d0,550d0,820d0,1020d0]
+  integer :: i,j,nabove,selected_fold,calls_before
   logical :: delta,herwig
 
   call get_command_argument(1,mode)
@@ -156,11 +157,97 @@ program check_pythia8_s_scales
   call require(all(pack(shower_scale_nbody,shower_scale_nbody.ge.0d0).le.shower_scale_hard), &
        'infrared scales respect SCALUP')
 
-  ! FxFx continues to use its own undamped clustering prescription.
+  ! FxFx draws the same damped scalar, using its Born clustering reference.
+  ! Its scalar matrix is kept separate from native dipole-scale caps.
   hard_reference=1000d0
   ickkw_mod=3
+  call init_scale_module(5,1d0,2,2)
+  random_value=0.1d0
+  calls_before=random_calls
   call compute_shower_scale_nbody(p,-3,mc_shower_scale_mass())
-  call require(all(shower_scale_nbody.eq.2000d0),'FxFx scale prescription')
+  call close(shower_scale_hard,325d0,'FxFx sampled hard scale')
+  call require(all(shower_scale_nbody.eq.shower_scale_hard),'FxFx scalar matrix')
+  call require(all(shower_scale_nbody_min.eq.100d0),'FxFx lower damping bounds')
+  call require(all(shower_scale_nbody_max.eq.1000d0),'FxFx upper damping bounds')
+  call require(random_calls.eq.calls_before+1,'one FxFx damping draw per event')
+  call require(.not.scalar_S_scales(),'FxFx retains scalar prescription exclusion')
+  calls_before=random_calls
+  call save_shower_scale_nbody(1,1,fksfather)
+  call save_shower_scale_nbody(2,2,fksfather,4)
+  call require(random_calls.eq.calls_before,'saving FxFx scalar needs no random dipole draw')
+  saved=shower_scale_nbody
+  saved_hard=shower_scale_hard
+
+  ! Native histories reuse the outer event's transformed damping fraction.
+  ! A different reference changes the interval without another random draw,
+  ! while saved S scales and already determined H scales keep their owners.
+  fraction=(shower_scale_hard-shower_scale_nbody_min(1,1))/ &
+       (shower_scale_nbody_max(1,1)-shower_scale_nbody_min(1,1))
+  shower_scale_n1body=222d0
+  emsca_H=333d0
+  calls_before=random_calls
+  call set_FxFx_shower_scale_nbody(100d0,fraction)
+  call close(shower_scale_hard,32.5d0,'native FxFx reference reuses damping fraction')
+  call require(all(shower_scale_nbody.eq.shower_scale_hard),'native FxFx scalar matrix')
+  call require(all(shower_scale_nbody_min.eq.10d0),'native FxFx lower bounds')
+  call require(all(shower_scale_nbody_max.eq.100d0),'native FxFx upper bounds')
+  call require(random_calls.eq.calls_before,'native FxFx reference needs no damping draw')
+  call require(all(shower_scale_n1body.eq.222d0).and.all(emsca_H.eq.333d0), &
+       'native FxFx scale leaves H-event matrices intact')
+  itype=5
+  nFKS=2
+  ifold_cnt=2
+  call update_shower_scale_Sevents_v2(2,selected_fold)
+  call require(selected_fold.eq.2,'FxFx selected S-event fold')
+  call close(showerscaleS_hard,saved_hard,'FxFx saved hard scale survives native histories')
+  if (delta) then
+    call require(all(showerscaleS.eq.saved),'FxFx saved Delta matrix survives native histories')
+  else
+    call close(showerscaleS(1,1),saved_hard,'FxFx saved scalar survives native histories')
+  endif
+
+  random_value=0.2d0
+  calls_before=random_calls
+  call compute_shower_scale_nbody(p,-3,mc_shower_scale_mass())
+  call close(shower_scale_hard,400d0,'FxFx second damping draw')
+  call require(random_calls.eq.calls_before+1,'fresh FxFx event draws independently')
+
+  ! Check the actual subtraction damping throughout and outside its support.
+  ! The sample uses deterministic quantiles, giving a half-bin error bound.
+  do j=1,size(thresholds)
+    q=thresholds(j)
+    ileg=1
+    shat_n1=4000d0**2
+    xtk=-2000d0*q
+    expected=compute_damping_weight(4,q/2000d0,0d0)
+    nabove=0
+    do i=1,1000
+      random_value=(dble(i)-0.5d0)/1000d0
+      calls_before=random_calls
+      call compute_shower_scale_nbody(p,-3,mc_shower_scale_mass())
+      if (shower_scale_hard.gt.q) nabove=nabove+1
+      call require(shower_scale_hard.ge.100d0.and.shower_scale_hard.le.1000d0, &
+           'FxFx samples lie within damping support')
+      call require(all(shower_scale_nbody.eq.shower_scale_hard), &
+           'FxFx dipoles use the sampled scalar')
+      call require(random_calls.eq.calls_before+1,'one draw for each FxFx quantile')
+    enddo
+    observed=dble(nabove)/1000d0
+    call require(abs(observed-expected).le.0.5d0/1000d0, &
+         'FxFx sampled survival agrees with subtraction damping')
+  enddo
+
+  random_value=0.5d0
+  call init_scale_module(5,2d0,2,2)
+  call compute_shower_scale_nbody(p,-3,mc_shower_scale_mass())
+  call close(shower_scale_hard,1100d0,'FxFx shower-scale variation')
+  call require(all(shower_scale_nbody_min.eq.200d0),'FxFx varied lower bounds')
+  call require(all(shower_scale_nbody_max.eq.2000d0),'FxFx varied upper bounds')
+  hard_reference=0.01d0
+  call compute_shower_scale_nbody(p,-3,mc_shower_scale_mass())
+  call close(shower_scale_hard,4.5d0,'FxFx infrared floor and damping width')
+  call require(all(shower_scale_nbody_min.eq.3d0),'FxFx infrared lower bounds')
+  call require(all(shower_scale_nbody_max.eq.6d0),'FxFx infrared upper bounds')
   print *, 'PASS '//trim(mode)
 contains
   subroutine require(condition,label)

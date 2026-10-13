@@ -169,15 +169,27 @@ contains
     endif
   end subroutine compute_shower_scale_nbody
 
-  subroutine set_FxFx_shower_scale_nbody(born_ref_scale)
-    ! FxFx uses the smallest Born clustering scale, with scalar damping
-    ! bounds. Native kl histories can reuse the clustering done for cuts.
-    ! This operation performs no clustering, Sudakov evaluation or RNG draw.
+  subroutine set_FxFx_shower_scale_nbody(born_ref_scale,damping_fraction)
+    ! Sample one scalar starting scale from the ordinary damping distribution,
+    ! using the smallest FxFx Born clustering scale as its reference. Native
+    ! H histories can reuse the outer draw with their own Born damping bounds.
+    ! This operation performs no clustering or Sudakov evaluation.
     double precision, intent(in) :: born_ref_scale
-    shower_scale_hard=shower_scale_factor*born_ref_scale
+    double precision, intent(in), optional :: damping_fraction
+    double precision :: scalemin,scalemax,rrnd
+    double precision, external :: ran2
+    call get_scaleminmax(born_ref_scale,scalemin,scalemax,0d0)
+    scalemin=max(scalemin,scaleMCcut)
+    scalemax=max(scalemax,scalemin+scaleMCdelta)
+    if (present(damping_fraction)) then
+       rrnd=damping_fraction
+    else
+       rrnd=damping_inv(ran2(),1d0)
+    endif
+    shower_scale_hard=scalemin+rrnd*(scalemax-scalemin)
     shower_scale_nbody=shower_scale_hard
-    shower_scale_nbody_min=shower_scale_hard
-    shower_scale_nbody_max=shower_scale_hard+scaleMCdelta
+    shower_scale_nbody_min=scalemin
+    shower_scale_nbody_max=scalemax
   end subroutine set_FxFx_shower_scale_nbody
 
   subroutine save_shower_scale_nbody(ifks,ifold,father,partner)
@@ -186,7 +198,7 @@ contains
     emsca_S_hard(ifks,ifold)=shower_scale_hard
     if (mcatnlo_delta_mod) then
        emsca_S(ifks,ifold,:,:)=shower_scale_nbody
-    elseif (scalar_S_scales()) then
+    elseif (ickkw_mod.eq.3.or.scalar_S_scales()) then
        emsca_S(ifks,ifold,:,:)=shower_scale_hard
     elseif (present(partner)) then
        emsca_S(ifks,ifold,:,:)=shower_scale_nbody(father,partner)
