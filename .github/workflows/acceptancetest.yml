@@ -2165,6 +2165,20 @@ jobs:
             ./tests/test_manager.py test_density_mode_vs_standalone_LI1 -pA -t0 -l INFO
 
 
+  acceptancetest_standalone_rw_tree_then_virt:
+    # tree then loop standalone_rw output in one session, as the NLO reweighting
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - name: test that the tree standalone_rw calls do not leak into MadLoop
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_standalone_rw_tree_then_virt -pA -t0 -l INFO
+
+
   acceptancetest_check_gauge:
     # gauge/lorentz check commands that were not listed in any workflow (CI coverage audit)
     runs-on: ubuntu-22.04

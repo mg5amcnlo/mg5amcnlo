@@ -998,6 +998,10 @@ class MadSpinInterface(extended_cmd.Cmd):
             elif line.startswith('import model'):
                 if model_name in line:
                     final_model = True
+
+        # same t-channel widths as the generation (aMC@NLO keeps them)
+        if rwgt_interface.ReweightInterface.keep_tchannel_width(self.banner):
+            self.mg5cmd.options['zerowidth_tchannel'] = False
                     
                 
     def import_model(self, args):

@@ -948,6 +948,80 @@ class UFOHELASCallWriterTest(unittest.TestCase):
         for i, line in enumerate(solution):
             self.assertEqual(line, result[i])
 
+
+    def get_tchannel_calls(self, matrix_element, export_format,
+                           output_options=None, options=None):
+        """helas calls written by the standalone exporter"""
+
+        # the exporter monkey-patches the HelasCallWriter: restore it
+        self.addCleanup(setattr, helas_call_writers.HelasCallWriter,
+                        'customize_argument_for_all_other_helas_object',
+                        helas_call_writers.HelasCallWriter.__dict__[
+                            'customize_argument_for_all_other_helas_object'])
+        exporter = export_v4.ProcessExporterFortranSA('',
+                        {'export_format': export_format,
+                         'output_options': output_options or {}},
+                        format=export_format)
+        fortran_model = helas_call_writers.FortranUFOHelasCallWriter(\
+            self.mybasemodel, options=options or {})
+        replace_dict = exporter.write_matrix_element_v4(None,
+                        matrix_element, fortran_model, write=False)
+        return replace_dict['helas_calls'].split('\n'), fortran_model
+
+    def test_UFO_fortran_tchannel_width_standalone_rw(self):
+        """Test that the t-channel width is set to zero, using the fk_ tagging
+        of madevent, for the reweighting and MadSpin outputs (standalone_rw,
+        standalone_msP/msF, standalone with --zerowidth_tchannel=True) but not
+        for standalone"""
+
+        solution =['CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))',
+                   'CALL VXXXXX(P(0,2),wmas,NHEL(2),-1*IC(2),W(1,2))',
+                   'CALL VXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))',
+                   'CALL VXXXXX(P(0,4),wmas,NHEL(4),+1*IC(4),W(1,4))',
+                   'CALL VXXXXX(P(0,5),zmas,NHEL(5),+1*IC(5),W(1,5))',
+                   'CALL VVVV1_4(W(1,1),W(1,3),W(1,2),GC_51,wmas,wwid,W(1,6))',
+                   '# Amplitude(s) for diagram number 1',
+                   'CALL VVV1_0(W(1,6),W(1,4),W(1,5),GC_12,AMP(1))',
+                   'CALL VVVV1_3(W(1,1),W(1,3),W(1,4),GC_51,wmas,wwid,W(1,6))',
+                   '# Amplitude(s) for diagram number 2',
+                   'CALL VVV1_0(W(1,2),W(1,6),W(1,5),GC_12,AMP(2))']
+        zeroed = list(solution)
+        zeroed[8] = 'CALL VVVV1_3(W(1,1),W(1,3),W(1,4),GC_51,wmas, ZERO,W(1,6))'
+
+        # (format, output options, writer options): t-channel W width zeroed?
+        for export_format, output_options, options, zero in [
+                ('standalone', None, None, False),
+                ('standalone', {'zerowidth_tchannel': 'True'}, None, True),
+                ('standalone_rw', None, None, True),
+                ('standalone_rw', {'zerowidth_tchannel': 'False'}, None, False),
+                ('standalone_rw', None, {'zerowidth_tchannel': False}, False),
+                ('standalone_msP', None, None, True),
+                ('standalone_msF', None, None, True)]:
+            result, fortran_model = self.get_tchannel_calls(self.mymatrixelement,
+                                    export_format, output_options, options)
+            self.assertEqual(zeroed if zero else solution, result)
+            self.assertEqual(fortran_model.width_tchannel_set_tozero, zero)
+
+    def test_UFO_fortran_tchannel_width_decay(self):
+        """No width is set to zero in a decay (is_t_channel assumes two initial
+        particles), also when the output mixes it with 2 > n processes"""
+
+        legs = base_objects.LegList([base_objects.Leg({'id':23, 'state':False}),
+                                     base_objects.Leg({'id':24, 'state':True}),
+                                     base_objects.Leg({'id':-24, 'state':True}),
+                                     base_objects.Leg({'id':22, 'state':True}),
+                                     base_objects.Leg({'id':22, 'state':True})])
+        decay = helas_objects.HelasMatrixElement(diagram_generation.Amplitude(
+                base_objects.Process({'legs':legs, 'model':self.mybasemodel})))
+
+        result, fortran_model = self.get_tchannel_calls(decay, 'standalone_rw')
+        propagators = [call for call in result if 'wmas,' in call and 'XXXXX' not in call]
+        self.assertTrue(propagators)
+        for call in propagators:
+            self.assertIn('wmas,wwid,', call)
+        self.assertFalse(fortran_model.width_tchannel_set_tozero)
+        self.assertTrue(fortran_model.options['zerowidth_tchannel'])
+
         
     def test_UFO_CPP_helas_call_writer(self):
         """Test automatic generation of UFO helas calls in C++"""

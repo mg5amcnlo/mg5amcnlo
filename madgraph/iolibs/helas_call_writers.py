@@ -231,16 +231,22 @@ class HelasCallWriter(base_objects.PhysicsObject):
         me = matrix_element.get('diagrams')
         matrix_element.reuse_outdated_wavefunctions(me)
 
-        res = []
-        for diagram in matrix_element.get('diagrams'):
-            
-            
-            res.extend([ self.get_wavefunction_call(wf) for \
-                         wf in diagram.get('wavefunctions') ])
-            res.append("# Amplitude(s) for diagram number %d" % \
-                       diagram.get('number'))
-            for amplitude in diagram.get('amplitudes'):
-                res.append(self.get_amplitude_call(amplitude))
+        # no t-channel in a decay (is_t_channel assumes two initial particles),
+        # also when the output mixes decays with 2 > n processes (--standalone)
+        zerowidth_tchannel = self.options['zerowidth_tchannel']
+        if matrix_element.get('processes')[0].get_ninitial() == 1:
+            self.options['zerowidth_tchannel'] = False
+        try:
+            res = []
+            for diagram in matrix_element.get('diagrams'):
+                res.extend([ self.get_wavefunction_call(wf) for \
+                             wf in diagram.get('wavefunctions') ])
+                res.append("# Amplitude(s) for diagram number %d" % \
+                           diagram.get('number'))
+                for amplitude in diagram.get('amplitudes'):
+                    res.append(self.get_amplitude_call(amplitude))
+        finally:
+            self.options['zerowidth_tchannel'] = zerowidth_tchannel
 
         return res
 
