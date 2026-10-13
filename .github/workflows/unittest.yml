@@ -727,6 +727,20 @@ jobs:
             ./tests/test_manager.py test_nice_string_offshell_and_polarization test_nice_string_offshell_last_leg test_generate_propagator_only_polarisation test_propagator_polarisation_round_trip -t0
 
 
+  unittest_tchannel_width:
+    # t-channel widths of the reweighting and MadSpin matrix elements
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: test the t-channel widths of the reweighting and MadSpin outputs
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_UFO_fortran_tchannel_width_standalone_rw test_UFO_fortran_tchannel_width_decay test_reweight_tchannel -t0
+
+
   unittest_write_model:
     # runs alone: excluded from the shared unittest jobs due to side effects
     runs-on: ubuntu-latest

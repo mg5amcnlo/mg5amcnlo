@@ -4606,7 +4606,8 @@ class decay_all_events_onshell(decay_all_events):
             commandline = commandline.replace('add process', 'generate',1)
             mgcmd.exec_cmd(commandline, precmd=True)
 
-            commandline = 'output standalone %s --prefix=int' % pjoin(path_me, ms_me_subdir)
+            # same t-channel widths as madevent (zerowidth_tchannel)
+            commandline = 'output standalone %s --prefix=int --zerowidth_tchannel=True' % pjoin(path_me, ms_me_subdir)
             logger.info(commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
             fill_all_me(self, "production")
@@ -4615,7 +4616,8 @@ class decay_all_events_onshell(decay_all_events):
             # (pdg list), the decaying particle in each decay (True/False)
             zero_width = self.zerowidth_decay_pdgs()
             commandline_production = commandline.replace('add process', 'generate',1)
-            commandline_production += 'output standalone %s --prefix=int --density=1 --zerowidth_decay=%s' % (pjoin(path_me, ms_me_subdir), zero_width)
+            # same t-channel widths as madevent (zerowidth_tchannel)
+            commandline_production += 'output standalone %s --prefix=int --density=1 --zerowidth_tchannel=True --zerowidth_decay=%s' % (pjoin(path_me, ms_me_subdir), zero_width)
 
             logger.info(commandline_production)
             mgcmd.exec_cmd(commandline_production, precmd=True)

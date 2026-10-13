@@ -3159,6 +3159,33 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         self.prefix_info = {}
         ProcessExporterFortran.__init__(self, *args, **opts)
 
+    def zero_tchannel_width(self):
+        """True if the t-channel widths are set to zero (zerowidth_tchannel)
+        as in madevent: by default for the reweighting (standalone_rw) and
+        MadSpin (standalone_msP/msF) outputs, not for standalone. The output
+        option --zerowidth_tchannel=True/False overrides it (used by MadSpin
+        for its standalone outputs). Never for the loop outputs."""
+
+        export_format = self.opt['export_format']
+        if export_format not in ['standalone', 'standalone_rw',
+                                 'standalone_msP', 'standalone_msF']:
+            return False
+        output_options = self.opt.get('output_options') or {}
+        if 'zerowidth_tchannel' in output_options:
+            return banner_mod.ConfigFile.format_variable(
+                output_options['zerowidth_tchannel'], bool, 'zerowidth_tchannel')
+        return export_format != 'standalone'
+
+    # helper function for customise helas writter
+    def custom_helas_call(self, call, arg):
+        """Tag the propagator width with fk_ as madevent does, such that the
+        HelasCallWriter sets the t-channel widths to zero like in the generated
+        sample. The remaining tags are removed in write_matrix_element_v4."""
+
+        if arg['mass'] == '%(M)s,%(W)s,' and self.zero_tchannel_width():
+            arg['mass'] = '%(M)s,fk_%(W)s,'
+        return call, arg
+
     def copy_template(self, model):
         """Additional actions needed for setup of Template
         """
@@ -3870,6 +3897,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                                self.get_zerowidth_pdgs(matrix_element)):
             helas_calls = fortran_model.get_matrix_element_calls(\
                     matrix_element)
+        if self.zero_tchannel_width():
+            # t-channel widths are already zeroed, no fake width in standalone
+            helas_calls = [call.replace(',fk_', ',') for call in helas_calls]
 
         replace_dict['helas_calls'] = "\n".join(helas_calls)
 

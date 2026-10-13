@@ -2168,6 +2168,9 @@ class ReweightInterface(extended_cmd.Cmd):
                 except madgraph.InvalidCmd:
                     pass 
                         
+        if self.keep_tchannel_width(self.banner):
+            mgcmd.options['zerowidth_tchannel'] = False
+
         # 1. Load model---------------------------------------------------------  
         if  not data['model_name'] and not second:
             raise self.InvalidCmd('Only UFO model can be loaded in this module.')
@@ -2191,6 +2194,19 @@ class ReweightInterface(extended_cmd.Cmd):
                 except madgraph.InvalidCmd:
                     pass
         return path_me, data, mgcmd
+
+    @staticmethod
+    def keep_tchannel_width(event_banner):
+        """True if the sample was generated with finite t-channel widths:
+        only madevent (since 2.8.0) sets them to zero (zerowidth_tchannel),
+        aMC@NLO keeps them. The version is in the header of the proc_card."""
+
+        if 'mgruncard' in event_banner and \
+               isinstance(event_banner.get('run_card'), banner.RunCardNLO):
+            return True
+        version = re.search(r'VERSION\s+(\d+)\.(\d+)', event_banner['mg5proccard'])
+        return bool(version) and \
+                         (int(version.group(1)), int(version.group(2))) < (2, 8)
 
     @misc.mute_logger()
     def create_standalone_directory(self, second=False):
