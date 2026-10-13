@@ -3318,7 +3318,7 @@ class DensityInterface(ReweightInterface):
         Output: position_particles
         """
         pdg_to_chose = user_input[0]
-        position_particles = []
+        position_particles = [0] * len(pdg_to_chose)
         orig_order_concatenated = orig_order[0] + orig_order[1]
         particle_in_process_already_chosen = [False for i in range(len(orig_order_concatenated))]
         particle_in_user_input_already_found = [False for i in range(len(pdg_to_chose))]
@@ -3327,19 +3327,19 @@ class DensityInterface(ReweightInterface):
             return [-1]
         else:
             for i in range(len(orig_order_concatenated)):
-                if len(position_particles) != len(user_input[0]):
+                if 0 in position_particles: #if there is still a 0, it means that we have not found all the particle to put in the density matrix
                     for j in range(len(pdg_to_chose)):
                         if pdg_to_chose[j] == orig_order_concatenated[i] and not particle_in_process_already_chosen[i] and not particle_in_user_input_already_found[j]: # if the particles is still available and that its pdg code corresponds to the user input
                             if fortran_format:
-                                position_particles.append(i + 1) #if fortran_format = True, we add +1 because Fortran indices begin at 1 instead of 0 as in Python
+                                position_particles[j] = i + 1 #if fortran_format = True, we add +1 because Fortran indices begin at 1 instead of 0 as in Python
                             else:
-                                position_particles.append(i) # position of the particle in the original order
+                                position_particles[j] = i # position of the particle in the original order
                             particle_in_process_already_chosen[i] = True
                             particle_in_user_input_already_found[j] = True
 
                             break
 
-            if len(position_particles) != len(user_input[0]):
+            if 0 in position_particles:
                 logger.error(f'The pdg inputs for {name_input} are not correct. At least one pdg is not present in the process.')
 
             return position_particles
