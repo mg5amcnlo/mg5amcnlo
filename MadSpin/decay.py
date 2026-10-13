@@ -4612,9 +4612,12 @@ class decay_all_events_onshell(decay_all_events):
             mgcmd.exec_cmd(commandline, precmd=True)
             fill_all_me(self, "production")
         else:
+            # auto_zero_width_PA: the decayed particles in the production
+            # (pdg list), the decaying particle in each decay (True/False)
+            zero_width = self.zerowidth_decay_pdgs()
             commandline_production = commandline.replace('add process', 'generate',1)
             # same t-channel widths as madevent (zerowidth_tchannel)
-            commandline_production += 'output standalone %s --prefix=int --density=1 --zerowidth_tchannel=True' % pjoin(path_me, ms_me_subdir)
+            commandline_production += 'output standalone %s --prefix=int --density=1 --zerowidth_tchannel=True --zerowidth_decay=%s' % (pjoin(path_me, ms_me_subdir), zero_width)
 
             logger.info(commandline_production)
             mgcmd.exec_cmd(commandline_production, precmd=True)
@@ -4623,7 +4626,7 @@ class decay_all_events_onshell(decay_all_events):
             fill_all_me(self, "production")
 
             commandline_decay = self.get_decay_command()
-            commandline_decay += 'output standalone %s --prefix=int --density=1 -f' % pjoin(path_me, ms_me_decay_subdir) #we add -f, else it would ask us if we want to clean the folder madspin_decay and madspin_me
+            commandline_decay += 'output standalone %s --prefix=int --density=1 --zerowidth_decay=%s -f' % (pjoin(path_me, ms_me_decay_subdir), bool(zero_width)) #we add -f, else it would ask us if we want to clean the folder madspin_decay and madspin_me
             commandline_decay = commandline_decay.replace('add process', 'generate',1)
 
             logger.info(commandline_decay)
@@ -4749,6 +4752,22 @@ class decay_all_events_onshell(decay_all_events):
                 #commandline+="add process %s @%i --no_warning=duplicate --standalone;" % (proc,i)
                 i+=1
         return commandline
+
+    def zerowidth_decay_pdgs(self):
+        """The value of ``output standalone --zerowidth_decay=`` of the
+        production for auto_zero_width_PA: comma-separated |pdg|, empty for
+        none. The decay output gets True when this is not empty.
+
+        With spinmode=PA, the propagators of the particles MadSpin decays are
+        written with a zero width -- in the production, and in each particle's
+        own decay only (ProcessExporterFortranSA.get_zerowidth_pdgs). The
+        param_card, and so every width MadSpin reads (Breit-Wigner,
+        reshuffling, branching ratios), is untouched.
+        """
+        pdgs = []
+        if hasattr(getattr(self, 'mscmd', None), '_zero_width_pdgs'):
+            pdgs = self.mscmd._zero_width_pdgs()
+        return ','.join(str(pid) for pid in pdgs)
 
     def refresh_me_param_cards(self):
         """Put MadSpin's parameters inside every matrix-element directory.

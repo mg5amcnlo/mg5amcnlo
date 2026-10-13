@@ -990,6 +990,49 @@ class TestCmdShell2(unittest.TestCase,
             self.assertAlmostEqual(original_sol[key][0] if abs(original_sol[key][0]) > 1e-12 else 0, sol[key][0])
             self.assertAlmostEqual(original_sol[key][1] if abs(original_sol[key][1]) > 1e-12 else 0, sol[key][1])
 
+    def test_standalone_zerowidth(self):
+        """output standalone --zerowidth_decay=: in a decay only the decaying
+        particle's propagators get a zero width, in a production the listed
+        final-state particles' ones; nothing changes without the option."""
+
+        def calls(out_dir, pdir):
+            # the P<n>_ numbering depends on the generation, not the suffix
+            sub = os.path.join(out_dir, 'SubProcesses')
+            pdir = [d for d in os.listdir(sub) if d.split('_', 1)[-1] == pdir][0]
+            text = open(os.path.join(sub, pdir, 'matrix.f')).read()
+            return [l.strip() for l in text.split('\n')
+                    if l.strip().startswith('CALL') and 'XXXXX' not in l]
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmtree(self.out_dir)
+        self.do('set group_subprocesses False')
+        self.do('generate t > e+ ve b')
+        self.do('add process t > w+ b g')
+        for option in ('True', '6,24'):
+            self.do('output standalone %s --prefix=int --density=1 --zerowidth_decay=%s -f'
+                    % (self.out_dir, option))
+            # the internal W of the top decay keeps its width
+            self.assertIn('CALL FFV2_3(W(1,2),W(1,3),GC_100,MDL_MW,MDL_WW,W(1,5))',
+                          calls(self.out_dir, 't_epveb'))
+            # the internal top of t > w+ b g does not
+            self.assertIn('CALL FFV2_1(W(1,3),W(1,2),GC_100,MDL_MT, ZERO,W(1,5))',
+                          calls(self.out_dir, 't_wpbg'))
+        self.do('output standalone %s --prefix=int --density=1 --zerowidth_decay=False -f'
+                % self.out_dir)
+        self.assertIn('CALL FFV2_1(W(1,3),W(1,2),GC_100,MDL_MT,MDL_WT,W(1,5))',
+                      calls(self.out_dir, 't_wpbg'))
+
+        self.do('generate e+ e- > t t~ z')
+        self.do('output standalone %s --prefix=int --density=1 --zerowidth_decay=6,24 -f'
+                % self.out_dir)
+        zeroed = [c for c in calls(self.out_dir, 'epem_ttxz') if 'MDL_MT' in c]
+        self.assertEqual(len(zeroed), 2)
+        self.assertTrue(all('MDL_MT, ZERO,' in c for c in zeroed), zeroed)
+
+        self.do('output standalone %s --prefix=int --density=1 -f' % self.out_dir)
+        kept = [c for c in calls(self.out_dir, 'epem_ttxz') if 'MDL_MT' in c]
+        self.assertTrue(all('MDL_MT,MDL_WT,' in c for c in kept), kept)
+
     def test_standalone_density_uu(self):
         ############################################################################
         # Check convolution of density matrix with decay matrix 
@@ -1642,13 +1685,13 @@ class TestCmdShell2(unittest.TestCase,
         import matrix2py
         #os.chdir(os.path.join(mdir, 'SubProcesses', Pdir))
         with misc.chdir(os.path.join(mdir, 'SubProcesses', Pdir)):
-            matrix2py.m0_initialisemodel('../../Cards/param_card.dat')
+            matrix2py.py_m0_initialisemodel('../../Cards/param_card.dat')
 
             p = [[x.E, x.px, x.py, x.pz] for x in p]
             P =self.invert_momenta(p)
             alphas = 0.118
             nhel = -1 # means sum over all helicity                                                                                                                                                                   
-            me2 = matrix2py.m0_get_value(P, alphas, nhel)
+            me2 = matrix2py.py_m0_get_value(P, alphas, nhel)
             misc.sprint('fortran: ', fortran_me, ' f2py: ', me2)
             # compute density matrix
             self.assertAlmostEqual(fortran_me/me2, 1., places=5)
@@ -1661,7 +1704,9 @@ class TestCmdShell2(unittest.TestCase,
             ncomb = 9 # why needed in f2py ?
             alphas = 0.118 # no impact for ZZ
 
-            f2py_dens = matrix2py.m0_get_density(P, pos, n_changing, allow_hel, ncomb, alphas)
+            scale2 = 0. # dummy for tree-level (only used for loop-induced)
+            f2py_dens = matrix2py.py_m0_get_density(P, pos, allow_hel, ncomb, alphas, scale2,
+                                                    n_changing=n_changing)
             misc.sprint('fortran: ', fortran_dens)
             misc.sprint('f2py:    ', f2py_dens)
             for i in range(9*5):
@@ -1670,8 +1715,9 @@ class TestCmdShell2(unittest.TestCase,
                 self.assertAlmostEqual(fortran_dens[i].imag, f2py_dens[i].imag, places=5)
             import MadSpin.decay as madspin
             density_matrix = madspin.DensityMatrix(f2py_dens, n_changing, allow_hel, ncomb)
-            self.assertAlmostEqual(density_matrix.trace()/9./4./2./fortran_me, 1,4)  #9 color , 4 spin, 2 symmetry factor (
-            misc.sprint(density_matrix.matrix[1], fortran_dens[1])
+            # GET_DENSITY divides each interference term by IDEN (9 colour * 4 spin
+            # * 2 identical ZZ), so the trace already equals the averaged ME.
+            self.assertAlmostEqual(density_matrix.trace()/fortran_me, 1,4)
 
 
     def test_density_mode_user_interface(self):
