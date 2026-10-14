@@ -16,7 +16,16 @@ import time
 SAMPLES = 'virtual_pool_samples.dat'
 ITERATIONS = 'virtual_pool_iterations.dat'
 FORMAT_VERSION = 2
-FEATURE_CATALOG = 5
+MODEL_FORMAT_VERSION = 3
+FEATURE_CATALOG = 6
+LEGACY_FEATURE_CATALOG = 5
+CONDITIONAL_FEATURE_CATALOG = 7
+CAPTURE_FORMAT_VERSION = 3
+
+
+def scalar_feature_count(metadata):
+    return (3 + metadata['nlegs']*(metadata['nlegs']-1)//2 +
+            len({m for m in metadata['masses'] if m > 0}))
 
 
 def _floats(line):
@@ -27,8 +36,12 @@ def _floats(line):
 
 
 def _header(stream, magic):
-    if stream.readline().strip() != '%s %d' % (magic, FORMAT_VERSION):
+    header = stream.readline().split()
+    versions = (2, MODEL_FORMAT_VERSION) if magic == 'VIRTUAL_POOL_MODEL' else (2, CAPTURE_FORMAT_VERSION)
+    if (len(header) != 2 or header[0] != magic or
+            header[1] not in tuple(str(v) for v in versions)):
         raise ValueError('unsupported virtual-pool file header; restart integration')
+    version = int(header[1])
     dimensions = tuple(int(x) for x in stream.readline().split())
     if len(dimensions) != 5:
         raise ValueError('invalid virtual-pool dimensions')
@@ -37,14 +50,31 @@ def _header(stream, magic):
     masses = _floats(stream.readline())
     incoming = tuple(int(x) for x in stream.readline().split())
     expected = 1 + nlegs*(nlegs-1)//2 + len({m for m in masses if m > 0})
-    if (catalog != FEATURE_CATALOG or nf != expected or not 1 <= nf <= 2048
+    if catalog in (FEATURE_CATALOG, CONDITIONAL_FEATURE_CATALOG):
+        expected += 2
+    if catalog == CONDITIONAL_FEATURE_CATALOG:
+        expected += (nlegs-2)*(nlegs-3)//2
+    if (catalog not in (LEGACY_FEATURE_CATALOG, FEATURE_CATALOG, CONDITIONAL_FEATURE_CATALOG) or nf != expected or not 1 <= nf <= 2048
             or not 3 <= nlegs <= 64 or not 1 <= norders <= 1024 or not 1 <= nx <= 256
             or any(len(x) != nlegs for x in (pdgs, masses, incoming))
             or any(x < 0 for x in masses) or any(x not in (0, 1) for x in incoming)
-            or sum(incoming) != 2):
+            or sum(incoming) not in ((1, 2) if catalog == CONDITIONAL_FEATURE_CATALOG else (2,))):
         raise ValueError('invalid virtual-pool particle metadata')
-    return dict(version=FORMAT_VERSION, catalog=catalog, nf=nf, norders=norders,
-                nlegs=nlegs, nx=nx, pdgs=pdgs, masses=masses, incoming=incoming)
+    metadata = dict(version=version, catalog=catalog, nf=nf, norders=norders,
+                    nlegs=nlegs, nx=nx, pdgs=pdgs, masses=masses, incoming=incoming)
+    if magic == 'VIRTUAL_POOL_SAMPLES' and version == CAPTURE_FORMAT_VERSION:
+        fields = stream.readline().split()
+        if len(fields) != 1 or not 0 <= int(fields[0]) <= 65536:
+            raise ValueError('invalid native helicity map size')
+        nhel = int(fields[0])
+        helicities = []
+        for actual in range(1, nhel+1):
+            fields = tuple(int(v) for v in stream.readline().split())
+            if len(fields) != nlegs+2 or fields[0] != actual or fields[1] < 0:
+                raise ValueError('invalid complete native helicity map')
+            helicities.append(fields)
+        metadata.update(nhel=nhel, helicities=tuple(helicities))
+    return metadata
 
 
 def _read_iterations(directory):
@@ -83,7 +113,9 @@ def _read_job(directory):
             if not line.strip():
                 continue
             fields = line.split()
-            if len(fields) != metadata['nf'] + 9 + metadata['nx']:
+            prefix = metadata['nf'] + 9 + metadata['nx']
+            suffix = 3 + metadata['nhel'] + 4*metadata['nlegs'] if metadata['version'] == 3 else 0
+            if len(fields) != prefix + suffix:
                 raise ValueError('%s:%s: incorrect sample width' % (path, number))
             sample, channel, iteration, order = (int(v) for v in fields[:4])
             probability, born, virtual, baseline, *values = _floats(' '.join(fields[5:]))
@@ -100,7 +132,23 @@ def _read_job(directory):
                        order=order, probability=probability, born=born,
                        virtual=virtual, baseline=baseline, features=features,
                        directory=directory)
-            row.update(bins=int(fields[4]), x=values[metadata['nf']:])
+            row.update(bins=int(fields[4]), x=values[metadata['nf']:metadata['nf']+metadata['nx']])
+            if metadata['version'] == 3:
+                extra = _floats(' '.join(fields[prefix:]))
+                full, selected, selected_q = extra[:3]
+                q = extra[3:3+metadata['nhel']]
+                if (full not in (0, 1) or selected != int(selected) or
+                        (full and (selected != -1 or selected_q != 1)) or
+                        (not full and metadata['nhel'] and
+                         (not 1 <= selected <= metadata['nhel'] or not 0 < selected_q <= 1)) or
+                        any(v < 0 or v > 1 for v in q) or
+                        (q and sum(q) != 0 and abs(sum(q)-1) > 1.e-9) or
+                        (q and sum(q) != 0 and not full and abs(q[int(selected)-1]-selected_q) > 1.e-9)):
+                    raise ValueError('invalid native helicity selection/probabilities')
+                if any(q[i] and not h[1] for i, h in enumerate(metadata['helicities'])):
+                    raise ValueError('probability assigned to inactive native helicity')
+                row.update(full_branch=bool(full), selected_helicity=int(selected),
+                           selected_q=selected_q, q=q, momenta=extra[3+metadata['nhel']:])
             if row['bins'] not in (4, 8) or any(v < 0 or v > 1 for v in row['x']):
                 raise ValueError('invalid MINT coordinates/bins')
             if rows and (iteration, sample) < (rows[-1]['iteration'], rows[-1]['sample']):
@@ -193,7 +241,9 @@ def _atomic_write(path, text):
 
 def _model_text(metadata, orders):
     floats = lambda values: ' '.join('%.17e' % x for x in values)
-    lines = ['VIRTUAL_POOL_MODEL %d' % FORMAT_VERSION,
+    version = (MODEL_FORMAT_VERSION if metadata.get('version') == MODEL_FORMAT_VERSION or
+               any(o['degree'] == 3 for o in orders) else FORMAT_VERSION)
+    lines = ['VIRTUAL_POOL_MODEL %d' % version,
              '%d %d %d %d %d' % tuple(metadata[k] for k in
                                       ('catalog', 'nf', 'norders', 'nlegs', 'nx')),
              ' '.join(str(x) for x in metadata['pdgs']), floats(metadata['masses']),
@@ -204,11 +254,15 @@ def _model_text(metadata, orders):
                       len(entry['terms']), entry['degree']))
         lines.extend([floats(entry['lower']), floats(entry['upper'])])
         for term in entry['terms']:
-            lines.append('%d %d %.17e' % (term['pair'][0]+1, term['pair'][1]+1, term['coefficient']))
+            indices = tuple(term['pair'])
+            if version == MODEL_FORMAT_VERSION:
+                indices += (-1,)*(3-len(indices))
+            lines.append(' '.join(str(i+1) for i in indices) + ' %.17e' % term['coefficient'])
     return '\n'.join(lines) + '\n'
 
 
-def train_pool(job_dirs, output_model, report_path=None, job_groups=None):
+def train_pool(job_dirs, output_model, report_path=None, job_groups=None,
+               neural=False, output_neural=None):
     """Fit one frozen model per coupling order after the first-stage barrier.
 
     Missing NumPy or captures give an explicit MINT fallback. Malformed files
@@ -221,18 +275,29 @@ def train_pool(job_dirs, output_model, report_path=None, job_groups=None):
     from . import virtual_pool_polynomial as polynomial
 
     started = time.monotonic()
+    cpu_started = time.process_time()
+    if neural:
+        output_neural = output_neural or os.path.join(os.path.dirname(os.path.abspath(output_model)),
+                                                      'virtual_pool_neural.dat')
+        if os.path.exists(output_neural):
+            os.unlink(output_neural)
     metadata, rows, jobs = collect_samples(job_dirs, job_groups)
     report = dict(version=FORMAT_VERSION, status='skipped', enabled=False, model_written=False,
                   family='born_invariant_polynomial', accepted_rows=len(rows), jobs=jobs, orders=[],
                   accepted_samples=len({(r['directory'], r['channel'], r['iteration'], r['sample'])
                                         for r in rows}),
                   objective='physical residual; inverse accepted attempts and loop probability',
-                  validation='matched three-fold MINT/model CV; paired L1 gain and RMS guards',
+                  validation='matched three-fold CV and forward iterations; paired L1 gain and RMS guards',
                   tail_margin=polynomial.TAIL_MARGIN, max_coefficients=polynomial.MAX_TERMS,
+                  max_cubic_features=polynomial.MAX_CUBIC_FEATURES,
+                  max_cubic_design_elements=polynomial.MAX_CUBIC_DESIGN_ELEMENTS,
                   minimum_rows_per_coefficient=polynomial.ROWS_PER_TERM,
-                  call_probability='retain first-stage fraction; exact loop outside trained domain')
+                  call_probability='adapt to measured residual; exact loop outside trained domain',
+                  boundary_prediction='clamped polynomial continuation; exact residual correction')
     if metadata is None:
         report['reason'] = 'no_sample_headers'
+        if neural:
+            report['neural'] = dict(model_written=False, enabled=False, reason='no_sample_headers')
     else:
         report['metadata'] = metadata
         try:
@@ -241,6 +306,8 @@ def train_pool(job_dirs, output_model, report_path=None, job_groups=None):
             # A zero-blend model would also freeze the loop-call budget.
             # No model lets the controller keep ordinary adaptive MINT.
             report.update(status='fallback', reason='numpy_unavailable')
+            if neural:
+                report['neural'] = dict(model_written=False, enabled=False, reason='numpy_unavailable')
         else:
             folds = _folds(rows, 3)
             orders = []
@@ -251,11 +318,19 @@ def train_pool(job_dirs, output_model, report_path=None, job_groups=None):
                 report['orders'].append(diagnostics)
             _atomic_write(output_model, _model_text(metadata, orders))
             report.update(model_written=True,
+                          model_format_version=MODEL_FORMAT_VERSION if metadata['version'] == 3 or any(o['degree'] == 3 for o in orders) else FORMAT_VERSION,
                           enabled=any(o['blend'] > 0 for o in orders))
             report['status'] = 'trained' if report['enabled'] else 'fallback'
+            if neural:
+                from . import virtual_pool_neural
+                report['neural'] = virtual_pool_neural.train(
+                    rows, metadata, orders, report['orders'], output_model, output_neural)
+                if report['neural']['enabled']:
+                    report.update(enabled=True, status='trained')
     if not report['model_written']:
         report['call_probability'] = 'adaptive MINT'
     report['training_seconds'] = time.monotonic()-started
+    report['training_cpu_seconds'] = time.process_time()-cpu_started
     if report_path is not None:
         _atomic_write(report_path, json.dumps(report, sort_keys=True, indent=2, allow_nan=False) + '\n')
     return report
@@ -267,6 +342,7 @@ def load_model(path):
 
     with open(path) as stream:
         metadata = _header(stream, 'VIRTUAL_POOL_MODEL')
+        indices_per_term = 3 if metadata['version'] == MODEL_FORMAT_VERSION else 2
         orders = []
         for expected_order in range(1, metadata['norders'] + 1):
             fields = stream.readline().split()
@@ -276,23 +352,30 @@ def load_model(path):
             blend, born_scale, target_scale = _floats(' '.join(fields[1:4]))
             lower, upper = _floats(stream.readline()), _floats(stream.readline())
             if (order != expected_order or not 0 <= blend <= 1 or born_scale <= 0 or target_scale <= 0
-                    or not 0 <= nterms <= MAX_TERMS or not 0 <= degree <= 2
+                    or not 0 <= nterms <= MAX_TERMS or not 0 <= degree <= indices_per_term
                     or len(lower) != metadata['nf'] or len(upper) != metadata['nf']
                     or any(a > b for a, b in zip(lower, upper))):
                 raise ValueError('invalid pooled model order metadata')
             if blend and not nterms:
                 raise ValueError('active polynomial has no coefficients')
+            if metadata['catalog'] == CONDITIONAL_FEATURE_CATALOG and blend:
+                ns = scalar_feature_count(metadata)
+                if any(a != -1 or b != 1 for a, b in zip(lower[ns:], upper[ns:])):
+                    raise ValueError('signed orientation coordinates require fixed bounds')
             terms = []
             for _ in range(nterms):
                 fields = stream.readline().split()
-                if len(fields) != 3:
+                if len(fields) != indices_per_term+1:
                     raise ValueError('invalid polynomial term')
-                pair = tuple(int(v)-1 for v in fields[:2])
-                coefficient, = _floats(fields[2])
+                pair = tuple(int(v)-1 for v in fields[:indices_per_term])
+                coefficient, = _floats(fields[-1])
                 if (min(pair) < -1 or max(pair) >= metadata['nf'] or
-                        (pair[0] == -1 and pair[1] != -1) or
-                        (degree < 2 and pair[1] >= 0) or (degree == 0 and pair[0] >= 0)):
+                        any(a == -1 and b >= 0 for a, b in zip(pair, pair[1:])) or
+                        sum(i >= 0 for i in pair) > degree):
                     raise ValueError('invalid polynomial indices/degree')
+                if (metadata['catalog'] == CONDITIONAL_FEATURE_CATALOG and
+                        sum(i >= scalar_feature_count(metadata) for i in pair) > 1):
+                    raise ValueError('polynomial term contains multiple orientation factors')
                 terms.append(dict(pair=pair, coefficient=coefficient))
             orders.append(dict(order=order, blend=blend, born_scale=born_scale,
                                target_scale=target_scale, degree=degree,

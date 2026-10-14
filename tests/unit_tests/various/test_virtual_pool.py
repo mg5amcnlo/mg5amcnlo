@@ -140,8 +140,8 @@ class VirtualPoolTests(unittest.TestCase):
         subprocess.check_call([sys.executable, '-c', code], cwd=str(Path(__file__).resolve().parents[3]))
 
     def test_discovery_without_optional_numpy(self):
-        # The CI shards import every test module before selecting their tests.
-        # -S excludes installed optional packages, as on the minimal runners.
+        # CI imports every module before selecting tests. -S reproduces a
+        # minimal runner with no installed optional packages.
         result = subprocess.run(
             [sys.executable, '-S', 'tests/test_manager.py', 'test_phi4_vertex', '-t0'],
             cwd=Path(__file__).resolve().parents[3], capture_output=True,
@@ -156,13 +156,18 @@ class VirtualPoolTests(unittest.TestCase):
                         for i in range(size)]
                 job = self.write_job('no_numpy_%d' % size, rows)
                 output = self.root / 'model'
+                companion = self.root / 'neural'
+                companion.write_text('stale')
                 with mock.patch.dict(sys.modules, {'numpy': None}):
-                    report = pool.train_pool([job], output)
+                    report = pool.train_pool([job], output, neural=True, output_neural=companion)
                 self.assertEqual(report['status'], 'fallback')
                 self.assertFalse(report['model_written'])
                 self.assertFalse(report['enabled'])
                 self.assertEqual(report['reason'], 'numpy_unavailable')
+                self.assertEqual(report['call_probability'], 'adaptive MINT')
+                self.assertEqual(report['neural']['reason'], 'numpy_unavailable')
                 self.assertFalse(output.exists())
+                self.assertFalse(companion.exists())
 
     def test_retired_capture_format_requires_new_integration(self):
         job = self.write_job('obsolete', [])

@@ -16,6 +16,41 @@ program check_pooled_virtual_weights
   icontr=0
 
   select case(trim(mode))
+  case('conditional_actual_subtraction')
+     b=[2d0,-1d0,3d0];v=[7d0,-4d0,1d0];k=[.5d0,-2d0,1d0]
+     call set_point(b,v,k)
+     selected_ratio=[1d0,3d0,-.5d0]
+     conditional_selection=.true.
+     virtual_fraction=.25d0
+     call exercise_virtual_stage()
+     call close_vector(amp_split_avv,b*k,'mean approximation uses weighted head mean')
+     call close_vector(amp_split_virt,(v-b*selected_ratio)/.25d0,'selected actual subtraction')
+     call close_vector(.25d0*amp_split_virt+b*pooled_virtual_actual_ratio,v, &
+          'capture target reconstructs selected virtual')
+  case('deferred_veto_xsec')
+     ! Veto-xsec consumes the virtual before the deferred closing callback.
+     b=[2d0,1d0,-1d0];v=[3d0,-4d0,8d0];k=2d0
+     call set_point(b,v,k)
+     abrv='virt'
+     ickkw=-1
+     virtual_defer_requested=.true.
+     nloops=loop_calls
+     call exercise_virtual_stage()
+     if(loop_calls.ne.nloops+1.or.virtual_deferred_ready)error stop 'veto-xsec was deferred'
+     call close_vector(amp_split_virt,v,'veto-xsec needs immediate virtual')
+  case('deferred_zero_carrier')
+     ! A zero total absolute Born carrier cannot bound a finite loop.
+     ! It must take the ordinary exact branch even when deferral is enabled.
+     b=0d0;v=[2d0,-3d0,7d0];k=[100d0,-20d0,30d0]
+     call set_point(b,v,k)
+     abrv='virt'
+     virtual_defer_requested=.true.
+     nloops=loop_calls
+     call exercise_virtual_stage()
+     if(loop_calls.ne.nloops+1.or.virtual_deferred_ready)error stop 'zero carrier was deferred'
+     call close_vector(amp_split_virt,v,'zero carrier finite virtual lost')
+     if(virtual_over_born.ne.0d0)error stop 'zero carrier diagnostic ratio'
+     if(.not.pooled_virtual_sampled.or.pooled_probability.ne.1d0)error stop 'fallback not exact'
   case('pooled_cancellation')
      ! Three coupling orders: zero virtual, zero Born, and signed Born.
      b=[2d0,0d0,-3d0]; v=[0d0,7d0,-0.5d0]; k=[0.25d0,99d0,0.5d0]

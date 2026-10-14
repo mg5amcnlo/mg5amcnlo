@@ -9,6 +9,7 @@ module pooled_mint_fixture
   logical :: use_poly_virtual=.false.
   logical :: use_pooled_virtual=.false.,pooled_virtual_sampled=.false.
   double precision :: pooled_virtual_ratio(2)=0d0,pooled_virtual_probability=.25d0
+  double precision :: pooled_virtual_actual_ratio(2)=0d0
 contains
   include 'pooled_mint_routine.inc'
   subroutine fill_ave_virt(x,order,virtual,born)
@@ -29,7 +30,10 @@ program check_pooled_mint
   ! the exact virtual even though the traditional MINT ratio differs.
   use_pooled_virtual=.true.
   pooled_virtual_sampled=.true.
-  pooled_virtual_ratio=[2d0,3d0]
+  ! Conditional predictions distinguish the q-weighted mean from the head
+  ! actually subtracted by the sampled native loop.
+  pooled_virtual_ratio=[99d0,-88d0]
+  pooled_virtual_actual_ratio=[2d0,3d0]
   average_virtual(:,1)=[4d0,99d0,88d0]
   f([8,10])=[6d0,-10d0]
   f([7,9])=[32d0,240d0]

@@ -68,10 +68,11 @@ module mint_module
   use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
   use FKSParams ! contains use_poly_virtual
   use virtual_pooled, only: pooled_virtual_init, pooled_virtual_begin_point, &
-       pooled_virtual_prepare, pooled_virtual_ratio, pooled_virtual_sampled, &
+       pooled_virtual_prepare, pooled_virtual_ratio, pooled_virtual_actual_ratio, pooled_virtual_sampled, &
        pooled_virtual_mark_sampled, pooled_virtual_observe, pooled_virtual_iteration, &
        pooled_virtual_collecting, pooled_virtual_applying, pooled_virtual_probability, &
-       pooled_virtual_call_probability
+       pooled_virtual_call_probability, pooled_virtual_velocity_factor, pooled_virtual_velocity_valid, &
+       pooled_virtual_context, pooled_virtual_save_context, pooled_virtual_restore_context
   implicit none
   integer, parameter, private :: nintervals=32    ! max number of intervals in the integration grids
   integer, parameter, public  :: ndimmax=60       ! max number of dimensions of the integral
@@ -175,6 +176,19 @@ module mint_module
   logical, dimension(maxchannels), private :: regridded
   double precision, dimension(0:nintervals,ndimmax,maxchannels), private :: xgrid,xacc
   double precision, dimension(nintervals,ndimmax,maxchannels), private :: ymax,xmmm
+  ! A separate proposal for the expensive residual. The ordinary xgrid is
+  ! retained; these factors describe a density in its integration cells.
+  double precision, dimension(nintervals,ndimmax,maxchannels), private :: residual_max,residual_cdf
+  logical, private :: residual_envelope_available=.false.
+  logical, dimension(maxchannels), private :: residual_envelope_selected=.false.
+  double precision, dimension(maxchannels), private :: residual_envelope_norm=0d0
+  double precision, dimension(maxchannels), private :: residual_kappa=0d0
+  double precision, dimension(maxchannels), private :: residual_velocity_kappa=0d0
+  logical, public :: virtual_defer_requested=.false.,virtual_deferred_ready=.false.
+  integer(kind=8), private :: virtual_carrier_attempts=0,virtual_carrier_vetoes=0
+  integer(kind=8), private :: residual_gen_attempts=0,residual_gen_loops=0
+  integer(kind=8), private :: residual_proposal_attempts=0
+  double precision, private :: residual_gen_weight=0d0,residual_gen_excess=0d0
   double precision, dimension(nintegrals,0:maxchannels), private :: vtot,etot,chi2
   double precision, dimension(nintegrals,3), private :: ans3,unc3
   double precision, dimension(nintegrals), private :: ans_l3,unc_l3,chi2_l3,f
@@ -194,6 +208,7 @@ module mint_module
 
 ! functions and subroutines:
   public :: mint,gen,read_grids_from_file,get_mint_wgt
+  public :: screen_virtual_carrier,observe_virtual_ratio
   public :: born_spread_configure,born_spread_set_point
   public :: born_spread_observe_sample,born_spread_get_factor
   public :: born_spread_load_table,born_spread_write_table
@@ -222,7 +237,8 @@ module mint_module
        &,increase_gen_counters_middle,increase_gen_counters_before &
        &,increase_gen_counters_end,check_upper_bound &
        &,get_random_cell_flat,get_weighted_cell,initialise_mint_gen &
-       &,print_gen_counters
+       &,print_gen_counters,update_residual_envelope,prepare_residual_envelope &
+       &,get_residual_weighted_cell,get_virtual_candidate,residual_cell_bound,update_virtual_envelopes
 contains
 
   subroutine mint(fun)
@@ -1122,9 +1138,8 @@ contains
     implicit none
     integer kchan,k_ord_virt
     double precision :: error_virt
-    ! Keep the first-stage loop budget after the frozen model is installed.
-    ! Accuracy gains must not automatically be spent on stronger roulette.
-    if (use_pooled_virtual.and.pooled_virtual_applying) return
+    ! A frozen approximation still permits the exact correction probability
+    ! to adapt. Its reduced residual variance should save expensive loops.
     do kchan=1,nchans
        error_virt=0d0
        do k_ord_virt=1,n_ord_virt
@@ -1417,10 +1432,10 @@ contains
                 virtual=0d0
                 do j_ord_virt=1,n_ord_virt
                    virtual=virtual+pooled_virtual_probability*f(2*j_ord_virt+5) &
-                        +pooled_virtual_ratio(j_ord_virt)*f(2*j_ord_virt+6)
+                        +pooled_virtual_actual_ratio(j_ord_virt)*f(2*j_ord_virt+6)
                 enddo
              else
-                virtual=f(ithree)*pooled_virtual_probability+pooled_virtual_ratio(k_ord_virt)*born
+                virtual=f(ithree)*pooled_virtual_probability+pooled_virtual_actual_ratio(k_ord_virt)*born
              endif
              call fill_ave_virt(x,k_ord_virt,virtual,born)
           elseif (use_poly_virtual) then
@@ -1466,8 +1481,7 @@ contains
 ! at most).
     probability=virtual_fraction(ichan)
     if(use_pooled_virtual.and.pooled_virtual_sampled) probability=pooled_virtual_probability
-    if (f(5)*probability.gt.ymax_virt(ichan)) &
-         ymax_virt(ichan) = min(f(5)*probability,ymax_virt(ichan)*2d0)
+    call update_virtual_envelopes(f(5)*probability)
 ! for consistent printing in the log files (in particular when doing LO
 ! runs), set also f(6) to zero when imode.eq.1 and the virtuals are not
 ! included.
@@ -1781,6 +1795,18 @@ contains
        enddo
     enddo
     ymax_virt(1:nchans)=ans(5,1:nchans)
+    residual_envelope_available=use_pooled_virtual.and..not.fixed_order
+    residual_max=0d0
+    residual_kappa=0d0
+    residual_velocity_kappa=0d0
+    if (residual_envelope_available) then
+       do kdim=1,ndim
+          do kint=1,nint_used/ifold(kdim)
+             residual_max(kint,kdim,1:nchans)= &
+                  max(ans(5,1:nchans),max(ans(1,1:nchans),1d0)*1d-12)**(1d0/ndim)
+          enddo
+       enddo
+    endif
   end subroutine reset_upper_bounding_envelope
   
   subroutine setup_imode_m1
@@ -1877,28 +1903,58 @@ contains
        write (12,*) 'AVE',virtual_fraction(kchan),average_virtual(0,kchan)
     enddo
     if (use_poly_virtual) call save_polyfit(12)
+    if (imode.ge.1.and.residual_envelope_available) then
+       do kchan=1,nchans
+          do j=1,nintervals
+             write(12,*) 'MAX',(residual_max(j,i,kchan),i=1,ndim)
+          enddo
+       enddo
+    endif
+    if (imode.ge.1.and.residual_envelope_available) then
+       do kchan=1,nchans
+          write(12,*) 'MAX',residual_kappa(kchan),residual_velocity_kappa(kchan)
+       enddo
+    endif
     if (use_pooled_virtual) write(12,'(a)') 'PVP 1'
+    if (imode.ge.1.and.residual_envelope_available) write(12,'(a)') 'VEP 4'
     close (12)
   end subroutine write_grids_to_file
   
   subroutine read_grids_from_file
 ! Read the MINT integration grids from file
     implicit none
-    integer :: i,j,k,kchan,idum,ios
+    integer :: i,j,k,kchan,idum,ios,envelope_version
     integer,dimension(maxchannels) :: points
     character(len=3) :: dummy
-    logical :: saved_pooled
+    character(len=4096) :: marker
+    logical :: saved_pooled,saved_envelope
     open (unit=12, file='mint_grids',status='old')
     ! Check the approximation mode before parsing its different grid layout.
     saved_pooled=.false.
+    saved_envelope=.false.
+    envelope_version=0
+    residual_kappa=0d0
+    residual_velocity_kappa=0d0
+    residual_envelope_available=.false.
+    residual_max=0d0
     do
-       read(12,'(a)',iostat=ios) dummy
+       read(12,'(a)',iostat=ios) marker
+       dummy=marker(1:3)
        if (ios.lt.0) exit
        if (ios.ne.0) then
           write(*,*) 'ERROR: cannot inspect mint_grids.'
           stop 1
        endif
        if (dummy.eq.'PVP') saved_pooled=.true.
+       if (dummy.eq.'VEP') then
+          envelope_version=0
+          read(marker,*,iostat=ios) dummy,envelope_version
+          if (ios.ne.0.or.(envelope_version.ne.2.and.envelope_version.ne.3.and.envelope_version.ne.4)) then
+             write(*,*) 'ERROR: unsupported virtual envelope in mint_grids; repeat envelope integration.'
+             stop 1
+          endif
+          saved_envelope=.true.
+       endif
     enddo
     rewind(12)
     if (saved_pooled.neqv.use_pooled_virtual) then
@@ -1945,6 +2001,43 @@ contains
        call init_polyfit(ndim-3,nchans,n_ord_virt,maxval(points(1:nchans)))
        call restore_polyfit(12)
        call do_polyfit()
+    endif
+    if (saved_envelope) then
+       if (imode.lt.2.or..not.saved_pooled) then
+          write(*,*) 'ERROR: virtual envelope in incompatible mint_grids.'
+          stop 1
+       endif
+       do kchan=1,nchans
+          do j=1,nintervals
+             read(12,*,iostat=ios) dummy,(residual_max(j,i,kchan),i=1,ndim)
+             if (ios.ne.0.or.dummy.ne.'MAX') then
+                write(*,*) 'ERROR: malformed virtual envelope in mint_grids.'
+                stop 1
+             endif
+          enddo
+       enddo
+       if (envelope_version.ge.3) then
+          do kchan=1,nchans
+             if (envelope_version.ge.4) then
+                read(12,*,iostat=ios) dummy,residual_kappa(kchan),residual_velocity_kappa(kchan)
+             else
+                read(12,*,iostat=ios) dummy,residual_kappa(kchan)
+             endif
+             if (ios.ne.0.or.dummy.ne.'MAX') then
+                write(*,*) 'ERROR: malformed virtual carrier bound in mint_grids.'
+                stop 1
+             endif
+             if (.not.ieee_is_finite(residual_kappa(kchan)).or.residual_kappa(kchan).lt.0d0) then
+                write(*,*) 'ERROR: invalid virtual carrier bound in mint_grids.'
+                stop 1
+             endif
+             if (.not.ieee_is_finite(residual_velocity_kappa(kchan)).or.residual_velocity_kappa(kchan).lt.0d0) then
+                write(*,*) 'ERROR: invalid virtual velocity carrier bound in mint_grids.'
+                stop 1
+             endif
+          enddo
+       endif
+       residual_envelope_available=.true.
     endif
     close (12)
     if (use_pooled_virtual) call pooled_virtual_init(n_ord_virt,ndim-3)
@@ -2270,6 +2363,8 @@ contains
     ymax(1:nintervals,1:ndim,1:nchans)=0d0
     ave_virt(1:nintervals_virt,1:ndim-3,0:n_ord_virt,1:nchans)=0d0
     ymax_virt(1:nchans)=0d0
+    residual_envelope_available=.false.
+    residual_max=0d0
     ans(1:nintegrals,1:nchans)=0d0
     unc(1:nintegrals,1:nchans)=0d0
     nhits_in_grids(1:nchans)=0
@@ -2364,11 +2459,14 @@ contains
 10     continue
        new_point=.true.
        if (vn.eq.1) then
-          call get_random_cell_flat(x,vol)
+          call get_virtual_candidate(x,vol)
        else
           call get_weighted_cell(x,vol)
        endif
+       virtual_defer_requested=use_pooled_virtual.and.vn.eq.1.and.residual_kappa(ichan).gt.0d0
+       virtual_deferred_ready=.false.
        call compute_integrand(fun,x,vol)
+       virtual_defer_requested=.false.
        call increase_gen_counters_middle(vn)
        call check_upper_bound(vn,found_point)
        if (.not.found_point) goto 10
@@ -2385,6 +2483,8 @@ contains
     gen_counters(3)=gen_counters(3)+1
     if (vn.eq.1) then
        gen_counters(5)=gen_counters(5)+1
+       residual_gen_attempts=residual_gen_attempts+1
+       if (pooled_virtual_sampled.or.f(5).ne.0d0) residual_gen_loops=residual_gen_loops+1
     else
        gen_counters(6)=gen_counters(6)+1
     endif
@@ -2419,6 +2519,12 @@ contains
     implicit none
     logical :: found_point
     integer :: vn
+    double precision :: relative_weight
+    if (vn.eq.1.and.upper_bound.gt.0d0) then
+       relative_weight=f(1)/upper_bound
+       residual_gen_weight=residual_gen_weight+relative_weight
+       residual_gen_excess=residual_gen_excess+max(relative_weight-1d0,0d0)
+    endif
     if (f(1).gt.upper_bound) then
        if (vn.eq.2) then
           gen_counters(7)=gen_counters(7)+1
@@ -2445,6 +2551,203 @@ contains
     call get_random_x(x,vol,kfold)
     upper_bound=ymax_virt(ichan)
   end subroutine get_random_cell_flat
+
+  subroutine update_virtual_envelopes(weight)
+    implicit none
+    double precision, intent(in) :: weight
+    if (residual_envelope_available) then
+       ! Both alternatives must cover every observation with the same margin.
+       ! Otherwise a capped scalar update can appear cheaper by missing peaks.
+       ymax_virt(ichan)=max(ymax_virt(ichan),min(weight,huge(1d0)/2d0)*2d0)
+       call update_residual_envelope(weight)
+    elseif (weight.gt.ymax_virt(ichan)) then
+       ymax_virt(ichan)=min(weight,ymax_virt(ichan)*2d0)
+    endif
+  end subroutine update_virtual_envelopes
+
+  subroutine update_residual_envelope(weight)
+    implicit none
+    double precision, intent(in) :: weight
+    double precision :: bound,log_target,log_growth
+    integer :: kdim
+    if (weight.le.0d0) return
+    call residual_cell_bound(bound)
+    ! Cover each observed point immediately, with a factor-two margin. All
+    ! factors only increase, so previous observations remain covered too.
+    ! The actual loop probability has already been removed from weight.
+    log_target=min(log(huge(1d0)),log(weight)+log(2d0))
+    if (log_target.gt.log(bound)) then
+       log_growth=(log_target-log(bound))/ndim
+       do kdim=1,ndim
+          residual_max(ncell(kdim),kdim,ichan)=exp(min(log(huge(1d0)), &
+               log(residual_max(ncell(kdim),kdim,ichan))+log_growth))
+       enddo
+    endif
+  end subroutine update_residual_envelope
+
+  subroutine prepare_residual_envelope
+    implicit none
+    integer :: kchan,kdim,kint,nintcurr
+    double precision :: norm,total,largest,log_norm
+    residual_envelope_selected=.false.
+    residual_envelope_norm=0d0
+    residual_envelope_norm(1:nchans)=ymax_virt(1:nchans)
+    if (.not.residual_envelope_available) return
+    do kchan=1,nchans
+       log_norm=0d0
+       do kdim=1,ndim
+          nintcurr=nintervals/ifold(kdim)
+          if (any(.not.ieee_is_finite(residual_max(1:nintcurr,kdim,kchan))).or. &
+               any(residual_max(1:nintcurr,kdim,kchan).le.0d0)) then
+             write(*,*) 'ERROR: nonpositive/nonfinite virtual envelope.'
+             stop 1
+          endif
+          largest=maxval(residual_max(1:nintcurr,kdim,kchan))
+          total=sum(residual_max(1:nintcurr,kdim,kchan)/largest)
+          log_norm=log_norm+log(largest)+log(total/nintcurr)
+          residual_cdf(1,kdim,kchan)=(residual_max(1,kdim,kchan)/largest)/total
+          do kint=2,nintcurr
+             residual_cdf(kint,kdim,kchan)=residual_cdf(kint-1,kdim,kchan)+ &
+                  (residual_max(kint,kdim,kchan)/largest)/total
+          enddo
+          residual_cdf(nintcurr,kdim,kchan)=1d0
+       enddo
+       ! Compare integrated proposal bounds, not their maximum values.
+       ! Actual generation also reports overflows and their excess weight:
+       ! a smaller normalization alone does not certify a valid bound.
+       norm=exp(max(log(tiny(1d0)),min(log(huge(1d0)),log_norm)))
+       if (norm.lt.ymax_virt(kchan)) then
+          residual_envelope_selected(kchan)=.true.
+          residual_envelope_norm(kchan)=norm
+       endif
+       write(*,*) 'Virtual envelope scalar / product / base uses product:', &
+            ymax_virt(kchan),norm,residual_envelope_selected(kchan)
+    enddo
+  end subroutine prepare_residual_envelope
+
+  subroutine residual_cell_bound(bound)
+    implicit none
+    double precision, intent(out) :: bound
+    double precision :: log_bound
+    integer :: kdim
+    log_bound=0d0
+    do kdim=1,ndim
+       log_bound=log_bound+log(residual_max(ncell(kdim),kdim,ichan))
+    enddo
+    ! Tiny positive bounds still have sampling support. Work in logarithms
+    ! so a small intermediate product cannot erase a later large factor.
+    bound=exp(max(log(tiny(1d0)),min(log(huge(1d0)),log_bound)))
+  end subroutine residual_cell_bound
+
+  subroutine get_virtual_candidate(x,vol)
+    implicit none
+    double precision :: vol,other_bound
+    double precision, dimension(ndimmax) :: x
+    do
+       residual_proposal_attempts=residual_proposal_attempts+1
+       if (residual_envelope_selected(1)) then
+          call get_residual_weighted_cell(x,vol)
+          other_bound=ymax_virt(ichan)
+       else
+          call get_random_cell_flat(x,vol)
+          if (.not.residual_envelope_available) return
+          call residual_cell_bound(other_bound)
+       endif
+       ! Draw from min(scalar,product), normalized by cheap rejection from
+       ! either envelope. No phase space or matrix element is evaluated here.
+       if (other_bound.lt.upper_bound) then
+          if (ran3(.false.)*upper_bound.gt.other_bound) cycle
+          upper_bound=other_bound
+       endif
+       return
+    enddo
+  end subroutine get_virtual_candidate
+
+  subroutine observe_virtual_ratio(virtual,born)
+    ! Step 1 uses the approximation frozen at the controller barrier. Observe
+    ! existing exact evaluations only, before their Bernoulli reweighting.
+    implicit none
+    double precision, intent(in) :: virtual(:),born(:)
+    double precision :: largest_born,largest_residual,log_carrier,log_ratio
+    if (imode.ne.1.or..not.residual_envelope_available) return
+    if (any(.not.ieee_is_finite(born)).or.any(.not.ieee_is_finite(virtual))) return
+    largest_born=maxval(abs(born))
+    largest_residual=maxval(abs(virtual))
+    if (largest_born.le.0d0.or.largest_residual.le.0d0) return
+    log_carrier=log(largest_born)+log(sum(abs(born)/largest_born))
+    log_ratio=log(2d0)+log(largest_residual)-log_carrier
+    residual_kappa(ichan)=max(residual_kappa(ichan), &
+         exp(max(log(tiny(1d0)),min(log(huge(1d0)),log_ratio))))
+    if (pooled_virtual_velocity_valid.and.ieee_is_finite(pooled_virtual_velocity_factor)) then
+       if (pooled_virtual_velocity_factor.ge.1d0) then
+          log_ratio=log_ratio-log(pooled_virtual_velocity_factor)
+          residual_velocity_kappa(ichan)=max(residual_velocity_kappa(ichan), &
+               exp(max(log(tiny(1d0)),min(log(huge(1d0)),log_ratio))))
+       endif
+    endif
+  end subroutine observe_virtual_ratio
+
+  subroutine screen_virtual_carrier(carrier,other,accepted)
+    ! A native cheap pass has already included all folds, PDFs, coupling and
+    ! bias factors. Its positive carrier bounds each signed split order.
+    implicit none
+    double precision, intent(in) :: carrier,other
+    logical, intent(out) :: accepted
+    double precision :: screened_bound,kappa,log_product
+    virtual_carrier_attempts=virtual_carrier_attempts+1
+    accepted=.true.
+    ! An unresolved massive threshold has no reliable finite carrier.
+    ! Evaluate its exact residual against the outer proposal instead.
+    if (.not.pooled_virtual_velocity_valid) return
+    kappa=residual_kappa(ichan)
+    if (kappa.le.0d0.or.other.ge.upper_bound) return
+    ! Avoid overflow and an unnecessary random draw if the original envelope
+    ! is already tighter than the Born bound.
+    screened_bound=other
+    if (carrier.gt.0d0) then
+       log_product=log(kappa)+log(carrier)
+       if (residual_velocity_kappa(ichan).gt.0d0.and.pooled_virtual_velocity_valid.and. &
+            ieee_is_finite(pooled_virtual_velocity_factor)) then
+          if (pooled_virtual_velocity_factor.ge.1d0) &
+               log_product=min(log_product,log(residual_velocity_kappa(ichan))+ &
+                               log(carrier)+log(pooled_virtual_velocity_factor))
+       endif
+       if (log_product.ge.log(upper_bound-other)) return
+       screened_bound=min(upper_bound,other+exp(max(log(tiny(1d0)),log_product)))
+    endif
+    if (screened_bound.le.0d0) then
+       accepted=.false.
+    elseif (ran3(.false.)*upper_bound.gt.screened_bound) then
+       accepted=.false.
+    else
+       upper_bound=screened_bound
+    endif
+    if (.not.accepted) virtual_carrier_vetoes=virtual_carrier_vetoes+1
+  end subroutine screen_virtual_carrier
+
+  subroutine get_residual_weighted_cell(x,vol)
+    implicit none
+    double precision :: vol,r
+    double precision, dimension(ndimmax) :: x
+    integer :: kdim,kint,nintcurr
+    integer, dimension(ndimmax) :: kfold
+    call get_channel
+    do kdim=1,ndim
+       nintcurr=nintervals/ifold(kdim)
+       r=ran3(.false.)
+       ncell(kdim)=nintcurr
+       do kint=1,nintcurr
+          if (r.lt.residual_cdf(kint,kdim,ichan)) then
+             ncell(kdim)=kint
+             exit
+          endif
+       enddo
+       rand(kdim)=ran3(.false.)
+    enddo
+    kfold(1:ndim)=1
+    call get_random_x_next_fold(x,vol,kfold)
+    call residual_cell_bound(upper_bound)
+  end subroutine get_residual_weighted_cell
 
   subroutine get_weighted_cell(x,vol)
     implicit none
@@ -2494,7 +2797,15 @@ contains
           xmmm(kint,kdim,1:nchans)=xmmm(kint,kdim,1:nchans)/xmmm(nintcurr,kdim,1:nchans)
        enddo
     enddo
+    call prepare_residual_envelope
     gen_counters(1:13)=0
+    residual_gen_attempts=0
+    residual_gen_loops=0
+    virtual_carrier_attempts=0
+    virtual_carrier_vetoes=0
+    residual_proposal_attempts=0
+    residual_gen_weight=0d0
+    residual_gen_excess=0d0
   end subroutine initialise_mint_gen
 
   subroutine print_gen_counters
@@ -2520,6 +2831,17 @@ contains
        unwgt_eff_virt=-1d0
     endif
     write (*,*) 'Generation efficiencies:',unwgt_eff,unwgt_eff_virt
+    if (residual_gen_attempts.gt.0) then
+       write(*,*) 'Virtual Born carrier ratio bound:',residual_kappa(1)
+       write(*,*) 'Virtual velocity carrier ratio bound:',residual_velocity_kappa(1)
+       write(*,*) 'Virtual Born carrier attempts / vetoes:',virtual_carrier_attempts,virtual_carrier_vetoes
+       write(*,*) 'Virtual proposal attempts / evaluated residuals:',residual_gen_attempts,residual_gen_loops
+       write(*,*) 'Virtual cheap proposals / phase-space attempts:',residual_proposal_attempts,residual_gen_attempts
+       write(*,*) 'Virtual proposal base norm / estimated effective norm:',residual_envelope_norm(1), &
+            residual_envelope_norm(1)*dble(residual_gen_attempts)/max(1d0,dble(residual_proposal_attempts))
+       write(*,*) 'Virtual envelope overflows / excess fraction:',gen_counters(8), &
+            residual_gen_excess/max(residual_gen_weight,tiny(1d0))
+    endif
   end subroutine print_gen_counters
 
   

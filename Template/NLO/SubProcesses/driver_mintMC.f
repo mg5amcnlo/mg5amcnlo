@@ -1150,6 +1150,9 @@ c Include the weight from the bias_function
      $           nonfinite_contribution=.true.
          enddo
          if(nonfinite_contribution)goto 900
+c All folds and native PDF/bias factors are available for the cheap veto.
+c Passing points replace their carrier records by the exact loop residual.
+         if(virtual_deferred_ready)call deferred_virtual_context(1,0d0)
 c Sum the contributions that can be summed before taking the ABS value
          call sum_identical_contributions
          call fill_mint_function_NLOPS(f,n1body_wgt)

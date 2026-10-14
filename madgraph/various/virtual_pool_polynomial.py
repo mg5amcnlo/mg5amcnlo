@@ -7,11 +7,16 @@ import itertools
 import math
 
 MAX_TERMS = 512
+# Cubic screening is deliberately a single additional objective. Bound the
+# temporary dense selection fit as well as the frozen sparse representation.
+MAX_CUBIC_FEATURES = 18
+MAX_CUBIC_DESIGN_ELEMENTS = 40000000
+CUBIC_RIDGE = .01
 MIN_ROWS = 60
 ROWS_PER_TERM = 5
 TAIL_MARGIN = .10
 RIDGES = (1.e-4, .01, 1.)
-LOSSES = ('huber', 'square')
+LOSSES = ('huber', 'square', 'born_huber', 'born_square')
 BLENDS = (.25, .5, .75, 1.)
 
 
@@ -31,36 +36,111 @@ def coordinates(x, lower, upper):
     return np.clip(z, -1., 1.), outside
 
 
-def pairs_for(x, degree):
+def pairs_for(x, degree, nscalar=None, basis='full'):
     import numpy as np
     active = np.flatnonzero(np.ptp(x, axis=0) > 1.e-12).tolist()
+    if nscalar is not None:
+        active = [i for i in active if basis != 'relative' or i != nscalar-1]
     pairs = [(-1, -1)] + [(i, -1) for i in active]
-    if degree == 2:
+    if degree >= 2:
         pairs += list(itertools.combinations_with_replacement(active, 2))
+    if degree == 3:
+        pairs = [pair + (-1,) for pair in pairs]
+        pairs += list(itertools.combinations_with_replacement(active, 3))
+    if nscalar is not None:
+        # Preserve the even polynomial and an odd-times-linear block. Products
+        # of two signed orientation coordinates would erase this separation.
+        pairs = [p for p in pairs if sum(i >= nscalar for i in p) <= 1 and
+                 not (sum(i >= nscalar for i in p) and sum(i >= 0 for i in p) > 2)]
     return pairs
+
+
+def basis_size(x, degree, nscalar=None, basis='full'):
+    """Count before allocating a potentially enormous high-multiplicity basis."""
+    import numpy as np
+    active = np.flatnonzero(np.ptp(x, axis=0) > 1.e-12)
+    if nscalar is None:
+        # Degrees are at most three; keep this available on Python 3.7 too.
+        count = 1
+        for factor in range(1, degree+1):
+            count = count*(len(active)+factor)//factor
+        return len(active), count
+    even = int(sum(i < nscalar and (basis != 'relative' or i != nscalar-1) for i in active))
+    odd = int(sum(i >= nscalar for i in active))
+    count = 1+even+odd
+    if degree >= 2:
+        count += even*(even+1)//2 + even*odd
+    if degree == 3:
+        count += even*(even+1)*(even+2)//6
+    return even, count
 
 
 def design(z, pairs):
     import numpy as np
-    ones = np.ones(len(z))
-    return np.column_stack([(ones if a < 0 else z[:, a]) *
-                            (ones if b < 0 else z[:, b]) for a, b in pairs])
+    return np.column_stack([np.prod(z[:, [i for i in indices if i >= 0]], axis=1)
+                            for indices in pairs])
 
 
-def fit(x, born, virtual, weight, degree, ridge, loss):
+def fit(x, born, virtual, weight, degree, ridge, loss, basis='full', nscalar=None):
     import numpy as np
-    lo, hi = x.min(axis=0), x.max(axis=0)
-    pairs = pairs_for(x, degree)
-    if len(pairs) > MAX_TERMS:
+    if degree not in (1, 2, 3):
+        raise ValueError('invalid polynomial degree')
+    if basis not in ('full', 'relative') or (basis == 'relative' and degree != 3):
+        raise ValueError('invalid polynomial feature subset')
+    # Catalog 6's final coordinate is absolute log(shat). A relative-only
+    # candidate excludes it at every degree, while retaining full-catalog
+    # bounds and index numbering for the common native serialization.
+    basis_x = x[:, :-1] if basis == 'relative' and nscalar is None else x
+    scalar_active, count = basis_size(basis_x, degree, nscalar, basis)
+    if degree == 3 and (scalar_active > MAX_CUBIC_FEATURES or
+                       len(x)*count > MAX_CUBIC_DESIGN_ELEMENTS):
+        raise ValueError('cubic selection exceeds fit budget')
+    if degree < 3 and count > MAX_TERMS:
         raise ValueError('polynomial exceeds coefficient budget')
+    pairs = pairs_for(basis_x, degree, nscalar, basis)
+    lo, hi = x.min(axis=0), x.max(axis=0)
+    if nscalar is not None:
+        lo[nscalar:], hi[nscalar:] = -1., 1.
+    if degree < 3 and len(pairs) > MAX_TERMS:
+        raise ValueError('polynomial exceeds coefficient budget')
+    z, _ = coordinates(x, lo, hi)
+    matrix = design(z, pairs)
+    coeff, norm, bscale, vscale = _solve_design(matrix, born, virtual, weight, ridge, loss)
+    if degree == 3 and len(pairs) > MAX_TERMS:
+        # Preserve every constant/linear/quadratic term. Select the additional
+        # cubic terms entirely within this fitting fold, then refit the sparse
+        # model; held-out targets never influence the feature selection.
+        lower = sum(indices[2] < 0 for indices in pairs)
+        if lower >= MAX_TERMS:
+            raise ValueError('mandatory polynomial terms exceed coefficient budget')
+        importance = np.abs(coeff[lower:])*norm[lower:]
+        ranked = np.argsort(-importance, kind='stable')[:MAX_TERMS-lower] + lower
+        selected = np.concatenate((np.arange(lower), np.sort(ranked)))
+        pairs = [pairs[i] for i in selected]
+        coeff, norm, bscale, vscale = _solve_design(
+            matrix[:, selected], born, virtual, weight, ridge, loss)
+    terms = [dict(pair=indices, coefficient=float(value)) for indices, value, size in
+             zip(pairs, coeff, norm) if size > 0]
+    return dict(degree=degree, lower=lo.tolist(), upper=hi.tolist(), terms=terms,
+                born_scale=bscale, target_scale=vscale)
+
+
+def _solve_design(matrix, born, virtual, weight, ridge, loss):
+    import numpy as np
     w = weight / weight.sum()
     bscale = float(w @ np.abs(born))
     vscale = float(w @ np.abs(virtual))
     if not math.isfinite(bscale) or not math.isfinite(vscale) or not bscale or not vscale:
         raise ValueError('zero fit scale')
-    z, _ = coordinates(x, lo, hi)
-    a = (born/bscale)[:, None] * design(z, pairs)
-    norm = np.sqrt(w @ (a*a))
+    a = (born/bscale)[:, None] * matrix
+    # A Born-dependent noise scale prevents a few very large integration
+    # weights from determining a polynomial for the whole subprocess. Keep
+    # V-B*P as the regression residual, including signed and zero Born rows;
+    # never construct the potentially singular target V/B.
+    born_noise = loss.startswith('born_')
+    noise = np.maximum(np.abs(born)/bscale, 1.e-12) if born_noise else np.ones(len(born))
+    fit_weight = w/noise
+    norm = np.sqrt(fit_weight @ (a*a))
     if not np.all(np.isfinite(norm)):
         raise ValueError('nonfinite design scale')
     keep = norm > max(float(norm.max())*1.e-10, 1.e-20)
@@ -68,19 +148,20 @@ def fit(x, born, virtual, weight, degree, ridge, loss):
         raise ValueError('empty design')
     a = a[:, keep] / norm[keep]
     y = virtual/vscale
-    irls = np.ones(len(x))
-    for _ in range(8 if loss == 'huber' else 1):
-        ww = w*irls
+    irls = np.ones(len(born))
+    huber = loss.endswith('huber')
+    for _ in range((20 if born_noise else 8) if huber else 1):
+        ww = fit_weight*irls
         coeff = np.linalg.solve(a.T @ (ww[:, None]*a) + ridge*np.eye(a.shape[1]),
                                 a.T @ (ww*y))
-        if loss == 'huber':
-            irls = np.minimum(1., .25/np.maximum(np.abs(y-a@coeff), 1.e-20))
+        if huber:
+            irls = np.minimum(1., .25*noise/np.maximum(np.abs(y-a@coeff), 1.e-20))
     if not np.all(np.isfinite(coeff)):
         raise ValueError('nonfinite fit')
-    terms = [dict(pair=pairs[i], coefficient=float(c/norm[i]))
-             for i, c in zip(np.flatnonzero(keep), coeff)]
-    return dict(degree=degree, lower=lo.tolist(), upper=hi.tolist(), terms=terms,
-                born_scale=bscale, target_scale=vscale)
+    result = np.zeros(matrix.shape[1])
+    result[keep] = coeff/norm[keep]
+    norm[~keep] = 0.
+    return result, norm, bscale, vscale
 
 
 def predict(entry, x, born, mint, blend=None):
@@ -88,14 +169,16 @@ def predict(entry, x, born, mint, blend=None):
     lam = entry.get('blend', 1.) if blend is None else blend
     if not lam:
         return mint.copy()
-    z, outside = coordinates(x, entry['lower'], entry['upper'])
+    z, _ = coordinates(x, entry['lower'], entry['upper'])
     value = design(z, [t['pair'] for t in entry['terms']]) @ np.asarray(
         [t['coefficient'] for t in entry['terms']])
     shared = (born/entry['born_scale'])*value*entry['target_scale']
     answer = mint + lam*(shared-mint)
-    # The native runtime also evaluates the exact loop on these far-outside
-    # points. The fallback here keeps CV and Python/Fortran prediction equal.
-    answer[outside | ~np.isfinite(answer)] = mint[outside | ~np.isfinite(answer)]
+    # Keep the bounded prediction outside the training box. Native inference
+    # requests an exact loop there, so continuation cannot bias the estimator.
+    # Falling back to MINT would reintroduce its largest residuals at the edge.
+    invalid = ~np.isfinite(answer)
+    answer[invalid] = mint[invalid]
     return answer
 
 
@@ -182,6 +265,26 @@ def mint_predictions(rows, include):
     return result
 
 
+def forward_split(rows):
+    """Hold out whole later iterations, independently in each worker/channel.
+
+    Random folds test interpolation within the capture. This split additionally
+    tests how a frozen approximation behaves as the integration grid evolves.
+    Workers with a single committed iteration only supply fitting observations.
+    """
+    import numpy as np
+    histories = {}
+    for row in rows:
+        key = (row['directory'], row['channel'])
+        histories.setdefault(key, set()).add(row['iteration'])
+    cutoffs = {}
+    for key, iterations in histories.items():
+        levels = sorted(iterations)
+        cutoffs[key] = levels[max(0, 2*len(levels)//3-1)]
+    return np.asarray([row['iteration'] <= cutoffs[(row['directory'], row['channel'])]
+                       for row in rows])
+
+
 def fit_order(rows, folds, metadata, order):
     indices = [i for i, r in enumerate(rows) if r['order'] == order]
     subset = [rows[i] for i in indices]
@@ -213,27 +316,104 @@ def fit_order(rows, folds, metadata, order):
     base = (y-mint)/scale
     base_l1 = float(wn @ np.abs(base))
     base_second = float(wn @ (base*base))
+    target_l1 = float(wn @ np.abs(y/scale))
+    target_rms = math.sqrt(float(wn @ (y/scale)**2))
     report.update(cv_folds=3, baseline_cv_l1=base_l1*scale,
-                  baseline_cv_rms=math.sqrt(base_second)*scale)
+                  baseline_cv_rms=math.sqrt(base_second)*scale,
+                  baseline_cv_max=float(np.max(np.abs(base)))*scale,
+                  target_l1=target_l1*scale, target_rms=target_rms*scale,
+                  baseline_cv_relative_l1=base_l1/target_l1 if target_l1 else None,
+                  baseline_cv_relative_rms=math.sqrt(base_second)/target_rms if target_rms else None)
     if not base_l1:
         return fallback('cross_validation_prefers_mint')
+    earlier = forward_split(subset)
+    later = ~earlier
+    forward = np.count_nonzero(later) >= 10 and np.count_nonzero(earlier) >= MIN_ROWS
+    if forward:
+        forward_mint = mint_predictions(subset, earlier)
+        fw = w[later]/w[later].sum()
+        fb = (y[later]-forward_mint[later])/scale
+        forward_l1 = float(fw @ np.abs(fb))
+        forward_second = float(fw @ (fb*fb))
+        ft_l1 = float(fw @ np.abs(y[later]/scale))
+        ft_rms = math.sqrt(float(fw @ (y[later]/scale)**2))
+        report['forward_validation'] = dict(
+            fitting_rows=int(np.count_nonzero(earlier)), validation_rows=int(np.count_nonzero(later)),
+            baseline_l1=forward_l1*scale, baseline_rms=math.sqrt(forward_second)*scale,
+            baseline_max=float(np.max(np.abs(fb)))*scale,
+            target_l1=ft_l1*scale, target_rms=ft_rms*scale,
+            baseline_relative_l1=forward_l1/ft_l1 if ft_l1 else None,
+            baseline_relative_rms=math.sqrt(forward_second)/ft_rms if ft_rms else None)
+    else:
+        report['forward_validation'] = dict(reason='insufficient_distinct_iteration_history')
+    nscalar = None
+    if metadata.get('catalog') == 7:
+        from .virtual_pool import scalar_feature_count
+        nscalar = scalar_feature_count(metadata)
+    fit_extra = {} if nscalar is None else {'nscalar': nscalar}
     eligible = []
-    for degree in (1, 2):
+    candidate_residuals = {}
+    for degree in (1, 2, 3):
         # Cap both work and flexibility before allocating quadratic matrices.
-        active = int(np.count_nonzero(np.ptp(x, axis=0) > 1.e-12))
-        nterms = 1+active+(active*(active+1)//2 if degree == 2 else 0)
+        active, dense_terms = basis_size(x, degree, nscalar)
+        nterms = min(dense_terms, MAX_TERMS) if degree == 3 else dense_terms
         smallest = min(np.count_nonzero(assignment != f) for f in range(3))
-        if nterms > MAX_TERMS or smallest < ROWS_PER_TERM*nterms:
+        if degree < 3 and (nterms > MAX_TERMS or smallest < ROWS_PER_TERM*dense_terms):
             report.setdefault('skipped_degrees', []).append(degree)
             continue
-        for ridge, loss in itertools.product(RIDGES, LOSSES):
+        choices = ([(CUBIC_RIDGE, 'born_square', basis) for basis in
+                    (('full', 'relative') if metadata.get('catalog') in (6, 7) else ('full',))]
+                   if degree == 3 else ((r, loss, 'full') for r, loss in itertools.product(RIDGES, LOSSES)))
+        for ridge, loss, basis in choices:
+            if degree == 3:
+                basis_x = x[:, :-1] if basis == 'relative' and nscalar is None else x
+                active, dense_terms = basis_size(basis_x, 3, nscalar, basis)
+                nterms = min(dense_terms, MAX_TERMS)
+                screen = dict(basis=basis)
+                report.setdefault('cubic_screens', []).append(screen)
+                if basis == 'full':
+                    report['cubic_screen'] = screen
+                if (active > MAX_CUBIC_FEATURES or len(x)*dense_terms > MAX_CUBIC_DESIGN_ELEMENTS or
+                        smallest < ROWS_PER_TERM*dense_terms):
+                    screen['reason'] = 'fit_budget_or_insufficient_rows'
+                    continue
+                if not forward or np.count_nonzero(earlier) < ROWS_PER_TERM*dense_terms:
+                    screen['reason'] = 'insufficient_forward_history'
+                    continue
             proposal = np.zeros(len(subset))
+            forward_proposal = None
             try:
+                if degree == 3:
+                    # Cheap rejection of unhelpful richer fits before the
+                    # three additional CV fits. This screen does not replace
+                    # any of the matched-fold or forward acceptance guards.
+                    simpler = [candidate for candidate in eligible if candidate['degree'] < 3]
+                    reference = min(simpler, key=lambda a: a['cv_l1']) if simpler else None
+                    if reference is None or 'forward_l1' not in reference:
+                        screen['reason'] = 'no_validated_simpler_reference'
+                        continue
+                    model = fit(x[earlier], b[earlier], y[earlier], w[earlier], degree, ridge, loss, basis, **fit_extra)
+                    forward_proposal = predict(model, x[later], b[later], forward_mint[later])
+                    fr = (y[later]-forward_proposal)/scale
+                    screen_l1 = float(fw @ np.abs(fr))*scale
+                    screen_rms = math.sqrt(float(fw @ (fr*fr)))*scale
+                    useful = (screen_l1 < .98*reference['forward_l1'] and
+                              screen_rms <= 1.05*reference['forward_rms'])
+                    screen.update(reason='passed' if useful else 'no_forward_improvement',
+                        forward_l1=screen_l1, forward_rms=screen_rms,
+                        reference_l1=reference['forward_l1'], reference_rms=reference['forward_rms'])
+                    if not useful:
+                        continue
                 for fold in range(3):
                     valid, train = assignment == fold, assignment != fold
-                    model = fit(x[train], b[train], y[train], w[train], degree, ridge, loss)
+                    model = fit(x[train], b[train], y[train], w[train], degree, ridge, loss, basis, **fit_extra)
                     proposal[valid] = predict(model, x[valid], b[valid], mint[valid])
+                if forward_proposal is None and forward and np.count_nonzero(earlier) >= ROWS_PER_TERM*nterms:
+                    model = fit(x[earlier], b[earlier], y[earlier], w[earlier], degree, ridge, loss, basis, **fit_extra)
+                    forward_proposal = predict(model, x[later], b[later], forward_mint[later])
             except (ValueError, np.linalg.LinAlgError, FloatingPointError):
+                if degree == 3:
+                    screen['reason'] = 'fit_failed'
                 continue
             for blend in BLENDS:
                 residual = (y-(mint+blend*(proposal-mint)))/scale
@@ -248,21 +428,55 @@ def fit_order(rows, folds, metadata, order):
                              for f in range(3))
                 accept = (base_l1-l1 > max(.02*base_l1, 2.*se) and
                           second <= base_second and stable)
-                entry = dict(degree=degree, ridge=ridge, loss=loss, blend=blend,
+                entry = dict(degree=degree, ridge=ridge, loss=loss, basis=basis, blend=blend,
                              parameters=nterms, cv_l1=l1*scale,
-                             cv_rms=math.sqrt(second)*scale, gain_error=se*scale,
+                             cv_rms=math.sqrt(second)*scale,
+                             cv_max=float(np.max(np.abs(residual)))*scale, gain_error=se*scale,
+                             cv_relative_l1=l1/target_l1 if target_l1 else None,
+                             cv_relative_rms=math.sqrt(second)/target_rms if target_rms else None,
                              eligible=bool(accept))
+                if forward_proposal is not None:
+                    fr = (y[later]-(forward_mint[later]+blend*(forward_proposal-forward_mint[later])))/scale
+                    fl1 = float(fw @ np.abs(fr))
+                    fsecond = float(fw @ (fr*fr))
+                    # Do not select an interpolation improvement that already
+                    # degrades on future iterations from this same capture.
+                    forward_ok = fl1 <= forward_l1 and fsecond <= 1.05**2*forward_second
+                    accept = accept and forward_ok
+                    entry.update(forward_l1=fl1*scale, forward_rms=math.sqrt(fsecond)*scale,
+                                 forward_max=float(np.max(np.abs(fr)))*scale,
+                                 forward_relative_l1=fl1/ft_l1 if ft_l1 else None,
+                                 forward_relative_rms=math.sqrt(fsecond)/ft_rms if ft_rms else None,
+                                 forward_eligible=bool(forward_ok), eligible=bool(accept))
+                elif forward:
+                    entry['forward_reason'] = 'insufficient_fitting_rows_per_coefficient'
                 report['candidates'].append(entry)
                 if accept:
                     eligible.append(entry)
+                    candidate_residuals[id(entry)] = np.abs(residual)
+        if degree == 3 and not any(candidate['degree'] == 3 for candidate in report['candidates']):
+            report.setdefault('skipped_degrees', []).append(3)
     if not eligible:
         return fallback('cross_validation_prefers_mint')
     best = min(eligible, key=lambda a: a['cv_l1'])
-    # Prefer a smaller basis if its quality is statistically indistinguishable.
-    selected = min((a for a in eligible if a['cv_l1'] <= best['cv_l1']+best['gain_error']),
+    # Complexity comparisons need their own paired uncertainty. The uncertainty
+    # of the gain over MINT can be much larger and would admit a substantially
+    # worse linear approximation even when quadratic fits generalize well.
+    def comparable(entry):
+        paired = scale*float(np.linalg.norm(wn*(candidate_residuals[id(entry)]-
+                                               candidate_residuals[id(best)])))
+        entry['difference_from_best_error'] = paired
+        if entry['cv_rms'] > 1.05*best['cv_rms']:
+            return False
+        if 'forward_l1' in best:
+            if ('forward_l1' not in entry or entry['forward_l1'] > 1.05*best['forward_l1'] or
+                    entry['forward_rms'] > 1.05*best['forward_rms']):
+                return False
+        return entry['cv_l1'] <= best['cv_l1']+paired
+    selected = min((a for a in eligible if comparable(a)),
                    key=lambda a: (a['degree'], a['cv_l1']))
     try:
-        model = fit(x, b, y, w, selected['degree'], selected['ridge'], selected['loss'])
+        model = fit(x, b, y, w, selected['degree'], selected['ridge'], selected['loss'], selected['basis'], **fit_extra)
     except (ValueError, np.linalg.LinAlgError, FloatingPointError):
         return fallback('final_fit_failed')
     model.update(order=order, blend=selected['blend'], reason='selected_by_matched_cross_validation')

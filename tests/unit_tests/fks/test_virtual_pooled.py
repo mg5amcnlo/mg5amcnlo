@@ -24,6 +24,7 @@ class TestVirtualPooled(unittest.TestCase):
         result = subprocess.run([
             shutil.which('gfortran'), '-O2', '-fno-automatic', '-fcheck=all',
             '-ffpe-trap=invalid,zero,overflow',
+            str(TEMPLATE / 'virtual_envelope_carrier.f90'),
             str(TEMPLATE / 'virtual_pooled.f90'),
             str(ROOT / 'tests/input_files/check_virtual_pooled.f90'),
             '-o', str(cls.executable)], cwd=cls.build.name,
@@ -168,3 +169,22 @@ class TestVirtualPooled(unittest.TestCase):
                 fields = self.run_case('invariants').split()
                 self.assertEqual(list(map(int, fields[:2])), [5, len(expected)])
                 np.testing.assert_allclose(list(map(float, fields[2:])), expected, rtol=2e-13, atol=2e-14)
+
+    def test_catalog6_distinguishes_loop_scale_and_absolute_energy(self):
+        p=np.array([[250.,0,0,250.],[250.,0,0,-250.],
+                    [250.,150.,0.,200.],[250.,-150.,0.,-200.]])
+        def coordinates(scale,qes):
+            lines=['4 %.17e %.17e' % (10000.*scale**2,qes)]
+            lines += [' '.join(map(str,[21,0.,int(i<2),*(leg*scale)]))
+                      for i,leg in enumerate(p)]
+            (self.path/'coordinates_input.dat').write_text('\n'.join(lines)+'\n')
+            fields=self.run_case('invariants6').split()
+            self.assertEqual(list(map(int,fields[:2])),[6,9])
+            return np.asarray(list(map(float,fields[2:])))
+        first=coordinates(1.,40000.)
+        changed_loop=coordinates(1.,90000.)
+        np.testing.assert_allclose(first[:-2],changed_loop[:-2])
+        self.assertAlmostEqual(changed_loop[-2]-first[-2],np.log(40000./90000.))
+        scaled=coordinates(2.,160000.)
+        np.testing.assert_allclose(first[:-1],scaled[:-1],atol=1e-14)
+        self.assertAlmostEqual(scaled[-1]-first[-1],np.log(4.))

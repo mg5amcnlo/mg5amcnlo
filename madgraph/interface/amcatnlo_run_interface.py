@@ -2208,10 +2208,58 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if not self._virtual_pool_resume:
             for p_dir in p_dirs:
                 for name in ('virtual_pool_model.dat', 'virtual_pool_report.json',
-                             'virtual_pool_manifest.json'):
+                             'virtual_pool_neural.dat', 'virtual_pool_manifest.json'):
                     path = pjoin(self.me_dir, 'SubProcesses', p_dir, name)
                     if os.path.lexists(path):
                         os.remove(path)
+
+    def virtual_pool_source_identity(self, p_dir):
+        """Bind helicity heads to the generated amplitudes and physical inputs.
+
+        Event counts, random seeds, grids and object files are deliberately
+        absent: generation may change those while reusing the frozen fit.
+        The authoritative helicity filter and model parameters must agree.
+        """
+        paths = set()
+        directory = pjoin(self.me_dir, 'SubProcesses', p_dir)
+        for source in (directory, pjoin(self.me_dir, 'Source', 'MODEL'),
+                       pjoin(self.me_dir, 'Source', 'BornSupport'),
+                       pjoin(self.me_dir, 'Source', 'DHELAS')):
+            if not os.path.isdir(source):
+                continue
+            for current, subdirs, names in os.walk(source):
+                subdirs[:] = sorted(name for name in subdirs
+                                    if not name.startswith(('GF', 'GB', 'all_G', 'born_G')))
+                for name in names:
+                    if name.endswith(('.f', '.f90', '.inc')) and name != 'run_card.inc':
+                        paths.add(pjoin(current, name))
+        resources = pjoin(directory, 'MadLoop5_resources')
+        if os.path.isdir(resources):
+            for name in os.listdir(resources):
+                if name.endswith('.dat') and os.path.isfile(pjoin(resources, name)):
+                    paths.add(pjoin(resources, name))
+        for name in ('param_card.dat', 'MadLoopParams.dat', 'FKS_params.dat'):
+            path = pjoin(self.me_dir, 'Cards', name)
+            if os.path.isfile(path):
+                paths.add(path)
+        identity = {}
+        for path in sorted(paths):
+            with open(path, 'rb') as stream:
+                identity[os.path.relpath(path, self.me_dir)] = hashlib.sha256(stream.read()).hexdigest()
+        run_card = pjoin(self.me_dir, 'Cards', 'run_card.dat')
+        if os.path.isfile(run_card):
+            # Parse values so comments, ordering and equivalent numeric spelling
+            # do not invalidate a fit. Keep beam/PDF/scale/cut settings, while
+            # allowing the ordinary generation-only controls to change.
+            with open(run_card) as stream:
+                card = banner_mod.RunCardNLO(stream, consistency=False, unknown_warning=False)
+            controls = {'nevents', 'iseed', 'python_seed', 'run_tag', 'nevt_job',
+                        'req_acc', 'req_acc_fo', 'npoints_fo_grid', 'niters_fo_grid',
+                        'npoints_fo', 'niters_fo', 'time_of_flight'}
+            physics = {name: value for name, value in card.items() if name not in controls}
+            encoded = json.dumps(physics, sort_keys=True, separators=(',', ':'), allow_nan=False)
+            identity['Cards/run_card.dat:physics'] = hashlib.sha256(encoded.encode('utf-8')).hexdigest()
+        return identity
 
     def virtual_pool_state(self, p_dir):
         """Load a frozen subprocess model, including an explicit empty fallback."""
@@ -2226,7 +2274,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         try:
             with open(manifest) as stream:
                 state = json.load(stream)
-            if (state['version'] != 1 or
+            if (state['version'] not in (1, 2) or
                     state['fixed_order'] != self._virtual_pool_fixed_order or
                     state['status'] not in ('trained', 'fallback')):
                 raise ValueError('incompatible manifest')
@@ -2237,6 +2285,15 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     raise ValueError('model checksum differs from frozen manifest')
             elif state['status'] != 'fallback':
                 raise ValueError('trained model is missing')
+            if state.get('neural_sha256') is not None:
+                if state['model_sha256'] is None:
+                    raise ValueError('neural companion has no base model')
+                with open(pjoin(directory, 'virtual_pool_neural.dat'), 'rb') as stream:
+                    digest = hashlib.sha256(stream.read()).hexdigest()
+                if digest != state['neural_sha256']:
+                    raise ValueError('neural checksum differs from frozen manifest')
+                if state.get('source_identity') != self.virtual_pool_source_identity(p_dir):
+                    raise ValueError('amplitude, helicity filter or parameters differ from frozen manifest')
         except (IOError, ValueError, KeyError, TypeError) as error:
             raise aMCatNLOError('Cannot resume pooled virtuals for %s: %s. '
                                 'Restart the integration to collect a new fit.' %
@@ -2252,6 +2309,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         state = self.virtual_pool_state(job['p_dir'])
         collection_step = 1 if fixed_order else 0
         model = pjoin(job['dirname'], 'virtual_pool_model.dat')
+        neural = pjoin(job['dirname'], 'virtual_pool_neural.dat')
         if state is not None:
             if state['model_sha256'] is not None:
                 source = pjoin(self.me_dir, 'SubProcesses', job['p_dir'],
@@ -2269,6 +2327,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                                 job['p_dir'])
         if mode != 2 and os.path.lexists(model):
             os.remove(model)
+        if mode == 2 and state.get('neural_sha256') is not None:
+            if os.path.islink(neural):
+                os.remove(neural)
+            shutil.copyfile(pjoin(self.me_dir, 'SubProcesses', job['p_dir'],
+                                  'virtual_pool_neural.dat'), neural)
+        elif os.path.lexists(neural):
+            os.remove(neural)
         with open(pjoin(job['dirname'], 'virtual_pool_mode.dat'), 'w') as stream:
             stream.write('%d\n' % mode)
         if clear_records and mode == 1:
@@ -2299,23 +2364,33 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 continue
             directory = pjoin(self.me_dir, 'SubProcesses', p_dir)
             model = pjoin(directory, 'virtual_pool_model.dat')
+            neural = pjoin(directory, 'virtual_pool_neural.dat')
             report = pjoin(directory, 'virtual_pool_report.json')
             try:
                 result = train_pool(sorted(job_groups), model, report,
-                                    job_groups=job_groups)
+                                    job_groups=job_groups, neural=True,
+                                    output_neural=neural)
                 digest = None
+                neural_digest = None
                 if result['model_written']:
                     with open(model, 'rb') as stream:
                         digest = hashlib.sha256(stream.read()).hexdigest()
                 elif os.path.lexists(model):
                     os.remove(model)
+                if digest and result.get('neural', {}).get('model_written'):
+                    with open(neural, 'rb') as stream:
+                        neural_digest = hashlib.sha256(stream.read()).hexdigest()
+                elif os.path.lexists(neural):
+                    os.remove(neural)
             except (IOError, ValueError, KeyError) as error:
                 raise aMCatNLOError('Cannot fit pooled virtuals for %s: %s' %
                                     (p_dir, error))
-            state = dict(version=1, fixed_order=fixed_order,
+            state = dict(version=2, fixed_order=fixed_order,
                          collection_step=integration_step,
                          status='trained' if digest and result['status']=='trained' else 'fallback',
-                         model_sha256=digest)
+                         model_sha256=digest, neural_sha256=neural_digest,
+                         source_identity=self.virtual_pool_source_identity(p_dir)
+                                         if neural_digest else None)
             manifest = pjoin(directory, 'virtual_pool_manifest.json')
             with open(manifest + '.tmp', 'w') as stream:
                 json.dump(state, stream, sort_keys=True, indent=2)
@@ -2621,26 +2696,38 @@ RESTART = %(mint_mode)s
         # Needed to average the grids (both xgrids, ave_virt and
         # MC_integer grids), but sum the cross section info. The
         # latter is only the only line that contains integers.
-        for j,fs in enumerate([files_mint_grids,files_MC_integer]):
+        combined_grids=[]
+        for fs in (files_mint_grids,files_MC_integer):
             linesoffiles=[]
             polyfit_data=[]
             pooled_data=[]
+            envelope_data=[]
             for f in fs:
                 with open(f,'r',newline='') as fi:
                     data=fi.readlines()
                     pooled_data.append([dat for dat in data
                                         if dat.split()[0] == 'PVP'])
-                    data=[dat for dat in data if dat.split()[0] != 'PVP']
+                    envelope_data.append([dat for dat in data
+                                          if dat.split()[0] == 'VEP'])
+                    data=[dat for dat in data if dat.split()[0] not in ('PVP', 'VEP')]
                     linesoffiles.append([dat for dat in data if 'POL' not in dat.split()[0]])
                     polyfit_data.append([dat for dat in data if 'POL' in dat.split()[0]])
             if any(block != pooled_data[0] for block in pooled_data[1:]):
                 raise aMCatNLOError('Pooled virtual modes differ or are missing in '
                                     'split grid files. Cannot combine them; rerun '
                                     'integration from a common grid setup.')
+            if any(block != envelope_data[0] for block in envelope_data[1:]):
+                raise aMCatNLOError('Virtual envelope formats differ or are missing in '
+                                    'split grid files. Cannot combine them; rerun '
+                                    'integration from a common grid setup.')
+            if any(len(rows) != len(linesoffiles[0]) for rows in linesoffiles[1:]):
+                raise aMCatNLOError('Split grid files have different numbers of rows.')
             to_write=[]
             for rowgrp in zip(*linesoffiles):
                 action=misc.make_unique([row.strip().split()[0] for row in rowgrp]) 
                 floatsbyfile = [[float(a) for a in row.strip().split()[1:]] for row in rowgrp]
+                if any(len(values) != len(floatsbyfile[0]) for values in floatsbyfile[1:]):
+                    raise aMCatNLOError('Split grid rows have different numbers of values.')
                 floatgrps = list(zip(*floatsbyfile))
                 if len(action) != 1:
                     raise aMCatNLOError('"mint_grids" files not in correct format. '+\
@@ -2699,14 +2786,15 @@ RESTART = %(mint_mode)s
 
             if pooled_data:
                 to_write.extend(pooled_data[0])
+            if envelope_data:
+                to_write.extend(envelope_data[0])
 
-            # write the data over the master location
-            if j==0:
-                with open(pjoin(location,'mint_grids'),'w',newline='') as f:
-                    f.writelines(to_write)
-            elif j==1:
-                with open(pjoin(location,'grid.MC_integer'),'w',newline='') as f:
-                    f.writelines(to_write)
+            combined_grids.append(to_write)
+
+        # Validate both grids before replacing either existing master file.
+        for name,data in zip(('mint_grids','grid.MC_integer'),combined_grids):
+            with open(pjoin(location,name),'w',newline='') as f:
+                f.writelines(data)
 
                 
     def split_jobs_fixed_order(self,jobs_to_run,jobs_to_collect):
@@ -5404,6 +5492,8 @@ RESTART = %(mint_mode)s
                     pool_mode = stream.read().strip()
                 if pool_mode == '2':
                     required_output.append('%s/virtual_pool_model.dat' % current)
+                    if os.path.isfile(pjoin(cwd, current, 'virtual_pool_neural.dat')):
+                        required_output.append('%s/virtual_pool_neural.dat' % current)
 
         #Find the correct PDF input file
         pdfinput = self.get_pdf_input_filename()

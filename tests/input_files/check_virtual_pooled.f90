@@ -9,7 +9,7 @@ program check_virtual_pooled
   real(dp),allocatable :: cp(:,:),cm(:),x(:),cr(:)
   integer,allocatable :: ci(:)
   logical,allocatable :: cin(:)
-  real(dp) :: mur2
+  real(dp) :: mur2,qes2
   call get_command_argument(1,test_case)
   p=0d0
   p(:,1)=[250d0,0d0,0d0,250d0]
@@ -21,7 +21,7 @@ program check_virtual_pooled
   incoming=[.true.,.true.,.false.,.false.]
   ratio=[10d0,-3d0]
   select case(trim(test_case))
-  case('batch_predict','batch_probability')
+  case('batch_predict','batch_probability','batch_predict6','batch_probability6')
      open(newunit=unit,file='batch_input.dat',status='old')
      read(unit,*) n,orders,points
      allocate(cp(0:3,n),cm(n),ci(n),cin(n),cr(orders))
@@ -31,13 +31,21 @@ program check_virtual_pooled
      enddo
      call pooled_virtual_init(orders,2)
      do j=1,points
-        read(unit,*) mur2,cr
+        if(trim(test_case)=='batch_predict6'.or.trim(test_case)=='batch_probability6') then
+           read(unit,*) mur2,qes2,cr
+        else
+           read(unit,*) mur2,cr
+        endif
         do k=1,n
            read(unit,*) cp(:,k)
         enddo
         call pooled_virtual_begin_point()
-        call pooled_virtual_prepare(cp,cm,cin,ci,mur2,cr)
-        if(trim(test_case)=='batch_probability') then
+        if(trim(test_case)=='batch_predict6'.or.trim(test_case)=='batch_probability6') then
+           call pooled_virtual_prepare(cp,cm,cin,ci,mur2,cr,qes2)
+        else
+           call pooled_virtual_prepare(cp,cm,cin,ci,mur2,cr)
+        endif
+        if(trim(test_case)=='batch_probability'.or.trim(test_case)=='batch_probability6') then
            write(*,'(I0,1X,*(ES25.16E3,1X))') j,pooled_virtual_ratio,pooled_virtual_call_probability(.125d0)
         else
            write(*,'(I0,1X,*(ES25.16E3,1X))') j,pooled_virtual_ratio
@@ -45,16 +53,24 @@ program check_virtual_pooled
      enddo
      close(unit)
      stop
-  case('invariants')
+  case('invariants','invariants6')
      open(newunit=unit,file='coordinates_input.dat',status='old')
-     read(unit,*) n,mur2
+     if(trim(test_case)=='invariants6') then
+        read(unit,*) n,mur2,qes2
+     else
+        read(unit,*) n,mur2
+     endif
      allocate(cp(0:3,n),cm(n),ci(n),cin(n))
      do k=1,n
         read(unit,*) ci(k),cm(k),flag,cp(:,k)
         cin(k)=flag==1
      enddo
      close(unit)
-     call pooled_virtual_invariants(cp,cm,cin,ci,mur2,cat,x,valid)
+     if(trim(test_case)=='invariants6') then
+        call pooled_virtual_invariants(cp,cm,cin,ci,mur2,cat,x,valid,qes2)
+     else
+        call pooled_virtual_invariants(cp,cm,cin,ci,mur2,cat,x,valid)
+     endif
      if(.not.valid) stop 2
      write(*,'(2(I0,1X),*(ES25.16E3,1X))') cat,size(x),x
      stop
@@ -111,7 +127,7 @@ program check_virtual_pooled
         before=pooled_virtual_ratio
         ratio=999d0 ! MINT re-evaluates its grid at subsequent folds.
         call check(pooled_virtual_ratio,before,'frozen correction across folds')
-        ! Far outside the fitted domain, retain MINT and request an exact loop.
+        ! Far outside, retain the bounded polynomial and request an exact loop.
         p(0:3,1:2)=p(0:3,1:2)*100d0
         p(0,3:4)=p(0,3:4)*100d0
         p(1,3)=sqrt(p(0,3)**2-mass(3)**2)
@@ -119,7 +135,7 @@ program check_virtual_pooled
         call pooled_virtual_begin_point()
         ratio=[10d0,-3d0]
         call pooled_virtual_prepare(p,mass,incoming,pdg,10000d0,ratio)
-        call check(pooled_virtual_ratio,ratio,'tail MINT fallback')
+        call check(pooled_virtual_ratio,[12d0,ratio(2)],'tail bounded continuation')
         if(pooled_virtual_call_probability(.125d0)/=1d0) stop 11
      endif
   case('bad_model')

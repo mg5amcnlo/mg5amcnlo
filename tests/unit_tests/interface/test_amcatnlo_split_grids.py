@@ -70,3 +70,52 @@ class TestSplitOrderGrids(unittest.TestCase):
                     self.combine()
                 for name in ('mint_grids', 'grid.MC_integer'):
                     self.assertEqual((self.base / name).read_bytes(), b'previous master\n')
+
+    def test_combines_virtual_envelope_factors_and_preserves_marker(self):
+        # Componentwise maxima cover the proposal from every split replica.
+        self.write_split_grids([b'MAX 2 9\nMAX .7\nPVP 1\nVEP 3\n',
+                                b'MAX 5 3\nMAX .3\nPVP 1\nVEP 3\n'])
+        self.combine()
+        content = (self.base / 'mint_grids').read_bytes()
+        self.assertIn(b'MAX 5.0 9.0\n', content)
+        self.assertIn(b'MAX 0.7\n', content)
+        self.assertTrue(content.endswith(b'PVP 1\nVEP 3\n'))
+
+    def test_virtual_envelope_mismatch_preserves_outputs(self):
+        for blocks in ([b'PVP 1\nVEP 1\n', b'PVP 1\n'],
+                       [b'PVP 1\nVEP 1\n', b'PVP 1\nVEP 2\n']):
+            with self.subTest(blocks=blocks):
+                self.write_split_grids(blocks)
+                for name in ('mint_grids', 'grid.MC_integer'):
+                    (self.base / name).write_bytes(b'previous master\n')
+                with self.assertRaisesRegex(aMCatNLOError, 'Virtual envelope formats differ'):
+                    self.combine()
+                for name in ('mint_grids', 'grid.MC_integer'):
+                    self.assertEqual((self.base / name).read_bytes(), b'previous master\n')
+
+    def test_combines_both_velocity_and_born_bounds_by_maximum(self):
+        self.write_split_grids([b'MAX .7 .1\nPVP 1\nVEP 4\n',
+                                b'MAX .3 .4\nPVP 1\nVEP 4\n'])
+        self.combine()
+        content = (self.base / 'mint_grids').read_bytes()
+        self.assertIn(b'MAX 0.7 0.4\n', content)
+        self.assertTrue(content.endswith(b'PVP 1\nVEP 4\n'))
+
+    def test_truncated_velocity_bound_cannot_be_silently_merged(self):
+        self.write_split_grids([b'MAX .7 .1\nPVP 1\nVEP 4\n',
+                                b'MAX .3\nPVP 1\nVEP 4\n'])
+        (self.base / 'mint_grids').write_bytes(b'previous master\n')
+        with self.assertRaisesRegex(aMCatNLOError, 'different numbers of values'):
+            self.combine()
+        self.assertEqual((self.base / 'mint_grids').read_bytes(), b'previous master\n')
+
+    def test_invalid_mc_integer_grid_preserves_both_master_files(self):
+        self.write_split_grids([b'PVP 1\nVEP 4\n', b'PVP 1\nVEP 4\n'])
+        (Path(self.jobs[1]['dirname']) / 'grid.MC_integer').write_bytes(
+            b'AVE 6\nSUM 5 7\n')
+        for name in ('mint_grids', 'grid.MC_integer'):
+            (self.base / name).write_bytes(b'previous master\n')
+        with self.assertRaisesRegex(aMCatNLOError, 'different numbers of values'):
+            self.combine()
+        for name in ('mint_grids', 'grid.MC_integer'):
+            self.assertEqual((self.base / name).read_bytes(), b'previous master\n')

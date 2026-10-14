@@ -39,10 +39,17 @@ class TestVirtualPoolController(unittest.TestCase):
                     split=split, run_mode='all')
 
     @staticmethod
-    def fit(job_dirs, output_model, report_path, job_groups=None):
+    def fit(job_dirs, output_model, report_path, job_groups=None, **kwargs):
         Path(output_model).write_text('frozen model for %s\n' % job_dirs)
         Path(report_path).write_text('{}\n')
         return dict(status='trained', model_written=True)
+
+    def neural_fit(self, *args, **kwargs):
+        result = self.fit(*args, **kwargs)
+        self.assertTrue(kwargs['neural'])
+        Path(kwargs['output_neural']).write_text('frozen conditional heads\n')
+        result['neural'] = dict(model_written=True)
+        return result
 
     def test_global_barrier_groups_by_subprocess_and_deduplicates(self):
         self.configure()
@@ -143,6 +150,102 @@ class TestVirtualPoolController(unittest.TestCase):
                 self.command.stage_virtual_pool(job, 2, False)
             fit.assert_called_once()
         self.assertEqual((Path(job['dirname']) / 'virtual_pool_mode.dat').read_text(), '2\n')
+
+    def test_neural_companion_copied_and_required_for_grid_transfer(self):
+        self.configure()
+        job = self.job(split=3)
+        with mock.patch('madgraph.various.virtual_pool.train_pool', side_effect=self.neural_fit):
+            self.command.collect_virtual_pool([job], 0, False)
+        self.command.stage_virtual_pool(job, 2, False)
+        companion = Path(job['dirname']) / 'virtual_pool_neural.dat'
+        source = companion.parent.parent / companion.name
+        self.assertEqual(companion.read_bytes(), source.read_bytes())
+        self.assertFalse(companion.is_symlink())
+        self.command.get_pdf_input_filename = lambda: str(self.root / 'missing_pdf')
+        _, _, required, _ = self.command.getIO_ajob(
+            'ajob1', str(companion.parent.parent), ['1', 'F', '3', '2'])
+        self.assertIn('GF1_3/virtual_pool_neural.dat', required)
+        self.configure(resume=True)
+        self.command.stage_virtual_pool(job, 2, False)
+        source.write_text('altered heads\n')
+        self.configure(resume=True)
+        with self.assertRaisesRegex(aMCatNLOError, 'neural checksum'):
+            self.command.stage_virtual_pool(job, 2, False)
+
+    def test_neural_resume_binds_native_filter_and_parameters(self):
+        parent = self.root / 'SubProcesses' / 'P0_gg'
+        resources = parent / 'MadLoop5_resources'
+        resources.mkdir()
+        native_filter = resources / 'HelFilter.dat'
+        native_filter.write_text('1 2 0 0\n')
+        born = parent / 'born.f'
+        born.write_text('native Born provider\n')
+        parameters = self.root / 'Cards' / 'param_card.dat'
+        parameters.write_text('physical parameters\n')
+        shared = self.root / 'Source' / 'BornSupport' / 'provider_1'
+        shared.mkdir(parents=True)
+        kernel = shared / 'kernel_1.f'
+        kernel.write_text('shared Born amplitude kernel\n')
+        helicity_library = self.root / 'Source' / 'DHELAS'
+        helicity_library.mkdir()
+        helicity = helicity_library / 'FFV1_0.f'
+        helicity.write_text('generated helicity wavefunction\n')
+        self.configure()
+        job = self.job()
+        with mock.patch('madgraph.various.virtual_pool.train_pool', side_effect=self.neural_fit):
+            self.command.collect_virtual_pool([job], 0, False)
+        for path in (native_filter, born, parameters, kernel, helicity):
+            original = path.read_bytes()
+            path.write_text('different physics or head identity\n')
+            self.configure(resume=True)
+            with self.assertRaisesRegex(aMCatNLOError, 'amplitude, helicity filter or parameters'):
+                self.command.stage_virtual_pool(job, 2, False)
+            path.write_bytes(original)
+        # Native drivers rewrite these run controls before generation.
+        (parent / 'randinit').write_text('seed=12345\n')
+        (parent / 'run_card.inc').write_text('NEVENTS=100000\n')
+        self.configure(resume=True)
+        self.command.stage_virtual_pool(job, 2, False)
+
+    def test_old_manifest_and_rejected_fit_remove_stale_neural_companion(self):
+        self.configure()
+        job = self.job()
+        parent = Path(job['dirname']).parent
+        (parent / 'virtual_pool_neural.dat').write_text('stale heads\n')
+        with mock.patch('madgraph.various.virtual_pool.train_pool', side_effect=self.fit):
+            self.command.collect_virtual_pool([job], 0, False)
+        self.assertFalse((parent / 'virtual_pool_neural.dat').exists())
+        manifest = parent / 'virtual_pool_manifest.json'
+        state = json.loads(manifest.read_text())
+        state['version'] = 1
+        state.pop('neural_sha256')
+        state.pop('source_identity')
+        manifest.write_text(json.dumps(state))
+        stale = Path(job['dirname']) / 'virtual_pool_neural.dat'
+        stale.write_text('unbound heads\n')
+        self.configure(resume=True)
+        self.command.stage_virtual_pool(job, 2, False)
+        self.assertFalse(stale.exists())
+
+    def test_neural_resume_checks_run_physics_but_allows_new_event_count(self):
+        card = self.root / 'Cards' / 'run_card.dat'
+        card.write_text('1000 = nevents\n123 = iseed\n20.0 = ptj\n6500 = ebeam1\n')
+        self.configure()
+        job = self.job()
+        with mock.patch('madgraph.various.virtual_pool.train_pool', side_effect=self.neural_fit):
+            self.command.collect_virtual_pool([job], 0, False)
+        card.write_text('6500.0 = ebeam1 ! unchanged beam\n100000 = nevents\n'
+                        '987 = iseed\n2d1 = ptj\n')
+        self.configure(resume=True)
+        self.command.stage_virtual_pool(job, 2, False)
+        for setting in ('30 = ptj', '7000 = ebeam1', 'cteq6l1 = pdlabel',
+                        '2 = mur_over_ref', '260000 = lhaid'):
+            with self.subTest(setting=setting):
+                card.write_text('100000 = nevents\n987 = iseed\n20 = ptj\n'
+                                '6500 = ebeam1\n'+setting+'\n')
+                self.configure(resume=True)
+                with self.assertRaisesRegex(aMCatNLOError, 'parameters differ'):
+                    self.command.stage_virtual_pool(job, 2, False)
 
     def test_fixed_order_split_gets_frozen_model_and_grid_copies(self):
         self.configure(mode='NLO')

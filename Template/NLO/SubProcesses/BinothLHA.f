@@ -5,6 +5,8 @@ c that calls the OLP and returns the virtual weights. For convenience
 c also the born_wgt is passed to this subroutine.
 c
       use FKSParams
+      use virtual_pooled, only: pooled_virtual_enabled,
+     $ pooled_virtual_set_selection,pooled_virtual_validate_native_map
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -90,6 +92,8 @@ c masses
       data nbad / 0 /
 
       IOErrCounter = 0
+      if(pooled_virtual_enabled)
+     $ call pooled_virtual_set_selection(.true.,-1,1d0)
 c update the ren_scale for MadLoop and the couplings (should be the
 c Ellis-Sexton scale)
       mu_r = sqrt(QES2)
@@ -210,6 +214,8 @@ C          different coupling combinations
 c Use the Born helicity amplitudes to sample the helicities of the
 c virtual as flat as possible
             call PickHelicityMC(p,goodhel,hel,ihel,volh)
+            if(pooled_virtual_enabled)
+     $       call pooled_virtual_set_selection(.false.,hel(ihel),volh)
             !
             fillh=.false.
             call sloopmatrixhel_thres(p,hel(ihel),virt_wgts_hel
@@ -561,6 +567,9 @@ c weight, screwing up the complete integration afterward.
          enddo
          virt_wgt=0d0
       endif
+      if(pooled_virtual_enabled.and.mc_hel.eq.1.and.
+     $   .not.firsttime) call pooled_virtual_validate_native_map(
+     $   hel(1:hel(0)),goodhel(1:hel(0)))
       return
       end
 

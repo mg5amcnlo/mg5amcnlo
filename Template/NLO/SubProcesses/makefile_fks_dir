@@ -76,7 +76,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 boostwdir2.o cluster.o splitorders_stuff.o reweight_xsec.o	\
 	 get_color.o iproc_map.o sudakov.o  				\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
-	 $(pineappl_interface) weight_lines.o mint_module.o virtual_pooled.o polfit.o
+	 $(pineappl_interface) weight_lines.o mint_module.o virtual_pooled.o virtual_envelope_carrier.o polfit.o
 
 FILESSUD= fks_phase_space_data.o \
          $(patsubst %.f,%.o,$(wildcard  ewsudakov*.f)) 			\
@@ -228,8 +228,9 @@ driver_mintFO.o driver_mintMC.o write_event.o add_write_info.o \
     test_soft_col_limits.o symmetry_fks_v3.o: genps_fks.o
 driver_mintFO.o: process_module.o
 mint_module.o : FKSParams.o virtual_pooled.o
+virtual_pooled.o : virtual_envelope_carrier.o
 BinothLHA_OLP.o: FKSParams.o
-BinothLHA.o: FKSParams.o
+BinothLHA.o: FKSParams.o virtual_pooled.o
 reweight_xsec_events.o: weight_lines.o
 fks_singular.o: weight_lines.o mint_module.o fks_symmetry.inc
 driver_mintMC.o: weight_lines.o mint_module.o genps_fks_helpers.o fks_symmetry.inc mc_histories.inc

@@ -6695,8 +6695,10 @@ c
 
 
       subroutine bornsoftvirtual(p,bsv_wgt,virt_wgt,born_wgt)
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat,p_born
-      use mc_native_context, only: native_metadata
+      use mc_native_context, only: native_metadata,active_context,
+     $ local_context
       use extra_weights
       use mint_module
       implicit none
@@ -7097,7 +7099,9 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
             feature_pdg=native_metadata%born_ids(:,1)
             call pooled_virtual_prepare(p_born,feature_mass,
      $           feature_incoming,feature_pdg,scale**2,
-     $           average_virtual(1:amp_split_size,ichan))
+     $           average_virtual(1:amp_split_size,ichan),QES2,.true.,
+     $           active_context.eq.local_context)
+            call prepare_pooled_helicities(p_born)
          endif
          ! Training and validation keep the Born-based approximate
          ! virtual below, but exclude the one-loop residual from the fit.
@@ -7107,6 +7111,20 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
      $         virtual_prob=pooled_virtual_call_probability(virtual_prob)
           if ((ran2().le.virtual_prob .and.
      $         abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
+            if(virtual_defer_requested.and.abrv.eq.'virt'.and.
+     $           ickkw.ne.-1)then
+             if(sum(abs(amp_split_born_for_virt)).gt.0d0.and.
+     $           ieee_is_finite(sum(abs(amp_split_born_for_virt))))then
+c Build the native PDF/bias/flow records once with a positive carrier.
+c The exact loop is delayed until the fully weighted Born veto passes.
+               call deferred_virtual_context(0,born_wgt)
+               virtual_deferred_ready=.true.
+               amp_split_virt=sum(abs(amp_split_born_for_virt))
+               virt_wgt=sum(amp_split_virt)
+               call pooled_virtual_mark_sampled(1d0)
+               goto 554
+             endif
+            endif
             call cpu_time(tBefore)
             Call BinothLHA(p_born,born_wgt,virt_wgt)
             if (use_pooled_virtual.and.ickkw.ne.-1) then
@@ -7134,7 +7152,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
      $                 amp_split_virt(iamp).eq.0d0) cycle
                   if (use_pooled_virtual) then
                      amp_split_virt(iamp)=amp_split_virt(iamp)-
-     $                    pooled_virtual_ratio(iamp)
+     $                    pooled_virtual_actual_ratio(iamp)
      $                    *amp_split_born_for_virt(iamp)
                   elseif (use_poly_virtual) then
                      amp_split_virt(iamp)=amp_split_virt(iamp)-
@@ -7148,6 +7166,8 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
                   virt_wgt = virt_wgt + amp_split_virt(iamp)
                enddo
             endif
+            call observe_virtual_ratio(amp_split_virt,
+     $           amp_split_born_for_virt)
             if (abrv.ne.'virt') then
                virt_wgt=virt_wgt/virtual_prob
                do iamp=1,amp_split_size
@@ -7159,6 +7179,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
             tOLP=tOLP+(tAfter-tBefore)
           endif
          endif
+ 554     continue
          virt_wgt_save=virt_wgt
          amp_split_virt_save(1:amp_split_size)=
      $        amp_split_virt(1:amp_split_size)
@@ -8634,4 +8655,163 @@ c     reset the default dynamical_scale_choice
       call get_mother_col_charge(i_fks,j_fks,i_type,ch_i,j_type,ch_j
      $     ,m_type,ch_m)
       j_pdg=pdg_type_d(iFKS,j_fks)
+      end
+
+
+      subroutine prepare_pooled_helicities(p)
+c Compute precisely the native mixture of nonzero Born squared orders,
+c without drawing a helicity or evaluating a virtual matrix element.
+      use mc_born_types
+      use virtual_pooled, only: pooled_virtual_needs_helicities,
+     $ pooled_virtual_set_helicity_weights
+      implicit none
+      include 'nexternal.inc'
+      include 'coupl.inc'
+      include 'q_es.inc'
+      include '../../Source/MODEL/input.inc'
+      double precision p(0:3,nexternal-1),saved_mu_r
+      logical updateloop,saved_updateloop
+      common/to_updateloop/updateloop
+      type(BornRequest) request
+      type(BornResult) result
+      if(.not.pooled_virtual_needs_helicities())return
+c Binoth's sampler sees couplings at the Ellis-Sexton scale. Restore all
+c model parameters after this cheap prediction pass for subsequent terms.
+      saved_mu_r=mu_r
+      saved_updateloop=updateloop
+      mu_r=sqrt(QES2)
+      updateloop=.true.
+      call update_as_param()
+      updateloop=.false.
+      request%helicities=.true.
+      call mc_born_local(p,request,result)
+      call pooled_virtual_set_helicity_weights(result%helicity_orders)
+      mu_r=saved_mu_r
+      updateloop=.true.
+      call update_as_param()
+      updateloop=saved_updateloop
+      end
+
+      subroutine deferred_virtual_context(action,born_wgt)
+      use fks_phase_space_data, only: p_born
+      use mc_native_context, only: active_history
+      use weight_lines
+      use mint_module
+      implicit none
+      include 'nexternal.inc'
+      include 'orders.inc'
+      include 'coupl.inc'
+      include 'q_es.inc'
+      include 'run.inc'
+      include '../../Source/MODEL/input.inc'
+      include 'timing_variables.inc'
+      integer action,i,k,saved_fks,saved_history
+      integer nFKSprocess,current_fks,current_history
+      common/c_nFKSprocess/nFKSprocess
+      double precision born_wgt,saved_p(0:3,nexternal-1),saved_born
+      double precision saved_amp_born(amp_split_size)
+      double precision carrier_raw
+      type(pooled_virtual_context),save :: saved_pool_context
+      double precision saved_g,saved_scale,saved_qes,virt_wgt
+      double precision deferred_before,deferred_after,saved_mu_r
+      double precision current_g,current_scale,current_qes,current_mu_r
+      double precision carrier,other,ratio(amp_split_size)
+      double precision amp_split_virt(amp_split_size),
+     $ amp_split_born_for_virt(amp_split_size),
+     $ amp_split_avv(amp_split_size)
+      common/to_amp_split_virt/amp_split_virt,
+     $ amp_split_born_for_virt,amp_split_avv
+      double precision amp_split_finite_ML(amp_split_size)
+      common/to_amp_split_finite/amp_split_finite_ML
+      double precision virtual_over_born
+      common/c_vob/virtual_over_born
+      logical accepted,updateloop
+      common/to_updateloop/updateloop
+      save saved_p,saved_born,saved_amp_born,carrier_raw,
+     $ saved_g,saved_scale,saved_qes,saved_fks,saved_history,saved_mu_r
+      if(action.eq.0)then
+         saved_p=p_born
+         saved_born=born_wgt
+         saved_amp_born=amp_split_born_for_virt
+         call pooled_virtual_save_context(saved_pool_context)
+         carrier_raw=sum(abs(saved_amp_born))
+         saved_g=g
+         saved_scale=scale
+         saved_qes=QES2
+         saved_mu_r=mu_r
+         saved_fks=nFKSprocess
+         saved_history=active_history
+c Match Binoth's cheap model-parameter update before subsequent Born
+c and scheme-counterterm evaluations, including running BSM couplings.
+         mu_r=sqrt(QES2)
+         updateloop=.true.
+         call update_as_param()
+         updateloop=.false.
+         return
+      endif
+      if(.not.virtual_deferred_ready)return
+      carrier=0d0
+      other=0d0
+      do i=1,icontr
+         if(itype(i).eq.14)then
+            carrier=carrier+sum(abs(parton_iproc(1:niproc(i),i)))
+         else
+            other=other+sum(abs(parton_iproc(1:niproc(i),i)))
+         endif
+      enddo
+      call screen_virtual_carrier(carrier,other,accepted)
+      if(.not.accepted)then
+         icontr=0
+         virt_wgt_mint=0d0
+         born_wgt_mint=0d0
+         pooled_virtual_sampled=.false.
+         virtual_deferred_ready=.false.
+         return
+      endif
+c Evaluate at exactly the first fold's saved native Born context, then
+c restore the final fold's context. Floating-point scale recomputation
+c alone can change QES2 by an ulp across folds.
+      current_g=g
+      current_scale=scale
+      current_qes=QES2
+      current_mu_r=mu_r
+      current_fks=nFKSprocess
+      current_history=active_history
+      call update_fks_dir(saved_fks)
+      call mc_set_history(saved_history)
+      g=saved_g
+      scale=saved_scale
+      QES2=saved_qes
+      mu_r=saved_mu_r
+      call cpu_time(deferred_before)
+      call pooled_virtual_restore_context(saved_pool_context)
+      call BinothLHA(saved_p,saved_born,virt_wgt)
+      call cpu_time(deferred_after)
+      tOLP=tOLP+deferred_after-deferred_before
+      g=current_g
+      scale=current_scale
+      QES2=current_qes
+      mu_r=current_mu_r
+      call update_as_param()
+      call update_fks_dir(current_fks)
+      call mc_set_history(current_history)
+      ratio=(amp_split_finite_ML-pooled_virtual_actual_ratio
+     $     *saved_amp_born)
+     $     /carrier_raw
+      virtual_over_born=0d0
+      if(saved_born.ne.0d0)virtual_over_born=virt_wgt/saved_born
+      do i=1,icontr
+         if(itype(i).ne.14)cycle
+         k=amppos(i)
+         if(k.lt.1.or.k.gt.amp_split_size)stop 'bad deferred order'
+         wgt(1:3,i)=wgt(1:3,i)*ratio(k)
+         wgts(1,i)=wgts(1,i)*ratio(k)
+         parton_iproc(1:niproc(i),i)=
+     $        parton_iproc(1:niproc(i),i)*ratio(k)
+      enddo
+      virt_wgt_mint(1:amp_split_size)=
+     $     virt_wgt_mint(1:amp_split_size)*ratio
+      virt_wgt_mint(0)=sum(virt_wgt_mint(1:amp_split_size))
+      call pooled_virtual_mark_sampled(1d0)
+      virtual_deferred_ready=.false.
       end

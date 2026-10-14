@@ -75,6 +75,9 @@ class TestPooledVirtualWeights(unittest.TestCase):
     def test_pooled_exact_cancellation_and_frozen_fold_ratio(self):
         self.check_mode('pooled_cancellation')
 
+    def test_conditional_mean_and_selected_subtraction_reconstruct_sample(self):
+        self.check_mode('conditional_actual_subtraction')
+
     def test_pooled_subsampling_keeps_exact_mean(self):
         self.check_mode('pooled_subsampling')
 
@@ -83,3 +86,9 @@ class TestPooledVirtualWeights(unittest.TestCase):
 
     def test_pooled_tail_uses_actual_probability_in_exact_correction(self):
         self.check_mode('pooled_tail_probability')
+
+    def test_deferred_zero_carrier_falls_back_to_exact_virtual(self):
+        self.check_mode('deferred_zero_carrier')
+
+    def test_deferred_veto_xsec_retains_immediate_virtual(self):
+        self.check_mode('deferred_veto_xsec')

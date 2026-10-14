@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
 class TestPooledMint(unittest.TestCase):
-    def test_channel_loop_budget_freezes_only_after_barrier(self):
+    def test_channel_loop_budget_adapts_to_the_frozen_residual(self):
         source = (ROOT / 'Template/NLO/SubProcesses/mint_module.f90').read_text()
         routine = re.search(r'^  subroutine update_virtual_fraction\b.*?'
                             r'^  end subroutine update_virtual_fraction', source,
@@ -36,10 +36,10 @@ program check
  if(any(abs(virtual_fraction-[.1d0,.8d0])>1d-14))error stop 'collection budget did not adapt'
  pooled_virtual_applying=.true.
  call update_virtual_fraction
- if(any(abs(virtual_fraction-[.1d0,.8d0])>1d-14))error stop 'frozen fit changed loop budget'
+ if(any(abs(virtual_fraction-[.025d0,1d0])>1d-14))error stop 'frozen fit did not save loops'
  use_pooled_virtual=.false.
  call update_virtual_fraction
- if(any(abs(virtual_fraction-[.025d0,1d0])>1d-14))error stop 'legacy budget did not adapt'
+ if(any(abs(virtual_fraction-[.00625d0,1d0])>1d-14))error stop 'legacy budget did not adapt'
 end program
 ''')
             compiled = subprocess.run([

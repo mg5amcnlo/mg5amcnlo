@@ -1,5 +1,5 @@
-Barrier-pooled virtual approximation: invariant polynomials, format version 2
-============================================================================
+Barrier-pooled virtual approximation and conditional helicity corrections
+=========================================================================
 
 New NLO exports enable #UsePooledVirtual in Cards/FKS_params.dat. Old cards
 without that key retain the previous default. Set it false to disable pooling
@@ -16,6 +16,12 @@ It pools integration channels and split replicas within the same actual Born
 subprocess and fits each coupling order separately. There is no communication
 among workers during a stage. Frozen models are copied into subsequent job
 directories, including cluster transfers. Controller resumes verify checksums.
+An optional virtual_pool_neural.dat companion is trained at this same barrier.
+It uses the native helicity map and probabilities captured with existing loop
+evaluations; it generates no additional sampled or full-sum virtual calls.
+Its checksum and the base-model checksum are frozen together. Resuming a neural
+fit also verifies generated amplitude sources, model parameters and native
+helicity resources. Event counts, random seeds and object files are excluded.
 
 job_groups maps each directory to its physical integration-channel batch.
 Split replicas share an attempted-point denominator. Different batches have
@@ -41,12 +47,20 @@ Born-spreading calibration restarts discard pre-calibration observations.
 
 Model and conservative selection
 --------------------------------
-The candidate is A_new=(1-lambda) A_MINT + lambda B P(z). P is linear or
-quadratic, including all cross terms. The invariant coordinate catalog is:
+The candidate is A_new=(1-lambda) A_MINT + lambda B P(z). P is linear,
+quadratic including all cross terms, or a validated sparse cubic.
+Invariant coordinate catalog 6 is:
   log(shat/muR^2),
   log(max(abs(2*pi.pj)/shat,1e-15)) for all i<j in native Born order,
-  log(shat/m^2) for distinct positive external masses in ascending order.
-The renormalization scale is the actual runtime scale. Coordinates do not
+  log(shat/m^2) for distinct positive external masses in ascending order,
+  log(shat/QES2), using the actual Ellis-Sexton scale passed to MadLoop,
+  log(shat), with shat expressed in the native GeV-squared units.
+muR is the physical runtime renormalization scale, which can differ from
+the loop reference scale QES2, for example in FxFx. The absolute scale lets
+massless external states describe effects of massive internal particles.
+Catalog 5 remains readable with its original meaning and lacks the last two
+coordinates; captures from different catalogs are never silently combined.
+Coordinates do not
 require a particular spin, colour representation, or particle identity.
 This is a generic fitting basis, not an exact formula for arbitrary virtuals.
 
@@ -54,9 +68,35 @@ Scalers use fitting rows only and map nonconstant coordinates to [-1,1].
 Constants and negligible columns are removed. Regression fits weighted V
 through V-B*P without per-point Born division. Born/target/column normalization
 keeps the small linear systems well scaled. The fixed candidate scan is:
-  degree 1 or 2; ridge 1e-4,0.01,1; Huber or squared loss;
-  blend 0,0.25,0.5,0.75,1. Huber IRLS has eight iterations and a fixed
-  residual threshold of 0.25 times the weighted mean absolute target scale.
+  degree 1 or 2; ridge 1e-4,0.01,1; Huber or squared loss, with constant
+  or Born-dependent noise scale; blend 0,0.25,0.5,0.75,1.
+Constant-noise Huber IRLS has eight iterations and a residual threshold of
+0.25 times the weighted mean absolute target scale. Born-noise fits divide
+the regression weights by max(abs(B)/born_scale,1e-12), while retaining the
+unsingular target V-B*P. Their Huber threshold follows that same noise scale
+and uses twenty iterations. The validation objective is always the original
+physical residual, independently of the candidate's fitting loss.
+
+Richer candidates use degree 3, ridge 0.01 and Born-dependent squared
+loss. Catalogs 6/7 compare the complete scalar coordinate set with a relative-only
+variant that excludes absolute log(shat), including from its linear and
+quadratic terms. CV selects between them; no particle or process identity
+selects a basis. Both keep full-catalog native index numbering and bounds.
+Each preserves every constant, linear and quadratic term of its chosen
+coordinate set. If the dense
+cubic exceeds 512 terms, a preliminary fit ranks cubic terms by normalized
+coefficient magnitude; the strongest additions are retained and the capped
+model is refitted. This selection is repeated inside each fitting fold,
+without consulting its held-out observations. Active feature count is capped
+at 18 and the temporary dense design at 40 million values, including the
+final all-sample fit. Each fitting fold needs five rows per dense candidate
+term. Processes outside these budgets keep the existing simpler candidates.
+
+Before its three CV fits, each cubic must improve the best validated simpler
+model's forward L1 by at least 2%, with no more than a 5% forward RMS increase.
+The cubic is skipped if there is insufficient forward history or no validated
+simpler reference. Passing this preliminary screen still requires all the
+ordinary matched-fold, aggregate RMS and forward-validation guards below.
 
 Three-fold CV is stratified by job/channel/iteration, keeping coupling orders
 of the same point together. Each validation baseline is a frozen native MINT
@@ -64,12 +104,20 @@ reconstruction from that same fold complement, including the recorded 4-to-8
 bin schedule. The stored causal A is NOT the validation baseline. Worker and
 channel histories remain distinct, as in the native grids. All sampled rows,
 including exact zero residuals, enter the MINT reconstruction.
+An additional forward validation fits earlier whole iterations and evaluates
+later iterations separately in each worker/channel. Where enough observations
+are available, candidates must not increase its L1 or increase RMS by more
+than 5%. Reports include both validations' maximum residuals; these are useful
+diagnostics but are not estimates of an unseen supremum.
 
 A candidate must reduce weighted L1 by more than both 2% and twice a
 conservative paired standard-error estimate. Its aggregate RMS must not
-increase; no individual fold may increase RMS by more than 5%. A linear
+increase; no individual fold may increase RMS by more than 5%. A simpler
 candidate within one paired error estimate of the best L1 is preferred over
-quadratic complexity. The error estimate is sqrt(sum((w_i*delta_i)^2)), with
+higher degree only when its RMS and forward-validation L1/RMS are
+also within 5% of the best. This comparison uses the paired difference between
+the two candidates, not their improvements over MINT.
+The error estimate is sqrt(sum((w_i*delta_i)^2)), with
 normalized weights and paired absolute-residual differences. It prevents one
 large observed gain from establishing significance by itself. These tuning
 diagnostics are not independent performance measurements.
@@ -83,21 +131,63 @@ explicit zero-blend MINT fallback. Without NumPy on the controller, no model is
 installed: ordinary MINT marginals and adaptive virtual-call fractions remain
 active, including on later split jobs and resumes. Resuming a previously fitted
 model does not need NumPy; workers evaluate it in Fortran and retain its frozen
-event envelope. Captures and models use format version 2.
+event envelope. Legacy captures remain format version 2. Models
+without cubics remain version 2 for those captures; a selected cubic or a new
+conditional capture uses model version 3.
+Both model versions and coordinate catalogs 5/6/7 are read explicitly.
 Earlier experimental formats are rejected; restart their integration from
 grid setup before using this implementation.
 
+Conditional helicity correction
+------------------------------
+New capture version 3 stores catalog 7, the complete native helicity tuples and
+GOODHEL multiplicities, the actual selected/full-sum branch, selected native
+probability, complete probability vector and Born momenta. Catalog 7 appends
+signed, normalized epsilon contractions to catalog 6. Polynomial terms contain
+at most one such odd coordinate. These orientation inputs distinguish reflected
+points which share all scalar products but can have different virtuals.
+
+The optional neural correction has one or two tanh layers, a linear skip and
+one output per trained native helicity representative. Its finite target is
+V-A_common, with a Born carrier multiplying the prediction. Training never
+divides a target by the point's Born. Input bounds, common-model coefficients
+and neural coefficients are refitted independently in three
+chronological forward splits (one half, two thirds and four fifths of each
+worker/channel history). Head eligibility is frozen from the earliest fitting
+subset and retained in later folds and the final fit. Every split must improve physical weighted L1 and
+increase RMS by no more than 5%; aggregate RMS must not increase. Mean L1 gain
+must exceed both 2% and twice the largest paired error estimate. Failed fits,
+insufficient heads or missing optional SciPy retain the common approximation.
+Unknown or untrained heads contribute zero conditional correction.
+
+Native Born helicity squared orders determine exactly the same probability
+mixture as PickHelicityMC, including representative multiplicities and the
+actual Ellis-Sexton coupling state. The original helicity draw remains inside
+BinothLHA. If A_h is the prediction for its native sampled estimator, then
+
+  A_mean = sum_h q_h A_h
+  corrected = A_mean + I/p * (V_native,h - A_h).
+
+A native full-sum branch instead subtracts A_mean. Capture and grid adaptation
+reconstruct V using the actual selected subtraction, rather than A_mean. The
+deferred loop saves the first fold's full prediction table, probabilities and
+native context. Native worker inference uses Fortran and consumes no RNG.
+Extra diagnostic full-sum research labels are not production training inputs.
+
 Exact correction, boundaries and call budget
 -------------------------------------------
-The original helicity sampler and RNG are unchanged. The estimator remains
-A + I*(V_h-A)/p with the actual positive loop-call probability p. Models are
-frozen at the barrier. The first-stage channel probabilities are retained
-while applying them, so better residuals do not automatically lower the loop
-budget. Native driver policies can still explicitly require exact loops.
+The original helicity sampler and random-number generator are retained. The
+estimator uses the mean/selected identity above, or its common-model limit
+A + I*(V_h-A)/p, with the actual positive loop-call probability p. Models are
+frozen at the barrier. Channel call probabilities continue adapting to the
+measured residual errors. Native driver policies can still explicitly require
+exact loops. Event generation uses a separately trained residual proposal.
 
 Features clamp to their training boundaries. If any coordinate of an active
-model lies more than 10% of its training range beyond a boundary, that order
-uses MINT and the point requests an exact virtual (p=1). A constant coordinate
+model lies more than 10% of its training range beyond a boundary, the bounded
+polynomial is retained and the point requests an exact virtual (p=1). Hard
+replacement by MINT would recreate large residuals in just those tails.
+A constant coordinate
 has tolerance 1e-10*max(1,abs(value)). Invalid coordinates in apply mode also
 request an exact loop. The point's actual probability is used for residual
 normalization, exact-V reconstruction and virtual-envelope bookkeeping.
@@ -106,18 +196,125 @@ No positivity clipping or deletion of negative weights is performed.
 
 The collection stage itself cannot benefit from the model. Short fixed-order
 runs ending at step 1 only train; later integration stages consume the fit.
-A better residual does not guarantee fewer negative unweighted events or a
-net timing gain. Full-event tests and total fitting/inference overhead matter.
+The implemented residual L1/RMS promotion guards do not guarantee that
+unweighting efficiency will improve or remain unchanged. A promotion guard
+based on residual tails or generation-envelope cost is future work; it is not
+implemented. A better residual also does not guarantee fewer negative
+unweighted events or a net timing gain. Full-event tests and total
+fitting/inference overhead matter.
 
-Version-2 files
----------------
+Residual proposal and early Born veto
+-------------------------------------------
+For MC@NLO generation, reducing the mean residual alone does not control loop
+cost: a loose residual rejection bound can still require many exact virtual
+evaluations per accepted event. Pooled runs therefore train a separate
+factorized residual envelope on the existing MINT cells during step 1. Every
+sampled exact residual updates both this envelope and the scalar bound to
+cover twice the observed absolute residual weight. The loop-call probability
+is removed before either update. Factors only increase, preserving coverage
+of all earlier observations. Folding uses only the active cells.
+
+The product envelope's normalization is the product of its marginal means.
+Generation chooses the smaller integrated bound as its base proposal, then
+performs a cheap rejection to sample the pointwise minimum of the scalar and
+product envelopes. This preliminary rejection evaluates neither phase space
+nor matrix elements. The ordinary exact residual and its event sign are then
+computed, followed by rejection against that same minimum bound. Thus the
+proposal changes sampling efficiency without changing the residual target
+when the envelope covers it. The scalar comparison includes the same
+factor-two observed-point margin; an underestimated scalar cannot win merely
+because its update was capped.
+
+Step 1 also learns a dimensionless Born-carrier bound kappa from its existing
+exact virtual evaluations. Its observation is twice the largest absolute
+split-order residual divided by the sum of absolute native Born components,
+before any inverse loop-probability weighting. Only the frozen approximation
+used in this stage enters the bound. Learning requests no extra virtuals and
+consumes no random draws. No positive ratio evidence disables the Born veto;
+a zero total Born carrier at a point uses the original exact path.
+
+Version 4 also learns a second kappa for the carrier
+
+  C = sum_order abs(B_order) * (1 + sum_massive_outgoing_pairs 1/v_ij)
+  v_ij = sqrt((p_i.p_j)^2 - m_i^2*m_j^2) / (p_i.p_j).
+
+This uses generic masses and momenta, without selecting a particle species.
+It accommodates a finite virtual correction where a massive-pair Born weight
+vanishes at threshold. Both kappas use the same existing exact observations
+and factor-two margin. Screening takes the minimum of the ordinary Born,
+velocity and outer bounds. The ordinary bound protects cases where the extra
+carrier is less useful. An unresolved velocity bypasses the carrier veto and
+evaluates the exact residual against the outer proposal. No velocity floor is
+introduced. The first fold's factor is retained with the deferred context.
+
+For a residual generation candidate, a cheap native pass uses that positive
+Born carrier in each virtual split order. It builds phase space, all folds,
+PDFs, bias factors and the normal event records once. The screening bound is
+kappa times the sum of absolute weighted carrier/flavour contributions, plus
+absolute contributions outside the residual. Signed orders therefore cannot
+cancel out the screening carrier. Generation screens against the minimum of
+this bound and the outer envelope before calling MadLoop. On passing, the
+exact loop uses the saved first-fold Born context; each carrier record is
+multiplied by its own exact split-order residual/carrier ratio. Native event
+grouping and sign selection then use these corrected weights. The final-fold
+context is restored, including its scale and coupling values.
+
+The two rejections multiply to the ordinary exact residual rejection
+probability: screening with T/E followed by |R|/T gives |R|/E, where
+T=min(E,Born bound,velocity bound). Native FKS, flow and flavour choices are retained. The
+helicity sampler is unchanged and is called after the cheap veto, so its
+random draws move later in the candidate evaluation. Complete-helicity native
+identity checks and statistical sampled-helicity comparisons serve different
+validation purposes. Performance comparisons must count
+all integration stages and the remaining cheap carrier evaluations as well
+as MadLoop calls.
+
+These are empirical bounds, not analytic upper limits. A rare peak can exceed
+either learned bound. Production diagnostics therefore report overflow counts
+and the proposal-weighted excess fraction, sum(max(f/bound-1,0)) /
+sum(f/bound). They also report cheap proposals, phase-space attempts, evaluated
+residuals, the outer proposal normalization, kappa, and Born-carrier attempts
+and vetoes. The outer normalization does not include the subsequent Born
+veto. Residual excess should also be assessed against the residual sector's
+fraction of the total absolute integral when evaluating physics precision.
+
+Fixed-order integration does not use the generation envelope or Born veto.
+Disabling UsePooledVirtual retains the original scalar update, generation
+proposal and random-number sequence. Generation reads frozen grid data and
+does not rewrite shared input grids; split replicas have no mutable shared
+sampling state.
+
+Native grid envelope metadata
+-----------------------------
+Pooled MC grids written after step 1 append one MAX row per MINT interval and
+channel for the residual factors, then one MAX row per channel for the ordinary
+and velocity kappas, followed by the marker VEP 4. This marker
+is separate from the virtual model/capture version. Split-grid merging takes
+componentwise maxima of the factors and kappa and requires consistent markers
+and row counts. The resulting product covers the observations from every replica.
+
+Generation reads the complete VEP 4 grid, including in only_generation and
+restart workflows. VEP 3 retains its original ordinary-Born denominator with
+the velocity veto disabled. VEP 2 grids retain the product/minimum proposal with the
+Born veto disabled because they contain no ratio evidence. Older grids
+without a VEP marker retain the scalar-only fallback. Experimental VEP 1 grids are rejected because their scalar bound
+does not have the margin required by minimum-envelope sampling; rerun the
+envelope integration. Step 1 normally reads the preceding step-0 grid, which
+has no residual-envelope block. A diagnostic workflow that manually strips
+MAX rows to reconstruct such an integration grid must also remove VEP.
+Changing the approximation or physical inputs requires fresh integration
+and envelope training rather than reuse of any version's old bounds.
+
+Capture and model files
+-----------------------
 virtual_pool_samples.dat has five header lines:
   VIRTUAL_POOL_SAMPLES 2
-  5 nf norders nlegs nx
+  6 nf norders nlegs nx
   pdg(1:nlegs)
   mass(1:nlegs)
   incoming(1:nlegs)
 
+The first field is the feature catalog (legacy 5 or current 6).
 nx is the number of Born MINT random coordinates (ndim-3). Exactly two legs
 are incoming. Each subsequent row is:
   sampleid channel iteration order bins probability B V A features(1:nf) x(1:nx)
@@ -140,15 +337,136 @@ Feature indices are one-based; index zero means the constant 1. Thus (0,0)
 is a constant, (a,0) a linear term, and (a,b) a quadratic product. The raw
 Born multiplier is target_scale/born_scale times the polynomial sum.
 Degree is 0,1,2; zero blend reproduces MINT exactly. Constant boundary scaling,
-out-of-domain fallback and polynomial ordering agree between Python/Fortran.
+bounded continuation and polynomial ordering agree between Python/Fortran.
+
+A model containing a cubic begins with VIRTUAL_POOL_MODEL 3. Its metadata
+and order headers are unchanged; every term row, including lower-degree
+orders in the same model, instead stores:
+  a b c coefficient
+Degree may also be 3. Trailing zero indices pad lower-degree terms, while
+(a,b,c) with three positive indices is a cubic product. Version-2 models are
+not interpreted as triples. Capture and model format versions are independent.
 
 Models and JSON reports are written atomically. Per-job mode markers remain
 0=inactive,1=collect,2=apply. A no-header fallback needs no model. Reports give
 actual point counts, candidate diagnostics, selected models and fit wall time.
 A subprocess manifest binds the model checksum to the integration workflow.
 
+Conditional capture and companion interchange
+-----------------------------------------------
+Capture version 3 retains the five header lines above and appends nhel,
+followed by nhel complete native map records, including inactive IDs:
+  actual_id GOODHEL HEL(1:nlegs)
+Actual IDs are one-based and sequential. Each data row retains the legacy
+prefix and appends:
+  full_branch selected_actualhel selected_q q(1:nhel) pBorn(0:3,1:nlegs)
+Momenta are leg-major [E,px,py,pz]. Full branches use selected_actualhel=-1
+and selected_q=1. Otherwise selected_q equals q(selected_actualhel). Native q
+already includes GOODHEL: it must not be multiplied by multiplicity again.
+An all-zero q marks an unavailable distribution; those rows remain in common
+polynomial training but are excluded from conditional fitting. nhel=0 permits
+geometry-only captures. Header creation waits for validated native metadata.
+
+Catalog 7 appends (nlegs-2)*(nlegs-3)/2 signed normalized epsilon coordinates
+to catalog 6, one per pair of non-anchor Born legs. The incoming pair anchors
+a scattering process; the actual incoming leg and first outgoing leg anchor
+a decay. Polynomial bounds for these signed inputs are fixed [-1,1]. The
+common fit adds an odd-times-linear block to the even polynomial, with at
+most one signed factor per term. Legacy catalogs retain their original meaning.
+
+train_pool(..., neural=True, output_neural=...) optionally trains
+virtual_pool_neural.dat. Missing NumPy/SciPy or rejected validation yields an
+explicit fallback and removes any stale companion. The automatic default recipe has one
+64-unit tanh layer, ridge .001, Born-noise exponent 1 and at most 400 L-BFGS
+iterations, using the scalar input bank. Larger optimization budgets, two-layer
+architectures and canonical/composite input banks are manually selected
+research recipes; they do not change this default. Only existing native selected/full branches are labels; no extra
+full-helicity evaluations are requested. The direct loss is V-Acommon-B*NN,
+including signed/zero Born carriers, without constructing a target V/B.
+Untrained heads have zero correction. Full branches constrain sum(q*delta),
+while sampled branches constrain their selected delta.
+
+Three chronological forward splits per worker/channel use fractions .5, 2/3
+and .8. The common polynomial recipe is selected by nested guarded CV using only
+earlier observations. Its coefficients, MINT baseline, input bounds and head
+masks use that same earlier subset; later labels cannot select the recipe. Each fold must improve
+physical L1 with at most a 5% RMS increase; aggregate RMS must not increase.
+The mean L1 gain must exceed 2% and twice the largest paired gain error across
+the overlapping folds. Only an accepted recipe is refitted on all committed
+rows. Reports include relative true-virtual errors, all candidates, fallback
+reasons and the number of additional loop calls (zero).
+
+The companion text codec is:
+  VIRTUAL_POOL_NEURAL 1
+  catalog nf norders nlegs nx nhel
+  pdg(1:nlegs)
+  mass(1:nlegs)
+  incoming(1:nlegs)
+  base_model_sha256
+  actual_id GOODHEL HEL(1:nlegs)                 [nhel rows]
+Then for each coupling order:
+  order enabled ninputs nheads width1 width2 born_scale target_scale
+Disabled orders use zero counts/widths and unit scales, with no following rows.
+An enabled order contains:
+  kind a b c lower upper                        [ninputs rows]
+  actual_id trained                            [nheads rows]
+  W1                                           [ninputs rows, width1 columns]
+  bias1                                        [one row]
+  W2, bias2                                    [only if width2>0]
+  Wout                                         [last-width rows, nheads columns]
+  output_bias                                  [one row]
+  affine_skip                                  [ninputs+1 rows, nheads columns]
+Matrices are input-major; hidden layers use tanh. Output is linear plus the
+affine skip, with ratio correction target_scale/born_scale times that output.
+Input kinds, using one-based catalog/leg/native-helicity IDs, are:
+  1 scaled catalog feature a; 2 raw signed catalog feature a;
+  3 canonical outgoing leg a, component b=0..3; 4 crossed triple-invariant log(a,b,c);
+  5 sign of that triple invariant; 6 native probability 2*q(a)-1.
+Kinds 1/4 clamp training-range scaling to [-1,1], with zero for constant bounds.
+Others are raw. Canonical components are [4E/Q-1,2px/Q,2py/Q,2pz/Q] in the
+incoming-CM frame. Triple logs use log(max(abs((pa+pb+pc)^2)/shat,1e-15)),
+with incoming momenta crossed negative. The default input bank uses scalar,
+signed-orientation and native-q features; canonical/composite banks are optional.
+
+The codec supports one/two hidden layers, at most 64 units each, 64 output
+heads, 128 inputs and a complete native map of at most 65536 IDs. Training caps
+probability storage at 16 million values, feature storage at 40 million, hidden
+activations at 12 million, candidate configurations at four, and optional
+optimization recipes at 4000 iterations. Reports give wall and process CPU
+training time separately.
+
+An accepted conditional model may additionally propose averaging predictions
+over an identical-metadata outgoing-leg swap. This is a control-variate choice,
+not an assumption that a diagram-restricted or decay-chain amplitude is exactly
+symmetric. No transformed targets or extra loop labels are created. The trial
+averages the COMPLETE common polynomial and neural prediction, remaps native
+helicity IDs and q together, and compares against the original native targets
+on all three forward holds. Every active order must pass the same physical L1,
+RMS, 2% gain and paired-error guards relative to the unsymmetrized conditional
+model. Otherwise the companion remains version 1.
+
+Version 2 adds a permutation table immediately after the complete native
+HEL/GOOD map and before the first order block:
+  npermutations
+  leg_permutation(1:nlegs)                      [npermutations rows]
+There are at most two permutations: identity first, then optionally one
+transposition of outgoing legs with equal PDG and mass. Leg indices are
+one-based. The full HEL map must be closed, GOODHEL multiplicities preserved,
+and enabled-head membership and trained masks closed under the swap. The
+trained-head mask is frozen using the earliest forward fitting subset; extra
+all-data rows cannot activate a previously unvalidated rare head. Unknown q
+retains the original common approximation. Native exact-tail flags are combined
+across the prediction passes. Python predict_model evaluates complete version-1
+or version-2 predictions; predict_correction is the unsymmetrized correction
+primitive. No particle species or process name enables a permutation.
+No process name chooses a basis, model architecture or exception.
+
 Implementation
 --------------
 virtual_pool.py: accepted-record pooling, serialization and diagnostics.
 virtual_pool_polynomial.py: regression, matched MINT replay and CV selection.
+virtual_pool_neural.py: conditional fitting, typed inputs and companion codec.
 virtual_pooled.f90: generic coordinates, capture and frozen native inference.
+mint_module.f90: residual envelopes, proposal sampling and generation diagnostics.
+driver_mintMC.f and fks_singular.f: weighted Born screening, delayed exact
+virtual evaluation and native contribution restoration.

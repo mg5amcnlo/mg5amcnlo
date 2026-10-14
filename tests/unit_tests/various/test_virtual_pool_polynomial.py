@@ -71,12 +71,14 @@ class PolynomialPoolTests(unittest.TestCase):
         folds = np.arange(len(rows))%3
         original = poly.fit
         calls = []
+        permitted = [{tuple(rows[i]['features']) for i in range(len(rows)) if folds[i]!=fold}
+                     for fold in range(3)]
+        earlier = poly.forward_split(rows)
+        permitted.append({tuple(rows[i]['features']) for i in range(len(rows)) if earlier[i]})
         def checked(x,b,y,w,*args):
             selected = {tuple(row) for row in x}
             if len(x) != len(rows):
-                fold = len(calls)%3
-                expected = {tuple(rows[i]['features']) for i in range(len(rows)) if folds[i]!=fold}
-                self.assertEqual(selected,expected)
+                self.assertIn(selected,permitted)
             calls.append(len(x))
             return original(x,b,y,w,*args)
         with mock.patch.object(poly,'fit',side_effect=checked):
@@ -89,6 +91,49 @@ class PolynomialPoolTests(unittest.TestCase):
         for candidate in report['candidates']:
             if candidate['eligible']:
                 self.assertLessEqual(candidate['cv_rms'],report['baseline_cv_rms'])
+                self.assertLessEqual(candidate['forward_l1'],report['forward_validation']['baseline_l1'])
+
+    def test_forward_validation_keeps_whole_iterations_and_workers_separate(self):
+        rows=self.records()
+        earlier=poly.forward_split(rows)
+        assignments={}
+        for row,selected in zip(rows,earlier):
+            key=(row['directory'],row['channel'],row['iteration'])
+            self.assertEqual(assignments.setdefault(key,selected),selected)
+        self.assertTrue(all(earlier[i] for i,r in enumerate(rows) if r['iteration']<3))
+        self.assertFalse(any(earlier[i] for i,r in enumerate(rows) if r['iteration']==3))
+
+    def test_born_noise_fit_generalizes_with_large_signed_integration_weights(self):
+        rng=np.random.default_rng(928)
+        x=rng.uniform(-1,1,(1500,2))
+        born=np.exp(rng.normal(0,2,len(x)))
+        born[::101]=0.;born[1::71]*=-1
+        virtual=born*(.4+.6*x[:,0]-.2*x[:,1]+rng.normal(0,.3,len(x)))
+        weight=np.ones(len(x))/len(x)
+        other=rng.uniform(-1,1,(1000,2))
+        truth=.4+.6*other[:,0]-.2*other[:,1]
+        errors={}
+        for loss in ('square','born_square','born_huber'):
+            entry=poly.fit(x,born,virtual,weight,1,1e-4,loss)
+            prediction=poly.predict(entry,other,np.ones(len(other)),np.zeros(len(other)))
+            errors[loss]=np.mean(np.abs(prediction-truth))
+            zero=poly.predict(entry,other,np.zeros(len(other)),np.zeros(len(other)))
+            np.testing.assert_array_equal(zero,0.)
+        self.assertLess(errors['born_square'],.35*errors['square'])
+        self.assertLess(errors['born_huber'],.05)
+
+    def test_noisy_baseline_does_not_hide_resolved_quadratic_improvement(self):
+        rows=self.records()
+        # A noisy comparator makes the improvement over it uncertain. It does
+        # not make the two fitted approximations mutually indistinguishable.
+        comparator=np.full(len(rows),1000.)
+        comparator[49]=50000.
+        with mock.patch.object(poly,'mint_predictions',return_value=comparator):
+            entry,report=poly.fit_order(rows,pool._folds(rows,3),self.metadata,1)
+        self.assertEqual(entry['degree'],2)
+        linear=[c for c in report['candidates'] if c['degree']==1 and c['eligible']]
+        self.assertTrue(linear)
+        self.assertLess(report['selected']['cv_rms'],.15*min(c['cv_rms'] for c in linear))
 
     def test_small_samples_and_zero_orders_use_mint(self):
         rows=self.records(40)
@@ -118,7 +163,110 @@ class PolynomialPoolTests(unittest.TestCase):
         metadata=dict(self.metadata,nf=53)
         _,report=poly.fit_order(rows,np.arange(len(rows))%3,metadata,1)
         self.assertIn(2,report['skipped_degrees'])
+        self.assertIn(3,report['skipped_degrees'])
         self.assertTrue(all(c['parameters']<=poly.MAX_TERMS for c in report['candidates']))
+
+    def test_cubic_is_selected_only_after_forward_and_matched_fold_validation(self):
+        rows=self.records(2400)
+        for row in rows:
+            x=row['features']
+            row['virtual']=row['born']*(.4+.7*x[0]*x[2]*x[3]+.3*x[4]**3)
+        folds=pool._folds(rows,3)
+        earlier=poly.forward_split(rows)
+        allowed=[{tuple(rows[i]['features']) for i in range(len(rows)) if folds[i]!=fold}
+                 for fold in range(3)]
+        allowed.append({tuple(rows[i]['features']) for i in range(len(rows)) if earlier[i]})
+        original=poly.fit
+        cubic_calls=[]
+        def checked(x,b,y,w,degree,*args):
+            if degree==3:
+                selected={tuple(row) for row in x}
+                if len(x)!=len(rows): self.assertIn(selected,allowed)
+                cubic_calls.append(len(x))
+            return original(x,b,y,w,degree,*args)
+        with mock.patch.object(poly,'fit',side_effect=checked):
+            entry,report=poly.fit_order(rows,folds,self.metadata,1)
+        self.assertEqual(entry['degree'],3)
+        self.assertEqual(report['cubic_screen']['reason'],'passed')
+        self.assertEqual(len(cubic_calls),5) # Forward, three CV fits, final fit.
+        self.assertEqual(cubic_calls[-1],len(rows))
+        self.assertTrue(report['selected']['forward_eligible'])
+        self.assertLess(report['selected']['cv_rms'],.1*report['baseline_cv_rms'])
+
+    def test_sparse_cubic_caps_coefficients_and_generalizes(self):
+        rng=np.random.default_rng(9021)
+        x=rng.uniform(-1,1,(2000,16));b=rng.uniform(.5,2.,len(x))
+        b[::91]=0.;b[1::37]*=-1
+        y=b*(.3+.6*x[:,0]*x[:,1]*x[:,2]+.3*x[:,3]**3)
+        w=np.ones(len(x))/len(x)
+        entry=poly.fit(x[:1500],b[:1500],y[:1500],w[:1500],3,.01,'born_square')
+        self.assertEqual(len(entry['terms']),poly.MAX_TERMS)
+        self.assertTrue(any(all(i>=0 for i in term['pair']) for term in entry['terms']))
+        predicted=poly.predict(entry,x[1500:],b[1500:],np.zeros(500))
+        self.assertLess(np.linalg.norm(predicted-y[1500:])/np.linalg.norm(y[1500:]),.2)
+        np.testing.assert_array_equal(predicted[b[1500:]==0],0.)
+
+    def test_cubic_budget_is_checked_before_matrix_allocation(self):
+        rng=np.random.default_rng(472)
+        x=rng.normal(size=(100,poly.MAX_CUBIC_FEATURES+1));v=np.ones(100)
+        with mock.patch.object(poly,'design',side_effect=AssertionError('allocated')):
+            with self.assertRaisesRegex(ValueError,'fit budget'):
+                poly.fit(x,v,v,v,3,.01,'born_square')
+            with mock.patch.object(poly,'MAX_CUBIC_DESIGN_ELEMENTS',100):
+                with self.assertRaisesRegex(ValueError,'fit budget'):
+                    poly.fit(x[:,:4],v,v,v,3,.01,'born_square')
+
+    def test_relative_cubic_excludes_absolute_energy_at_every_degree(self):
+        rng=np.random.default_rng(731)
+        x=rng.uniform(-1,1,(800,10));x[:,1]=0.
+        b=rng.uniform(.5,2.,len(x));y=b*(.5+.6*x[:,0]*x[:,2]*x[:,8])
+        entry=poly.fit(x,b,y,np.ones(len(x)),3,.01,'born_square','relative')
+        self.assertEqual(len(entry['lower']),10)
+        self.assertTrue(all(9 not in term['pair'] for term in entry['terms']))
+        self.assertTrue(any(8 in term['pair'] for term in entry['terms']))
+        entry.update(order=1,blend=1.)
+        metadata=dict(self.metadata,catalog=6,nf=10)
+        path=self.root/'relative_model';path.write_text(pool._model_text(metadata,[entry]))
+        model=pool.load_model(path)
+        changed=x.copy();changed[:,-1]=100.
+        first=pool.predict(model,1,x,b,np.zeros(len(x)))
+        second=pool.predict(model,1,changed,b,np.zeros(len(x)))
+        np.testing.assert_array_equal(first,second)
+
+    def test_catalog6_compares_both_cubic_bases_under_the_same_guards(self):
+        rows=self.records(2400);rng=np.random.default_rng(32)
+        for row in rows:
+            x=row['features']
+            row['virtual']=row['born']*(.4+.7*x[0]*x[2]*x[3]+.3*x[4]**3)
+            row['features'] += [0.,float(rng.uniform(-1,1))]
+        metadata=dict(self.metadata,catalog=6,nf=10)
+        entry,report=poly.fit_order(rows,pool._folds(rows,3),metadata,1)
+        self.assertEqual(entry['degree'],3)
+        self.assertEqual({c['basis'] for c in report['cubic_screens']},{'full','relative'})
+        eligible=[c for c in report['candidates'] if c['degree']==3 and c['eligible']]
+        self.assertEqual({c['basis'] for c in eligible},{'full','relative'})
+        for candidate in eligible:
+            self.assertLessEqual(candidate['cv_rms'],report['baseline_cv_rms'])
+            self.assertTrue(candidate['forward_eligible'])
+
+    def test_model_versions_keep_legacy_quadratics_and_validate_triples(self):
+        entry=poly.empty_order(1,8,'test')
+        entry.update(degree=2,blend=1.,terms=[dict(pair=(0,2),coefficient=.7)])
+        text=pool._model_text(self.metadata,[entry])
+        self.assertTrue(text.startswith('VIRTUAL_POOL_MODEL 2\n'))
+        entry.update(degree=3,terms=[dict(pair=(0,2,4),coefficient=.7)])
+        text=pool._model_text(self.metadata,[entry])
+        path=self.root/'model';path.write_text(text)
+        model=pool.load_model(path)
+        self.assertEqual(model['metadata']['version'],3)
+        self.assertEqual(pool._model_text(model['metadata'],model['orders']),text)
+        for malformed in (text.replace('MODEL 3','MODEL 2'),
+                          text.replace('1 3 5 ', '1 0 5 '),
+                          text.replace('1 3 5 ', '1 3 9 '),
+                          text.replace('1 3 5 ', '1 3 '),
+                          text.replace('1 3\n', '1 2\n')):
+            path.write_text(malformed)
+            with self.assertRaises(ValueError):pool.load_model(path)
 
     def test_malformed_coordinates_and_polynomial_rejected(self):
         rows=self.records(2);rows[0]['x'][0]=1.5
@@ -192,6 +340,7 @@ end program
     def test_generic_native_invariants_for_massless_and_unequal_mass_states(self):
         executable=self.root/'coordinates'
         subprocess.run(['gfortran','-O2','-fcheck=all','-ffpe-trap=invalid,zero,overflow',
+                        str(ROOT/'Template/NLO/SubProcesses/virtual_envelope_carrier.f90'),
                         str(ROOT/'Template/NLO/SubProcesses/virtual_pooled.f90'),
                         str(ROOT/'tests/input_files/check_virtual_pooled.f90'),'-o',str(executable)],
                         cwd=self.root,check=True,capture_output=True)
@@ -221,6 +370,7 @@ end program
     def test_native_capture_and_polynomial_prediction_with_tail_probability(self):
         executable=self.root/'check'
         subprocess.run(['gfortran','-O2','-fcheck=all','-ffpe-trap=invalid,zero,overflow',
+                        str(ROOT/'Template/NLO/SubProcesses/virtual_envelope_carrier.f90'),
                         str(ROOT/'Template/NLO/SubProcesses/virtual_pooled.f90'),
                         str(ROOT/'tests/input_files/check_virtual_pooled.f90'),'-o',str(executable)],
                         cwd=self.root,check=True,capture_output=True)
@@ -256,7 +406,96 @@ end program
         expected=pool.predict(model,1,np.asarray(features),np.ones(2),np.full(2,2.))
         np.testing.assert_allclose(actual[:,1],expected,rtol=3.e-14)
         np.testing.assert_array_equal(actual[:,2],[.125,1.])
-        self.assertEqual(actual[1,1],2.) # Out-of-domain MINT fallback.
+        self.assertNotEqual(actual[1,1],2.) # Bounded continuation, with exact correction.
+
+    @unittest.skipUnless(shutil.which('gfortran'),'requires gfortran')
+    def test_catalog6_model_reads_actual_loop_and_absolute_scale_in_both_runtimes(self):
+        executable=self.root/'check'
+        subprocess.run(['gfortran','-O2','-fcheck=all','-ffpe-trap=invalid,zero,overflow',
+                        str(ROOT/'Template/NLO/SubProcesses/virtual_envelope_carrier.f90'),
+                        str(ROOT/'Template/NLO/SubProcesses/virtual_pooled.f90'),
+                        str(ROOT/'tests/input_files/check_virtual_pooled.f90'),'-o',str(executable)],
+                        cwd=self.root,check=True,capture_output=True)
+        meta=dict(self.metadata,catalog=6,nf=10)
+        entry=poly.empty_order(1,10,'test')
+        entry.update(degree=1,blend=1.,lower=[-20.]*10,upper=[20.]*10,
+                     terms=[dict(pair=(8,-1),coefficient=2.),
+                            dict(pair=(9,-1),coefficient=3.)])
+        text=pool._model_text(meta,[entry])
+        (self.root/'virtual_pool_model.dat').write_text(text)
+        model=pool.load_model(self.root/'virtual_pool_model.dat')
+        (self.root/'virtual_pool_mode.dat').write_text('2\n')
+        beta=np.sqrt(250.**2-173.**2)
+        p=np.array([[250.,0,0,250.],[250.,0,0,-250.],
+                    [250.,beta,0,0],[250.,-beta,0,0]])
+        lines=['4 1 2','21 0 1','21 0 1','6 173 0','-6 173 0']
+        features=[]
+        for qes in (10000.,40000.):
+            lines += ['10000 %.17e 2'%qes]+[' '.join(map(str,leg)) for leg in p]
+            features.append([np.log(25.)]+[
+                np.log(2*(p[i,0]*p[j,0]-p[i,1:]@p[j,1:])/250000.)
+                for i in range(4) for j in range(i+1,4)]+[
+                np.log(250000./173.**2),np.log(250000./qes),np.log(250000.)])
+        (self.root/'batch_input.dat').write_text('\n'.join(lines)+'\n')
+        run=subprocess.run([str(executable),'batch_predict6'],cwd=self.root,check=True,
+                           capture_output=True,text=True)
+        actual=np.array([list(map(float,line.split())) for line in run.stdout.splitlines()])[:,1]
+        expected=pool.predict(model,1,np.asarray(features),np.ones(2),np.full(2,2.))
+        np.testing.assert_allclose(actual,expected,rtol=3.e-14)
+        self.assertNotEqual(actual[0],actual[1])
+
+    @unittest.skipUnless(shutil.which('gfortran'),'requires gfortran')
+    def test_native_cubic_matches_python_with_mixed_orders_and_exact_tails(self):
+        executable=self.root/'cubic'
+        subprocess.run(['gfortran','-O2','-fno-automatic','-fcheck=all',
+                        '-ffpe-trap=invalid,zero,overflow',
+                        str(ROOT/'Template/NLO/SubProcesses/virtual_envelope_carrier.f90'),
+                        str(ROOT/'Template/NLO/SubProcesses/virtual_pooled.f90'),
+                        str(ROOT/'tests/input_files/check_virtual_pooled.f90'),'-o',str(executable)],
+                        cwd=self.root,check=True,capture_output=True)
+        meta=dict(self.metadata,catalog=6,nf=10,norders=2)
+        entry=poly.empty_order(1,10,'test')
+        entry.update(degree=3,blend=.75,born_scale=2.,target_scale=3.,
+                     lower=[-20.]*10,upper=[20.]*10,
+                     terms=[dict(pair=(-1,-1,-1),coefficient=.4),
+                            dict(pair=(0,0,0),coefficient=.7),
+                            dict(pair=(2,8,9),coefficient=-1.2)])
+        quadratic=poly.empty_order(2,10,'test')
+        quadratic.update(degree=2,blend=1.,lower=[-20.]*10,upper=[20.]*10,
+                         terms=[dict(pair=(0,8),coefficient=.9)])
+        text=pool._model_text(meta,[entry,quadratic])
+        (self.root/'virtual_pool_model.dat').write_text(text)
+        model=pool.load_model(self.root/'virtual_pool_model.dat')
+        (self.root/'virtual_pool_mode.dat').write_text('2\n')
+        q=np.sqrt(250.**2-173.**2)
+        p=np.array([[250.,0,0,250.],[250.,0,0,-250.],
+                    [250.,q,0,0],[250.,-q,0,0]])
+        lines=['4 2 3','21 0 1','21 0 1','6 173 0','-6 173 0'];features=[]
+        for mur2,qes2 in ((10000.,20000.),(40000.,90000.),(1e-30,1e-30)):
+            lines+=['%.17e %.17e 2 -3'%(mur2,qes2)]+[' '.join(map(str,leg)) for leg in p]
+            features.append([np.log(250000./mur2)]+[
+                np.log(2*(p[i,0]*p[j,0]-p[i,1:]@p[j,1:])/250000.)
+                for i in range(4) for j in range(i+1,4)]+[
+                np.log(250000./173.**2),np.log(250000./qes2),np.log(250000.)])
+        (self.root/'batch_input.dat').write_text('\n'.join(lines)+'\n')
+        run=subprocess.run([str(executable),'batch_probability6'],cwd=self.root,check=True,
+                           capture_output=True,text=True)
+        actual=np.array([list(map(float,line.split())) for line in run.stdout.splitlines()])
+        for order,mint in ((1,2.),(2,-3.)):
+            expected=pool.predict(model,order,np.asarray(features),np.ones(3),np.full(3,mint))
+            np.testing.assert_allclose(actual[:,order],expected,rtol=3e-14,atol=1e-15)
+        np.testing.assert_array_equal(actual[:,-1],[.125,.125,1.])
+        # Malformed triples fail before native inference, matching Python.
+        for bad in (text.replace('3 9 10 ', '3 0 10 '),
+                    text.replace('3 9 10 ', '3 9 11 '),
+                    text.replace('3 9 10 ', '3 9 '),
+                    text.replace('MODEL 3','MODEL 2')):
+            (self.root/'virtual_pool_model.dat').write_text(bad)
+            with self.assertRaises(ValueError):pool.load_model(self.root/'virtual_pool_model.dat')
+            run=subprocess.run([str(executable),'batch_probability6'],cwd=self.root,
+                               capture_output=True,text=True)
+            self.assertNotEqual(run.returncode,0)
+            self.assertIn('Pooled virtual:',run.stdout)
 
 
 if __name__=='__main__':

@@ -683,17 +683,26 @@ jobs:
       - name: Check discovery and fallback without optional dependencies
         run: |
           python3 -S tests/test_manager.py test_phi4_vertex test_virtual_pool \
-            test_amcatnlo_virtual_pool test_pooled_mint -t0
+            test_amcatnlo_virtual_pool test_pooled_mint test_virtual_envelope \
+            test_deferred_virtual -t0
+          python3 -S -m unittest \
+            tests.unit_tests.fks.test_conditional_virtual_integration \
+            tests.unit_tests.fks.test_virtual_envelope_carrier \
+            tests.unit_tests.various.test_virtual_pool_neural
       - name: Check pooled virtual fitting and native integration
         run: |
           gfortran --version
           python3 -m venv "$RUNNER_TEMP/virtual-pool-venv"
-          "$RUNNER_TEMP/virtual-pool-venv/bin/python" -m pip install numpy
+          "$RUNNER_TEMP/virtual-pool-venv/bin/python" -m pip install numpy scipy
           "$RUNNER_TEMP/virtual-pool-venv/bin/python" tests/test_manager.py \
-            test_virtual_pool test_virtual_pool_polynomial test_virtual_pooled \
+            test_virtual_pool test_virtual_pool_polynomial test_virtual_pool_neural \
+            test_virtual_pooled \
             test_pooled_mint test_pooled_mint_targets \
             test_pooled_virtual_selection test_pooled_virtual_weights \
             test_amcatnlo_split_grids test_amcatnlo_virtual_pool \
+            test_conditional_virtual_integration test_deferred_virtual \
+            test_virtual_envelope test_virtual_envelope_carrier \
+            test_virtual_quality_benchmark test_born_amplitude_cache \
             test_born_spreading test_pdf_luminosity_cache -t0
 
   unittest_uncovered:
