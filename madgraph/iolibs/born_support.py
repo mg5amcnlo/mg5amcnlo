@@ -465,16 +465,88 @@ def helicity_matrix_metadata(matrix, model):
     return result
 
 
+def explicit_helas_dependencies(root):
+    """Conservatively certify argument-only fixed-form HELAS helpers.
+
+    A homogeneous coupling graph does not constrain a custom helper's module,
+    COMMON, or external-function inputs. Reject those instead of assuming
+    they share the generated ALOHA routines' dependency contract. Calls may
+    only reach another inspected DHELAS routine or a numerical intrinsic.
+    Unknown formats/declarations also retain the full model-state key.
+    """
+    directory = root/'Source'/'DHELAS'
+    sources = sorted(path for path in directory.iterdir()
+                     if path.suffix.lower() in ('.f', '.f90', '.f95', '.for')) if directory.exists() else []
+    routines, names = [], set()
+    start = re.compile(r'\s*(?:[\w*]+\s+)*?(?:subroutine|function)\s+(\w+)', re.I)
+    for path in sources:
+        if path.suffix != '.f':
+            return False
+        if any(line.lstrip().startswith('#') for line in path.read_text().splitlines()):
+            return False
+        try:
+            lines = expand(path)
+        except (OSError, MadGraph5Error):
+            return False
+        current = []
+        for line in lines:
+            # String literals and diagnostics cannot declare dependencies.
+            line = re.sub(r'''('(?:[^']|'')*'|"(?:[^"]|"")*")''', '', line).split('!', 1)[0].lower()
+            if re.search(r'\b(common|use|module|external|save|data|entry|equivalence|procedure)\b', line):
+                return False
+            if '::' in line or re.search(r'\b(read|open|inquire|include)\b', line):
+                return False
+            match = start.match(line)
+            if match:
+                if current:
+                    routines.append(current)
+                current = [line]
+                if match[1] in names:
+                    return False
+                names.add(match[1])
+            else:
+                current.append(line)
+        if current:
+            routines.append(current)
+    intrinsics = set('abs acos aimag aint anint asin atan atan2 cmplx conjg cos '
+                     'cosh dabs dacos dasin datan datan2 dble dcmplx dconjg dcos '
+                     'dcosh ddim dexp dim dimag dint dlog dlog10 dmax1 dmin1 dmod '
+                     'dnint dsign dsin dsinh dsqrt dtan dtanh exp int log log10 '
+                     'max max0 max1 min min0 min1 mod nint real sign sin sinh '
+                     'sqrt tan tanh'.split())
+    syntax = {'if', 'elseif', 'while', 'parameter', 'dimension', 'write', 'format'}
+    declaration = re.compile(r'\s*(?:double\s+(?:precision|complex)|'
+                             r'(?:real|complex|integer|logical)(?:\*\d+)?)\s+(.+)', re.I)
+    for lines in routines:
+        arrays = set()
+        for line in lines:
+            if start.match(line):
+                continue
+            decl = declaration.match(line)
+            dimension = re.match(r'\s*dimension\s+(.+)', line)
+            if decl or dimension:
+                body = (decl or dimension)[1]
+                if '/' in body or '=' in body:
+                    return False
+                arrays.update(re.findall(r'\b(\w+)\s*\(', body))
+        for line in lines:
+            if start.match(line) or declaration.match(line) or re.match(r'\s*dimension\b', line):
+                continue
+            if any(name not in names for name in re.findall(r'\bcall\s+(\w+)', line)):
+                return False
+            references = set(re.findall(r'\b(\w+)\s*\(', line))
+            if references - names - arrays - intrinsics - syntax:
+                return False
+    return True
+
+
 def helicity_state_signature(root, records, model, members):
-    """Use only certified tree inputs for masks; amplitude keys stay complete."""
+    """Identify certified tree inputs for mask and exact amplitude cache keys."""
     matrices = [matrix for record in records for matrix in record.get('helicity_matrices', [])]
     if not matrices or not all(matrix['homogeneous'] for matrix in matrices):
         return None
-    # Ordinary ALOHA routines depend only on their arguments. Custom HELAS
-    # routines with hidden model COMMONs need the conservative full-state key.
-    for path in (root/'Source'/'DHELAS').glob('*.f'):
-        if any(re.search(r'(?i)\bcommon\b', line) for line in expand(path)):
-            return None
+    if not explicit_helas_dependencies(root):
+        return None
     direct = set()
     for record in records:
         source = root/'SubProcesses'/record['directory']
@@ -556,6 +628,41 @@ def write_helicity_state_comparator(path, members, signature):
     source = path.read_text()
     source = re.sub(r'  logical function born_helicity_state_equal\(a,b\)[\s\S]*?  end function',
                     '\n'.join(lines), source)
+    path.write_text(source)
+
+
+def write_amplitude_state_comparator(path, members, signature):
+    """Ignore only certified unused state; compare actual tree inputs exactly.
+
+    The signature's proof excludes hidden HELAS/model dependencies and covers
+    every exported tree squared order. Mask homogeneity alone is insufficient
+    for SAVEAMP reuse: G, every used coupling (including its phase), and every
+    direct/independent input must be identical. Unsupported models retain the
+    template's full-state predicate. No rescaling or numerical tolerance is
+    applied to an amplitude cache key.
+    """
+    if signature is None:
+        return
+    sizes = {kind: max([int(index.split(':')[-1]) for _, k, index in members if k == kind] or [0])
+             for kind in ('real', 'complex')}
+    indices = {kind: set(signature[kind]) for kind in ('real', 'complex')}
+    indices['real'].add(signature['g'])
+    for kind, index, _ in signature['couplings']:
+        indices[kind].add(index)
+    lines = ['  logical function born_amplitude_state_equal(a,b)',
+             '    type(BornModelState),intent(in)::a,b',
+             '    born_amplitude_state_equal=.false.',
+             '    if(.not.allocated(a%real_values).or..not.allocated(b%real_values))return',
+             '    if(.not.allocated(a%complex_values).or..not.allocated(b%complex_values))return']
+    for kind in ('real', 'complex'):
+        lines += ['    if(size(a%%%s_values).ne.%d.or.size(b%%%s_values).ne.%d)return' %
+                  (kind, sizes[kind], kind, sizes[kind])]
+        for index in sorted(indices[kind]):
+            lines += ['    if(a%%%s_values(%d).ne.b%%%s_values(%d))return' %
+                      (kind, index, kind, index)]
+    lines += ['    born_amplitude_state_equal=.true.', '  end function']
+    source = re.sub(r'  logical function born_amplitude_state_equal\(a,b\)[\s\S]*?  end function',
+                    '\n'.join(lines), path.read_text())
     path.write_text(source)
 
 
@@ -727,6 +834,7 @@ def finalize(exporter):
     write_api(support, records, providers, model_sizes, histories)
     signature = helicity_state_signature(root, records, exporter.model, model_members)
     write_helicity_state_comparator(support/'mc_born_types.f90', model_members, signature)
+    write_amplitude_state_comparator(support/'mc_born_types.f90', model_members, signature)
     (support/'helicity_signature.json').write_text(json.dumps(
         dict(mode='homogeneous_G' if signature else 'full_model_state', signature=signature),
         indent=2, sort_keys=True)+'\n')
@@ -893,8 +1001,9 @@ def provider_adapter(r, source, members):
     else:
         lines += ['if(request%colour)then','status=4','return','endif']
     lines += ['model_changed=.not.born_model_state_equal(state,cached_state)',
-              'cache_hit=.false.',
-              'if(.not.model_changed)cache_hit=context.eq.cached_context.and.'
+              'cache_hit=.not.model_changed',
+              'if(model_changed)cache_hit=born_amplitude_state_equal(state,cached_state)',
+              'if(cache_hit)cache_hit=context.eq.cached_context.and.'
               'request%sector.eq.cached_sector.and.all(p.eq.cached_p)',
               'if(model_changed)then',
               'if(.not.born_helicity_state_equal(state,cached_state))model_epoch=model_epoch+1',

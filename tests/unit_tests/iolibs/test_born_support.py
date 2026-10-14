@@ -576,6 +576,29 @@ class TestBornLibrary(unittest.TestCase):
                 'if(status.ne.0)stop 38', 'call close_real(result%born,other%born)',
                 'if(born_test_helas_calls(%d).ne.calls_before)stop 39' % r['provider']]
         if signature:
+            # Loop-only state changes must install the new full model state
+            # without recomputing identical tree amplitudes. Restore it too:
+            # the cached full-state snapshot must follow both transitions.
+            for kind in ('real', 'complex'):
+                used = set(signature[kind]) | {index for k,index,_ in signature['couplings'] if k == kind}
+                if kind == 'real':
+                    used.add(signature['g'])
+                size = max([int(index.split(':')[-1]) for _,k,index in members if k == kind] or [0])
+                unused = sorted(set(range(1,size+1))-used)
+                if not unused:
+                    continue
+                lines += ['alternate=state',
+                    'alternate%%%s_values(%d)=alternate%%%s_values(%d)+0.125d0' %
+                    (kind,unused[0],kind,unused[0]),
+                    'if(born_model_state_equal(state,alternate))stop 47',
+                    'if(.not.born_amplitude_state_equal(state,alternate))stop 48',
+                    'calls_before=born_test_helas_calls(%d)' % r['provider'],
+                    'call born_evaluate(%d,%d,p,alternate,request,other,status)' % (r['provider'],r['context']),
+                    'if(status.ne.0)stop 49', 'call close_real(result%born,other%born)',
+                    'if(born_test_helas_calls(%d).ne.calls_before)stop 50' % r['provider'],
+                    'call born_evaluate(%d,%d,p,state,request,other,status)' % (r['provider'],r['context']),
+                    'if(status.ne.0)stop 51', 'call close_real(result%born,other%born)',
+                    'if(born_test_helas_calls(%d).ne.calls_before)stop 52' % r['provider']]
             lines += ['alternate=state',
                 'state%%real_values(%d)=2d0*state%%real_values(%d)' % (signature['g'],signature['g'])]
             for kind, index, degree in signature['couplings']:
@@ -602,6 +625,13 @@ class TestBornLibrary(unittest.TestCase):
 
     def test_dy(self):
         self.compare(self.outputs['dy'])
+
+    def test_standard_exports_retain_exact_tree_cache(self):
+        for name in ('dy','ttbar','wjet'):
+            with self.subTest(process=name):
+                signature=json.loads((self.outputs[name]/'Source/BornSupport/helicity_signature.json').read_text())
+                self.assertEqual(signature['mode'],'homogeneous_G')
+                self.assertIsNotNone(signature['signature'])
 
     def test_ttbar(self):
         self.compare(self.outputs['ttbar'])
