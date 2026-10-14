@@ -207,6 +207,36 @@ class TestVirtualPoolController(unittest.TestCase):
         self.configure(resume=True)
         self.command.stage_virtual_pool(job, 2, False)
 
+    def test_neural_fit_and_resume_with_dangling_and_valid_source_links(self):
+        parent = self.root / 'SubProcesses' / 'P0_gg'
+        # Older exports retain this link even though MINT uses a module now.
+        (parent / 'mint.inc').symlink_to('../mint.inc')
+        shared = self.root / 'SubProcesses' / 'mint_module.f90'
+        shared.write_text('shared MINT module\n')
+        (parent / shared.name).symlink_to('../' + shared.name)
+        self.configure()
+        job = self.job()
+        with mock.patch('madgraph.various.virtual_pool.train_pool', side_effect=self.neural_fit):
+            self.command.collect_virtual_pool([job], 0, False)
+        state = json.loads((parent / 'virtual_pool_manifest.json').read_text())
+        identity = state['source_identity']
+        self.assertNotIn('SubProcesses/P0_gg/mint.inc', identity)
+        self.assertIn('SubProcesses/P0_gg/mint_module.f90', identity)
+        self.configure(resume=True)
+        self.command.stage_virtual_pool(job, 2, False)
+        self.assertEqual((Path(job['dirname']) / 'virtual_pool_mode.dat').read_text(), '2\n')
+
+        # Changes through a valid link must still invalidate the frozen fit,
+        # including loss of a source that was present during collection.
+        shared.write_text('changed shared MINT module\n')
+        self.configure(resume=True)
+        with self.assertRaisesRegex(aMCatNLOError, 'parameters differ'):
+            self.command.stage_virtual_pool(job, 2, False)
+        shared.unlink()
+        self.configure(resume=True)
+        with self.assertRaisesRegex(aMCatNLOError, 'parameters differ'):
+            self.command.stage_virtual_pool(job, 2, False)
+
     def test_old_manifest_and_rejected_fit_remove_stale_neural_companion(self):
         self.configure()
         job = self.job()

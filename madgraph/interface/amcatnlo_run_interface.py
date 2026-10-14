@@ -2231,8 +2231,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 subdirs[:] = sorted(name for name in subdirs
                                     if not name.startswith(('GF', 'GB', 'all_G', 'born_G')))
                 for name in names:
-                    if name.endswith(('.f', '.f90', '.inc')) and name != 'run_card.inc':
-                        paths.add(pjoin(current, name))
+                    path = pjoin(current, name)
+                    # Older exports can contain obsolete dangling source links.
+                    if (name.endswith(('.f', '.f90', '.inc')) and
+                            name != 'run_card.inc' and os.path.isfile(path)):
+                        paths.add(path)
         resources = pjoin(directory, 'MadLoop5_resources')
         if os.path.isdir(resources):
             for name in os.listdir(resources):

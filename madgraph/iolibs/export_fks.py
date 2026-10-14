@@ -746,7 +746,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'virtual_pooled.f90',
                      'virtual_envelope_carrier.f90',
                      'MC_integer.f',
-                     'mint.inc',
                      'montecarlocounter.f',
                      'mcatnlo_delta_scales.f90',
                      'herwig7_scales.f90',
