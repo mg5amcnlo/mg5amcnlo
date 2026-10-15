@@ -1279,8 +1279,19 @@ C goldstones, they behave like left handed leptons (charged); neutrals mix
       Integer sud_mod
       COMMON /to_sud_mod/ sud_mod
 
+      logical FAV4
+      COMMON /to_FAV4/ FAV4
+
       if (sud_mod.eq.0.or.sud_mod.eq.2) then
         sdk_ia_diag = -sdk_charge(pdg,hel,ifsign)
+       if (.not.FAV4) then
+          sdk_ia_diag= sdk_ia_diag / (-1d0)
+          
+          if (abs(pdg).eq.251) sdk_ia_diag= sdk_ia_diag / CMPLX(0d0,1d0)
+          write(*,*) 'here', abs(pdg)
+
+        endif
+
         return
       elseif (sud_mod.eq.1) then
         sdk_ia_diag = 0
