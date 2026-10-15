@@ -3262,52 +3262,23 @@ class DensityInterface(ReweightInterface):
         if len(user_input[0]) != len(user_input[2]):
             raise ValueError(f'The number of particle in {name_input}[0] and the number of ranks in {name_input}[2] do not match.')
 
-        pdg_new = [0] * len(pdg)
-        new_order_corrected = [0] * len(pdg)
-        for i in range(len(pdg)):
-            if observable_values_sorted[i] == observable_values_sorted[i]: #if the value of observable is not a NaN (it is in the density matrix)
-                pdg_new[i] = pdg[new_order[i]]
-                new_order_corrected[i] = new_order[i]
-            else: #if it is a NaN we keep them in the original order
-                pdg_new[i] = pdg[i]
-                new_order_corrected[i] = original_order[i]
+        # observable value of each particle, indexed by its position in the original order
+        value_of_particle = dict(zip(new_order, observable_values_sorted))
 
-        # dic_rank_particles keys are the particles chosen by the user and the values are their wanted rank in the observable's order
-        dic_rank_particles = {}
-        for i in range(len(user_input[0])):
-            if user_input[0][i] not in dic_rank_particles.keys():
-                dic_rank_particles[user_input[0][i]] = []
-
-        for i in range(len(user_input[0])):
-            if user_input[0][i] in dic_rank_particles.keys():
-                dic_rank_particles[user_input[0][i]].append(user_input[2][i])
-
-        # dic_values_observable keys are the particles chosen by the user and is filled with their value in the chosen observable
-        # dic_postion_new_order keys are the particles chosen by the user and is filled with their position in new_order
-        dic_values_observable, dic_postion_new_order = {}, {}
-        for key in user_input[0]:
-            dic_values_observable[key], dic_postion_new_order[key] = [], []
-
-        for key in dic_rank_particles.keys():
-            for j in range(len(pdg_new)):
-                if pdg_new[j] == int(key):
-                    dic_values_observable[key].append(observable_values_sorted[j])
-            for k in range(len(dic_rank_particles[key])):
-                for l in range(len(observable_values_sorted)):
-                    try:
-                        #this if statement represents which index of dic_values_observable[key] we want to keep
-                        if observable_values_sorted[l] == dic_values_observable[key][dic_rank_particles[key][k]] and pdg[new_order[l]] == key:
-                            dic_postion_new_order[key].append(l)
-                    except:
-                        raise ValueError(f'There are not enough identical particles for the rank you chose in {name_input}. Please change your input')
-
+        # each slot of the user input is resolved independently so that the output keeps the order asked by the user
         position_particles = []
-        for key in dic_postion_new_order.keys(): # here we convert the position in new_order to the position in the original order
-            for j in range(len(dic_postion_new_order[key])):
-                if fortran_format:
-                    position_particles.append(new_order[dic_postion_new_order[key][j]] + 1) #python format begins integers at 0 so we do not need to add +1
-                else:
-                    position_particles.append(new_order[dic_postion_new_order[key][j]]) #python format begins integers at 0 so we do not need to add +1
+        for key, rank in zip(user_input[0], user_input[2]):
+            # particles with the requested pdg, ranked in decreasing order of the observable
+            candidates = [j for j in original_order if pdg[j] == int(key) and value_of_particle[j] == value_of_particle[j]]
+            candidates.sort(key=lambda j: value_of_particle[j], reverse=True)
+            try:
+                position = candidates[int(rank)]
+            except IndexError:
+                raise ValueError(f'There are not enough identical particles for the rank you chose in {name_input}. Please change your input')
+            if fortran_format:
+                position_particles.append(position + 1) #if fortran_format = True, we add +1 because Fortran indices begin at 1 instead of 0 as in Python
+            else:
+                position_particles.append(position)
         return position_particles
 
     def find_position_particles_default_order(self, orig_order, user_input, name_input, fortran_format):
