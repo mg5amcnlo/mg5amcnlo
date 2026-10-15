@@ -132,8 +132,23 @@ c     saved. 'pdflast' is filled below.
       pdlabellast(ireuse)=pdlabel
 
       neutron_tagging(1:2)=-2
-      if(pdlabel(1:3).eq.'edf') then
+      neutron_xsigma=0d0
+      if(pdlabel(1:2).eq.'ed') then
          USE_CHARGEFORMFACTOR4PHOTON=.FALSE.
+c        for neutron tagging uncertainty
+         if(pdlabel(3:3).eq.'f')then
+c           central value of neutron xs
+            neutron_xsigma=0d0
+         elseif(pdlabel(3:3).eq.'p')then
+c     upper value of neutron xs
+            neutron_xsigma=1d0
+         elseif(pdlabel(3:3).eq.'m')then
+c     lower value of neutron xs
+            neutron_xsigma=-1d0
+         else
+            WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
+            STOP -1
+         endif
          if(pdlabel(4:4).ne.'f')then
 c     forward neutron tagging
             if(pdlabel(5:5).ne.'n'.or.pdlabel(7:7).ne.'n')then
@@ -196,8 +211,22 @@ c 4n
                STOP 9
             endif
          endif
-      elseif(pdlabel(1:3).eq.'chf') then
+      elseif(pdlabel(1:2).eq.'ch') then
          USE_CHARGEFORMFACTOR4PHOTON=.TRUE.
+c     for neutron tagging uncertainty
+         if(pdlabel(3:3).eq.'f')then
+c     central value of neutron xs
+            neutron_xsigma=0d0
+         elseif(pdlabel(3:3).eq.'p')then
+c     upper value of neutron xs
+            neutron_xsigma=1d0
+         elseif(pdlabel(3:3).eq.'m')then
+c     lower value of neutron xs
+            neutron_xsigma=-1d0
+         else
+            WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
+            STOP -2
+         endif
          if(pdlabel(4:4).ne.'f')then
 c     forward neutron tagging
             if(pdlabel(5:5).ne.'n'.or.pdlabel(7:7).ne.'n')then
@@ -284,7 +313,7 @@ c     write(*,*) 'running gamma-UPC'
       
       return
       end
-      
+     
 
       subroutine Get_nucleus_RA(nb_p,nb_n,RAI)
       USE ElasticPhotonPhotonFlux

@@ -57,6 +57,17 @@ MODULE ElasticPhotonPhotonFlux
   INTEGER,PRIVATE,SAVE::nuclearA_beam1,nuclearA_beam2,nuclearZ_beam1,nuclearZ_beam2
   ! energy in GeV per nucleon in each beam
   REAL(KIND(1d0)),DIMENSION(2),PRIVATE,SAVE::ebeam_PN
+  ! minimal energies (GeV) to be integrated in neutron tagging (in target frame)
+  ! Emin_Xn, Emin_1n, Emin_2n, Emin_3n, Emin_4n
+  REAL(KIND(1d0)),PARAMETER,PRIVATE::Emin_Xn=5d-3, Emin_1n=5d-3, Emin_2n=1d-2
+  REAL(KIND(1d0)),PARAMETER,PRIVATE::Emin_3n=1.5d-2, Emin_4n=2d-2
+  ! maximal energies (GeV) to be integrated in neutron tagging (in target frame)
+  ! if it is 0, it means we take all possible energies (xgamma up to unity)
+  ! Emax_Xn, Emax_1n, Emax_2n, Emax_3n, Emax_4n
+  REAL(KIND(1d0)),PARAMETER,PRIVATE::Emax_Xn=0d0, Emax_1n=2d-1, Emax_2n=2d-1
+  REAL(KIND(1d0)),PARAMETER,PRIVATE::Emax_3n=2d-1, Emax_4n=2d-1
+  ! it will calculate cross sections by increasing all parameters by XSIGMA sigma.
+  REAL(KIND(1d0)),PUBLIC::NEUTRON_XSIGMA=0d0
 CONTAINS
   FUNCTION PNOHAD_pp(bx,by,b0)
     ! the probability of no hardonic interaction at impact b=(bx,by)
@@ -1830,14 +1841,17 @@ CONTAINS
     INTEGER::ilog10x1,ilog10x2
     ! nseg for 10**(-n-1) to 10**(-n)
     INTEGER,PARAMETER::nseg=10
+    INTEGER,PARAMETER::n_interp=6
     INTEGER::MX,MY,I,J,K,L
     INTEGER::MX_save=0,MY_save=0
     SAVE MX_save,MY_save
     REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE::XD_1D,YD_1D
     REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE::ZD,ZD_save
     SAVE MX,MY,XD_1D,YD_1D,ZD,ZD_save
-    REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
-    REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    !REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
+    !REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    REAL(KIND(1d0)),DIMENSION(n_interp)::XD2_1D,YD2_1D
+    REAL(KIND(1d0)),DIMENSION(n_interp,n_interp)::ZD2
     REAL(KIND(1d0))::xx1,xx2
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
@@ -1856,7 +1870,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -1982,20 +1996,59 @@ CONTAINS
           ELSE
              ilog10x2=FLOOR(YI(1))
           ENDIF
+          !K=nseg*(-ilog10x1-1)
+          !DO I=1,nseg+1
+          !   XD2_1D(I)=XD_1D(K+I)
+          !ENDDO
+          !L=nseg*(-ilog10x2-1)
+          !DO I=1,nseg+1
+          !   YD2_1D(I)=YD_1D(L+I)
+          !ENDDO
+          !DO I=1,nseg+1
+          !   DO J=1,nseg+1
+          !      ZD2(I,J)=ZD(K+I,L+J)
+          !   ENDDO
+          !ENDDO
+          !CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
           K=nseg*(-ilog10x1-1)
-          DO I=1,nseg+1
-             XD2_1D(I)=XD_1D(K+I)
+          DO I=K+1,K+nseg+1
+             if(XD_1D(I).LE.XI(1))EXIT
           ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MX_save+1)THEN
+             K=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             K=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MX_save+1)THEN
+             K=MX_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #1 !"
+             STOP
+          ENDIF
           L=nseg*(-ilog10x2-1)
-          DO I=1,nseg+1
+          DO I=L+1,L+nseg+1
+             if(YD_1D(I).LE.YI(1))EXIT
+          ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MY_save+1)THEN
+             L=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             L=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MY_save+1)THEN
+             L=MY_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #2 !"
+             STOP
+          ENDIF
+          DO I=1,n_interp
+             XD2_1D(I)=XD_1D(K+I)
              YD2_1D(I)=YD_1D(L+I)
           ENDDO
-          DO I=1,nseg+1
-             DO J=1,nseg+1
+          DO I=1,n_interp
+             DO J=1,n_interp
                 ZD2(I,J)=ZD(K+I,L+J)
              ENDDO
           ENDDO
-          CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
+          CALL lagrange_interp_2d(n_interp-1,n_interp-1,XD2_1D,&
+               YD2_1D,ZD2,1,XI,YI,ZI)
        ELSE
           ZI(1)=PhotonPhotonFlux_pp_eval(x1,x2)
        ENDIF
@@ -2229,6 +2282,7 @@ CONTAINS
     INTEGER::ilog10x1,ilog10x2
     ! nseg for 10**(-n-1) to 10**(-n)
     INTEGER,PARAMETER::nseg=10
+    INTEGER,PARAMETER::n_interp=6
     INTEGER::MX,MY,I,J,K,L
     INTEGER,DIMENSION(2)::MX_save=(/0,0/),MY_save=(/0,0/)
     SAVE MX_save,MY_save
@@ -2236,8 +2290,10 @@ CONTAINS
     REAL(KIND(1d0)),DIMENSION(:,:,:),ALLOCATABLE::ZD
     REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE::ZD1_save,ZD2_save
     SAVE MX,MY,XD_1D,YD_1D,ZD,ZD1_save,ZD2_save
-    REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
-    REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    !REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
+    !REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    REAL(KIND(1d0)),DIMENSION(n_interp)::XD2_1D,YD2_1D
+    REAL(KIND(1d0)),DIMENSION(n_interp,n_interp)::ZD2
     REAL(KIND(1d0))::xx1,xx2
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
@@ -2259,7 +2315,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -2415,20 +2471,59 @@ CONTAINS
        ELSE
           ilog10x2=FLOOR(YI(1))
        ENDIF
+       !K=nseg*(-ilog10x1-1)
+       !DO I=1,nseg+1
+       !   XD2_1D(I)=XD_1D(K+I)
+       !ENDDO
+       !L=nseg*(-ilog10x2-1)
+       !DO I=1,nseg+1
+       !   YD2_1D(I)=YD_1D(L+I)
+       !ENDDO
+       !DO I=1,nseg+1
+       !   DO J=1,nseg+1
+       !      ZD2(I,J)=ZD(igrid,K+I,L+J)
+       !   ENDDO
+       !ENDDO
+       !CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
        K=nseg*(-ilog10x1-1)
-       DO I=1,nseg+1
-          XD2_1D(I)=XD_1D(K+I)
+       DO I=K+1,K+nseg+1
+          if(XD_1D(I).LE.XI(1))EXIT
        ENDDO
+       IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MX_save(igrid)+1)THEN
+          K=I-n_interp/2-1
+       ELSEIF(I-n_interp/2.LT.1)THEN
+          K=0
+       ELSEIF(I-n_interp/2-1+n_interp.GT.MX_save(igrid)+1)THEN
+          K=MX_save(igrid)+1-n_interp
+       ELSE
+          WRITE(*,*)"Error: you cannot reach here #1 !"
+          STOP
+       ENDIF
        L=nseg*(-ilog10x2-1)
-       DO I=1,nseg+1
+       DO I=L+1,L+nseg+1
+          if(YD_1D(I).LE.YI(1))EXIT
+       ENDDO
+       IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MY_save(igrid)+1)THEN
+          L=I-n_interp/2-1
+       ELSEIF(I-n_interp/2.LT.1)THEN
+          L=0
+       ELSEIF(I-n_interp/2-1+n_interp.GT.MY_save(igrid)+1)THEN
+          L=MY_save(igrid)+1-n_interp
+       ELSE
+          WRITE(*,*)"Error: you cannot reach here #2 !"
+          STOP
+       ENDIF
+       DO I=1,n_interp
+          XD2_1D(I)=XD_1D(K+I)
           YD2_1D(I)=YD_1D(L+I)
        ENDDO
-       DO I=1,nseg+1
-          DO J=1,nseg+1
+       DO I=1,n_interp
+          DO J=1,n_interp
              ZD2(I,J)=ZD(igrid,K+I,L+J)
           ENDDO
        ENDDO
-       CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
+       CALL lagrange_interp_2d(n_interp-1,n_interp-1,XD2_1D,&
+             YD2_1D,ZD2,1,XI,YI,ZI)
        IF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0)THEN
           PhotonPhotonDeltaB_pp=0d0
        ELSE
@@ -2681,14 +2776,17 @@ CONTAINS
     INTEGER::ilog10x1,ilog10x2
     ! nseg for 10**(-n-1) to 10**(-n)
     INTEGER,PARAMETER::nseg=10
+    INTEGER,PARAMETER::n_interp=6
     INTEGER::MX,MY,I,J,K,L
     INTEGER::MX_save=0,MY_save=0
     SAVE MX_save,MY_save
     REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE::XD_1D,YD_1D
     REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE::ZD,ZD_save
     SAVE MX,MY,XD_1D,YD_1D,ZD,ZD_save
-    REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
-    REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    !REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
+    !REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    REAL(KIND(1d0)),DIMENSION(n_interp)::XD2_1D,YD2_1D
+    REAL(KIND(1d0)),DIMENSION(n_interp,n_interp)::ZD2
     REAL(KIND(1d0))::xx1,xx2
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
@@ -2707,7 +2805,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -2829,20 +2927,59 @@ CONTAINS
           ELSE
              ilog10x2=FLOOR(YI(1))
           ENDIF
+          !K=nseg*(-ilog10x1-1)
+          !DO I=1,nseg+1
+          !   XD2_1D(I)=XD_1D(K+I)
+          !ENDDO
+          !L=nseg*(-ilog10x2-1)
+          !DO I=1,nseg+1
+          !   YD2_1D(I)=YD_1D(L+I)
+          !ENDDO
+          !DO I=1,nseg+1
+          !   DO J=1,nseg+1
+          !      ZD2(I,J)=ZD(K+I,L+J)
+          !   ENDDO
+          !ENDDO
+          !CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
           K=nseg*(-ilog10x1-1)
-          DO I=1,nseg+1
-             XD2_1D(I)=XD_1D(K+I)
+          DO I=K+1,K+nseg+1
+             if(XD_1D(I).LE.XI(1))EXIT
           ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MX_save+1)THEN
+             K=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             K=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MX_save+1)THEN
+             K=MX_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #1 !"
+             STOP
+          ENDIF
           L=nseg*(-ilog10x2-1)
-          DO I=1,nseg+1
+          DO I=L+1,L+nseg+1
+             if(YD_1D(I).LE.YI(1))EXIT
+          ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MY_save+1)THEN
+             L=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             L=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MY_save+1)THEN
+             L=MY_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #2 !"
+             STOP
+          ENDIF
+          DO I=1,n_interp
+             XD2_1D(I)=XD_1D(K+I)
              YD2_1D(I)=YD_1D(L+I)
           ENDDO
-          DO I=1,nseg+1
-             DO J=1,nseg+1
+          DO I=1,n_interp
+             DO J=1,n_interp
                 ZD2(I,J)=ZD(K+I,L+J)
              ENDDO
           ENDDO
-          CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
+          CALL lagrange_interp_2d(n_interp-1,n_interp-1,XD2_1D,&
+               YD2_1D,ZD2,1,XI,YI,ZI)
        ELSE
           ZI(1)=PhotonPhotonFlux_pA_hardsphere_eval(x1,x2)
        ENDIF
@@ -3095,14 +3232,17 @@ CONTAINS
     INTEGER::ilog10x1,ilog10x2
     ! nseg for 10**(-n-1) to 10**(-n)
     INTEGER,PARAMETER::nseg=10
+    INTEGER,PARAMETER::n_interp=6
     INTEGER::MX,MY,I,J,K,L
     INTEGER::MX_save=0,MY_save=0
     SAVE MX_save,MY_save
     REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE::XD_1D,YD_1D
     REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE::ZD,ZD_save
     SAVE MX,MY,XD_1D,YD_1D,ZD,ZD_save
-    REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
-    REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    !REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
+    !REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    REAL(KIND(1d0)),DIMENSION(n_interp)::XD2_1D,YD2_1D
+    REAL(KIND(1d0)),DIMENSION(n_interp,n_interp)::ZD2
     REAL(KIND(1d0))::xx1,xx2
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
@@ -3121,7 +3261,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -3240,20 +3380,59 @@ CONTAINS
           ELSE
              ilog10x2=FLOOR(YI(1))
           ENDIF
+          !K=nseg*(-ilog10x1-1)
+          !DO I=1,nseg+1
+          !   XD2_1D(I)=XD_1D(K+I)
+          !ENDDO
+          !L=nseg*(-ilog10x2-1)
+          !DO I=1,nseg+1
+          !   YD2_1D(I)=YD_1D(L+I)
+          !ENDDO
+          !DO I=1,nseg+1
+          !   DO J=1,nseg+1
+          !      ZD2(I,J)=ZD(K+I,L+J)
+          !   ENDDO
+          !ENDDO
+          !CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
           K=nseg*(-ilog10x1-1)
-          DO I=1,nseg+1
-             XD2_1D(I)=XD_1D(K+I)
+          DO I=K+1,K+nseg+1
+             if(XD_1D(I).LE.XI(1))EXIT
           ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MX_save+1)THEN
+             K=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             K=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MX_save+1)THEN
+             K=MX_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #1 !"
+             STOP
+          ENDIF
           L=nseg*(-ilog10x2-1)
-          DO I=1,nseg+1
+          DO I=L+1,L+nseg+1
+             if(YD_1D(I).LE.YI(1))EXIT
+          ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MY_save+1)THEN
+             L=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             L=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MY_save+1)THEN
+             L=MY_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #2 !"
+             STOP
+          ENDIF
+          DO I=1,n_interp
+             XD2_1D(I)=XD_1D(K+I)
              YD2_1D(I)=YD_1D(L+I)
           ENDDO
-          DO I=1,nseg+1
-             DO J=1,nseg+1
+          DO I=1,n_interp
+             DO J=1,n_interp
                 ZD2(I,J)=ZD(K+I,L+J)
              ENDDO
           ENDDO
-          CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
+          CALL lagrange_interp_2d(n_interp-1,n_interp-1,XD2_1D,&
+               YD2_1D,ZD2,1,XI,YI,ZI)
        ELSE
           ZI(1)=PhotonPhotonFlux_pA_WoodsSaxon_eval(x1,x2)
        ENDIF
@@ -3529,6 +3708,7 @@ CONTAINS
     INTEGER::ilog10x1,ilog10x2
     ! nseg for 10**(-n-1) to 10**(-n)
     INTEGER,PARAMETER::nseg=10
+    INTEGER,PARAMETER::n_interp=6
     INTEGER::MX,MY,I,J,K,L
     INTEGER,DIMENSION(2)::MX_save=(/0,0/),MY_save=(/0,0/)
     SAVE MX_save,MY_save
@@ -3536,8 +3716,10 @@ CONTAINS
     REAL(KIND(1d0)),DIMENSION(:,:,:),ALLOCATABLE::ZD
     REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE::ZD1_save,ZD2_save
     SAVE MX,MY,XD_1D,YD_1D,ZD,ZD1_save,ZD2_save
-    REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
-    REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    !REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
+    !REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    REAL(KIND(1d0)),DIMENSION(n_interp)::XD2_1D,YD2_1D
+    REAL(KIND(1d0)),DIMENSION(n_interp,n_interp)::ZD2
     REAL(KIND(1d0))::xx1,xx2
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
@@ -3559,7 +3741,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -3714,20 +3896,59 @@ CONTAINS
        ELSE
           ilog10x2=FLOOR(YI(1))
        ENDIF
+       !K=nseg*(-ilog10x1-1)
+       !DO I=1,nseg+1
+       !   XD2_1D(I)=XD_1D(K+I)
+       !ENDDO
+       !L=nseg*(-ilog10x2-1)
+       !DO I=1,nseg+1
+       !   YD2_1D(I)=YD_1D(L+I)
+       !ENDDO
+       !DO I=1,nseg+1
+       !   DO J=1,nseg+1
+       !      ZD2(I,J)=ZD(igrid,K+I,L+J)
+       !   ENDDO
+       !ENDDO
+       !CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
        K=nseg*(-ilog10x1-1)
-       DO I=1,nseg+1
-          XD2_1D(I)=XD_1D(K+I)
+       DO I=K+1,K+nseg+1
+          if(XD_1D(I).LE.XI(1))EXIT
        ENDDO
+       IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MX_save(igrid)+1)THEN
+          K=I-n_interp/2-1
+       ELSEIF(I-n_interp/2.LT.1)THEN
+          K=0
+       ELSEIF(I-n_interp/2-1+n_interp.GT.MX_save(igrid)+1)THEN
+          K=MX_save(igrid)+1-n_interp
+       ELSE
+          WRITE(*,*)"Error: you cannot reach here #1 !"
+          STOP
+       ENDIF
        L=nseg*(-ilog10x2-1)
-       DO I=1,nseg+1
+       DO I=L+1,L+nseg+1
+          if(YD_1D(I).LE.YI(1))EXIT
+       ENDDO
+       IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MY_save(igrid)+1)THEN
+          L=I-n_interp/2-1
+       ELSEIF(I-n_interp/2.LT.1)THEN
+          L=0
+       ELSEIF(I-n_interp/2-1+n_interp.GT.MY_save(igrid)+1)THEN
+          L=MY_save(igrid)+1-n_interp
+       ELSE
+          WRITE(*,*)"Error: you cannot reach here #2 !"
+          STOP
+       ENDIF
+       DO I=1,n_interp
+          XD2_1D(I)=XD_1D(K+I)
           YD2_1D(I)=YD_1D(L+I)
        ENDDO
-       DO I=1,nseg+1
-          DO J=1,nseg+1
+       DO I=1,n_interp
+          DO J=1,n_interp
              ZD2(I,J)=ZD(igrid,K+I,L+J)
           ENDDO
        ENDDO
-       CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
+       CALL lagrange_interp_2d(n_interp-1,n_interp-1,XD2_1D,&
+            YD2_1D,ZD2,1,XI,YI,ZI)
        IF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0)THEN
           PhotonPhotonDeltaB_pA_WoodsSaxon=0d0
        ELSE
@@ -4050,14 +4271,17 @@ CONTAINS
     INTEGER::ilog10x1,ilog10x2
     ! nseg for 10**(-n-1) to 10**(-n)
     INTEGER,PARAMETER::nseg=10
+    INTEGER,PARAMETER::n_interp=6
     INTEGER::MX,MY,I,J,K,L
     INTEGER::MX_save=0,MY_save=0
     SAVE MX_save,MY_save
     REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE::XD_1D,YD_1D
     REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE::ZD,ZD_save
     SAVE MX,MY,XD_1D,YD_1D,ZD,ZD_save
-    REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
-    REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    !REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
+    !REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    REAL(KIND(1d0)),DIMENSION(n_interp)::XD2_1D,YD2_1D
+    REAL(KIND(1d0)),DIMENSION(n_interp,n_interp)::ZD2
     REAL(KIND(1d0))::xx1,xx2
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
@@ -4076,7 +4300,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -4198,20 +4422,59 @@ CONTAINS
           ELSE
              ilog10x2=FLOOR(YI(1))
           ENDIF
+          !K=nseg*(-ilog10x1-1)
+          !DO I=1,nseg+1
+          !   XD2_1D(I)=XD_1D(K+I)
+          !ENDDO
+          !L=nseg*(-ilog10x2-1)
+          !DO I=1,nseg+1
+          !   YD2_1D(I)=YD_1D(L+I)
+          !ENDDO
+          !DO I=1,nseg+1
+          !   DO J=1,nseg+1
+          !      ZD2(I,J)=ZD(K+I,L+J)
+          !   ENDDO
+          !ENDDO
+          !CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
           K=nseg*(-ilog10x1-1)
-          DO I=1,nseg+1
-             XD2_1D(I)=XD_1D(K+I)
+          DO I=K+1,K+nseg+1
+             if(XD_1D(I).LE.XI(1))EXIT
           ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MX_save+1)THEN
+             K=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             K=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MX_save+1)THEN
+             K=MX_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #1 !"
+             STOP
+          ENDIF
           L=nseg*(-ilog10x2-1)
-          DO I=1,nseg+1
+          DO I=L+1,L+nseg+1
+             if(YD_1D(I).LE.YI(1))EXIT
+          ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MY_save+1)THEN
+             L=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             L=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MY_save+1)THEN
+             L=MY_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #2 !"
+             STOP
+          ENDIF
+          DO I=1,n_interp
+             XD2_1D(I)=XD_1D(K+I)
              YD2_1D(I)=YD_1D(L+I)
           ENDDO
-          DO I=1,nseg+1
-             DO J=1,nseg+1
+          DO I=1,n_interp
+             DO J=1,n_interp
                 ZD2(I,J)=ZD(K+I,L+J)
              ENDDO
           ENDDO
-          CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
+          CALL lagrange_interp_2d(n_interp-1,n_interp-1,XD2_1D,&
+               YD2_1D,ZD2,1,XI,YI,ZI)
        ELSE
           ZI(1)=PhotonPhotonFlux_AB_hardsphere_eval(x1,x2)
        ENDIF
@@ -4453,14 +4716,17 @@ CONTAINS
     INTEGER::ilog10x1,ilog10x2
     ! nseg for 10**(-n-1) to 10**(-n)
     INTEGER,PARAMETER::nseg=10
+    INTEGER,PARAMETER::n_interp=6
     INTEGER::MX,MY,I,J,K,L
     INTEGER::MX_save=0,MY_save=0
     SAVE MX_save,MY_save
     REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE::XD_1D,YD_1D
     REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE::ZD,ZD_save
     SAVE MX,MY,XD_1D,YD_1D,ZD,ZD_save
-    REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
-    REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    !REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
+    !REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    REAL(KIND(1d0)),DIMENSION(n_interp)::XD2_1D,YD2_1D
+    REAL(KIND(1d0)),DIMENSION(n_interp,n_interp)::ZD2
     REAL(KIND(1d0))::xx1,xx2
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
@@ -4479,7 +4745,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -4602,20 +4868,59 @@ CONTAINS
           ELSE
              ilog10x2=FLOOR(YI(1))
           ENDIF
+          !K=nseg*(-ilog10x1-1)
+          !DO I=1,nseg+1
+          !   XD2_1D(I)=XD_1D(K+I)
+          !ENDDO
+          !L=nseg*(-ilog10x2-1)
+          !DO I=1,nseg+1
+          !   YD2_1D(I)=YD_1D(L+I)
+          !ENDDO
+          !DO I=1,nseg+1
+          !   DO J=1,nseg+1
+          !      ZD2(I,J)=ZD(K+I,L+J)
+          !   ENDDO
+          !ENDDO
+          !CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
           K=nseg*(-ilog10x1-1)
-          DO I=1,nseg+1
-             XD2_1D(I)=XD_1D(K+I)
+          DO I=K+1,K+nseg+1
+             if(XD_1D(I).LE.XI(1))EXIT
           ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MX_save+1)THEN
+             K=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             K=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MX_save+1)THEN
+             K=MX_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #1 !"
+             STOP
+          ENDIF
           L=nseg*(-ilog10x2-1)
-          DO I=1,nseg+1
+          DO I=L+1,L+nseg+1
+             if(YD_1D(I).LE.YI(1))EXIT
+          ENDDO
+          IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MY_save+1)THEN
+             L=I-n_interp/2-1
+          ELSEIF(I-n_interp/2.LT.1)THEN
+             L=0
+          ELSEIF(I-n_interp/2-1+n_interp.GT.MY_save+1)THEN
+             L=MY_save+1-n_interp
+          ELSE
+             WRITE(*,*)"Error: you cannot reach here #2 !"
+             STOP
+          ENDIF
+          DO I=1,n_interp
+             XD2_1D(I)=XD_1D(K+I)
              YD2_1D(I)=YD_1D(L+I)
           ENDDO
-          DO I=1,nseg+1
-             DO J=1,nseg+1
+          DO I=1,n_interp
+             DO J=1,n_interp
                 ZD2(I,J)=ZD(K+I,L+J)
              ENDDO
           ENDDO
-          CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
+          CALL lagrange_interp_2d(n_interp-1,n_interp-1,XD2_1D,&
+               YD2_1D,ZD2,1,XI,YI,ZI)
        ELSE
           ZI(1)=PhotonPhotonFlux_AB_WoodsSaxon_eval(x1,x2)
        ENDIF
@@ -4894,6 +5199,7 @@ CONTAINS
     INTEGER::ilog10x1,ilog10x2
     ! nseg for 10**(-n-1) to 10**(-n)
     INTEGER,PARAMETER::nseg=10
+    INTEGER,PARAMETER::n_interp=6
     INTEGER::MX,MY,I,J,K,L
     INTEGER,DIMENSION(2)::MX_save=(/0,0/),MY_save=(/0,0/)
     SAVE MX_save,MY_save
@@ -4901,8 +5207,10 @@ CONTAINS
     REAL(KIND(1d0)),DIMENSION(:,:,:),ALLOCATABLE::ZD
     REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE::ZD1_save,ZD2_save
     SAVE MX,MY,XD_1D,YD_1D,ZD,ZD1_save,ZD2_save
-    REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
-    REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    !REAL(KIND(1d0)),DIMENSION(nseg+1)::XD2_1D,YD2_1D
+    !REAL(KIND(1d0)),DIMENSION(nseg+1,nseg+1)::ZD2
+    REAL(KIND(1d0)),DIMENSION(n_interp)::XD2_1D,YD2_1D
+    REAL(KIND(1d0)),DIMENSION(n_interp,n_interp)::ZD2
     REAL(KIND(1d0))::xx1,xx2
     REAL(KIND(1d0)),DIMENSION(1)::XI,YI,ZI
     REAL(KIND(1d0))::pnohadval
@@ -4924,7 +5232,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -5084,20 +5392,59 @@ CONTAINS
        ELSE
           ilog10x2=FLOOR(YI(1))
        ENDIF
+       !K=nseg*(-ilog10x1-1)
+       !DO I=1,nseg+1
+       !   XD2_1D(I)=XD_1D(K+I)
+       !ENDDO
+       !L=nseg*(-ilog10x2-1)
+       !DO I=1,nseg+1
+       !   YD2_1D(I)=YD_1D(L+I)
+       !ENDDO
+       !DO I=1,nseg+1
+       !   DO J=1,nseg+1
+       !      ZD2(I,J)=ZD(igrid,K+I,L+J)
+       !   ENDDO
+       !ENDDO
+       !CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
        K=nseg*(-ilog10x1-1)
-       DO I=1,nseg+1
-          XD2_1D(I)=XD_1D(K+I)
+       DO I=K+1,K+nseg+1
+          if(XD_1D(I).LE.XI(1))EXIT
        ENDDO
+       IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MX_save(igrid)+1)THEN
+          K=I-n_interp/2-1
+       ELSEIF(I-n_interp/2.LT.1)THEN
+          K=0
+       ELSEIF(I-n_interp/2-1+n_interp.GT.MX_save(igrid)+1)THEN
+          K=MX_save(igrid)+1-n_interp
+       ELSE
+          WRITE(*,*)"Error: you cannot reach here #1 !"
+          STOP
+       ENDIF
        L=nseg*(-ilog10x2-1)
-       DO I=1,nseg+1
+       DO I=L+1,L+nseg+1
+          if(YD_1D(I).LE.YI(1))EXIT
+       ENDDO
+       IF(I-n_interp/2.GE.1.AND.I-n_interp/2-1+n_interp.LE.MY_save(igrid)+1)THEN
+          L=I-n_interp/2-1
+       ELSEIF(I-n_interp/2.LT.1)THEN
+          L=0
+       ELSEIF(I-n_interp/2-1+n_interp.GT.MY_save(igrid)+1)THEN
+          L=MY_save(igrid)+1-n_interp
+       ELSE
+          WRITE(*,*)"Error: you cannot reach here #2 !"
+          STOP
+       ENDIF
+       DO I=1,n_interp
+          XD2_1D(I)=XD_1D(K+I)
           YD2_1D(I)=YD_1D(L+I)
        ENDDO
-       DO I=1,nseg+1
-          DO J=1,nseg+1
+       DO I=1,n_interp
+          DO J=1,n_interp
              ZD2(I,J)=ZD(igrid,K+I,L+J)
           ENDDO
        ENDDO
-       CALL lagrange_interp_2d(nseg,nseg,XD2_1D,YD2_1D,ZD2,1,XI,YI,ZI)
+       CALL lagrange_interp_2d(n_interp-1,n_interp-1,XD2_1D,&
+            YD2_1D,ZD2,1,XI,YI,ZI)
        IF(ISNAN(ZI(1)).OR.ZI(1).LT.0d0)THEN
           PhotonPhotonDeltaB_AB_WoodsSaxon=0d0
        ELSE
@@ -5503,7 +5850,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -5546,7 +5893,7 @@ CONTAINS
        WRITE(*,*)"|       \$$              \$$$$$$  \$$        \$$$$$$          |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    A library for exclusive photon-photon processes in       |"
-       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.7)     |"
+       WRITE(*,*)"|    ultraperipheral proton and nuclear collisions (v1.8)     |"
        WRITE(*,*)"|                                                             |"
        WRITE(*,*)"|    By Hua-Sheng Shao (LPTHE) and David d'Enterria (CERN)    |"
        WRITE(*,*)"|                                                             |"
@@ -5785,7 +6132,7 @@ CONTAINS
     ! P^{Xn,(1)}
     IF(in2.NE.-2.OR.conj_sum)THEN
        PXn_LO_proj1=PbreakXn_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-            RA_save(1),wVal_save(1),aaVal_save(1),1d-3,0d0,1)
+            RA_save(1),wVal_save(1),aaVal_save(1),Emin_Xn,Emax_Xn,1)
        PXn_LO_proj1=PXn_LO_proj1*Z_save(1)**2*alpha
        P0n_proj1=DEXP(-PXn_LO_proj1)
        IF(in2.EQ.-1.OR.(conj_sum.AND.in1.EQ.-1))THEN
@@ -5810,7 +6157,7 @@ CONTAINS
        IF(in2.EQ.1.OR.(conj_sum.AND.in1.EQ.1))THEN
           ! 1n
           P1n_LO_proj1=Pbreak1n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),1d-3,4d-2,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_1n,Emax_1n,1)
           P1n_LO_proj1=P1n_LO_proj1*Z_save(1)**2*alpha
           P1n_proj1=P1n_LO_proj1*P0n_proj1
           IF(in2.EQ.1)THEN
@@ -5823,10 +6170,10 @@ CONTAINS
        IF(in2.EQ.2.OR.(conj_sum.AND.in1.EQ.2))THEN
           ! 2n
           P1n_LO_proj1=Pbreak1n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),1d-3,4d-2,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_1n,Emax_1n,1)
           P1n_LO_proj1=P1n_LO_proj1*Z_save(1)**2*alpha
           P2n_LO_proj1=Pbreak2n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),1.3d-2,1.4d-1,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_2n,Emax_2n,1)
           P2n_LO_proj1=P2n_LO_proj1*Z_save(1)**2*alpha
           P2n_proj1=(P1n_LO_proj1**2/2d0+P2n_LO_proj1)*P0n_proj1
           IF(in2.EQ.2)THEN
@@ -5839,13 +6186,13 @@ CONTAINS
        IF(in2.EQ.3.OR.(conj_sum.AND.in1.EQ.3))THEN
           ! 3n
           P1n_LO_proj1=Pbreak1n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),1d-3,4d-2,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_1n,Emax_1n,1)
           P1n_LO_proj1=P1n_LO_proj1*Z_save(1)**2*alpha
           P2n_LO_proj1=Pbreak2n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),1.3d-2,1.4d-1,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_2n,Emax_2n,1)
           P2n_LO_proj1=P2n_LO_proj1*Z_save(1)**2*alpha
           P3n_LO_proj1=Pbreak3n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),2.2d-2,1.4d-1,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_3n,Emax_3n,1)
           P3n_LO_proj1=P3n_LO_proj1*Z_save(1)**2*alpha
           P3n_proj1=(P1n_LO_proj1**3/6d0+P1n_LO_proj1*P2n_LO_proj1+P3n_LO_proj1)*P0n_proj1
           IF(in2.EQ.3)THEN
@@ -5858,16 +6205,16 @@ CONTAINS
        IF(in2.EQ.4.OR.(conj_sum.AND.in1.EQ.4))THEN
           ! 4n
           P1n_LO_proj1=Pbreak1n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),1d-3,4d-2,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_1n,Emax_1n,1)
           P1n_LO_proj1=P1n_LO_proj1*Z_save(1)**2*alpha
           P2n_LO_proj1=Pbreak2n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),1.3d-2,1.4d-1,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_2n,Emax_2n,1)
           P2n_LO_proj1=P2n_LO_proj1*Z_save(1)**2*alpha
           P3n_LO_proj1=Pbreak3n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),2.2d-2,1.4d-1,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_3n,Emax_3n,1)
           P3n_LO_proj1=P3n_LO_proj1*Z_save(1)**2*alpha
           P4n_LO_proj1=Pbreak4n_LO_AB_WS(Db,A_save(2),Z_save(2),gamma2_save,gamma1_save,&
-               RA_save(1),wVal_save(1),aaVal_save(1),3.2d-2,1.4d-1,1)
+               RA_save(1),wVal_save(1),aaVal_save(1),Emin_4n,Emax_4n,1)
           P4n_LO_proj1=P4n_LO_proj1*Z_save(1)**2*alpha
           P4n_proj1=(P1n_LO_proj1**4/24d0+P1n_LO_proj1**2*P2n_LO_proj1/2d0&
                +P1n_LO_proj1*P3n_LO_proj1+P2n_LO_proj1**2/2d0+P4n_LO_proj1)*P0n_proj1
@@ -5882,7 +6229,7 @@ CONTAINS
     ! For in1, projectile is beam 2 and target is beam 1
     IF(in1.NE.-2.OR.conj_sum)THEN
        PXn_LO_proj2=PbreakXn_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-            RA_save(2),wVal_save(2),aaVal_save(2),1d-3,0d0,2)
+            RA_save(2),wVal_save(2),aaVal_save(2),Emin_Xn,Emax_Xn,2)
        PXn_LO_proj2=PXn_LO_proj2*Z_save(2)**2*alpha
        P0n_proj2=DEXP(-PXn_LO_proj2)
        IF(in1.EQ.-1.OR.(conj_sum.AND.in2.EQ.-1))THEN
@@ -5907,7 +6254,7 @@ CONTAINS
        IF(in1.EQ.1.OR.(conj_sum.AND.in2.EQ.1))THEN
           ! 1n
           P1n_LO_proj2=Pbreak1n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),1d-3,4d-2,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_1n,Emax_1n,2)
           P1n_LO_proj2=P1n_LO_proj2*Z_save(2)**2*alpha
           P1n_proj2=P1n_LO_proj2*P0n_proj2
           IF(in1.EQ.1)THEN
@@ -5920,10 +6267,10 @@ CONTAINS
        IF(in1.EQ.2.OR.(conj_sum.AND.in2.EQ.2))THEN
           ! 2n
           P1n_LO_proj2=Pbreak1n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),1d-3,4d-2,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_1n,Emax_1n,2)
           P1n_LO_proj2=P1n_LO_proj2*Z_save(2)**2*alpha
           P2n_LO_proj2=Pbreak2n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),1.3d-2,1.4d-1,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_2n,Emax_2n,2)
           P2n_LO_proj2=P2n_LO_proj2*Z_save(2)**2*alpha
           P2n_proj2=(P1n_LO_proj2**2/2d0+P2n_LO_proj2)*P0n_proj2
           IF(in1.EQ.2)THEN
@@ -5936,13 +6283,13 @@ CONTAINS
        IF(in1.EQ.3.OR.(conj_sum.AND.in2.EQ.3))THEN
           ! 3n
           P1n_LO_proj2=Pbreak1n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),1d-3,4d-2,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_1n,Emax_1n,2)
           P1n_LO_proj2=P1n_LO_proj2*Z_save(2)**2*alpha
           P2n_LO_proj2=Pbreak2n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),1.3d-2,1.4d-1,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_2n,Emax_2n,2)
           P2n_LO_proj2=P2n_LO_proj2*Z_save(2)**2*alpha
           P3n_LO_proj2=Pbreak3n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),2.2d-2,1.4d-1,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_3n,Emax_3n,2)
           P3n_LO_proj2=P3n_LO_proj2*Z_save(2)**2*alpha
           P3n_proj2=(P1n_LO_proj2**3/6d0+P1n_LO_proj2*P2n_LO_proj2+P3n_LO_proj2)*P0n_proj2
           IF(in1.EQ.3)THEN
@@ -5955,16 +6302,16 @@ CONTAINS
        IF(in1.EQ.4.OR.(conj_sum.AND.in2.EQ.4))THEN
           ! 4n
           P1n_LO_proj2=Pbreak1n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),1d-3,4d-2,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_1n,Emax_1n,2)
           P1n_LO_proj2=P1n_LO_proj2*Z_save(2)**2*alpha
           P2n_LO_proj2=Pbreak2n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),1.3d-2,1.4d-1,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_2n,Emax_2n,2)
           P2n_LO_proj2=P2n_LO_proj2*Z_save(2)**2*alpha
           P3n_LO_proj2=Pbreak3n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),2.2d-2,1.4d-1,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_3n,Emax_3n,2)
           P3n_LO_proj2=P3n_LO_proj2*Z_save(2)**2*alpha
           P4n_LO_proj2=Pbreak4n_LO_AB_WS(Db,A_save(1),Z_save(1),gamma1_save,gamma2_save,&
-               RA_save(2),wVal_save(2),aaVal_save(2),3.2d-2,1.4d-1,2)
+               RA_save(2),wVal_save(2),aaVal_save(2),Emin_4n,Emax_4n,2)
           P4n_LO_proj2=P4n_LO_proj2*Z_save(2)**2*alpha
           P4n_proj2=(P1n_LO_proj2**4/24d0+P1n_LO_proj2**2*P2n_LO_proj2/2d0&
                +P1n_LO_proj2*P3n_LO_proj2+P2n_LO_proj2**2/2d0+P4n_LO_proj2)*P0n_proj2
@@ -6074,7 +6421,7 @@ CONTAINS
     ENDIF
 
     Pbreak_pA_WoodsSaxon=1d0
-    PXn_LO_proj1=PbreakXn_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,1d-3,0d0)
+    PXn_LO_proj1=PbreakXn_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_Xn,Emax_Xn)
     PXn_LO_proj1=PXn_LO_proj1*alpha
     P0n_proj1=DEXP(-PXn_LO_proj1)
     IF(in2.EQ.-1)THEN
@@ -6086,37 +6433,37 @@ CONTAINS
        Pbreak_pA_WoodsSaxon=Pbreak_pA_WoodsSaxon*P0n_proj1
     ELSEIF(in2.EQ.1)THEN
        ! 1n
-       P1n_LO_proj1=Pbreak1n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,1d-3,4d-2)
+       P1n_LO_proj1=Pbreak1n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_1n,Emax_1n)
        P1n_LO_proj1=P1n_LO_proj1*alpha
        P1n_proj1=P1n_LO_proj1*P0n_proj1
        Pbreak_pA_WoodsSaxon=Pbreak_pA_WoodsSaxon*P1n_proj1
     ELSEIF(in2.EQ.2)THEN
        ! 2n
-       P1n_LO_proj1=Pbreak1n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,1d-3,4d-2)
+       P1n_LO_proj1=Pbreak1n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_1n,Emax_1n)
        P1n_LO_proj1=P1n_LO_proj1*alpha
-       P2n_LO_proj1=Pbreak2n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,1.3d-2,1.4d-1)
+       P2n_LO_proj1=Pbreak2n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_2n,Emax_2n)
        P2n_LO_proj1=P2n_LO_proj1*alpha
        P2n_proj1=(P1n_LO_proj1**2/2d0+P2n_LO_proj1)*P0n_proj1
        Pbreak_pA_WoodsSaxon=Pbreak_pA_WoodsSaxon*P2n_proj1
     ELSEIF(in2.EQ.3)THEN
        ! 3n
-       P1n_LO_proj1=Pbreak1n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,1d-3,4d-2)
+       P1n_LO_proj1=Pbreak1n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_1n,Emax_1n)
        P1n_LO_proj1=P1n_LO_proj1*alpha
-       P2n_LO_proj1=Pbreak2n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,1.3d-2,1.4d-1)
+       P2n_LO_proj1=Pbreak2n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_2n,Emax_2n)
        P2n_LO_proj1=P2n_LO_proj1*alpha
-       P3n_LO_proj1=Pbreak3n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,2.2d-2,1.4d-1)
+       P3n_LO_proj1=Pbreak3n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_3n,Emax_3n)
        P3n_LO_proj1=P3n_LO_proj1*alpha
        P3n_proj1=(P1n_LO_proj1**3/6d0+P1n_LO_proj1*P2n_LO_proj1+P3n_LO_proj1)*P0n_proj1
        Pbreak_pA_WoodsSaxon=Pbreak_pA_WoodsSaxon*P3n_proj1
     ELSEIF(in2.EQ.4)THEN
        ! 4n
-       P1n_LO_proj1=Pbreak1n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,1d-3,4d-2)
+       P1n_LO_proj1=Pbreak1n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_1n,Emax_1n)
        P1n_LO_proj1=P1n_LO_proj1*alpha
-       P2n_LO_proj1=Pbreak2n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,1.3d-2,1.4d-1)
+       P2n_LO_proj1=Pbreak2n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_2n,Emax_2n)
        P2n_LO_proj1=P2n_LO_proj1*alpha
-       P3n_LO_proj1=Pbreak3n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,2.2d-2,1.4d-1)
+       P3n_LO_proj1=Pbreak3n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_3n,Emax_3n)
        P3n_LO_proj1=P3n_LO_proj1*alpha
-       P4n_LO_proj1=Pbreak4n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,3.2d-2,1.4d-1)
+       P4n_LO_proj1=Pbreak4n_LO_pA(Db,A_save,Z_save,gamma2_save,gamma1_save,Emin_4n,Emax_4n)
        P4n_LO_proj1=P4n_LO_proj1*alpha
        P4n_proj1=(P1n_LO_proj1**4/24d0+P1n_LO_proj1**2*P2n_LO_proj1/2d0&
             +P1n_LO_proj1*P3n_LO_proj1+P2n_LO_proj1**2/2d0+P4n_LO_proj1)*P0n_proj1
@@ -6444,6 +6791,13 @@ CONTAINS
     REAL(KIND(1d0))::b_proj_common,R_proj_common,w_proj_common,aa_proj_common
     COMMON/PbreakXn_AB_CFF_WS_REAL/gamma_target_common,gamma_proj_common,b_proj_common,&
          R_proj_common,w_proj_common,aa_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
     
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -6749,6 +7103,13 @@ CONTAINS
     REAL(KIND(1d0))::gamma_proj_common,gamma_target_common
     REAL(KIND(1d0))::b_proj_common
     COMMON/PbreakXn_pA_CFF_REAL/gamma_target_common,gamma_proj_common,b_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
 
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -7098,6 +7459,13 @@ CONTAINS
     REAL(KIND(1d0))::b_proj_common,R_proj_common,w_proj_common,aa_proj_common
     COMMON/Pbreak1n_AB_CFF_WS_REAL/gamma_target_common,gamma_proj_common,b_proj_common,&
          R_proj_common,w_proj_common,aa_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
     
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -7404,6 +7772,13 @@ CONTAINS
     REAL(KIND(1d0))::gamma_proj_common,gamma_target_common
     REAL(KIND(1d0))::b_proj_common
     COMMON/Pbreak1n_pA_CFF_REAL/gamma_target_common,gamma_proj_common,b_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
 
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -7753,6 +8128,13 @@ CONTAINS
     REAL(KIND(1d0))::b_proj_common,R_proj_common,w_proj_common,aa_proj_common
     COMMON/Pbreak2n_AB_CFF_WS_REAL/gamma_target_common,gamma_proj_common,b_proj_common,&
          R_proj_common,w_proj_common,aa_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
     
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -8059,6 +8441,14 @@ CONTAINS
     REAL(KIND(1d0))::gamma_proj_common,gamma_target_common
     REAL(KIND(1d0))::b_proj_common
     COMMON/Pbreak2n_pA_CFF_REAL/gamma_target_common,gamma_proj_common,b_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
+    
 
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -8408,6 +8798,13 @@ CONTAINS
     REAL(KIND(1d0))::b_proj_common,R_proj_common,w_proj_common,aa_proj_common
     COMMON/Pbreak3n_AB_CFF_WS_REAL/gamma_target_common,gamma_proj_common,b_proj_common,&
          R_proj_common,w_proj_common,aa_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
     
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -8714,6 +9111,13 @@ CONTAINS
     REAL(KIND(1d0))::gamma_proj_common,gamma_target_common
     REAL(KIND(1d0))::b_proj_common
     COMMON/Pbreak3n_pA_CFF_REAL/gamma_target_common,gamma_proj_common,b_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
 
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -9063,6 +9467,13 @@ CONTAINS
     REAL(KIND(1d0))::b_proj_common,R_proj_common,w_proj_common,aa_proj_common
     COMMON/Pbreak4n_AB_CFF_WS_REAL/gamma_target_common,gamma_proj_common,b_proj_common,&
          R_proj_common,w_proj_common,aa_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
     
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
@@ -9369,6 +9780,13 @@ CONTAINS
     REAL(KIND(1d0))::gamma_proj_common,gamma_target_common
     REAL(KIND(1d0))::b_proj_common
     COMMON/Pbreak4n_pA_CFF_REAL/gamma_target_common,gamma_proj_common,b_proj_common
+    INTEGER,SAVE::init=0
+
+    if(init.eq.0)then
+       ! uncertainty for neutron tagging
+       XSIGMA=NEUTRON_XSIGMA
+       init=1
+    endif
 
     xgamma=DEXP(-log1oxgamma)
     IF(xgamma.GE.1d0.OR.xgamma.LE.0d0)THEN
