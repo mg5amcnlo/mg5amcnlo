@@ -4,6 +4,17 @@ ANNOUNCEMENT:
    The 2.9.X LONG TERM STABLE version is now at end of life for bug fixing/support since December 2025.
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
+3.8.2 (XX/XX/XX):
+    VD+OM: Density mode of the reweighting (since 3.8.0): the particles of the density matrix are now
+        ordered as given in particle_in_density_matrix (they followed the order of the process), also
+        when they are ranked with an observable. That ranking could be wrong, or drop a particle, when
+        other particles were in between. A pdg code (or a rank) absent from the process is now an error.
+    OM: Density mode of the reweighting (since 3.8.0): boost_choice used the wrong particles when the
+        event contains intermediate particles, e.g. the t+W frame instead of the b+t~ one for
+        g g > t t~, t > b w+ with boost_choice [5, -6].
+    VD: Quantum Information library: new observable Get_Steering (two-qubit steering for 2 or 3
+        measurements per site, 1510.08030).
+
 3.8.0 (15/09/26):
     OM+SA+VD: MadSpin2 (2609.02794)
         - Arbitrary decay, support for loop-induced processes, interference, Pole Approximation mode, polarization weights, ...
