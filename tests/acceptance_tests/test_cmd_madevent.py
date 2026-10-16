@@ -170,14 +170,24 @@ _MG7_DEFAULT_CARDS = {
 
 def _mg7_tool_or_skip(test, cmd, *option_keys):
     """skipTest unless every configured tool path in *option_keys* (e.g.
-    'pythia8_path', 'delphes_path', 'rivet_path') is available; otherwise the
-    post-processing driver would silently skip the tool and the output-file
-    assertions would fail for an unrelated (missing-tool) reason."""
+    'pythia8_path', 'delphes_path', 'rivet_path', or 'fastjet' for the
+    fastjet-config executable) is available; otherwise the post-processing
+    driver would skip or fail on the tool and the output-file assertions would
+    fail for an unrelated (missing-tool) reason. Used by the madevent
+    post-processing tests too."""
     for key in option_keys:
         path = cmd.options.get(key)
+        if path and key == 'fastjet':
+            # fastjet-config may be given by name and found on the PATH
+            path = misc.which(path) or path
         if not path or path in ('None', 'NA') or not os.path.exists(path):
-            test.skipTest('mg7 post-processing tool %s not configured (%s)'
+            test.skipTest('post-processing tool %s not configured (%s)'
                           % (key, path))
+
+
+# Rivet runs need rivet, yoda and a full fastjet (fastjet-config) next to the
+# Pythia8 shower; contur adds its own installation on top.
+_RIVET_TOOLS = ('pythia8_path', 'rivet_path', 'yoda_path', 'fastjet')
 
 
 def _run_mg7_postproc(test, setup_cmds, run_dir, datadir, switch_lines=None,
@@ -4083,6 +4093,8 @@ class TestMEfromfile(unittest.TestCase):
     def test_contur_from_file(self):
         """check that contur runs as expected"""
 
+        _mg7_tool_or_skip(self, MGCmd.MasterCmd(),
+                          *(_RIVET_TOOLS + ('contur_path',)))
         cwd = os.getcwd()
         import subprocess
         if logging.getLogger('madgraph').level <= 20:
@@ -4115,8 +4127,9 @@ class TestMEfromfile(unittest.TestCase):
 
 
     def test_rivet_from_file(self):
-        """check that contur runs as expected"""
+        """check that rivet runs as expected"""
 
+        _mg7_tool_or_skip(self, MGCmd.MasterCmd(), *_RIVET_TOOLS)
         cwd = os.getcwd()
         import subprocess
         if logging.getLogger('madgraph').level <= 20:
@@ -4298,7 +4311,7 @@ set draw_rivet_plots True
             pjoin(self.path, 'MG7_rivet'), datadir,
             switch_lines=['shower=Pythia8', 'analysis=Rivet'],
             precopy_cards=['pythia8', 'rivet'],
-            require_tools=('pythia8_path', 'rivet_path'),
+            require_tools=_RIVET_TOOLS,
             events=100)
 
         self.assertTrue(os.path.exists(pjoin(run, 'rivet_result.yoda')),

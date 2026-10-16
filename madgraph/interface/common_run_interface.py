@@ -3200,6 +3200,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         #2 Prepare Rivet setup environments
         rivet_path = self.options['rivet_path']
         yoda_path = self.options['yoda_path']
+        # Rivet links against rivet, yoda and a full fastjet installation
+        # (fjcore, the fallback without fastjet-config, is not enough)
+        for key, what in [('rivet_path', 'rivet'), ('yoda_path', 'yoda'),
+                          ('fastjet', 'fastjet-config')]:
+            value = self.options[key]
+            if not value or value in ['None', 'NA'] or \
+                         (key == 'fastjet' and not misc.which(value)):
+                raise self.InvalidCmd('Rivet requires %s, but option %s is "%s":'
+                    ' install it (install rivet) or set %s in '
+                    'mg5_configuration.txt.' % (what, key, value, key))
         fastjet_path = subprocess.Popen([self.options['fastjet'], '--prefix'],
                          stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
 
