@@ -467,7 +467,7 @@ c     Update the strong coupling
                   if ((.not. lscalevar(dd)) .and. kf.ne.1) exit
                   mu2_f(kf)=c_mu2_f*scalevarF(kf)**2
 c     call the PDFs
-                  if (lpp(1).eq.2 .and. lpp(2).eq.2) then
+                  if (abs(lpp(1)).eq.2 .and. abs(lpp(2)).eq.2) then
                      xlum(kf)=photonpdfsquare(bjx(1,i),bjx(2,i))
                   else
                      xlum(kf)=1d0
@@ -533,7 +533,7 @@ c     add the weights to the array
 c     alpha_s
                g=sqrt(4d0*pi*alphas(sqrt(mu2_r)))
 c     call the PDFs
-               if (lpp(1).eq.2 .and. lpp(2).eq.2) then
+               if (abs(lpp(1)).eq.2 .and. abs(lpp(2)).eq.2) then
                   xlum=photonpdfsquare(bjx(1,i),bjx(2,i))
                else
                   xlum=1d0
