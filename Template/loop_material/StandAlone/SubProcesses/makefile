@@ -176,6 +176,11 @@ ifeq ($(origin MENUM),undefined)
   MENUM=2
 endif
 
+# name of the f2py python module. A caller importing a rebuild of this
+# directory in a python process that already imported the previous build has
+# to give it (and ROOTNAME) a new value: a module cannot be imported twice.
+F2PYMOD= all_matrix$(MENUM)py
+
 liball$(ROOTNAME)_$(MENUM)me.$(dylibext): all_matrix.o libMadLoop.$(dylibext) $(WRAPPER_OBJS) $(LIBS)  $(OLP) 
 	$(CXX) $(DYNLIBFLAG)  $(LIBALLME_DYNFLAG)  $(STDLIB_FLAG)  -o liball$(ROOTNAME)_$(MENUM)me.$(dylibext) all_matrix.o */f2py_wrapper.o ../Source/DHELAS/*.o ../Source/MODEL/*.o $(STAT_LIB) $(RPATH_LIBS) $(LINK_LOOP_LIBS) $(ALL_DOTO) $(STDLIB) $(LINK_LOOP_LIBS) 
 
@@ -201,7 +206,7 @@ allmatrix$(MENUM)py.so: $(OLP)_static all_matrix.f $(LIBS) $(WRAPPER)
 
 
 all_matrix$(MENUM)py.so:  liball$(ROOTNAME)_$(MENUM)me.$(dylibext) f2py_wrapper.f makefile
-	LDFLAGS="-Wl,-rpath,$(HERE) -L$(HERE) $(RPATH_LIBS)  $(LINK_LOOP_LIBS) $(LD_F2PY)" $(F2PY)  -c f2py_wrapper.f -L$(HERE) -lall$(ROOTNAME)_$(MENUM)me -m all_matrix$(MENUM)py  
+	LDFLAGS="-Wl,-rpath,$(HERE) -L$(HERE) $(RPATH_LIBS)  $(LINK_LOOP_LIBS) $(LD_F2PY)" $(F2PY)  -c f2py_wrapper.f -L$(HERE) -lall$(ROOTNAME)_$(MENUM)me -m $(F2PYMOD)
 	touch all_matrix$(MENUM)py.so
 	touch __init__.py
 
