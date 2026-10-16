@@ -6019,7 +6019,6 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                     ' --path=%s --body_decay=2'%pjoin(path,'tmp.dat')+\
                     ' --precision_channel=0.001 --engine=madevent'
 #                misc.sprint(command)
-                param_card.write(pjoin(options['output_path'],'tmp.dat'))
                 # The MG5 command get_width will change the cmd._curr_model
                 # and the cmd._curr_fortran_model which what we specified, so 
                 # we must make sure to restore them after it finishes
