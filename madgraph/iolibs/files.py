@@ -246,6 +246,19 @@ def ln(file_pos, starting_dir='.', name='', log=True, cwd=None, abspath=False):
 
     if not abspath:
         target = os.path.relpath(file_pos, starting_dir)
+        # The kernel resolves '..' on the physical directory, so a relative
+        # path counted on a logical one that crosses a symlinked directory
+        # (macOS /var -> /private/var) lands elsewhere: count it on the
+        # physical directories then, or fall back to the absolute path.
+        if os.path.realpath(os.path.join(starting_dir, target)) != \
+                                                   os.path.realpath(file_pos):
+            phys_pos = os.path.join(
+                os.path.realpath(os.path.dirname(os.path.abspath(file_pos))),
+                os.path.basename(os.path.abspath(file_pos)))
+            target = os.path.relpath(phys_pos, os.path.realpath(starting_dir))
+            if os.path.realpath(os.path.join(starting_dir, target)) != \
+                                                   os.path.realpath(file_pos):
+                target = os.path.abspath(file_pos)
     else:
         target = file_pos
 
