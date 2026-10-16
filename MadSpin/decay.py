@@ -512,7 +512,11 @@ class dc_branch_from_me(dict):
                     child_propa_id -= 1
                     self["tree"][propa_id]["d%s" % c_nb]["index"] = child_propa_id
                     self.nb_decays += 1
-                    child_propa_id = add_decay(to_decay[c_pid].pop(), child_propa_id)
+                    # FIFO, as in get_full_process_structure: the n-th child of
+                    # a given pid takes the n-th sub-decay written for it, which
+                    # is how MG orders the legs of the full matrix element
+                    # (h > z z, z > e+ e-, z > u u~ has e+ e- before u u~).
+                    child_propa_id = add_decay(to_decay[c_pid].pop(0), child_propa_id)
                 else:
                     self.nexternal += 1
                     self["tree"][propa_id]["d%s" % c_nb]["index"] = self.nexternal
@@ -691,6 +695,11 @@ class dc_branch_from_me(dict):
                     to_decay[pid] = [dec]
 
             # loop over the child
+            # resonances are numbered as in __init__: a decaying child takes
+            # the next free id after the whole subtree of its previous
+            # sibling (propa_id-1 for every child sent two decaying z's of
+            # h > z z to the same resonance)
+            child_propa_id = propa_id
             for c_nb,leg in enumerate(proc.get('legs')):
                 if c_nb == 0:
                     continue
@@ -698,7 +707,10 @@ class dc_branch_from_me(dict):
                 c_pid = leg.get('id')
                 self["tree"][propa_id]["d%s" % c_nb]["labels"].append(c_pid)
                 if c_pid in to_decay:
-                    add_decay(to_decay[c_pid].pop(), propa_id-1)
+                    child_propa_id -= 1
+                    # FIFO, same pairing as in __init__
+                    child_propa_id = add_decay(to_decay[c_pid].pop(0), child_propa_id)
+            return child_propa_id
         
         # launch the recursive loop
         for proc in proc_list:
@@ -4594,13 +4606,18 @@ class decay_all_events_onshell(decay_all_events):
             commandline = commandline.replace('add process', 'generate',1)
             mgcmd.exec_cmd(commandline, precmd=True)
 
-            commandline = 'output standalone %s --prefix=int' % pjoin(path_me, ms_me_subdir)
+            # same t-channel widths as madevent (zerowidth_tchannel)
+            commandline = 'output standalone %s --prefix=int --zerowidth_tchannel=True' % pjoin(path_me, ms_me_subdir)
             logger.info(commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
             fill_all_me(self, "production")
         else:
+            # auto_zero_width_PA: the decayed particles in the production
+            # (pdg list), the decaying particle in each decay (True/False)
+            zero_width = self.zerowidth_decay_pdgs()
             commandline_production = commandline.replace('add process', 'generate',1)
-            commandline_production += 'output standalone %s --prefix=int --density=1' % pjoin(path_me, ms_me_subdir)
+            # same t-channel widths as madevent (zerowidth_tchannel)
+            commandline_production += 'output standalone %s --prefix=int --density=1 --zerowidth_tchannel=True --zerowidth_decay=%s' % (pjoin(path_me, ms_me_subdir), zero_width)
 
             logger.info(commandline_production)
             mgcmd.exec_cmd(commandline_production, precmd=True)
@@ -4609,7 +4626,7 @@ class decay_all_events_onshell(decay_all_events):
             fill_all_me(self, "production")
 
             commandline_decay = self.get_decay_command()
-            commandline_decay += 'output standalone %s --prefix=int --density=1 -f' % pjoin(path_me, ms_me_decay_subdir) #we add -f, else it would ask us if we want to clean the folder madspin_decay and madspin_me
+            commandline_decay += 'output standalone %s --prefix=int --density=1 --zerowidth_decay=%s -f' % (pjoin(path_me, ms_me_decay_subdir), bool(zero_width)) #we add -f, else it would ask us if we want to clean the folder madspin_decay and madspin_me
             commandline_decay = commandline_decay.replace('add process', 'generate',1)
 
             logger.info(commandline_decay)
@@ -4735,6 +4752,22 @@ class decay_all_events_onshell(decay_all_events):
                 #commandline+="add process %s @%i --no_warning=duplicate --standalone;" % (proc,i)
                 i+=1
         return commandline
+
+    def zerowidth_decay_pdgs(self):
+        """The value of ``output standalone --zerowidth_decay=`` of the
+        production for auto_zero_width_PA: comma-separated |pdg|, empty for
+        none. The decay output gets True when this is not empty.
+
+        With spinmode=PA, the propagators of the particles MadSpin decays are
+        written with a zero width -- in the production, and in each particle's
+        own decay only (ProcessExporterFortranSA.get_zerowidth_pdgs). The
+        param_card, and so every width MadSpin reads (Breit-Wigner,
+        reshuffling, branching ratios), is untouched.
+        """
+        pdgs = []
+        if hasattr(getattr(self, 'mscmd', None), '_zero_width_pdgs'):
+            pdgs = self.mscmd._zero_width_pdgs()
+        return ','.join(str(pid) for pid in pdgs)
 
     def refresh_me_param_cards(self):
         """Put MadSpin's parameters inside every matrix-element directory.

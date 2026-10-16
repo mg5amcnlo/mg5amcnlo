@@ -17,6 +17,7 @@ from cmd import Cmd
 """ Basic test of the command interface """
 
 import unittest
+import unittest.mock as mock
 import madgraph
 import madgraph.interface.master_interface as mgcmd
 import madgraph.interface.extended_cmd as ext_cmd
@@ -1306,3 +1307,113 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.assertTrue(any([leptons[0] in [abs(l['id']) for l in real['leglist']] for real in reals[1]]))
         # avoid border effects
         self.interface.do_set('include_lepton_initiated_processes False')
+
+
+    def test_ew_resonances_without_cms(self):
+        """NLO EW corrections to processes with an unstable s-channel
+        propagator need the complex-mass scheme: check that the resonances
+        are found in the Born diagrams, and that the user is warned"""
+        cmd = amcatnlocmd.aMCatNLOInterface
+
+        # Drell-Yan: s-channel Z (the photon has no width)
+        self.interface.do_generate('u u~ > e+ e- QED^2=4 QCD^2=0 [real=QED]')
+        fksproc = self.interface._fks_multi_proc
+        self.assertEqual(cmd.find_unstable_s_channels(fksproc), ['z'])
+        with self.assertLogs('cmdprint', level='WARNING') as log:
+            cmd.warn_resonances_without_cms(self.interface, fksproc, ['QED'])
+        self.assertEqual(len(log.output), 1)
+        self.assertIn('NLO EW corrections', log.output[0])
+        self.assertIn('complex_mass_scheme', log.output[0])
+        self.assertIn(': z,', log.output[0])
+
+        # t-channel propagators only: nothing to warn about
+        self.interface.do_generate('u u~ > a a QED^2=4 QCD^2=0 [real=QED]')
+        fksproc = self.interface._fks_multi_proc
+        self.assertEqual(cmd.find_unstable_s_channels(fksproc), [])
+
+        # s-channel Z which cannot go on shell (m_Z < 2 m_t, m_Z < 2 m_W)
+        for proc in ['u u~ > t t~ QED^2=4 QCD^2=0 [real=QED]',
+                     'u u~ > w+ w- QED^2=4 QCD^2=0 [real=QED]']:
+            self.interface.do_generate(proc)
+            fksproc = self.interface._fks_multi_proc
+            self.assertEqual(cmd.find_unstable_s_channels(fksproc), [])
+
+        # W and Z resonances in four-lepton production
+        self.interface.do_generate(
+                       'u u~ > e+ ve e- ve~ QED^2=8 QCD^2=0 [real=QED]')
+        fksproc = self.interface._fks_multi_proc
+        self.assertEqual(cmd.find_unstable_s_channels(fksproc), ['w+', 'z'])
+
+
+    def test_qcd_resonances_without_cms(self):
+        """NLO QCD corrections to processes with a colour-charged unstable
+        s-channel propagator (e.g. an intermediate top quark) need the
+        complex-mass scheme as well: check that only the coloured
+        resonances are considered, and that the user is warned"""
+        cmd = amcatnlocmd.aMCatNLOInterface
+
+        # single-top-like EW Born: s-channel top (and colourless h, z).
+        # The s-channel w+ carries at least m_W + 2 m_b: not resonant
+        self.interface.do_generate('u d~ > w+ b b~ QCD=0 [QCD]')
+        fksproc = self.interface._fks_multi_proc
+        self.assertEqual(cmd.find_unstable_s_channels(fksproc),
+                         ['h', 't', 'z'])
+        self.assertEqual(
+            cmd.find_unstable_s_channels(fksproc, coloured_only=True), ['t'])
+        with self.assertLogs('cmdprint', level='WARNING') as log:
+            cmd.warn_resonances_without_cms(self.interface, fksproc, ['QCD'])
+        self.assertEqual(len(log.output), 1)
+        self.assertIn('NLO QCD corrections', log.output[0])
+        self.assertIn('complex_mass_scheme', log.output[0])
+        self.assertIn(': t,', log.output[0])
+
+        # Drell-Yan: the Z is not coloured, no warning for QCD corrections
+        # (but there is one for EW corrections)
+        self.interface.do_generate('u u~ > e+ e- QCD=0 [QCD]')
+        fksproc = self.interface._fks_multi_proc
+        self.assertEqual(
+            cmd.find_unstable_s_channels(fksproc, coloured_only=True), [])
+        with mock.patch.object(amcatnlocmd.logger, 'warning') as warning:
+            cmd.warn_resonances_without_cms(self.interface, fksproc, ['QCD'])
+            self.assertFalse(warning.called)
+            cmd.warn_resonances_without_cms(self.interface, fksproc, ['QCD', 'QED'])
+            self.assertEqual(warning.call_count, 1)
+
+        # on-shell tops: no s-channel top
+        self.interface.do_generate('u u~ > t t~ QED=0 [QCD]')
+        fksproc = self.interface._fks_multi_proc
+        self.assertEqual(cmd.find_unstable_s_channels(fksproc), [])
+
+        # top propagator t* > t g, which cannot go on shell
+        self.interface.do_generate('u u~ > t t~ g QED=0 [real=QCD]')
+        fksproc = self.interface._fks_multi_proc
+        self.assertEqual(cmd.find_unstable_s_channels(fksproc), [])
+
+
+    def test_resonance_warning_from_generate(self):
+        """the no-CMS resonance warning is emitted by generate only when the
+        virtual corrections are included and the complex-mass scheme is off"""
+
+        def warned(line):
+            # spy on the warnings rather than using assertLogs: generate
+            # emits other warnings, some with MG-specific formatting tags
+            logger = amcatnlocmd.logger
+            with mock.patch.object(logger, 'warning',
+                                   wraps=logger.warning) as warning:
+                self.interface.do_generate(line)
+            return any('complex_mass_scheme True' in str(call.args[0])
+                       for call in warning.call_args_list)
+
+        dy = 'u u~ > e+ e- QED^2=4 QCD^2=0 %s'
+        # virtual corrections, CMS off: warning
+        self.assertTrue(warned(dy % '[QED]'))
+        # real emission only: no virtual corrections, no warning
+        self.assertFalse(warned(dy % '[real=QED]'))
+        # no resonance which can go on shell: no warning
+        self.assertFalse(warned('u u~ > t t~ QED^2=4 QCD^2=0 [QED]'))
+        # CMS on: no warning
+        self.interface.do_set('complex_mass_scheme True')
+        try:
+            self.assertFalse(warned(dy % '[QED]'))
+        finally:
+            self.interface.do_set('complex_mass_scheme False')

@@ -691,6 +691,21 @@ class TestCmdLoop(unittest.TestCase):
             self.assertAlmostEqual(matrix_element_prod_and_decay[i], comparison.real)
 
 
+    def test_standalone_rw_tree_then_virt(self):
+        """The calls of a tree standalone_rw output (fk_ tag of the widths)
+        must not leak into the next MadLoop output (NLO reweighting)"""
+
+        self.do('import model loop_sm')
+        self.do('generate u u~ > e+ e-')
+        self.do('output standalone_rw %s -f' % pjoin(self.tmpdir, 'TREE'))
+        self.do('generate u u~ > e+ e- [virt=QCD]')
+        self.do('output standalone_rw %s -f' % pjoin(self.tmpdir, 'VIRT'))
+
+        born = open(pjoin(self.tmpdir, 'VIRT', 'SubProcesses', 'P0_uux_epem',
+                          'born_matrix.f')).read()
+        self.assertEqual([l.strip() for l in born.split('\n') if 'FK_' in l.upper()], [])
+        self.assertIn('MDL_MZ,MDL_WZ,', born)
+
     def test_density_mode_loop_induced_standalone1(self):
         """ Testing the density mode in standalone mode for loop induced.
             Process: g g > h [sqrvirt=QCD]

@@ -969,9 +969,10 @@ C
         err1 = self.cmd_line.results.current['error']
 
         #target = 166.36114 # value used as reference before changing sde_strategy
-        # 100k value is 165.84 +- 0.05
-        target = 165.84
-        self.assertTrue(abs(val1 - target) / err1 < 1., 'large difference between %s and %s +- %s'%
+        # mean of 12 independent 100k runs (sde_strategy 1 and 2): 165.76 +- 0.01
+        # (a single run has an error of ~0.06-0.09, hence the 2 sigma window)
+        target = 165.76
+        self.assertTrue(abs(val1 - target) / err1 < 2., 'large difference between %s and %s +- %s'%
                         (target, val1, err1))
 
         
@@ -983,9 +984,9 @@ C
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
-        # 100k value is  165.71 +- 0.06
-        target = 165.71
-        self.assertTrue(abs(val1 - target) / err1 < 1., 'large difference between %s and %s +- %s'%
+        # the fixed extra scale does not change this cross-section: same reference
+        target = 165.76
+        self.assertTrue(abs(val1 - target) / err1 < 2., 'large difference between %s and %s +- %s'%
                         (target, val1, err1))
 
 

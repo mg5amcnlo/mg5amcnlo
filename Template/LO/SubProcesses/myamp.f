@@ -226,12 +226,13 @@ c     Local
 c
       double precision  xm(-nexternal:nexternal)
       double precision  xe(-nexternal:nexternal)
+      double precision  xbw(-nexternal:nexternal) ! xm raised by non-forced BW
       double precision bwcut_for_PS(-nexternal:0)
       double precision tsgn, xo, a
       double precision x1,x2,xk(nexternal)
       double precision dr,mtot,etot,xqfact
-      double precision spmass
-      double precision stot ! technically the min with dsqrt_shatmax**2 with the physical one
+      double precision spmass, xknee
+      double precision shat_max ! largest allowed shat: min(stot, dsqrt_shatmax**2)
       integer i, iconfig, l1, l2, j, nt, nbw, iproc, k
       integer iden_part(-nexternal+1:nexternal)
 
@@ -283,11 +284,21 @@ c
       double precision      spole(maxinvar),swidth(maxinvar),bwjac
       common/to_brietwigner/spole          ,swidth          ,bwjac
 
+c     s-hat map with a knee (pole=-25, see transpole)
+      double precision shat_knee_frac ! fraction of points below the knee
+      parameter (shat_knee_frac=0.03d0)
+      double precision shat_floor, knee_frac, knee_log
+      common/to_shat_knee/shat_floor, knee_frac, knee_log
+
       integer        lbw(0:nexternal)  !Use of B.W.
       common /to_BW/ lbw
 
-      double precision real_stot,m1,m2
-      common/to_stot/real_stot,m1,m2
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
+c     unit of the s-hat variable, as sampled by gen_mom
+      double precision shat_unit
+      double precision get_shat_max, get_shat_unit
+      external get_shat_max, get_shat_unit
 
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
       include 'cuts.inc'
@@ -310,11 +321,8 @@ c
 c-----
 c  Begin Code
 c-----     
-      if (dsqrt_shatmax.ne.-1)then
-        stot = min(real_stot, dsqrt_shatmax**2)
-      else
-        stot = real_stot
-      endif
+      shat_max = get_shat_max(stot)
+      shat_unit = get_shat_unit(stot)
 
       iconfig = this_config
 c     needs to be initialise to avoid segfault
@@ -336,11 +344,12 @@ c      etmin = 10
 
       mtot = 0d0
       etot = 0d0   !Total energy needed
-      spmass = 0d0 !Keep track of BW masses for shat
+      spmass = 0d0 !Keep track of BW masses for shat (sum of xbw)
       xqfact=1d0
       if(ickkw.eq.2.or.ktscheme.eq.2) xqfact=0.3d0
       do i=nincoming+1,nexternal  !assumes 2 incoming
          xm(i)=emass(i)
+         xbw(i)=xm(i)
 c-fax
          xe(i)=max(emass(i),max(etmin(i),0d0))
          xe(i)=max(xe(i),max(emin(i),0d0))
@@ -380,8 +389,10 @@ c     Start loop over propagators
          if (tsgn .eq. 1d0) then !s channel
             xm(i) = xm(iforest(1,i,iconfig))+xm(iforest(2,i,iconfig))
             xe(i) = xe(iforest(1,i,iconfig))+xe(iforest(2,i,iconfig))
+            xbw(i) = xbw(iforest(1,i,iconfig))+xbw(iforest(2,i,iconfig))
             mtot = mtot - xm(i)
             etot = etot - xe(i)
+            spmass = spmass - xbw(i)
             if (iforest(1,i,iconfig) .gt. 0
      &           .and. iforest(2,i,iconfig) .gt. 0) then
 c-JA 1/2009: Set deltaR cuts here together with s_min cuts
@@ -410,6 +421,7 @@ c              JA 6/8/2011 Set xe(i) for resonances
                endif
             endif
             xe(i)=max(xe(i),xm(i))
+            xbw(i)=max(xbw(i),xm(i))
 c     Check for impossible onshell configurations
 c     Either: required onshell and daughter masses too large
 c     Or: forced and daughter masses too large
@@ -417,7 +429,7 @@ c     Or: required offshell and forced
             if(prwidth_tmp(i,iconfig) .gt. 0.and.
      $         (lbw(nbw).eq.1.and.
      $          (prmass(i,iconfig)+bwcut_for_PS(i)*prwidth_tmp(i,iconfig).lt.xm(i)
-     $           .or.prmass(i,iconfig)-bwcut_for_PS(i)*prwidth_tmp(i,iconfig).gt.dsqrt(stot))
+     $           .or.prmass(i,iconfig)-bwcut_for_PS(i)*prwidth_tmp(i,iconfig).gt.dsqrt(shat_max))
      $          .or.gforcebw(i,iconfig).eq.1.and.
      $              prmass(i,iconfig)+bwcutoff*prwidth_tmp(i,iconfig).lt.xm(i)
      $          .or.lbw(nbw).eq.2.and.gforcebw(i,iconfig).eq.1))
@@ -434,11 +446,11 @@ c tjs 11/2008 if require BW then force even if worried about energy
 c JA 8/2011 don't use BW if mass is > CM energy
 c----
                   if(prmass(i,iconfig).ge.xm(i).and.iden_part(i).eq.0.and.
-     $                 prmass(i,iconfig).lt.sqrt(stot)
+     $                 prmass(i,iconfig).lt.sqrt(shat_max)
      $                 .or. lbw(nbw).eq.1) then
                      write(*,*) 'Setting PDF BW',j,nbw,prmass(i,iconfig)
-                     spole(j)=prmass(i,iconfig)*prmass(i,iconfig)/stot
-                     swidth(j) = prwidth(i,iconfig)*prmass(i,iconfig)/stot ! keep the real width here (important for the jacobian)
+                     spole(j)=prmass(i,iconfig)*prmass(i,iconfig)/shat_unit
+                     swidth(j) = prwidth(i,iconfig)*prmass(i,iconfig)/shat_unit ! keep the real width here (important for the jacobian)
                   endif
                else if((prmass(i,iconfig)+bwcut_for_PS(i)*prwidth_tmp(i,iconfig)).ge.xm(i)
      $                  .and. iden_part(i).eq.0 .or. lbw(nbw).eq.1) then
@@ -455,10 +467,13 @@ c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
                   if (xo.eq.0d0) xo=MIN(10d0/stot, stot/50d0, 0.5)
                   call setgrid(-i,xo,a,1)
                endif
-c     Set spmass for BWs
+c     Mass scale of the BWs for the s-hat knee (only changes xbw for
+c     non-forced BWs since xm is already raised for the others).
+c     xbw is propagated to the mother such that nested BWs (t > b w+,
+c     w+ > e+ ve) are not counted twice.
                if (swidth(-i) .ne. 0d0)
-     $              spmass=spmass-xm(i) +
-     $              max(xm(i),prmass(i,iconfig)-bwcut_for_PS(i)*prwidth_tmp(i,iconfig))
+     $              xbw(i)=max(xbw(i),
+     $              prmass(i,iconfig)-bwcut_for_PS(i)*prwidth_tmp(i,iconfig))
             else                                  !1/x^pow
               a=prmass(i,iconfig)**2/stot
 c     JA 4/1/2011 always set grid
@@ -490,6 +505,7 @@ c              endif
             endif
             etot = etot+xe(i)
             mtot=mtot+xm(i)
+            spmass = spmass+xbw(i)
 c            write(*,*) 'New mtot',i,mtot,xm(i)
          else                                        !t channel
 c
@@ -541,41 +557,58 @@ c     Perform setting for shat (PDF BW or 1/s)
       if (abs(lpp(1)) .ge. 1 .or. abs(lpp(2)) .ge. 1) then
 c     Set minimum based on: 1) required energy 2) resonances 3) 1/10000 of sqrt(s)
          i = max(1,3*(nexternal-2) - 4 + 1)
-         xo = max(min(etot**2/stot, 1d0-1d-8),1d0/stot)
-         if (xo.eq.1d0/stot) then
+         xo = max(min(etot**2/shat_unit, 1d0-1d-8),1d0/shat_unit)
+         if (xo.eq.1d0/shat_unit) then
              dynscale_cut =  (dynamical_scale_choice.eq.-1.and.
      $        .not.(FIXED_REN_SCALE.and.FIXED_FAC_SCALE1.and.FIXED_FAC_SCALE2))
              if (dynscale_cut.and.Smin.gt.0)then
-                 xo = max(4d0/stot, Smin/stot)
+                 xo = max(4d0/shat_unit, Smin/shat_unit)
              elseif (dynscale_cut)then
-                 xo = 4d0/stot
+                 xo = 4d0/shat_unit
              elseif (Smin.gt.0) then
-                xo = .5*min(Smin/stot,xo)
+                xo = .5*min(Smin/shat_unit,xo)
              endif
          endif
 
 c        Take into account special cuts
 c        already done in smin
-c     Include mass scale from BWs
-         xo = max(xo, spmass**2/stot)
-         if (swidth(i).eq.0.and.xo.eq.1d0/stot) then
+c     Mass scale from the BWs which are not forced: this is not a lower
+c     bound of the phase-space but the knee of the 1/s map (see below)
+         xknee = spmass**2/shat_unit
+         if (swidth(i).eq.0.and.xo.eq.1d0/shat_unit.and.xknee.le.xo) then
             write(*,*) 'Warning: No minimum found for integration'
-            write(*,*) '         Setting minimum to ',1d0/stot
+            write(*,*) '         Setting minimum to ',1d0/shat_unit
          endif
 c-----------------------
 c     tjs  4/29/2008 use analytic transform for s-hat
 c-----------------------
          if (swidth(i) .eq. 0d0) then
-            if (xo.lt.smin/stot)then
-                xo = 1d0*smin/stot
+            if (xo.lt.smin/shat_unit)then
+                xo = 1d0*smin/shat_unit
             endif
-            swidth(i) = xo
-            spole(i)= -2.0d0    ! 1/s pole
-            write(*,*) "Transforming s_hat 1/s ",i,xo, smin, stot
-        else if(smin/stot.gt.spole(i)+bwcutoff*max(swidth(i),  spole(i)*small_width_treatment)) then 
-            swidth(i) = smin/stot
+            if (xknee.gt.xo .and. xknee.lt.xo+shat_knee_frac
+     $           .and. xknee.lt.0.5d0) then
+c              1/s map above the knee, log map between xo and the knee
+c              such that the off-shell region below the knee keeps a
+c              fixed fraction of the points (see transpole). For a knee
+c              far above xo, the 1/s map below already keeps more.
+               shat_floor = xo
+               knee_frac = shat_knee_frac
+               knee_log = log(xknee/xo)
+               swidth(i) = xknee
+               spole(i) = -25d0
+               write(*,*) "Transforming s_hat 1/s with knee ",i,xo,
+     $              xknee, smin, shat_unit
+            else
+               swidth(i) = max(xo, xknee)
+               spole(i)= -2.0d0    ! 1/s pole
+               write(*,*) "Transforming s_hat 1/s ",i,swidth(i), smin,
+     $              shat_unit
+            endif
+        else if(smin/shat_unit.gt.spole(i)+bwcutoff*max(swidth(i),  spole(i)*small_width_treatment)) then 
+            swidth(i) = smin/shat_unit
             spole(i) = -2d0
-            write(*,*) "Transforming s_hat 1/s ",i,xo, smin, stot
+            write(*,*) "Transforming s_hat 1/s ",i,xo, smin, shat_unit
         else    
             write(*,*) "Transforming s_hat BW ",spole(i), max(swidth(i), spole(i)*small_width_treatment)
          endif

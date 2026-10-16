@@ -1366,3 +1366,182 @@ class TestProductionJacobian(unittest.TestCase):
         evt = self._event(new_mass=1e6)
         self.assertEqual(evt.production_jacobian(), -1)
         self.assertEqual(evt[2].new_mass, 1e6)  # not resampled behind our back
+
+
+class TestUnweightOverweight(unittest.TestCase):
+    """MultiEventFile.unweight with an event_target (the final combination of
+    madevent): an accepted event with |w| > max_wgt must be written with
+    |w|/max_wgt units of the common weight (sign kept), not truncated to one,
+    and the sample must stay normalised according to event_norm."""
+
+    template = """<event>
+ 4      1 %(wgt)+.10e 2.26335600e+02 7.54677100e-03 1.12924600e-01
+       21 -1    0    0  501  502 +0.0000000000e+00 +0.0000000000e+00 +1.3497663545e+02 1.3497663545e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+       21 -1    0    0  502  503 -0.0000000000e+00 -0.0000000000e+00 -5.2972469895e+02 5.2972469895e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+        6  1    1    2  501    0 +9.9532160446e+01 +1.0673399736e+02 -2.0404901160e+01 2.2725350854e+02 1.7300000000e+02 0.0000e+00 1.0000e+00
+       -6  1    1    2    0  503 -9.9532160446e+01 -1.0673399736e+02 -3.7434316234e+02 4.3744782585e+02 1.7300000000e+02 0.0000e+00 -1.0000e+00
+#orig %(file)i %(wgt).17e
+</event>
+"""
+
+    def setUp(self):
+        self.path = tempfile.mkdtemp(prefix='test_mg5')
+        self.banner_text = lhe_parser.EventFile(pjoin(MG5DIR, 'tests',
+                                     'input_files', 'ttbar.lhe.gz')).banner
+
+    def tearDown(self):
+        shutil.rmtree(self.path)
+
+    def write_channels(self):
+        """two channels with a heavy-tailed weight distribution (and some
+        negative weights in the second one). Return the list of (path, weights)"""
+
+        import random
+        rng = random.Random(4242)
+        channels = []
+        for ifile, (nevt, neg) in enumerate([(1500, 0), (1000, 0.1)]):
+            wgts = []
+            for i in range(nevt):
+                w = rng.random()**(-1./3) # tail in the weight: P(|w|>x) = x^-3
+                if rng.random() < neg:
+                    w = -w
+                wgts.append(float('%.10e' % w))
+            Gdir = pjoin(self.path, 'P1_gg_ttx', 'G%i' % (ifile+1))
+            os.makedirs(Gdir)
+            path = pjoin(Gdir, 'events.lhe')
+            with open(path, 'w') as fsock:
+                fsock.write(self.banner_text)
+                for w in wgts:
+                    fsock.write(self.template % {'wgt': w, 'file': ifile})
+                fsock.write('</LesHouchesEvents>\n')
+            channels.append((path, wgts))
+        return channels
+
+    def unweight(self, channels, normalization, event_target, get_wgt=None):
+        """run the final unweighting. Return the output events as a list of
+        (written weight, scaled input weight) and the MultiEventFile"""
+
+        import random
+        import madgraph.various.banner as banner_mod
+        random.seed(17)
+        allevent = lhe_parser.MultiEventFile()
+        allevent.banner = banner_mod.Banner(self.banner_text)
+        scales = []
+        for i, (path, wgts) in enumerate(channels):
+            # give a different normalisation to each channel
+            across = (i+1) * sum(abs(w) for w in wgts)
+            scales.append((i+1))
+            allevent.add(path, across, 0.01*across, across, nb_event=len(wgts))
+        if not get_wgt:
+            get_wgt = lambda event: event.wgt
+        output = pjoin(self.path, 'unweighted_events.lhe')
+        nb_event = allevent.unweight(output, get_wgt, trunc_error=1e-2,
+                                     event_target=event_target,
+                                     normalization=normalization)
+        events = []
+        for event in lhe_parser.EventFile(output):
+            ifile, orig = event.comment.split()[1:3]
+            events.append((event.wgt, float(orig) * scales[int(ifile)]))
+        self.assertEqual(len(events), nb_event)
+        return events, allevent
+
+    def check_overweights(self, events, max_wgt):
+        """every written weight is sign(w) * common * max(1, |w|/max_wgt)"""
+
+        common = min(abs(w) for w, _ in events)
+        nb_over = 0
+        for written, orig in events:
+            self.assertEqual(math.copysign(1, written), math.copysign(1, orig))
+            ratio = max(1., abs(orig)/max_wgt)
+            self.assertAlmostEqual(abs(written)/common, ratio, delta=1e-6*ratio)
+            if ratio > 1:
+                nb_over += 1
+        # the 1% criterion leaves some events above max_wgt
+        self.assertGreater(nb_over, 0)
+        return common, nb_over
+
+    def test_unweight_keeps_overweights(self):
+        """overweight events keep their weight for each event_norm, and the
+        sample stays normalised to the cross section"""
+
+        channels = self.write_channels()
+        xsec = sum((i+1) * sum(abs(w) for w in wgts) for i, (_, wgts) in enumerate(channels))
+        # the second getter forces the generic (event parsing) loop
+        for normalization, get_wgt in [('average', None), ('sum', None), ('unit', None),
+                                       ('sum', lambda event: float(event.wgt))]:
+            # 500: requested number reached; 1500: not reached
+            for event_target in [500, 1500]:
+                events, allevent = self.unweight(channels, normalization,
+                                                 event_target, get_wgt)
+                nb_event = len(events)
+                if event_target == 500:
+                    self.assertEqual(nb_event, event_target)
+                else:
+                    self.assertLess(nb_event, event_target)
+                self.check_overweights(events, allevent.max_wgt)
+                sum_abs = sum(abs(w) for w, _ in events)
+                if normalization == 'average':
+                    self.assertAlmostEqual(sum_abs/nb_event/xsec, 1, delta=1e-6)
+                elif normalization == 'sum':
+                    self.assertAlmostEqual(sum_abs/xsec, 1, delta=1e-6)
+                else:
+                    self.assertAlmostEqual(sum_abs/event_target, 1, delta=1e-6)
+
+    def test_unweight_overweights_are_unbiased(self):
+        """the written sample reproduces the input cross section carried by
+        the events above max_wgt, which a truncation to the common weight lowers"""
+
+        channels = self.write_channels()
+        events, allevent = self.unweight(channels, 'sum', 500)
+        tail = allevent.max_wgt
+        xsec_tail = sum(w*(i+1) for i, (_, wgts) in enumerate(channels)
+                        for w in wgts if abs(w)*(i+1) > tail)
+        out_tail = sum(w for w, orig in events if abs(orig) > tail)
+        # all the events above max_wgt are accepted: only the (uniform) drop of
+        # the events beyond event_target and the global normalisation fluctuate
+        self.assertAlmostEqual(out_tail/xsec_tail, 1, delta=0.1)
+        # a truncation to the common weight loses a visible fraction of it
+        common = min(abs(w) for w, _ in events)
+        truncated = sum(math.copysign(common, w) for w, orig in events if abs(orig) > tail)
+        self.assertLess(truncated/xsec_tail, 0.8)
+
+    def test_unweight_partial_then_final(self):
+        """two-stage combination (do_combine_events_partial, then the final
+        unweighting of the partial files): the overweights of the first stage
+        survive the second one and the sample stays normalised"""
+
+        import random
+        import madgraph.various.banner as banner_mod
+        channels = self.write_channels()
+        xsec = sum((i+1) * sum(abs(w) for w in wgts) for i, (_, wgts) in enumerate(channels))
+        random.seed(23)
+        partials = []
+        for i, (path, wgts) in enumerate(channels):
+            # one partial per channel, unweighted as in do_combine_events_partial
+            partial = lhe_parser.MultiEventFile()
+            partial.banner = banner_mod.Banner(self.banner_text)
+            across = (i+1) * sum(abs(w) for w in wgts)
+            partial.add(path, across, 0.01*across, across, nb_event=len(wgts))
+            output = pjoin(self.path, 'partials%i.lhe' % i)
+            partial.unweight(output, lambda event: event.wgt, log_level=5,
+                             trunc_error=1e-2, event_target=300)
+            partials.append((output, across, 0.01*across, across))
+        allevent = lhe_parser.MultiEventFile()
+        allevent.banner = banner_mod.Banner(self.banner_text)
+        for data in partials:
+            allevent.add(*data)
+        output = pjoin(self.path, 'unweighted_events.lhe')
+        nb_event = allevent.unweight(output, lambda event: event.wgt,
+                                     trunc_error=1e-2, event_target=500,
+                                     normalization='average')
+        events = []
+        for event in lhe_parser.EventFile(output):
+            ifile, orig = event.comment.split()[1:3]
+            events.append((event.wgt, float(orig) * (int(ifile)+1)))
+        self.assertEqual(len(events), nb_event)
+        sum_abs = sum(abs(w) for w, _ in events)
+        self.assertAlmostEqual(sum_abs/nb_event/xsec, 1, delta=1e-6)
+        common = min(abs(w) for w, _ in events)
+        self.assertGreater(max(abs(w) for w, _ in events)/common, 2)
+        for written, orig in events:
+            self.assertEqual(math.copysign(1, written), math.copysign(1, orig))

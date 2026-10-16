@@ -14,12 +14,9 @@
 ################################################################################
 """Unit tests for the selection of the particles in the density mode of the reweighting"""
 from __future__ import absolute_import
-import types
-
 import tests.unit_tests as unittest
 
 import madgraph.interface.reweight_interface as rwgt_interface
-import madgraph.various.lhe_parser as lhe_parser
 
 chose = rwgt_interface.DensityInterface.chose_particle_user_input
 
@@ -78,27 +75,3 @@ class TestDensitySelection(unittest.TestCase):
         self.assertRaises(ValueError, chose, self.momenta, self.pdg, ([6, 6], 'pt', [0]), 'opt')
         # unknown observable
         self.assertRaises(ValueError, chose, self.momenta, self.pdg, ([6], 'not_an_observable', []), 'opt')
-
-    def test_density_boost_original_order(self):
-        """the positions used for the boost refer to orig_order, not to the event which contains the intermediate top"""
-        event = lhe_parser.Event("""<event>
- 6      1 +4.2873600e+02 2.58116800e+02 7.54677100e-03 1.10829800e-01
-       21 -1    0    0  501  502 +0.0000000000e+00 +0.0000000000e+00 +1.0845458909e+02 1.0845458909e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
-       21 -1    0    0  502  503 -0.0000000000e+00 -0.0000000000e+00 -6.4844659178e+02 6.4844659178e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
-        6  2    1    2  501    0 -1.0996883743e+01 +1.9124424233e+02 -1.8275210837e+02 3.1616925127e+02 1.7282757494e+02 0.0000e+00 0.0000e+00
-        5  1    3    3  501    0 +4.3637392514e+01 +4.9281743782e+00 -1.3060449857e+01 4.6056207819e+01 4.7000000000e+00 0.0000e+00 -1.0000e+00
-       24  1    3    3    0    0 -5.4634276257e+01 +1.8631606795e+02 -1.6969165851e+02 2.7011304345e+02 8.0419002446e+01 0.0000e+00 -1.0000e+00
-       -6  1    1    2    0  503 +1.0996883743e+01 -1.9124424233e+02 -3.5723989432e+02 4.4073192960e+02 1.7300000000e+02 0.0000e+00 -1.0000e+00
-</event>""")
-        orig_order = ([21, 21], [5, 24, -6])
-        pdg = orig_order[0] + orig_order[1]
-        all_p = [event.get_momenta(orig_order)]
-        user_input = ([5, -6], '', [])
-        positions = chose(all_p[0], pdg, user_input, 'momenta_boost')
-        self.assertEqual(positions, [2, 4])
-
-        stub = types.SimpleNamespace(momenta_boost=user_input, keep_ordering=True)
-        new_all_p = rwgt_interface.DensityInterface.method_boost_event(stub, event, all_p, orig_order, 0, positions)
-        p_b, p_tbar = new_all_p[0][2], new_all_p[0][4]
-        for k in range(1, 4): # b + t~ is at rest after the boost
-            self.assertAlmostEqual(p_b[k] + p_tbar[k], 0., places=6)

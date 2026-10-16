@@ -886,8 +886,14 @@ class EventFile(object):
             unwgt_name = get_wgt.__name__
 
         # check which weight to write
+        # An accepted event is written with weight x = sign(w)*max(|w|, max_wgt).
+        # With self.written_weight (the common weight of the final sample) x is
+        # expressed in units of max_wgt: an overweight event (|w| > max_wgt)
+        # keeps |w|/max_wgt units of the common weight instead of being
+        # truncated to one. The normalisation of the sample is fixed once all
+        # the events are written (see below).
         if hasattr(self, "written_weight"):
-            written_weight = lambda x: math.copysign(self.written_weight,float(x))
+            written_weight = lambda x: math.copysign(self.written_weight * (abs(float(x))/max_wgt), float(x))
         else: 
             written_weight = lambda x: x
                     
@@ -944,6 +950,12 @@ class EventFile(object):
                 banner = self.banner
             if banner_module:
                 # modify the lha strategy
+                # 'unit'/'sum' keep 3 even if overweight events (weight above
+                # the common one) are written: 4 means that the cross section
+                # is the average weight, wrong for those normalisations. A
+                # reader applying IDWTUP=3 strictly (weight +-1, e.g. Pythia6)
+                # sees those events with the common weight, as when they were
+                # truncated; XWGTUP keeps the correct weight for the others.
                 curr_strategy = banner.get_lha_strategy()
                 if normalization in ['unit', 'sum']:
                     strategy = 3
@@ -992,7 +1004,9 @@ class EventFile(object):
 
             # scan the file
             nb_keep = 0
-            trunc_cross = 0
+            trunc_cross = 0 # excess weight sum(|w| - max_wgt) of the overweight events
+            nb_over = 0 # number of overweight events (|w| > max_wgt)
+            sum_written = 0 # sum of the |weight| written in the output
             if use_fast_second_pass:
                 for raw_event, _ievent, wgt, header_meta in self._iter_raw_events_for_unweight():
                     r = random.random()
@@ -1002,8 +1016,10 @@ class EventFile(object):
                         nb_keep += 1
                         if abs(wgt) > max_wgt:
                             trunc_cross += abs(wgt) - max_wgt
+                            nb_over += 1
                         if outputpath and (event_target == 0 or keep_overshoot or nb_keep <= event_target):
                             final_wgt = written_weight(max(wgt, max_wgt))
+                            sum_written += abs(final_wgt)
                             try:
                                 outfiles[nb_keep % nb_output].write(self._rewrite_raw_event_weight(raw_event, final_wgt, header_meta))
                             except Exception:
@@ -1015,8 +1031,10 @@ class EventFile(object):
                         nb_keep += 1
                         if abs(wgt) > max_wgt:
                             trunc_cross += abs(wgt) - max_wgt
+                            nb_over += 1
                         if outputpath and (event_target == 0 or keep_overshoot or nb_keep <= event_target):
                             final_wgt = -1 * written_weight(max(abs(wgt), max_wgt))
+                            sum_written += abs(final_wgt)
                             try:
                                 outfiles[nb_keep % nb_output].write(self._rewrite_raw_event_weight(raw_event, final_wgt, header_meta))
                             except Exception:
@@ -1035,8 +1053,10 @@ class EventFile(object):
                         event.wgt = written_weight(max(wgt, max_wgt))
                         if abs(wgt) > max_wgt:
                             trunc_cross += abs(wgt) - max_wgt 
+                            nb_over += 1
                         if event_target ==0 or keep_overshoot or nb_keep <= event_target:
                             if outputpath:                         
+                                sum_written += abs(event.wgt)
                                 outfiles[nb_keep % nb_output].write(str(event))
 
                     elif wgt < 0:
@@ -1044,7 +1064,9 @@ class EventFile(object):
                         event.wgt =     -1* written_weight(max(abs(wgt), max_wgt))
                         if abs(wgt) > max_wgt:
                             trunc_cross += abs(wgt) - max_wgt
+                            nb_over += 1
                         if outputpath and (event_target ==0 or keep_overshoot or nb_keep <= event_target):
+                            sum_written += abs(event.wgt)
                             outfiles[nb_keep % nb_output].write(str(event))
             
             if event_target and nb_keep > event_target:
@@ -1087,24 +1109,22 @@ class EventFile(object):
         else:
             nb_events_unweighted = nb_keep
 
-        logger.log(log_level, "write %i event (efficiency %.2g %%, truncation %.2g %%) after %i iteration(s)", 
-          nb_keep, nb_events_unweighted/nb_event*100, trunc_cross/cross['abs']*100, i)
+        logger.log(log_level, "write %i event (efficiency %.2g %%, %i overweight event(s) kept with their weight: excess of %.2g %% of the cross section) after %i iteration(s)", 
+          nb_keep, nb_events_unweighted/nb_event*100, nb_over, trunc_cross/cross['abs']*100, i)
      
-        #correct the weight in the file if not the correct number of event
-        if nb_keep != event_target and hasattr(self, "written_weight") and strategy !=4:
-            written_weight = lambda x: math.copysign(self.written_weight*event_target/nb_keep, float(x))
-            for path in outpaths:
-                startfile = EventFile(path)
-                tmpname = pjoin(os.path.dirname(path), "wgtcorrected_"+ os.path.basename(path))
-                outfile = EventFile(tmpname, "w")
-                outfile.write(startfile.banner)
-                for event in startfile:
-                    event.wgt = written_weight(event.wgt)
-                    outfile.write(str(event))
-                outfile.write("</LesHouchesEvents>\n")
-                startfile.close()
-                outfile.close()
-                shutil.move(tmpname, path)
+        # normalise the written sample: the sum of |weight| has to be
+        # written_weight*event_target for 'sum'/'unit' and written_weight*nb_keep
+        # (i.e. average |weight| = written_weight) for 'average'. This absorbs
+        # both the difference between nb_keep and event_target and the extra
+        # weight carried by the overweight events.
+        if hasattr(self, "written_weight") and outputpath and sum_written:
+            if normalization in ['unit', 'sum'] and event_target:
+                factor = self.written_weight * event_target / sum_written
+            else:
+                factor = self.written_weight * nb_keep / sum_written
+            if abs(factor - 1) > 1e-9:
+                for path in outpaths:
+                    self._rescale_event_weights(path, factor)
             
         
         
@@ -1112,6 +1132,33 @@ class EventFile(object):
         self.max_wgt = max_wgt
         return nb_keep
     
+    @staticmethod
+    def _rescale_event_weights(path, factor):
+        """multiply the central weight of every event of the file by factor
+        (the file is rewritten in place)"""
+
+        tmpname = pjoin(os.path.dirname(path), "wgtcorrected_"+ os.path.basename(path))
+        startfile = EventFile(path)
+        outfile = EventFile(tmpname, "w")
+        outfile.write(startfile.banner)
+        try:
+            for raw_event, _ievent, wgt, header_meta in startfile._iter_raw_events_direct():
+                outfile.write(EventFile._rewrite_raw_event_weight(raw_event, wgt*factor, header_meta))
+        except ValueError:
+            # malformed block: restart with the generic (slower) parser
+            startfile.close()
+            outfile.close()
+            startfile = EventFile(path)
+            outfile = EventFile(tmpname, "w")
+            outfile.write(startfile.banner)
+            for event in startfile:
+                event.wgt *= factor
+                outfile.write(str(event))
+        outfile.write("</LesHouchesEvents>\n")
+        startfile.close()
+        outfile.close()
+        shutil.move(tmpname, path)
+
     def apply_fct_on_event(self, *fcts, **opts):
         """ apply one or more fct on all event. """
         
@@ -3498,51 +3545,31 @@ class Event(list):
         return jac
         
     
-    def get_helicity(self, get_order=None, allow_reversed=True):
-        """return a list with the helicities in the order asked for"""
+    def get_helicity(self, get_order=None, allow_reversed=True,
+                     decay_chain=False):
+        """return a list with the helicities in the order asked for
+
+        The helicity at slot i has to belong to the particle whose momentum
+        get_momenta puts at slot i -- the reweighting looks the pair up
+        together -- so both take their slots from the same get_mapping (and
+        have to be asked with the same ``decay_chain``).
+        """
         
         if get_order is None:
             init = [part.pid for part in self if part.status == -1]
             final = [part.pid for part in self if part.status == 1] 
             get_order = [init, final]
 
-        #avoid to modify the input
-        order = [list(get_order[0]), list(get_order[1])] 
-        out = [9] *(len(order[0])+len(order[1]))
-        for i, part in enumerate(self):
-            if part.status == 1: #final
-                try:
-                    ind = order[1].index(part.pid)
-                except ValueError as error:
-                    if not allow_reversed:
-                        raise error
-                    else:
-                        order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
-                        try:
-                            return self.get_helicity(order, False)
-                        except ValueError:
-                            raise error     
-                position = len(order[0]) + ind
-                order[1][ind] = 0   
-            elif part.status == -1:
-                try:
-                    ind = order[0].index(part.pid)
-                except ValueError as error:
-                    if not allow_reversed:
-                        raise error
-                    else:
-                        order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
-                        try:
-                            return self.get_helicity(order, False)
-                        except ValueError:
-                            raise error
-                 
-                position =  ind
-                order[0][ind] = 0
-            else: #intermediate
+        event_pos2order, _ = self.get_mapping(get_order, allow_reversed,
+                                              decay_chain)
+        out = [9] * (len(get_order[0]) + len(get_order[1]))
+        curr_pos = -1
+        for part in self:
+            if abs(part.status) != 1: #intermediate
                 continue
-            out[position] = int(part.helicity)
-        return out  
+            curr_pos += 1
+            out[event_pos2order[curr_pos]] = int(part.helicity)
+        return out
 
     
     def check_color_structure(self):
@@ -3755,66 +3782,195 @@ class Event(list):
         
         return re.sub('[\n]+', '\n', out)
 
-    def get_momenta(self, get_order, allow_reversed=True):
-        """return the momenta vector in the order asked for"""
-        
-        #avoid to modify the input
-        order = [list(get_order[0]), list(get_order[1])] 
-        out = [''] *(len(order[0])+len(order[1]))
-        for i, part in enumerate(self):
-            if part.status == 1: #final
-                try:
-                    ind = order[1].index(part.pid)
-                except ValueError as error:
-                    if not allow_reversed:
-                        raise error
-                    else:
-                        order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
-                        try:
-                            return self.get_momenta_str(order, False)
-                        except ValueError:
-                            raise error     
-                position = len(order[0]) + ind
-                order[1][ind] = 0   
-            elif part.status == -1:
-                try:
-                    ind = order[0].index(part.pid)
-                except ValueError as error:
-                    if not allow_reversed:
-                        raise error
-                    else:
-                        order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
-                        try:
-                            return self.get_momenta_str(order, False)
-                        except ValueError:
-                            raise error
-                 
-                position =  ind
-                order[0][ind] = 0
-            else: #intermediate
-                continue
+    def get_mapping(self, get_order, allow_reversed=True, decay_chain=False):
+        """Which slot of the order asked for each particle of the event takes.
 
-            out[position] = (part.E, part.px, part.py, part.pz)
-            
+        Returns two dictionaries: from the position among the event's external
+        (|status| == 1) particles to the slot in get_order (initial state
+        first), and back. The k-th particle of a pdg in the event takes the
+        k-th slot of that pdg. With allow_reversed, an event that only matches
+        the charge-conjugated order is mapped onto that one (self-conjugate
+        particles keep their id).
+
+        get_momenta, get_helicity and get_all_momenta all take their slots from
+        here, so they cannot disagree on which particle sits where. They used
+        to carry a copy of this walk each, and the copies had drifted:
+        get_momenta's charge-reversed retry went through get_momenta_str and
+        handed back a Fortran-formatted *string* instead of the momenta, and
+        get_all_momenta could not map a charge-reversed order at all.
+
+        With decay_chain, identical final-state particles coming from different
+        resonances are dealt their slots so that the decay products of every
+        resonance of the event sit on consecutive slots (see
+        _follow_decay_chains) instead of in the event's line order.
+        """
+
+        #avoid to modify the input
+        order = [list(get_order[0]), list(get_order[1])]
+        out1 = {}
+        out2 = {}
+        curr_pos = -1
+        for part in self:
+            if abs(part.status) != 1: #intermediate
+                continue
+            curr_pos += 1
+            block = order[0] if part.status == -1 else order[1]
+            try:
+                ind = block.index(part.pid)
+            except ValueError as error:
+                if not allow_reversed:
+                    raise error
+                # charge conjugation leaves a self-conjugate particle (g, a,
+                # z, h, ...) as it is. Without the model, an id the event
+                # carries while it never carries its negative is taken as one;
+                # negating it could only fail (no slot of the event fits it).
+                pids = set(p.pid for p in self if abs(p.status) == 1)
+                conj = lambda i: i if (i in pids and -i not in pids) else -i
+                order = [[conj(i) for i in get_order[0]],
+                         [conj(i) for i in get_order[1]]]
+                try:
+                    return self.get_mapping(order, False, decay_chain)
+                except ValueError:
+                    raise error
+            position = ind if part.status == -1 else len(order[0]) + ind
+            # empty the slot, for the next identical particle
+            block[ind] = 0
+            out1[curr_pos] = position
+            out2[position] = curr_pos
+        if decay_chain:
+            out1 = self._follow_decay_chains(out1)
+            out2 = dict((v, k) for k, v in out1.items())
+        return out1, out2
+
+    def _follow_decay_chains(self, event_pos2order, max_trials=5040):
+        """Re-deal the slots of identical final-state particles that come from
+        different resonances, so that the decay products of every resonance
+        (status 2 line) of the event take consecutive slots.
+
+        That is how MG5 lays out a decay-chain process: each decaying particle
+        of the production is replaced, in place, by its decay products, so in
+        ``u d~ > w+ z, w+ > e+ ve, z > e+ e-`` legs 3-4 are the W's and legs
+        5-6 the Z's. Dealing the two e+ in line order put the Z's e+ on leg 3
+        whenever the event wrote it first -- the matrix element then saw an
+        e+ ve pair that is not a W, and me_frame = [3, 4] was not the W rest
+        frame.
+
+        The first assignment (line order first) that keeps every resonance on
+        consecutive slots wins, so an event already in that layout is left as
+        it is. When none does -- a process not written as a decay chain, for
+        which the identical particles are exchangeable anyway -- the line
+        order is kept.
+        """
+        import itertools
+        externals = [part for part in self if abs(part.status) == 1]
+
+        def mothers(part):
+            return [m for m in (part.mother1, part.mother2)
+                    if m is not None and hasattr(m, 'status')]
+
+        def ancestors(part):
+            seen = []
+            todo = mothers(part)
+            while todo:
+                mother = todo.pop()
+                if any(mother is m for m in seen):
+                    continue
+                seen.append(mother)
+                todo.extend(mothers(mother))
+            return seen
+
+        # final-state descendants of each resonance, as positions in externals
+        lineage = [ancestors(part) if part.status == 1 else []
+                   for part in externals]
+        chains = []
+        for resonance in self:
+            if resonance.status != 2:
+                continue
+            chain = [pos for pos, anc in enumerate(lineage)
+                     if any(resonance is m for m in anc)]
+            if len(chain) > 1:
+                chains.append(chain)
+        if not chains:
+            return event_pos2order
+
+        # the identical particles that can be swapped: same pdg, not all
+        # from the same mother
+        groups = []
+        for pid in set(part.pid for part in externals if part.status == 1):
+            members = [pos for pos, part in enumerate(externals)
+                       if part.status == 1 and part.pid == pid]
+            if len(members) < 2:
+                continue
+            direct = [mothers(externals[pos]) for pos in members]
+            first = direct[0][0] if direct[0] else None
+            if all(d and d[0] is first for d in direct):
+                continue
+            groups.append(members)
+        if not groups:
+            return event_pos2order
+
+        def consecutive(mapping):
+            for chain in chains:
+                slots = [mapping[pos] for pos in chain]
+                if max(slots) - min(slots) + 1 != len(slots):
+                    return False
+            return True
+
+        if consecutive(event_pos2order):
+            return event_pos2order
+        slots = [[event_pos2order[pos] for pos in members]
+                 for members in groups]
+        trials = itertools.product(*[itertools.permutations(s) for s in slots])
+        for trial in itertools.islice(trials, max_trials):
+            mapping = dict(event_pos2order)
+            for members, perm in zip(groups, trial):
+                for pos, slot in zip(members, perm):
+                    mapping[pos] = slot
+            if consecutive(mapping):
+                return mapping
+        return event_pos2order
+
+    def get_momenta(self, get_order, allow_reversed=True, decay_chain=False):
+        """return the momenta vector in the order asked for"""
+
+        event_pos2order, _ = self.get_mapping(get_order, allow_reversed,
+                                              decay_chain)
+        out = [''] * (len(get_order[0]) + len(get_order[1]))
+        curr_pos = -1
+        for part in self:
+            if abs(part.status) != 1: #intermediate
+                continue
+            curr_pos += 1
+            out[event_pos2order[curr_pos]] = (part.E, part.px, part.py, part.pz)
         return out
 
 
-    def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None,permutate_two_decay=False):
+    def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None,permutate_two_decay=False,
+                        decay_chain=False):
         """ same as get_momenta but return all valid permutation of the final state 
               where identical particle does NOT have the same parent
               for easier development debug output allow to return internal variable for the unittest to check
               permutate_two_decay allow to also consider the case with flip between two decay products
+              decay_chain: see get_mapping
         """  
 
-        p = self.get_momenta(get_order, allow_reversed)
+        p = self.get_momenta(get_order, allow_reversed, decay_chain)
 
         nbin = len(get_order[0])
-        final = get_order[1]
         data = {} # dict will be {pdg: {(m1,m2): [position1, position2]}} position are position in p
-        for i, part in enumerate(self):
-            pdg = part.pid
+        # each particle's slot in p is the one get_momenta put it in: take it
+        # from the same mapping (re-deriving it with final.index(pdg), as this
+        # did, failed on a charge-reversed order)
+        event_pos2order, _ = self.get_mapping(get_order, allow_reversed,
+                                              decay_chain)
+        curr_pos = -1
+        for part in self:
+            if abs(part.status) != 1:
+                continue
+            curr_pos += 1
             if part.status != 1:
                 continue
+            pdg = part.pid
             try:
                 m1 = part.mother1.event_id
             except AttributeError:
@@ -3824,14 +3980,8 @@ class Event(list):
             except AttributeError:
                 m2 = 0
             M = (m1,m2)
-            if pdg in data:
-                max_prev = max(k+1  for N in data[pdg] for k in data[pdg][N] ) - nbin
-                if M in data[pdg]:
-                    data[pdg][M].append(nbin+final.index(pdg,max_prev))
-                else:
-                    data[pdg][M] = [nbin+final.index(pdg, max_prev)]
-            else:
-                data[pdg] = {M:[nbin+final.index(pdg)]}
+            data.setdefault(pdg, {}).setdefault(M, []).append(
+                                                    event_pos2order[curr_pos])
 
         # for unnittest 
         if debug_output == 1:
@@ -4897,8 +5047,13 @@ class NLO_PARTIALWEIGHT(object):
             out.sort()
             return (tuple(initial), tuple(out)), order
         
-        def get_momenta(self, get_order, allow_reversed=True):
-            """return the momenta vector in the order asked for"""
+        def get_momenta(self, get_order, allow_reversed=True, decay_chain=False):
+            """return the momenta vector in the order asked for
+
+            decay_chain is accepted for the reweighting, which asks Event and
+            BasicEvent alike, and ignored: a BasicEvent carries momenta and
+            pdgs only -- no resonance lines, no mothers -- so its line order is
+            all there is to go on."""
              
             #avoid to modify the input
             order = [list(get_order[0]), list(get_order[1])] 
@@ -4940,17 +5095,20 @@ class NLO_PARTIALWEIGHT(object):
                 
             return out
 
-        def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None):
+        def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None,
+                            permutate_two_decay=False, decay_chain=False):
             """ same as get_momenta but return all valid permutation of the final state 
                     where identical particle does NOT have the same parent
                     for easier development debug output allow to return internal variable for the unittest to check
+                    permutate_two_decay/decay_chain: accepted like Event's, ignored (no mothers here)
             """  
 
 
             return [self.get_momenta(get_order, allow_reversed)]
             
             
-        def get_helicity(self, *args):
+        def get_helicity(self, get_order=None, allow_reversed=True,
+                         decay_chain=False):
             return [9] * len(self)
         
         @property

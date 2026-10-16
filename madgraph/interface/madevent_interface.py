@@ -5140,7 +5140,7 @@ tar -czf split_$1.tar.gz split_$1
                 for split_dir in split_dirs:
                     log_file = pjoin(split_dir,'PY8_log.txt')
                     pythia_log_file.write('='*35+'\n')
-                    pythia_log_file.write(' -> Pythia8 log file for run %d <-'%i+'\n')
+                    pythia_log_file.write(' -> Pythia8 log file for %s <-'%os.path.basename(split_dir)+'\n')
                     pythia_log_file.write('='*35+'\n')
                     pythia_log_file.write(open(log_file,'r').read()+'\n')
                     if run_type in merged_run_types:
