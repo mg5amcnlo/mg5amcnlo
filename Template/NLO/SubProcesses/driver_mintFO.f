@@ -352,6 +352,8 @@ c timing statistics
       external passcuts
       integer             ini_fin_fks(maxchannels)
       common/fks_channels/ini_fin_fks
+      integer real_channel_type
+      common /c_real_channel_type/ real_channel_type
       data sum /.false./
       integer         nndim
       common/tosigint/nndim
@@ -416,6 +418,13 @@ c PineAPPL
       if (ickkw.eq.-1) H1_factor_virt=0d0
       if (ickkw.eq.3) call set_FxFx_scale(0,p)
       call update_vegas_x(xx,x)
+      if (real_channel_type.eq.1) then
+c The finite hard remainder has its own real-diagram phase space and
+c sums only the FKS sectors owned by this subprocess and real ME.
+         nbody=.false.
+         call compute_hard_real_channels(nndim,iconfig,x,p,vegas_wgt)
+         goto 12
+      endif
       call get_MC_integer(max(ini_fin_fks(ichan),1)
      $     ,ini_fin_fks_map(ini_fin_fks(ichan),0),iran_picked,vol)
       nFKS_picked=ini_fin_fks_map(ini_fin_fks(ichan),iran_picked)
@@ -536,7 +545,10 @@ c Include the bias weight specified in the bias_weight_function
       endif
 
 c Importance sampling for FKS configurations
-      if (sum) then
+      if (real_channel_type.eq.1) then
+c There is no sampled FKS integer in the hard contribution.
+         continue
+      elseif (sum) then
          call get_wgt_nbody(sig)
          call fill_MC_integer(max(ini_fin_fks(ichan),1),iran_picked
      $        ,abs(sig))
@@ -718,6 +730,7 @@ c
       include 'fks_info.inc'
       include 'run.inc'
       include 'orders.inc'
+      include 'real_channels.inc'
 c
 c     Arguments
 c
@@ -732,6 +745,8 @@ c     Global
 c
       integer ini_fin_fks(maxchannels)
       common /fks_channels/ini_fin_fks
+      integer real_channel_type
+      common /c_real_channel_type/ real_channel_type
       integer           isum_hel
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
@@ -778,7 +793,7 @@ c
       integer random_offset_split
       common /c_random_offset_split/ random_offset_split
       logical done
-      character*140 buffer
+      character*4096 buffer
 c-----
 c  Begin Code
 c-----
@@ -786,6 +801,7 @@ c-----
       open (unit=83,file='input_app.txt',status='old')
       done=.false.
       nchans=0
+      real_channel_type=0
       do while (.not. done)
          read(83,'(a)',err=222,end=222) buffer
          if (buffer(1:7).eq.'NPOINTS') then
@@ -835,6 +851,18 @@ c-----
      $              ,maxchannels
                stop 1
             endif
+         elseif(buffer(1:12).eq.'CHANNEL_TYPE') then
+            read(buffer(15:),*) real_channel_type
+            if (real_channel_type.ne.0.and.real_channel_type.ne.1) then
+               write (*,*) 'Invalid CHANNEL_TYPE',real_channel_type
+               stop 1
+            endif
+            if (real_channel_type.eq.1.and.
+     $           .not.(real_channels_x0.gt.0d0.and.
+     $                 real_channels_x0.lt.1d0)) then
+               write (*,*) 'Hard channels require 0 < real_channels_x0 < 1'
+               stop 1
+            endif
          elseif(buffer(1:7).eq.'CHANNEL') then
             if (nchans.le.0) then
                write (*,*) '"NCHANS" missing in input files'/
@@ -844,6 +872,16 @@ c-----
             read(buffer(10:),*) (dconfig(kchan),kchan=1,nchans)
             do kchan=1,nchans
                iconfigs(kchan) = int(dconfig(kchan))
+               if (real_channel_type.eq.1) then
+                  if (dconfig(kchan).ne.dble(iconfigs(kchan)).or.
+     $                iconfigs(kchan).lt.1.or.
+     $                iconfigs(kchan).gt.n_real_channels) then
+                     write (*,*) 'Invalid hard channel',dconfig(kchan)
+                     stop 1
+                  endif
+                  ini_fin_fks(kchan)=0
+                  cycle
+               endif
                if ( nint(dconfig(kchan)*10)-iconfigs(kchan)*10.eq.0 )
      $              then
                   ini_fin_fks(kchan)=0
@@ -903,6 +941,13 @@ c-----
  222     done=.true.
       enddo
       close(83)
+      if (real_channel_type.eq.1) then
+         if (ickkw.ne.0.or.abrv.eq.'born'.or.abrv.eq.'bovi'.or.
+     $       abrv.eq.'bosk'.or.abrv(1:2).eq.'vi') then
+            write (*,*) 'Hard channels require an ordinary real NLO run'
+            stop 1
+         endif
+      endif
 
       if (fks_configs.eq.1) then
          if (pdg_type_d(1,fks_i_d(1)).eq.-21.and.abrv.ne.'born') then
@@ -939,3 +984,117 @@ c
       lbw(0)=0
       end
 c
+
+      subroutine compute_hard_real_channels(ndim,id,x,p,vegas_wgt)
+c Finite real remainder of MadFKS (6.28). The full real phase space is
+c partitioned by real diagram squares. The FKS sum is local to this
+c Born subprocess: the same real process can belong to several Borns.
+      use extra_weights
+      use mint_module, only: pass_cuts_check
+      implicit none
+      include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+      include 'run.inc'
+      include 'coupl.inc'
+      include 'orders.inc'
+      include 'fks_info.inc'
+      include 'real_channels.inc'
+      include 'real_matrix_weights.inc'
+      integer ndim,id,ime,sector,i,j,k,iamp,orders(nsplitorders)
+      integer ndiagrams,get_orders_tag
+      double precision x(99),p(0:3,nexternal),vegas_wgt,jac
+      double precision total,denom,fraction,softvar,hard,sij,wgt1
+      double precision rwgt,real_channel_invariant,fks_Sij,raw_split(amp_split_size)
+      double precision vi,vj
+      logical passcuts
+      external real_channel_invariant,fks_Sij,passcuts
+      integer i_fks,j_fks
+      common /fks_indices/ i_fks,j_fks
+      integer fks_j_from_i(nexternal,0:nexternal)
+     $     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/ fks_j_from_i,particle_type,pdg_type
+      double precision xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
+     $     ,p_i_fks_cnt(0:3,-2:2)
+      common /fksvariables/ xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,
+     $                      p_i_fks_cnt
+      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common /parton_cms_stuff/ ybst_til_tolab,ybst_til_tocm,
+     $                         sqrtshat,shat
+      double precision fkssymmetryfactor,fkssymmetryfactorBorn,
+     $                 fkssymmetryfactorDeg
+      integer ngluons,nquarks(-6:6),nphotons
+      common /numberofparticles/ fkssymmetryfactor,fkssymmetryfactorBorn,
+     $                 fkssymmetryfactorDeg,ngluons,nquarks,nphotons
+
+      call initialize_weight_analysis
+      ime=real_channel_me(id)
+      call update_fks_dir(real_channel_fks(id))
+      call generate_momenta_real_channels(ndim,real_channel_config(id),
+     $     real_channel_fks(id),x,p,jac)
+      if (jac.le.0d0.or.p(0,1).le.0d0) return
+      call set_cms_stuff(-100)
+      if (.not.passcuts(p,rwgt)) return
+      pass_cuts_check=.true.
+c Exact soft/collinear endpoints have zero measure. Avoid evaluating
+c a divergent raw matrix element there, including singular pairs owned
+c by a different Born subprocess.
+      do i=nincoming+1,nexternal
+         if (p(0,i).le.0d0) return
+         do j=1,fks_j_from_i(i,0)
+            k=fks_j_from_i(i,j)
+            if (real_channel_invariant(p,i,k).le.0d0) return
+         enddo
+      enddo
+      call set_alphaS(p)
+      get_real_diagram_weights=.true.
+      call smatrix_real(p,total)
+      get_real_diagram_weights=.false.
+      raw_split(1:amp_split_size)=amp_split(1:amp_split_size)
+      denom=0d0
+      ndiagrams=0
+      do i=1,n_real_channels
+         if (real_channel_me(i).ne.ime) cycle
+         ndiagrams=ndiagrams+1
+         denom=denom+max(0d0,real_amp2(real_channel_diagram(i)))
+      enddo
+      if (denom.gt.0d0) then
+         fraction=max(0d0,real_amp2(real_channel_diagram(id)))/denom
+      else
+c A zero diagram sum can occur at an amplitude zero. A uniform
+c partition also covers nonzero interference with vanishing weights.
+         fraction=1d0/dble(ndiagrams)
+      endif
+      if (fraction.eq.0d0) return
+      do sector=1,fks_configs
+         if (real_sector_me(sector).ne.ime) cycle
+         call update_fks_dir(sector)
+         xi_i_fks_ev=2d0*p(0,i_fks)/sqrtshat
+         vi=sqrt(sum(p(1:3,i_fks)**2))
+         vj=sqrt(sum(p(1:3,j_fks)**2))
+         if (vi.eq.0d0.or.vj.eq.0d0) cycle
+         y_ij_fks_ev=sum(p(1:3,i_fks)*p(1:3,j_fks))/(vi*vj)
+         y_ij_fks_ev=max(-1d0,min(1d0,y_ij_fks_ev))
+         p_i_fks_ev(:)=p(:,i_fks)/xi_i_fks_ev
+         do k=-2,2
+            p_i_fks_cnt(:,k)=p(:,i_fks)/xi_i_fks_ev
+         enddo
+         softvar=max(0d0,2d0*real_channel_invariant(p,i_fks,j_fks)/shat)
+         hard=softvar**2/(real_channels_x0**2+softvar**2)
+         if (hard.eq.0d0) cycle
+         sij=fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
+         if (sij.le.0d0) cycle
+         do iamp=1,amp_split_size
+            if (raw_split(iamp).eq.0d0) cycle
+            call amp_split_pos_to_orders(iamp,orders)
+            QCD_power=orders(qcd_pos)
+            wgtcpower=0d0
+            if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+            orders_tag=get_orders_tag(orders)
+            amp_pos=iamp
+            wgt1=raw_split(iamp)/g**QCD_power*jac*vegas_wgt*
+     $           fkssymmetryfactor*sij*hard*fraction
+            call add_wgt(1,orders,wgt1,0d0,0d0)
+         enddo
+      enddo
+      return
+      end

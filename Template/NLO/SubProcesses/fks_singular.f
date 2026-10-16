@@ -617,15 +617,18 @@ C wrt the hard matrix element. Relevant for lepton collisions.
 c This subroutine computes the real-emission matrix elements and adds
 c its value to the list of weights using the add_wgt subroutine
       use extra_weights
+      use mint_module, only: fixed_order
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
       include 'timing_variables.inc'
       include 'orders.inc'
+      include 'run.inc'
       integer orders(nsplitorders)
       integer iamp
       double precision s_ev,fks_Sij,p(0:3,nexternal),wgt1,fx_ev
-     $     ,sudakov_damp
+     $     ,sudakov_damp,real_channel_soft_fraction
+      external real_channel_soft_fraction
       external fks_Sij
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -649,6 +652,13 @@ c its value to the list of weights using the add_wgt subroutine
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
         wgt1=amp_split(iamp)*s_ev*f_r/g**(qcd_power)
+c MadFKS section 6.3: only the real event is damped. Local subtraction
+c terms already have f=1 in their singular limits. Keep this separate
+c from Sudakov damping, whose complement uses n-body kinematics.
+        if (fixed_order.and.real_channels_x0.gt.0d0.and.
+     $      real_channels_x0.lt.1d0) then
+           wgt1=wgt1*real_channel_soft_fraction(p)
+        endif
         if (sudakov_damp.gt.0d0) then
           call add_wgt(1,orders,wgt1*sudakov_damp,0d0,0d0)
         endif
@@ -660,6 +670,52 @@ c its value to the list of weights using the add_wgt subroutine
       tReal=tReal+(tAfter-tBefore)
       return
       end
+
+      double precision function real_channel_soft_fraction(p)
+c Smooth non-hard fraction; callers on the legacy path never need it.
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      double precision p(0:3,nexternal),real_channel_invariant,x
+      external real_channel_invariant
+      integer i_fks,j_fks
+      common /fks_indices/ i_fks,j_fks
+      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common /parton_cms_stuff/ ybst_til_tolab,ybst_til_tocm,
+     $                         sqrtshat,shat
+      real_channel_soft_fraction=1d0
+      if (.not.(real_channels_x0.gt.0d0.and.
+     $          real_channels_x0.lt.1d0)) return
+      x=max(0d0,2d0*real_channel_invariant(p,i_fks,j_fks)/shat)
+      real_channel_soft_fraction=real_channels_x0**2/
+     $                         (real_channels_x0**2+x**2)
+      return
+      end
+
+      double precision function real_channel_invariant(p,i,j)
+c Stable on-shell k_i.k_j, including arbitrarily small soft/collinear
+c separations. The legacy dot helper deliberately rounds small values
+c to zero and would impose an artificial cutoff on the hard remainder.
+      implicit none
+      include 'nexternal.inc'
+      include 'coupl.inc'
+      integer i,j
+      double precision p(0:3,nexternal),pmass(nexternal),vi,vj
+      double precision zero
+      parameter (zero=0d0)
+      include 'pmass.inc'
+      vi=sqrt(sum(p(1:3,i)**2))
+      vj=sqrt(sum(p(1:3,j)**2))
+      if (vi.eq.0d0.or.vj.eq.0d0) then
+         real_channel_invariant=p(0,i)*p(0,j)
+      else
+         real_channel_invariant=pmass(i)**2*p(0,j)/(p(0,i)+vi)
+     $        +vi*pmass(j)**2/(p(0,j)+vj)
+     $        +0.5d0*vi*vj*sum((p(1:3,i)/vi-p(1:3,j)/vj)**2)
+      endif
+      return
+      end
+
 
       subroutine compute_soft_counter_term(replace_MC_subt)
 c This subroutine computes the soft counter term and adds its value to
@@ -1369,9 +1425,6 @@ c bpower.
       include 'genps.inc'
       include 'timing_variables.inc'
       double precision pi,vegas_wgt
-      integer i,j
-      logical firsttime
-      data firsttime /.true./
       parameter (pi=3.1415926535897932385d0)
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
@@ -1391,18 +1444,36 @@ c bpower.
      &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
       double precision      f_b,f_nb
       common /factor_nbody/ f_b,f_nb
-      logical pineappl
-      common /for_pineappl/ pineappl
-      logical needrndec
-      parameter (needrndec=.false.)
-      real*8 ran2
-      external ran2
-      real*8 rndec(10)
-      common/crndec/rndec
-      include "pineappl_common.inc" 
-      integer orders(nsplitorders)
 C
       call cpu_time(tBefore)
+      call initialize_weight_analysis
+      call set_cms_stuff(0)
+c f_* multiplication factors for Born and nbody
+      f_b=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*shat/(16
+     $     *pi**2))*fkssymmetryfactorBorn*vegas_wgt
+      f_nb=f_b
+      call cpu_time(tAfter)
+      tf_nb=tf_nb+(tAfter-tBefore)
+      return
+      end
+
+
+      subroutine initialize_weight_analysis
+c Shared initialization also needed in jobs integrating only hard real.
+      use extra_weights
+      use mint_module
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'pineappl_common.inc'
+      integer i,j,orders(nsplitorders)
+      logical firsttime,pineappl,needrndec
+      data firsttime /.true./
+      parameter (needrndec=.false.)
+      common /for_pineappl/ pineappl
+      double precision ran2,rndec(10)
+      external ran2
+      common /crndec/ rndec
 c Random numbers to be used in the plotting routine: these numbers will
 c not change between events, counter events and n-body contributions.
       if(needrndec)then
@@ -1424,16 +1495,8 @@ c Initialize hiostograms for fixed order runs
          if (fixed_order) call initplot
          firsttime=.false.
       endif
-      call set_cms_stuff(0)
-c f_* multiplication factors for Born and nbody
-      f_b=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*shat/(16
-     $     *pi**2))*fkssymmetryfactorBorn*vegas_wgt
-      f_nb=f_b
-      call cpu_time(tAfter)
-      tf_nb=tf_nb+(tAfter-tBefore)
       return
       end
-
 
       subroutine include_multichannel_enhance(imode)
       implicit none
@@ -1875,6 +1938,7 @@ c        contribution
       use weight_lines
       use extra_weights
       use FKSParams
+      use mint_module, only: fixed_order
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1912,6 +1976,8 @@ c        contribution
       integer     fold,ifold_counter
       common /cfl/fold,ifold_counter
       integer ntagph
+      integer real_channel_type
+      common /c_real_channel_type/ real_channel_type
       double precision resc
       integer get_n_tagged_photons
       double precision get_rescale_alpha_factor
@@ -2024,7 +2090,12 @@ c matrix elements
       wgt_ME_tree(2,icontr)=wgt_me_real
       do i=1,nexternal
          do j=0,3
-            if (p1_cnt(0,1,0).gt.0d0.and.type.ne.5) then
+            if (fixed_order.and.real_channel_type.eq.1.and.
+     $          type.eq.1) then
+c The hard remainder has no underlying Born counterevent. Its auxiliary
+c record is the real event itself; never read ungenerated Born momenta.
+               momenta_m(j,i,1,icontr)=p_ev(j,i)
+            elseif (p1_cnt(0,1,0).gt.0d0.and.type.ne.5) then
                momenta_m(j,i,1,icontr)=p1_cnt(j,i,0)
             elseif (p1_cnt(0,1,1).gt.0d0) then
                momenta_m(j,i,1,icontr)=p1_cnt(j,i,1)
@@ -7769,6 +7840,8 @@ c
       common/sctests/softtest,colltest
 
       integer config_fks,i,j,fac1,fac2,kchan
+      integer real_channel_type
+      common /c_real_channel_type/ real_channel_type
       logical match_to_shower
 
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
@@ -8102,6 +8175,12 @@ c Setup the FKS symmetry factors.
          endif
       endif
 
+      if (fixed_order.and.real_channel_type.eq.1) then
+c Hard channels enumerate each eligible real topology once. Their IDs
+c are unrelated to the Born configuration numbers in symfact.dat.
+         diagramsymmetryfactor=1d0
+         return
+      endif
       if (firsttime) then
 c Check to see if this channel needs to be included in the multi-channeling
          do kchan=1,nchans
@@ -8490,4 +8569,12 @@ c     reset the default dynamical_scale_choice
       enddo
       mapconfig_in(0)=mapconfig(0)
       return
+      end
+
+      block data real_channel_job_defaults
+c Shared code is also linked by MC@NLO, where there are no hard jobs.
+      implicit none
+      integer real_channel_type
+      common /c_real_channel_type/ real_channel_type
+      data real_channel_type /0/
       end

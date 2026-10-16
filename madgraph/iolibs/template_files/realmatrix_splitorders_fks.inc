@@ -128,16 +128,19 @@ C
       DATA GOODHEL/NCOMB*.FALSE./
       INTEGER NTRY
       DATA NTRY/0/
+      include 'real_matrix_weights.inc'
 %(den_factor_line)s
 C ----------
 C BEGIN CODE
 C ----------
       NTRY=NTRY+1
+      if (get_real_diagram_weights) real_amp2(:)=0d0
       DO I=0,NSQAMPSO
       	ANS(I) = 0D0	  
       ENDDO
       DO IHEL=1,NCOMB
-        IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
+        IF (GOODHEL(IHEL) .OR. NTRY .LT. 2 .OR.
+     &      get_real_diagram_weights) THEN
           IF (NTRY.LT.2) THEN
 C for the first ps-point, check for helicities that give
 C identical matrix elements
@@ -156,7 +159,8 @@ C identical matrix elements
  444            continue
             ENDDO
           ELSE
-            IF (T_IDENT(IHEL).GT.0) THEN
+            IF (T_IDENT(IHEL).GT.0 .AND.
+     &          .NOT.get_real_diagram_weights) THEN
 C if two helicity states are identical, dont recompute
             DO I=0,NSQAMPSO
               T(I)=T_SAVE(T_IDENT(IHEL),I)
@@ -226,6 +230,7 @@ C
       INTEGER CF_INDEX, DENOM
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
+      include 'real_matrix_weights.inc'
 C
 C FUNCTION
 C
@@ -239,6 +244,9 @@ C BEGIN CODE
 C ----------
       jamp(:,:) = (0d0,0d0)
 %(helas_calls)s
+      if (get_real_diagram_weights) then
+%(real_amp2_lines)s
+      endif
 %(jamp_lines)s
 
       RES(:) = 0d0

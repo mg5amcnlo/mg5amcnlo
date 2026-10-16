@@ -22,6 +22,8 @@ import sys
 import tempfile
 import glob
 import shutil
+import subprocess
+from types import SimpleNamespace
 from tests import test_manager
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
@@ -35,10 +37,134 @@ import tests.IOTests as IOTests
 import madgraph.interface.master_interface as MGCmd
 
 import madgraph.fks.fks_common as fks_common
+import madgraph.iolibs.export_fks as export_fks
+import madgraph.iolibs.file_writers as writers
 
 _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 'input_files')
+
+
+class TestRealChannelExport(unittest.TestCase):
+    """Check real topology ownership and the helicity-summed partition."""
+
+    @staticmethod
+    def real_me(vertices):
+        class MatrixElement(dict):
+            def get_number_of_amplitudes(self):
+                return len(vertices) + 2
+
+        diagrams = [{'vertices': [{'legs': [None] * size} for size in sizes]}
+                    for sizes in vertices]
+        return SimpleNamespace(matrix_element=MatrixElement(
+            base_amplitude={'diagrams': diagrams},
+            diagrams=[{'number': number + 1} for number in range(len(vertices))]))
+
+    def test_channels_own_sectors_without_born_channel_factor(self):
+        # The contact diagram leaves a hole in diagram IDs, but not configs.
+        matrix_element = SimpleNamespace(
+            real_processes=[self.real_me([[3, 3], [4], [3, 3]]),
+                            self.real_me([[3]])],
+            get_fks_info_list=lambda: [{'n_me': 1}, {'n_me': 1}, {'n_me': 2}])
+        exporter = object.__new__(export_fks.ProcessExporterFortranFKS)
+        channels, sectors, representatives = exporter.get_real_channels(matrix_element)
+        self.assertEqual(channels, [(1, 1, 1, 1), (1, 1, 2, 3), (2, 3, 1, 1)])
+        self.assertEqual(sectors, [1, 1, 2])
+        self.assertEqual(representatives, [1, 3])
+        with tempfile.TemporaryDirectory() as path:
+            filename = os.path.join(path, 'real_channels.inc')
+            exporter.write_real_channels_file(writers.FortranWriter(filename),
+                                              matrix_element)
+            with open(filename) as stream:
+                output = stream.read().lower()
+            self.assertIn('n_real_channels=3', output)
+            self.assertIn('max_real_diagrams=5', output)
+
+    def test_no_real_channels(self):
+        exporter = object.__new__(export_fks.ProcessExporterFortranFKS)
+        matrix_element = SimpleNamespace(real_processes=[],
+                                         get_fks_info_list=lambda: [])
+        with tempfile.TemporaryDirectory() as path:
+            filename = os.path.join(path, 'real_channels.inc')
+            exporter.write_real_channels_file(writers.FortranWriter(filename),
+                                              matrix_element)
+            with open(filename) as stream:
+                output = stream.read().lower()
+            self.assertIn('n_real_channels=0', output)
+            self.assertIn('real_channel_me(1)', output)
+            self.assertIn('real_sector_me(1)', output)
+
+    def test_real_diagram_weights_include_cached_helicities(self):
+        compiler = shutil.which('gfortran')
+        if not compiler:
+            self.skipTest('gfortran is needed for the real helicity regression')
+        filename = os.path.join(export_fks._file_path,
+                  'iolibs/template_files/realmatrix_splitorders_fks.inc')
+        with open(filename) as stream:
+            template = stream.read()
+        template = template[template.index('      SUBROUTINE SMATRIX%(proc_prefix)s_SPLITORDERS'):]
+        template = template[:template.index('C Helper functions')]
+        # Both helicities have the same full matrix element, but unequal
+        # individual diagram squares. Reusing just T would lose one helicity.
+        source = template % {
+            'proc_prefix': '1', 'info_lines': '', 'process_lines': '',
+            'ncomb': 2, 'nSqAmpSplitOrders': 1, 'nAmpSplitOrders': 1,
+            'helicity_lines': '      data nhel /1,-1/',
+            'den_factor_line': '      data iden /1/',
+            'ngraphs': 2, 'nwavefuncs': 1, 'ncolor': 1,
+            'wavefunctionsize': 8, 'nb_temp_jamp': 1,
+            'color_data_lines': '      data cf /1,0/\n      data denom /1/',
+            'helas_calls': ('      amp(1)=dcmplx(p(0,1)+nhel(1),0d0)\n'
+                            '      amp(2)=dcmplx(p(0,1)-nhel(1),0d0)'),
+            'real_amp2_lines': ('      real_amp2(1)=real_amp2(1)+abs(amp(1))**2\n'
+                               '      real_amp2(2)=real_amp2(2)+abs(amp(2))**2'),
+            'jamp_lines': '      jamp(1,1)=amp(1)+amp(2)'}
+        source += """
+      integer function sqsoindex1(i,j)
+      integer i,j
+      sqsoindex1=1
+      end
+      program test_real_weights
+      implicit none
+      double precision p(0:3,1),ans(0:1)
+      include 'real_matrix_weights.inc'
+      p=0d0
+      get_real_diagram_weights=.false.
+      real_amp2=-1d0
+      p(0,1)=2d0
+      call smatrix1_splitorders(p,ans)
+      if (ans(0).ne.32d0.or.any(real_amp2.ne.-1d0)) stop 1
+      get_real_diagram_weights=.true.
+      p(0,1)=3d0
+      call smatrix1_splitorders(p,ans)
+      if (ans(0).ne.72d0.or.any(real_amp2.ne.20d0)) stop 2
+      p(0,1)=4d0
+      call smatrix1_splitorders(p,ans)
+      if (ans(0).ne.128d0.or.any(real_amp2.ne.34d0)) stop 3
+      get_real_diagram_weights=.false.
+      real_amp2=-1d0
+      call smatrix1_splitorders(p,ans)
+      if (ans(0).ne.128d0.or.any(real_amp2.ne.-1d0)) stop 4
+      end
+"""
+        with tempfile.TemporaryDirectory() as path:
+            for name, content in {
+                'matrix.f': source,
+                'nexternal.inc': '      integer nexternal\n      parameter(nexternal=1)\n',
+                'coupl.inc': '',
+                'real_matrix_weights.inc': (
+                    '      double precision real_amp2(2)\n'
+                    '      common /c_real_diagram_weights/ real_amp2\n'
+                    '      logical get_real_diagram_weights\n'
+                    '      common /c_get_real_diagram_weights/ get_real_diagram_weights\n')
+            }.items():
+                with open(os.path.join(path, name), 'w') as stream:
+                    stream.write(content)
+            subprocess.check_output([compiler, '-ffixed-line-length-none',
+                                     '-fcheck=all', 'matrix.f', '-o', 'check'],
+                                    cwd=path, stderr=subprocess.STDOUT)
+            subprocess.check_output([os.path.join(path, 'check')], cwd=path,
+                                    stderr=subprocess.STDOUT)
 
 class IOExportFKSTest(IOTests.IOTestManager):
     """Test class for the export fks module"""

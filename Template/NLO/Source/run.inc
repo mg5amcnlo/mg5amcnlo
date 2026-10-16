@@ -70,6 +70,10 @@ c
       logical mcatnlo_delta
       common /cMCatNLO_Delta/ mcatnlo_delta
 
+c     Real-diagram integration channels, enabled only for 0 < x0 < 1
+      double precision real_channels_x0
+      common /c_real_channels_x0/ real_channels_x0
+
 c
 c     Reweight info
 c

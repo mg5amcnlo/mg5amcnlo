@@ -1895,16 +1895,91 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
     def write_real_matrix_elements(self, matrix_element, fortran_model):
         """writes the matrix_i.f files which contain the real matrix elements""" 
         
+        self.write_real_channels_file(writers.FortranWriter('real_channels.inc'),
+                                     matrix_element)
+        max_diagrams = max([1] + [real.matrix_element.get_number_of_amplitudes()
+                                 for real in matrix_element.real_processes])
+        weights_writer = writers.FortranWriter('real_matrix_weights.inc')
+        weights_writer.writelines([
+            'double precision real_amp2(%d)' % max_diagrams,
+            'common /c_real_diagram_weights/ real_amp2',
+            'logical get_real_diagram_weights',
+            'common /c_get_real_diagram_weights/ get_real_diagram_weights'])
+        weights_writer.close()
+
         sqsorders_list = []
         for n, fksreal in enumerate(matrix_element.real_processes):
             filename = 'matrix_%d.f' % (n + 1)
+            writer = writers.FortranWriter(filename)
             ncalls, ncolors, nsplitorders, nsqsplitorders = \
                                     self.write_split_me_fks(\
-                                        writers.FortranWriter(filename),
+                                        writer,
                                         fksreal.matrix_element, 
                                         fortran_model, 'real', "%d" % (n+1))
+            if n == 0:
+                writer.writelines("""
+      block data initialize_real_diagram_weights
+      implicit none
+      include 'real_matrix_weights.inc'
+      data get_real_diagram_weights /.false./
+      end
+""")
+            writer.close()
             sqsorders_list.append(nsqsplitorders)
         return sqsorders_list
+
+    def get_real_channels(self, matrix_element):
+        """Return independent real topologies and their locally owned sectors.
+
+        Configuration numbers follow configs_and_props_info.dat, whereas
+        diagram numbers index the uncompressed, per-diagram real_amp2 array.
+        The same real process in another Born directory owns different sectors
+        and deliberately retains its own hard channels.
+        """
+        sectors = matrix_element.get_fks_info_list()
+        sector_me = [info['n_me'] for info in sectors]
+        representative = [sector_me.index(ime + 1) + 1
+                          for ime in range(len(matrix_element.real_processes))]
+        channels = []
+        for ime, real in enumerate(matrix_element.real_processes, 1):
+            me = real.matrix_element
+            diagrams = me.get('base_amplitude').get('diagrams')
+            minvert = min(max(len(vertex.get('legs'))
+                              for vertex in diag.get('vertices'))
+                          for diag in diagrams)
+            iconfig = 0
+            for idiag, diag in enumerate(diagrams):
+                if any(len(vertex.get('legs')) > minvert
+                       for vertex in diag.get('vertices')):
+                    continue
+                iconfig += 1
+                channels.append((ime, representative[ime - 1], iconfig,
+                                 me.get('diagrams')[idiag].get('number')))
+        return channels, sector_me, representative
+
+    def write_real_channels_file(self, writer, matrix_element):
+        """Write compact hard-channel IDs without a Born-channel factor."""
+        channels, sector_me, representative = self.get_real_channels(matrix_element)
+        max_diagrams = max([1] + [real.matrix_element.get_number_of_amplitudes()
+                                 for real in matrix_element.real_processes])
+        lines = [
+            'integer n_real_channels,n_real_matrix_elements,max_real_diagrams',
+            'parameter (n_real_channels=%d)' % len(channels),
+            'parameter (n_real_matrix_elements=%d)' % len(representative),
+            'parameter (max_real_diagrams=%d)' % max_diagrams]
+        tables = [('real_channel_me', [channel[0] for channel in channels]),
+                  ('real_channel_fks', [channel[1] for channel in channels]),
+                  ('real_channel_config', [channel[2] for channel in channels]),
+                  ('real_channel_diagram', [channel[3] for channel in channels]),
+                  ('real_sector_me', sector_me),
+                  ('real_me_fks', representative)]
+        for name, values in tables:
+            values = values or [0]
+            lines.append('integer %s(%d)' % (name, len(values)))
+            lines.append('data %s /%s/' %
+                         (name, ','.join(str(value) for value in values)))
+        writer.writelines(lines)
+        writer.close()
 
         
     
@@ -2072,6 +2147,11 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             amp2_lines = self.get_amp2_lines(matrix_element, [] )
             replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
             replace_dict['global_variable'] = "       Double Precision amp2(NGRAPHS)\n       common/to_amps/  amp2\n"
+
+        if proc_type == 'real':
+            replace_dict['real_amp2_lines'] = '\n'.join(
+                line.replace('AMP2(', 'REAL_AMP2(')
+                for line in self.get_amp2_lines(matrix_element))
 
         # JAMP definition, depends on the number of independent split orders
         split_orders=matrix_element.get('processes')[0].get('split_orders')

@@ -5843,6 +5843,8 @@ class RunCardNLO(RunCard):
         self.add_param('niters_fo_grid', 4, include=False)
         self.add_param('npoints_fo', 10000, include=False)        
         self.add_param('niters_fo', 6, include=False)
+        self.add_param('real_channels_x0', -1.0, hidden=True,
+                       comment='Separate hard real-emission integration channels for fixed-order NLO: 0 < x0 < 1 enables f(x)=1/(1+(x/x0)^2); all other values disable them.')
         #seed and collider
         self.add_param('iseed', 0)
         self.add_param('lpp1', 1, fortran_name='lpp(1)',

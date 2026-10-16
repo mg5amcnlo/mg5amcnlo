@@ -146,12 +146,24 @@ def compile_dir(*arguments):
                 tf.close()
             
         if not options['reweightonly']:
+            # Publish the compiled setting only after both binaries and their
+            # channel catalogues are ready. A failed rebuild must not permit
+            # --nocompile to reuse an executable with stale channel metadata.
+            has_real_channels = os.path.exists(pjoin(this_dir, 'real_channels.inc'))
+            marker = pjoin(this_dir, 'real_channels_x0.dat')
+            executable_marker = pjoin(this_dir, exe + '.real_channels_x0.dat')
+            if has_real_channels:
+                for path in (marker, executable_marker):
+                    with open(path, 'w') as stream:
+                        stream.write('compilation incomplete\n')
             misc.compile(['gensym'], cwd=this_dir, job_specs = False)
+            #compile madevent_mintMC/mintFO
+            misc.compile([exe], cwd=this_dir, job_specs = False)
             misc.call(['./gensym', mode],cwd= this_dir,
                      stdout=open(pjoin(this_dir, 'gensym.log'), 'w'),
                      close_fds=True) 
-            #compile madevent_mintMC/mintFO
-            misc.compile([exe], cwd=this_dir, job_specs = False)
+            if has_real_channels:
+                shutil.copyfile(marker, executable_marker)
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
             misc.compile(['reweight_xsec_events'], cwd=this_dir, job_specs = False)
 
@@ -2090,10 +2102,80 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         return
 
 
+    @staticmethod
+    def effective_real_channels_x0(value):
+        """Use a single value for all settings that disable real channels."""
+        return value if 0.0 < value < 1.0 else -1.0
+
+    def check_real_channels_mode(self,mode):
+        """Real-diagram channels are supported only for ordinary fixed-order NLO."""
+        value = self.run_card['real_channels_x0'] if 'real_channels_x0' in self.run_card else -1.0
+        x0 = self.effective_real_channels_x0(value)
+        if x0 > 0 and (mode != 'NLO' or self.run_card['ickkw'] != 0):
+            raise self.InvalidCmd('real_channels_x0 between 0 and 1 requires fixed-order NLO '
+                                  'with ickkw=0; it is not supported for LO or MC@NLO '
+                                  '(including noshower).')
+        return x0
+
+    def check_real_channels_restart(self,jobs,x0):
+        """Do not reuse adaptive grids made for a different real-emission split."""
+        for job in jobs:
+            saved = self.effective_real_channels_x0(job.get('real_channels_x0', -1.0))
+            kind = job.get('channel_type', 0)
+            if saved != x0:
+                raise aMCatNLOError('Cannot restart with a different real_channels_x0 '
+                                    'setting. Start a fresh integration to rebuild the grids.')
+            if kind not in (0, 1) or (kind == 1 and saved < 0):
+                raise aMCatNLOError('Invalid real-channel metadata in saved job status.')
+            job['channel_type'] = kind
+            job['real_channels_x0'] = saved
+
+    def check_real_channels_nocompile(self,p_dirs,exe='madevent_mintFO'):
+        """Keep job construction consistent with the setting in existing binaries."""
+        requested_x0 = self.run_card['real_channels_x0'] if 'real_channels_x0' in self.run_card else -1.0
+        requested_x0 = self.effective_real_channels_x0(requested_x0)
+        for p_dir in p_dirs:
+            # The catalogue and selected executable can come from different
+            # builds when switching between fixed order and MC@NLO.
+            for filename in ('real_channels_x0.dat', exe + '.real_channels_x0.dat'):
+                path = pjoin(self.me_dir, 'SubProcesses', p_dir, filename)
+                compiled_x0 = -1.0
+                try:
+                    with open(path) as stream:
+                        compiled_x0 = float(stream.read().strip().lower().replace('d', 'e'))
+                    if not math.isfinite(compiled_x0):
+                        raise ValueError('Non-finite compiled setting')
+                except FileNotFoundError:
+                    # Processes generated before this feature have no markers
+                    # and can only be reused with real channels disabled.
+                    pass
+                except (OSError, ValueError):
+                    raise self.InvalidCmd('Cannot determine the compiled real_channels_x0 '
+                                          'setting in %s. Rerun without --nocompile.' % p_dir)
+                if self.effective_real_channels_x0(compiled_x0) != requested_x0:
+                    raise self.InvalidCmd('real_channels_x0 differs from the compiled setting '
+                                          'in %s. Rerun without --nocompile to update the '
+                                          'executable and integration channels.' % p_dir)
+
+    @staticmethod
+    def fixed_order_job_identity(job):
+        """A split job belongs to one subprocess, channel group and channel kind."""
+        return job['p_dir'], job['channel'], job.get('channel_type', 0)
+
+    def check_fixed_order_job_group(self,jobs):
+        """Check channel identities before summing jobs or touching their grids."""
+        identities = {(self.fixed_order_job_identity(job), job.get('configs'),
+                       self.effective_real_channels_x0(job.get('real_channels_x0', -1.0)))
+                      for job in jobs}
+        if len(identities) != 1:
+            raise aMCatNLOError('Cannot combine fixed-order jobs with different channels, '
+                                'channel types or real_channels_x0 settings.')
+
     def create_jobs_to_run(self,options,p_dirs,req_acc,run_mode,\
                            integration_step,mode,fixed_order=True):
         """Creates a list of dictionaries with all the jobs to be run"""
         jobs_to_run=[]
+        real_channels_x0 = self.check_real_channels_mode(mode)
         if not options['only_generation']:
             # Fresh, new run. Check all the P*/channels.txt files
             # (created by the 'gensym' executable) to set-up all the
@@ -2108,18 +2190,37 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     logger.warning('No integration channels found for contribution %s (too large masses/low energy?)' % p_dir)
                     continue
                 if fixed_order:
-                    lch=len(channels)
+                    channel_groups = [(0, channels)]
+                    if real_channels_x0 > 0 and run_mode[:4] not in ('born', 'bovi', 'bosk') \
+                            and not run_mode.startswith('vi'):
+                        hard_file = pjoin(self.me_dir,'SubProcesses',p_dir,'channels_hard.txt')
+                        try:
+                            with open(hard_file) as chan_file:
+                                hard_channels = chan_file.read().split()
+                        except IOError:
+                            raise aMCatNLOError('Missing hard real-emission channel list %s. '
+                                                'Recompile this process before running.' % hard_file)
+                        channel_groups.append((1, hard_channels))
                     maxchannels=20    # combine up to 20 channels in a single job
-                    njobs=(int(lch/maxchannels)+1 if lch%maxchannels!= 0 \
-                           else int(lch/maxchannels))
-                    for nj in range(1,njobs+1):
+                    grouped_channels=[]
+                    for kind, pool in channel_groups:
+                        lch=len(pool)
+                        njobs=(lch+maxchannels-1)//maxchannels
+                        for nj in range(1,njobs+1):
+                            nchans=lch//njobs + (1 if nj <= lch%njobs else 0)
+                            grouped_channels.append((kind, pool[:nchans]))
+                            del pool[:nchans]
+                        if pool:
+                            raise aMCatNLOError('"channels" is not empty %s' % pool)
+                    for nj, (kind, configs) in enumerate(grouped_channels, 1):
                         job={}
                         job['p_dir']=p_dir
                         job['p_label']=p_dir[1:].split('_')[0]
                         job['channel']=str(nj)
-                        job['nchans']=(int(lch/njobs)+1 if nj <= lch%njobs else int(lch/njobs))
-                        job['configs']=' '.join(channels[:job['nchans']])
-                        del channels[:job['nchans']]
+                        job['nchans']=len(configs)
+                        job['configs']=' '.join(configs)
+                        job['channel_type']=kind
+                        job['real_channels_x0']=real_channels_x0
                         job['split']=0
                         if req_acc == -1:
                             job['accuracy']=0
@@ -2137,8 +2238,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         job['wgt_frac']=1.0
                         job['wgt_mult']=1.0
                         jobs_to_run.append(job)
-                    if channels:
-                        raise aMCatNLOError('"channels" is not empty %s' % channels)
                 else:
                     for channel in channels:
                         job={}
@@ -2165,6 +2264,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             except:
                 raise aMCatNLOError('Cannot reconstruct jobs from saved job status in %s' % \
                                     pjoin(self.me_dir,'SubProcesses','job_status.pkl'))
+            self.check_real_channels_restart(jobs_to_collect,real_channels_x0)
             # Update cross sections and determine which jobs to run next
             if fixed_order:
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run,
@@ -2231,6 +2331,8 @@ RUN_MODE = %(run_mode)s
 RESTART = %(mint_mode)s
 """ \
               % job
+            if job.get('channel_type', 0) == 1:
+                content = content.replace('\nCHANNEL =', '\nCHANNEL_TYPE = 1\nCHANNEL =')
         else:
             if job['mint_mode'] == 0:
                 job['fold_string']='1 1 1'
@@ -2405,8 +2507,8 @@ RESTART = %(mint_mode)s
                 job['combined']=1
                 jobs_to_run_new.append(job) # this jobs wasn't split
             elif job['split'] == 1:
-                jobgroups_to_combine.append([j for j in jobs_to_run if j['p_dir'] == job['p_dir'] and \
-                                            j['channel'] == job['channel']])
+                jobgroups_to_combine.append([j for j in jobs_to_run if \
+                    self.fixed_order_job_identity(j) == self.fixed_order_job_identity(job)])
             else:
                 continue
         for job_group in jobgroups_to_combine:
@@ -2417,6 +2519,7 @@ RESTART = %(mint_mode)s
 
     def combine_split_order_jobs(self,job_group):
         """combine the jobs in job_group and return a single summed job"""
+        self.check_fixed_order_job_group(job_group)
         # first copy one of the jobs in 'jobs'
         sum_job=copy.copy(job_group[0])
         # update the information to have a 'non-split' job:
@@ -2451,6 +2554,7 @@ RESTART = %(mint_mode)s
         """Combines the mint_grids and MC-integer grids from the split order
         jobs (fixed order only).
         """
+        self.check_fixed_order_job_group(job_group)
         files_mint_grids=[]
         files_MC_integer=[]
         location=None
@@ -2570,8 +2674,8 @@ RESTART = %(mint_mode)s
             # remove current job from jobs_to_collect. Make sure
             # to remove all the split ones in case the original
             # job had been a split one (before it was re-combined)
-            for j in [j for j in jobs_to_collect_new if j['p_dir'] == job['p_dir'] and \
-                                j['channel'] == job['channel']]:
+            for j in [j for j in jobs_to_collect_new if \
+                    self.fixed_order_job_identity(j) == self.fixed_order_job_identity(job)]:
                 jobs_to_collect_new.remove(j)
             time_expected=job['time_spend']*(job['niters']*job['npoints'])/  \
                            (job['niters_done']*job['npoints_done'])
@@ -5453,6 +5557,7 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
         # If they exists, return
         if all([os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, exe)) \
                 for p_dir in p_dirs]) and options['nocompile']:
+            self.check_real_channels_nocompile(p_dirs,exe)
             return
 
         # rm links to lhapdflib/ PDFsets if exist
@@ -5904,6 +6009,7 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
 
         if not mode =='onlyshower':
             self.run_card = self.banner.charge_card('run_card')
+            self.check_real_channels_mode(mode)
             self.run_tag = self.run_card['run_tag']
             #this is if the user did not provide a name for the current run
             if not hasattr(self, 'run_name') or not self.run_name:

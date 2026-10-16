@@ -98,6 +98,13 @@ c factors. Hence, simply use the first fks_configuration.
       if (nFKSprocess.gt.fks_configs) nFKSprocess=1
       call leshouche_inc_chooser()
       call setrun                !Sets up run parameters
+      if (real_channels_x0.gt.0d0.and.real_channels_x0.lt.1d0) then
+         if (run_mode.ne.'NLO'.or.ickkw.ne.0) then
+            write (*,*) 'Real channels require fixed-order NLO',
+     $           ' with ickkw=0'
+            stop 1
+         endif
+      endif
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts 
       call printout
@@ -211,6 +218,15 @@ c        Look for matches
       write(*,*) 'Found ',nmatch, ' matches. ',mapconfig(0)-nmatch,
      $     ' channels remain for integration.'
       call write_bash(use_config,force_one_job)
+c Record the setting used by this executable and its channel catalogues.
+c This survives explicit treatcards calls that rewrite run_card.inc.
+      open(unit=26,file='real_channels_x0.dat',status='replace')
+      if (real_channels_x0.gt.0d0.and.real_channels_x0.lt.1d0) then
+         write(26,'(es26.17e3)') real_channels_x0
+      else
+         write(26,'(es26.17e3)') -1d0
+      endif
+      close(26)
       return
       end
 
@@ -313,6 +329,8 @@ c***************************************************************************
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
       include 'born_conf.inc' ! needed for mapconfig
+      include 'run.inc'
+      include 'real_channels.inc'
       integer use_config(0:lmaxconfigs),i,lname
       character*30 fname,mname
       character*2 postfix
@@ -357,6 +375,20 @@ c***************************************************************************
             endif
          endif
       enddo
+      close(26)
+c
+c Hard channels use independent real-diagram indices. Keep their list
+c separate so that fixed-order jobs cannot combine them with Born maps.
+c Replacing the file also clears entries left by an earlier enabled run.
+c
+      open(unit=26,file='channels_hard.txt',status='replace')
+      if (real_channels_x0.gt.0d0.and.real_channels_x0.lt.1d0
+     $     .and..not.force_one_job) then
+         do i=1,n_real_channels
+            write(26,'(x,i10,$)') i
+         enddo
+      endif
+      write(26,*)
       close(26)
       if (mapconfig(0) .gt. 9999) then
          write(*,*) 'ERROR: only writing first 9999 jobs',mapconfig(0)
