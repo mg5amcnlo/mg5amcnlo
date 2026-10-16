@@ -142,14 +142,8 @@ class _DensityStub(object):
         self.keep_ordering = False
 
     method_boost_event = reweight_interface.DensityInterface.method_boost_event
-    chose_particle_user_input = \
-        reweight_interface.DensityInterface.chose_particle_user_input
-    find_position_particles_default_order = \
-        reweight_interface.DensityInterface.find_position_particles_default_order
-    find_position_particles_new_order = \
-        reweight_interface.DensityInterface.find_position_particles_new_order
-    find_position_particles_with_observable = \
-        reweight_interface.DensityInterface.find_position_particles_with_observable
+    chose_particle_user_input = staticmethod(
+        reweight_interface.DensityInterface.chose_particle_user_input)
     _boost_to_chosen_legs = reweight_interface.DensityInterface._boost_to_chosen_legs
     boost_momenta_to_rest_frame = staticmethod(
         reweight_interface.ReweightInterface.boost_momenta_to_rest_frame)
@@ -157,17 +151,14 @@ class _DensityStub(object):
 
 class TestDensityInterfaceLegs(unittest.TestCase):
 
-    PROPERTIES = [p for p in dir(lhe_parser.FourMomentum)
-                  if isinstance(getattr(lhe_parser.FourMomentum, p), property)]
     PDG = list(ORDER[0]) + list(ORDER[1])
 
     def _choose(self, layout, user_input, resonance=False, fortran=False):
         event = _event(layout, resonance)
         lab_p = event.get_momenta(ORDER)
         stub = _DensityStub(user_input)
-        return stub.chose_particle_user_input(lab_p, self.PDG, self.PROPERTIES,
-                                              ORDER, user_input, 'test',
-                                              fortran), lab_p, event
+        return stub.chose_particle_user_input(lab_p, self.PDG, user_input,
+                                              'test', fortran), lab_p, event
 
     def test_ranked_choice_is_the_same_particle_in_every_layout(self):
         """'the hardest top' names one particle, however the LHE lists them."""

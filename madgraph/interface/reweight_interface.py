@@ -3147,19 +3147,15 @@ class DensityInterface(ReweightInterface):
 
         pdg = list(orig_order[0])+list(orig_order[1])
 
-        #list_properties is the list of properties of the class FourMomentum that we can use to rank particles
-        list_properties = [p for p in dir(lhe_parser.FourMomentum) if isinstance(getattr(lhe_parser.FourMomentum,p),property)]
-        
-        
         # the particles are chosen -- and ranked, for an observable -- on the
         # lab-frame momenta, laid out in the matrix element's order like pdg
         # and all_p, so that a returned position is a leg for all three
         lab_p = event.get_momenta(orig_order,
                                  decay_chain=not self.keep_ordering)
-        boost_corrected = self.chose_particle_user_input(lab_p, pdg, list_properties, orig_order, self.momenta_boost, 'momenta_boost', fortran_format = False)
+        boost_corrected = self.chose_particle_user_input(lab_p, pdg, self.momenta_boost, 'momenta_boost', fortran_format = False)
         all_p = self.method_boost_event(event, all_p, orig_order, hypp_id, boost_corrected)
         
-        refChoice_corrected = self.chose_particle_user_input(lab_p, pdg, list_properties, orig_order, self.helicity_direction, 'helicity_direction', fortran_format = True)
+        refChoice_corrected = self.chose_particle_user_input(lab_p, pdg, self.helicity_direction, 'helicity_direction', fortran_format = True)
         phi, theta = self.calculate_angles_rotation(refChoice_corrected, all_p, module)
         
         for i in range(len(all_p)):
@@ -3189,7 +3185,7 @@ class DensityInterface(ReweightInterface):
 
 
         # POS of py_get_density: a leg of the matrix element, like pdg and all_p
-        pos_corrected = self.chose_particle_user_input(lab_p, pdg, list_properties, orig_order, self.particle_in_density_matrix, 'particle_in_density_matrix', fortran_format = True)
+        pos_corrected = self.chose_particle_user_input(lab_p, pdg, self.particle_in_density_matrix, 'particle_in_density_matrix', fortran_format = True)
 
         status = []
         for particle in event:
@@ -3259,6 +3255,7 @@ class DensityInterface(ReweightInterface):
 
     def method_boost_event(self, event, all_p, orig_order, hypp_id, boost_corrected):
         """ This method overwrites the method of the same name in the class ReweightInterface.
+            boost_corrected are positions (python format) in orig_order, like the momenta in all_p.
             Output: new_all_p (all the boosted momenta of a given event)
         """
 
@@ -3301,193 +3298,62 @@ class DensityInterface(ReweightInterface):
 
 
 
-    def chose_particle_user_input(self, momenta, pdg, list_properties, orig_order, user_input, name_input, fortran_format = False):
+    @staticmethod
+    def chose_particle_user_input(momenta, pdg, user_input, name_input, fortran_format = False):
         """
         This function transforms the user_input for a given name_input into the position of particles in the original order.
         The position of the particles can then be used to boost, rotate the event, etc.
+        user_input = (pdg codes, observable, ranks). The j-th position returned corresponds to the j-th pdg code given by the user,
+        such that the order of the user is kept (it is the order of the particles in the density matrix).
+        For each pdg code, the candidates are the particles of the process with this pdg code:
+          - without observable, the k-th occurrence of a pdg code in the user input takes the k-th candidate in the original order
+          - with an observable, the candidates are ranked in decreasing order of the observable (evaluated on momenta). The k-th
+            occurrence of a pdg code takes the k-th candidate, or the candidate of rank user_input[2][j] if ranks are given.
+        momenta: momenta of the event in the original order, pdg: pdg codes in the original order
         fortran_format = True, means that we use the Fortran format for indices, so lists begin at 1, else we use Python format.
-        Output: position_particles
-
-        ``momenta`` are the event's momenta in the matrix element's order,
-        i.e. aligned with ``pdg``: every position returned is a leg of the
-        matrix element. They used to be the event's own lines, which ranked
-        pdg[i] (a leg) together with event[i] (an LHE line, status-2 ones
-        included) -- a different particle whenever the LHE order is not the
-        matrix element's.
+        Output: position_particles ([-1] if the option is not used)
         """
-        if 0 in user_input[0]: # if the user does not want to user this input
+        pdg_to_chose, observable = list(user_input[0]), user_input[1]
+        if 0 in pdg_to_chose: # if the user does not want to use this input
             return [-1]
-        
-        if user_input[1] == '':
-            position_particles = self.find_position_particles_default_order(orig_order, user_input, name_input, fortran_format) #if the user does not give an observable to rank the particles
-            return position_particles
 
-        else:
-            found_property = False
-            for prop in list_properties: #finding the observable given by the user
-                if prop == user_input[1]:
-                    found_property = True
-                    observable_values = []
-                    original_order = [i for i in range(len(momenta))]
-                    for i, p in enumerate(momenta):
-                        if pdg[i] in user_input[0]:
-                            correct_p_rot = lhe_parser.FourMomentum(p)
-                            observable_values.append(getattr(correct_p_rot, prop))
-                        else:
-                            observable_values.append(float('NaN'))
-
-                    # if several particles of same pdg have the same value of the observable, we can not rank them so we use the default order.
-                    # we do not crash the code because it can happen randomly for an event, even if the user_input is correct
-                    if len(set(observable_values)) != len(observable_values) and len(set(user_input[0])) != len(user_input[0]):
-                        logger.warning(f"Some particles in {name_input} have the same value for the observable given. For this event the order of the observable is not taken into account.")                        
-                        position_particles = self.find_position_particles_default_order(orig_order, user_input, name_input, fortran_format)
-                        return position_particles
-                    
-                    # ranking the particles via the observable's value. The
-                    # particles that are not candidates carry NaN, and NaN
-                    # compares False with everything, so sorting them in with
-                    # the rest left the candidates in whatever order the NaNs
-                    # happened to split them into -- i.e. it depended on the
-                    # leg order again ('the hardest top' could be the softer
-                    # one). Candidates first, by decreasing value (ties: the
-                    # later leg first, as before); the NaNs after them.
-                    ranked = sorted(zip(observable_values, original_order),
-                                    key=lambda vo: (vo[0] == vo[0],
-                                                    vo[0] if vo[0] == vo[0] else 0.,
-                                                    vo[1]),
-                                    reverse=True)
-                    observable_values_sorted, new_order = zip(*ranked)
-
-                    if len(user_input[2]) > 0: # if the user gives a ranking to use for the observable, use it
-                        position_particles = self.find_position_particles_with_observable(pdg, observable_values_sorted, new_order, original_order, user_input, name_input, fortran_format)
-                        return position_particles
-
-                    else: #else they are ranked in decreasing order
-                        position_particles = self.find_position_particles_new_order(pdg, user_input, new_order, fortran_format)
-                        return position_particles
-
-            if not found_property:
-                raise ValueError(f'The observable {user_input[1]} is not recognised. Observables are defined in the class FourMomentum of lhe_parser.')
-
-
-    def find_position_particles_with_observable(self, pdg, observable_values_sorted, new_order, original_order, user_input, name_input, fortran_format):
-        """
-        This function transforms the user_input for a given name_input into the position of particles in the original order specifically if the user gives an observable.
-        The position of the particles can then be used to boost, rotate the event, etc.
-        fortran_format = True, means that we use the Fortran format for indices, so lists begin at 1, else we use Python format.
-        Output: position_particles
-        """
-        if len(user_input[0]) != len(user_input[2]):
+        ranks = list(user_input[2]) if observable else [] # a ranking without observable is ignored (an error is already printed when reading the card)
+        if observable and not isinstance(getattr(lhe_parser.FourMomentum, observable, None), property):
+            raise ValueError(f'The observable {observable} is not recognised. Observables are defined in the class FourMomentum of lhe_parser.')
+        if ranks and len(ranks) != len(pdg_to_chose):
             raise ValueError(f'The number of particle in {name_input}[0] and the number of ranks in {name_input}[2] do not match.')
 
-        pdg_new = [0] * len(pdg)
-        new_order_corrected = [0] * len(pdg)
-        for i in range(len(pdg)):
-            if observable_values_sorted[i] == observable_values_sorted[i]: #if the value of observable is not a NaN (it is in the density matrix)
-                pdg_new[i] = pdg[new_order[i]]
-                new_order_corrected[i] = new_order[i]
-            else: #if it is a NaN we keep them in the original order
-                pdg_new[i] = pdg[i]
-                new_order_corrected[i] = original_order[i]
+        # candidates[pid] are the positions of the particles with this pdg code, in the original order
+        candidates = {pid: [i for i in range(len(pdg)) if pdg[i] == pid] for pid in set(pdg_to_chose)}
+        for pid in candidates:
+            if not candidates[pid]:
+                raise ValueError(f'The pdg inputs for {name_input} are not correct. The pdg {pid} is not present in the process.')
 
-        # dic_rank_particles keys are the particles chosen by the user and the values are their wanted rank in the observable's order
-        dic_rank_particles = {}
-        for i in range(len(user_input[0])):
-            if user_input[0][i] not in dic_rank_particles.keys():
-                dic_rank_particles[user_input[0][i]] = []
-
-        for i in range(len(user_input[0])):
-            if user_input[0][i] in dic_rank_particles.keys():
-                dic_rank_particles[user_input[0][i]].append(user_input[2][i])
-
-        # dic_values_observable keys are the particles chosen by the user and is filled with their value in the chosen observable
-        # dic_postion_new_order keys are the particles chosen by the user and is filled with their position in new_order
-        dic_values_observable, dic_postion_new_order = {}, {}
-        for key in user_input[0]:
-            dic_values_observable[key], dic_postion_new_order[key] = [], []
-
-        for key in dic_rank_particles.keys():
-            for j in range(len(pdg_new)):
-                if pdg_new[j] == int(key):
-                    dic_values_observable[key].append(observable_values_sorted[j])
-            for k in range(len(dic_rank_particles[key])):
-                for l in range(len(observable_values_sorted)):
-                    try:
-                        #this if statement represents which index of dic_values_observable[key] we want to keep
-                        if observable_values_sorted[l] == dic_values_observable[key][dic_rank_particles[key][k]] and pdg[new_order[l]] == key:
-                            dic_postion_new_order[key].append(l)
-                    except:
-                        raise ValueError(f'There are not enough identical particles for the rank you chose in {name_input}. Please change your input')
+        if observable:
+            values = {i: getattr(lhe_parser.FourMomentum(momenta[i]), observable) for pos in candidates.values() for i in pos}
+            if any(len(set(values[i] for i in pos)) != len(pos) for pos in candidates.values()):
+                # if several particles of same pdg have the same value of the observable, we can not rank them so we use the default order.
+                # we do not crash the code because it can happen randomly for an event, even if the user_input is correct
+                logger.warning(f"Some particles in {name_input} have the same value for the observable given. For this event the order of the observable is not taken into account.")
+            else:
+                for pid in candidates:
+                    candidates[pid] = sorted(candidates[pid], key=lambda i: values[i], reverse=True) #ranking the particles via the observable's value
 
         position_particles = []
-        for key in dic_postion_new_order.keys(): # here we convert the position in new_order to the position in the original order
-            for j in range(len(dic_postion_new_order[key])):
-                if fortran_format:
-                    position_particles.append(new_order[dic_postion_new_order[key][j]] + 1) #python format begins integers at 0 so we do not need to add +1
-                else:
-                    position_particles.append(new_order[dic_postion_new_order[key][j]]) #python format begins integers at 0 so we do not need to add +1
-        return position_particles
+        for j, pid in enumerate(pdg_to_chose):
+            rank = ranks[j] if ranks else pdg_to_chose[:j].count(pid)
+            try:
+                position = candidates[pid][rank]
+            except IndexError:
+                if ranks:
+                    raise ValueError(f'There are not enough identical particles for the rank you chose in {name_input}. Please change your input')
+                raise ValueError(f'The pdg inputs for {name_input} are not correct. The pdg {pid} is not present {pdg_to_chose.count(pid)} times in the process.')
+            if position in position_particles:
+                raise ValueError(f'The same particle (pdg {pid}) is selected twice in {name_input}. Please change your input')
+            position_particles.append(position)
 
-    def find_position_particles_default_order(self, orig_order, user_input, name_input, fortran_format):
-        """
-        This function transforms the user_input for a given name_input into the position of particles in the original order specifically if the user does not give any additional information.
-        The position of the particles can then be used to boost, rotate the event, etc.
-        fortran_format = True, means that we use the Fortran format for indices, so lists begin at 1, else we use Python format.
-        Output: position_particles
-        """
-        pdg_to_chose = user_input[0]
-        position_particles = []
-        orig_order_concatenated = orig_order[0] + orig_order[1]
-        particle_in_process_already_chosen = [False for i in range(len(orig_order_concatenated))]
-        particle_in_user_input_already_found = [False for i in range(len(pdg_to_chose))]
-        
-        if 0 in pdg_to_chose:
-            return [-1]
-        else:
-            for i in range(len(orig_order_concatenated)):
-                if len(position_particles) != len(user_input[0]):
-                    for j in range(len(pdg_to_chose)):
-                        if pdg_to_chose[j] == orig_order_concatenated[i] and not particle_in_process_already_chosen[i] and not particle_in_user_input_already_found[j]: # if the particles is still available and that its pdg code corresponds to the user input
-                            if fortran_format:
-                                position_particles.append(i + 1) #if fortran_format = True, we add +1 because Fortran indices begin at 1 instead of 0 as in Python
-                            else:
-                                position_particles.append(i) # position of the particle in the original order
-                            particle_in_process_already_chosen[i] = True
-                            particle_in_user_input_already_found[j] = True
-
-                            break
-
-            if len(position_particles) != len(user_input[0]):
-                logger.error(f'The pdg inputs for {name_input} are not correct. At least one pdg is not present in the process.')
-
-            return position_particles
-
-
-    def find_position_particles_new_order(self, pdg, user_input, new_order, fortran_format):
-        """
-        This function transforms the user_input for a given name_input into the position of particles in the original order specifically if the user gives 
-        an observable but does not specify the rank in which to order them. In this case, they are ranked in decreasing order.
-        The position of the particles can then be used to boost, rotate the event, etc.
-        fortran_format = True, means that we use the Fortran format for indices, so lists begin at 1, else we use Python format.
-        Output: position_particles
-        """
-        if -1 not in user_input[0]:
-            position_particles = [0] * len(user_input[0])
-            is_particle_taken = [0] * len(pdg)
-            compteur = 0
-            for i in range(len(position_particles)):
-                for j in range(len(pdg)):
-                    if pdg[new_order[j]] == user_input[0][i] and is_particle_taken[j] == 0:
-                        if fortran_format:
-                            position_particles[compteur] = new_order[j] + 1 #if fortran_format = True, we add +1 because Fortran indices begin at 1 instead of 0 as in Python
-                        else:
-                            position_particles[compteur] = new_order[j]
-                        is_particle_taken[j] = 1
-                        compteur += 1
-                        break                    
-        else:
-            position_particles = [-1]
-        
+        if fortran_format: # we add +1 because Fortran indices begin at 1 instead of 0 as in Python
+            position_particles = [i + 1 for i in position_particles]
         return position_particles
 
     def calculate_angles_rotation(self, position_particles, all_p, module):
@@ -3495,9 +3361,9 @@ class DensityInterface(ReweightInterface):
             Output: phi and theta for each element of all_p
         """
         if -1 not in position_particles:
-            pref = [0, 0, 0, 0]
             phi, theta = [0] * len(all_p), [0] * len(all_p)
             for i in range(len(all_p)):
+                pref = [0, 0, 0, 0]
                 for j in range(len(position_particles)):
                     for k in range(len(pref)):
                         pref[k] += all_p[i][position_particles[j] - 1][k]

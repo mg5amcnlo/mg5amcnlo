@@ -12,6 +12,15 @@ ANNOUNCEMENT:
     OM: output standalone: new option --zerowidth_decay=True|False|<pdg>,<pdg>,... writing propagators
         with a zero width (param_card untouched): in a 2>N process those of the final-state particles,
         in a 1>N process (decay) those of the decaying particle only; a pdg list restricts to those.
+    VD+OM: Density mode of the reweighting (since 3.8.0): the particles of the density matrix are now
+        ordered as given in particle_in_density_matrix (they followed the order of the process), also
+        when they are ranked with an observable. That ranking could be wrong, or drop a particle, when
+        other particles were in between. A pdg code (or a rank) absent from the process is now an error.
+    OM: Density mode of the reweighting (since 3.8.0): boost_choice used the wrong particles when the
+        event contains intermediate particles, e.g. the t+W frame instead of the b+t~ one for
+        g g > t t~, t > b w+ with boost_choice [5, -6].
+    VD: Quantum Information library: new observable Get_Steering (two-qubit steering for 2 or 3
+        measurements per site, 1510.08030).
 
 3.8.1 (XX/XX/XX):
     OM: LO: the final unweighting no longer truncates the events above the maximum

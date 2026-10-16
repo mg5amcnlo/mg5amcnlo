@@ -55,6 +55,68 @@ def invert_momenta(p:list[float]) ->list[float]:
             new_p[j][i] = x
     return new_p
 
+# Generating a random density matrix
+def random_density_matrix_qubitqubit(seed=None):
+    """Random 4x4 density matrix."""
+    rng = np.random.default_rng(seed)
+    G = rng.normal(size=(4, 4)) + 1j * rng.normal(size=(4, 4))
+    rho = G @ G.conj().T
+    return rho / np.trace(rho).real
+
+def su2_from_so3(O, tol=1e-8):
+    """
+    Returns the SU(2) matrix U such that U.sigma_j.U^dagger = sum_k O[k, j] sigma_k for a rotation O of SO(3).
+    It is used to convert the matrices W and Z from the Singular Value Decomposition of the correlation matrix into
+    local unitary transformations of the density matrix (see Get_Local_Normal_Form). It is only possible if the determinant is 1.
+    """
+    O = np.asarray(O, dtype=float)
+    if not np.allclose(O @ O.T, np.eye(3), atol=tol):
+        raise ValueError("matrix is not orthogonal")
+    if np.linalg.det(O) < 0:
+        raise ValueError("determinant is -1: reflections have no SU(2) preimage")
+
+    # quaternion extraction (Shepperd's method: use the largest component)
+    t = np.trace(O)
+    if t > 0:
+        w = np.sqrt(1.0 + t) / 2.0
+        x = (O[2, 1] - O[1, 2]) / (4 * w)
+        y = (O[0, 2] - O[2, 0]) / (4 * w)
+        z = (O[1, 0] - O[0, 1]) / (4 * w)
+    else:
+        k = int(np.argmax(np.diag(O)))
+        if k == 0:
+            x = np.sqrt(max(0.0, 1 + O[0, 0] - O[1, 1] - O[2, 2])) / 2.0
+            w = (O[2, 1] - O[1, 2]) / (4 * x)
+            y = (O[0, 1] + O[1, 0]) / (4 * x)
+            z = (O[0, 2] + O[2, 0]) / (4 * x)
+        elif k == 1:
+            y = np.sqrt(max(0.0, 1 - O[0, 0] + O[1, 1] - O[2, 2])) / 2.0
+            w = (O[0, 2] - O[2, 0]) / (4 * y)
+            x = (O[0, 1] + O[1, 0]) / (4 * y)
+            z = (O[1, 2] + O[2, 1]) / (4 * y)
+        else:
+            z = np.sqrt(max(0.0, 1 - O[0, 0] - O[1, 1] + O[2, 2])) / 2.0
+            w = (O[1, 0] - O[0, 1]) / (4 * z)
+            x = (O[0, 2] + O[2, 0]) / (4 * z)
+            y = (O[1, 2] + O[2, 1]) / (4 * z)
+
+    q = np.array([w, x, y, z], dtype=float)
+    q /= np.linalg.norm(q)
+    w, x, y, z = q
+
+    # U = cos(th/2) 1 - i sin(th/2) n.sigma
+    # this is the general local unitary transformation of SU(2)
+    U = w * Identity2 - 1j * (x * sigma[0] + y * sigma[1] + z * sigma[2])
+
+    # self-check of equations in paragraph below equation (15) of https://journals.aps.org/pra/abstract/10.1103/PhysRevA.77.042303
+    for j in range(3):
+        lhs = U @ sigma[j] @ U.conj().T
+        rhs = sum(O[k, j] * sigma[k] for k in range(3))
+        if not np.allclose(lhs, rhs, atol=tol):
+            raise ValueError(f"translation of SO(3) into SU(2) failed:\n{lhs}\n!=\n{rhs}")
+
+    return U
+
 # Distances betweeen 2 matrices
 def trace_distance(Matrix1: list[complex, complex], Matrix2: list[complex, complex]) -> float:
     """
@@ -1046,6 +1108,59 @@ class DensityMatrixObservables22(DensityMatrixObservables):
         
         return Discord.real
 
+    def Get_Steering(self, nmeas=2) -> float:
+        """
+        Computation of the steering of a 2 qubits system based on the formula of https://arxiv.org/pdf/1510.08030v2
+        Input:  nmeas -> number of measurements per site (2 or 3)
+        Output: steering
+        """
+        s = np.linalg.svd(self.Get_Correlations()[0], compute_uv=False) # singular values, positive and in decreasing order
+        if nmeas == 2:
+            Lambda_nmeas = np.hypot(s[0], s[1]) # the two largest singular values
+        elif nmeas == 3:
+            Lambda_nmeas = np.linalg.norm(s)
+        else:
+            raise ValueError("The steering computation is only available for 2 or 3 measurements per site")
+
+        return max(0., (Lambda_nmeas - 1)/(np.sqrt(nmeas) - 1))
+
+    def Get_Local_Normal_Form(self, tol=1e-8) -> dict:
+        """
+        Transforms the density matrix with a local unitary U x V such that its correlation matrix is diagonal (equation 5 of https://arxiv.org/pdf/1510.08030v2).
+        It is the form used to derive the steering formula of Get_Steering.
+        Input:  tol -> tolerance of the self-checks
+        Output: dictionary with the transformed density matrix rho_lnf, the SU(2) matrices U and V, the corresponding SO(3) rotations O_A and O_B,
+                the rotated polarisations a = O_A.a and b = O_B.b, and the diagonal correlation matrix c
+        """
+        W, s, ZT = np.linalg.svd(self.Get_Correlations()[0])
+        Z = ZT.T
+        S = np.diag(s)
+
+        # W and Z are elements of O(3): if the determinant is -1, the sign of the last column is absorbed in S to have rotations
+        if np.linalg.det(W) < 0:
+            W[:, 2] *= -1
+            S[2, 2] *= -1
+        if np.linalg.det(Z) < 0:
+            Z[:, 2] *= -1
+            S[2, 2] *= -1
+
+        O_A, O_B = W.T, Z.T
+        U, V = su2_from_so3(O_A, tol), su2_from_so3(O_B, tol)
+        K = np.kron(U, V)
+        rho_lnf = K @ np.asarray(self.square_matrix()) @ K.conj().T
+        rho_lnf = 0.5 * (rho_lnf + rho_lnf.conj().T)   # kill numerical asymmetry
+
+        # self-check: the correlation matrix of rho_lnf is the diagonal matrix from the SVD
+        correlation_lnf = np.array([[np.trace(rho_lnf @ np.kron(si, sj)).real for sj in sigma] for si in sigma])
+        if not np.allclose(S, correlation_lnf, atol=tol):
+            raise ValueError(f"The check on the values of the correlation matrix has not passed:\n{correlation_lnf}\nexpected\n{S}")
+
+        a, b = self.Get_Polarisations()
+        return {"rho_lnf": rho_lnf,
+                "U": U, "V": V,
+                "O_A": O_A, "O_B": O_B,
+                "a": O_A @ a, "b": O_B @ b,
+                "c": S}
 
 
 class DensityMatrixObservables23(DensityMatrixObservables):

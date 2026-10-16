@@ -288,6 +288,9 @@ class TestDensityLibrary(unittest.TestCase):
         rho22_ref = [0.30328248, -0.03646875-0.02270232j, -0.03948149-0.02455507j, 0.01403486+0.02776092j, 0.19671752, -0.09294963, 0.03972701+0.02415582j, 0.19671752, 0.03671427+0.02230308j, 0.30328248]
         rho22_ref_instance = dens.DensityMatrixObservables22(rho22_ref)
 
+        Bell_ref = [.5, 0, 0, .5, 0, 0, 0, 0, 0, .5]
+        Bell_ref_instance = dens.DensityMatrixObservables22(Bell_ref)
+
         Cmatrix_ref = [ [-0.15782954,  0.05552184, -0.158417  ],
                         [ 0.05552184, -0.21396898, -0.09742178],
                         [-0.14636604, -0.0900108 ,  0.21312992]]
@@ -436,17 +439,101 @@ class TestDensityLibrary(unittest.TestCase):
         #Magic_Pure
         rho_pure = [[0.25, -0.25, -0.25, 0.25], [-0.25, 0.25, 0.25, -0.25], [-0.25, 0.25, 0.25, -0.25], [0.25, -0.25, -0.25, 0.25]]
         rho_pure_instance = dens.DensityMatrixObservables22(rho_pure)
-        self.assertAlmostEqual(rho_pure_instance.Magic_Pure(), 0, places=7) #have not found a good pure state with non zero magic
+        self.assertAlmostEqual(rho_pure_instance.Magic_Pure(), 0., places=7) #have not found a good pure state with non zero magic
+        self.assertAlmostEqual(Bell_ref_instance.Magic_Pure(), 0., places=7)
 
         #Magic_Mixed
         magic_ref = 0.32785008450868186
         self.assertAlmostEqual(rho22_concurrence_instance.Magic_Mixed(), magic_ref, places=7)
-
+        
         #Get_Discord
         discord_ref = 0.007612231907878438
         self.assertAlmostEqual(rho22_concurrence_instance.Get_Discord(maxiter=1000), discord_ref, places=4) #this test can sometimes fail because the minimisation can get stuck in a local minimum. I need to improve the minimisation.
+        self.assertAlmostEqual(Bell_ref_instance.Get_Discord(), 1., places=4)
 
-    
+        #Get_Steering
+        steering2_ref = 0.012682616530438166
+        steering3_ref = 0.014315007543313165
+        self.assertAlmostEqual(rho22_concurrence_instance.Get_Steering(nmeas=2), steering2_ref, places=7)
+        self.assertAlmostEqual(rho22_concurrence_instance.Get_Steering(nmeas=3), steering3_ref, places=7)
+        self.assertAlmostEqual(Bell_ref_instance.Get_Steering(nmeas=2), 1., places=7)
+        self.assertAlmostEqual(Bell_ref_instance.Get_Steering(nmeas=3), 1., places=7)
+
+    def test_additional_steering(self):
+        """Test that the full transformation of rho used to derive the steering formula (Get_Local_Normal_Form) works."""
+        import numpy as np
+        from unittest import mock
+        Identity2, sigma = dens.Identity2, dens.sigma
+
+        # the signs of the determinants of W and Z given by the SVD depend on LAPACK conventions:
+        # flipping the last column of W and the last row of Z^T gives another valid SVD with both determinants of opposite sign
+        svd = np.linalg.svd
+        def flipped_svd(*args, **opts):
+            W, s, ZT = svd(*args, **opts)
+            W[:, 2] *= -1
+            ZT[2, :] *= -1
+            return W, s, ZT
+
+        rho_ref = [0.30328248, -0.03646875-0.02270232j, -0.03948149-0.02455507j, 0.01403486+0.02776092j, 0.19671752, -0.09294963, 0.03972701+0.02415582j, 0.19671752, 0.03671427+0.02230308j, 0.30328248]
+        singlet = [0, 0, 0, 0, .5, -.5, 0, .5, 0, 0] # correlation matrix with determinant -1
+        all_rho = [('rho_ref', rho_ref, svd), ('rho_ref flipped', rho_ref, flipped_svd),
+                   ('singlet', singlet, svd), ('singlet flipped', singlet, flipped_svd)]
+        for seed in range(10): # random states cover all the branches of su2_from_so3
+            all_rho.append(('random %s' % seed, dens.random_density_matrix_qubitqubit(seed), svd))
+
+        for name, rho_input, svd_function in all_rho:
+            rho_instance = dens.DensityMatrixObservables22(rho_input)
+            rho = rho_instance.square_matrix()
+            c1 = rho_instance.Get_Correlations()[0]
+
+            with mock.patch.object(np.linalg, 'svd', svd_function):
+                lnf = rho_instance.Get_Local_Normal_Form()
+            rho2, U, V, c = lnf["rho_lnf"], lnf["U"], lnf["V"], lnf["c"]
+
+            rho2_instance = dens.DensityMatrixObservables22(rho2)
+            a2, b2 = rho2_instance.Get_Polarisations()
+            c2 = rho2_instance.Get_Correlations()[0]
+
+            rho_rebuild = np.kron(Identity2, Identity2).astype(complex)
+            for i in range(3):
+                rho_rebuild = rho_rebuild + lnf["a"][i] * np.kron(sigma[i], Identity2) + lnf["b"][i] * np.kron(Identity2, sigma[i])
+                for j in range(3):
+                    rho_rebuild = rho_rebuild + c[i, j] * np.kron(sigma[i], sigma[j])
+            rho_rebuild /= 4.0
+
+            res = {
+                # U, V really are SU(2)
+                "U unitary":        np.abs(U @ U.conj().T - Identity2).max(),
+                "det U = 1":        abs(np.linalg.det(U) - 1),
+                "V unitary":        np.abs(V @ V.conj().T - Identity2).max(),
+                "det V = 1":        abs(np.linalg.det(V) - 1),
+                # rho2 is a state
+                "hermitian":        np.abs(rho2 - rho2.conj().T).max(),
+                "trace 1":          abs(np.trace(rho2).real - 1),
+                "positive":         -min(0.0, np.linalg.eigvalsh(rho2).min()),
+                # correlation matrix diagonal, equal to predicted c
+                "c offdiagonal":    np.abs(c2 - np.diag(np.diag(c2))).max(),
+                "c matches SVD":    np.abs(c2 - c).max(),
+                # transformed Bloch vectors match O_A a, O_B b
+                "a matches O_A a":  np.abs(a2 - lnf["a"]).max(),
+                "b matches O_B b":  np.abs(b2 - lnf["b"]).max(),
+                # local unitary => spectrum, det c and entanglement are unchanged
+                "spectrum kept":    np.abs(np.linalg.eigvalsh(rho2)
+                                            - np.linalg.eigvalsh(rho)).max(),
+                "det c kept":       abs(np.linalg.det(c) - np.linalg.det(c1)),
+                "concurrence kept": abs(rho2_instance.Get_Concurrence() - rho_instance.Get_Concurrence()),
+                # reconstruction from (a, b, diag c) reproduces rho2
+                "rebuild":          np.abs(rho_rebuild - rho2).max(),
+            }
+
+            for key, v in res.items():
+                self.assertAlmostEqual(v, 0., places=10, msg='%s: %s' % (name, key))
+
+            # the steering only depends on the diagonal correlation matrix
+            s = sorted(np.abs(np.diag(c)), reverse=True)
+            self.assertAlmostEqual(rho_instance.Get_Steering(nmeas=2), max(0, (np.sqrt(s[0]**2 + s[1]**2) - 1)/(np.sqrt(2) - 1)), places=10)
+            self.assertAlmostEqual(rho_instance.Get_Steering(nmeas=3), max(0, (np.sqrt(s[0]**2 + s[1]**2 + s[2]**2) - 1)/(np.sqrt(3) - 1)), places=10)
+
     
     def test_DensityMatrixObservables23(self):
         """Test the methods of the class DensityMatrixObservables23 in Density_functions.py"""
