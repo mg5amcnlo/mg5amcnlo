@@ -488,6 +488,9 @@ c The n+1-body contributions (including counter terms)
          if (passcuts_nbody .and. abrv.ne.'real') then
             pass_cuts_check=.true.
             call set_cms_stuff(izero)
+c Clustering the real event above overwrites the active FxFx scales.
+c Counterevents keep the scales of their underlying Born state.
+            if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
             call set_alphaS(p1_cnt(0,1,0))
             call include_multichannel_enhance(3)
             call compute_soft_counter_term(0d0)
@@ -495,6 +498,7 @@ c The n+1-body contributions (including counter terms)
             call compute_soft_collinear_counter_term(0d0)
          endif
          if (passcuts_coll .and. abrv.ne.'real') then
+           if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
            call set_alphaS(p1_cnt(0,1,1))
            call set_cms_stuff(ione)
            call compute_collinear_counter_term(0d0)
@@ -502,6 +506,7 @@ c The n+1-body contributions (including counter terms)
          if (passcuts_n1body) then
             pass_cuts_check=.true.
             call set_cms_stuff(mohdr)
+            if (ickkw.eq.3) call set_FxFx_scale(-3,p)
             call set_alphaS(p)
             call include_multichannel_enhance(2)
             call compute_real_emission(p,1d0)
