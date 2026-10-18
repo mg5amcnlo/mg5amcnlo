@@ -101,6 +101,43 @@ class ConditionalPoolTests(unittest.TestCase):
                 numerical.append((neural.objective(plus, *args)[0]-neural.objective(minus, *args)[0])/2.e-6)
             np.testing.assert_allclose(gradient, numerical, rtol=2.e-6, atol=2.e-9)
 
+    def test_prepared_sparse_objective_preserves_full_branch_gradients(self):
+        rng = np.random.default_rng(927)
+        nheads = 32
+        z = rng.normal(size=(64, 4))
+        probabilities = rng.uniform(size=(64, nheads))
+        probabilities /= probabilities.sum(axis=1)[:, None]
+        mixing = np.zeros_like(probabilities)
+        mixing[np.arange(len(z)), rng.integers(nheads, size=len(z))] = 1.
+        mixing[::11] = probabilities[::11]
+        born = rng.normal(size=len(z))
+        born[::13] = 0.
+        target = rng.normal(size=len(z))
+        weight = rng.uniform(.1, 1., len(z))/len(z)
+        trained = [1]*nheads
+        trained[3] = 0
+        widths = (5, 3)
+        size = sum(np.prod(shape) for shape in neural._shapes(z.shape[1], nheads, widths))
+        theta = rng.normal(0., .1, size)
+        cases = ((mixing, trained, True), (probabilities, trained, False),
+                 (probabilities, [1]+[0]*(nheads-1), True),
+                 (np.zeros_like(mixing), trained, True))
+        for mixture, mask, sparse in cases:
+            args = (z, mixture, born, target, weight, widths, .03, mask)
+            prepared = neural._prepare_objective(z, mixture, mask)
+            self.assertEqual(prepared[-1], sparse)
+            expected, gradient = neural.objective(theta, *args)
+            actual, prepared_gradient = neural.objective(theta, *args, prepared)
+            self.assertAlmostEqual(actual, expected, places=14)
+            np.testing.assert_allclose(prepared_gradient, gradient, rtol=1.e-12, atol=1.e-14)
+            for index in (0, size//2, size-1):
+                plus, minus = theta.copy(), theta.copy()
+                plus[index] += 1.e-6
+                minus[index] -= 1.e-6
+                numerical = (neural.objective(plus, *args, prepared)[0]-
+                             neural.objective(minus, *args, prepared)[0])/2.e-6
+                self.assertAlmostEqual(prepared_gradient[index], numerical, places=8)
+
     def test_neural_domain_flags_match_clamped_and_degenerate_native_inputs(self):
         x = np.zeros((4, 11)); x[:, 0] = [-1.21, -1.1, 1.1, 1.21]
         p = momenta(4); q = np.tile([.6, 0., .4], (4, 1))

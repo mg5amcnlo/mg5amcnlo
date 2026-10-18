@@ -291,23 +291,59 @@ def forward(entry, inputs):
     return output*np.asarray(entry['trained'], dtype=float)[None, :]
 
 
-def objective(theta, inputs, mixing, born, target, weight, widths, ridge, trained):
+def objective(theta, inputs, mixing, born, target, weight, widths, ridge, trained,
+              prepared=None):
     """Direct weighted amplitude residual and analytic gradient (one/two layers)."""
     import numpy as np
     parts = unpack(theta, inputs.shape[1], mixing.shape[1], widths)
     activations = [inputs]
     for layer in range(len(widths)):
         activations.append(np.tanh(activations[-1]@parts[2*layer] + parts[2*layer+1]))
-    affine = np.column_stack((inputs, np.ones(len(inputs))))
-    allheads = activations[-1]@parts[-3] + parts[-2] + affine@parts[-1]
-    effective = mixing*np.asarray(trained)[None, :]
-    residual = born*np.sum(allheads*effective, axis=1)-target
-    dc = (weight*residual*born)[:, None]*effective
+    if prepared is None:
+        affine = np.column_stack((inputs, np.ones(len(inputs))))
+        effective = mixing*np.asarray(trained)[None, :]
+        sparse = False
+    else:
+        affine, effective, sparse = prepared
     gradients = [None]*len(parts)
-    gradients[-3] = activations[-1].T@dc + ridge*parts[-3]
-    gradients[-2] = dc.sum(axis=0) + ridge*parts[-2]
-    gradients[-1] = affine.T@dc + ridge*parts[-1]
-    back = dc@parts[-3].T
+    if sparse:
+        # Most native observations select one head. Group those rows and
+        # evaluate only their head; retain the full native-q mixture below.
+        groups, full, full_mixing = effective
+        prediction = np.zeros(len(inputs))
+        blocks = [(head, rows, probability, activations[-1][rows], affine[rows])
+                  for head, rows, probability in groups]
+        for head, rows, probability, hidden, linear in blocks:
+            prediction[rows] = probability*(hidden@parts[-3][:, head] + parts[-2][head] +
+                                            linear@parts[-1][:, head])
+        full_hidden, full_affine = activations[-1][full], affine[full]
+        prediction[full] = np.sum(full_mixing*(full_hidden@parts[-3] + parts[-2] +
+                                              full_affine@parts[-1]), axis=1)
+        residual = born*prediction-target
+        derivative = weight*residual*born
+        gradients[-3] = ridge*parts[-3]
+        gradients[-2] = ridge*parts[-2]
+        gradients[-1] = ridge*parts[-1]
+        back = np.zeros_like(activations[-1])
+        for head, rows, probability, hidden, linear in blocks:
+            dc = derivative[rows]*probability
+            gradients[-3][:, head] += hidden.T@dc
+            gradients[-2][head] += dc.sum()
+            gradients[-1][:, head] += linear.T@dc
+            back[rows] = dc[:, None]*parts[-3][:, head]
+        dc = derivative[full, None]*full_mixing
+        gradients[-3] += full_hidden.T@dc
+        gradients[-2] += dc.sum(axis=0)
+        gradients[-1] += full_affine.T@dc
+        back[full] = dc@parts[-3].T
+    else:
+        allheads = activations[-1]@parts[-3] + parts[-2] + affine@parts[-1]
+        residual = born*np.sum(allheads*effective, axis=1)-target
+        dc = (weight*residual*born)[:, None]*effective
+        gradients[-3] = activations[-1].T@dc + ridge*parts[-3]
+        gradients[-2] = dc.sum(axis=0) + ridge*parts[-2]
+        gradients[-1] = affine.T@dc + ridge*parts[-1]
+        back = dc@parts[-3].T
     for layer in reversed(range(len(widths))):
         dt = back*(1-activations[layer+1]**2)
         gradients[2*layer] = activations[layer].T@dt
@@ -316,6 +352,24 @@ def objective(theta, inputs, mixing, born, target, weight, widths, ridge, traine
     penalty = sum(np.sum(v*v) for v in parts[-3:])
     return (.5*float(weight@(residual*residual)) + .5*ridge*penalty,
             np.concatenate([g.ravel() for g in gradients]))
+
+
+def _prepare_objective(inputs, mixing, trained):
+    """Prepare arrays which are constant across all optimiser evaluations."""
+    import numpy as np
+    affine = np.column_stack((inputs, np.ones(len(inputs))))
+    effective = mixing*np.asarray(trained)[None, :]
+    sparse = effective.shape[1] >= 32 and np.count_nonzero(effective) < .25*effective.size
+    if sparse:
+        counts = np.count_nonzero(effective, axis=1)
+        groups = []
+        for head in range(effective.shape[1]):
+            rows = np.flatnonzero((counts == 1) & (effective[:, head] != 0))
+            if len(rows):
+                groups.append((head, rows, effective[rows, head]))
+        full = np.flatnonzero(counts > 1)
+        effective = groups, full, effective[full]
+    return affine, effective, sparse
 
 
 def fit(inputs, mixing, born, target, weight, heads, trained, configuration):
@@ -346,7 +400,9 @@ def fit(inputs, mixing, born, target, weight, heads, trained, configuration):
     for layer in range(len(widths)):
         parts[2*layer] = rng.normal(size=shapes[2*layer])/math.sqrt(shapes[2*layer][0])
     theta = np.concatenate([p.ravel() for p in parts])
-    args = (inputs, mixing, carrier, target/vscale, w/noise, widths, configuration['ridge'], trained)
+    prepared = _prepare_objective(inputs, mixing, trained)
+    args = (inputs, mixing, carrier, target/vscale, w/noise, widths,
+            configuration['ridge'], trained, prepared)
     result = minimize(objective, theta, args=args, jac=True, method='L-BFGS-B',
                       options=dict(maxiter=configuration['iterations'], maxcor=20,
                                    ftol=1.e-12, gtol=1.e-8, maxls=30))
@@ -354,6 +410,7 @@ def fit(inputs, mixing, born, target, weight, heads, trained, configuration):
         raise ValueError('nonfinite neural optimization')
     return dict(widths=list(widths), heads=list(map(int, heads)), trained=list(map(int, trained)),
                 theta=result.x.tolist(), born_scale=bscale, target_scale=vscale,
+                optimizer_evaluations=int(result.nfev),
                 optimizer_iterations=int(result.nit), optimizer_status=str(result.message))
 
 

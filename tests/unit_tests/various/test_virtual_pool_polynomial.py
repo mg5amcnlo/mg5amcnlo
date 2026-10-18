@@ -103,6 +103,54 @@ class PolynomialPoolTests(unittest.TestCase):
         self.assertTrue(all(earlier[i] for i,r in enumerate(rows) if r['iteration']<3))
         self.assertFalse(any(earlier[i] for i,r in enumerate(rows) if r['iteration']==3))
 
+    def test_bounded_fold_cache_preserves_models_and_candidate_guards(self):
+        rows = self.records()
+        rng = np.random.default_rng(621)
+        for row in rows:
+            row['virtual'] += row['born']*rng.normal(0, .05)
+        folds = pool._folds(rows, 3)
+        original = poly.design
+        with mock.patch.object(poly, 'design', wraps=original) as cached_design:
+            cached, cached_report = poly.fit_order(rows, folds, self.metadata, 1)
+        with mock.patch.object(poly, 'MAX_FIT_CACHE_ELEMENTS', 0), \
+                mock.patch.object(poly, 'design', wraps=original) as uncached_design:
+            uncached, uncached_report = poly.fit_order(rows, folds, self.metadata, 1)
+        self.assertEqual(cached, uncached)
+        self.assertEqual(cached_report, uncached_report)
+        self.assertLess(cached_design.call_count, uncached_design.call_count)
+
+    def test_numpy_only_solver_preserves_signed_rank_deficient_fits(self):
+        rng = np.random.default_rng(624)
+        coordinate = rng.uniform(-1, 1, 300)
+        x = np.column_stack((coordinate, coordinate, np.ones(len(coordinate))))
+        born = rng.normal(size=len(x))
+        born[::17] = 0.
+        virtual = born*(.4+.7*coordinate)
+        weights = rng.uniform(.1, 2., len(x))
+        for loss in poly.LOSSES:
+            with self.subTest(loss=loss):
+                expected = poly.fit(x, born, virtual, weights, 1, 1.e-4, loss)
+                with mock.patch.object(poly, '_positive_solver', return_value=None):
+                    actual = poly.fit(x, born, virtual, weights, 1, 1.e-4, loss)
+                np.testing.assert_allclose(
+                    poly.predict(actual, x, born, np.zeros(len(x))),
+                    poly.predict(expected, x, born, np.zeros(len(x))),
+                    rtol=1.e-11, atol=1.e-12)
+
+    def test_mint_bulk_predictions_keep_bin_edges_and_empty_iterations(self):
+        model = poly.Marginals(2, 4)
+        rows = [dict(x=x, born=b, virtual=v) for x, b, v in (
+            ([0., 1.], 1., 2.), ([1., 0.], -2., 3.),
+            ([.5, .5], 0., 0.), ([.25, .75], 3., -1.))]
+        for bins in (4, 8):
+            model.resize(bins)
+            model.update(rows)
+            average, count = model.average.copy(), model.count.copy()
+            model.update([])
+            np.testing.assert_array_equal(model.average, average)
+            np.testing.assert_array_equal(model.count, count)
+            np.testing.assert_array_equal(model.predict_many(rows), [model.predict(r) for r in rows])
+
     def test_born_noise_fit_generalizes_with_large_signed_integration_weights(self):
         rng=np.random.default_rng(928)
         x=rng.uniform(-1,1,(1500,2))

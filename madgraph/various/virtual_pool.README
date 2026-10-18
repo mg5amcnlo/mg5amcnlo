@@ -70,11 +70,13 @@ through V-B*P without per-point Born division. Born/target/column normalization
 keeps the small linear systems well scaled. The fixed candidate scan is:
   degree 1 or 2; ridge 1e-4,0.01,1; Huber or squared loss, with constant
   or Born-dependent noise scale; blend 0,0.25,0.5,0.75,1.
-Constant-noise Huber IRLS has eight iterations and a residual threshold of
+Constant-noise Huber IRLS has at most eight iterations and a residual threshold of
 0.25 times the weighted mean absolute target scale. Born-noise fits divide
 the regression weights by max(abs(B)/born_scale,1e-12), while retaining the
 unsingular target V-B*P. Their Huber threshold follows that same noise scale
-and uses twenty iterations. The validation objective is always the original
+and uses at most twenty iterations. Identical consecutive IRLS weights stop
+the fit early because its next linear system would be unchanged.
+The validation objective is always the original
 physical residual, independently of the candidate's fitting loss.
 
 Richer candidates use degree 3, ridge 0.01 and Born-dependent squared
@@ -460,6 +462,51 @@ across the prediction passes. Python predict_model evaluates complete version-1
 or version-2 predictions; predict_correction is the unsymmetrized correction
 primitive. No particle species or process name enables a permutation.
 No process name chooses a basis, model architecture or exception.
+
+Training cost
+-------------
+Linear and quadratic searches cache their design, column normalization and
+initial normal equations separately for each fitting partition and noise
+scale. Ridge candidates share those arrays. The cache is local to one degree
+and coupling order, with a conservative budget of eight million numeric
+elements (about 64 MB); larger fits recompute their arrays. Bounds and targets
+from another CV fold or later chronological observations never enter a cached
+fit. Cubic selection retains its existing dense-design budget and independent
+fold-local feature selection. Optional SciPy uses a positive-definite solve
+for ridge systems; NumPy-only controllers retain their original solver.
+
+MINT replay batches cell sums and predictions while preserving native row
+addition order, iteration history, zero observations and the 4-to-8-bin
+transition. Neural optimisation prepares its affine inputs and trained native
+mixture once per fit. At least 32 heads and fewer than 25% nonzero mixture
+entries enable grouped single-head observations; multi-head full branches
+still use the complete native probability mixture. The default 64-unit network,
+400-iteration cap, candidate scan, chronology and promotion guards are retained.
+
+The standalone synthetic benchmark is:
+
+  python3 tests/input_files/benchmark_virtual_training.py \
+      --reference-ref 849759f5c --repeats 3 --output /tmp/virtual-training.json
+
+It pins one available CPU, sets BLAS thread limits before importing NumPy and
+loads reference sources into a temporary package without changing the checkout.
+JSON includes CPU times and independent prediction errors. Example median CPU
+seconds over three repeats, compared with the pre-optimisation trainer:
+
+  case                          points   reference   optimised   speedup
+  polynomial, four Born legs      3000       0.499       0.164       3.04
+  polynomial, six Born legs       3000       2.111       0.599       3.53
+  complete conditional training    900       1.781       1.480       1.20
+  nonlinear correction, 16 heads   3000       1.403       1.354       1.04
+  nonlinear correction, 64 heads   3000       3.677       2.027       1.81
+
+The polynomial predictions agreed within 4e-15 on these cases. The conditional
+and 16-head errors agreed exactly; the 64-head held-out relative L1/RMS changed
+from 0.147985/0.166009 to 0.147929/0.165880. Grouped contractions can change
+floating-point summation and the optimiser trajectory, while preserving the
+loss and gradient algebra. These synthetic training measurements do not
+measure event-generation efficiency; use benchmark_virtual_quality.py for
+native loop calls, event distributions and envelope cost.
 
 Implementation
 --------------
