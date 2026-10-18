@@ -115,7 +115,7 @@ TEST= $(RUN) test_soft_col_limits.o BinothLHADummy.o write_event.o handling_lhe_
 SYM= $(RUN) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o write_event.o handling_lhe_events.o
 
 # Files for event reweighting to get e.g. scale and PDF uncertainties
-RWGFILES=fks_phase_space_data.o reweight_xsec_events.o handling_lhe_events.o recmom.o \
+RWGFILES=fks_phase_space_data.o FKSParams.o reweight_xsec_events.o handling_lhe_events.o recmom.o \
 	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
 	cuts.o dummy_fct.o $(fastjetfortran_madfks) boostwdir2.o veto_xsec.o	\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\

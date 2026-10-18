@@ -211,3 +211,46 @@ end function
             self.assertTrue(all(value <= 0 for value in actual))
             if point[2] == point[3]:
                 self.assertTrue(all(value == 0 for value in actual))
+
+    @unittest.skipUnless(shutil.which('make'), 'requires make')
+    def test_event_reweighting_links_sudakov_parameters(self):
+        root = self.work / 'reweight_build'
+        source = root / 'Source'
+        sub = root / 'SubProcesses'
+        work = sub / 'P0_fixture'
+        source.mkdir(parents=True)
+        work.mkdir(parents=True)
+        (root / 'lib').mkdir()
+        (source / 'make_opts').write_text(
+            'FC = ' + shutil.which('gfortran') + '\n'
+            'FFLAGS = -O0 -ffixed-line-length-none\n')
+        (sub / 'proc_characteristics').write_text('')
+        (sub / 'analyse_opts').write_text('')
+        shutil.copyfile(TEMPLATE / 'makefile_fks_dir', work / 'makefile')
+        shutil.copyfile(TEMPLATE / 'FKSParams.f90', work / 'FKSParams.f90')
+        shutil.copyfile(ROOT / 'Template/NLO/Source/dgauss.f', work / 'dgauss.f')
+        shutil.copyfile(self.work / 'kernel.f', work / 'cluster.f')
+        for name in ('driver.f90', 'cuts.inc', 'orders.inc'):
+            shutil.copyfile(self.work / name, work / name)
+        (work / 'nexternal.inc').write_text('')
+        for name in ('weight_lines', 'fks_phase_space_data', 'handling_lhe_events'):
+            (work / (name + '.f90')).write_text(
+                'subroutine fixture_' + name + '\nend subroutine\n')
+        # Exercise the production reweighting link list. Retain
+        # its Sudakov objects, with the existing numerical fixture providing
+        # the entry point, coupling and masses instead of a generated process.
+        (work / 'fixture.mk').write_text(
+            'check_reweight_link: $(filter cluster.o FKSParams.o,$(RWGFILES)) driver.o dgauss.o\n'
+            '\t$(FC) -o reweight_xsec_events $^\n'
+            'driver.o: FKSParams.o\n')
+        result = subprocess.run([
+            shutil.which('make'), '-j2', '-f', 'makefile', '-f', 'fixture.mk',
+            'check_reweight_link'], cwd=work, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        points = [(finite, .12, 20, 80, 1, 0) for finite in (0, 1)]
+        result = subprocess.run([str(work / 'reweight_xsec_events')],
+            input=''.join(' '.join(map(str, p))+'\n' for p in points),
+            capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        actual = [list(map(float, line.split())) for line in result.stdout.splitlines()]
+        self.assertEqual(actual, self.evaluate(points))
