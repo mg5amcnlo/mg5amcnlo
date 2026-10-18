@@ -1,0 +1,107 @@
+FxFx finite terms inspired by Pythia 8.318
+=======================================
+
+Selection
+---------
+Set in Cards/FKS_params.dat:
+
+  #FxFxPythia8FiniteTerms
+  .true.
+
+The default is .false. Existing cards without the entry use the legacy kernel.
+The option is available in Template/NLO and the generated w0j and w1j sources.
+Changing it requires new integration/grid setup and event generation; existing
+LHE files and shower histograms still contain the original Sudakov weights.
+
+Definition and provenance
+-------------------------
+Pythia 8.318 SimpleSpaceShower::pT2nextQCD, in
+/export/tmp/rikkert/Pythia/pythia8318/src/SimpleSpaceShower.cc:
+  lines 1082-1090: massless global ISR phase-space upper z bound;
+  lines 1124-1132, 1335-1345, 1409-1426: forward kernels for pdfMode != 0;
+  lines 1430-1434: z momentum-tagging factor for pdfMode == 1;
+  lines 1448-1461: branching phase-space veto at the actual trial pT.
+
+The analytic continuation uses those massless forward kernels, integrated over
+0 < z < b, with r = k/Q, eps = 2r/(sqrt(4+r^2)+r), b = 1-eps, H=log(1/eps).
+The small lower-z regulator in the shower is taken to zero in these integrals.
+The upper analytic scale Q is identified with Pythia's dipole mass.
+
+Positive branching rate at O(alpha_s), including the 2/k Jacobian:
+
+  quark: R_q(k,Q) = 2 alpha_s C_F/(pi k) [ H - 3 b^2/4 ].
+    This integrates z [ P_qq(z) + P_gq(z) ].
+
+  gluon: R_g(k,Q) = 2 alpha_s/(pi k) {
+      C_A [ H - b^2 + b^3/3 - b^4/4 ]
+      + n_f [ b^2/4 - b^3/3 + b^4/4 ] }.
+    This integrates z [ P_gg(z) + sum_f(P_qg(z)+P_qbarg(z)) ].
+
+Here P_qq=C_F(1+z^2)/(1-z), P_gq=C_F[1+(1-z)^2]/z,
+P_gg=2C_A[z/(1-z)+(1-z)/z+z(1-z)], P_qg=T_R[z^2+(1-z)^2].
+The production function Gamma returns the NEGATIVE branching rate, so its
+integral is log(Delta). It retains the existing A2 soft-log correction and
+running coupling. Massive emitting-particle kernels and massive g->QQ terms
+retain the legacy prescription.
+
+As r->0, H=log(1/r)+O(r), b->1. Thus the brackets tend to the original
+C_F[log(Q/k)-3/4] and C_A[log(Q/k)-11/12]+n_f/6. A1, B1 and A2 agree.
+Only finite-scale terms change. The O(alpha_s) expansion uses exactly the
+same finite terms, with alpha_s stripped off, so the FxFx -B Delta^(1)
+compensation continues to cancel the first-order Sudakov modification.
+Both exponent caches include the finite-term selection in their keys.
+
+This is an analytic, universal finite-term prescription. Physical Pythia ISR
+uses PDFs, event-specific dipole masses, recoil and phase-space history.
+FSR has different z bounds, and Pythia's coupling/tune and matrix-element
+corrections are additional choices. The option does not reproduce all of these
+or claim an exact shower no-emission probability. Its current A2 term is also
+not a full CMW rescaling of the finite kernel. The resulting higher-order
+differences are beyond the NLL coefficients retained here.
+
+The public manual describes the forward, momentum-sum-rule prescription:
+https://pythia.org/latest-manual/SpacelikeShowers.html (SpaceShower:pdfMode).
+
+Numerical checks and pilot
+--------------------------
+For two massless quark lines at Q=80.41900244575616 GeV, alpha_s(m_Z)=0.119,
+two-loop running (the coupling in the W study):
+
+  k [GeV]      applied legacy Delta      finite Delta       finite Delta*(1-Delta1)
+  20.0         0.99003828                0.78442634         0.97994584
+  21.5         1.00000000                0.80166052         0.98304359
+  23.0         1.00000000                0.81711049         0.98557623
+
+The compensated Born term alone is not a complete NLO prediction.
+
+W+1j fixed-order FxFx pilot, all six subprocesses, corrected counterevent scale
+restoration, two iterations of 65536 points per subprocess:
+
+  quantity                              legacy [pb]          finite [pb]
+  total NLO                             6426.46 +/- 50.85    6139.63 +/- 40.40
+  log10(DJR/GeV) in [1.3,1.4], NLO        788.52 +/- 31.12     687.47 +/- 23.91
+  log10(DJR/GeV) in [1.3,1.4], Born       538.39 +/-  3.13     433.37 +/-  2.57
+
+Each scheme starts from the same original grids, seed and offsets. The errors
+between schemes are correlated; no error on their difference was estimated.
+The legacy pilot reproduces the earlier restored-scale result exactly.
+These distributions are before showering. They do not establish a reduction
+of the merged samples' Qcut dependence; that requires newly generated samples
+and a new shower scan.
+
+Artifacts and reproduction
+--------------------------
+  python3 fxfx_diagnostics/pythia_finite_terms.py
+    -> pythia_finite_terms.csv, _selected.json, .pdf, .png.
+  python3 fxfx_diagnostics/compare_finite_fo.py --work <isolated work> --sample w1j
+    -> w1j_finite_fo_runs.json (includes inputs, cards, grid hashes and seeds).
+    Uses the staged subprocess area created during the original investigation;
+    the finite_legacy and finite_pythia job directories must not already exist.
+  python3 fxfx_diagnostics/plot_finite_fo.py
+    -> w1j_finite_legacy.HwU, w1j_finite_pythia.HwU, finite_fo_djr.csv/.npz,
+       finite_fo_summary.json and finite_fo_comparison.pdf/.png.
+
+Seven new compiled regression tests check independent integrals of the full
+splitting functions, NLL limits, the strict expansion, cancellation at NLO,
+scheme-aware caching, massive kernels, card defaults and rate endpoints:
+  python3 -m unittest tests.unit_tests.fks.test_fxfx_sudakov

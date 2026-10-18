@@ -1,0 +1,294 @@
+{
+  "samples": {
+    "w0j_fixed-order": {
+      "description": "",
+      "sources": [
+        "w0j/Events/fixed-order/MADatNLO.HwU"
+      ]
+    },
+    "w0j_fixed-order-ckkw": {
+      "description": "",
+      "sources": [
+        "w0j/Events/fixed-order-ckkw/MADatNLO.HwU"
+      ]
+    },
+    "w0j_showered": {
+      "description": "",
+      "sources": [
+        "w0j/Events/showered/plot_PYTHIA8_1_0.HwU"
+      ]
+    },
+    "w0j_showered-ckkw": {
+      "description": "",
+      "sources": [
+        "w0j/Events/showered-ckkw/plot_PYTHIA8_1_0.HwU"
+      ]
+    },
+    "w0j_scan_q20": {
+      "description": "First 100000 LHE events; random seed 12345; other steering unchanged.",
+      "sources": [
+        "/tmp/fxfx_wjets_a2oxejk2/showers/w0j_q20/MADatNLO.HwU"
+      ]
+    },
+    "w0j_scan_q30": {
+      "description": "First 100000 LHE events; random seed 12345; other steering unchanged.",
+      "sources": [
+        "/tmp/fxfx_wjets_a2oxejk2/showers/w0j_q30/MADatNLO.HwU"
+      ]
+    },
+    "w0j_scan_q40": {
+      "description": "First 100000 LHE events; random seed 12345; other steering unchanged.",
+      "sources": [
+        "/tmp/fxfx_wjets_a2oxejk2/showers/w0j_q40/MADatNLO.HwU"
+      ]
+    },
+    "w1j_fixed-order": {
+      "description": "",
+      "sources": [
+        "w1j/Events/fixed-order/MADatNLO.HwU"
+      ]
+    },
+    "w1j_fixed-order-ckkw": {
+      "description": "",
+      "sources": [
+        "w1j/Events/fixed-order-ckkw/MADatNLO.HwU"
+      ]
+    },
+    "w1j_showered": {
+      "description": "",
+      "sources": [
+        "w1j/Events/showered/plot_PYTHIA8_1_0.HwU"
+      ]
+    },
+    "w1j_showered-ckkw": {
+      "description": "",
+      "sources": [
+        "w1j/Events/showered-ckkw/plot_PYTHIA8_1_0.HwU"
+      ]
+    },
+    "w1j_scan_q20": {
+      "description": "First 100000 LHE events; random seed 12345; other steering unchanged.",
+      "sources": [
+        "/tmp/fxfx_wjets_a2oxejk2/showers/w1j_q20/MADatNLO.HwU"
+      ]
+    },
+    "w1j_scan_q30": {
+      "description": "First 100000 LHE events; random seed 12345; other steering unchanged.",
+      "sources": [
+        "/tmp/fxfx_wjets_a2oxejk2/showers/w1j_q30/MADatNLO.HwU"
+      ]
+    },
+    "w1j_scan_q40": {
+      "description": "First 100000 LHE events; random seed 12345; other steering unchanged.",
+      "sources": [
+        "/tmp/fxfx_wjets_a2oxejk2/showers/w1j_q40/MADatNLO.HwU"
+      ]
+    },
+    "w1j_scan_no_merging": {
+      "description": "ickkw=3 LHE; first 100000 events; FxFx hooks off; random seed 12345.",
+      "sources": [
+        "/tmp/fxfx_wjets_a2oxejk2/showers/w1j_q0/MADatNLO.HwU"
+      ]
+    },
+    "w1j_fo_pilot_baseline": {
+      "description": "Six subprocesses; common original grids; 65536 integration points per iteration; two iterations.",
+      "sources": [
+        "/tmp/fxfx_wjets_a2oxejk2/w1j/SubProcesses/P0_dxg_veuxep/baseline/MADatNLO.HwU",
+        "/tmp/fxfx_wjets_a2oxejk2/w1j/SubProcesses/P0_dxu_veepg/baseline/MADatNLO.HwU",
+        "/tmp/fxfx_wjets_a2oxejk2/w1j/SubProcesses/P0_gdx_veuxep/baseline/MADatNLO.HwU",
+        "/tmp/fxfx_wjets_a2oxejk2/w1j/SubProcesses/P0_gu_vedep/baseline/MADatNLO.HwU",
+        "/tmp/fxfx_wjets_a2oxejk2/w1j/SubProcesses/P0_udx_veepg/baseline/MADatNLO.HwU",
+        "/tmp/fxfx_wjets_a2oxejk2/w1j/SubProcesses/P0_ug_vedep/baseline/MADatNLO.HwU"
+      ]
+    },
+    "w1j_fo_pilot_restored": {
+      "description": "Six subprocesses; common original grids; 65536 integration points per iteration; two iterations.",
+      "sources": [
+        "/tmp/fxfx_wjets_a2oxejk2/w1j/SubProcesses/P0_dxg_veuxep/restored/MADatNLO.HwU",
+        "/tmp/fxfx_wjets_a2oxejk2/w1j/SubProcesses/P0_dxu_veepg/restored/MADatNLO.HwU",
+        "/tmp/fxfx_wjets_a2oxejk2/w1j/SubProcesses/P0_gdx_veuxep/restored/MADatNLO.HwU",
+        "/tmp/fxfx_wjets_a2oxejk2/w1j/SubProcesses/P0_gu_vedep/restored/MADatNLO.HwU",
+        "/tmp/fxfx_wjets_a2oxejk2/w1j/SubProcesses/P0_udx_veepg/restored/MADatNLO.HwU",
+        "/tmp/fxfx_wjets_a2oxejk2/w1j/SubProcesses/P0_ug_vedep/restored/MADatNLO.HwU"
+      ]
+    },
+    "merged_scan_q20": {
+      "description": "Sum of the zero- and one-jet scan at Qcut=20 GeV."
+    },
+    "merged_scan_q30": {
+      "description": "Sum of the zero- and one-jet scan at Qcut=30 GeV."
+    },
+    "merged_scan_q40": {
+      "description": "Sum of the zero- and one-jet scan at Qcut=40 GeV."
+    },
+    "w1j_showered-ckkw_LHE": {
+      "description": "Before showering, summed S and H contributions; all 500000 events. kt R=1 clustering of final QCD partons."
+    },
+    "w1j_showered-ckkw_LHE_S": {
+      "description": "Before showering, S contribution only; all 500000 events."
+    },
+    "w1j_showered-ckkw_LHE_H": {
+      "description": "Before showering, H contribution only; all 500000 events."
+    },
+    "w1j_showered_LHE": {
+      "description": "Before showering, summed S and H contributions; all 500000 events. kt R=1 clustering of final QCD partons."
+    },
+    "w0j_showered-ckkw_LHE": {
+      "description": "Before showering, summed S and H contributions; all 500000 events. kt R=1 clustering of final QCD partons."
+    },
+    "w0j_showered_LHE": {
+      "description": "Before showering, summed S and H contributions; all 500000 events. kt R=1 clustering of final QCD partons."
+    },
+    "w0j_fo_pilot_baseline": {
+      "description": "Two subprocesses; original integration grids; two iterations of 65536 points.",
+      "sources": [
+        "/tmp/fxfx_wjets_a2oxejk2/w0j/SubProcesses/P0_dxu_veep/baseline/MADatNLO.HwU",
+        "/tmp/fxfx_wjets_a2oxejk2/w0j/SubProcesses/P0_udx_veep/baseline/MADatNLO.HwU"
+      ]
+    },
+    "w0j_fo_pilot_restored": {
+      "description": "Two subprocesses; original integration grids; two iterations of 65536 points.",
+      "sources": [
+        "/tmp/fxfx_wjets_a2oxejk2/w0j/SubProcesses/P0_dxu_veep/restored/MADatNLO.HwU",
+        "/tmp/fxfx_wjets_a2oxejk2/w0j/SubProcesses/P0_udx_veep/restored/MADatNLO.HwU"
+      ]
+    },
+    "merged_original_q20": {
+      "sources": [
+        "w01j_20.HwU"
+      ],
+      "description": "Original merged W+0,1j sum at Qcut=20 GeV, 500000 events per input."
+    },
+    "w1j_LO_ickkw3": {
+      "sources": [
+        "w1j/Events/fixed-order-ckkw/MADatNLO.HwU"
+      ],
+      "description": "Born contribution with FxFx scales and Sudakov weights."
+    }
+  },
+  "rates_pb": {
+    "w0j_fixed-order": [
+      10853.12,
+      10.439826
+    ],
+    "w0j_fixed-order-ckkw": [
+      11022.301,
+      11.39269
+    ],
+    "w0j_showered": [
+      10842.03,
+      18.26623
+    ],
+    "w0j_showered-ckkw": [
+      8762.712,
+      17.47746
+    ],
+    "w0j_scan_q20": [
+      8759.153,
+      39.03931
+    ],
+    "w0j_scan_q30": [
+      9866.729,
+      41.53197
+    ],
+    "w0j_scan_q40": [
+      10435.93,
+      42.72748
+    ],
+    "w1j_fixed-order": [
+      6867.9143,
+      6.0986521
+    ],
+    "w1j_fixed-order-ckkw": [
+      4852.4241,
+      4.7631939
+    ],
+    "w1j_showered": [
+      6890.961,
+      22.68106
+    ],
+    "w1j_showered-ckkw": [
+      3418.385,
+      14.2217
+    ],
+    "w1j_scan_q20": [
+      3420.208,
+      31.7212
+    ],
+    "w1j_scan_q30": [
+      2121.306,
+      24.30402
+    ],
+    "w1j_scan_q40": [
+      1385.811,
+      19.32073
+    ],
+    "w1j_scan_no_merging": [
+      6425.679,
+      49.69717
+    ],
+    "w1j_fo_pilot_baseline": [
+      4865.5071,
+      46.571169423946024
+    ],
+    "w1j_fo_pilot_restored": [
+      6426.4611,
+      50.847556327375266
+    ],
+    "merged_scan_q20": [
+      12179.361,
+      50.30210984358509
+    ],
+    "merged_scan_q30": [
+      11988.035,
+      48.1205768901548
+    ],
+    "merged_scan_q40": [
+      11821.741,
+      46.892730298877886
+    ],
+    "w1j_showered-ckkw_LHE": [
+      6401.508734399145,
+      null
+    ],
+    "w1j_showered_LHE": [
+      6890.9926116055085,
+      null
+    ],
+    "w0j_showered-ckkw_LHE": [
+      11308.93127098077,
+      null
+    ],
+    "w0j_showered_LHE": [
+      10842.054026748985,
+      null
+    ],
+    "w0j_fo_pilot_baseline": [
+      11002.486,
+      34.91469515723859
+    ],
+    "w0j_fo_pilot_restored": [
+      11291.613000000001,
+      34.74573853652416
+    ],
+    "merged_original_q20": [
+      12181.097,
+      22.532607
+    ]
+  },
+  "provenance": {
+    "source_root": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun",
+    "scratch": "/tmp/fxfx_wjets_a2oxejk2",
+    "git_head": "4a4640b3e698782047d315adc472abd63a29b875",
+    "original_driver_sha256": "5897618eeee170171cc2edd017070f39e3cbbc66c4de25a01dcf3e426b8ba939",
+    "pythia": "8.318",
+    "generation_ptj_GeV": 8,
+    "scan_events_per_sample": 100000,
+    "scan_random_seed": 12345,
+    "fo_pilot_points": 65536,
+    "fo_pilot_iterations": 2,
+    "validation_command": "python3 -m unittest tests.unit_tests.fks.test_fxfx_fixed_order tests.unit_tests.fks.test_fxfx_clustering tests.unit_tests.fks.test_mc_history_weights tests.unit_tests.fks.test_mc_born_cuts",
+    "validation_result": "9 tests passed; new regression fails on the original fixed-order driver.",
+    "interpretation": "The fixed-order counterevents used real-emission FxFx renormalisation/factorisation scales. The restored result agrees with the MC@NLO input. The measured merging-scale dependence remains after correcting this reference."
+  }
+}

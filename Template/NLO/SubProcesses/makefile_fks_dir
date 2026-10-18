@@ -235,7 +235,7 @@ fks_singular.o: weight_lines.o mint_module.o fks_symmetry.inc
 driver_mintMC.o: weight_lines.o mint_module.o genps_fks_helpers.o fks_symmetry.inc mc_histories.inc
 driver_mintFO.o: weight_lines.o mint_module.o FKSParams.o
 chooser_functions.o: weight_lines.o
-cluster.o: weight_lines.o
+cluster.o: weight_lines.o FKSParams.o
 setcuts.o: mint_module.o
 genps_fks.o genps_fks_sampling.o genps_fks_radiation.o: genps.inc nexternal.inc
 fks_phase_space_data.o: nexternal.inc

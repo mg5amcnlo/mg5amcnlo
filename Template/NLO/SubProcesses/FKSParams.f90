@@ -19,6 +19,7 @@ module FKSParams
   logical :: MCExplicitKLSum=.true.
   logical :: MCSubtractionAtFixedFlow=.true.
   logical :: FKSExplicitSum=.false.
+  logical :: FxFxPythia8FiniteTerms=.false.
   integer :: FKSFinalRecoil=0
   integer :: FKSISRMapping=0
   real*8 :: Pythia8MMaxGamma=10d0
@@ -106,6 +107,8 @@ contains
              read(68,*,end=999) MCExplicitKLSum
           else if (buff .eq. '#MCSubtractionAtFixedFlow') then
              read(68,*,end=999) MCSubtractionAtFixedFlow
+          else if (buff .eq. '#FxFxPythia8FiniteTerms') then
+             read(68,*,end=999) FxFxPythia8FiniteTerms
           else if (buff .eq. '#FKSExplicitSum') then
              read(68,*,end=999) FKSExplicitSum
           else if (buff .eq. '#UsePolyVirtual') then
@@ -242,6 +245,7 @@ contains
        write(*,*) ' > MCExplicitKLSum           = ',MCExplicitKLSum
        write(*,*) ' > MCSubtractionAtFixedFlow  = ',MCSubtractionAtFixedFlow
        write(*,*) ' > FKSExplicitSum            = ',FKSExplicitSum
+       write(*,*) ' > FxFxPythia8FiniteTerms     = ',FxFxPythia8FiniteTerms
        write(*,*) &
             '==============================================================='
        paramPrinted=.TRUE.
@@ -271,6 +275,7 @@ contains
     MCExplicitKLSum=.true.
     MCSubtractionAtFixedFlow=.true.
     FKSExplicitSum=.false.
+    FxFxPythia8FiniteTerms=.false.
     IncludeBornContributions=.true.
     SelectedContributionTypes(0)=0
     VetoedContributionTypes(0)=0
