@@ -261,7 +261,10 @@
 !
 ! ==========================================================================
 ! FxFx analytic Sudakov finite terms (ickkw=3 only).
-! .false.: the standard logarithmic NLL kernels.
+! Always enabled for FxFx with PYTHIA8 matching, regardless of this flag.
+! Other modes default to .false.; fixed-order runs do not enable them
+! automatically, even when parton_shower=PYTHIA8 in the run card.
+! .false.: the standard logarithmic NLL kernels, unless enabled above.
 ! .true.: massless forward splitting kernels integrated with Pythia8's
 ! momentum tagging and global ISR z bound, identifying the upper FxFx
 ! scale with the dipole mass. Retains A1, B1, A2 and the existing massive

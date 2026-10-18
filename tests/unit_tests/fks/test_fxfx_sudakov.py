@@ -59,21 +59,34 @@ use FKSParams
 implicit none
 real*8 q,hard,m,alpha,g1,g2,e,e1,rate,Q1,mass,sudakov_exp,expanded_sudakov_exp,Gamma
 real*8 qe,qe1,masses(1)
-integer kind,finite,itype,mode,types(0:1)
+integer kind,finite,itype,mode,types(0:1),ickkw
+logical nlo_ps
 external Gamma
-character(1024) card
+character(1024) card,argument
+character(10) shower
 common /fixture_alpha/ alpha
 common /to_sud_exp/ Q1,mass,itype,mode
 call get_command_argument(1,card)
 if (len_trim(card)>0) then
   call FKSParamReader(trim(card),.false.,.true.)
-  write(*,*) FxFxPythia8FiniteTerms
+  if (command_argument_count()>1) then
+    call get_command_argument(2,argument)
+    read(argument,*) ickkw
+    call get_command_argument(3,argument)
+    read(argument,*) nlo_ps
+    call get_command_argument(4,shower)
+    call configure_fxfx_sudakov(ickkw,nlo_ps,shower)
+    ! A later forced card read must preserve the mandatory run setting.
+    call FKSParamReader(trim(card),.false.,.true.)
+  endif
+  write(*,*) use_fxfx_finite_terms()
   stop
 endif
 ! Keep one process alive to exercise cached values across scheme changes.
 do
-  read(*,*,end=100) finite,alpha,q,hard,kind,m
+  read(*,*,end=100) finite,alpha,q,hard,kind,m,ickkw,nlo_ps,shower
   FxFxPythia8FiniteTerms=finite/=0
+  call configure_fxfx_sudakov(ickkw,nlo_ps,shower)
   Q1=hard
   mass=m
   itype=kind
@@ -119,7 +132,9 @@ end function
             raise RuntimeError(result.stdout + result.stderr)
 
     def evaluate(self, points):
-        data = ''.join(' '.join(map(str, point)) + '\n' for point in points)
+        data = ''.join(' '.join(map(str, point if len(point) == 9 else
+                                   (*point, 0, 'F', 'PYTHIA8'))) + '\n'
+                       for point in points)
         result = subprocess.run([str(self.exe)], input=data,
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -204,6 +219,52 @@ end function
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(result.stdout.strip(), expected)
 
+    def test_matching_policy_survives_card_reload(self):
+        contexts = [(3, 'T', 'PYTHIA8', True),
+                    (3, 'F', 'PYTHIA8', False),
+                    (3, 'T', 'HERWIG7', False),
+                    (3, 'T', 'HERWIG6', False),
+                    (3, 'T', 'PYTHIA6Q', False),
+                    (0, 'T', 'PYTHIA8', False),
+                    (4, 'T', 'PYTHIA8', False),
+                    (-1, 'T', 'PYTHIA8', False)]
+        for text, requested in [('', False),
+                                ('#FxFxPythia8FiniteTerms\n.false.\n', False),
+                                ('#FxFxPythia8FiniteTerms\n.true.\n', True)]:
+            card = self.work / 'matching_card.dat'
+            card.write_text(text)
+            for ickkw, nlo_ps, shower, automatic in contexts:
+                with self.subTest(card=text, ickkw=ickkw, nlo_ps=nlo_ps, shower=shower):
+                    result = subprocess.run(
+                        [str(self.exe), str(card), str(ickkw), nlo_ps, shower],
+                        capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertEqual(result.stdout.strip(), 'T' if requested or automatic else 'F')
+
+    def test_automatic_terms_and_subtraction_use_effective_cache_keys(self):
+        for kind in (1, 3):
+            point = (0, .12, 20, 80, kind, 0)
+            legacy, automatic, explicit, fixed_order, herwig, unmerged, cached, restored = self.evaluate([
+                point,
+                (*point, 3, 'T', 'PYTHIA8'),
+                (1, *point[1:]),
+                (*point, 3, 'F', 'PYTHIA8'),
+                (*point, 3, 'T', 'HERWIG7'),
+                (*point, 0, 'T', 'PYTHIA8'),
+                (*point, 3, 'T', 'PYTHIA8'),
+                point])
+            self.assertEqual(automatic, explicit)
+            self.assertEqual(automatic, cached)
+            self.assertEqual(legacy, restored)
+            for other in (fixed_order, herwig, unmerged):
+                self.assertEqual(legacy, other)
+            # Check both the exponent and its strict NLO expansion, including
+            # the QCDsudakov wrapper, while the card value remains false.
+            self.assertLess(automatic[2], legacy[2])
+            self.assertLess(automatic[3], legacy[3])
+            self.assertLess(automatic[4], legacy[4])
+            self.assertLess(automatic[5], legacy[5])
+
     def test_massless_rates_and_unit_endpoint(self):
         points = [(1, .12, r*80, 80, kind, 0)
                   for kind in (1, 3) for r in (.001, .25, .9, 1)]
@@ -247,7 +308,8 @@ end function
             shutil.which('make'), '-j2', '-f', 'makefile', '-f', 'fixture.mk',
             'check_reweight_link'], cwd=work, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        points = [(finite, .12, 20, 80, 1, 0) for finite in (0, 1)]
+        points = [(finite, .12, 20, 80, 1, 0, 0, 'F', 'PYTHIA8')
+                  for finite in (0, 1)]
         result = subprocess.run([str(work / 'reweight_xsec_events')],
             input=''.join(' '.join(map(str, p))+'\n' for p in points),
             capture_output=True, text=True)

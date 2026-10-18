@@ -20,6 +20,7 @@ module FKSParams
   logical :: MCSubtractionAtFixedFlow=.true.
   logical :: FKSExplicitSum=.false.
   logical :: FxFxPythia8FiniteTerms=.false.
+  logical, private :: FxFxPythia8Matching=.false.
   integer :: FKSFinalRecoil=0
   integer :: FKSISRMapping=0
   real*8 :: Pythia8MMaxGamma=10d0
@@ -292,6 +293,28 @@ contains
        enddo
     enddo
   end subroutine DefaultFKSParam
+
+
+  subroutine configure_fxfx_sudakov(ickkw,nlo_ps,shower,printParam)
+    ! The run context is separate from the card so a later card read cannot
+    ! disable the finite terms required by FxFx with Pythia8 matching.
+    implicit none
+    integer, intent(in) :: ickkw
+    logical, intent(in) :: nlo_ps
+    character(*), intent(in) :: shower
+    logical, intent(in), optional :: printParam
+    FxFxPythia8Matching=ickkw.eq.3.and.nlo_ps.and.trim(shower).eq.'PYTHIA8'
+    if (present(printParam)) then
+       if (printParam.and.FxFxPythia8Matching) then
+          write(*,*) 'FxFx with PYTHIA8 matching: finite Sudakov terms enabled automatically.'
+       endif
+    endif
+  end subroutine configure_fxfx_sudakov
+
+  logical function use_fxfx_finite_terms()
+    implicit none
+    use_fxfx_finite_terms=FxFxPythia8FiniteTerms.or.FxFxPythia8Matching
+  end function use_fxfx_finite_terms
 
   integer function get_fks_isr_mapping(fixed_order,nlo_ps,shower) result(mapping)
     ! Resolve run settings on every entry so forward/inverse maps agree,
