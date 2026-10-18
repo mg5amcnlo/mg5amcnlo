@@ -43,6 +43,16 @@ extern "C" {
     pythia.readString("PartonLevel:MPI                 = off");
     pythia.readString("Print:quiet = on");
     pythia.readString("Merging:nRequested = 0");
+    // Sudakov trials need the nominal shower veto. Uncertainty variations
+    // postpone acceptance to branch(), which generateSingleSudakov never
+    // calls. Clear merging variations too, or init() re-enables them.
+    // The merging-variation settings are absent in older Pythia versions.
+    if (pythia.settings.isPVec("Merging:muRfactors"))
+      pythia.readString("Merging:muRfactors = {}");
+    if (pythia.settings.isFlag("Merging:doSchemeVariation"))
+      pythia.readString("Merging:doSchemeVariation = off");
+    if (pythia.settings.isFlag("UncertaintyBands:doVariations"))
+      pythia.readString("UncertaintyBands:doVariations = off");
     pythia.readString("Beams:setProductionScalesFromLHEF = off");
     pythia.readString("TimeShower:QEDshowerByQ = off");
     pythia.readString("TimeShower:QEDshowerByL = off");

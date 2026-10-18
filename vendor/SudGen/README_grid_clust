@@ -65,6 +65,30 @@
 
 
 
+Pythia variation settings
+------------------------
+The Pythia interface disables the following settings before initialization,
+when they are available in the installed Pythia version:
+
+  Merging:muRfactors = {}
+  Merging:doSchemeVariation = off
+  UncertaintyBands:doVariations = off
+
+The direct generateSingleSudakov() calls need the nominal shower veto.
+Shower uncertainty variations defer acceptance to branch(), which this API
+does not call. In Pythia 8.3, nonempty Merging:muRfactors can automatically
+enable shower variations, so turning off doVariations alone is insufficient.
+The interface checks for these settings to support older Pythia versions.
+
+These settings correct new grid generation. Reproducing a particular stored
+grid also requires its Pythia version, coupling, PDF mode, masses and seeds.
+
+The numerical regression test uses the actual Pythia library and both
+Fortran-callable interfaces. Run it from the repository root with:
+
+  PYTHIA8=/path/to/pythia python3 -m unittest tests.unit_tests.fks.test_sudgen
+
+
 ==================================================
   Running pre-tabulation codes on lxplus
 ==================================================
