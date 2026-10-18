@@ -2,7 +2,6 @@
 // the basis of the inputs specified in MCatNLO_MadFKS_PY8.Script 
 #include "Pythia8/Pythia.h"
 #include "Pythia8Plugins/HepMC2.h"
-#include "Pythia8Plugins/aMCatNLOHooks.h"
 #include "Pythia8Plugins/CombineMatchingInput.h"
 #include "HepMC/GenEvent.h"
 #include "HepMC/IO_GenEvent.h"
