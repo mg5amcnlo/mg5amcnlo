@@ -245,7 +245,7 @@ contains
     do k=1,norders
        if(models(k)%blend==0d0) cycle
        value=0d0
-       if(outside_training(k)) then
+       if(any([(outside_bounds(features(r),models(k)%lower(r),models(k)%upper(r)),r=1,nf)])) then
           exact_tail=.true.
        endif
        ! A bounded continuation avoids replacing a useful prediction with
@@ -268,18 +268,13 @@ contains
     common_ratio=pooled_virtual_ratio
   end subroutine
 
-  logical function outside_training(k) result(outside)
-    integer,intent(in) :: k
+  pure recursive logical function outside_bounds(value,lower,upper) result(outside)
+    real(dp),intent(in) :: value,lower,upper
     real(dp) :: width,allowance
-    integer :: i
-    outside=.false.
-    do i=1,nf
-       width=models(k)%upper(i)-models(k)%lower(i)
-       allowance=1d-10*max(1d0,abs(models(k)%lower(i)))
-       if(width>1d-12) allowance=0.1d0*width
-       if(features(i)<models(k)%lower(i)-allowance.or.features(i)>models(k)%upper(i)+allowance) &
-            outside=.true.
-    enddo
+    width=upper-lower
+    allowance=1d-10*max(1d0,abs(lower))
+    if(width>1d-12) allowance=0.1d0*width
+    outside=value<lower-allowance.or.value>upper+allowance
   end function
 
   real(dp) function pooled_virtual_call_probability(base) result(probability)
@@ -496,24 +491,32 @@ contains
 
   subroutine pooled_virtual_save_context(context)
     type(pooled_virtual_context),intent(out) :: context
-    context%mean=pooled_virtual_ratio;context%actual=pooled_virtual_actual_ratio
+    context%mean=pooled_virtual_ratio
+    context%actual=pooled_virtual_actual_ratio
     context%base=common_ratio
     if(allocated(head_ratio)) context%heads=head_ratio
     if(allocated(native_q)) context%probability=native_q
-    context%conditional=conditional_point;context%full_branch=full_branch
-    context%selected=selected_helicity;context%selected_probability=selected_probability
-    context%velocity_factor=pooled_virtual_velocity_factor;context%velocity_valid=pooled_virtual_velocity_valid
+    context%conditional=conditional_point
+    context%full_branch=full_branch
+    context%selected=selected_helicity
+    context%selected_probability=selected_probability
+    context%velocity_factor=pooled_virtual_velocity_factor
+    context%velocity_valid=pooled_virtual_velocity_valid
   end subroutine
 
   subroutine pooled_virtual_restore_context(context)
     type(pooled_virtual_context),intent(in) :: context
-    pooled_virtual_ratio=context%mean;pooled_virtual_actual_ratio=context%actual
+    pooled_virtual_ratio=context%mean
+    pooled_virtual_actual_ratio=context%actual
     common_ratio=context%base
     if(allocated(context%heads)) head_ratio=context%heads
     if(allocated(context%probability)) native_q=context%probability
-    conditional_point=context%conditional;full_branch=context%full_branch
-    selected_helicity=context%selected;selected_probability=context%selected_probability
-    pooled_virtual_velocity_factor=context%velocity_factor;pooled_virtual_velocity_valid=context%velocity_valid
+    conditional_point=context%conditional
+    full_branch=context%full_branch
+    selected_helicity=context%selected
+    selected_probability=context%selected_probability
+    pooled_virtual_velocity_factor=context%velocity_factor
+    pooled_virtual_velocity_valid=context%velocity_valid
   end subroutine
 
   subroutine pooled_virtual_iteration(iteration,accepted,attempts)
@@ -928,11 +931,11 @@ contains
   end subroutine
 
   recursive subroutine predict_neural_single()
-    real(dp) :: z(maxinputs),hidden(maxwidth),previous(maxwidth),delta(maxheads),canonical(0:3,nlegs)
-    real(dp) :: total(0:3),triple(0:3),shat,value,width,allowance
-    integer :: k,r,h,i,j,c,ni,nh,nw,np
-    logical :: valid,canonical_ready
-    canonical_ready=.false.;valid=.true.
+    real(dp) :: z(maxinputs),delta(maxheads),canonical(0:3,nlegs)
+    real(dp) :: total(0:3),shat
+    integer :: k,h,i,ni,nh
+    logical :: canonical_ready
+    canonical_ready=.false.
     total=0d0
     do i=1,nlegs
        if(saved_incoming(i)) total=total+point_p(:,i)
@@ -941,63 +944,87 @@ contains
     pooled_virtual_ratio=common_ratio
     do k=1,norders
        head_ratio(:,k)=common_ratio(k)
-       ni=neural(k)%inputs;nh=neural(k)%heads
+       ni=neural(k)%inputs
+       nh=neural(k)%heads
        if(nh==0) cycle
-       do r=1,ni
-          i=neural(k)%descriptor(2,r);j=neural(k)%descriptor(3,r);c=neural(k)%descriptor(4,r)
-          select case(neural(k)%descriptor(1,r))
-          case(1,2)
-             value=features(i)
-          case(3)
-             if(.not.canonical_ready) then
-                call canonical_coordinates(point_p,saved_incoming,canonical,valid)
-                canonical_ready=.true.
-             endif
-             if(.not.valid) then
-                canonical=0d0
-                exact_tail=.true.
-             endif
-             value=canonical(j,i)
-          case(4,5)
-             triple=merge(-1d0,1d0,saved_incoming(i))*point_p(:,i)+ &
-                  merge(-1d0,1d0,saved_incoming(j))*point_p(:,j)+merge(-1d0,1d0,saved_incoming(c))*point_p(:,c)
-             value=dot4(triple,triple)
-             if(neural(k)%descriptor(1,r)==4) then
-                value=logratio(abs(value),shat)
-             else
-                value=merge(sign(1d0,value),0d0,value/=0d0)
-             endif
-          case(6)
-             value=2d0*native_q(i)-1d0
-          end select
-          z(r)=value
-          if(neural(k)%descriptor(1,r)==1.or.neural(k)%descriptor(1,r)==4) then
-             width=neural(k)%upper(r)-neural(k)%lower(r)
-             z(r)=0d0
-             allowance=1d-10*max(1d0,abs(neural(k)%lower(r)))
-             if(width>1d-12) then
-                z(r)=max(-1d0,min(1d0,2d0*(value-neural(k)%lower(r))/width-1d0))
-                allowance=0.1d0*width
-             endif
-             if(value<neural(k)%lower(r)-allowance.or.value>neural(k)%upper(r)+allowance) exact_tail=.true.
-          endif
-       enddo
-       nw=neural(k)%width(1)
-       hidden(:nw)=tanh(matmul(transpose(neural(k)%hidden(1)%weight),z(:ni))+neural(k)%hidden(1)%bias)
-       do r=2,neural(k)%depth
-          np=nw;nw=neural(k)%width(r);previous(:np)=hidden(:np)
-          hidden(:nw)=tanh(matmul(transpose(neural(k)%hidden(r)%weight),previous(:np))+neural(k)%hidden(r)%bias)
-       enddo
-       delta(:nh)=matmul(transpose(neural(k)%output),hidden(:nw))+neural(k)%bias+ &
-            matmul(transpose(neural(k)%linear(:ni,:)),z(:ni))+neural(k)%linear(ni+1,:)
-       delta(:nh)=delta(:nh)*neural(k)%target_scale/neural(k)%born_scale
-       if(.not.all(ieee_is_finite(delta(:nh)))) call fail('nonfinite neural correction')
+       call neural_inputs(neural(k),shat,canonical,canonical_ready,z(:ni))
+       call neural_correction(neural(k),z(:ni),delta(:nh))
        do h=1,nh
-          if(neural(k)%trained(h)==0) delta(h)=0d0
           head_ratio(h,k)=common_ratio(k)+delta(h)
           pooled_virtual_ratio(k)=pooled_virtual_ratio(k)+native_q(neural(k)%helicity(h))*delta(h)
        enddo
     enddo
+  end subroutine
+
+  recursive subroutine neural_inputs(model,shat,canonical,canonical_ready,z)
+    type(neural_model),intent(in) :: model
+    real(dp),intent(in) :: shat
+    real(dp),intent(inout) :: canonical(0:3,nlegs)
+    logical,intent(inout) :: canonical_ready
+    real(dp),intent(out) :: z(:)
+    real(dp) :: triple(0:3),value,width
+    integer :: r,i,j,c,kind
+    logical :: valid
+    do r=1,model%inputs
+       kind=model%descriptor(1,r)
+       i=model%descriptor(2,r)
+       j=model%descriptor(3,r)
+       c=model%descriptor(4,r)
+       select case(kind)
+       case(1,2)
+          value=features(i)
+       case(3)
+          if(.not.canonical_ready) then
+             call canonical_coordinates(point_p,saved_incoming,canonical,valid)
+             canonical_ready=.true.
+             if(.not.valid) then
+                canonical=0d0
+                exact_tail=.true.
+             endif
+          endif
+          value=canonical(j,i)
+       case(4,5)
+          triple=merge(-1d0,1d0,saved_incoming(i))*point_p(:,i)+ &
+               merge(-1d0,1d0,saved_incoming(j))*point_p(:,j)+merge(-1d0,1d0,saved_incoming(c))*point_p(:,c)
+          value=dot4(triple,triple)
+          if(kind==4) then
+             value=logratio(abs(value),shat)
+          else
+             value=merge(sign(1d0,value),0d0,value/=0d0)
+          endif
+       case(6)
+          value=2d0*native_q(i)-1d0
+       end select
+       z(r)=value
+       if(kind==1.or.kind==4) then
+          width=model%upper(r)-model%lower(r)
+          z(r)=0d0
+          if(width>1d-12) z(r)=max(-1d0,min(1d0,2d0*(value-model%lower(r))/width-1d0))
+          if(outside_bounds(value,model%lower(r),model%upper(r))) exact_tail=.true.
+       endif
+    enddo
+  end subroutine
+
+  recursive subroutine neural_correction(model,z,delta)
+    type(neural_model),intent(in) :: model
+    real(dp),intent(in) :: z(:)
+    real(dp),intent(out) :: delta(:)
+    real(dp) :: hidden(maxwidth),previous(maxwidth)
+    integer :: r,ni,nw,np
+    ni=model%inputs
+    nw=model%width(1)
+    hidden(:nw)=tanh(matmul(transpose(model%hidden(1)%weight),z)+model%hidden(1)%bias)
+    do r=2,model%depth
+       np=nw
+       nw=model%width(r)
+       previous(:np)=hidden(:np)
+       hidden(:nw)=tanh(matmul(transpose(model%hidden(r)%weight),previous(:np))+model%hidden(r)%bias)
+    enddo
+    delta=matmul(transpose(model%output),hidden(:nw))+model%bias+ &
+         matmul(transpose(model%linear(:ni,:)),z)+model%linear(ni+1,:)
+    delta=delta*model%target_scale/model%born_scale
+    if(.not.all(ieee_is_finite(delta))) call fail('nonfinite neural correction')
+    where(model%trained==0) delta=0d0
   end subroutine
 
   recursive subroutine canonical_coordinates(p,incoming,coordinates,valid)

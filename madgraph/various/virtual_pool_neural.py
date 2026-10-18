@@ -397,12 +397,14 @@ def _complete_prediction(entry, common, metadata, features, momenta, q, born, mi
                          selected=None, full=None, permutations=None):
     import numpy as np
     from .virtual_pool_polynomial import predict as common_predict
-    permutations = permutations or [list(range(1, metadata['nlegs']+1))]
-    selected_total = np.zeros(len(born)); mean_total = np.zeros(len(born))
+    identity = list(range(1, metadata['nlegs']+1))
+    permutations = permutations or [identity]
+    selected_total = np.zeros(len(born))
+    mean_total = np.zeros(len(born))
     identity_common = None
     for permutation in permutations:
         permutation = list(permutation)
-        if permutation == list(range(1, metadata['nlegs']+1)):
+        if permutation == identity:
             x, p, probabilities, actual = features, momenta, q, selected
         else:
             mapping = np.asarray(helicity_permutation(metadata, permutation), dtype=int)
@@ -665,6 +667,22 @@ def _metrics(y, prediction, weight):
                 relative_rms=math.sqrt(second/true_second) if true_second else None)
 
 
+def _forward_validation(metrics, gains, errors):
+    """Use the same promotion guards for conditional fits and symmetry averages."""
+    import numpy as np
+    baseline_l1 = float(np.mean([m['baseline']['l1'] for m in metrics]))
+    gain = float(np.mean(gains))
+    # Forward validation sets overlap. Keep the largest paired error rather
+    # than treating the folds as independent estimates of the improvement.
+    error = max(errors)
+    stable = all(m['l1'] < m['baseline']['l1'] and
+                 m['rms'] <= 1.05*m['baseline']['rms'] for m in metrics)
+    variance = np.mean([m['rms']**2 for m in metrics]) <= np.mean([
+        m['baseline']['rms']**2 for m in metrics])
+    accepted = stable and variance and gain > max(.02*baseline_l1, 2*error)
+    return dict(eligible=bool(accepted), mean_l1_gain=gain, paired_gain_error=error)
+
+
 def _validate_symmetry(rows, metadata, x, p, q, b, y, w, folds, models, blend, permutation):
     """Compare a complete-prediction average on the existing forward holds."""
     import numpy as np
@@ -694,15 +712,9 @@ def _validate_symmetry(rows, metadata, x, p, q, b, y, w, folds, models, blend, p
     except (ValueError, FloatingPointError):
         result['reason'] = 'unsupported_permutation_or_prediction'
         return result
-    metrics = result['folds']
-    baseline_l1 = float(np.mean([m['baseline']['l1'] for m in metrics]))
-    gain, error = float(np.mean(gains)), max(errors)
-    stable = all(m['l1'] < m['baseline']['l1'] and
-                 m['rms'] <= 1.05*m['baseline']['rms'] for m in metrics)
-    variance = np.mean([m['rms']**2 for m in metrics]) <= np.mean([m['baseline']['rms']**2 for m in metrics])
-    accepted = stable and variance and gain > max(.02*baseline_l1, 2*error)
-    result.update(eligible=bool(accepted), mean_l1_gain=gain, paired_gain_error=error,
-                  reason='selected_by_three_forward_folds' if accepted else 'forward_validation_rejected')
+    result.update(_forward_validation(result['folds'], gains, errors))
+    result['reason'] = ('selected_by_three_forward_folds' if result['eligible']
+                        else 'forward_validation_rejected')
     return result
 
 
@@ -785,7 +797,7 @@ def train_order(rows, metadata, order_entry, diagnostics, configurations=None, b
             report['candidates'].append(dict(configuration=configuration, eligible=False,
                                             reason='fit_failed', detail=str(error)))
             continue
-        for blend in (.25, .5, .75, 1.):
+        for blend in polynomial.BLENDS:
             metrics, gains, errors = [], [], []
             for fold, correction in zip(folds, predictions):
                 va = fold['valid']
@@ -799,21 +811,11 @@ def train_order(rows, metadata, order_entry, diagnostics, configurations=None, b
                 ww = w[va]/w[va].sum()
                 gains.append(float(ww@gain))
                 errors.append(float(np.linalg.norm(ww*gain)))
-            base_l1 = np.mean([m['baseline']['l1'] for m in metrics])
-            gain = float(np.mean(gains))
-            # Forward validation sets overlap. Do not count them as independent
-            # replicates to shrink uncertainty: retain the largest paired SE.
-            error = max(errors)
-            stable = all(m['l1'] < m['baseline']['l1'] and
-                         m['rms'] <= 1.05*m['baseline']['rms'] for m in metrics)
-            aggregate_rms = np.mean([m['rms']**2 for m in metrics]) <= np.mean([
-                m['baseline']['rms']**2 for m in metrics])
-            accept = stable and aggregate_rms and gain > max(.02*base_l1, 2*error)
             candidate = dict(configuration=dict(configuration), blend=blend,
                              folds=metrics, mean_l1=float(np.mean([m['l1'] for m in metrics])),
-                             mean_l1_gain=gain, paired_gain_error=error, eligible=bool(accept))
+                             **_forward_validation(metrics, gains, errors))
             report['candidates'].append(candidate)
-            if accept:
+            if candidate['eligible']:
                 eligible.append(candidate)
                 candidate_models[id(candidate)] = models
     if not eligible:
@@ -836,10 +838,11 @@ def train_order(rows, metadata, order_entry, diagnostics, configurations=None, b
         return disabled, dict(report, reason='final_fit_failed', detail=str(error))
     result.update(order=order_entry['order'], enabled=True, descriptors=descriptors)
     result['target_scale'] *= selected['blend']
+    trained_native_heads = [h for h, flag in zip(heads, trained) if flag]
     report.update(reason='selected_by_three_forward_folds', selected=selected,
-                  trained_heads=[h for h, flag in zip(heads, trained) if flag],
+                  trained_heads=trained_native_heads,
                   untrained_native_heads=[h[0] for h in metadata['helicities'] if h[1] and
-                                          h[0] not in [head for head, flag in zip(heads, trained) if flag]],
+                                          h[0] not in trained_native_heads],
                   parameters=len(result['theta']))
     return result, report
 

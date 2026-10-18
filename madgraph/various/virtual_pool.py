@@ -96,6 +96,27 @@ def _read_iterations(directory):
     return iterations
 
 
+def _native_selection(fields, metadata):
+    """Decode the native branch without applying helicity multiplicities again."""
+    extra = _floats(' '.join(fields))
+    full, selected, selected_q = extra[:3]
+    nhel = metadata['nhel']
+    q = extra[3:3+nhel]
+    total = sum(q)
+    if (full not in (0, 1) or selected != int(selected) or
+            (full and (selected != -1 or selected_q != 1)) or
+            (not full and nhel and
+             (not 1 <= selected <= nhel or not 0 < selected_q <= 1)) or
+            any(v < 0 or v > 1 for v in q) or
+            (total != 0 and abs(total-1) > 1.e-9) or
+            (total != 0 and not full and abs(q[int(selected)-1]-selected_q) > 1.e-9)):
+        raise ValueError('invalid native helicity selection/probabilities')
+    if any(q[i] and not h[1] for i, h in enumerate(metadata['helicities'])):
+        raise ValueError('probability assigned to inactive native helicity')
+    return dict(full_branch=bool(full), selected_helicity=int(selected),
+                selected_q=selected_q, q=q, momenta=extra[3+nhel:])
+
+
 def _read_job(directory):
     path = os.path.join(directory, SAMPLES)
     iterations = _read_iterations(directory)
@@ -109,16 +130,18 @@ def _read_job(directory):
         metadata = _header(stream, 'VIRTUAL_POOL_SAMPLES')
         rows = []
         seen = set()
-        for number, line in enumerate(stream, 6):
+        conditional = metadata['version'] == CAPTURE_FORMAT_VERSION
+        prefix = metadata['nf'] + 9 + metadata['nx']
+        suffix = 3 + metadata['nhel'] + 4*metadata['nlegs'] if conditional else 0
+        first_row = 7 + metadata['nhel'] if conditional else 6
+        for number, line in enumerate(stream, first_row):
             if not line.strip():
                 continue
             fields = line.split()
-            prefix = metadata['nf'] + 9 + metadata['nx']
-            suffix = 3 + metadata['nhel'] + 4*metadata['nlegs'] if metadata['version'] == 3 else 0
             if len(fields) != prefix + suffix:
                 raise ValueError('%s:%s: incorrect sample width' % (path, number))
             sample, channel, iteration, order = (int(v) for v in fields[:4])
-            probability, born, virtual, baseline, *values = _floats(' '.join(fields[5:]))
+            probability, born, virtual, baseline, *values = _floats(' '.join(fields[5:prefix]))
             features = values[:metadata['nf']]
             if (sample < 1 or channel < 1 or iteration < 1
                     or not 1 <= order <= metadata['norders']
@@ -133,22 +156,8 @@ def _read_job(directory):
                        virtual=virtual, baseline=baseline, features=features,
                        directory=directory)
             row.update(bins=int(fields[4]), x=values[metadata['nf']:metadata['nf']+metadata['nx']])
-            if metadata['version'] == 3:
-                extra = _floats(' '.join(fields[prefix:]))
-                full, selected, selected_q = extra[:3]
-                q = extra[3:3+metadata['nhel']]
-                if (full not in (0, 1) or selected != int(selected) or
-                        (full and (selected != -1 or selected_q != 1)) or
-                        (not full and metadata['nhel'] and
-                         (not 1 <= selected <= metadata['nhel'] or not 0 < selected_q <= 1)) or
-                        any(v < 0 or v > 1 for v in q) or
-                        (q and sum(q) != 0 and abs(sum(q)-1) > 1.e-9) or
-                        (q and sum(q) != 0 and not full and abs(q[int(selected)-1]-selected_q) > 1.e-9)):
-                    raise ValueError('invalid native helicity selection/probabilities')
-                if any(q[i] and not h[1] for i, h in enumerate(metadata['helicities'])):
-                    raise ValueError('probability assigned to inactive native helicity')
-                row.update(full_branch=bool(full), selected_helicity=int(selected),
-                           selected_q=selected_q, q=q, momenta=extra[3+metadata['nhel']:])
+            if conditional:
+                row.update(_native_selection(fields[prefix:], metadata))
             if row['bins'] not in (4, 8) or any(v < 0 or v > 1 for v in row['x']):
                 raise ValueError('invalid MINT coordinates/bins')
             if rows and (iteration, sample) < (rows[-1]['iteration'], rows[-1]['sample']):
@@ -239,10 +248,16 @@ def _atomic_write(path, text):
             os.unlink(temporary)
 
 
+def _model_version(metadata, orders):
+    if (metadata.get('version') == CAPTURE_FORMAT_VERSION or
+            any(order['degree'] == 3 for order in orders)):
+        return MODEL_FORMAT_VERSION
+    return FORMAT_VERSION
+
+
 def _model_text(metadata, orders):
     floats = lambda values: ' '.join('%.17e' % x for x in values)
-    version = (MODEL_FORMAT_VERSION if metadata.get('version') == MODEL_FORMAT_VERSION or
-               any(o['degree'] == 3 for o in orders) else FORMAT_VERSION)
+    version = _model_version(metadata, orders)
     lines = ['VIRTUAL_POOL_MODEL %d' % version,
              '%d %d %d %d %d' % tuple(metadata[k] for k in
                                       ('catalog', 'nf', 'norders', 'nlegs', 'nx')),
@@ -318,7 +333,7 @@ def train_pool(job_dirs, output_model, report_path=None, job_groups=None,
                 report['orders'].append(diagnostics)
             _atomic_write(output_model, _model_text(metadata, orders))
             report.update(model_written=True,
-                          model_format_version=MODEL_FORMAT_VERSION if metadata['version'] == 3 or any(o['degree'] == 3 for o in orders) else FORMAT_VERSION,
+                          model_format_version=_model_version(metadata, orders),
                           enabled=any(o['blend'] > 0 for o in orders))
             report['status'] = 'trained' if report['enabled'] else 'fallback'
             if neural:

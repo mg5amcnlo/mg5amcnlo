@@ -2311,32 +2311,23 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             return
         state = self.virtual_pool_state(job['p_dir'])
         collection_step = 1 if fixed_order else 0
-        model = pjoin(job['dirname'], 'virtual_pool_model.dat')
-        neural = pjoin(job['dirname'], 'virtual_pool_neural.dat')
         if state is not None:
-            if state['model_sha256'] is not None:
-                source = pjoin(self.me_dir, 'SubProcesses', job['p_dir'],
-                               'virtual_pool_model.dat')
-                if os.path.islink(model):
-                    os.remove(model)
-                shutil.copyfile(source, model)
-                mode = 2
-            else:
-                mode = 0
+            mode = 2 if state['model_sha256'] is not None else 0
         elif integration_step <= collection_step:
             mode = int(integration_step == collection_step)
         else:
             raise aMCatNLOError('Pooled virtual barrier was not completed for %s' %
                                 job['p_dir'])
-        if mode != 2 and os.path.lexists(model):
-            os.remove(model)
-        if mode == 2 and state.get('neural_sha256') is not None:
-            if os.path.islink(neural):
-                os.remove(neural)
-            shutil.copyfile(pjoin(self.me_dir, 'SubProcesses', job['p_dir'],
-                                  'virtual_pool_neural.dat'), neural)
-        elif os.path.lexists(neural):
-            os.remove(neural)
+        for filename, checksum in (('virtual_pool_model.dat', 'model_sha256'),
+                                   ('virtual_pool_neural.dat', 'neural_sha256')):
+            destination = pjoin(job['dirname'], filename)
+            if mode == 2 and state.get(checksum) is not None:
+                if os.path.islink(destination):
+                    os.remove(destination)
+                source = pjoin(self.me_dir, 'SubProcesses', job['p_dir'], filename)
+                shutil.copyfile(source, destination)
+            elif os.path.lexists(destination):
+                os.remove(destination)
         with open(pjoin(job['dirname'], 'virtual_pool_mode.dat'), 'w') as stream:
             stream.write('%d\n' % mode)
         if clear_records and mode == 1:
