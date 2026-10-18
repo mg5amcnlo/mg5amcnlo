@@ -1247,8 +1247,7 @@ c Sum the contributions that can be summed before taking the ABS value
      $     outer_channel,mc_outer_channel_weight,native_born_ref_scale
       double precision nbody_scales_save(nexternal-1,nexternal-1,3),
      $     n1body_scales_save(nexternal,nexternal),
-     $     emsca_save(fks_configs,ndelH,ndelH),hard_scale_save,
-     $     damping_fraction_save
+     $     emsca_save(fks_configs,ndelH,ndelH),hard_scale_save
       double precision factors(9),mc_factors(8),pdf_factors(3),
      $     factors_save(9),mc_factors_save(8),pdf_factors_save(3)
       common/factor_n1body/factors
@@ -1333,23 +1332,6 @@ c Sum the contributions that can be summed before taking the ABS value
       nbody_scales_save(:,:,1)=shower_scale_nbody
       nbody_scales_save(:,:,2)=shower_scale_nbody_min
       nbody_scales_save(:,:,3)=shower_scale_nbody_max
-      damping_fraction_save=0.5d0
-      if (ickkw.eq.3.and.flow_save.gt.0) then
-! Reuse the outer damping draw when setting each native Born's bounds.
-! FxFx uses scalar matrices, so any entry supplies the common interval.
-         if (ieee_is_finite(hard_scale_save).and.
-     $        all(ieee_is_finite(nbody_scales_save(1,1,2:3)))) then
-            if (nbody_scales_save(1,1,3).gt.
-     $           nbody_scales_save(1,1,2)) then
-               damping_fraction_save=max(0d0,min(1d0,
-     $              (hard_scale_save-nbody_scales_save(1,1,2))/
-     $              (nbody_scales_save(1,1,3)-
-     $              nbody_scales_save(1,1,2))))
-            endif
-         endif
-      endif
-! If the outer Born failed cuts, no S scale was drawn. Native H terms
-! need only their damping bounds; keep the midpoint without an RNG draw.
       n1body_scales_save=shower_scale_n1body
       emsca_save=emsca_H(:,ifold_counter,:,:)
       factors_save=factors
@@ -1472,7 +1454,7 @@ c Sum the contributions that can be summed before taking the ABS value
             cuts_born=passcuts_native_born(p1_cnt(0,1,0),rwgt,
      $           native_born_ref_scale)
             if (ickkw.eq.3)call set_FxFx_shower_scale_nbody(
-     $           native_born_ref_scale,damping_fraction_save)
+     $           native_born_ref_scale)
             call set_cms_stuff(-100)
             if (ickkw.eq.3) call set_FxFx_scale(-3,pn)
             cuts_real=passcuts(pn,rwgt)

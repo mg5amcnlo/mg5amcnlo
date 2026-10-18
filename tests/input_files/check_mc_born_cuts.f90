@@ -14,8 +14,6 @@ module cut_fixture
   common /test_cuts/ptj,ptgmin,gamma_is_j
   integer :: native_matching(7),pdg(7),cluster_calls=0
   double precision :: native_scales(0:2)=[100d0,30d0,40d0]
-  double precision :: random_value=0.2d0
-  integer :: random_calls=0
 contains
   subroutine check_restored()
     if(any(need_matching_S.ne.77))error stop 'changed outer Born labels'
@@ -35,8 +33,7 @@ program check_mc_born_cuts
   implicit none
   double precision :: p(0:3,7),rwgt,born_ref_scale,expected_hard,expected_scales(6,6,3)
   double precision :: scale_factors(3)=[0.5d0,1d0,2d0]
-  double precision :: damping_fraction,reused_fraction
-  integer :: k,calls_before,random_calls_before
+  integer :: k,calls_before
   logical :: passcuts,passcuts_native_born,passed
   external passcuts,passcuts_native_born
   ickkw=3
@@ -112,8 +109,7 @@ program check_mc_born_cuts
 
   ! Reusing the cut clustering must reproduce the ordinary native Born
   ! shower calculation, including its damping bounds and scale factor,
-  ! with just one clustering for cuts and scales together. Native histories
-  ! reuse the event's damping fraction without consuming another RNG draw.
+  ! with just one clustering for cuts and scales together and no RNG draw.
   call init_process_module_global('PYTHIA8   ','all ',7,2,.false.,13000d0,1,1,3)
   call init_process_module_nbody(6,[(0d0,k=1,6)],[3,8,1,3,1,8],1, &
        reshape([(.false.,k=1,36)],[6,6,1]))
@@ -124,19 +120,16 @@ program check_mc_born_cuts
     native_scales=[100d0,30d0,40d0]
     if(k.eq.2)native_scales(0)=12d0
     if(k.eq.3)native_scales(2)=20d0
-    random_value=0.2d0
-    random_calls_before=random_calls
     call compute_shower_scale_nbody(p(:,1:6),1,0d0)
-    if(random_calls.ne.random_calls_before+1)error stop 'missing single FxFx damping draw'
+    if(shower_scale_hard.ne.scale_factors(k)*minval(native_scales)) &
+         error stop 'FxFx Born shower scale was damped'
+    if(any(shower_scale_nbody_min.ne.shower_scale_hard).or. &
+         any(shower_scale_nbody_max.ne.shower_scale_hard+3d0)) &
+         error stop 'FxFx Born subtraction uses a broad damping interval'
     expected_hard=shower_scale_hard
     expected_scales(:,:,1)=shower_scale_nbody
     expected_scales(:,:,2)=shower_scale_nbody_min
     expected_scales(:,:,3)=shower_scale_nbody_max
-    damping_fraction=(expected_hard-expected_scales(1,1,2))/ &
-         (expected_scales(1,1,3)-expected_scales(1,1,2))
-    if(abs(damping_fraction-1d0/3d0).gt.1d-12)error stop 'wrong transformed damping draw'
-    if(expected_hard.le.expected_scales(1,1,2).or. &
-         expected_hard.ge.expected_scales(1,1,3))error stop 'FxFx scale was not sampled inside bounds'
     shower_scale_hard=-111d0
     shower_scale_nbody=-112d0
     shower_scale_nbody_min=-113d0
@@ -144,13 +137,10 @@ program check_mc_born_cuts
     shower_scale_n1body=222d0
     emsca_H=333d0
     calls_before=cluster_calls
-    random_calls_before=random_calls
-    random_value=0.8d0
     passed=passcuts_native_born(p,rwgt,born_ref_scale)
     if(.not.passed)error stop 'resolved Born rejected during scale reuse'
-    call set_FxFx_shower_scale_nbody(born_ref_scale,damping_fraction)
+    call set_FxFx_shower_scale_nbody(born_ref_scale)
     if(cluster_calls.ne.calls_before+1)error stop 'extra clustering for native Born scale'
-    if(random_calls.ne.random_calls_before)error stop 'extra damping draw for native Born scale'
     if(shower_scale_hard.ne.expected_hard.or. &
          any(shower_scale_nbody.ne.expected_scales(:,:,1)).or. &
          any(shower_scale_nbody_min.ne.expected_scales(:,:,2)).or. &
@@ -158,25 +148,6 @@ program check_mc_born_cuts
          error stop 'reused Born scale differs from ordinary native calculation'
     if(any(shower_scale_n1body.ne.222d0).or.any(emsca_H.ne.333d0)) &
          error stop 'native Born scale overwrote H-event scales'
-    call check_restored()
-
-    ! A different history has a different clustering reference. Reusing
-    ! the transformed fraction correlates its scale with the outer S event.
-    native_scales=[100d0,60d0,80d0]
-    calls_before=cluster_calls
-    passed=passcuts_native_born(p,rwgt,born_ref_scale)
-    if(.not.passed)error stop 'resolved changed Born history rejected'
-    call set_FxFx_shower_scale_nbody(born_ref_scale,damping_fraction)
-    if(cluster_calls.ne.calls_before+1)error stop 'extra clustering for changed native history'
-    if(random_calls.ne.random_calls_before)error stop 'changed native history consumed RNG draw'
-    if(shower_scale_hard.eq.expected_hard)error stop 'ignored changed native reference scale'
-    reused_fraction=(shower_scale_hard-shower_scale_nbody_min(1,1))/ &
-         (shower_scale_nbody_max(1,1)-shower_scale_nbody_min(1,1))
-    if(abs(reused_fraction-damping_fraction).gt.1d-12) &
-         error stop 'changed native history lost event damping fraction'
-    if(any(shower_scale_nbody.ne.shower_scale_hard))error stop 'changed native history lost scalar scale'
-    if(any(shower_scale_n1body.ne.222d0).or.any(emsca_H.ne.333d0)) &
-         error stop 'changed native history overwrote H-event scales'
     call check_restored()
   enddo
   write(*,*)'PASS native Born cuts'
@@ -221,7 +192,5 @@ logical function passcuts(p,rwgt)
 end function
 
 double precision function ran2()
-  use cut_fixture, only: random_value,random_calls
-  random_calls=random_calls+1
-  ran2=random_value
+  error stop 'FxFx Born scales drew a random number'
 end function

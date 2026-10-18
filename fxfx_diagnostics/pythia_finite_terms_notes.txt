@@ -89,6 +89,10 @@ These distributions are before showering. They do not establish a reduction
 of the merged samples' Qcut dependence; that requires newly generated samples
 and a new shower scan.
 
+The saved shower-scan plots use the original LHE samples, generated with the
+broad shower-scale damping introduced in 4a4640b3e. They have not been rerun
+after restoring the preceding undamped FxFx shower-scale prescription.
+
 Artifacts and reproduction
 --------------------------
   python3 fxfx_diagnostics/pythia_finite_terms.py
