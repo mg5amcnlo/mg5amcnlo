@@ -4,6 +4,7 @@
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
+      include 'timing_variables.inc'
       double precision p(0:3,nexternal-1)
       type(BornRequest) request
       type(BornResult) result
@@ -16,6 +17,7 @@
       COMMON/PARAMS_R/ MDL_SQRT__AS,MDL_G__EXP__4,MDL_G__EXP__2  ,MDL_R2MIXEDFACTOR_FIN_,MDL_G__EXP__3,MDL_MU_R__EXP__2,MDL_LHV  ,MDL_CONJG__CKM3X3,MDL_CONJG__CKM22,MDL_CKM3X3,MDL_CKM33  ,MDL_CKM22,MDL_NCOL,MDL_CA,MDL_TF,MDL_CF,MDL_MZ__EXP__2  ,MDL_MZ__EXP__4,MDL_SQRT__2,MDL_MH__EXP__2,MDL_NCOL__EXP__2  ,MDL_MB__EXP__2,MDL_MT__EXP__2,MDL_AEW,MDL_SQRT__AEW,MDL_EE  ,MDL_MW__EXP__2,MDL_SW2,MDL_CW,MDL_SQRT__SW2,MDL_SW,MDL_G1  ,MDL_GW,MDL_V,MDL_V__EXP__2,MDL_LAM,MDL_YB,MDL_YT,MDL_YTAU  ,MDL_MUH,MDL_AXIALZUP,MDL_AXIALZDOWN,MDL_VECTORZUP  ,MDL_VECTORZDOWN,MDL_VECTORAUP,MDL_VECTORADOWN,MDL_VECTORWMDXU  ,MDL_AXIALWMDXU,MDL_VECTORWPUXD,MDL_AXIALWPUXD,MDL_GW__EXP__2  ,MDL_CW__EXP__2,MDL_EE__EXP__2,MDL_SW__EXP__2,MDL_YB__EXP__2  ,MDL_YT__EXP__2,AEWM1,MDL_GF,AS,MDL_YMB,MDL_YMT,MDL_YMTAU
       DOUBLE COMPLEX MDL_COMPLEXI,MDL_I1X33,MDL_I2X33,MDL_I3X33  ,MDL_I4X33,MDL_VECTOR_TBGP,MDL_AXIAL_TBGP,MDL_VECTOR_TBGM  ,MDL_AXIAL_TBGM
       COMMON/PARAMS_C/ MDL_COMPLEXI,MDL_I1X33,MDL_I2X33,MDL_I3X33  ,MDL_I4X33,MDL_VECTOR_TBGP,MDL_AXIAL_TBGP,MDL_VECTOR_TBGM  ,MDL_AXIAL_TBGM
+      if(timing_sampled)call timing_enter(timing_born)
       call born_model_dimensions(nr,nc)
       call born_resize_model_state(state,nr,nc)
       state%%real_values(1)=g
@@ -114,6 +116,7 @@
       write(*,*)'Born support evaluation failed',status
       stop 1
       endif
+      if(timing_sampled)call timing_leave(timing_born)
       end
       subroutine mc_capture_model_state(state)
       use mc_born_support
