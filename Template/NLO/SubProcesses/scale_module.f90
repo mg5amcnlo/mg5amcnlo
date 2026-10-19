@@ -318,12 +318,12 @@ contains
     ! i.e. the smallest scale returned by the clustering routine.
     implicit none
     integer :: n
-    double precision,dimension(0:3,n) :: p,pQCD
-    integer :: i,j,NN,iproc
+    double precision,dimension(0:3,n) :: p
+    integer :: iproc
     integer :: nFxFx_ren_scales
-    double precision,dimension(0:next_n1) :: FxFx_ren_scales
+    double precision,allocatable,save :: FxFx_ren_scales(:)
     double precision,dimension(2) :: FxFx_fac_scale
-    integer,dimension(next_n1) :: need_matching
+    integer,allocatable,save :: need_matching(:)
     double precision :: dummy1,dummy2
     logical,parameter :: for_mcatnlo_scale=.true.
     INTEGER              NFKSPROCESS
@@ -333,6 +333,15 @@ contains
        ! Both S and H use the invariant mass of the incoming hard system.
        global_ref_scale=sqrt(max(0d0,sumdot(p(:,1),p(:,2),1d0)))
        return
+    endif
+    ! Clustering overwrites these outputs. Retain their storage between
+    ! S/H evaluations, resizing when a different process is initialized.
+    if(allocated(FxFx_ren_scales))then
+       if(size(FxFx_ren_scales).ne.next_n1+1) &
+            deallocate(FxFx_ren_scales,need_matching)
+    endif
+    if(.not.allocated(FxFx_ren_scales))then
+       allocate(FxFx_ren_scales(0:next_n1),need_matching(next_n1))
     endif
     if (n.eq.next_n1) then
        iproc=nFKSprocess

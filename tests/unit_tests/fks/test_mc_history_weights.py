@@ -58,6 +58,7 @@ class TestMCHistoryWeights(unittest.TestCase):
             result = subprocess.run([
                 shutil.which('gfortran'), str(TEMPLATE.parent / 'Source/timing.f'), '-O2', '-std=legacy', '-fcheck=all',
                 '-ffixed-line-length-none', '-I', str(work),
+                str(TEMPLATE.parent / 'Source/BornSupport/mc_born_types.f90'),
                 str(TEMPLATE / 'fks_phase_space_data.f'),
                 str(work / 'contexts.f90'), str(TEMPLATE / 'weight_lines.f'),
                 str(work / 'weights.f'),
