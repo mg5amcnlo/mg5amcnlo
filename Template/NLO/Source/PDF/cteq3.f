@@ -209,6 +209,8 @@ c
 
       save Ist, Lp, Qsto
       save SB, SB2, SB3
+C     Reuse the parametrization when only x changes.
+      save A0, A1, A2, A3, A4, A5
 
       X  = XX
       Irt = 0

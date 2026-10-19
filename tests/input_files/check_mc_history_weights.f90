@@ -117,7 +117,7 @@ program check_mc_history_weights
               dis_p=3d30
               dis_l=-3d30
               dis_d=4d30
-              call compute_native_NLOPS_weights(p_ev,p_ev,p_ev,1d0,cuts_born,cuts_real,probne)
+              call compute_native_NLOPS_weights(p_ev,p_ev,cuts_born,cuts_real,probne)
               specialized=0d0
               do i=1,icontr
                 specialized(:,itype(i),amppos(i))=specialized(:,itype(i),amppos(i))+wgt(:,i)
@@ -205,13 +205,12 @@ program check_mc_history_weights
   write(*,*) 'PASS native H and S weights' ,cases,' cases'
 end program
 
-subroutine compute_MC_subt_term(p,p_lab,p_cms,jacPS,passcuts,probne)
+subroutine compute_MC_subt_term(p,p_cms,probne)
   use history_test_state
   use extra_weights
   use mc_counterterms, only: gfactsf,gfactcl
   implicit none
-  double precision :: p(0:3,5),p_lab(0:3,5),p_cms(0:3,5),jacPS,probne
-  logical :: passcuts
+  double precision :: p(0:3,5),p_cms(0:3,5),probne
   integer :: i,orders(2)
   probne=test_p
   gfactsf=test_gsoft
@@ -236,7 +235,7 @@ subroutine sreal(p,xi,y,ans)
   ans=sum(amp_split)
 end subroutine
 
-subroutine sreal_deg(p,xi,y,ans1,ans2)
+subroutine sreal_deg(p,xi,ans1,ans2)
   use history_test_state
   implicit none
   double precision :: p(0:3,5),xi,y,ans1,ans2

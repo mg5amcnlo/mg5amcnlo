@@ -57,7 +57,8 @@ class TestStandaloneSudakov(unittest.TestCase):
                     # Born sources and Sudakov object dependencies must work
                     # without FKS runtime initialization or an f2py install.
                     result = subprocess.run(
-                        ['make', 'born.o', 'ewsudakov_functions.o'], cwd=sub,
+                        ['make', 'born.o', 'ewsudakov_functions.o',
+                         'ewsudakov_wrapper.o'], cwd=sub,
                         capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0,
                                      result.stdout + result.stderr)
@@ -402,6 +403,9 @@ class TestBornLibrary(unittest.TestCase):
 
     @staticmethod
     def driver(r, members, sizes, model_lines, contexts, helicity_data=(), signature=None):
+        # This driver links the original Born sources captured before provider
+        # finalization. Its calculatedBorn resets belong to that independent
+        # reference evaluator, which still needs them to invalidate SAVEAMP.
         n,ng,nc,nh,ns = r['nexternal']-1,r['ngraphs'],r['ncolor'],r['nhelicity'],r['nsqamps']
         lines = ['program check', 'use mc_born_support', 'use mc_born_types', 'implicit none']
         lines += ["include 'orders.inc'"]+model_lines+[

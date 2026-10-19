@@ -39,25 +39,22 @@ C     file, others are in ./Source/kin_functions.f
       REAL*8 R2_04,invm2_04,pt_04,eta_04,pt,eta
       external R2_04,invm2_04,pt_04,eta_04,pt,eta
 C     recombination of photons
-      double precision p_reco(0:4,nexternal), R_reco
-      integer iPDG_reco(nexternal),nphiso
+      double precision p_reco(0:4,nexternal)
+      integer iPDG_reco(nexternal)
 c local integers
-      integer i,j
 c bare parton algorithm
       integer nPART
       double precision pPART(0:3,nexternal)
 c jet cluster algorithm
-      integer nQCD,NJET,JET(nexternal)
-      double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
-      integer njet_eta
-      double precision pgamma(0:3,nexternal),pgamma_iso(0:3,nexternal)
+      integer nQCD
+      double precision pQCD(0:3,nexternal)
+      double precision pgamma(0:3,nexternal)
       integer nph
       include "run.inc" ! includes the ickkw parameter
 c logicals that define if particles are leptons, jets or photons. These
 c are filled from the PDG codes (iPDG array) in this function.
-      logical is_a_lp(nexternal),is_a_lm(nexternal),is_a_j(nexternal)
-     $,is_a_ph(nexternal),is_nph_iso(nexternal),is_nextph_iso(nexternal)
-     $,is_nextph_iso_reco(nexternal)
+      logical is_a_lp(nexternal),is_a_lm(nexternal),is_a_j(nexternal),is_nph_iso(nexternal),is_nextph_iso(nexternal),
+     $     is_nextph_iso_reco(nexternal)
       logical is_a_lp_reco(nexternal),is_a_lm_reco(nexternal)
       logical passcuts_leptons, passcuts_unlops_jv, passcuts_photons, 
      $        passcuts_jets, passcuts_pdgs,passcuts_fxfx
@@ -75,9 +72,8 @@ C***************************************************************
       call identify_PART_partons(p,istatus,ipdg,pPART,nPART,is_a_lp,is_a_lm)
 
       ! Apply the Photon cuts on isolated photons based on the bare particles
-      passcuts_user = passcuts_user .and.
-     $ passcuts_photons(p,istatus,ipdg,is_a_lp,is_a_lm,pPART,nPART,
-     $ pgamma,nph,is_nph_iso,is_nextph_iso)
+      passcuts_user = passcuts_user .and.passcuts_photons(p,ipdg,is_a_lp,is_a_lm,pPART,nPART,pgamma,nph,is_nph_iso,
+     $     is_nextph_iso)
       if (.not.passcuts_user) return
 
       ! Recombine the photons and fermions
@@ -95,24 +91,20 @@ C***************************************************************
       call identify_QCD_partons(is_nextph_iso_reco,p_reco,istatus,ipdg_reco,is_a_j,pQCD,nQCD)
 
       ! Apply the UNLOPS/JetVeto cuts
-      passcuts_user = passcuts_user .and. 
-     $                  passcuts_unlops_jv(p_reco,istatus,ipdg_reco,pQCD,nQCD,ickkw)
+      passcuts_user = passcuts_user .and.passcuts_unlops_jv(p_reco,pQCD,nQCD,ickkw)
       if (.not.passcuts_user) return
 
       ! Apply the Jet cuts
       if (ickkw.ne.3) then
-         passcuts_user = passcuts_user .and. 
-     $                  passcuts_jets(p_reco,pQCD,nQCD,pgamma,nph,is_nph_iso,ickkw)
+      passcuts_user = passcuts_user .and.passcuts_jets(p_reco,pQCD,nQCD,ickkw)
          if (.not.passcuts_user) return
       else
-         passcuts_user=passcuts_user .and.
-     $                  passcuts_fxfx(p_reco,pQCD,nQCD)
+      passcuts_user=passcuts_user .and.passcuts_fxfx(pQCD,nQCD)
          if (.not.passcuts_user) return
       endif
 
       ! Apply PDG specific cuts
-      passcuts_user = passcuts_user .and. 
-     $                  passcuts_pdgs(p_reco,istatus,ipdg_reco)
+      passcuts_user = passcuts_user .and.passcuts_pdgs(p_reco)
       if (.not.passcuts_user) return
 
 C***************************************************************
@@ -186,11 +178,9 @@ c Leptons
       return
       end
 
-      logical function passcuts_photons(p,istatus,ipdg,is_a_lp,is_a_lm,
-     $pPART,nPART,pgamma,nph,is_nph_iso,is_nextph_iso)
+      logical function passcuts_photons(p,ipdg,is_a_lp,is_a_lm,pPART,nPART,pgamma,nph,is_nph_iso,is_nextph_iso)
       implicit none
       include 'nexternal.inc'
-      integer istatus(nexternal)
       integer iPDG(nexternal)
       double precision p(0:4,nexternal)
       logical is_a_lp(nexternal),is_a_lm(nexternal)
@@ -214,7 +204,7 @@ c Photon isolation
       real drlist(nexternal)
       double precision pem(0:3,nexternal)
 
-      logical alliso,isolated
+      logical isolated
       integer get_n_tagged_photons
       integer get_n_tagged_photons_initial
       logical is_a_ph(nexternal)
@@ -445,12 +435,11 @@ c more than the Born).
       end
 
 
-      logical function passcuts_fxfx(p,pQCD,nQCD)
+      logical function passcuts_fxfx(pQCD,nQCD)
 c In case of FxFx merging, use the lowest clustering scale to apply the cut
       implicit none
       include 'nexternal.inc'
       include 'cuts.inc'
-      double precision p(0:4,nexternal)
       integer nQCD
       double precision pQCD(0:3,nexternal)
       integer NJET,JET(nexternal)
@@ -487,23 +476,21 @@ c Second apply the actual ptj cut on the minimum FxFx_ren_scales(i)
       return
       end
       
-      logical function passcuts_jets(p,pQCD,nQCD,pgamma,nph,is_nph_iso,ickkw)
+      logical function passcuts_jets(p,pQCD,nQCD,ickkw)
       implicit none
       include 'nexternal.inc'
       double precision p(0:4,nexternal)
-      integer nQCD, nph
-      double precision pQCD(0:3,nexternal), pgamma(0:3,nexternal)
-      logical is_nph_iso(nexternal)
+      integer nQCD
+      double precision pQCD(0:3,nexternal)
       integer ickkw
       include "cuts.inc"
 
       integer NJET,JET(nexternal)
-      double precision rfj,sycut,palg,amcatnlo_fastjetdmerge
+      double precision rfj,sycut,palg
       double precision PJET(0:3,nexternal)
       integer mm
-      integer i,j
+      integer j
 
-      integer get_n_tagged_photons
 
       REAL*8 pt,eta
       external pt,eta
@@ -570,13 +557,10 @@ c Apply the jet cuts
 
 
 
-      logical function passcuts_unlops_jv(p,istatus,ipdg,pQCD,nQCD,ickkw)
+      logical function passcuts_unlops_jv(p,pQCD,nQCD,ickkw)
       implicit none
       include 'nexternal.inc'
-      integer istatus(nexternal)
-      integer iPDG(nexternal)
       double precision p(0:4,nexternal)
-      logical is_a_j(nexternal)
       integer nQCD
       double precision pQCD(0:3,nexternal)
       integer ickkw
@@ -713,11 +697,9 @@ c DeltaR and invariant mass cuts
       return
       end
 
-      logical function passcuts_pdgs(p,istatus,ipdg)
+      logical function passcuts_pdgs(p)
       implicit none
       include 'nexternal.inc'
-      integer istatus(nexternal)
-      integer iPDG(nexternal)
       double precision p(0:4,nexternal)
 c PDG specific cut
       double precision etmin(nincoming+1:nexternal-1)
@@ -766,7 +748,7 @@ C NO NEED TO CHANGE ANY OF THE FUNCTIONS BELOW
 C***************************************************************
 C***************************************************************
       logical function passcuts(p,rwgt)
-      use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      use fks_phase_space_data, only: ybst_til_tolab
       implicit none
       include "nexternal.inc"
       include 'run.inc'
@@ -873,11 +855,18 @@ C
       N = N1
       IF (N.LE.0)            RETURN
       IF (NSORT.NE.0) GO TO 2
-      DO 1 I=1,N
-    1 INDEX(I)=I
+      DO 9000 I=1,N
+      INDEX(I)=I
+ 9000 continue
 C
     2 IF (N.EQ.1)            RETURN
-      IF (MODE)    10,20,30
+      if (MODE.lt.0) then
+         go to 10
+      elseif (MODE.eq.0) then
+         go to 20
+      else
+         go to 30
+      endif
    10 STOP 5 ! CALL SORTTI (A,INDEX,N)
       GO TO 40
 C
@@ -888,11 +877,12 @@ C
 C
    40 IF (NWAY.EQ.0) GO TO 50
       N2 = N/2
-      DO 41 I=1,N2
+      DO 9001 I=1,N2
       ISWAP = INDEX(I)
       K = N+1-I
       INDEX(I) = INDEX(K)
-   41 INDEX(K) = ISWAP
+      INDEX(K) = ISWAP
+ 9001 continue
    50 RETURN
       END
 *     ========================================
@@ -901,32 +891,43 @@ C
       DIMENSION A(N1),INDEX(N1)
 C
       N = N1
-      DO 3 I1=2,N
+      DO 9000 I1=2,N
       I3 = I1
       I33 = INDEX(I3)
       AI = A(I33)
     1 I2 = I3/2
-      IF (I2) 3,3,2
+      if (I2.le.0) go to 3
+      go to 2
     2 I22 = INDEX(I2)
       IF (AI.LE.A (I22)) GO TO 3
       INDEX (I3) = I22
       I3 = I2
       GO TO 1
     3 INDEX (I3) = I33
+ 9000 continue
     4 I3 = INDEX (N)
       INDEX (N) = INDEX (1)
       AI = A(I3)
       N = N-1
-      IF (N-1) 12,12,5
+      if (N-1.le.0) go to 12
+      go to 5
     5 I1 = 1
     6 I2 = I1 + I1
       IF (I2.LE.N) I22= INDEX(I2)
-      IF (I2-N) 7,9,11
+      if (I2-N.lt.0) then
+         go to 7
+      elseif (I2-N.eq.0) then
+         go to 9
+      else
+         go to 11
+      endif
     7 I222 = INDEX (I2+1)
-      IF (A(I22)-A(I222)) 8,9,9
+      if (A(I22)-A(I222).lt.0) go to 8
+      go to 9
     8 I2 = I2+1
       I22 = I222
-    9 IF (AI-A(I22)) 10,11,11
+    9 if (AI-A(I22).lt.0) go to 10
+      go to 11
    10 INDEX(I1) = I22
       I1 = I2
       GO TO 6
@@ -942,32 +943,43 @@ C
       DIMENSION A(N1),INDEX(N1)
 C
       N = N1
-      DO 3 I1=2,N
+      DO 9000 I1=2,N
       I3 = I1
       I33 = INDEX(I3)
       AI = A(I33)
     1 I2 = I3/2
-      IF (I2) 3,3,2
+      if (I2.le.0) go to 3
+      go to 2
     2 I22 = INDEX(I2)
       IF (AI.LE.A (I22)) GO TO 3
       INDEX (I3) = I22
       I3 = I2
       GO TO 1
     3 INDEX (I3) = I33
+ 9000 continue
     4 I3 = INDEX (N)
       INDEX (N) = INDEX (1)
       AI = A(I3)
       N = N-1
-      IF (N-1) 12,12,5
+      if (N-1.le.0) go to 12
+      go to 5
     5 I1 = 1
     6 I2 = I1 + I1
       IF (I2.LE.N) I22= INDEX(I2)
-      IF (I2-N) 7,9,11
+      if (I2-N.lt.0) then
+         go to 7
+      elseif (I2-N.eq.0) then
+         go to 9
+      else
+         go to 11
+      endif
     7 I222 = INDEX (I2+1)
-      IF (A(I22)-A(I222)) 8,9,9
+      if (A(I22)-A(I222).lt.0) go to 8
+      go to 9
     8 I2 = I2+1
       I22 = I222
-    9 IF (AI-A(I22)) 10,11,11
+    9 if (AI-A(I22).lt.0) go to 10
+      go to 11
    10 INDEX(I1) = I22
       I1 = I2
       GO TO 6
@@ -983,32 +995,44 @@ C
       DIMENSION A(N1),INDEX(N1)
 C
       N = N1
-      DO 3 I1=2,N
+      DO 9000 I1=2,N
       I3 = I1
       I33 = INDEX(I3)
       AI = A(I33)
     1 I2 = I3/2
-      IF (I2) 3,3,2
+      if (I2.le.0) go to 3
+      go to 2
     2 I22 = INDEX(I2)
-      IF(ICMPCH(AI,A(I22)))3,3,21
+      if (ICMPCH(AI,A(I22)).le.0) go to 3
+      go to 21
    21 INDEX (I3) = I22
       I3 = I2
       GO TO 1
     3 INDEX (I3) = I33
+ 9000 continue
     4 I3 = INDEX (N)
       INDEX (N) = INDEX (1)
       AI = A(I3)
       N = N-1
-      IF (N-1) 12,12,5
+      if (N-1.le.0) go to 12
+      go to 5
     5 I1 = 1
     6 I2 = I1 + I1
       IF (I2.LE.N) I22= INDEX(I2)
-      IF (I2-N) 7,9,11
+      if (I2-N.lt.0) then
+         go to 7
+      elseif (I2-N.eq.0) then
+         go to 9
+      else
+         go to 11
+      endif
     7 I222 = INDEX (I2+1)
-      IF (ICMPCH(A(I22),A(I222))) 8,9,9
+      if (ICMPCH(A(I22),A(I222)).lt.0) go to 8
+      go to 9
     8 I2 = I2+1
       I22 = I222
-    9 IF (ICMPCH(AI,A(I22))) 10,11,11
+    9 if (ICMPCH(AI,A(I22)).lt.0) go to 10
+      go to 11
    10 INDEX(I1) = I22
       I1 = I2
       GO TO 6
@@ -1030,8 +1054,20 @@ C     ICMPCH=+1 IF HEX VALUES OF IC1 IS GREATER THAN IC2
       IF(I2.GE.0)GOTO 80
       I1=-I1
       I2=-I2
-      IF(I1-I2)80,70,60
- 40   IF(I1-I2)60,70,80
+      if (I1-I2.lt.0) then
+         go to 80
+      elseif (I1-I2.eq.0) then
+         go to 70
+      else
+         go to 60
+      endif
+ 40   if (I1-I2.lt.0) then
+         go to 60
+      elseif (I1-I2.eq.0) then
+         go to 70
+      else
+         go to 80
+      endif
  60   ICMPCH=-1
       RETURN
  70   ICMPCH=0
@@ -1046,28 +1082,25 @@ C     ICMPCH=+1 IF HEX VALUES OF IC1 IS GREATER THAN IC2
       real*8 iso_getdrv40,p1(0:3),p2(0:3)
       real*8 iso_getdr
 c
-      iso_getdrv40=iso_getdr(p1(0),p1(1),p1(2),p1(3),
-     #                       p2(0),p2(1),p2(2),p2(3))
+      iso_getdrv40=iso_getdr(p1(1),p1(2),p1(3),p2(1),p2(2),p2(3))
       return
       end
 
 
-      function iso_getdr(en1,ptx1,pty1,pl1,en2,ptx2,pty2,pl2)
+      function iso_getdr(ptx1,pty1,pl1,ptx2,pty2,pl2)
       implicit none
-      real*8 iso_getdr,en1,ptx1,pty1,pl1,en2,ptx2,pty2,pl2,deta,dphi,
-     # iso_getpseudorap,iso_getdelphi
+      real*8 iso_getdr,ptx1,pty1,pl1,ptx2,pty2,pl2,deta,dphi,iso_getpseudorap,iso_getdelphi
 c
-      deta=iso_getpseudorap(en1,ptx1,pty1,pl1)-
-     #     iso_getpseudorap(en2,ptx2,pty2,pl2)
+      deta=iso_getpseudorap(ptx1,pty1,pl1)-iso_getpseudorap(ptx2,pty2,pl2)
       dphi=iso_getdelphi(ptx1,pty1,ptx2,pty2)
       iso_getdr=sqrt(dphi**2+deta**2)
       return
       end
 
 
-      function iso_getpseudorap(en,ptx,pty,pl)
+      function iso_getpseudorap(ptx,pty,pl)
       implicit none
-      real*8 iso_getpseudorap,en,ptx,pty,pl,tiny,pt,eta,th
+      real*8 iso_getpseudorap,ptx,pty,pl,tiny,pt,eta,th
       parameter (tiny=1.d-5)
 c
       pt=sqrt(ptx**2+pty**2)

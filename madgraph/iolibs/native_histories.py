@@ -223,7 +223,7 @@ def write_module(directory,outer,by_id,keys,reachable,rows,maxproc):
     def array(name,values):
         return 'integer,parameter::%s(%d)=[%s]' % (name,len(values),','.join(map(str,values)))
     lines = ['module mc_native_context','use mc_born_support','use mc_born_types','implicit none',
-             'integer,parameter::local_context=%d,local_provider=%d' % (outer['context'],outer['provider']),
+             'integer,parameter::local_context=%d' % outer['context'],
              array('native_context_ids',[c for c,s in keys]),
              array('native_sector_ids',[s for c,s in keys]),
              array('native_provider_ids',[by_id[c]['provider'] for c,s in keys]),

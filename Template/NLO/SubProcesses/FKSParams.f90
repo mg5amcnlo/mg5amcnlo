@@ -34,7 +34,7 @@ contains
     logical, save :: HasReadOnce=.False.,paramPrinted=.false.
     logical :: force,couldRead,printParam
     character(*) :: filename
-    CHARACTER(len=64) :: buff, buff2, mode
+    CHARACTER(len=64) :: buff
     include "orders.inc"
     integer :: i,j
     couldRead=.False.
@@ -323,11 +323,11 @@ contains
     use_fxfx_finite_terms=FxFxPythia8FiniteTerms.or.FxFxPythia8Matching
   end function use_fxfx_finite_terms
 
-  integer function get_fks_isr_mapping(fixed_order,nlo_ps,shower) result(mapping)
+  integer function get_fks_isr_mapping(nlo_ps,shower) result(mapping)
     ! Resolve run settings on every entry so forward/inverse maps agree,
     ! including diagnostics which read the FKS card after setrun.
     implicit none
-    logical, intent(in) :: fixed_order,nlo_ps
+    logical, intent(in) :: nlo_ps
     character(*), intent(in) :: shower
     select case (FKSISRMapping)
     case (0)
@@ -347,12 +347,12 @@ contains
     endif
   end function get_fks_isr_mapping
 
-  subroutine print_fks_isr_mapping(fixed_order,nlo_ps,shower)
+  subroutine print_fks_isr_mapping(nlo_ps,shower)
     implicit none
-    logical, intent(in) :: fixed_order,nlo_ps
+    logical, intent(in) :: nlo_ps
     character(*), intent(in) :: shower
     integer mapping
-    mapping=get_fks_isr_mapping(fixed_order,nlo_ps,shower)
+    mapping=get_fks_isr_mapping(nlo_ps,shower)
     if (mapping.eq.1) then
        write(*,*) 'FKS ISR mapping: symmetric'
     else

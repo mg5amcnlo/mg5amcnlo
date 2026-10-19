@@ -13,7 +13,7 @@
       real*8,allocatable,dimension(:,:,:,:) :: a2d
       logical,allocatable,dimension(:) :: valid_ord_virt
       parameter (maxdeg=20)
-      real*8 absXS,virt,ave_fun,fun_at_x,eps,sum_w,yfit,x(*)
+      real*8 absXS,virt,ave_fun,fun_at_x,eps,yfit,x(*)
       logical fit_done,verbose
       parameter (verbose=.false.)
       character(len=3) :: dummy
@@ -331,7 +331,8 @@ C***  FIRST EXECUTABLE STATEMENT  POLFIT
  2    DO I = 1,M
          W(I) = 1.0
       enddo
- 4    IF (EPS .GE. 0.0) GO TO 8
+ 4    KSIG = 1
+      IF (EPS .GE. 0.0) GO TO 8
 C
 C DETERMINE SIGNIFICANCE LEVEL INDEX TO BE USED IN STATISTICAL TEST FOR
 C CHOOSING DEGREE OF POLYNOMIAL FIT
@@ -377,7 +378,8 @@ C
 C
 C COMPUTE FIT OF DEGREE ZERO
 C
- 13   TEMD1 = 0.0D0
+ 13   W1 = W11
+      TEMD1 = 0.0D0
       DO I = 1,M
         K4PI = K4 + I
         TEMD1 = TEMD1 + DBLE(W(I))*DBLE(Y(I))*DBLE(A(K4PI))
@@ -625,11 +627,11 @@ C***FIRST EXECUTABLE STATEMENT  PVALUE
       IF (L .LT. 0) GO TO 12
       NDO = MAX(NDER,0)
       NDO = MIN(NDO,L)
-      MAXORD = A(1) + 0.5
+      MAXORD = INT(A(1) + 0.5)
       K1 = MAXORD + 1
       K2 = K1 + MAXORD
       K3 = K2 + MAXORD + 2
-      NORD = A(K3) + 0.5
+      NORD = INT(A(K3) + 0.5)
       IF (L .GT. NORD) GO TO 11
       K4 = K3 + L + 1
       IF (NDER .LT. 1) GO TO 2

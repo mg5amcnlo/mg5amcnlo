@@ -33,8 +33,6 @@ c
       common/fks_indices/i_fks,j_fks
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-      logical                calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
       integer          isum_hel
       logical                    multi_channel
       common/to_matrix/isum_hel, multi_channel
@@ -144,7 +142,6 @@ c
 c
 c     Get and save base amplitudes
 c
-      calculatedBorn=.false.
 c Call the Born twice to make sure that all common blocks are correctly filled.
       call sborn(p_born,wgt1)
       call sborn(p_born,wgt1)
@@ -181,7 +178,6 @@ c nexternal is the number for the real configuration. Subtract 1 for the Born.
                   p_born(k,j)=p_born1(k,j)
                enddo
             enddo
-            calculatedBorn=.false.
             call sborn(p_born,wgt1)
 c        Look for matches
             do j=2,mapconfig(0)

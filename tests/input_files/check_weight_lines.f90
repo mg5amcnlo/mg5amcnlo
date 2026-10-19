@@ -73,7 +73,6 @@ contains
     ipr(ict)=ict
     orderstag(ict)=ict
     amppos(ict)=ict
-    parton_pdf(:,:,ict)=ict
     group_size(ict)=ict
     group_start(ict)=ict
     group_members(ict)=ict
@@ -93,7 +92,6 @@ contains
     bias_wgt(ict)=ict
     plot_wgts(:,ict)=ict
     shower_scale(ict)=ict
-    shower_scale_a(ict,:,:)=ict
     unwgt(:,ict)=ict
     need_match(:,ict)=ict
   end subroutine
@@ -113,13 +111,13 @@ contains
     if(any(pdg(:,ict).ne.ict).or.any(pdg_uborn(:,ict).ne.ict).or. &
          any(parton_pdg_uborn(:,1:nproc,ict).ne.ict).or. &
          any(parton_pdg(:,1:nproc,ict).ne.ict).or. &
-         any(parton_pdf(:,1:nproc,ict).ne.ict).or.any(need_match(:,ict).ne.ict)) &
+         any(need_match(:,ict).ne.ict)) &
          error stop 'lost flavour arrays'
     if(any(momenta(:,:,ict).ne.ict).or.any(momenta_m(:,:,:,ict).ne.ict).or. &
          any(wgt(:,ict).ne.ict).or.any(wgt_ME_tree(:,ict).ne.ict).or. &
          any(bjx(:,ict).ne.ict).or.any(scales2(:,ict).ne.ict))error stop 'lost kinematic arrays'
-    if(any([g_strong(ict),y_bst(ict),cpower(ict),bias_wgt(ict),shower_scale(ict)].ne.ict).or. &
-         any(shower_scale_a(ict,:,:).ne.ict))error stop 'lost scale data'
+    if(any([g_strong(ict),y_bst(ict),cpower(ict),bias_wgt(ict),shower_scale(ict)].ne.ict)) &
+         error stop 'lost scale data'
     if(any(wgts(1:nwgt,ict).ne.ict).or.any(plot_wgts(1:nwgt,ict).ne.ict).or. &
          any(parton_iproc(1:nproc,ict).ne.ict).or.any(unwgt(1:nproc,ict).ne.ict)) &
          error stop 'lost reweight data'

@@ -9,4 +9,4 @@ c***********************************************************************
       character*7 pdsublabel(2)
       integer lhaid, pdfscheme
       common/to_pdf/lhaid,pdfscheme,pdlabel,epa_label,pdsublabel
- 	
+

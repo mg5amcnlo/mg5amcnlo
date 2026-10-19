@@ -190,7 +190,7 @@ c leshouche.inc information
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
-      integer i,j,k
+      integer i,j
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
@@ -331,6 +331,7 @@ C read the various information from the configs_and_props_info.dat file
       integer mothup(2,nexternal-1,maxproc)
       integer icolup(2,nexternal-1,max_bcol)
       include 'born_leshouche.inc'
+      icolup_d=0
       if (fks_configs.eq.1) then
          if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
 c SPECIAL for [LOonly=QCD] process. Simply use the information from the
@@ -345,7 +346,7 @@ c born_leshouche.inc file.
                mothup_d(1,1,nexternal,j)=mothup(1,fks_j_d(1),j)
                mothup_d(1,2,nexternal,j)=mothup(2,fks_j_d(1),j)
             enddo
-            do j=1,maxflow
+            do j=1,max_bcol
                do i=1,nexternal-1
                   icolup_d(1,1,i,j)=icolup(1,i,j)
                   icolup_d(1,2,i,j)=icolup(2,i,j)
@@ -359,7 +360,6 @@ c born_leshouche.inc file.
       endif
 
       open(unit=78, file='leshouche_info.dat', status='old')
-      icolup_d=0 ! initialize colour to zero, (makes sure that valid_dipole() are set correctly).
       do while (.true.)
         read(78,'(a)',end=999) buff
         if (buff(:1).eq.'#') cycle

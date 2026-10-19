@@ -3,7 +3,7 @@
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
-      double precision p(0:3,nexternal-1),ans
+      double precision p(0:3,nexternal-1)
       type(BornRequest),save::request
       type(BornResult),save::result
       integer icnt
@@ -16,7 +16,7 @@
       amp_split_cnt=result%%split_counterterms
       end
       INTEGER FUNCTION GET_EXTRA_CNT_COLOR(ICNT,IPART)
-      INTEGER ICNT IPART
+      INTEGER ICNT, IPART
       INCLUDE 'nexternal.inc'
       INTEGER NEXTERNALB
       PARAMETER(NEXTERNALB=NEXTERNAL-1)
@@ -36,7 +36,7 @@
       RETURN
       END
       INTEGER FUNCTION GET_EXTRA_CNT_PDG(ICNT,IPART)
-      INTEGER ICNT IPART
+      INTEGER ICNT, IPART
       INCLUDE 'nexternal.inc'
       INTEGER NEXTERNALB
       PARAMETER(NEXTERNALB=NEXTERNAL-1)
@@ -56,7 +56,7 @@
       RETURN
       END
       DOUBLE PRECISION FUNCTION GET_EXTRA_CNT_CHARGE(ICNT,IPART)
-      INTEGER ICNT IPART
+      INTEGER ICNT, IPART
       INCLUDE 'nexternal.inc'
       INTEGER NEXTERNALB
       PARAMETER(NEXTERNALB=NEXTERNAL-1)

@@ -180,9 +180,6 @@ c the value of variable scale in common block /to_scale/
 c this is to avoid too low dynamic scales      
       double precision minscaleR
       parameter (minscaleR=2d0)
-c After recomputing alphaS, be sure to set 'calculatedBorn' to false
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
 c
       temp_scale_id='  '
       if(fixed_ren_scale)then
@@ -199,11 +196,6 @@ c The following is for backward compatibility. DO NOT REMOVE
       scale=muR
       g=sqrt(4d0*pi*alphas(scale))
       call update_as_param()
-c Reset calculatedBorn, because the couplings might have been changed.
-c This is needed in particular for the MC events, because there the
-c coupling should be set according to the real-emission kinematics,
-c even when computing the Born matrix elements.
-      calculatedBorn=.false.
 c
       return
       end
@@ -409,7 +401,7 @@ c a scale to be used as a reference for factorizations scales
       include 'nexternal.inc'
       include 'run.inc'
       double precision muF_ref_dynamic,pp(0:3,nexternal)
-      double precision tmp,scale_global_reference,pt,et,dot,xm2,sumdot
+      double precision tmp,scale_global_reference,pt,et,dot,sumdot
       external pt,et,dot,sumdot
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
@@ -457,8 +449,6 @@ c (Ellis-Sexton scale squared) in common block /COUPL_ES/
       include 'q_es.inc'
       double precision pp(0:3,nexternal),QES
       double precision QES_temp,QES_ref_dynamic
-      double precision pi
-      parameter (pi=3.14159265358979323846d0)
       character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
       common/cscales_id_string/muR_id_str,muF1_id_str,
      #                         muF2_id_str,QES_id_str
@@ -533,9 +523,9 @@ c a scale to be used as a reference for renormalization scale
       include 'run.inc'
       include 'cuts.inc'
       double precision scale_global_reference,pp(0:3,nexternal)
-      double precision tmp,pt,et,dot,xm2,sumdot,xmt2,ptmp(0:3)
+      double precision tmp,pt,et,dot,sumdot
       external pt,et,dot,sumdot
-      integer i,j
+      integer i
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
       double precision user_dynamical_scale

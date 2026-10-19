@@ -22,7 +22,7 @@ class TestVirtualPooled(unittest.TestCase):
         cls.build = tempfile.TemporaryDirectory(prefix='mg5_virtual_pool_build_')
         cls.executable = Path(cls.build.name) / 'check'
         result = subprocess.run([
-            shutil.which('gfortran'), '-O2', '-fno-automatic', '-fcheck=all',
+            shutil.which('gfortran'), '-O2', '-frecursive', '-fcheck=all',
             '-ffpe-trap=invalid,zero,overflow',
             str(TEMPLATE / 'virtual_envelope_carrier.f90'),
             str(TEMPLATE / 'virtual_pooled.f90'),
@@ -72,7 +72,7 @@ class TestVirtualPooled(unittest.TestCase):
         self.mode(0)
         self.run_case('inactive')
 
-    def test_fks_born_query_resets_the_previous_colour_request_with_static_locals(self):
+    def test_fks_born_query_resets_the_previous_colour_request(self):
         work = self.path/'SubProcesses/P0_check'
         work.mkdir(parents=True)
         model = self.path/'Source/MODEL'
@@ -87,15 +87,19 @@ class TestVirtualPooled(unittest.TestCase):
         helper = source[source.index('      subroutine prepare_pooled_helicities('):]
         helper = helper[:helper.index('      subroutine deferred_virtual_context(')]
         (work/'prepare.f').write_text(helper)
-        executable = work/'check'
-        result = subprocess.run([shutil.which('gfortran'), '-O1', '-fno-automatic', '-fcheck=all',
-            '-ffixed-line-length-none', '-I', str(work),
-            str(ROOT/'Template/NLO/Source/BornSupport/mc_born_types.f90'),
-            str(ROOT/'tests/input_files/check_virtual_physics_born.f90'), str(work/'prepare.f'),
-            '-o', str(executable)], cwd=work, capture_output=True, text=True, timeout=30)
-        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
-        result = subprocess.run([str(executable)], cwd=work, capture_output=True, text=True, timeout=30)
-        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        # Exercise production automatic storage and the original static-local
+        # regression: neither may reuse a colour request for normalization.
+        for storage in ('-frecursive', '-fno-automatic'):
+            with self.subTest(storage=storage):
+                executable = work/'check'
+                result = subprocess.run([shutil.which('gfortran'), '-O1', storage, '-fcheck=all',
+                    '-ffixed-line-length-none', '-I', str(work),
+                    str(ROOT/'Template/NLO/Source/BornSupport/mc_born_types.f90'),
+                    str(ROOT/'tests/input_files/check_virtual_physics_born.f90'), str(work/'prepare.f'),
+                    '-o', str(executable)], cwd=work, capture_output=True, text=True, timeout=30)
+                self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+                result = subprocess.run([str(executable)], cwd=work, capture_output=True, text=True, timeout=30)
+                self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
 
     @unittest.skipUnless(np is not None, 'requires numpy')
     def test_physics_capture_dresses_the_fit_without_changing_mint(self):

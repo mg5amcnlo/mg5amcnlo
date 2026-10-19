@@ -18,7 +18,7 @@ class TestIEEEScope(unittest.TestCase):
             # misses IEEE imports propagated through their .mod interfaces.
             mint_support(work)
             result = subprocess.run([
-                'gfortran', '-O', '-fno-automatic', '-c', 'params.f90',
+                'gfortran', '-O', '-c', 'params.f90',
                 str(TEMPLATE / 'virtual_envelope_carrier.f90'),
                 str(TEMPLATE / 'virtual_pooled.f90'),
                 str(TEMPLATE / 'mint_module.f90'),
@@ -42,7 +42,7 @@ class TestIEEEScope(unittest.TestCase):
                 with self.subTest(module=name):
                     (work / 'probe.f90').write_text(source)
                     result = subprocess.run([
-                        'gfortran', '-O', '-fno-automatic', '-S', 'probe.f90'],
+                        'gfortran', '-O', '-S', 'probe.f90'],
                         cwd=work, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                     self.assertNotIn('ieee_procedure_', (work / 'probe.s').read_text())

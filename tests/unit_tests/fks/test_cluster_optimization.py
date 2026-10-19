@@ -61,7 +61,7 @@ class TestClusterOptimization(unittest.TestCase):
         (work / 'clustering.f').write_text('\n'.join(routines))
         cls.executable = work / 'check_cluster_optimization'
         result = subprocess.run([
-            shutil.which('gfortran'), str(TEMPLATE.parent / 'Source/timing.f'), '-O2', '-g', '-std=legacy', '-fno-automatic',
+            shutil.which('gfortran'), str(TEMPLATE.parent / 'Source/timing.f'), '-O2', '-g', '-std=legacy',
             '-ffixed-line-length-132', '-fcheck=all', '-fbacktrace',
             '-finit-integer=-777', '-finit-real=snan', '-ffpe-trap=invalid,zero,overflow',
             '-I', str(work), str(work / 'state.f90'), str(work / 'cached.f'),

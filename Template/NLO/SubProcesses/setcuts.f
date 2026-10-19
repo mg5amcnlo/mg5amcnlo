@@ -767,7 +767,7 @@ c nFKSprocess. Auxiliary inner matching histories keep their own maps.
          s_mass(i)=s_mass_FKS(sampling_sector,i,ichan)
       enddo
       cBW_level_max=cBW_FKS_level_max(sampling_sector,ichan)
-      call set_granny(nFKSprocess,iconf,mass_min(-nexternal,ichan))
+      call set_granny(iconf,mass_min(-nexternal,ichan))
       cache(slot)%bounds(1)=tau_Born_lower_bound
       cache(slot)%bounds(2)=tau_lower_bound
       cache(slot)%bounds(3)=tau_lower_bound_resonance

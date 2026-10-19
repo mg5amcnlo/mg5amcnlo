@@ -35,7 +35,7 @@ class TestVirtualEnvelopeCarrier(unittest.TestCase):
         cls.build = tempfile.TemporaryDirectory(prefix='mg5_velocity_carrier_')
         cls.executable = Path(cls.build.name)/'check'
         result = subprocess.run([
-            shutil.which('gfortran'), '-O2', '-fno-automatic', '-fcheck=all',
+            shutil.which('gfortran'), '-O2', '-frecursive', '-fcheck=all',
             '-ffpe-trap=invalid,zero,overflow',
             str(ROOT/'Template/NLO/SubProcesses/virtual_envelope_carrier.f90'),
             str(ROOT/'tests/input_files/check_virtual_envelope_carrier.f90'),

@@ -27,7 +27,7 @@ class ConditionalVirtualIntegration(unittest.TestCase):
         cls.build = tempfile.TemporaryDirectory(prefix='mg5_conditional_build_')
         cls.addClassCleanup(cls.build.cleanup)
         cls.exe = Path(cls.build.name) / 'check'
-        command = [shutil.which('gfortran'), '-O2', '-fno-automatic', '-fcheck=all',
+        command = [shutil.which('gfortran'), '-O2', '-frecursive', '-fcheck=all',
                    '-ffpe-trap=invalid,zero,overflow',
                    str(TEMPLATE / 'virtual_envelope_carrier.f90'),
                    str(TEMPLATE / 'virtual_pooled.f90'),

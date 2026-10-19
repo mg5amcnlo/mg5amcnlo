@@ -56,7 +56,7 @@ class TestTauCutCache(unittest.TestCase):
         (work / 'granny.f').write_text(fortran_routine(TEMPLATE / 'fks_singular.f', 'set_granny'))
         cls.executable = work / 'check_tau_cache'
         result = subprocess.run([
-            shutil.which('gfortran'), '-O2', '-fcheck=all', '-fbacktrace', '-fno-automatic',
+            shutil.which('gfortran'), '-O2', '-fcheck=all', '-fbacktrace',
             '-ffixed-line-length-132', '-I', str(work), str(TEMPLATE / 'FKSParams.f90'),
             str(TEMPLATE / 'fks_phase_space_data.f'), str(work / 'contexts.f90'),
             str(work / 'cached.f'), str(work / 'fresh.f'), str(work / 'granny.f'),

@@ -1,5 +1,5 @@
       subroutine finalize_event(xx,weight,lunlhe,putonshell,p_label)
-      use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat,p_born
+      use fks_phase_space_data, only: ybst_til_tolab,p_born
       use fks_phase_space, only: fks_phase_space_point,generate_born_event,
      $     generate_momenta
       use mint_module
@@ -12,7 +12,7 @@
       include "run.inc"
       logical Hevents
       common/SHevents/Hevents
-      integer i,j,lunlhe,p_label
+      integer i,lunlhe,p_label
       real*8 xx(ndimmax),weight,evnt_wgt
       logical putonshell
       double precision wgt
@@ -129,9 +129,6 @@ c get info on beam and PDFs
       call write_lhef_init(lunlhe,
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      #  XSECUP,XERRUP,XMAXUP,LPRUP)
- 250  format(1x,i8)
- 501  format(2(1x,i6),2(1x,d14.8),2(1x,i2),2(1x,i8),1x,i2,1x,i3)
- 502  format(3(1x,d14.8),1x,i6)
 
       return
       end
@@ -151,7 +148,7 @@ c get info on beam and PDFs
       parameter (zero=0.d0)
       integer izero
       parameter (izero=0)
-      double precision aqcd,aqed,scale
+      double precision aqcd,aqed
       character*1000 buff
       INTEGER MAXNUP,i,j,k
       PARAMETER (MAXNUP=500)
@@ -160,6 +157,8 @@ c get info on beam and PDFs
       DOUBLE PRECISION XWGTUP,AQEDUP,AQCDUP,SCALUP,
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP),
      # SCALUP_a(MAXNUP,MAXNUP)
+c Reuse the large event-scale workspace without using the call stack.
+      save SCALUP_a
       include 'nFKSconfigs.inc'
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
@@ -217,7 +216,7 @@ c limits; Delta additionally records the effective directed scales.
       endif
 c
       aqcd=g**2/(4d0*pi)
-      aqed=gal(1)**2/(4d0*pi)
+      aqed=dble(gal(1)**2/(4d0*pi))
 c
 c 'write_header_init' should be called after 'aqcd' has been set,
 c because it includes a call to 'setrun', which resets the value of

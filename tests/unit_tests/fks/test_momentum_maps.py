@@ -151,7 +151,7 @@ class TestMomentumMaps(unittest.TestCase):
         cls.executable = work / "check_maps"
         command = [shutil.which("gfortran"), str(TEMPLATE.parent / 'Source/timing.f'), "-O2", "-std=legacy",
                    "-ffixed-line-length-none", "-ffunction-sections",
-                   "-fdata-sections", "-fcheck=all", "-fno-automatic",
+                   "-fdata-sections", "-fcheck=all",
                    "-Wl,-dead_strip" if sys.platform == "darwin" else "-Wl,--gc-sections",
                    "-I", str(work),
                    str(TEMPLATE / "fks_phase_space_data.f"),

@@ -15,7 +15,7 @@ module qed_shower_support
   public :: pythia8_qed_radiator
 contains
 
-  pure recursive logical function pythia8_qed_radiator(pdg, charge, is_initial) result(active)
+  pure logical function pythia8_qed_radiator(pdg, charge, is_initial) result(active)
     integer, intent(in) :: pdg
     double precision, intent(in) :: charge
     logical, intent(in), optional :: is_initial
@@ -33,7 +33,7 @@ contains
     endif
   end function pythia8_qed_radiator
 
-  pure recursive subroutine build_pythia8_qed_dipoles(p,pdg,charge,mass,nincoming, &
+  pure subroutine build_pythia8_qed_dipoles(p,pdg,charge,mass,nincoming, &
        dipoles,ierr,allow_beam_recoil)
     use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     double precision, intent(in) :: p(0:,:),charge(:),mass(:)

@@ -80,7 +80,7 @@ class TestBornSpreading(unittest.TestCase):
                  'pdg_equal', 'momenta_equal')))
             executable = work / 'check_sectors'
             result = subprocess.run([
-                shutil.which('gfortran'), '-O2', '-fcheck=all', '-fno-automatic',
+                shutil.which('gfortran'), '-O2', '-fcheck=all',
                 '-ffixed-line-length-132'] + support + [
                 str(work / 'group_context.f90'), str(TEMPLATE / 'weight_lines.f'),
                 str(work / 'grouping.f'),
@@ -118,7 +118,7 @@ class TestBornSpreading(unittest.TestCase):
             work = Path(tmp)
             executable = work / 'check_restart'
             result = subprocess.run([
-                shutil.which('gfortran'), '-O2', '-fcheck=all', '-fno-automatic'] +
+                shutil.which('gfortran'), '-O2', '-fcheck=all'] +
                 mint_support(work) + [
                 str(ROOT / 'tests/input_files/check_born_spreading_restart.f90'),
                 '-o', str(executable)], cwd=work, capture_output=True, text=True)
@@ -167,7 +167,7 @@ class TestBornSpreading(unittest.TestCase):
             (work / 'maps.f').write_text(source)
             executable = work / 'check_measure'
             result = subprocess.run([
-                shutil.which('gfortran'), '-O2', '-fcheck=all', '-fno-automatic',
+                shutil.which('gfortran'), '-O2', '-fcheck=all',
                 '-ffixed-line-length-132', '-I', str(work),
                 '-ffunction-sections', '-fdata-sections',
                 '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections'

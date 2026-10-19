@@ -401,7 +401,9 @@ recomputes collider energy and mass sums from the current inputs; the former
 `generate_momenta_conf` cache is gone. `set_tau_min` retains its existing cache
 with native epoch and configuration checks and is not called by inner radiation
 histories. Clustering's topology cache also follows the native epoch. The
-context activation sequence and `calculatedBorn=.false.` resets are retained.
+context activation sequence is retained. Born providers own their amplitude
+cache and validate momenta and model state on each request; outer callers no
+longer maintain a separate `calculatedBorn` flag.
 
 The driver's existing explicit restoration of colour flow, shower scales,
 matching flags, G factors and prefactors remains. The new routine has no saved

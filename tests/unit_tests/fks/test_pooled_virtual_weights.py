@@ -55,7 +55,9 @@ class TestPooledVirtualWeights(unittest.TestCase):
         (work / 'routines.f').write_text(wrappers + routines)
         cls.executable = work / 'check_weights'
         result = subprocess.run([
-            shutil.which('gfortran'), '-O2', '-fcheck=all', '-fno-automatic',
+            shutil.which('gfortran'), '-O2', '-fcheck=all', '-frecursive',
+            '-finit-real=snan', '-finit-integer=-13579',
+            '-ffpe-trap=invalid,zero,overflow',
             '-std=legacy', '-ffixed-line-length-none', '-I', str(work),
             str(TEMPLATE.parent / 'Source/timing.f'),
             str(TEMPLATE / 'weight_lines.f'),

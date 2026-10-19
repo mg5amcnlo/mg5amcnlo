@@ -281,8 +281,6 @@ c dump momenta in a fort.80 file
       double precision wgt,x(99),p(0:3,nexternal),fx
      $     ,amp(amp_split_size),wgt_PS,xp(0:3,nexternal+1),p_lab(0:3
      $     ,nexternal) ,p_cms(0:3,nexternal)
-      logical                calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer              nFKSprocess
@@ -290,7 +288,6 @@ c dump momenta in a fort.80 file
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
       
-      calculatedBorn=.false.
       call set_cms_stuff(-100)
       if (ilim.eq.2) then
          call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
@@ -329,8 +326,6 @@ c dump momenta in a fort.80 file
       double precision wgt,x(99),p(0:3,nexternal),fx,sector,fks_Sij
      $     ,limit_split(amp_split_size),limit_PS_wgt,lxp(0:3,nexternal
      $     +1),p_lab(0:3,nexternal) ,p_cms(0:3,nexternal)
-      logical                calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
       logical        softtest,colltest
       common/sctests/softtest,colltest
       integer i_fks,j_fks
@@ -339,7 +334,6 @@ c dump momenta in a fort.80 file
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
       
-      calculatedBorn=.false.
       if (softtest) then
          call set_cms_stuff(0)
          call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
@@ -402,8 +396,7 @@ c over other histories is an integration operation, not a native limit test.
       common/c_leading_cflows/is_leading_cflow,num_leading_cflows
       integer i_fks,j_fks,iflow,n_connect,ibornflow
       common/fks_indices/i_fks,j_fks
-      logical calculatedBorn,include_gfun
-      common/ccalculatedBorn/calculatedBorn
+      logical include_gfun
       double precision pmass(nexternal)
       common/to_mass/pmass
       external fks_Hij,mc_born_flow_weight
@@ -424,7 +417,6 @@ c sum without a randomly selected flow or a stale Born-flow probability.
          if (.not.is_leading_cflow(iflow)) cycle
          born_flow_picked=iflow
          call init_process_module_n1body_wrapper(born_flow_picked)
-         calculatedBorn=.false.
          call set_cms_stuff(-100)
          include_gfun=.true.
          call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p,p_cms,
@@ -496,8 +488,6 @@ c sum without a randomly selected flow or a stale Born-flow probability.
       integer jj,ntry
       double precision ran2
       external ran2
-      logical                calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
       ntry=0
       do jj=1,ndim
          x(jj)=ran2()
@@ -505,7 +495,6 @@ c sum without a randomly selected flow or a stale Born-flow probability.
       new_point=.true.
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
-      calculatedBorn=.false.
       do while (( wgt.lt.0 .or. p(0,1).le.0d0 .or. p_born(0,1).le.0d0
      &     ) .and. ntry .lt. 1000)
          do jj=1,ndim
@@ -514,7 +503,6 @@ c sum without a randomly selected flow or a stale Born-flow probability.
          new_point=.true.
          wgt=1d0
          call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
-         calculatedBorn=.false.
          ntry=ntry+1
       enddo
       if (ntry.ge.1000) then
@@ -723,7 +711,7 @@ c-----
       call setrun               !Sets up run parameters
       call FKSParamReader(paramFileName,.true.,.false.)
       call configure_fxfx_sudakov(ickkw,nlo_ps,shower_mc,.true.)
-      call print_fks_isr_mapping(fixed_order,nlo_ps,shower_mc)
+      call print_fks_isr_mapping(nlo_ps,shower_mc)
       call setpara('param_card.dat') !Sets up couplings and masses
       call fill_configurations_common
       ! initialise the global, but process dependent, information in the process module.

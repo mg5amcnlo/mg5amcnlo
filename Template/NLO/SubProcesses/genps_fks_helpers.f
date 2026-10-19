@@ -220,7 +220,7 @@ c collapsing the t-channel bounds used by native history inversions.
       end function LAMBDA
 
 
-      SUBROUTINE YMINMAX(X,Y,Z,U,V,W,YMIN,YMAX)
+      SUBROUTINE YMINMAX(X,Z,U,V,W,YMIN,YMAX)
 C**************************************************************************
 C     This is the G function from Particle Kinematics by
 C     E. Byckling and K. Kajantie, Chapter 4 p. 91 eqs 5.28
@@ -235,7 +235,7 @@ c
 c
 c     Arguments
 c
-      Double precision x,y,z,u,v,w              !inputs  y is dummy
+      Double precision x,z,u,v,w
       Double precision ymin,ymax                !output
 c
 c     Local
@@ -330,9 +330,9 @@ c compute phi:
            if (get_phi_from_p.lt.0d0) get_phi_from_p=get_phi_from_p+2d0*pi
         endif
       end function get_phi_from_p
-      double precision function get_xi_from_p(i_fks,j_fks,p_cms)
+      double precision function get_xi_from_p(i_fks,p_cms)
         implicit none
-        integer :: i_fks,j_fks
+        integer :: i_fks
         double precision,dimension(0:3,nexternal) :: p_cms
         get_xi_from_p=sqrt(2d0)*p_cms(0,i_fks)/sqrt(dot(p_cms(0,1),p_cms(0,2)))
       end function get_xi_from_p

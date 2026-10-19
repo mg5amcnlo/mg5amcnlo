@@ -32,13 +32,12 @@ C
 C     LOCAL VARIABLES                                                 
 C         
 C     
-      INTEGER I, ICROSS,LP
+      INTEGER I, ICROSS
       DOUBLE PRECISION CX1,SX1,UX1,DX1
       DOUBLE PRECISION G2
 C     
 C     STUFF FOR UPC
 C     
-      DOUBLE PRECISION PHOTONPDFSQUARE
 C     
 C     EXTERNAL FUNCTIONS                                              
 C         
@@ -60,12 +59,10 @@ C     STUFF FOR DRESSED EE COLLISIONS
 C     
       INCLUDE 'eepdf.inc'
       DOUBLE PRECISION EE_COMP_PROD
-      DOUBLE PRECISION DUMMY_COMPONENTS(N_EE)
       DOUBLE PRECISION CX1_COMPONENTS(N_EE),SX1_COMPONENTS(N_EE)
      $ ,UX1_COMPONENTS(N_EE),DX1_COMPONENTS(N_EE)
       DOUBLE PRECISION G2_COMPONENTS(N_EE)
 
-      INTEGER I_EE
       INCLUDE '../../Source/PDF/pdf.inc'
 C     
 C     DATA                                                            

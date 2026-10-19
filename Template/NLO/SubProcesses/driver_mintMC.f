@@ -13,8 +13,6 @@ c**************************************************************************
 C
 C     CONSTANTS
 C
-      double precision zero
-      parameter       (ZERO = 0d0)
       include 'nexternal.inc'
       include 'genps.inc'
       include 'nFKSconfigs.inc'
@@ -24,7 +22,7 @@ C
 C
 C     LOCAL
 C
-      integer i,j,k,l,l1,l2,nndim,nevts,p_label
+      integer i,j,nndim,nevts,p_label
 
       integer lunlhe
       parameter (lunlhe=98)
@@ -69,7 +67,6 @@ c Vegas stuff
       logical SHsep
       logical Hevents
       common/SHevents/Hevents
-      character*10 dum
       integer iFKS_picked
 c statistics for MadLoop      
       integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1(0:9)
@@ -81,9 +78,6 @@ c general MadFKS parameters
       integer ifold_picked
       double precision x_save(ndimmax,max_fold)
       common /c_vegas_x_fold/x_save,ifold_picked
-      integer                     n_MC_subt_diverge
-      common/counter_subt_diverge/n_MC_subt_diverge
-      include 'leshouche_decl.inc'
       include 'born_nhel.inc'
 C-----
 C  BEGIN CODE
@@ -110,7 +104,6 @@ c
       enddo
       virtual_fraction(1)=virt_fraction
       n_ord_virt=amp_split_size
-      n_MC_subt_diverge=0
       
       ntot=0
       nsun=0
@@ -128,7 +121,7 @@ c
 
       call setrun                !Sets up run parameters
       call configure_fxfx_sudakov(ickkw,nlo_ps,shower_mc,.true.)
-      call print_fks_isr_mapping(fixed_order,nlo_ps,shower_mc)
+      call print_fks_isr_mapping(nlo_ps,shower_mc)
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters
@@ -200,7 +193,7 @@ c     Prepare the MINT folding
 
       ! initialise the global, but process dependent, information in the process module.
       call init_process_module_global(shower_mc,abrv,nexternal,nincoming
-     $     ,mcatnlo_delta,ebeam(1)+ebeam(2),max_bcol,maxflow_used,ickkw)
+     $     ,mcatnlo_delta,ebeam(1)+ebeam(2),max_bcol,maxflow,ickkw)
       ! Also put all the n-body process dependent stuff here. It does
       ! not depend on PS point or FKS config, so all global information.
       call init_process_module_nbody_wrapper()
@@ -360,7 +353,6 @@ c Randomly pick the contribution that will be written in the event file
          enddo
       endif
 
-      write (*,*) 'counter for the diverging MC subtraction',n_MC_subt_diverge
       call cpu_time(job_finished)
       tTot=job_finished-job_started
       call timing_report(tTot)
@@ -375,8 +367,6 @@ c Randomly pick the contribution that will be written in the event file
       close(12)
 
       return
- 999  write (*,*) 'nevts file not found'
-      stop
       end
 
 
@@ -402,7 +392,7 @@ c
 c
 c     Local
 c
-      integer i, j
+      integer i
       double precision dconfig
 c
 c     Global
@@ -650,7 +640,7 @@ c
 
       function sigintF(xx,vegas_wgt,ifl,f)
       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
-      use fks_phase_space_data, only: p_born,p1_cnt,jac_cnt
+      use fks_phase_space_data, only: p_born,p1_cnt
       use fks_phase_space, only: fks_phase_space_point,
      $     generate_born_contribution,generate_real_phase_space
       use mc_native_context, only: mc_begin_real_point,mc_end_real_point
@@ -672,24 +662,19 @@ c
       logical rejected_point,weights_valid
       save rejected_point
       data rejected_point/.false./
-      integer i,j,ifl,proc_map(0:fks_configs,0:fks_configs)
-     $     ,nFKS_picked_nbody,nFKS_in,nFKS_out,izero,ione,itwo,mohdr
-     $     ,iFKS,sum,partner_picked(fks_configs),first_native_H
+      integer i,ifl,proc_map(0:fks_configs,0:fks_configs),nFKS_picked_nbody,nFKS_in,nFKS_out,izero,mohdr,iFKS,sum,
+     $     partner_picked(fks_configs),first_native_H
       save partner_picked
-      double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
-     $     ,nexternal),rwgt,vol,sig,x_local(99),MC_int_wgt,vol1,probne
-     $     ,sigintF,n1body_wgt,p_lab(0:3
-     $     ,nexternal) ,p_cms(0:3,nexternal),jacPS
-      save vol1,proc_map
+      double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3,nexternal),rwgt,x_local(99),vol1,probne,sigintF,
+     $     n1body_wgt,p_lab(0:3,nexternal),p_cms(0:3,nexternal),jacPS
+      save vol1,proc_map,sum
       integer             ini_fin_fks
       common/fks_channels/ini_fin_fks
       external passcuts
-      parameter (izero=0,ione=1,itwo=2,mohdr=-100)
+      parameter (izero=0,mohdr=-100)
       data firsttime/.true./
       integer     fold,ifold_counter
       common /cfl/fold,ifold_counter
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
       integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
       double precision virtual_over_born
@@ -797,7 +782,6 @@ c "npNLO".
 c The nbody contributions
          if (abrv.eq.'real') goto 11
          nbody=.true.
-         calculatedBorn=.false.
 c Pick the first one because that's the one with the soft singularity
          nFKS_picked_nbody=proc_map(proc_map(0,1),1)
          if (sum.eq.0) then
@@ -897,10 +881,6 @@ c 1/proc_map(0,0)*vol1)
  11      continue
 c The n+1-body contributions (including counter terms)
          if (abrv.eq.'born'.or.abrv(1:2).eq.'vi') goto 12
-c Set calculated Born to zero to prevent numerical inaccuracies: not
-c always exactly the same momenta in computation of Born when computed
-c for different nFKSprocess.
-         if(sum.eq.0) calculatedBorn=.false.
          nbody=.false.
          do i=1,proc_map(proc_map(0,1),0)
             wgt_me_real=0d0
@@ -913,11 +893,11 @@ c The preceding sector may have rejected its radiation and invalidated
 c the active Born. Starting scales still belong to the shared sample.
                p_born=sum_born
             endif
+            fks_father=min(i_fks,j_fks)
             if (born_flow_picked.gt.0) then
 !     Consider all flows for the shower scale assignment (with
 !     assignements only needed for the dipoles where the fks-mother is
 !     one end of the dipole line)
-               fks_father=min(i_fks,j_fks)
                call compute_shower_scale_nbody(p_born,-fks_father,
      $              mc_shower_scale_mass())
 !     assign emsca_S: we know flow (from driver_mintMC) and the
@@ -1048,8 +1028,7 @@ c check if event or counter-event passes cuts
 ! here, preserving the original path if no real point can be repartitioned.
             mc_S_only=MCExplicitKLSum.and.ickkw.ne.4.and.abrv.ne.'real'.and.
      $           p(0,1).gt.0d0.and.jacPS.gt.0d0.and.MC_HIST_COUNT.gt.0
-            call compute_NLOPS_flow_weights(p,p_lab,p_cms,jacPS,
-     $           passcuts_nbody,passcuts_n1body,probne,weights_valid)
+            call compute_NLOPS_flow_weights(p,p_cms,passcuts_nbody,passcuts_n1body,probne,weights_valid)
             mc_S_only=.false.
             if(.not.weights_valid)then
                call mc_end_real_point()
@@ -1149,8 +1128,7 @@ c Sum the contributions that can be summed before taking the ABS value
      $     jacPS,vegas_wgt,sampling_wgt,born_flow_factor,outer_point,
      $     weights_valid)
       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
-      use fks_phase_space_data,only: p_born,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt,xinorm_ev,
-     $     p1_cnt,jac_cnt,ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      use fks_phase_space_data,only: p_born,xi_i_fks_ev,y_ij_fks_ev,xinorm_ev,p1_cnt,ybst_til_tolab
       use FKSParams, only: MCSubtractionAtFixedFlow
 ! At a fixed real point form Hhat_a = S_a sum_b P_b (S_b R - M_b).
 ! The ordinary S records have already been made and are not changed.
@@ -1236,8 +1214,6 @@ c Sum the contributions that can be summed before taking the ABS value
       integer icolup_s(2,nexternal-1),icolup_h(2,nexternal),
      $     colours_s_save(2,nexternal-1),colours_h_save(2,nexternal)
       common/colour_connections/icolup_s,icolup_h
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
 
       weights_valid=.true.
       if (p(0,1).le.0d0 .or. jacPS.le.0d0) return
@@ -1337,7 +1313,6 @@ c Sum the contributions that can be summed before taking the ABS value
             call select_native_recoil(iconfig)
 ! Only the radiation projection and counter/real measure ratios are
 ! needed here. The common Born sampling factor cancels from the H density.
-            calculatedBorn=.false.
             call generate_native_momenta(p_flipped,pn,pn_lab,pn_cms,
      $           jac_native,native_valid)
             this_config=iconfig
@@ -1379,14 +1354,12 @@ c Sum the contributions that can be summed before taking the ABS value
 ! would require a flow map and support at a different Born point.
 ! q_b,c=p_b,c here; no additional outer 1/q_a,c belongs on this term.
             call set_alphaS(p1_cnt(0,1,0))
-            calculatedBorn=.false.
             call sborn_native(p_born,born_weight)
             call get_born_flow(born_flow_picked,flow_factor_native)
             if(born_flow_picked.eq.0)then
                weights_valid=.false.
                goto 900
             endif
-            calculatedBorn=.false.
             if (MCSubtractionAtFixedFlow)
      $           call include_born_flow_weight(flow_factor_native,
      $           flow_factor_native)
@@ -1415,9 +1388,7 @@ c Sum the contributions that can be summed before taking the ABS value
             if (ickkw.eq.3) call set_FxFx_scale(-3,pn)
             cuts_real=passcuts(pn,rwgt)
             first_alt=icontr+1
-            call compute_NLOPS_flow_weights(pn,pn_lab,pn_cms,
-     $           jac_native,cuts_born,cuts_real,probne_native,
-     $           weights_valid)
+            call compute_NLOPS_flow_weights(pn,pn_cms,cuts_born,cuts_real,probne_native,weights_valid)
             if(.not.weights_valid)goto 900
             do ict=first_alt,icontr
                if (.not.H_event(ict)) then
@@ -1472,7 +1443,6 @@ c Sum the contributions that can be summed before taking the ABS value
       call update_fks_dir(owner)
       call init_process_module_nbody_wrapper()
       call update_coltype_and_charge(owner,i_fks,j_fks)
-      calculatedBorn=.false.
       call initialize_fks_phase_space(iconfig)
       call restore_fks_phase_space(saved_point)
       jac_native=saved_point%weight
@@ -1513,7 +1483,6 @@ c Sum the contributions that can be summed before taking the ABS value
       endif
       call set_cms_stuff(-100)
       call set_alphaS(p)
-      calculatedBorn=.false.
       need_matching_cuts=matching_save(:,3)
       mc_H_only=.false.
       end
@@ -1577,13 +1546,12 @@ c Sum the contributions that can be summed before taking the ABS value
       end
 
       subroutine init_process_module_nbody_wrapper()
-      use fks_phase_space_data, only: p_born
       use process_module
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
       include 'born_nhel.inc'
-      integer iFKS,colour(1:nexternal-1),i,j,k,get_color
+      integer colour(1:nexternal-1),i,j,k,get_color
       external get_color
       double precision mass(1:nexternal-1),get_mass_from_id
       external get_mass_from_id
@@ -1621,12 +1589,11 @@ c Sum the contributions that can be summed before taking the ABS value
       end
 
       
-      subroutine compute_NLOPS_flow_weights(p,p_lab,p_cms,jacPS,
-     $     passcuts_nbody,passcuts_n1body,probne,weights_valid)
+      subroutine compute_NLOPS_flow_weights(p,p_cms,passcuts_nbody,passcuts_n1body,probne,weights_valid)
 ! Sum complete native contributions before unweighting, including the
 ! flow-dependent G replacement and Delta/real H-S split. The sampled
 ! outer flow remains the event colour and shower-scale owner. Native
-! inner histories use their own Born basis, never the outer flow basis.
+! inner histories use their own Born colour flows.
       use FKSParams, only: MCSubtractionAtFixedFlow
       use fks_phase_space_data, only: p_born,p1_cnt
       use scale_module, only: born_flow_picked,shower_scale_n1body,
@@ -1639,9 +1606,8 @@ c Sum the contributions that can be summed before taking the ABS value
       include 'nexternal.inc'
       include 'born_nhel.inc'
       include 'run.inc'
-      double precision p(0:3,nexternal),p_lab(0:3,nexternal),
-     $     p_cms(0:3,nexternal),jacPS,probne,probne_flow,
-     $     flow_weights(max_bcol),sumborn,born_weight,flow_fraction
+      double precision p(0:3,nexternal),p_cms(0:3,nexternal),probne,probne_flow,flow_weights(max_bcol),sumborn,
+     $     born_weight,flow_fraction
       logical passcuts_nbody,passcuts_n1body,weights_valid
       integer flow,flow_owner,num_leading_cflows
       logical is_leading_cflow(max_bcol)
@@ -1659,8 +1625,6 @@ c Sum the contributions that can be summed before taking the ABS value
       common/fks_indices/i_fks,j_fks
       common/cfl/fold,ifold_counter
       common/c_MCcntcalled/MCcntcalled
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
       character*4 abrv
       common/to_abrv/abrv
       integer icolup_s(2,nexternal-1),icolup_h(2,nexternal),
@@ -1674,8 +1638,7 @@ c Sum the contributions that can be summed before taking the ABS value
       weights_valid=.true.
       if (MCSubtractionAtFixedFlow.or..not.passcuts_nbody.or.
      $     abrv.eq.'real'.or.ickkw.eq.4) then
-         call compute_native_NLOPS_weights(p,p_lab,p_cms,jacPS,
-     $        passcuts_nbody,passcuts_n1body,probne)
+         call compute_native_NLOPS_weights(p,p_cms,passcuts_nbody,passcuts_n1body,probne)
          weights_valid=.not.nonfinite_contribution
          return
       endif
@@ -1692,7 +1655,6 @@ c Sum the contributions that can be summed before taking the ABS value
          endif
       endif
       call set_alphaS(p1_cnt(0,1,0))
-      calculatedBorn=.false.
       call sborn_native(p_born,born_weight)
       call get_born_flow_weights(flow_weights,sumborn)
       if (sumborn.le.0d0) then
@@ -1724,7 +1686,6 @@ c Sum the contributions that can be summed before taking the ABS value
          pdf_factors=pdf_factors_save
          call include_born_flow_weight(flow_fraction,1d0)
          MCcntcalled=0
-         calculatedBorn=.false.
 ! Reuse the event's colour-insertion variate and the already sampled
 ! all-flow Born dipole scales. Internal flows must not overwrite the
 ! saved H-event colours or draw a new shower starting scale.
@@ -1735,8 +1696,7 @@ c Sum the contributions that can be summed before taking the ABS value
      $        call compute_shower_scale_n1body(p,i_fks,j_fks,
      $        mc_shower_scale_mass())
          emsca_H(nFKSprocess,ifold_counter,:,:)=emsca_base
-         call compute_native_NLOPS_weights(p,p_lab,p_cms,jacPS,
-     $        passcuts_nbody,passcuts_n1body,probne_flow)
+         call compute_native_NLOPS_weights(p,p_cms,passcuts_nbody,passcuts_n1body,probne_flow)
          if(nonfinite_contribution)then
             weights_valid=.false.
             exit
@@ -1765,7 +1725,6 @@ c Sum the contributions that can be summed before taking the ABS value
       gfactsf=gfun_owner(1)
       gfactcl=gfun_owner(2)
       gfactazi=gfun_owner(3)
-      calculatedBorn=.false.
       end
 
       subroutine init_process_module_n1body_wrapper(bornflow)
@@ -1783,7 +1742,7 @@ c Sum the contributions that can be summed before taking the ABS value
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
-      integer iFKS,colour(1:nexternal),i,j,k,get_color,bornflow
+      integer colour(1:nexternal),i,j,get_color,bornflow
       logical preserve_event_owner
       double precision mass(1:nexternal),get_mass_from_id
       external get_color

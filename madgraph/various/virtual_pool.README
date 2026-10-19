@@ -681,3 +681,9 @@ virtual_pooled.f90: generic coordinates, capture and frozen native inference.
 mint_module.f90: residual envelopes, proposal sampling and generation diagnostics.
 driver_mintMC.f and fks_singular.f: weighted Born screening, delayed exact
 virtual evaluation and native contribution restoration.
+
+NLO workers use automatic local storage. Deferred point state and reusable
+Born-query buffers have explicit SAVE declarations. Native virtual tests use
+automatic storage; deferred and weight checks also poison local variables and
+trap invalid arithmetic. The colour-request regression covers both automatic
+and static storage.

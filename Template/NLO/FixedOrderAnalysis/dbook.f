@@ -11,7 +11,7 @@ C    BY Michelangelo Mangano    NOVEMBER 1988
 C    LAST REVISED NOVEMBER 9, 1988
 C    LAST REVISED JUNE 12, 1989  (ADD SCATTER PLOTS)
 C    LAST REVISED oct 1990 (Add multi-plots on one page, routines MULTITOP,
-C         			MTFILL,...)
+C                               MTFILL,...)
 C    LAST REVISED Jun 2003 by FM: passed to double precision AND 
 C    included the date for linux      
 C**********************************************************************
@@ -97,7 +97,7 @@ C
 C  COMMON/HISTO/  Histogram N
 C                           
 C   BOOK(N),      Three-letter character-string: 'NO' if histogram was not 
-C		  Booked, 'YES' otherwise
+C                 Booked, 'YES' otherwise
 C   TITLE(N),     Title of the histogram
 C
 C   HMIN(N),      Min value of x range
@@ -137,8 +137,9 @@ C
 C     START
 C
       NHIST=0
-      DO 1, I=1,NPLOTS             
-   1  BOOK(I)=' NO'
+      DO 9000, I=1,NPLOTS
+      BOOK(I)=' NO'
+ 9000 continue
 C     Initialize the number of bins of the amcblast grids
       if(pineappl) appl_obs_nbins = 0
       END  
@@ -167,7 +168,7 @@ C     START
 C
       NHIST = MAX(N,NHIST)
       IF(BOOK(N)(1:1).EQ.'Y') THEN
-	 CALL MWARN('MBOOK')
+         CALL MWARN('MBOOK')
          WRITE(*,*) 'Histogram',N,TITLE(N),' already in use. '
          WRITE(*,*) 'superseded by ',TIT
       ENDIF
@@ -176,15 +177,15 @@ C
 1     HDEL(N) = DEL
       NBIN(N) = INT((XMAX-XMIN)/(DEL*0.999999d0))
       IF(NBIN(N).GT.100) THEN
-	WRITE(*,*) 'TOO MANY BINS (',NBIN(N),') REQUIRED IN HIST ',N
-	WRITE(*,*) 'RE-ENTER BIN SIZE DELTA (OLD BIN = ',DEL,' ):'
-	READ(*,*) DEL
-	GO TO 1
+        WRITE(*,*) 'TOO MANY BINS (',NBIN(N),') REQUIRED IN HIST ',N
+        WRITE(*,*) 'RE-ENTER BIN SIZE DELTA (OLD BIN = ',DEL,' ):'
+        READ(*,*) DEL
+        GO TO 1
       ENDIF
       HMIN(N) = XMIN
       HMAX(N) = NBIN(N)*DEL+XMIN
       IF(abs(HMAX(N)-XMAX).gt.0.001d0*DEL) THEN
-	 CALL MWARN('MBOOK')
+         CALL MWARN('MBOOK')
          WRITE(*,*)
      #'Histogram ', TIT, ' Change of upper limit:',xmax,'-->',HMAX(N)
       ENDIF
@@ -275,7 +276,7 @@ C
       M = NBIN(NIN)                                           
       I = (IDIR + 3)/2
       IF(NOUT.NE.NIN.AND.BOOK(NOUT)(1:1).NE.'Y') THEN
-      	CALL MBOOK(NOUT,TITLE(NIN)//C(I), 
+        CALL MBOOK(NOUT,TITLE(NIN)//C(I),
      &                HDEL(NIN),HMIN(NIN),HMAX(NIN))
       ENDIF
       IF(IDIR.EQ.1) THEN
@@ -325,6 +326,7 @@ C
       ELSEIF(IPOW.EQ.0) THEN
          CALL MWARN('SUMPOW')
          WRITE(*,*)'Error: IPOW=0 not allowed in SUMPOW'
+         STOP 1
       ELSE
          SUMPOW = (X**IPOW+Y**IPOW)**(1./IPOW)
       ENDIF
@@ -355,10 +357,8 @@ C
      &    (BOOK(J)(1:1).NE.'Y'.AND.BOOK(J).NE.'NST') ) RETURN
       IF(NBIN(I).NE.NBIN(J).AND.(OPER.EQ.'+'.OR.OPER.EQ.'-'.OR.OPER.EQ.
      &    '*'.OR.OPER.EQ.'/'.OR.OPER.EQ.'M'.OR.OPER.EQ.'A')) THEN
-	  CALL MWARN('MOPERA')
+          CALL MWARN('MOPERA')
           WRITE(*,*) I,J                               
-  20      FORMAT(' ****** INCOMPATIBLE OPERATION HIST ',I2,' &',I2,
-     &    '*******'/)
           RETURN
       ENDIF
       IF(BOOK(K)(1:1).NE.'Y') 
@@ -429,35 +429,35 @@ c the average value of I to K and will put in J the quadratic dispersion.
          OSCORE(I) = 0
       ELSE
         DO L=1,NBIN(I)
-      	IF(OPER.EQ.'+') THEN
-       	  HIST(K,L)=X*HIST(I,L) + Y*HIST(J,L)
-      	ELSEIF(OPER.EQ.'-') THEN
-      	  HIST(K,L)=X*HIST(I,L) - Y*HIST(J,L)
-      	ELSEIF(OPER.EQ.'*') THEN
-      	  HIST(K,L)=X*HIST(I,L) * Y*HIST(J,L)
-      	ELSEIF(OPER.EQ.'/') THEN
+        IF(OPER.EQ.'+') THEN
+          HIST(K,L)=X*HIST(I,L) + Y*HIST(J,L)
+        ELSEIF(OPER.EQ.'-') THEN
+          HIST(K,L)=X*HIST(I,L) - Y*HIST(J,L)
+        ELSEIF(OPER.EQ.'*') THEN
+          HIST(K,L)=X*HIST(I,L) * Y*HIST(J,L)
+        ELSEIF(OPER.EQ.'/') THEN
           IF(Y.EQ.0..OR.HIST(J,L).EQ.0.) THEN
             HIST(K,L)=0.
           ELSE
             HIST(K,L)=X*HIST(I,L) / (Y*HIST(J,L))
           ENDIF
-       	ELSEIF(OPER.EQ.'F') THEN
-      	  HIST(K,L)=X*HIST(I,L)
-      	ELSEIF(OPER.EQ.'R') THEN
+        ELSEIF(OPER.EQ.'F') THEN
+          HIST(K,L)=X*HIST(I,L)
+        ELSEIF(OPER.EQ.'R') THEN
           IF(HIST(I,L).GT.0.) THEN
             HIST(K,L)=X*DSQRT(HIST(I,L))
           ELSE                           
             HIST(K,L)=0.
           ENDIF
-      	ELSEIF(OPER.EQ.'S') THEN
+        ELSEIF(OPER.EQ.'S') THEN
           HIST(K,L)=X*HIST(I,L)**2
-      	ELSEIF(OPER.EQ.'L') THEN  
+        ELSEIF(OPER.EQ.'L') THEN
           IF(HIST(I,L).EQ.0..OR.J.EQ.0.) THEN
              HIST(K,L)=0.
            ELSE
              HIST(K,L)=X*LOG10(Y*HIST(I,L))
            ENDIF
-      	ELSEIF(OPER.EQ.'M') THEN
+        ELSEIF(OPER.EQ.'M') THEN
            IF(I.NE.J) XNORM=HIST(I,L)
            IF(I.EQ.J) XNORM=DFLOAT(IHIS(J,L))
            IF(XNORM.NE.0.) THEN
@@ -469,7 +469,7 @@ c the average value of I to K and will put in J the quadratic dispersion.
              HIST(K,L)=0.
              HIST(J,L)=0.
            ENDIF
-      	ELSEIF(OPER.EQ.'V') THEN                 
+        ELSEIF(OPER.EQ.'V') THEN
            XAVG=HIST(I,L)*X
            XSQAVG=HIST(J,L)*X
            XNORM=DFLOAT(IHIS(I,L))*X
@@ -479,23 +479,22 @@ c the average value of I to K and will put in J the quadratic dispersion.
            ELSE  
               HIST(K,L)=0.
            ENDIF 
-      	ELSE 
-	 CALL MWARN('MOPERA')
+        ELSE
+         CALL MWARN('MOPERA')
          WRITE(*,*) OPER
-   5     FORMAT(' ****** OPERATION ="',A1,'" UNKNOWN ********'/)
          RETURN
         ENDIF
         ENDDO
-      	IF(OPER.EQ.'+') THEN
-       	  USCORE(K)=X*USCORE(I) + Y*USCORE(J)  
-       	  OSCORE(K)=X*OSCORE(I) + Y*OSCORE(J)  
-      	ELSEIF(OPER.EQ.'-') THEN     
-      	  USCORE(K)=X*USCORE(I) - Y*USCORE(J)
-      	  OSCORE(K)=X*OSCORE(I) - Y*OSCORE(J)
-      	ELSEIF(OPER.EQ.'*') THEN     
-      	  USCORE(K)=X*USCORE(I) * Y*USCORE(J)
-      	  OSCORE(K)=X*OSCORE(I) * Y*OSCORE(J)
-      	ELSEIF(OPER.EQ.'/') THEN     
+        IF(OPER.EQ.'+') THEN
+          USCORE(K)=X*USCORE(I) + Y*USCORE(J)
+          OSCORE(K)=X*OSCORE(I) + Y*OSCORE(J)
+        ELSEIF(OPER.EQ.'-') THEN
+          USCORE(K)=X*USCORE(I) - Y*USCORE(J)
+          OSCORE(K)=X*OSCORE(I) - Y*OSCORE(J)
+        ELSEIF(OPER.EQ.'*') THEN
+          USCORE(K)=X*USCORE(I) * Y*USCORE(J)
+          OSCORE(K)=X*OSCORE(I) * Y*OSCORE(J)
+        ELSEIF(OPER.EQ.'/') THEN
           IF(Y.EQ.0..OR.USCORE(J).EQ.0.) THEN
             USCORE(K)=0.
           ELSE
@@ -506,10 +505,10 @@ c the average value of I to K and will put in J the quadratic dispersion.
           ELSE
             OSCORE(K)=X*OSCORE(I) / (Y*OSCORE(J))
           ENDIF
-       	ELSEIF(OPER.EQ.'F') THEN
-      	  USCORE(K)=X*USCORE(I)
-      	  OSCORE(K)=X*OSCORE(I)
-      	ELSEIF(OPER.EQ.'R') THEN
+        ELSEIF(OPER.EQ.'F') THEN
+          USCORE(K)=X*USCORE(I)
+          OSCORE(K)=X*OSCORE(I)
+        ELSEIF(OPER.EQ.'R') THEN
           IF(USCORE(I).GT.0.) THEN
             USCORE(K)=X*DSQRT(USCORE(I))
           ELSE                           
@@ -520,10 +519,10 @@ c the average value of I to K and will put in J the quadratic dispersion.
           ELSE                           
             OSCORE(K)=0.
           ENDIF     
-      	ELSEIF(OPER.EQ.'S') THEN
+        ELSEIF(OPER.EQ.'S') THEN
           USCORE(K)=X*USCORE(I)**2
           OSCORE(K)=X*OSCORE(I)**2
-      	ELSEIF(OPER.EQ.'L') THEN  
+        ELSEIF(OPER.EQ.'L') THEN
           IF(USCORE(I).EQ.0..OR.J.EQ.0.) THEN
              USCORE(K)=0.
            ELSE
@@ -563,8 +562,9 @@ C
       IOSCORE(N)=0
       HAVG(N)=0.
       HINT(N)=0.
-      DO 1 I=1,NBIN(N)
-   1  HIST(N,I)=0.
+      DO 9000 I=1,NBIN(N)
+      HIST(N,I)=0.
+ 9000 continue
       END
 
       SUBROUTINE MRESET(N)
@@ -636,9 +636,9 @@ C
       IF=0
       DO J=1,NBIN(N)
          X=HIST(N,J)
- 	 AVG=AVG+X*XHIS(N,J)
+         AVG=AVG+X*XHIS(N,J)
          XIN=XIN+X
-	 IF(X.NE.0) IF=1
+         IF(X.NE.0) IF=1
       ENDDO             
       IF(XIN.EQ.0) GO TO 10
       AVG = AVG/XIN
@@ -674,14 +674,15 @@ C     START
 C
       IF(BOOK(N)(:1).NE.'Y')RETURN
       IF(HINT(N).EQ.0.) THEN
-	CALL MWARN('MNORM')
-	WRITE(*,*)' INTEGRAL HIST ',N,' IS ZERO: CANNOT RENORMALIZE'
-	RETURN               
+        CALL MWARN('MNORM')
+        WRITE(*,*)' INTEGRAL HIST ',N,' IS ZERO: CANNOT RENORMALIZE'
+        RETURN
       ELSE
-	Y=X/HINT(N)
+        Y=X/HINT(N)
       ENDIF
-      DO 1, I=1,NBIN(N)
-    1 HIST(N,I)=HIST(N,I)*Y
+      DO 9000, I=1,NBIN(N)
+      HIST(N,I)=HIST(N,I)*Y
+ 9000 continue
       HINT(N)=X            
       OSCORE(N)=OSCORE(N)*Y
       USCORE(N)=USCORE(N)*Y
@@ -722,7 +723,6 @@ C      WRITE(98,7) N,IYEAR,IMON,IDAY,CTIME(1:5)
       WRITE(98,15) HAVG(N),HSIG(N),HINT(N)
       WRITE(98,20) IENT(N),IUSCORE(N),IOSCORE(N)
 C    7 FORMAT(4X,'HIST = ',I3,'   19',I2,'-',I2,'-',I2,1X,A5/)
-   10 FORMAT(4X,2E10.3)
    15 FORMAT(/' AVG =',E10.3,4X,' RMS =',E10.3,' INTEGRAL =',E10.3,/)
    20 FORMAT(' ENTRIES=',I5,4X,'UNDERSCORE=',I5,4x,'OVERSCORE=',I5,//)
       END
@@ -784,17 +784,6 @@ cRF
     1 CONTINUE
       WRITE(99,200)
   200 FORMAT('   HISTO')
-  300 FORMAT( /1x,
-     &' (INFO-BOX'/,1X,                               
-     &' BOX 7.3 1.3 SIZE 9.5 0.7'/,1X,
-     &' SET WINDOW Y 0. TO 2.'/,1X,
-     &' SET TITLE SIZE -1.5'/1X,
-     &' SET FONT DUPLEX '/1X,
-     &' TITLE 3.8 1.4 "X-sect =',1PE10.3,'(pb)   AVG =',1PE10.3,
-     &             '   RMS =',1PE10.3,'"',/1X,
-     &' TITLE 3.8 1.1 "Entries =',I8,2x,'Entries =',I8,2X
-     &                ,'Undersc =',I6,2X,'Oversc =',I6,'"',/1X,
-     &' SET TITLE SIZE -2')                            
       WRITE(99,400)
   400 FORMAT('   NEW PLOT')
       END
@@ -816,9 +805,9 @@ C
 C
 C     LOCAL
 C
-      REAL*8 YTIT,XTIT,FEXP,FMAX,FMIN,X,XMX,FMX,FMN
-      REAL*8 YU,XU,YL,XL,YTIT0,YD,XTIT0,TITX,TITS,TICS,SRED,XD
-      INTEGER IBIN,IPNS,J,I,NOLD,IFRAME,IFRMAX,IP,NS,MOLD
+      REAL*8 YTIT,XTIT,FMAX,FMIN,X,XMX,FMX,FMN
+      REAL*8 YU,XU,YL,XL,YTIT0,YD,XTIT0,TITS,TICS,SRED,XD
+      INTEGER IBIN,J,I,NOLD,IFRAME,IFRMAX,IP,NS,MOLD
       INTEGER INI
 C
 C     START
@@ -836,6 +825,9 @@ C  DEFAULT SIZES
       REAL*8 TIC0,LAB0,TIT0,LABS
       DATA TIT0,LAB0,TIC0/3d0,3d0,0.06d0/
       DATA INI/0/                                          
+C     Plot layout and curve style are shared with later MTFILL calls.
+      SAVE IFRAME,I,J,NOLD,MOLD,XD,YD,TITS,LABS,TICS,XTIT0,YTIT0,IP
+      DATA NOLD,MOLD/0,0/
       IF(INI.EQ.0) THEN
 c      CALL IDATE(IMON,IDAY,IYEAR)
 c      CALL TIME(CTIME)
@@ -845,28 +837,28 @@ C   71 FORMAT(4X,' (   19',I2,' -',I2,' -',I2,1X,A5/)
       INI=1         
       ENDIF
       IF(SCA.EQ.'REF') THEN
-	IFRAME=0
-	RETURN
+        IFRAME=0
+        RETURN
       ENDIF
       IF(BOOK(NH)(:1).NE.'Y') RETURN
       IFRMAX=N*M         
       IFRAME=IFRAME+1
       IF(IFRAME.GT.IFRMAX.OR.N.NE.NOLD.OR.M.NE.MOLD) THEN
-      	IFRAME=1
+        IFRAME=1
         WRITE(99,202)   
 C        WRITE(99,1) IMON,IDAY,CTIME(1:5)
 C  1     FORMAT(' SET FONT DUPLEX',/,'  SET TITLE SIZE 2',/,
 C     +      ' TITLE 12.8 9 ANGLE -90 ','" MLM   ',I2,'-',I2,1X,A5,'"')
       ENDIF                                
       IF(IFRAME.EQ.1) THEN
-    	I=1
-	J=1
+        I=1
+        J=1
       ELSEIF(IFRAME.LE.IFRMAX) THEN
-	IF(I.LE.N) I=I+1
+        IF(I.LE.N) I=I+1
         IF(I.GT.N) THEN
-		I=1
-		J=J+1
-	ENDIF
+                I=1
+                J=J+1
+        ENDIF
       ENDIF
       IF(N.EQ.NOLD) GO TO 10
       NS=N-1
@@ -888,6 +880,8 @@ C     +      ' TITLE 12.8 9 ANGLE -90 ','" MLM   ',I2,'-',I2,1X,A5,'"')
       YU=YL+YD*YPFRAC        
       IP=0
       XMX=0.
+      FMX=0d0
+      FMN=0d0
       DO IBIN=1,NBIN(NH)
         X=HIST(NH,IBIN)
         IF(X.NE.0.) THEN
@@ -902,11 +896,17 @@ C     +      ' TITLE 12.8 9 ANGLE -90 ','" MLM   ',I2,'-',I2,1X,A5,'"')
         XMX=MAX(XMX,ABS(X)+ HIST(NE,IBIN))
       ENDDO
       SCALE=SCA
-50    IF(SCALE.EQ.'LIN') THEN
-        IF(FMN.GE.0.)   FMIN=0.
-        IF(FMN.LT.0.)   FMIN=FMN*1.3
-        IF(FMX.GT.0.)   FMAX=FMX*1.3
-        IF(FMX.LT.0.)   FMAX=0.
+      IF(SCALE.EQ.'LIN') THEN
+        IF(FMN.GE.0.) THEN
+          FMIN=0.
+        ELSE
+          FMIN=FMN*1.3
+        ENDIF
+        IF(FMX.GT.0.) THEN
+          FMAX=FMX*1.3
+        ELSE
+          FMAX=0.
+        ENDIF
       ELSEIF(SCALE.EQ.'LOG') THEN
 cRF
 c$$$        IF(FMN.LE.0.) THEN
@@ -977,7 +977,7 @@ C
       IF(BOOK(NE).NE.'NO')   WRITE(99,*)  '  PLOT'
 201   FORMAT(2X,'HIST ',A)           
 202   FORMAT('   NEW PLOT',/,/)
-203   RETURN     
+      RETURN
       END                     
 
 
@@ -1176,6 +1176,7 @@ c Only empty the histograms 'j'.
       implicit real * 8 (a-h,o-z)
       character * 70 files(20), filn
       data nfil/0/
+      save files
 c
 c sum up files
       call sumfil(files,nfil)

@@ -90,7 +90,7 @@ c
       integer                    pdg_cut(0:25)
       logical                    mxxpart_antipart(1:25) 
       common/TO_PDG_SPECIFIC_CUT/ptmin4pdg,ptmax4pdg,mxxmin4pdg,
-     &	                         pdg_cut,
+     &                          pdg_cut,
      &                           mxxpart_antipart
 
 C stuff for alpha running in lepton collisions

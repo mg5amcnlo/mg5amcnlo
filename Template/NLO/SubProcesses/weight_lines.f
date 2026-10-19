@@ -17,7 +17,7 @@
          logical, allocatable :: H_event(:)
          integer, allocatable :: itype(:),nFKS(:),QCDpower(:),pdg(:,:)
      $        ,pdg_uborn(:,:),parton_pdg_uborn(:,:,:),parton_pdg(:,:,:)
-     $        ,plot_id(:),niproc(:),ipr(:),parton_pdf(:,:,:)
+     $        ,plot_id(:),niproc(:),ipr(:)
      $        ,ifold_cnt(:)
      $        ,orderstag(:),amppos(:),need_match(:,:)
 ! Keep the event/shower owner separate from the native PDF/ME history.
@@ -30,7 +30,7 @@
      $        ,g_strong(:),wgts(:,:),parton_iproc(:,:),y_bst(:)
      $        ,cpower(:),plot_wgts(:,:),shower_scale(:),unwgt(:,:)
      $        ,unwgt_B(:,:),unwgt_noB(:,:)
-     $        ,bias_wgt(:),shower_scale_a(:,:,:)
+     $        ,bias_wgt(:)
          save
       contains
          integer function event_owner(ict)
@@ -129,10 +129,6 @@ c parton_iproc
          allocate(temp2(n_proc,max_contr))
          temp2(1:max_iproc,1:max_contr)=parton_iproc
          call move_alloc(temp2,parton_iproc)
-c parton_pdf
-         allocate(itemp3(nexternal,n_proc,max_contr))
-         itemp3(1:nexternal,1:max_iproc,1:max_contr)=parton_pdf
-         call move_alloc(itemp3,parton_pdf)
 c unwgt
          allocate(temp2(n_proc,max_contr))
          temp2(1:max_iproc,1:max_contr)=unwgt
@@ -236,10 +232,6 @@ c amppos
          allocate(itemp1(contr_capacity))
          itemp1(1:max_contr)=amppos
          call move_alloc(itemp1,amppos)
-c parton_pdf
-         allocate(itemp3(nexternal,max_iproc,contr_capacity))
-         itemp3(1:nexternal,1:max_iproc,1:max_contr)=parton_pdf
-         call move_alloc(itemp3,parton_pdf)
 c group_size
          allocate(itemp1(contr_capacity))
          itemp1=0
@@ -321,10 +313,6 @@ c shower_scale
          allocate(temp1(contr_capacity))
          temp1(1:max_contr)=shower_scale
          call move_alloc(temp1,shower_scale)
-c shower_scale_a
-         allocate(temp3(contr_capacity,nexternal,nexternal))
-         temp3(1:max_contr,1:nexternal,1:nexternal)=shower_scale_a
-         call move_alloc(temp3,shower_scale_a)
 c unwgt
          allocate(temp2(max_iproc,contr_capacity))
          temp2(1:max_iproc,1:max_contr)=unwgt
@@ -361,7 +349,6 @@ c update maximum
       allocate(ipr(1))
       allocate(orderstag(1))
       allocate(amppos(1))
-      allocate(parton_pdf(nexternal,1,1))
       allocate(group_size(1))
       group_size=0
       allocate(group_start(1))
@@ -386,7 +373,6 @@ c update maximum
       allocate(bias_wgt(1))
       allocate(plot_wgts(1,1))
       allocate(shower_scale(1))
-      allocate(shower_scale_a(1,nexternal,nexternal))
       allocate(unwgt(1,1))
       allocate(need_match(nexternal,1))
       max_contr=1
@@ -417,7 +403,6 @@ c update maximum
       if (allocated(ipr)) deallocate(ipr)
       if (allocated(orderstag)) deallocate(orderstag)
       if (allocated(amppos)) deallocate(amppos)
-      if (allocated(parton_pdf)) deallocate(parton_pdf)
       if (allocated(group_size)) deallocate(group_size)
       if (allocated(group_start)) deallocate(group_start)
       if (allocated(group_members)) deallocate(group_members)
@@ -437,7 +422,6 @@ c update maximum
       if (allocated(bias_wgt)) deallocate(bias_wgt)
       if (allocated(plot_wgts)) deallocate(plot_wgts)
       if (allocated(shower_scale)) deallocate(shower_scale)
-      if (allocated(shower_scale_a)) deallocate(shower_scale_a)
       if (allocated(unwgt)) deallocate(unwgt)
       call release_born_spread_lines
       if (allocated(need_match)) deallocate(need_match)

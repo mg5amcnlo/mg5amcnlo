@@ -12,8 +12,6 @@
       common/c_born_cnt/ans_cnt
       double precision wgt_ME_born,wgt_ME_real
       common/c_wgt_ME_tree/wgt_ME_born,wgt_ME_real
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
       call mc_born_local(p,request,result)
       ans=result%%born
       wgt_ME_born=ans
@@ -23,7 +21,6 @@
       amp2=result%%diagrams
       jamp2(0)=1d0
       jamp2(1:1)=result%%flows
-      calculatedBorn=.true.
       end
       subroutine sborn_onehel(p,nhel,hell,ans)
       use mc_born_types

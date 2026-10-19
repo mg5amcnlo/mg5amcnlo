@@ -1,6 +1,6 @@
       subroutine add_write_info(p_born,pp,ybst_til_tolab,iconfig,Hevents
      &     ,putonshell,ndim,x,jpart,npart,pb,shower_scale_a)
-      use fks_phase_space_data, only: p1_cnt,jac_cnt
+      use fks_phase_space_data, only: p1_cnt
 c Computes all the info needed to write out the events including the
 c intermediate resonances. It also boosts the events to the lab frame
       use fks_phase_space, only: fks_phase_space_point,generate_born_event,
@@ -13,7 +13,6 @@ c intermediate resonances. It also boosts the events to the lab frame
       include "born_nhel.inc"
       include "born_coloramps.inc"
       include "nFKSconfigs.inc"
-      include "leshouche_decl.inc"
       include "run.inc"
 
 c Arguments
@@ -27,11 +26,9 @@ c Arguments
       double precision pb(0:4,-nexternal+3:2*nexternal-3)
 
 c Local
-      integer np,i,j,iBornGraph,ida(2),size,nexpart,idum,ires,nres,ns
+      integer i,j,iBornGraph,ida(2),nexpart,idum,ires,nres,ns
       integer icolalt(2,-nexternal+3:2*nexternal-3),ip,iflow
       integer ito(-nexternal+3:nexternal)
-      double precision xtarget,sumborn,jampsum
-      double complex wgt1(2)
       logical firsttime,firsttime2
       data firsttime/.true./
       data firsttime2/.true./
@@ -129,7 +126,7 @@ c pt_clust string
       integer need_matching(nexternal)
       common /c_need_matching_to_write/ need_matching
       double precision ptclus
-      CHARACTER temp*600,temp0*7,integ*1,float*18
+      CHARACTER temp*600,temp0*7,float*18
       CHARACTER integfour*4      
       CHARACTER(LEN=1000) ptclusstring
       common /c_ptclusstring/ ptclusstring
@@ -236,7 +233,7 @@ c This is an (n+1)-body process (see update_unwgt_table in
 c driver_mintMC.f). For S events it corresponds to the underlying Born
 c process chosen
       ip=i_process_addwrite
-      if (ip.lt.1 .or. ip.gt.maxproc_used) then
+      if (ip.lt.1 .or. ip.gt.maxproc) then
          write (*,*)'ERROR #12 in add_write_info,'/
      &        /' not a well-defined process',ip,Hevents
          stop
@@ -604,7 +601,7 @@ c
      $           /'(add_write_info.f)'
             stop
          endif
-         temp0='<scales '
+         temp0='<scales'
          temp=''
          do i=nincoming+1,nexpart
             integfour=''
@@ -838,7 +835,7 @@ c      include 'fks.inc'
       integer i
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      double precision xtarget,ran2,rrnd
+      double precision ran2,rrnd
       save rrnd
       external ran2
       integer jpart(7,-nexternal+3:2*nexternal-3),iflow
@@ -1157,7 +1154,6 @@ c of multiple possibilities.
 c This routines assumes that the mother of (i_fks,j_fks) has
 c label min(i_fks,j_fks)
       implicit none
-      integer ip
       double precision xmi,xmj,xm1,xm2,emsum
       logical Hevents
 
@@ -1383,7 +1379,7 @@ c
 
 
       subroutine put_on_MC_mshell_in(p,xm1,xm2,mfail)
-      use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      use fks_phase_space_data, only: ybst_til_tolab,shat
       implicit none
       include 'nexternal.inc'
       double precision p(0:3,nexternal),xm1,xm2
@@ -1538,8 +1534,7 @@ c and let the Monte Carlo deal with it
       double precision p(0:3,99),xmi,xmj
       integer mfail
 
-      double precision dirbst(1:3),dirpj(1:3)
-      double precision pipj(0:3),pibst(0:3),pjbst(0:3)
+      double precision pipj(0:3)
 
       double precision p1(0:3),p1R(0:3),pipjR(0:3)
 
@@ -1712,7 +1707,7 @@ c
 
 
       subroutine put_on_MC_mshell_Hevin(p,xmi,xm1,xm2,mfail)
-      use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      use fks_phase_space_data, only: ybst_til_tolab,ybst_til_tocm,shat
       implicit none
       double precision p(0:3,99),xmi,xm1,xm2
       integer mfail

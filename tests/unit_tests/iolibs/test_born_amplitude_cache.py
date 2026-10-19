@@ -93,7 +93,7 @@ if(.not.bad_equal(bad_a,bad_b))stop 2
 if(born_amplitude_state_equal(a,b))stop 3
 end program
 ''')
-            command=['gfortran','-O2','-fno-automatic','-fcheck=all',str(module),str(bad),
+            command=['gfortran','-O2','-frecursive','-fcheck=all',str(module),str(bad),
                      str(root/'hidden.f90'),str(helpers/'vertex.f'),str(root/'check.f90'),'-o','check']
             result=subprocess.run(command,cwd=root,capture_output=True,text=True)
             self.assertEqual(result.returncode,0,result.stdout+result.stderr)
@@ -203,7 +203,7 @@ call probe1(2,p,a,request,hit,epoch)
 if(hit.or.epoch.ne.4)stop 14
 end program
 '''+'\n'.join(routines))
-            result=subprocess.run(['gfortran','-O2','-fno-automatic','-fcheck=all',
+            result=subprocess.run(['gfortran','-O2','-frecursive','-fcheck=all',
                                    str(module),str(work/'check.f90'),'-o','check'],
                                   cwd=work,capture_output=True,text=True)
             self.assertEqual(result.returncode,0,result.stdout+result.stderr)
@@ -228,7 +228,7 @@ a%complex_values=[(2d0,1d0),(-4d0,2d0),(7d0,-1d0)]
 b=a
 if(.not.born_amplitude_state_equal(a,b))stop 1
 ''' + body + '\nend program\n')
-            result = subprocess.run(['gfortran', '-O2', '-fno-automatic', '-fcheck=all',
+            result = subprocess.run(['gfortran', '-O2', '-frecursive', '-fcheck=all',
                                      str(module), str(work/'check.f90'), '-o', 'check'],
                                     cwd=work, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stdout+result.stderr)

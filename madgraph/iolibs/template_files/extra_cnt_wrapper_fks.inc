@@ -20,7 +20,7 @@ end
 integer function get_extra_cnt_color(icnt,ipart)
 C return the color of the ipart-th particle of 
 C counterterm icnt
-integer icnt ipart
+integer icnt, ipart
 include 'nexternal.inc'
 integer nexternalb
 parameter(nexternalb=nexternal-1)
@@ -47,7 +47,7 @@ end
 integer function get_extra_cnt_pdg(icnt,ipart)
 C return the pdg id of the ipart-th particle of 
 C counterterm icnt
-integer icnt ipart
+integer icnt, ipart
 include 'nexternal.inc'
 integer nexternalb
 parameter(nexternalb=nexternal-1)
@@ -74,7 +74,7 @@ end
 double precision function get_extra_cnt_charge(icnt,ipart)
 C return the charge id of the ipart-th particle of 
 C counterterm icnt
-integer icnt ipart
+integer icnt, ipart
 include 'nexternal.inc'
 integer nexternalb
 parameter(nexternalb=nexternal-1)

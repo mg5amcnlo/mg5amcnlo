@@ -28,8 +28,7 @@ c identically for generation, inverse projection and the lepton chart.
       common /c_fnlo_nlops/fixed_order,nlo_ps
       character*10 shower_mc
       common /cMonteCarloType/shower_mc
-      use_symmetric_isr_mapping=
-     $     get_fks_isr_mapping(fixed_order,nlo_ps,shower_mc).eq.1
+      use_symmetric_isr_mapping=get_fks_isr_mapping(nlo_ps,shower_mc).eq.1
       end function use_symmetric_isr_mapping
 
 
@@ -72,10 +71,9 @@ c parameters
       data xi_i_fks_matrix/0.d0,-1.d8,0.d0,-1.d8,0.d0/
       double precision y_ij_fks_matrix(-2:2)
       data y_ij_fks_matrix/-1.d0,-1.d0,-1.d8,1.d0,1.d0/
-      double precision stiny,sstiny,qtiny,ctiny,cctiny
+      double precision stiny,sstiny,ctiny,cctiny
       double complex ximag
       parameter (stiny=1d-6)
-      parameter (qtiny=1d-7)
       parameter (ctiny=5d-7)
       parameter (ximag=(0d0,1d0))
 c
@@ -358,8 +356,9 @@ c Collinear limit of <ij>/[ij]. See innerpin.m.
      &     ,sqrtshat,m_j_fks,x,xmrec2,xp,phi_i_fks,xiimax,xinorm
      &     ,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks,xjac,xpswgt,pass)
       use fks_phase_space_data, only: veckn_ev,veckbarn_ev,xp0jfks
-      use mc_native_context, only: native_mapping
+      use mc_native_context, only: active_native_mapping=>native_mapping
       implicit none
+      logical native_mapping
 c arguments
       integer icountevts,i_fks,j_fks,isolsign
       double precision shat,sqrtshat,x(2),xmrec2,xp(0:3,nexternal)
@@ -396,6 +395,7 @@ c parameters
       parameter (stiny=1d-6)
       parameter (ctiny=5d-7)
 c
+      native_mapping=active_native_mapping
       if(colltest .or.
      &     abs(icountevts).eq.1.or.abs(icountevts).eq.2)then
          write(*,*)'Error #5 in genps_fks.f:'
@@ -683,18 +683,17 @@ c
      $           ,y_ij_fks,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat
      $           ,i_fks,j_fks,m_j_fks)
       use fks_phase_space_data, only: xinorm_ev
-      use mc_native_context, only: native_mapping
+      use mc_native_context, only: active_native_mapping=>native_mapping
       implicit none
+      logical native_mapping
       real*8 pi
       parameter (pi=3.1415926535897932d0)
       double precision xjac,x(3),xp(0:3,nexternal),xi_i_fks,y_ij_fks
      $     ,phi_i_fks,p_born(0:3,-max_branch:nexternal-1),shat,sqrtshat
      $     ,xpswgt,m_j_fks
       integer i_fks,j_fks
-      double precision recoil(0:3),sumrec,sumrec2,xmj
-     $     ,xmj2,xmjhat,xmhat,xim,cffA2,cffB2,cffC2,cffDEL2,xiBm,ximax
-     $     ,xiimax,xinorm,rat_xi,expybst
-     $     ,shybst,chybst,chybstmo,veckn,veckbarn,xdir(3),xmrec2
+      double precision recoil(0:3),sumrec,xmj,xmj2,xmjhat,xmhat,xim,cffA2,cffB2,cffC2,cffDEL2,xiBm,ximax,xiimax,xinorm,
+     $     rat_xi,expybst,shybst,chybst,chybstmo,veckn,veckbarn,xdir(3),xmrec2
       integer i
       double precision native_uborn,native_u,native_denom,
      $     native_eborn,native_delta,native_onepy,native_ratio,
@@ -703,6 +702,7 @@ c
       external rho,dot
       logical        softtest,colltest
       common/sctests/softtest,colltest
+      native_mapping=active_native_mapping
       sstiny=1d-6
       cctiny=5d-7
       if(softtest.or.colltest.or.native_mapping)then
@@ -779,6 +779,8 @@ c roundoff when the recoil is soft, spoiling the forward reconstruction.
          x(1)=sqrt(max(0d0,min(1d0,x(1))))
          xjac=xjac*2d0*x(1)
          xinorm_ev=1d0
+         xpswgt=xpswgt*2d0*shat/(4d0*pi)**3*native_u**2/
+     $        (xp(0,j_fks)*native_denom)
       else
       branch_sign=rho(xp(0,j_fks))/sqrtshat*
      $     (2-xi_i_fks*(1-y_ij_fks))*(2-xi_i_fks*(1+y_ij_fks))
@@ -838,10 +840,7 @@ c
 c Phase-space factor for (xii,yij,phii)
       veckn=rho(xp(0,j_fks))
       veckbarn=rho(p_born(0,j_fks))
-      if(native_mapping)then
-         xpswgt=xpswgt*2d0*shat/(4d0*pi)**3*native_u**2/
-     $        (xp(0,j_fks)*native_denom)
-      else
+      if(.not.native_mapping)then
       xpswgt=xpswgt*2*shat/(4*pi)**3*veckn/veckbarn/
      &     ( 2-xi_i_fks*(1-xp(0,j_fks)/veckn*y_ij_fks) )
       endif
@@ -867,36 +866,26 @@ c nearly antiparallel daughters without subtracting their cosines.
       end function native_fsr_angle
 
 
-      subroutine generate_momenta_initial(icountevts,i_fks,j_fks,
-     &     xbjrk_born,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks,xp,x
-     &     ,shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm
-     &     ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,pass)
+      subroutine generate_momenta_initial(icountevts,i_fks,j_fks,xbjrk_born,tau_born,ycm_born,shat_born,phi_i_fks,xp,x,
+     $     shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,pass)
       implicit none
       integer icountevts,i_fks,j_fks
-      double precision xbjrk_born(2),tau_born,ycm_born,ycmhat,shat_born
-     &     ,phi_i_fks,xpswgt,xjac,xiimax,xinorm,xp(0:3,nexternal),stot
-     &     ,x(2),y_ij_fks,xi_i_hat,xi_i_fks,shat,sqrtshat,tau,ycm
-     &     ,xbjrk(2),p_i_fks(0:3)
+      double precision xbjrk_born(2),tau_born,ycm_born,shat_born,phi_i_fks,xpswgt,xjac,xiimax,xinorm,xp(0:3,nexternal),
+     $     stot,x(2),y_ij_fks,xi_i_hat,xi_i_fks,shat,sqrtshat,tau,ycm,xbjrk(2),p_i_fks(0:3)
       logical pass
 c Use the same run-level choice for the event and every counterevent.
       if(use_symmetric_isr_mapping())then
-         call generate_momenta_initial_symmetric(icountevts,i_fks,j_fks,
-     &     xbjrk_born,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks,xp,x
-     &     ,shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm
-     &     ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,pass)
+         call generate_momenta_initial_symmetric(icountevts,i_fks,j_fks,xbjrk_born,tau_born,ycm_born,shat_born,phi_i_fks,xp,
+     $     x,shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,pass)
       else
-         call generate_momenta_initial_asymmetric(icountevts,i_fks,j_fks,
-     &     xbjrk_born,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks,xp,x
-     &     ,shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm
-     &     ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,pass)
+         call generate_momenta_initial_asymmetric(icountevts,i_fks,j_fks,xbjrk_born,tau_born,ycm_born,shat_born,phi_i_fks,xp,
+     $     x,shat,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,pass)
       endif
       end subroutine generate_momenta_initial
 
 
-      subroutine generate_momenta_initial_asymmetric(icountevts,i_fks,j_fks,
-     &     xbjrk_born,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks,xp,x
-     &     ,shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm
-     &     ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,pass)
+      subroutine generate_momenta_initial_asymmetric(icountevts,i_fks,j_fks,xbjrk_born,tau_born,ycm_born,shat_born,
+     $     phi_i_fks,xp,x,shat,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,pass)
 c Asymmetric initial-state event projection, retained for shower matching.
 c Only the emitting beam changes fraction: x_j=bar{x}_j/(1-xi).
 c All hard final momenta undergo the same light-cone Lorentz map. Its
@@ -905,11 +894,9 @@ c soft and emitter-collinear limits leave the underlying Born unchanged.
       use mc_native_context, only: native_mapping
       implicit none
       integer icountevts,i_fks,j_fks,idir,i
-      double precision xbjrk_born(2),tau_born,ycm_born,ycmhat,shat_born
-     &     ,phi_i_fks,xpswgt,xjac,xiimax,xinorm,xp(0:3,nexternal),stot
-     &     ,x(2),y_ij_fks,xi_i_hat,xi_i_fks,shat,sqrtshat,tau,ycm
-     &     ,xbjrk(2),p_i_fks(0:3),xiimin,z,sqrtz,sqrtborn
-     &     ,pplus,pminus,sintheta,sstiny,cctiny
+      double precision xbjrk_born(2),tau_born,ycm_born,shat_born,phi_i_fks,xpswgt,xjac,xiimax,xinorm,xp(0:3,nexternal),
+     $     x(2),y_ij_fks,xi_i_hat,xi_i_fks,shat,sqrtshat,tau,ycm,xbjrk(2),p_i_fks(0:3),xiimin,z,sqrtz,sqrtborn,pplus,
+     $     pminus,sintheta,sstiny,cctiny
       logical pass,softtest,colltest
       common/sctests/softtest,colltest
       double precision xi_i_fks_fix,y_ij_fks_fix
@@ -1015,18 +1002,16 @@ c xiimax/xinorm also feed the finite FKS endpoint logarithms.
       end subroutine generate_momenta_initial_asymmetric
 
 
-      subroutine generate_momenta_initial_symmetric(icountevts,i_fks,j_fks,
-     &     xbjrk_born,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks ,xp,x
-     &     , shat,stot,sqrtshat,tau,ycm,xbjrk ,p_i_fks,xiimax,xinorm
-     &     ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt ,xjac ,pass)
+      subroutine generate_momenta_initial_symmetric(icountevts,i_fks,j_fks,xbjrk_born,tau_born,ycm_born,shat_born,
+     $     phi_i_fks,xp,x,shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,
+     $     pass)
       use fks_phase_space_data,only: tau_lower_bound,xij_aor
       use mc_native_context, only: native_mapping
       implicit none
 c arguments
       integer icountevts,i_fks,j_fks
-      double precision xbjrk_born(2),tau_born,ycm_born,ycmhat,shat_born
-     &     ,phi_i_fks,xpswgt,xjac,xiimax,xinorm,xp(0:3,nexternal),stot
-     &     ,x(2),y_ij_fks,xi_i_hat
+      double precision xbjrk_born(2),tau_born,ycm_born,shat_born,phi_i_fks,xpswgt,xjac,xiimax,xinorm,xp(0:3,nexternal),
+     $     stot,x(2),y_ij_fks,xi_i_hat
       double precision shat,sqrtshat,tau,ycm,xbjrk(2),p_i_fks(0:3)
       logical pass
 c common blocks
@@ -1057,10 +1042,8 @@ c parameters
       parameter (fks_as_is=.false.)
       double complex ximag
       parameter (ximag=(0d0,1d0))
-      double precision stiny,sstiny,qtiny,zero,ctiny,cctiny,vtiny
+      double precision stiny,sstiny,zero,ctiny,cctiny
       parameter (stiny=1d-6)
-      parameter (vtiny=0d0)
-      parameter (qtiny=1d-7)
       parameter (zero=0d0)
       parameter (ctiny=5d-7)
 c
@@ -1139,6 +1122,9 @@ c
       elseif(idir.eq.-1)then
          y_ij_fks_upp=-yij_low
          y_ij_fks_low=-yij_upp
+      else
+         write(*,*) 'Invalid incoming FKS emitter',j_fks
+         stop 1
       endif
 
       if(y_ij_fks_upp.le.y_ij_fks_low)then
@@ -1314,40 +1300,32 @@ c
       end subroutine generate_momenta_initial_symmetric
 
 
-      subroutine generate_momenta_initial_inverse(xp,xi_i_fks,y_ij_fks
-     $     ,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat,i_fks,j_fks,stot
-     $     ,tau,ycm,xbjrk,tau_born,ycm_born,xbjrk_born,y_lab_to_cms)
+      subroutine generate_momenta_initial_inverse(xp,xi_i_fks,y_ij_fks,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat,i_fks,
+     $     j_fks,stot,tau,ycm,xbjrk,tau_born,ycm_born,xbjrk_born)
       implicit none
       integer i_fks,j_fks
-      double precision xjac,x(3),xp(0:3,nexternal),xi_i_fks,y_ij_fks
-     $     ,phi_i_fks,p_born(0:3,-max_branch:nexternal-1),shat,sqrtshat
-     $     ,xpswgt,stot,tau,ycm,xbjrk(2),tau_born,ycm_born,xbjrk_born(2)
-     $     ,y_lab_to_cms
+      double precision xjac,x(3),xp(0:3,nexternal),xi_i_fks,y_ij_fks,phi_i_fks,p_born(0:3,-max_branch:nexternal-1),shat,
+     $     sqrtshat,xpswgt,stot,tau,ycm,xbjrk(2),tau_born,ycm_born,xbjrk_born(2)
 c Use the same run-level choice for the event and every counterevent.
       if(use_symmetric_isr_mapping())then
-         call generate_momenta_initial_inverse_symmetric(xp,xi_i_fks,y_ij_fks
-     $     ,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat,i_fks,j_fks,stot
-     $     ,tau,ycm,xbjrk,tau_born,ycm_born,xbjrk_born,y_lab_to_cms)
+         call generate_momenta_initial_inverse_symmetric(xp,xi_i_fks,y_ij_fks,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat,
+     $     i_fks,j_fks,stot,tau,ycm,xbjrk,tau_born,ycm_born,xbjrk_born)
       else
-         call generate_momenta_initial_inverse_asymmetric(xp,xi_i_fks,y_ij_fks
-     $     ,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat,i_fks,j_fks,stot
-     $     ,tau,ycm,xbjrk,tau_born,ycm_born,xbjrk_born,y_lab_to_cms)
+         call generate_momenta_initial_inverse_asymmetric(xp,xi_i_fks,y_ij_fks,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat,
+     $     i_fks,j_fks,stot,tau,ycm,xbjrk,tau_born,ycm_born,xbjrk_born)
       endif
       end subroutine generate_momenta_initial_inverse
 
 
-      subroutine generate_momenta_initial_inverse_asymmetric(xp,xi_i_fks,y_ij_fks
-     $     ,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat,i_fks,j_fks,stot
-     $     ,tau,ycm,xbjrk,tau_born,ycm_born,xbjrk_born,y_lab_to_cms)
+      subroutine generate_momenta_initial_inverse_asymmetric(xp,xi_i_fks,y_ij_fks,phi_i_fks,p_born,x,xjac,xpswgt,shat,
+     $     sqrtshat,i_fks,j_fks,stot,tau,ycm,xbjrk,tau_born,ycm_born,xbjrk_born)
       use fks_phase_space_data, only: xinorm_ev,xij_aor
       use mc_native_context, only: native_mapping
       implicit none
       integer i_fks,j_fks,idir,i,iborn
-      double precision xjac,x(3),xp(0:3,nexternal),xi_i_fks,y_ij_fks
-     $     ,phi_i_fks,p_born(0:3,-max_branch:nexternal-1),shat,sqrtshat
-     $     ,xpswgt,stot,tau,ycm,xbjrk(2),tau_born,ycm_born,xbjrk_born(2)
-     $     ,y_lab_to_cms,pred(0:3),z,sqrtborn,xiimax,xiimin,xinorm
-     $     ,sstiny,cctiny,pplus,pminus,exp_y
+      double precision xjac,x(3),xp(0:3,nexternal),xi_i_fks,y_ij_fks,phi_i_fks,p_born(0:3,-max_branch:nexternal-1),shat,
+     $     sqrtshat,xpswgt,stot,tau,ycm,xbjrk(2),tau_born,ycm_born,xbjrk_born(2),pred(0:3),z,sqrtborn,xiimax,xiimin,
+     $     xinorm,sstiny,cctiny,pplus,pminus,exp_y
       double precision pmass(nexternal),transverse_mass2
       common/to_mass/pmass
       type(isr_recoil_boost) recoil_boost
@@ -1441,23 +1419,19 @@ c when undoing a large Born rapidity. Its mass is supplied by the model.
       end subroutine generate_momenta_initial_inverse_asymmetric
 
 
-      subroutine generate_momenta_initial_inverse_symmetric(xp,xi_i_fks ,y_ij_fks
-     $     ,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat,i_fks,j_fks,stot
-     $     ,tau,ycm,xbjrk,tau_born,ycm_born,xbjrk_born,y_lab_to_cms)
+      subroutine generate_momenta_initial_inverse_symmetric(xp,xi_i_fks,y_ij_fks,phi_i_fks,p_born,x,xjac,xpswgt,shat,
+     $     sqrtshat,i_fks,j_fks,stot,tau,ycm,xbjrk,tau_born,ycm_born,xbjrk_born)
       use fks_phase_space_data,only: xinorm_ev,tau_lower_bound,xij_aor
       use mc_native_context, only: native_mapping
       implicit none
-      double precision pi,stiny,qtiny,zero,ctiny
-      parameter (pi=3.1415926535897932d0,stiny=1d-6,qtiny=1d-7,zero=0d0
-     $     ,ctiny=5d-7)
+      double precision pi,stiny,zero,ctiny
+      parameter (pi=3.1415926535897932d0,stiny=1d-6,zero=0d0,ctiny=5d-7)
       double complex ximag
       parameter (ximag=(0d0,1d0))
       logical fks_as_is
       parameter (fks_as_is=.false.)
-      double precision xjac,x(3),xp(0:3,nexternal),xi_i_fks,y_ij_fks
-     $     ,phi_i_fks,p_born(0:3,-max_branch:nexternal-1),shat,sqrtshat
-     $     ,xpswgt,stot,tau,ycm,xbjrk(2),tau_born,ycm_born,xbjrk_born(2)
-     $     ,x1,x2,y_lab_to_cms,xp_red(0:3,nexternal)
+      double precision xjac,x(3),xp(0:3,nexternal),xi_i_fks,y_ij_fks,phi_i_fks,p_born(0:3,-max_branch:nexternal-1),shat,
+     $     sqrtshat,xpswgt,stot,tau,ycm,xbjrk(2),tau_born,ycm_born,xbjrk_born(2),xp_red(0:3,nexternal)
       integer i_fks,j_fks
       double precision yijdir,costh_i_fks,omega,ltau_born ,e2ycm_born
      $     ,em2ycm_born,yij_upp,yij_low ,y_ij_fks_upp ,y_ij_fks_low
@@ -1644,19 +1618,15 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
       end subroutine generate_momenta_initial_inverse_symmetric
 
 
-      subroutine generate_momenta_initial_noevpr(icountevts,i_fks,j_fks,
-     &     xbjrk_born,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks ,xp,x
-     &     , shat,stot,sqrtshat,tau,ycm,xbjrk ,p_i_fks,xiimax,xinorm
-     &     ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt ,xjac ,srec, pass)
-      use fks_phase_space_data,only: tau_Born_lower_bound,tau_lower_bound_resonance,tau_lower_bound,
-     $     veckn_ev,veckbarn_ev,xp0jfks,xij_aor
+      subroutine generate_momenta_initial_noevpr(icountevts,i_fks,j_fks,xbjrk_born,tau_born,ycm_born,shat_born,phi_i_fks,
+     $     xp,x,shat,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,srec,pass)
+      use fks_phase_space_data,only: tau_Born_lower_bound,xij_aor
       use mc_native_context, only: native_mapping
       implicit none
 c arguments
       integer icountevts,i_fks,j_fks
-      double precision xbjrk_born(2),tau_born,ycm_born,ycmhat,shat_born
-     &     ,phi_i_fks,xpswgt,xjac,xiimax,xinorm,xp(0:3,nexternal),stot
-     &     ,x(2),y_ij_fks,xi_i_hat
+      double precision xbjrk_born(2),tau_born,ycm_born,shat_born,phi_i_fks,xpswgt,xjac,xiimax,xinorm,xp(0:3,nexternal),
+     $     x(2),y_ij_fks,xi_i_hat
       double precision shat,sqrtshat,tau,ycm,xbjrk(2),p_i_fks(0:3),srec
       logical pass
 c common blocks
@@ -1665,12 +1635,8 @@ c common blocks
       double precision xi_i_fks_fix,y_ij_fks_fix
       common/cxiyfix/xi_i_fks_fix,y_ij_fks_fix
 c local
-      integer i,j,idir
-      double precision yijdir,costh_i_fks,x1bar2,x2bar2,yij_sol,xi1,xi2
-     $     ,ximaxtmp,omega,bstfact,shy_tbst,chy_tbst,chy_tbstmo
-     $     ,xdir_t(3),cosphi_i_fks,sinphi_i_fks,shy_lbst,chy_lbst
-     $     ,encmso2,E_i_fks,sinth_i_fks,xpifksred(0:3),xi_i_fks
-     $     ,xiimin,yij_upp,yij_low,y_ij_fks_upp,y_ij_fks_low
+      integer j,idir
+      double precision yijdir,costh_i_fks,cosphi_i_fks,sinphi_i_fks,encmso2,E_i_fks,sinth_i_fks,xpifksred(0:3),xi_i_fks
       double complex resAoR0
 c external
 c
@@ -1685,10 +1651,8 @@ c parameters
       parameter (fks_as_is=.false.)
       double complex ximag
       parameter (ximag=(0d0,1d0))
-      double precision stiny,sstiny,qtiny,zero,ctiny,cctiny
+      double precision stiny,sstiny,ctiny,cctiny
       parameter (stiny=1d-6)
-      parameter (qtiny=1d-7)
-      parameter (zero=0d0)
       parameter (ctiny=5d-7)
 c
       pass=.true.

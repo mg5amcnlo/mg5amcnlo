@@ -36,6 +36,7 @@ C       finite part
         GET_VIRTUAL_A0GMU_CONV = 0D0
       ELSE
         WRITE(*,*) 'Error get_virtual_a0Gmu_conv: Invalid ivirt', IVIRT
+        STOP 1
       ENDIF
 
       RETURN

@@ -20,8 +20,6 @@
       integer map_all(0:lmaxconfigs,0:fks_configs)
       common/c_configurations/masses,widths,forest_all,sprop_all,
      $     tprid_all,map_all
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
       nb=size(native_metadata%tree,2)
       nc=native_metadata%configurations(0)
       np=native_metadata%nprocesses
@@ -50,7 +48,6 @@
       tprid_all(:,:,0)=tprid
       map_all(:,0)=mapconfig
       call mc_native_props(masses(:,:,0),widths(:,:,0),pow)
-      calculatedBorn=.false.
       end
 
       subroutine mc_native_masses(pmass)
@@ -111,8 +108,6 @@
       common/to_amp_split_soft/amp_split_soft
       double precision wgt_me_born,wgt_me_real
       common/c_wgt_ME_tree/wgt_me_born,wgt_me_real
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
       type(BornRequest),save::request
       type(BornModelState),save::state
       if(timing_sampled)call timing_enter(timing_born)
@@ -161,7 +156,6 @@
      $        amp_split_soft(b)=native_result%soft(a)
       enddo
       wgt_me_born=native_result%born
-      calculatedBorn=.true.
       if(timing_sampled)call timing_leave(timing_born)
       return
       end
@@ -247,14 +241,11 @@
       common/dsymfactor/diagramsymmetryfactor
       integer this_config,i
       common/to_mconfigs/this_config
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
       mc_outer_channel_weight=0d0
       if(p_born_ev(0,1).le.0d0)return
       pas=0d0
       pas(:,1:nexternal-1)=p_born_ev
       call set_alphas(pas)
-      calculatedBorn=.false.
       call sborn(p_born_ev,ans)
       total=0d0
       do i=1,mapconfig(0)
@@ -263,5 +254,4 @@
       if(total.gt.0d0)mc_outer_channel_weight=
      $     amp2(mapconfig(this_config))/total*diagramsymmetryfactor
       call set_alphas(p_ev)
-      calculatedBorn=.false.
       end

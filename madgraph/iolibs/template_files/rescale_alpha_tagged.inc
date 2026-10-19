@@ -34,6 +34,7 @@ else if (ivirt.eq.0) then
 get_virtual_a0Gmu_conv = %(virtual_a0Gmu_conv_finite)s
 else
 write(*,*) 'Error get_virtual_a0Gmu_conv: Invalid ivirt', ivirt
+stop 1
 endif
 
 return

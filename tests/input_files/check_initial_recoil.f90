@@ -286,8 +286,7 @@ contains
     j0=7d0
     ps0=3d0
     ratio_save=ratio
-    call generate_FKS_kinematics(xgen(1:3),nbody,j0,ps0,stot,s,sqrts,taub,yb,yhat, &
-         xb,mb,jout,out,valid)
+    call generate_FKS_kinematics(xgen(1:3),nbody,j0,ps0,stot,s,sqrts,taub,yb,xb,mb,jout,out,valid)
     if(.not.valid.or.jout.le.0d0)error stop 'production FI map rejected'
     if(maxval(abs(out-p)).gt.3d-5)error stop 'production FI map differs from direct map'
     if(maxval(abs(pbe-born_save)).gt.3d-5)error stop 'FI real partition projection differs from common Born'

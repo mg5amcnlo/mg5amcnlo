@@ -5,7 +5,7 @@ C array an integer number
       implicit none
       include 'orders.inc'
       integer ord(nsplitorders)
-      integer i,j
+      integer i
       integer base, step
       parameter(base=100)
       ! this is for the printout of the informations

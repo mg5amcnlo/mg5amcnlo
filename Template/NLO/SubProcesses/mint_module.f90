@@ -308,7 +308,7 @@ contains
   subroutine calibrate_born_spreading(fun)
     implicit none
     double precision, external :: fun
-    double precision :: x(ndimmax),vol,dummy
+    double precision :: x(ndimmax),vol
     integer :: kfold(ndimmax),ipoint
     logical :: old_even_rn
     born_spread_phase=1
@@ -385,7 +385,7 @@ contains
     k=first_break
     do ibin=1,born_spread_nbins
        global_bin=(isector-1)*born_spread_nbins+ibin
-       bin_area(ibin)=born_spread_bin_area(ibin)
+       bin_area(ibin)=born_spread_bin_area()
        max_factor=1d0/bin_area(ibin)
        deriv=born_spread_deriv0(ibin,isector)
        slope_scale=abs(deriv)
@@ -520,9 +520,8 @@ contains
     deallocate(seg_bin,seg_slope,seg_length)
   end subroutine solve_born_spreading_sector
 
-  double precision function born_spread_bin_area(ibin)
+  pure double precision function born_spread_bin_area()
     implicit none
-    integer, intent(in) :: ibin
     ! The Born prefactor contains the radiation Jacobians. The table
     ! coordinates are uniform in that measure, not in the raw MINT x's.
     born_spread_bin_area=1d0/born_spread_nbins
@@ -537,7 +536,7 @@ contains
     born_spread_phase=1
     do ibin=1,born_spread_nbins
        born_spread_current_bin=ibin
-       area=born_spread_bin_area(ibin)
+       area=born_spread_bin_area()
        ix=mod(ibin-1,born_spread_nxi)+1
        bval(1)=area
        cval(1)=-2d0*area
@@ -636,12 +635,12 @@ contains
     if (i.lt.right) call born_spread_sort_breaks(i,right)
   end subroutine born_spread_sort_breaks
 
-  recursive subroutine born_spread_sort_segments(slopes,bins,lengths,left,right)
+  pure recursive subroutine born_spread_sort_segments(slopes,bins,lengths,left,right)
     implicit none
     integer, intent(in) :: left,right
     integer, intent(inout) :: bins(:)
     double precision, intent(inout) :: slopes(:),lengths(:)
-    integer :: i,j,pivot_bin,temp_bin
+    integer :: i,j,temp_bin
     double precision :: pivot,temp_slope,temp_length
     i=left
     j=right
@@ -674,13 +673,13 @@ contains
          slopes,bins,lengths,i,right)
   end subroutine born_spread_sort_segments
 
-  logical function born_spread_same_break(a,b)
+  pure logical function born_spread_same_break(a,b)
     implicit none
     double precision, intent(in) :: a,b
     born_spread_same_break=(a.eq.b)
   end function born_spread_same_break
 
-  logical function born_spread_same_slope(a,b)
+  pure logical function born_spread_same_slope(a,b)
     implicit none
     double precision, intent(in) :: a,b
     double precision :: scale
@@ -776,9 +775,8 @@ contains
           if (.not.ieee_is_finite(turn)) cycle
           if (turn.eq.0d0.and.c.lt.0d0.and.b.gt.0d0) &
                born_spread_deriv0(ibin,isector)=born_spread_deriv0(ibin,isector)+b
-          if (turn.gt.0d0.and.turn.lt. &
-               1d0/born_spread_bin_area(ibin)) &
-               call born_spread_append((isector-1)*born_spread_nbins+ibin,turn,abs(b))
+          if (turn.gt.0d0.and.turn.lt.1d0/born_spread_bin_area())call &
+               born_spread_append((isector-1)*born_spread_nbins+ibin,turn,abs(b))
        enddo
     elseif (born_spread_phase.eq.2) then
        base_neg=0d0
@@ -904,18 +902,10 @@ contains
     write(*,*) 'Loaded normalized born-spreading table from born_spreading.dat'
   end subroutine born_spread_load_table
 
-  double precision function born_spread_normalization(isector)
+  pure double precision function born_spread_normalization(isector)
     implicit none
     integer, intent(in) :: isector
-    integer :: ix,iy,ibin
-    born_spread_normalization=0d0
-    do iy=1,born_spread_ny
-       do ix=1,born_spread_nxi
-          ibin=(iy-1)*born_spread_nxi+ix
-          born_spread_normalization=born_spread_normalization+ &
-               born_spread_bin_area(ibin)*born_spread_factor(ix,iy,isector)
-       enddo
-    enddo
+    born_spread_normalization=sum(born_spread_bin_area()*born_spread_factor(:,:,isector))
   end function born_spread_normalization
 
   subroutine born_spread_write_table
@@ -1310,8 +1300,8 @@ contains
   
   subroutine check_for_special_channels_loop(channel_loop_done)
     implicit none
-    logical :: channel_loop_done
-    integer :: kchan,i
+    logical, intent(out) :: channel_loop_done
+    integer :: kchan
     do kchan=nchans,1,-1
        if (ans_chan(kchan).eq.1d0) then
 ! results of the current channel
@@ -1335,6 +1325,7 @@ contains
           return
        endif
     enddo
+    error stop 'Missing active channel in initial MINT channel loop'
   end subroutine check_for_special_channels_loop
 
   subroutine combine_results_channels_special_loop
@@ -1853,7 +1844,7 @@ contains
 
   subroutine reset_mint_grids
     implicit none
-    integer :: kdim,kint
+    integer :: kint
     do kint=0,nint_used
        xgrid(kint,1:ndim,1:nchans)=dble(kint)/nint_used
     enddo
@@ -2422,11 +2413,10 @@ contains
   subroutine initialize_even_random_numbers
 ! Recompute the number of calls. Uses the algorithm from VEGAS
     implicit none
-    integer :: i
 ! Make sure that hypercubes are newly initialized
     firsttime=.true.
 ! Number of elements in which we can split one dimension
-    ng=(ncalls0/2.)**(1./ndim)
+    ng=int((ncalls0/2.)**(1./ndim))
 ! Total number of hypercubes
     k=ng**ndim
 ! Number of PS points in each hypercube (at least 2)

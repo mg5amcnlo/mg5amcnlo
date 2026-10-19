@@ -1,6 +1,6 @@
 
       subroutine pythia_UNLOPS(p,passUNLOPScuts)
-      use fks_phase_space_data, only: p1_cnt,jac_cnt
+      use fks_phase_space_data, only: p1_cnt
 c Cut to apply are the following theta functions:
 c    [ B + V + int R \theta(ptj - d(\phi_R)) ] \theta(d(\phi_B)-ptj)
 c where ptj is the input merging scale and d(\phi) is the scale of the
