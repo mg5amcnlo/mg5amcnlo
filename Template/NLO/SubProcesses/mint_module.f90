@@ -65,7 +65,8 @@
 !
 
 module mint_module
-  use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+  ! Keep IEEE imports local to the procedures using them. Module-level
+  ! imports make gfortran save/restore FPU state in unrelated module users.
   use FKSParams ! contains use_poly_virtual
   implicit none
   integer, parameter, private :: nintervals=32    ! max number of intervals in the integration grids
@@ -718,6 +719,7 @@ contains
   end function born_spread_get_factor
 
   subroutine born_spread_observe_sample(bvals,cvals,nvals,point_complete)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     implicit none
     integer, intent(in) :: nvals
     double precision, intent(in) :: bvals(*),cvals(*)
@@ -824,6 +826,7 @@ contains
   end subroutine born_spread_append
 
   subroutine born_spread_load_table
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     implicit none
     integer :: ios,version,nxi,ny,nexternal,nincoming,nfks,ndim_in
     integer :: i,j,isector

@@ -1,6 +1,7 @@
 ! Runtime-sized results never alias a subprocess's fixed Born COMMON blocks.
 module mc_born_types
   implicit none
+  private :: born_is_finite_standard
   integer, parameter :: BORN_OK=0, BORN_UNKNOWN_CONTEXT=1, BORN_BAD_SECTOR=2
   integer, parameter :: BORN_INVALID_REQUEST=3, BORN_MISSING_CORRELATION=4
   integer, parameter :: BORN_INCOMPLETE_HISTORY=5
@@ -47,6 +48,31 @@ module mc_born_types
     complex(8), allocatable :: counterterms(:,:), split_counterterms(:,:,:), extra(:,:)
   end type
 contains
+  elemental logical function born_is_finite(x) result(finite)
+    use, intrinsic :: iso_fortran_env, only: int64
+    real(8), intent(in) :: x
+    integer(int64), parameter :: exponent_mask=int(z'7ff0000000000000',int64)
+    ! Check the representation at compile time, including mixed-endian
+    ! layouts. Integer classification leaves exception flags untouched and
+    ! avoids saving/restoring the FPU state around every provider request.
+    logical, parameter :: binary64=storage_size(0d0).eq.64.and. &
+         radix(0d0).eq.2.and.digits(0d0).eq.53.and. &
+         transfer(1d0,0_int64).eq.int(z'3ff0000000000000',int64).and. &
+         transfer(-1d0,0_int64).eq.int(z'bff0000000000000',int64).and. &
+         transfer(huge(0d0),0_int64).eq.int(z'7fefffffffffffff',int64)
+    if (binary64) then
+      finite=iand(transfer(x,0_int64),exponent_mask).ne.exponent_mask
+    else
+      finite=born_is_finite_standard(x)
+    endif
+  end function
+
+  elemental logical function born_is_finite_standard(x) result(finite)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+    real(8), intent(in) :: x
+    finite=ieee_is_finite(x)
+  end function
+
   logical function born_model_state_equal(a,b)
     type(BornModelState),intent(in) :: a,b
     born_model_state_equal=.false.

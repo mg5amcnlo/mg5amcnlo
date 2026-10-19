@@ -537,7 +537,6 @@ def write_helicity_state_comparator(path, members, signature):
     sizes = {kind: max([int(index.split(':')[-1]) for _, k, index in members if k == kind] or [0])
              for kind in ('real', 'complex')}
     lines = ['  logical function born_helicity_state_equal(a,b)',
-             '    use,intrinsic::ieee_arithmetic,only:ieee_is_finite',
              '    type(BornModelState),intent(in)::a,b',
              '    real(8)::ga,gb,pa,pb', '    complex(8)::ca,cb',
              '    born_helicity_state_equal=.false.',
@@ -553,7 +552,7 @@ def write_helicity_state_comparator(path, members, signature):
              '      born_helicity_state_equal=.true.', '      return', '    endif',
              '    ga=a%%real_values(%d)' % signature['g'],
              '    gb=b%%real_values(%d)' % signature['g'],
-             '    if(.not.ieee_is_finite(ga).or..not.ieee_is_finite(gb))return',
+             '    if(.not.born_is_finite(ga).or..not.born_is_finite(gb))return',
              '    if(ga.le.0d0.or.gb.le.0d0)return']
     for kind in ('real', 'complex'):
         for index in sorted(set(signature[kind])):
@@ -561,11 +560,11 @@ def write_helicity_state_comparator(path, members, signature):
     for kind, index, degree in sorted(signature['couplings']):
         left, right = ('%s%%%s_values(%d)' % (state,kind,index) for state in ('a','b'))
         lines += ['    pa=ga**(%d)' % degree, '    pb=gb**(%d)' % degree,
-                  '    if(.not.ieee_is_finite(pa).or..not.ieee_is_finite(pb))return',
+                  '    if(.not.born_is_finite(pa).or..not.born_is_finite(pb))return',
                   '    if(pa.eq.0d0.or.pb.eq.0d0)return',
                   '    ca=%s/pa' % left, '    cb=%s/pb' % right,
-                  '    if(.not.ieee_is_finite(real(ca,8)).or..not.ieee_is_finite(aimag(ca)))return',
-                  '    if(.not.ieee_is_finite(real(cb,8)).or..not.ieee_is_finite(aimag(cb)))return',
+                  '    if(.not.born_is_finite(real(ca,8)).or..not.born_is_finite(aimag(ca)))return',
+                  '    if(.not.born_is_finite(real(cb,8)).or..not.born_is_finite(aimag(cb)))return',
                   '    if(real(ca,8).eq.0d0.and.real(%s,8).ne.0d0)return' % left,
                   '    if(real(cb,8).eq.0d0.and.real(%s,8).ne.0d0)return' % right]
         if kind == 'complex':
@@ -948,8 +947,7 @@ def provider_adapter(r, source, members):
     degrees = r['helicity_matrices'][0].get('amplitude_degrees')
     strong = next((index for name,kind,index in members if name == 'g' and kind == 'real'), None)
     lines = ['subroutine mcb_provider_%d(context,p,state,request,result,status)' % r['provider'],
-             'use mc_born_types',
-             'use,intrinsic::ieee_arithmetic,only:ieee_is_finite', 'implicit none']
+             'use mc_born_types', 'implicit none']
     lines += expand(source/'orders.inc')
     lines += ['integer context,status', 'type(BornModelState) state',
              'type(BornRequest) request', 'type(BornResult) result',
@@ -1062,7 +1060,7 @@ def provider_adapter(r, source, members):
         lines += ['if(scaled)then',
                   'ratio=state%%real_values(%s)/points(slot)%%state%%real_values(%s)' % (strong,strong),
                   'factors=ratio**strong_degrees',
-                  'if(.not.ieee_is_finite(ratio).or.any(.not.ieee_is_finite(factors)).or.'
+                  'if(.not.born_is_finite(ratio).or.any(.not.born_is_finite(factors)).or.'
                   'any(factors.eq.0d0))reuse_amplitudes=.false.', 'endif']
     lines += ['clock=clock+1', 'points(slot)%age=clock']
     # The model COMMONs are shared by providers inside the DSO. Transfer even
