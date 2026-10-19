@@ -29,16 +29,21 @@ contains
     probability=base
     if(pooled_exact_tail) probability=1d0
   end function
-  subroutine pooled_virtual_prepare(p,mass,incoming,pdg,mur2,ratio,qes2,conditional,context_valid)
+  subroutine pooled_virtual_prepare(p,mass,incoming,pdg,mur2,ratio,qes2,conditional,context_valid,coupling,colours)
     double precision p(0:3,4),mass(4),mur2,ratio(:),qes2
     logical incoming(4)
     logical,optional :: conditional,context_valid
+    double precision,optional :: coupling(:)
+    integer,optional :: colours(:)
     integer pdg(4)
     if(any(mass.ne.[0d0,0d0,2d0,3d0]))error stop 'pooled Born mass ordering'
     if(any(pdg.ne.[21,21,6,-6]))error stop 'pooled Born PDG ordering'
     if(any(incoming.neqv.[.true.,.true.,.false.,.false.]))error stop 'pooled incoming ordering'
     if(mur2.ne.25d0)error stop 'pooled scale'
     if(qes2.ne.9d0)error stop 'pooled loop reference scale'
+    if(.not.present(coupling).or..not.present(colours))error stop 'missing pooled physics inputs'
+    if(size(coupling).ne.3.or.any(coupling.lt.0d0))error stop 'pooled extra coupling'
+    if(any(colours.ne.[8,8,3,-3]))error stop 'pooled Born colour ordering'
     pooled_prepare_calls=pooled_prepare_calls+1
     pooled_virtual_ratio=proposal_ratio
     pooled_virtual_actual_ratio=proposal_ratio
@@ -51,8 +56,10 @@ contains
   end subroutine
 end module
 
-subroutine prepare_pooled_helicities(p)
+subroutine prepare_pooled_helicities(p,colours)
   double precision p(0:3,4)
+  integer colours(4)
+  if(any(colours.ne.[8,8,3,-3]))error stop 'pooled helicity colour ordering'
 end subroutine
 
 subroutine deferred_virtual_context(action,born)
@@ -72,9 +79,11 @@ module pooled_weight_fixture
   end type
   type(fixture_born_metadata)::native_metadata
   double precision :: p_born(0:3,4)=1d0,pmass(5)=[0d0,0d0,99d0,2d0,3d0]
-  double precision :: feature_mass(4),QES2=9d0,scale=5d0
+  double precision :: feature_mass(4),feature_coupling(3),QES2=9d0,scale=5d0
+  double precision,parameter :: pi=3.1415926535897932384626433832795d0
+  complex*16 :: gal(2)=(1d0,0d0)
   logical :: feature_incoming(4)
-  integer :: feature_pdg(4)
+  integer :: feature_pdg(4),feature_colour(4),particle_type(5)=[8,8,8,3,-3]
   complex*16 :: amp_split_cnt(3,2,2)=(0d0,0d0)
   double precision :: amp_split_virt(3)=0d0,amp_split_born_for_virt(3)=0d0
   double precision :: amp_split_avv(3)=0d0,amp_split_finite_ML(3)=0d0

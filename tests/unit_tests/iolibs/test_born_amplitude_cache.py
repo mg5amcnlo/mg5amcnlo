@@ -104,41 +104,41 @@ end program
         record = dict(provider=1, nexternal=2, ngraphs=1, ncolor=1,
                       nhelicity=2, namps=2, nsqamps=3, orders=['QCD', 'QED'],
                       sectors=[dict(fks=dict(splitting_type=['QCD'])),
-                               dict(fks=dict(splitting_type=['QED']))], links=[])
+                               dict(fks=dict(splitting_type=['QED']))], links=[],
+                      helicity_matrices=[dict(amplitude_degrees=[1])])
         with mock.patch.object(support, 'expand', return_value=[]):
             adapter = support.provider_adapter(record, Path('/unused/SubProcesses/P0'), MEMBERS)
         start = adapter.index('model_changed=.not.born_model_state_equal(state,cached_state)')
         end = adapter.index('split_type_used(1)=.true.')
-        # Execute the generator's actual cache/epoch/state-transfer block.
-        # The probe replaces only the later matrix evaluation with its cache
-        # outcome; each generated provider retains its own saved key.
+        # Use the generated cache declarations and point updates as well as
+        # the lookup/epoch/state-transfer block. Only the matrix evaluation
+        # is omitted; each probe retains its provider's independent cache.
+        declarations = '\n'.join(adapter[1:adapter.index('status=0')]).replace(
+            'implicit none', 'implicit none\ninteger,parameter::amp_split_size=3,nsplitorders=2')
         block = '\n'.join(adapter[start:end])
+        update_start = adapter.index('if(.not.reuse_amplitudes.or.scaled)then')
+        update_end = adapter.index('points(slot)%valid=.true.')+1
+        update = '\n'.join(adapter[update_start:update_end])
         routines = []
         for provider in (1, 2):
-            routines.append('''subroutine probe%d(context,p,state,request,hit,epoch)
-use mc_born_types
-implicit none
-integer context,epoch
-real(8) p(0:3,1)
-type(BornModelState) state
-type(BornRequest) request
-logical hit,model_changed,cache_hit
-type(BornModelState),save::cached_state
-integer,save::cached_context=0,cached_sector=0,model_epoch=0
-real(8),save::cached_p(0:3,1)=0d0
-integer born_model_epoch
+            routines.append('subroutine probe%d(context,p,state,request,hit,epoch)\n' % provider+
+                            declarations+'''
+integer epoch
+logical hit
 real(8) g,mass,width,loop_scale
 complex(8) tree_a,tree_b,loop_coupling
 common/installed_real/g,mass,width,loop_scale
 common/installed_complex/tree_a,tree_b,loop_coupling
-%s
-hit=cache_hit
+'''+block+'''
+hit=.not.rebuild
 epoch=born_model_epoch
-cached_p=p
-cached_context=context
-cached_sector=request%%sector
+saveamp=(0d0,0d0)
+if(rebuild)then
+'''+update+'''
+endif
+active_slot=slot
 end subroutine
-''' % (provider, block))
+''')
         with tempfile.TemporaryDirectory(prefix='mg5_amplitude_adapter_') as tmp:
             work=Path(tmp);module=work/'mc_born_types.f90'
             shutil.copyfile(ROOT/'Template/NLO/Source/BornSupport/mc_born_types.f90', module)
@@ -194,7 +194,7 @@ if(hit)stop 12
 a%complex_values(1)=a%complex_values(1)*(1d0,0.1d0)
 call probe1(2,p,a,request,hit,epoch)
 if(hit)stop 13
-! A common G rescaling changes amplitudes without invalidating the mask.
+! Common G rescaling rebuilds results from scaled amplitudes, retaining masks.
 epoch=-1
 a%real_values(1)=2d0*a%real_values(1)
 a%complex_values(1)=2d0*a%complex_values(1)
