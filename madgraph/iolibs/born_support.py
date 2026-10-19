@@ -3,6 +3,8 @@
 The registry is prepared before forking exporters. Workers only write their own
 records; no worker updates a shared manifest. Generated Fortran has private
 provider state and passes model state and results explicitly across the DSO API.
+Providers share a colour density across soft links, cache complete Born results,
+and rescale saved diagrams after a certified strong-coupling change.
 """
 
 import ast
@@ -109,6 +111,23 @@ def worker_record(exporter, me, amp_orders):
                  helicity_matrices=[helicity_matrix_metadata(matrix, proc['model'])
                      for matrix in [born]+list(me.extra_cnt_me_list)+
                      [real.matrix_element for real in me.real_processes]])
+    # Packed matrices follow the same (i,j), i <= j order as the Born colour
+    # sum. Off-diagonal entries include the second half of the symmetric sum.
+    entry['colour_matrices'] = []
+    legs = fks_common.to_fks_legs(proc.get_legs_with_decays(), proc['model'])
+    for link in me.color_links:
+        m, n = link['link']
+        insertion = fks_common.legs_to_color_link_string(
+            legs[m-1], legs[n-1], pert=me.perturbation)
+        matrix = fks_common.born_color_insertion(born['color_basis'], insertion)
+        if any(imaginary for _, imaginary in matrix.values()):
+            # The real density is only applicable to real symmetric links.
+            entry['colour_matrices'] = None
+            break
+        entry['colour_matrices'].append([
+            [value.numerator, value.denominator]
+            for i in range(entry['ncolor']) for j in range(i, entry['ncolor'])
+            for value in [matrix[i, j][0]*(1 if i == j else 2)]])
     for sector, info in enumerate(me.get_fks_info_list(), 1):
         real = me.real_processes[info['n_me']-1]
         fks = info['fks_info']
@@ -462,11 +481,12 @@ def helicity_matrix_metadata(matrix, model):
     except (ValueError, KeyError):
         return result
     result['homogeneous'] = True
+    result['amplitude_degrees'] = [amplitudes[i] for i in sorted(amplitudes)]
     return result
 
 
 def helicity_state_signature(root, records, model, members):
-    """Use only certified tree inputs for masks; amplitude keys stay complete."""
+    """Certify tree inputs for helicity masks and strong-coupling rescaling."""
     matrices = [matrix for record in records for matrix in record.get('helicity_matrices', [])]
     if not matrices or not all(matrix['homogeneous'] for matrix in matrices):
         return None
@@ -506,7 +526,7 @@ def helicity_state_signature(root, records, model, members):
 
 
 def write_helicity_state_comparator(path, members, signature):
-    """Install an output-specific mask predicate, using exact comparisons.
+    """Install an output-specific strong-scaling predicate with exact checks.
 
     Positive nonzero G and identical normalized couplings imply a nonzero
     common factor per certified squared order. Division roundoff can cause
@@ -776,6 +796,7 @@ def write_provider(root, support, record, model_members, model_commons):
         lines += expand(temp)
         temp.unlink()
     lines = model_aware_helicity_filter(lines)
+    lines = color_density_lines(lines, record, source)
     names = dict(model_commons)
     for line in lines:
         names.update((n.lower(), 'mcb%d_' % pid+n.lower()) for n in
@@ -785,6 +806,90 @@ def write_provider(root, support, record, model_members, model_commons):
     write_fortran(directory/'matrix.f', [rename(line, names) for line in lines])
     adapter = provider_adapter(record, source, model_members)
     write_fortran(directory/'adapter.f', [rename(line, names) for line in adapter])
+
+
+def color_density_declarations(record):
+    pairs = record['ncolor']*(record['ncolor']+1)//2
+    return ['double precision colour_density(%d,%d)' % (pairs, record['nsqamps']),
+            'logical accumulating_colour_density',
+            'common/c_born_colour_density/colour_density,accumulating_colour_density']
+
+
+def color_density_lines(lines, record, source):
+    """Use one real helicity-summed density for every soft colour insertion.
+
+    The original Born contraction and spin interference keep their arithmetic
+    order. Only the links change: their exact matrices act on the packed Born
+    density, with no per-link helicity loop or reconstruction of amplitudes.
+    """
+    matrices = record.get('colour_matrices')
+    if not matrices:
+        return lines
+    pairs = record['ncolor']*(record['ncolor']+1)//2
+    for index in range(1, len(matrices)+1):
+        for name in ('sb_sf_%03d', 'sb_sf_%03d_splitorders', 'b_sf_%03d'):
+            lines = without_routine(lines, name % index)
+    result, current = [], ''
+    for line in lines:
+        match = re.match(r'(?i)\s*subroutine\s+(\w+)', line)
+        if match:
+            current = match[1].lower()
+        line = re.sub(r'(?i)call sb_sf_(\d+)\(p_born,wgt_col\)',
+                      lambda m: 'call sb_sf_density(%d,wgt_col)' % int(m[1]), line)
+        if current == 'born' and re.match(r'(?i)\s*do\s+m\s*=\s*1,\s*nampso', line):
+            # Once per actual helicity, before the ordinary colour sum.
+            # The later JAMPH contraction is the spin-correlated Born.
+            if not any('colour_density(CF_INDEX' in s for s in result):
+                result += ['if(accumulating_colour_density)then',
+                           'do m=1,nampso', 'do n=1,nampso',
+                           'colour_density_order=SQSOINDEXB(m,n)', 'CF_INDEX=0',
+                           'do i=1,ncolor', 'do j=i,ncolor', 'CF_INDEX=CF_INDEX+1',
+                           'colour_density(CF_INDEX,colour_density_order)='
+                           'colour_density(CF_INDEX,colour_density_order)+'
+                           'dble(jamp(j,m)*dconjg(jamp(i,n)))',
+                           'enddo', 'enddo', 'enddo', 'enddo', 'endif']
+        result.append(line)
+        if current in ('born', 'sborn_splitorders') and re.match(r'(?i)\s*implicit none\s*$', line):
+            result += color_density_declarations(record)
+            if current == 'born':
+                result += ['integer colour_density_order']
+        if current == 'sborn_splitorders' and re.match(r'(?i)\s*iden\s*=', line):
+            result += ['colour_density=0d0', 'accumulating_colour_density=.true.']
+        if current == 'sborn_splitorders' and re.match(r'(?i)\s*calculatedborn\s*=\s*\.true\.', line):
+            result += ['accumulating_colour_density=.false.']
+        if line.strip().lower() == 'end':
+            current = ''
+    result += ['subroutine sb_sf_density(link,ans_summed)', 'implicit none',
+               *expand(source/'orders.inc'), 'integer link,i,j,iden,nfksprocess',
+               'common/c_nfksprocess/nfksprocess',
+               'double precision ans_summed,ans(%d),max_val' % record['nsqamps'],
+               'double precision,parameter::tiny=1d-12',
+               'double precision,parameter::cf(%d,%d)=reshape([%s],[%d,%d])' %
+               (pairs, len(matrices), ','.join('%sd0/%sd0' % tuple(value)
+                    for matrix in matrices for value in matrix), pairs, len(matrices)),
+               'logical keep_order_cnt(nsplitorders,%d)' % record['nsqamps'],
+               'common/c_keep_order_cnt/keep_order_cnt',
+               'integer amp_orders(nsplitorders)',
+               'integer GETORDPOWFROMINDEX_B,orders_to_amp_split_pos']
+    result += color_density_declarations(record)
+    # IDEN includes the native FKS statistical normalization, and therefore
+    # stays outside the sector-independent colour density.
+    den_lines = routine((source/'born.f').read_text(), 'sborn_splitorders')
+    result += [s for s in den_lines if re.search(r'(?i)\b(?:integer\s+iden_values|data\s+iden_values)', s)]
+    result += ['iden=iden_values(nfksprocess)', 'ans=0d0',
+               'do i=1,%d' % record['nsqamps'], 'do j=1,%d' % pairs,
+               'ans(i)=ans(i)+cf(j,link)*colour_density(j,i)', 'enddo',
+               'ans(i)=ans(i)/dble(iden)', 'enddo',
+               'max_val=maxval(abs(ans))', 'ans_summed=0d0',
+               'amp_split_cnt=(0d0,0d0)', 'do i=1,%d' % record['nsqamps'],
+               'if(.not.keep_order_cnt(qcd_pos,i))cycle',
+               'ans_summed=ans_summed+ans(i)', 'do j=1,nsplitorders',
+               'amp_orders(j)=GETORDPOWFROMINDEX_B(j,i)',
+               'if(j.eq.qcd_pos)amp_orders(j)=amp_orders(j)+2', 'enddo',
+               'if(abs(ans(i)).gt.max_val*tiny)'
+               'amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,qcd_pos)=ans(i)',
+               'enddo', 'if(abs(ans_summed).lt.max_val*tiny)ans_summed=0d0', 'end']
+    return result
 
 
 def write_metadata(root, support, record):
@@ -839,18 +944,46 @@ def provider_adapter(r, source, members):
     n = r['nexternal']-1
     ng, nc, nh = r['ngraphs'], r['ncolor'], r['nhelicity']
     na, ns = r['namps'], r['nsqamps']
+    density = bool(r.get('colour_matrices'))
+    degrees = r['helicity_matrices'][0].get('amplitude_degrees')
+    strong = next((index for name,kind,index in members if name == 'g' and kind == 'real'), None)
     lines = ['subroutine mcb_provider_%d(context,p,state,request,result,status)' % r['provider'],
-             'use mc_born_types', 'implicit none',
-             'integer context,status', 'type(BornModelState) state',
+             'use mc_born_types',
+             'use,intrinsic::ieee_arithmetic,only:ieee_is_finite', 'implicit none']
+    lines += expand(source/'orders.inc')
+    lines += ['integer context,status', 'type(BornModelState) state',
              'type(BornRequest) request', 'type(BornResult) result',
              'double precision p(0:3,%d),ans,correlation' % n,
-             'integer nfksprocess,i', 'common/c_nfksprocess/nfksprocess',
+             'integer nfksprocess,i,slot,j', 'common/c_nfksprocess/nfksprocess',
              'logical calculatedBorn', 'common/ccalculatedBorn/calculatedBorn',
              'type(BornModelState),save::cached_state',
-             'double precision,save::cached_p(0:3,%d)=0d0' % n,
-             'integer,save::cached_context=0,cached_sector=0,model_epoch=0',
+             # A small LRU retains the Born point while soft/collinear points
+             # intervene, including across folds. Storage stays bounded.
+             'integer,parameter::cache_size=4',
+             'type CachedBornPoint',
+             'type(BornModelState) state',
+             # Provider dimensions are fixed. Copying a BornResult here would
+             # repeatedly allocate its buffers, including optional results.
+             'double precision born_weight,squared_orders(amp_split_size)',
+             'double precision diagrams(%d),flows(%d),flow_orders(%d,%d)' % (ng,nc,nc,na),
+             'double complex counterterms(2,nsplitorders)',
+             'double complex split_counterterms(amp_split_size,2,nsplitorders)',
+             'double precision::p(0:3,%d)=0d0' % n,
+             'double complex amplitudes(%d,%d)' % (ng,nh)]
+    if density:
+        lines += ['double precision density(%d,%d)' % (nc*(nc+1)//2,ns)]
+    lines += ['integer::context=0,sector=0', 'integer(8)::age=0',
+             'logical::valid=.false.', 'end type',
+             'type(CachedBornPoint),save::points(cache_size)',
+             'integer,save::active_slot=0,model_epoch=0',
+             'integer(8),save::clock=0',
              'integer born_model_epoch', 'common/c_born_model_epoch/born_model_epoch',
-             'logical model_changed,cache_hit',
+             'logical reuse_amplitudes,rebuild,scaled,model_changed',
+             'double precision ratio,factors(%d)' % ng,
+             'double complex saveamp(%d,%d)' % (ng,nh),
+             'common/to_saveamp/saveamp',
+             'double precision savemom(%d,2)' % n,
+             'common/to_savemom/savemom',
              'double precision amp2(%d),jamp2(0:%d)' % (ng, nc),
              'common/to_amps/amp2,jamp2',
              'double precision amp2b(%d),jamp2b(0:%d,0:%d)' % (ng,nc,na),
@@ -859,7 +992,12 @@ def provider_adapter(r, source, members):
              'common/c_born_hel/wgt_hel',
              'common/c_born_hel_split/wgt_hel_split',
              'double complex ans_split(2,0:%d)' % ns]
-    lines += expand(source/'orders.inc') + expand(source/'coupl.inc')
+    if degrees and strong:
+        lines += ['integer,parameter::strong_degrees(%d)=[%s]' %
+                  (ng,','.join(map(str,degrees)))]
+    if density:
+        lines += color_density_declarations(r)
+    lines += expand(source/'coupl.inc')
     lines += expand(source.parents[1]/'Source'/'MODEL'/'input.inc')
     lines += ['double complex ans_cnt(2,nsplitorders),extra(2,nsplitorders)',
               'common/c_born_cnt/ans_cnt',
@@ -893,15 +1031,40 @@ def provider_adapter(r, source, members):
     else:
         lines += ['if(request%colour)then','status=4','return','endif']
     lines += ['model_changed=.not.born_model_state_equal(state,cached_state)',
-              'cache_hit=.false.',
-              'if(.not.model_changed)cache_hit=context.eq.cached_context.and.'
-              'request%sector.eq.cached_sector.and.all(p.eq.cached_p)',
               'if(model_changed)then',
-              'if(.not.born_helicity_state_equal(state,cached_state))model_epoch=model_epoch+1',
+              'if(.not.born_helicity_state_equal(state,cached_state))then',
+              'model_epoch=model_epoch+1', 'points%valid=.false.',
+              'points%age=0', 'active_slot=0', 'endif',
               'cached_state%real_values=state%real_values',
-              'cached_state%complex_values=state%complex_values',
-              'endif',
-              'born_model_epoch=model_epoch']
+              'cached_state%complex_values=state%complex_values', 'endif',
+              'born_model_epoch=model_epoch',
+              # The active point already has the last installed model state.
+              # Most correlation requests can skip the LRU and model scans.
+              'slot=0', 'scaled=.false.',
+              'if(.not.model_changed.and.active_slot.gt.0)then',
+              'if(all(p.eq.points(active_slot)%p))slot=active_slot', 'endif',
+              'if(slot.eq.0)then', 'do i=1,cache_size',
+              'if(.not.points(i)%valid)cycle',
+              'if(.not.all(p.eq.points(i)%p))cycle',
+              'if(.not.born_model_state_equal(state,points(i)%state))then']
+    if degrees and strong:
+        lines += ['if(.not.born_helicity_state_equal(state,points(i)%state))cycle',
+                  'scaled=.true.']
+    else:
+        lines += ['cycle']
+    lines += ['endif', 'slot=i', 'exit', 'enddo', 'endif',
+              'reuse_amplitudes=slot.ne.0',
+              'if(.not.reuse_amplitudes)slot=minloc(points%age,dim=1)',
+              'rebuild=.true.', 'if(reuse_amplitudes)then',
+              'rebuild=scaled.or.context.ne.points(slot)%context.or.'
+              'request%sector.ne.points(slot)%sector', 'endif']
+    if degrees and strong:
+        lines += ['if(scaled)then',
+                  'ratio=state%%real_values(%s)/points(slot)%%state%%real_values(%s)' % (strong,strong),
+                  'factors=ratio**strong_degrees',
+                  'if(.not.ieee_is_finite(ratio).or.any(.not.ieee_is_finite(factors)).or.'
+                  'any(factors.eq.0d0))reuse_amplitudes=.false.', 'endif']
+    lines += ['clock=clock+1', 'points(slot)%age=clock']
     # The model COMMONs are shared by providers inside the DSO. Transfer even
     # on a cache hit: an intervening provider may have installed another state.
     lines += ['%s=state%%%s_values(%s)' % v for v in members]
@@ -910,15 +1073,54 @@ def provider_adapter(r, source, members):
               for i,v in enumerate(flags,1)]
     lines += ['need_color_links=request%colour', 'need_charge_links=request%charge',
               'charges=request%charges',
-              # Rebuild the inexpensive contractions/order/flow buffers from
-              # SAVEAMP on a hit. Never trust a caller's calculatedBorn flag.
-              'calculatedBorn=cache_hit', 'ans_cnt=(0d0,0d0)',
+              # SBORN checks this legacy projection before reading SAVEAMP.
+              # Restore it before rebuilding a different native context.
+              'do j=1,%d' % n, 'savemom(j,1)=p(0,j)', 'savemom(j,2)=p(3,j)', 'enddo',
+              'if(rebuild)then',
+              'if(reuse_amplitudes)then',
+              'if(active_slot.ne.slot.or.scaled)saveamp=points(slot)%amplitudes']
+    if degrees and strong:
+        lines += ['if(scaled)then',
+                  'do i=1,%d' % nh,
+                  'saveamp(:,i)=saveamp(:,i)*factors', 'enddo', 'endif']
+    lines += ['endif',
+              # Reuse all helicities across sectors; only spin interference
+              # and the native normalization depend on the FKS configuration.
+              'calculatedBorn=reuse_amplitudes', 'ans_cnt=(0d0,0d0)',
               'amp_split_cnt=(0d0,0d0)', 'call sborn(p,ans)',
-              'cached_p=p', 'cached_context=context', 'cached_sector=request%sector',
+              'points(slot)%born_weight=ans', 'points(slot)%squared_orders=amp_split',
+              'points(slot)%counterterms=ans_cnt',
+              'points(slot)%split_counterterms=amp_split_cnt',
+              'points(slot)%diagrams=amp2', 'points(slot)%%flows=jamp2(1:%d)' % nc,
+              'points(slot)%%flow_orders=jamp2b(1:%d,1:%d)' % (nc,na),
+              'if(.not.reuse_amplitudes.or.scaled)then',
+              'points(slot)%amplitudes=saveamp', 'points(slot)%p=p',
+              'points(slot)%state%real_values=state%real_values',
+              'points(slot)%state%complex_values=state%complex_values', 'endif',
+              'points(slot)%context=context',
+              'points(slot)%sector=request%sector', 'points(slot)%valid=.true.']
+    if density:
+        lines += ['points(slot)%density=colour_density']
+    lines += ['else', 'ans=points(slot)%born_weight',
+              # Optional requests and intervening providers may have changed
+              # these buffers. Restore them on hits; SBORN just filled them
+              # on misses. Array assignment retains allocated output storage.
+              'ans_cnt=points(slot)%counterterms',
+              'amp_split=points(slot)%squared_orders',
+              'amp_split_cnt=points(slot)%split_counterterms',
+              'amp2=points(slot)%diagrams', 'amp2b=points(slot)%diagrams',
+              'jamp2(0)=%dd0' % nc, 'jamp2(1:%d)=points(slot)%%flows' % nc,
+              'jamp2b(0,0)=%dd0' % nc,
+              'jamp2b(1:%d,1:%d)=points(slot)%%flow_orders' % (nc,na),
+              'if(active_slot.ne.slot)saveamp=points(slot)%amplitudes']
+    if density:
+        lines += ['if(active_slot.ne.slot)colour_density=points(slot)%density']
+    lines += ['endif',
               'result%born=ans', 'result%amplitudes=amp_split',
               'result%counterterms=ans_cnt', 'result%split_counterterms=amp_split_cnt',
               'result%diagrams=amp2', 'result%%flows=jamp2(1:%d)' % nc,
               'result%%flow_orders=jamp2b(1:%d,1:%d)' % (nc,na),
+              'active_slot=slot', 'calculatedBorn=.true.',
               'if(request%helicities) then',
               'result%has_helicities=.true.',
               'wgt_hel=0d0', 'wgt_hel_split=0d0', 'call sborn_hel(p,ans)',
