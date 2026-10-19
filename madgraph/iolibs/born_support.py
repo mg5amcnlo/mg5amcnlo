@@ -1298,12 +1298,11 @@ def write_wrappers(root, r, members):
         'common/to_amps/amp2,jamp2', 'double complex ans_cnt(2,nsplitorders)',
         'common/c_born_cnt/ans_cnt', 'double precision wgt_ME_born,wgt_ME_real',
         'common/c_wgt_ME_tree/wgt_ME_born,wgt_ME_real',
-        'logical calculatedBorn', 'common/ccalculatedBorn/calculatedBorn',
         'call mc_born_local(p,request,result)', 'ans=result%born',
         'wgt_ME_born=ans', 'amp_split=result%amplitudes',
         'amp_split_cnt=result%split_counterterms', 'ans_cnt=result%counterterms',
         'amp2=result%diagrams', 'jamp2(0)=%dd0' % r['ncolor'],
-        'jamp2(1:%d)=result%%flows' % r['ncolor'], 'calculatedBorn=.true.', 'end']
+        'jamp2(1:%d)=result%%flows' % r['ncolor'], 'end']
     lines += ['subroutine sborn_onehel(p,nhel,hell,ans)']+declarations+[
         'integer nhel(nexternal-1),hell',
         'double complex amp_split_ewsud(amp_split_size)',

@@ -63,8 +63,6 @@ module flow_test_state
   common/test_run/ickkw
   character(4) :: abrv
   common/to_abrv/abrv
-  logical :: calculatedBorn
-  common/ccalculatedBorn/calculatedBorn
   logical :: is_leading_cflow(3)
   integer :: num_leading_cflows
   common/c_leading_cflows/is_leading_cflow,num_leading_cflows
@@ -111,7 +109,6 @@ contains
     gfactazi=0.93d0
     ickkw=0
     abrv='all '
-    calculatedBorn=.false.
     MCcntcalled=0
     nFKSprocess=2
     fold=0

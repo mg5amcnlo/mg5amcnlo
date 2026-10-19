@@ -304,8 +304,6 @@ c
       common/cnbody/nbody
       double precision virtual_over_born
       common/c_vob/virtual_over_born
-      logical                calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
       character*4      abrv
       common /to_abrv/ abrv
 c PineAPPL
@@ -366,7 +364,6 @@ c Share the sampled Born within this evaluation when sectors permit it.
 c The nbody contributions
       if (abrv.eq.'real') goto 11
       nbody=.true.
-      calculatedBorn=.false.
       call get_born_nFKSprocess(nFKS_picked,nFKS_born)
       call update_fks_dir(nFKS_born)
       if (ini_fin_fks(ichan).eq.0) then
@@ -414,7 +411,6 @@ c The n+1-body contributions (including counter terms)
 
       do i=nFKS_min,nFKS_max
          iFKS=ini_fin_fks_map(ini_fin_fks(ichan),i)
-         calculatedBorn=.false. 
          ! MZ this is a temporary fix for processes without
          ! soft singularities associated to the initial state
          ! DO NOT extend this fix to event generation

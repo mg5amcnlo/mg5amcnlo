@@ -3078,6 +3078,15 @@ Parameters              %(params)s\n\
             
         replace_dict['calls_to_me'] = calls_to_me
 
+        # FKS providers own their amplitude cache. Standalone Sudakov
+        # exports keep the original Born evaluator and its shared flag.
+        standalone_born = not hasattr(self, 'born_support_registry')
+        replace_dict['born_cache_declarations'] = (
+            'LOGICAL CALCULATEDBORN\nCOMMON/CCALCULATEDBORN/CALCULATEDBORN'
+            if standalone_born else '')
+        replace_dict['reset_born_cache'] = (
+            'CALCULATEDBORN=.FALSE.' if standalone_born else '')
+
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/ewsudakov_wrapper.inc')).read()
         file = file % replace_dict

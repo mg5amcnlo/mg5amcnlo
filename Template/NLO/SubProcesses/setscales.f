@@ -180,9 +180,6 @@ c the value of variable scale in common block /to_scale/
 c this is to avoid too low dynamic scales      
       double precision minscaleR
       parameter (minscaleR=2d0)
-c After recomputing alphaS, be sure to set 'calculatedBorn' to false
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
 c
       temp_scale_id='  '
       if(fixed_ren_scale)then
@@ -199,11 +196,6 @@ c The following is for backward compatibility. DO NOT REMOVE
       scale=muR
       g=sqrt(4d0*pi*alphas(scale))
       call update_as_param()
-c Reset calculatedBorn, because the couplings might have been changed.
-c This is needed in particular for the MC events, because there the
-c coupling should be set according to the real-emission kinematics,
-c even when computing the Born matrix elements.
-      calculatedBorn=.false.
 c
       return
       end

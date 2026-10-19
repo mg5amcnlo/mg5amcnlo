@@ -1692,8 +1692,6 @@ c partitions of unity at their respective phase-space points.
      &     ,granny_chain_real_final(-nexternal:nexternal)
       common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
      &     ,granny_chain_real_final
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
       logical use_evpr
       common /to_use_evpr/use_evpr
 
@@ -1707,12 +1705,10 @@ c Compute the multi-channel enhancement factor 'enhance'.
             pas=0d0
             pas(:,1:nexternal-1)=p_born
             call set_alphas(pas)
-            calculatedBorn=.false.
          endif
          call sborn_native(p_born,wgt_c)
          if(imode.eq.4)then
             call set_alphas(p_ev)
-            calculatedBorn=.false.
          endif
       elseif(p_born(0,1).lt.0d0)then
          enhance=0d0
@@ -1751,13 +1747,11 @@ c This also keeps the partition normalized for mixed Born orders.
          p_born_used(:,:) = p_born_ev(:,:)
          if (.not.use_evpr) p_born_used(:,:) = p_born_norad(:,:) 
          if (p_born_ev(0,1).gt.0d0) then
-            calculatedBorn=.false.
             pas(0:3,nexternal)=0d0
             pas(0:3,1:nexternal-1)=p_born_used(0:3,1:nexternal-1)
             call set_alphas(pas)
             call sborn_native(p_born_used,wgt_c)
             call set_alphas(p_ev)
-            calculatedBorn=.false.
          elseif(p_born_used(0,1).lt.0d0)then
             if (enhance.ne.0d0) then 
                enhance_real=enhance
@@ -4711,8 +4705,6 @@ C
       double precision cthbe,sthbe,cphibe,sphibe
       common/cbeangles/cthbe,sthbe,cphibe,sphibe
 
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
 
       integer i,j,imother_fks,iord
 C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
@@ -4892,8 +4884,6 @@ C
 
 
 
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
 
 c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       double precision       ch_i,ch_j,ch_m
@@ -5727,9 +5717,7 @@ c      include "fks.inc"
 
       include "pmass.inc"
 c
-c Call the Born to be sure that 'CalculatedBorn' is done correctly. This
-c should always be done before calling the color-correlated Borns,
-c because of the caching of the diagrams.
+c Fill the Born counterterm order buffers before the soft kernels.
 c
       call sborn_native(p_born(0,1),wgt1)
 c
@@ -5902,8 +5890,6 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       double complex ans_extra_cnt(2,nsplitorders)
       integer iextra_cnt, isplitorder_born, isplitorder_cnt
       common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
 
 C keep track of each split orders
       integer iamp
@@ -6020,7 +6006,6 @@ c A factor gS^2 is included in the Altarelli-Parisi kernels
 
       collrem_xi=0.d0
       collrem_lxi=0.d0
-      calculatedborn=.false.
       do iord = 1, nsplitorders
         if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
 
@@ -6085,7 +6070,6 @@ c has to be inserted here
         endif
 
       enddo
-      calculatedborn=.false.
 
       return
       end
@@ -6731,8 +6715,6 @@ c      include "fks.inc"
       double precision beta0,ren_group_coeff
       common/cbeta0/beta0,ren_group_coeff
 
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
 
       double precision virt_fraction_inc
       data virt_fraction_inc /1d0/

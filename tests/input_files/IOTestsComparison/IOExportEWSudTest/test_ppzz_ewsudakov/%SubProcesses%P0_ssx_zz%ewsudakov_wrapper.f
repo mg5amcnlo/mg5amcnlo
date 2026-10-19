@@ -84,8 +84,6 @@
       DOUBLE COMPLEX GET_QCD_LO2
       EXTERNAL GET_QCD_LO2
 
-      LOGICAL CALCULATEDBORN
-      COMMON/CCALCULATEDBORN/CALCULATEDBORN
 
       INTEGER EWSUD_HELSELECT
       COMMON/TO_EWSUD_HELSELECT/EWSUD_HELSELECT
@@ -138,7 +136,6 @@ C     stuff for the MC over helicities
         HEL_MAX = HEL_MIN
       ENDIF
 
-      CALCULATEDBORN=.FALSE.
 
 C     Main loop over the helicities
       DO IHEL=HEL_MIN, HEL_MAX
@@ -272,7 +269,6 @@ C       the SSC terms (charged)
 
 
 
-      CALCULATEDBORN=.FALSE.
 
       RETURN
       END

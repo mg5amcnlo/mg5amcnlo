@@ -80,12 +80,9 @@ c have more diagrams than the local Born routine's to_amps COMMON.
       double precision p(0:3,nexternal-1),ans,total,numerator,diagram,amp2(ngraphs),jamp2(0:ncolor),
      $     pas(0:3,nexternal)
       common /to_amps/amp2,jamp2
-      logical calculatedBorn
-      common /ccalculatedBorn/calculatedBorn
       pas=0d0
       pas(:,1:nexternal-1)=p
       call set_alphas(pas)
-      calculatedBorn=.false.
       call sborn_native(p,ans)
       total=0d0
       numerator=0d0
@@ -102,5 +99,4 @@ c have more diagrams than the local Born routine's to_amps COMMON.
       native_recoil_weight=0d0
       if(total.gt.0d0)native_recoil_weight=numerator/total
       call set_alphas(p_ev)
-      calculatedBorn=.false.
       end

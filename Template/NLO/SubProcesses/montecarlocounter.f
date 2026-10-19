@@ -1907,8 +1907,6 @@ c Born flow and correction order, using Odagiri's prescription.
       integer i,iamp,imother_fks
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
       double precision iden_comp,iden_comp_FKS(fks_configs)
       common /c_iden_comp/iden_comp,iden_comp_FKS
       double precision ch_i,ch_j,ch_m
@@ -1945,9 +1943,7 @@ c can flip even though their matrix elements have no momentum dependence.
             p_born_rot(2,i)=p_born(2,i)
             p_born_rot(3,i)=-p_born(3,i)
          enddo
-         calculatedBorn=.false.
          call sborn_native(p_born_rot,wgt_born)
-         calculatedBorn=.false.
       else
          call sborn_native(p_born,wgt_born)
       endif

@@ -25,9 +25,8 @@ program check_resonance_partition
   common/MC_NATIVE_BORN_TOPOLOGY/mapconfig,iforest,sprop,tprid,forcebw
   integer :: config,c,group_of(3)
   common/to_mconfigs/config
-  logical :: calculated,evpr,granny,chain(-5:5),realchain(-5:5)
+  logical :: evpr,granny,chain(-5:5),realchain(-5:5)
   integer :: igranny,iaunt
-  common/ccalculatedBorn/calculated
   common/to_use_evpr/evpr
   common/c_granny_res/igranny,iaunt,granny,chain,realchain
   double precision :: symmetry,fr,fs,fc,fdc,fsc,fdsc(4),fms,fmh,fss,fsh,fcs,fch,fscs,fsch
@@ -55,7 +54,6 @@ program check_resonance_partition
     if(c.gt.1)pb(0,1:2)=100d0
     granny=c.gt.1
     call set_alphas(pe)
-    calculated=.false.
     fr=1d0
     call include_multichannel_enhance(2)
     outer=mc_outer_channel_weight()
@@ -73,12 +71,10 @@ program check_resonance_partition
     fms=1d0
     fmh=1d0
     call set_alphas(pe)
-    calculated=.false.
     call include_multichannel_enhance(4)
     mc=mc+fms
     if(abs(g-3d0).gt.1d-14)error stop 'MC coupling not restored'
     fs=1d0
-    calculated=.false.
     call set_alphas(pb)
     call include_multichannel_enhance(3)
     soft=soft+fs

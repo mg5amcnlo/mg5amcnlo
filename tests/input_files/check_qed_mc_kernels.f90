@@ -14,7 +14,7 @@ program check_qed_mc_kernels
   double precision :: ch_i, ch_j, ch_m, g
   integer :: i_type, j_type, m_type, j_pdg
   integer :: ifks,jfks,num_leading_cflows,iextra_cnt,isplitorder_born,isplitorder_cnt
-  logical :: is_leading_cflow(1),calculatedBorn
+  logical :: is_leading_cflow(1)
   double precision :: iden_comp,iden_comp_FKS(1)
   double complex :: gal(2)
   logical :: split_type(nsplitorders)
@@ -25,7 +25,6 @@ program check_qed_mc_kernels
   common /c_leading_cflows/ is_leading_cflow,num_leading_cflows
   common /c_extra_cnt/ iextra_cnt,isplitorder_born,isplitorder_cnt
   common /c_iden_comp/ iden_comp,iden_comp_FKS
-  common /ccalculatedBorn/ calculatedBorn
   call get_command_argument(1,mode)
   shower_mc_mod='PYTHIA8'
   mcatnlo_delta_mod=.false.
@@ -37,7 +36,6 @@ program check_qed_mc_kernels
   iextra_cnt=0
   is_leading_cflow=.true.
   num_leading_cflows=1
-  calculatedBorn=.false.
   iden_comp=1d0
   ch_m=0d0
   ch_j=1d0

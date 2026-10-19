@@ -46,8 +46,7 @@ external get_xxc_diag, get_xxc_nondiag
 double complex GET_QCD_LO2
 external GET_QCD_LO2
 
-LOGICAL CALCULATEDBORN
-COMMON/CCALCULATEDBORN/CALCULATEDBORN
+%(born_cache_declarations)s
 
 integer ewsud_helselect
 common/to_ewsud_helselect/ewsud_helselect
@@ -100,7 +99,7 @@ else
  hel_max = hel_min
 endif
 
-CALCULATEDBORN=.FALSE.
+%(reset_born_cache)s
 
 C Main loop over the helicities
 DO IHEL=hel_min, hel_max
@@ -158,7 +157,7 @@ ENDDO
 
 
 
-CALCULATEDBORN=.FALSE.
+%(reset_born_cache)s
 
 return
 end

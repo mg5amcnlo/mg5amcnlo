@@ -688,8 +688,6 @@ c
       data firsttime/.true./
       integer     fold,ifold_counter
       common /cfl/fold,ifold_counter
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
       integer              MCcntcalled
       common/c_MCcntcalled/MCcntcalled
       double precision virtual_over_born
@@ -797,7 +795,6 @@ c "npNLO".
 c The nbody contributions
          if (abrv.eq.'real') goto 11
          nbody=.true.
-         calculatedBorn=.false.
 c Pick the first one because that's the one with the soft singularity
          nFKS_picked_nbody=proc_map(proc_map(0,1),1)
          if (sum.eq.0) then
@@ -897,10 +894,6 @@ c 1/proc_map(0,0)*vol1)
  11      continue
 c The n+1-body contributions (including counter terms)
          if (abrv.eq.'born'.or.abrv(1:2).eq.'vi') goto 12
-c Set calculated Born to zero to prevent numerical inaccuracies: not
-c always exactly the same momenta in computation of Born when computed
-c for different nFKSprocess.
-         if(sum.eq.0) calculatedBorn=.false.
          nbody=.false.
          do i=1,proc_map(proc_map(0,1),0)
             wgt_me_real=0d0
@@ -1233,8 +1226,6 @@ c Sum the contributions that can be summed before taking the ABS value
       integer icolup_s(2,nexternal-1),icolup_h(2,nexternal),
      $     colours_s_save(2,nexternal-1),colours_h_save(2,nexternal)
       common/colour_connections/icolup_s,icolup_h
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
 
       weights_valid=.true.
       if (p(0,1).le.0d0 .or. jacPS.le.0d0) return
@@ -1334,7 +1325,6 @@ c Sum the contributions that can be summed before taking the ABS value
             call select_native_recoil(iconfig)
 ! Only the radiation projection and counter/real measure ratios are
 ! needed here. The common Born sampling factor cancels from the H density.
-            calculatedBorn=.false.
             call generate_native_momenta(p_flipped,pn,pn_lab,pn_cms,
      $           jac_native,native_valid)
             this_config=iconfig
@@ -1376,14 +1366,12 @@ c Sum the contributions that can be summed before taking the ABS value
 ! would require a flow map and support at a different Born point.
 ! q_b,c=p_b,c here; no additional outer 1/q_a,c belongs on this term.
             call set_alphaS(p1_cnt(0,1,0))
-            calculatedBorn=.false.
             call sborn_native(p_born,born_weight)
             call get_born_flow(born_flow_picked,flow_factor_native)
             if(born_flow_picked.eq.0)then
                weights_valid=.false.
                goto 900
             endif
-            calculatedBorn=.false.
             if (MCSubtractionAtFixedFlow)
      $           call include_born_flow_weight(flow_factor_native,
      $           flow_factor_native)
@@ -1469,7 +1457,6 @@ c Sum the contributions that can be summed before taking the ABS value
       call update_fks_dir(owner)
       call init_process_module_nbody_wrapper()
       call update_coltype_and_charge(owner,i_fks,j_fks)
-      calculatedBorn=.false.
       call initialize_fks_phase_space(iconfig)
       call restore_fks_phase_space(saved_point)
       jac_native=saved_point%weight
@@ -1510,7 +1497,6 @@ c Sum the contributions that can be summed before taking the ABS value
       endif
       call set_cms_stuff(-100)
       call set_alphaS(p)
-      calculatedBorn=.false.
       need_matching_cuts=matching_save(:,3)
       mc_H_only=.false.
       end
@@ -1656,8 +1642,6 @@ c Sum the contributions that can be summed before taking the ABS value
       common/fks_indices/i_fks,j_fks
       common/cfl/fold,ifold_counter
       common/c_MCcntcalled/MCcntcalled
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
       character*4 abrv
       common/to_abrv/abrv
       integer icolup_s(2,nexternal-1),icolup_h(2,nexternal),
@@ -1689,7 +1673,6 @@ c Sum the contributions that can be summed before taking the ABS value
          endif
       endif
       call set_alphaS(p1_cnt(0,1,0))
-      calculatedBorn=.false.
       call sborn_native(p_born,born_weight)
       call get_born_flow_weights(flow_weights,sumborn)
       if (sumborn.le.0d0) then
@@ -1721,7 +1704,6 @@ c Sum the contributions that can be summed before taking the ABS value
          pdf_factors=pdf_factors_save
          call include_born_flow_weight(flow_fraction,1d0)
          MCcntcalled=0
-         calculatedBorn=.false.
 ! Reuse the event's colour-insertion variate and the already sampled
 ! all-flow Born dipole scales. Internal flows must not overwrite the
 ! saved H-event colours or draw a new shower starting scale.
@@ -1762,7 +1744,6 @@ c Sum the contributions that can be summed before taking the ABS value
       gfactsf=gfun_owner(1)
       gfactcl=gfun_owner(2)
       gfactazi=gfun_owner(3)
-      calculatedBorn=.false.
       end
 
       subroutine init_process_module_n1body_wrapper(bornflow)

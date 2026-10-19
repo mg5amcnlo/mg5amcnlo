@@ -28,8 +28,6 @@ C
       double precision double, single, finite
       double precision born, virt_wgt
       double precision totmass
-      logical calculatedborn
-      common/ccalculatedborn/calculatedborn
       logical fksprefact
       parameter (fksprefact=.true.)
       integer nfksprocess
@@ -160,7 +158,6 @@ c initialization
           finite=0d0
           single=0d0
           double=0d0
-          calculatedborn = .false.
           if (nincoming.eq.1) then
               call rambo(0, nexternal-nincoming-1, pmass(1), 
      1         pmass_rambo, prambo)
