@@ -8099,13 +8099,11 @@ c Check to see if this channel needs to be included in the multi-channeling
       end
 
       subroutine set_granny(nFKSprocess,iconf,mass_min)
-c This determines of the grandmother of the FKS pair is a resonance. If
+c This determines whether the grandmother of the FKS pair is a resonance. If
 c so, set granny_is_res=.true. and also set to which internal propagator
 c the grandmother corresponds (igranny) as well as the aunt (iaunt).
 c This information can be used to improve the phase-space
 c parametrisation.
-      use mint_module
-      use mc_native_context, only: native_epoch
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -8123,23 +8121,10 @@ c common block that is filled by this subroutine
 c other common blocks
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-c     local
-      integer size
-      parameter (size=fks_configs*maxchannels)
-      integer epoch_saved(fks_configs,maxchannels)
-      data epoch_saved/size*-1/
-      integer config_saved(fks_configs,maxchannels)
-      data config_saved/size*0/
-      logical firsttime_fks(fks_configs,maxchannels)
-      data firsttime_fks/size*.true./
+c set_tau_min caches this complete result together with the bounds and
+c conflicting Breit-Wigners. Recompute here only on a chart-cache miss,
+c so changes to cuts, masses and widths cannot reuse an old resonance.
       integer i,imother
-c save
-      logical granny_is_res_fks(fks_configs,maxchannels)
-      integer igranny_fks(fks_configs,maxchannels),iaunt_fks(fks_configs
-     $     ,maxchannels)
-      logical granny_chain_fks(-nexternal:nexternal,fks_configs
-     $     ,maxchannels)
-      save granny_is_res_fks,igranny_fks,iaunt_fks,granny_chain_fks
 c itree info
       include 'born_conf.inc'
 c propagator info
@@ -8149,115 +8134,69 @@ c propagator info
       double precision pwidth(-nexternal:0,lmaxconfigs)
       integer pow(-nexternal:0,lmaxconfigs)
       include 'coupl.inc'
-      include 'born_props.inc'
-c
-c If it's the firsttime going into this subroutine for this nFKSprocess,
-c save all the relevant information so that for later calls a simple
-c copy will do.
-      if (firsttime_fks(nFKSprocess,ichan).or.
-     $     epoch_saved(nFKSprocess,ichan).ne.native_epoch.or.
-     $     config_saved(nFKSprocess,ichan).ne.iconf)then
-         epoch_saved(nFKSprocess,ichan)=native_epoch
-         config_saved(nFKSprocess,ichan)=iconf
-         firsttime_fks(nFKSprocess,ichan)=.false.
+      igranny=0
+      iaunt=0
+      granny_is_res=.false.
+      granny_chain=.false.
+      granny_chain_real_final=.false.
 c need to have at least 2->3 (or 1->3) process to have non-trivial
 c grandmother
-         if (nexternal-nincoming.lt.3) then
-            igranny_fks(nFKSprocess,ichan)=0
-            iaunt_fks(nFKSprocess,ichan)=0
-            granny_is_res_fks(nFKSprocess,ichan)=.false.
-            igranny=0
-            iaunt=0
-            granny_is_res=.false.
-            return
+      if (nexternal-nincoming.lt.3)return
 c j_fks needs to be final state to have non-trivial grandmother
-         elseif (j_fks.le.nincoming) then
-            igranny_fks(nFKSprocess,ichan)=0
-            iaunt_fks(nFKSprocess,ichan)=0
-            granny_is_res_fks(nFKSprocess,ichan)=.false.
-            igranny=0
-            iaunt=0
-            granny_is_res=.false.
-            return
-         endif
+      if (j_fks.le.nincoming)return
+      pmass=0d0
+      pwidth=0d0
+      include 'born_props.inc'
 c determine if grandmother is an s-channel particle. If so, set igranny
 c and iaunt.
-         imother=min(i_fks,j_fks)
-         do i=-1,-(nexternal-(2+nincoming)),-1
-            if (iforest(1,i,iconf).eq.1 .or.
-     &              iforest(1,i,iconf).eq.2) then
+      imother=min(i_fks,j_fks)
+      do i=-1,-(nexternal-(2+nincoming)),-1
+         if (iforest(1,i,iconf).eq.1 .or.
+     &       iforest(1,i,iconf).eq.2) then
 c no more s-channels, so exit the do-loop and set igranny=0
-               igranny_fks(nFKSprocess,ichan)=0
-               iaunt_fks(nFKSprocess,ichan)=0
-               exit
-            elseif (iforest(1,i,iconf).eq.imother) then
+            exit
+         elseif (iforest(1,i,iconf).eq.imother) then
 c Daughter 1 is the fks_mother.
-               igranny_fks(nFKSprocess,ichan)=i
-               iaunt_fks(nFKSprocess,ichan)=iforest(2,i,iconf)
-               exit
-            elseif (iforest(2,i,iconf).eq.imother) then
+            igranny=i
+            iaunt=iforest(2,i,iconf)
+            exit
+         elseif (iforest(2,i,iconf).eq.imother) then
 c Daughter 2 is the fks_mother.
-               igranny_fks(nFKSprocess,ichan)=i
-               iaunt_fks(nFKSprocess,ichan)=iforest(1,i,iconf)
-               exit
-            endif
-         enddo
+            igranny=i
+            iaunt=iforest(1,i,iconf)
+            exit
+         endif
+      enddo
 c If there is an s-channel grandmother, determine if it's a resonance by
 c making sure that it's massive and has a non-zero width. In the special
 c case that the grandmother is the s-hat propagator (which means that
 c the process has no t-channels), set granny_is_res to false.
-         if (igranny_fks(nFKSprocess,ichan).ne.0 .and.
-     $        igranny_fks(nFKSprocess,ichan).ne.-(nexternal-(2+nincoming))) then
-            if (pmass(igranny_fks(nFKSprocess,ichan),iconf).ne.0d0 .and.
-     $           pwidth(igranny_fks(nFKSprocess,ichan),iconf).gt.0d0) then
-               ! also check if the sum of all the masses of all final
-               ! state particles originating from the granny is smaller
-               ! than the mass of the granny. Otherwise it will never be
-               ! on-shell, and we don't need the special mapping.
-               if (pmass(igranny_fks(nFKSprocess,ichan),iconf) .gt.
-     $              mass_min(igranny_fks(nFKSprocess,ichan))) then
-                  granny_is_res_fks(nFKSprocess,ichan)=.true.
-               else
-                  granny_is_res_fks(nFKSprocess,ichan)=.false.
-               endif
-            else
-               granny_is_res_fks(nFKSprocess,ichan)=.false.
-            endif
-         else
-            granny_is_res_fks(nFKSprocess,ichan)=.false.
-         endif
-c Now we have igranny and granny_is_res_fks. We can now determine the
-c chain of s-channels that originates from the grandmother
-         do i=-nexternal,nexternal
-            granny_chain_fks(i,nFKSprocess,ichan)=.false.
-         enddo
-         if (granny_is_res_fks(nFKSprocess,ichan)) then
-c granny is part of the chain            
-            granny_chain_fks(igranny_fks(nFKSprocess,ichan),nFKSprocess,ichan)
-     &           =.true.
-c loop from the granny to the external particles. If mother was part of
-c the granny chain, so are the daugthers.
-            do i=igranny_fks(nFKSprocess,ichan),-1
-               if (granny_chain_fks(i,nFKSprocess,ichan)) then
-                  granny_chain_fks(iforest(1,i,iconf),nFKSprocess,ichan) =
-     $                 .true.
-                  granny_chain_fks(iforest(2,i,iconf),nFKSprocess,ichan) =
-     $                 .true.
-               endif
-            enddo
+      if (igranny.ne.0 .and.
+     $    igranny.ne.-(nexternal-(2+nincoming))) then
+         if (pmass(igranny,iconf).ne.0d0 .and.
+     $       pwidth(igranny,iconf).gt.0d0) then
+c Check whether the daughter masses allow an on-shell grandmother.
+            granny_is_res=pmass(igranny,iconf).gt.mass_min(igranny)
          endif
       endif
-c Here is the simply copy for later calls to this subroutine: set
-c igranny, iaunt and granny_is_res from the saved information
-      if (granny_is_res_fks(nFKSprocess,ichan)) then
-         igranny=igranny_fks(nFKSprocess,ichan)
-         iaunt=iaunt_fks(nFKSprocess,ichan)
-         granny_is_res=.true.
-         do i=-nexternal,nexternal
-            granny_chain(i)=granny_chain_fks(i,nFKSprocess,ichan)
-            if (i.le.0) then
-               granny_chain_real_final(i)=.false.
-            elseif (i.lt.max(i_fks,j_fks)) then
+c Now we have igranny and granny_is_res. We can now determine the
+c chain of s-channels that originates from the grandmother
+      if (granny_is_res) then
+c granny is part of the chain            
+         granny_chain(igranny)=.true.
+c loop from the granny to the external particles. If mother was part of
+c the granny chain, so are the daugthers.
+         do i=igranny,-1
+            if (granny_chain(i)) then
+               granny_chain(iforest(1,i,iconf))=.true.
+               granny_chain(iforest(2,i,iconf))=.true.
+            endif
+         enddo
+      endif
+c Map the Born descendants back to the real external numbering.
+      if (granny_is_res) then
+         do i=1,nexternal
+            if (i.lt.max(i_fks,j_fks)) then
                granny_chain_real_final(i)=granny_chain(i)
             elseif(i.eq.max(i_fks,j_fks)) then
                granny_chain_real_final(i)=.true.
@@ -8269,10 +8208,6 @@ c igranny, iaunt and granny_is_res from the saved information
          igranny=0
          iaunt=0
          granny_is_res=.false.
-         do i=-nexternal,nexternal
-            granny_chain(i)=.false.
-            granny_chain_real_final(i)=.false.
-         enddo
       endif
       return
       end

@@ -154,9 +154,10 @@ c     fully ensure that this is not a jet/lepton/photon
 c Sets the lower bound for tau=x1*x2, using information on particle
 c masses and on the jet minimum pt, as entered in run_card.dat, 
 c variable ptj
-      use mc_native_context, only: native_epoch,active_context,
+      use mc_native_context, only: active_context,
      $     native_context_ids,native_mapping
-      use mint_module
+      use mint_module, only: maxchannels,iconfig,ichan,nlo_ps,
+     $     FKSExplicitSum
       implicit none
       double precision zero,vtiny
       parameter (zero=0.d0,vtiny=1d-8)
@@ -222,32 +223,125 @@ c     block for the (simple) cut bsed on the pdg
       double precision smin_update , mxx
       integer nb_iden_pdg
 c
-      integer,save::epoch_save=-1,config_save=-1
-      logical,save::mapping_save=.false.
+      integer granny_i,granny_j,igranny,iaunt
+      logical granny_is_res,granny_chain(-nexternal:nexternal),
+     $     granny_chain_real_final(-nexternal:nexternal)
+      common/fks_indices/granny_i,granny_j
+      common/c_granny_res/igranny,iaunt,granny_is_res,granny_chain,
+     $     granny_chain_real_final
+c Cache the complete chart state, rather than an epoch that changes on
+c every native-context switch. Model masses, widths and cuts remain exact
+c inputs; running couplings and sampled momenta do not enter these bounds.
+      integer,parameter::cache_size=64,nfinal=nexternal-nincoming-1
+      integer,parameter::recent_configs=max(1,min(lmaxconfigs,4))
+      type TauCutEntry
+         integer key_i(7),tree(2,-max_branch:-1),ids(nexternal)
+         double precision key_r(7),masses(nexternal),
+     $        pole_masses(-nexternal:0),pole_widths(-nexternal:0),
+     $        etmin(nfinal),mxxmin(nfinal,nfinal)
+         logical key_l(3),jets(nincoming+1:nexternal),
+     $        positive(nincoming+1:nexternal),negative(nincoming+1:nexternal),
+     $        photons(nincoming+1:nexternal)
+         double precision bounds(3),s_mass(-nexternal:nexternal)
+         double precision bw_mass(-1:1,-nexternal:-1),
+     $        bw_width(-1:1,-nexternal:-1)
+         integer bw_max,bw(-nexternal:-1),bw_level(-nexternal:-1)
+         integer granny,aunt
+         logical is_res,chain(-nexternal:nexternal),
+     $        real_chain(-nexternal:nexternal)
+         integer(8)::age=0
+         logical::valid=.false.
+      end type TauCutEntry
+      type(TauCutEntry),save::cache(cache_size)
+      integer key_i(7),slot,lookup,mode_index,recent_config
+      double precision key_r(7)
+      logical key_l(3)
+      integer,save::recent_slot(fks_configs,2,recent_configs)=0
+      integer(8),save::clock=0
       integer nprint
       parameter(nprint=fks_configs*maxchannels)
       logical printed(fks_configs,maxchannels)
       data printed/nprint*.false./
-      logical firsttime,firsttime_chans(maxchannels)
-      data firsttime /.true./
-      data firsttime_chans/maxchannels*.true./
-      if(epoch_save.ne.native_epoch.or.config_save.ne.iconfig.or.
-     $     (mapping_save.neqv.native_mapping))then
-         firsttime_chans=.true.
-         epoch_save=native_epoch
-         config_save=iconfig
-         mapping_save=native_mapping
-      endif
-      if (firsttime) then
-         do i = 1,lmaxconfigs
-            do j = -nexternal,0
-               pmass(j,i) = 0d0
-               pwidth(j,i) = 0d0
-            enddo
-         enddo
-         firsttime=.false.
-      endif
+      pmass=0d0
+      pwidth=0d0
       include "born_props.inc"
+c Scalar stores avoid compiler-allocated array-constructor temporaries.
+      key_i(1)=nFKSprocess
+      key_i(2)=active_context
+      key_i(3)=iconfig
+      key_i(4)=iconf
+      key_i(5)=ichan
+      key_i(6)=granny_i
+      key_i(7)=granny_j
+      key_r(1)=ptj
+      key_r(2)=ptgmin
+      key_r(3)=ptl
+      key_r(4)=mll
+      key_r(5)=mll_sf
+      key_r(6)=ebeam(1)
+      key_r(7)=ebeam(2)
+      key_l(1)=native_mapping
+      key_l(2)=FKSExplicitSum
+      key_l(3)=nlo_ps
+      mode_index=1
+      if(native_mapping)mode_index=2
+c Keep alternating native topologies in the short lookup. Collisions
+c and evicted entries still go through the complete input comparison.
+      recent_config=1+mod(iconf-1,recent_configs)
+      slot=recent_slot(nFKSprocess,mode_index,recent_config)
+      if(slot.ne.0)then
+         if(.not.cache_matches(slot))slot=0
+      endif
+      if(slot.eq.0)then
+         do lookup=1,cache_size
+            if(.not.cache_matches(lookup))cycle
+            slot=lookup
+            exit
+         enddo
+      endif
+      clock=clock+1
+      if(slot.ne.0)then
+         cache(slot)%age=clock
+         recent_slot(nFKSprocess,mode_index,recent_config)=slot
+         tau_Born_lower_bound=cache(slot)%bounds(1)
+         tau_lower_bound=cache(slot)%bounds(2)
+         tau_lower_bound_resonance=cache(slot)%bounds(3)
+         s_mass=cache(slot)%s_mass
+         cBW_level_max=cache(slot)%bw_max
+         cBW=cache(slot)%bw
+         cBW_level=cache(slot)%bw_level
+         do j=-1,1,2
+            cBW_mass(j,:)=cache(slot)%bw_mass(j,:)
+            cBW_width(j,:)=cache(slot)%bw_width(j,:)
+         enddo
+         igranny=cache(slot)%granny
+         iaunt=cache(slot)%aunt
+         granny_is_res=cache(slot)%is_res
+         granny_chain=cache(slot)%chain
+         granny_chain_real_final=cache(slot)%real_chain
+         return
+      endif
+      slot=1
+      do lookup=2,cache_size
+         if(cache(lookup)%age.lt.cache(slot)%age)slot=lookup
+      enddo
+      cache(slot)%valid=.false.
+      cache(slot)%key_i=key_i
+      cache(slot)%key_r=key_r
+      cache(slot)%key_l=key_l
+      cache(slot)%tree=itree
+      cache(slot)%ids=idup(:,1)
+      cache(slot)%masses=emass
+      cache(slot)%pole_masses=pmass(:,iconf)
+      cache(slot)%pole_widths=pwidth(:,iconf)
+      cache(slot)%etmin=etmin
+      cache(slot)%mxxmin=mxxmin
+      cache(slot)%jets=is_a_j(nincoming+1:nexternal)
+      cache(slot)%positive=is_a_lp(nincoming+1:nexternal)
+      cache(slot)%negative=is_a_lm(nincoming+1:nexternal)
+      cache(slot)%photons=is_a_ph(nincoming+1:nexternal)
+      cache(slot)%age=clock
+      recent_slot(nFKSprocess,mode_index,recent_config)=slot
 
 c The following assumes that light QCD particles are at the end of the
 c list. Exclude one of them (i_fks) to set tau bound at the Born level 
@@ -259,15 +353,18 @@ c bound' if j_fks is initial state: the real-emission i_fks parton is
 c not necessarily the softest.  Therefore, it could be that even though
 c the Born does not have enough energy to pass the cuts set by ptj, the
 c event could.
-      if (firsttime_chans(ichan)) then
          do i=-nexternal,nexternal
             xm(i)=0d0
             xw(i)=0d0
             mass_min(i,ichan)=0d0
          end do
-         firsttime_chans(ichan)=.false.
          do iFKS=1,fks_configs
             if(native_context_ids(iFKS).ne.active_context)cycle
+            cBW_FKS(iFKS,:,ichan)=0
+            cBW_FKS_level(iFKS,:,ichan)=0
+            cBW_FKS_mass(iFKS,:,:,ichan)=0d0
+            cBW_FKS_width(iFKS,:,:,ichan)=0d0
+            s_mass_FKS(iFKS,:,ichan)=0d0
             j_fks=FKS_J_D(iFKS)
             i_fks=FKS_I_D(iFKS)
             taumin(iFKS,ichan)=0.d0
@@ -633,7 +730,6 @@ c
             endif
             endif
          enddo
-      endif
       sampling_sector=nFKSprocess
       if (FKSExplicitSum.and.nlo_ps.and..not.native_mapping) then
 c S weights may be combined only at a common Born point. In particular,
@@ -672,8 +768,49 @@ c nFKSprocess. Auxiliary inner matching histories keep their own maps.
       enddo
       cBW_level_max=cBW_FKS_level_max(sampling_sector,ichan)
       call set_granny(nFKSprocess,iconf,mass_min(-nexternal,ichan))
+      cache(slot)%bounds(1)=tau_Born_lower_bound
+      cache(slot)%bounds(2)=tau_lower_bound
+      cache(slot)%bounds(3)=tau_lower_bound_resonance
+      cache(slot)%s_mass=s_mass
+      cache(slot)%bw_max=cBW_level_max
+      cache(slot)%bw=cBW
+      cache(slot)%bw_level=cBW_level
+      do j=-1,1,2
+         cache(slot)%bw_mass(j,:)=cBW_mass(j,:)
+         cache(slot)%bw_width(j,:)=cBW_width(j,:)
+      enddo
+      cache(slot)%granny=igranny
+      cache(slot)%aunt=iaunt
+      cache(slot)%is_res=granny_is_res
+      cache(slot)%chain=granny_chain
+      cache(slot)%real_chain=granny_chain_real_final
+      cache(slot)%valid=.true.
       return
-      end
+
+      contains
+
+      logical function cache_matches(index)
+      integer,intent(in)::index
+      cache_matches=.false.
+      if(.not.cache(index)%valid)return
+      if(any(key_i.ne.cache(index)%key_i))return
+      if(any(key_l.neqv.cache(index)%key_l))return
+      if(any(key_r.ne.cache(index)%key_r))return
+      if(any(pmass(:,iconf).ne.cache(index)%pole_masses))return
+      if(any(pwidth(:,iconf).ne.cache(index)%pole_widths))return
+      if(any(emass.ne.cache(index)%masses))return
+      if(any(itree.ne.cache(index)%tree))return
+      if(any(idup(:,1).ne.cache(index)%ids))return
+      if(any(etmin.ne.cache(index)%etmin))return
+      if(any(mxxmin.ne.cache(index)%mxxmin))return
+      if(any(is_a_j(nincoming+1:nexternal).neqv.cache(index)%jets))return
+      if(any(is_a_lp(nincoming+1:nexternal).neqv.cache(index)%positive))return
+      if(any(is_a_lm(nincoming+1:nexternal).neqv.cache(index)%negative))return
+      if(any(is_a_ph(nincoming+1:nexternal).neqv.cache(index)%photons))return
+      cache_matches=.true.
+      end function cache_matches
+
+      end subroutine set_tau_min
 
 
       subroutine sChan_order(ns_channel,order)
