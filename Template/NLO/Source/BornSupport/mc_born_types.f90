@@ -5,6 +5,8 @@ module mc_born_types
   integer, parameter :: BORN_OK=0, BORN_UNKNOWN_CONTEXT=1, BORN_BAD_SECTOR=2
   integer, parameter :: BORN_INVALID_REQUEST=3, BORN_MISSING_CORRELATION=4
   integer, parameter :: BORN_INCOMPLETE_HISTORY=5
+  ! Provider model COMMONs share one installation inside the Born library.
+  integer, save :: born_installed_provider=0
   type BornModelState
     real(8), allocatable :: real_values(:)
     complex(8), allocatable :: complex_values(:)
@@ -84,11 +86,17 @@ contains
                           all(a%complex_values.eq.b%complex_values)
   end function
 
-  logical function born_helicity_state_equal(a,b)
+  logical function born_helicity_state_equal(a,b,model_changed)
     type(BornModelState),intent(in) :: a,b
+    logical,intent(in),optional :: model_changed
     ! Finalization replaces this conservative default only after proving
     ! homogeneous G scaling in every used tree squared-order component.
-    born_helicity_state_equal=born_model_state_equal(a,b)
+    ! Providers can supply their preceding exact model comparison.
+    if(present(model_changed))then
+      born_helicity_state_equal=.not.model_changed
+    else
+      born_helicity_state_equal=born_model_state_equal(a,b)
+    endif
   end function
 
   logical function born_amplitude_state_equal(a,b)

@@ -618,6 +618,8 @@ class TestBornLibrary(unittest.TestCase):
                 lines += ['state%%%s_values(%d)=state%%%s_values(%d)*2d0**(%d)' %
                           (kind,index,kind,index,degree)]
             lines += ['if(.not.born_helicity_state_equal(state,alternate))stop 43',
+                'if(.not.born_helicity_state_equal(state,alternate,.true.))stop 43',
+                'if(.not.born_helicity_state_equal(state,state,.false.))stop 43',
                 'if(born_model_state_equal(state,alternate))stop 44',
                 'calls_before=born_test_helas_calls(%d)' % r['provider'],
                 'call born_evaluate(%d,%d,pother,state,request,other,status)' % (r['provider'],r['context']),

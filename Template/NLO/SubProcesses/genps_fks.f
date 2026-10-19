@@ -12,7 +12,8 @@ c Sampling and radiation kernels live in their own lower-level modules.
      $     generate_momenta_initial_inverse,
      $     generate_momenta_initial_noevpr,use_symmetric_isr_mapping
       use fks_phase_space_helpers, only: lambda,get_recoil,
-     $     boost_isr_recoil
+     $     isr_recoil_boost,prepare_isr_recoil_boost,
+     $     apply_isr_recoil_boost
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -148,7 +149,6 @@ c sampling a plain Born point, whose measure contains no radiation.
       type(fks_phase_space_point),intent(out) :: point
 
       if(timing_sampled)call timing_enter(timing_phase_space)
-      point=fks_phase_space_point()
       call initialize_fks_phase_space(iconfig)
       call generate_prepared_fks_point(ndim,x,.true.,wgt,
      $     point)
@@ -403,7 +403,9 @@ c condition in initialize_born_chart and avoid threshold roundoff.
          use_evpr=use_evpr.or.j_fks.gt.nincoming
       endif
       born%event_projection=use_evpr
-      born%bounds=[tau_Born_lower_bound,tau_lower_bound_resonance,tau_lower_bound]
+      born%bounds(1)=tau_Born_lower_bound
+      born%bounds(2)=tau_lower_bound_resonance
+      born%bounds(3)=tau_lower_bound
       born%omx=omx
       born%ndim=ndim
       born%config=this_config
@@ -415,7 +417,8 @@ c condition in initialize_born_chart and avoid threshold roundoff.
       born%external_mass=pmass
       born%beam_energy=ebeam
       born%beams=lpp
-      born%limit_tests=[softtest,colltest]
+      born%limit_tests(1)=softtest
+      born%limit_tests(2)=colltest
       pass=.true.
  9909 continue
       if(timing_sampled)call timing_leave(timing_phase_space)
@@ -469,9 +472,11 @@ c Equal Born flavours alone do not imply equal cuts/BW sampling maps.
       if(any(born%external_mass.ne.pmass).or.
      $     any(born%beam_energy.ne.ebeam).or.
      $     any(born%beams.ne.lpp).or.
-     $     any(born%bounds.ne.[tau_Born_lower_bound,
-     $     tau_lower_bound_resonance,tau_lower_bound]))return
-      if(any(born%limit_tests.neqv.[softtest,colltest]))return
+     $     born%bounds(1).ne.tau_Born_lower_bound.or.
+     $     born%bounds(2).ne.tau_lower_bound_resonance.or.
+     $     born%bounds(3).ne.tau_lower_bound)return
+      if((born%limit_tests(1).neqv.softtest).or.
+     $     (born%limit_tests(2).neqv.colltest))return
       if(any(born%coordinates(1:ndim-3).ne.x(1:ndim-3)))return
       fks_born_matches=.true.
       end function fks_born_matches
@@ -543,6 +548,28 @@ c Copy the reusable input before replacing the generated result.
 
       subroutine generate_fks_radiation(born,rad,nbody_only,
      $     wgt,point,pass)
+c Record the complete result for callers retaining this radiation trial.
+c Every member is assigned by record_fks_phase_space; intent(inout)
+c avoids default-initializing the entire result before overwriting it.
+      implicit none
+      type(fks_born_point),intent(in) :: born
+      type(fks_phase_space_point),intent(inout) :: point
+      logical,intent(in) :: nbody_only
+      logical,intent(out) :: pass
+      double precision rad(3),wgt,p(0:3,nexternal),
+     $     p_lab(0:3,nexternal),p_cms(0:3,nexternal)
+
+      call generate_fks_radiation_momenta(born,rad,nbody_only,wgt,
+     $     p,p_lab,p_cms,pass)
+      call record_fks_phase_space(point,born,wgt,p,p_lab,p_cms)
+      point%radiation_coordinates=rad
+      point%has_radiation=.true.
+      point%nbody_only=nbody_only
+      end subroutine generate_fks_radiation
+
+
+      subroutine generate_fks_radiation_momenta(born,rad,nbody_only,
+     $     wgt,p,p_lab,p_cms,pass)
       use fks_phase_space_data, only: tau_Born_lower_bound,tau_lower_bound_resonance,tau_lower_bound
 c Generate radiation from supplied Born CM momenta, without any Born
 c chart, beam sampling or recoil selection. The active sector/recoiler
@@ -552,7 +579,6 @@ c the caller weight: apply it once to real and counterevent Jacobians.
       implicit none
       include 'timing_variables.inc'
       type(fks_born_point),intent(in) :: born
-      type(fks_phase_space_point),intent(out) :: point
       logical,intent(in) :: nbody_only
       logical,intent(out) :: pass
       logical use_evpr
@@ -597,13 +623,9 @@ c the caller weight: apply it once to real and counterevent Jacobians.
          call boost_n1_to_lab(p,p_lab,-born%ycm)
       endif
  900  continue
-      call record_fks_phase_space(point,born,wgt,p,p_lab,p_cms)
-      point%radiation_coordinates=rad
-      point%has_radiation=.true.
-      point%nbody_only=nbody_only
       if(timing_sampled)call timing_leave(timing_phase_space)
       return
-      end subroutine generate_fks_radiation
+      end subroutine generate_fks_radiation_momenta
 
 
       subroutine reject_fks_phase_space(wgt,p,p_lab,p_cms)
@@ -1177,6 +1199,7 @@ c light-cone recoil followed by the boost to the real CM.
       double precision xi_i_fks,y_ij_fks,phi_i_fks,shat,srec
       double precision pred(0:3),sqrtz,pplus,pminus
       double precision chy,shy,chy_minus_one,direction(3)
+      type(isr_recoil_boost) recoil_boost
       integer i_fks,j_fks,idir,i,ireal
       idir=3-2*j_fks
       sqrtz=sqrt(1d0-xi_i_fks)
@@ -1205,11 +1228,13 @@ c its soft copy branch independent of the undefined radiation axis.
          enddo
          return
       endif
+      call prepare_isr_recoil_boost(xi_i_fks,y_ij_fks,phi_i_fks,
+     &     recoil_boost)
       do i=3,nexternal-1
          ireal=i
          if(i.ge.i_fks)ireal=i+1
-         call boost_isr_recoil(pborn(0,i),pred,xi_i_fks,
-     &        y_ij_fks,phi_i_fks,idir,.false.)
+         call apply_isr_recoil_boost(pborn(0,i),pred,recoil_boost,
+     &        idir,.false.)
          pplus=(pred(0)+idir*pred(3))*sqrtz
          pminus=(pred(0)-idir*pred(3))/sqrtz
          xp(0,ireal)=(pplus+pminus)/2d0
@@ -1337,17 +1362,17 @@ c run_card). This fix is needed for set_cms_stuff to work properly.
       double precision,parameter :: reconstruction_rtol=1d-4
       double precision reconstruction_delta,reconstruction_scale
       type(fks_born_point) born
-      type(fks_phase_space_point) generated
-      type(fks_phase_space_point),optional,intent(out) :: point
+      type(fks_phase_space_point),optional,intent(inout) :: point
       integer i
 
       if(timing_sampled)call timing_enter(timing_phase_space)
       pass=.false.
       born=fks_born_point()
       x=0d0
-      bounds_save=[tau_Born_lower_bound,tau_lower_bound_resonance,tau_lower_bound]
+      bounds_save(1)=tau_Born_lower_bound
+      bounds_save(2)=tau_lower_bound_resonance
+      bounds_save(3)=tau_lower_bound
       omx_save=omx_ee
-      if(present(point))point=fks_phase_space_point()
       jac=-1d0
       p=0d0
       p(0,1)=-1d0
@@ -1389,7 +1414,6 @@ c run_card). This fix is needed for set_cms_stuff to work properly.
      $     any(pb(0,1:2).le.0d0).or.
      $     .not.ieee_is_finite(tau_born).or.tau_born.le.0d0)
      $     goto 900
-      born=fks_born_point()
       born%valid=.true.
       born%native=.true.
       born%external_mass=pmass
@@ -1405,7 +1429,9 @@ c run_card). This fix is needed for set_cms_stuff to work properly.
       born%sqrtshat=sqrt(born%shat)
       if(tau_born.lt.1d0)
      $     born%ycmhat=ycm_born/(-0.5d0*log(tau_born))
-      born%bounds=[tau_Born_lower_bound,tau_lower_bound_resonance,tau_lower_bound]
+      born%bounds(1)=tau_Born_lower_bound
+      born%bounds(2)=tau_lower_bound_resonance
+      born%bounds(3)=tau_lower_bound
       born%omx=omx_ee
 ! The inverse radiation measure only checks the projection. Native
 ! forward densities use the same unit Born measure for every history.
@@ -1416,11 +1442,8 @@ c run_card). This fix is needed for set_cms_stuff to work properly.
       this_config=1
       use_evpr=.true.
       jac=1d0
-      call generate_fks_radiation(born,x,.false.,jac,
-     $     generated,pass)
-      p=generated%p
-      p_lab=generated%p_lab
-      p_cms=generated%p_cms
+      call generate_fks_radiation_momenta(born,x,.false.,jac,
+     $     p,p_lab,p_cms,pass)
       pass=ieee_is_finite(jac).and.jac.gt.0d0.and.p(0,1).gt.0d0
       if(.not.pass)goto 900
 ! Near radiation boundaries, the maps amplify input roundoff.
@@ -1454,16 +1477,15 @@ c run_card). This fix is needed for set_cms_stuff to work properly.
          jac=-1d0
          call reject_fks_phase_space(jac,p,p_lab,p_cms)
          jac=-1d0
-         call record_fks_phase_space(generated,born,jac,
-     $        p,p_lab,p_cms)
-         generated%radiation_coordinates=x
-         generated%has_radiation=.true.
       endif
 c The returned snapshot describes the restored active controls. The
-c native generation inputs remain separately in generated%born.
-      generated%bounds=bounds_save
-      generated%omx=omx_save
-      if(present(point))point=generated
+c native generation inputs remain separately in point%born. Native H
+c histories only consume momenta and active data, so skip their snapshot.
+      if(present(point))then
+         call record_fks_phase_space(point,born,jac,p,p_lab,p_cms)
+         point%radiation_coordinates=x
+         point%has_radiation=.true.
+      endif
       if(timing_sampled)call timing_leave(timing_phase_space)
       return
       end subroutine generate_native_momenta
@@ -1625,13 +1647,20 @@ c generation frame also for massive solutions with no counterevents.
       point%p_born_l=p_born_l
       point%p_born_ev=p_born_ev
       point%spin_phase=spin_phase
-      point%radiation_energies=[veckn_ev,veckbarn_ev,xp0jfks]
+      point%radiation_energies(1)=veckn_ev
+      point%radiation_energies(2)=veckbarn_ev
+      point%radiation_energies(3)=xp0jfks
       point%solution_sign=solution_sign
       point%no_counterevents=no_counterevents
       point%event_projection=event_projection
-      point%bounds=[tau_Born_lower_bound,tau_lower_bound_resonance,tau_lower_bound]
+      point%bounds(1)=tau_Born_lower_bound
+      point%bounds(2)=tau_lower_bound_resonance
+      point%bounds(3)=tau_lower_bound
       point%omx=omx
-      point%active_cms=[ybst_til_tolab,ybst_til_tocm,sqrtshat,shat]
+      point%active_cms(1)=ybst_til_tolab
+      point%active_cms(2)=ybst_til_tocm
+      point%active_cms(3)=sqrtshat
+      point%active_cms(4)=shat
       point%resonance_momentum=resonance_momentum
       point%resonance_mass2=resonance_mass2
       point%resonance_recoil=resonance_recoil
@@ -1751,19 +1780,23 @@ c routine does not change process, shower, colour, PDF or coupling state.
       subroutine record_fks_phase_space(point,born,wgt,p,p_lab,p_cms)
 c Keep the reusable Born input separate from the complete generated
 c result. All caller weights have already been applied to Jacobians.
+c Assign every member here or in capture_fks_phase_space, including the
+c defaults for callers without radiation. Avoid full-object resets.
       implicit none
       include 'timing_variables.inc'
-      type(fks_phase_space_point),intent(out) :: point
+      type(fks_phase_space_point),intent(inout) :: point
       type(fks_born_point),intent(in) :: born
       double precision,intent(in) :: wgt,p(0:3,nexternal),
      $     p_lab(0:3,nexternal),p_cms(0:3,nexternal)
       if(timing_sampled)call timing_enter(timing_phase_space)
-      point=fks_phase_space_point()
       point%born=born
       point%p=p
       point%p_lab=p_lab
       point%p_cms=p_cms
       point%weight=wgt
+      point%radiation_coordinates=0d0
+      point%has_radiation=.false.
+      point%nbody_only=.false.
       call capture_fks_phase_space(point)
       if(timing_sampled)call timing_leave(timing_phase_space)
       return

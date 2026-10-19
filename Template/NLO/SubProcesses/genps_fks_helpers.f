@@ -7,11 +7,18 @@ c callers. Soft coordinate recovery takes its endpoint direction explicitly.
       include 'nexternal.inc'
       private
       public get_massive_fsr_bounds,getangles,gentcms,lambda,yminmax,
-     $     get_recoil,boost_isr_recoil
+     $     get_recoil,boost_isr_recoil,isr_recoil_boost,
+     $     prepare_isr_recoil_boost,apply_isr_recoil_boost
       public dot,rho,sumdot,pt,deltaR,delta_phi,delta_y,HTo2,HT,
      $     boost_n1_to_its_cms,boost_n1_to_lab,get_xi_from_p,
      $     get_yij_from_p,get_phi_from_p,flip_momenta,
      $     apply_momentum_permutation
+
+c Coefficients common to every hard momentum in one ISR recoil map.
+      type isr_recoil_boost
+         logical identity
+         double precision a,b(2),b_squared
+      end type isr_recoil_boost
       contains
 
       subroutine get_massive_fsr_bounds(shat,sqrtshat,m_j_fks,
@@ -334,24 +341,18 @@ c compute phi:
         double precision,dimension(0:3,nexternal),intent(in) :: p
         double precision,dimension(0:3,nexternal),intent(out) :: p_cm
         double precision,intent(out) :: y
-        integer :: i
 c Add each beam's light-cone components before adding the beams;
 c subtracting their total E and pz loses the smaller beam at large y.
         y=log(((p(0,1)+p(3,1))+(p(0,2)+p(3,2)))/
      $     ((p(0,1)-p(3,1))+(p(0,2)-p(3,2))))/2d0
-        do i=1,nexternal
-           call boostz(p(0,i),y,p_cm(0,i))
-        enddo
+        call boost_z_momenta(p,y,p_cm)
       end subroutine boost_n1_to_its_cms
       subroutine boost_n1_to_lab(p,p_lab,y)
         implicit none
         double precision,dimension(0:3,nexternal),intent(in) :: p
         double precision,dimension(0:3,nexternal),intent(out) :: p_lab
         double precision,intent(in) :: y
-        integer :: i
-        do i=1,nexternal
-           call boostz(p(0,i),y,p_lab(0,i))
-        enddo
+        call boost_z_momenta(p,y,p_lab)
       end subroutine boost_n1_to_lab
       double precision function get_yij_from_p(i_fks,j_fks,p_cms,soft_direction)
         implicit none
@@ -396,18 +397,23 @@ c A dot product of large momenta can lose several ulps near |y|=1.
         double precision,dimension(0:3) :: p1
         rho=sqrt(dot3(p1,p1))
       end function rho
-      subroutine boostz(p,yb,pb)
-c boost in the z-direction with rapidity yb
+      subroutine boost_z_momenta(p,yb,pb)
+c The rapidity is shared by every momentum in this frame conversion.
         implicit none
-        real(kind=8),dimension(0:3) :: p,pb
-        real(kind=8) :: yb,pplus,pminus
+        real(kind=8),dimension(0:3,nexternal) :: p,pb
+        real(kind=8) :: yb,pplus,pminus,exp_minus_y,exp_plus_y
+        integer i
 c Scale light-cone components instead of subtracting boosted E/pz.
-        pplus=(p(0)+p(3))*exp(-yb)
-        pminus=(p(0)-p(3))*exp(yb)
-        pb(0)=0.5d0*(pplus+pminus)
-        pb(1:2)=p(1:2)
-        pb(3)=0.5d0*(pplus-pminus)
-      end subroutine boostz
+        exp_minus_y=exp(-yb)
+        exp_plus_y=exp(yb)
+        do i=1,nexternal
+           pplus=(p(0,i)+p(3,i))*exp_minus_y
+           pminus=(p(0,i)-p(3,i))*exp_plus_y
+           pb(0,i)=0.5d0*(pplus+pminus)
+           pb(1:2,i)=p(1:2,i)
+           pb(3,i)=0.5d0*(pplus-pminus)
+        enddo
+      end subroutine boost_z_momenta
 
       double precision function deltaR(p1,p2)
         implicit none
@@ -459,8 +465,9 @@ c Scale light-cone components instead of subtracting boosted E/pz.
       double precision function sumdot(p1,p2,sign)
         implicit  none
         double precision,dimension(0:3) :: p1,p2
-        double precision :: sign
-        sumdot=dot(p1+sign*p2,p1+sign*p2)
+        double precision :: sign,p(0:3)
+        p=p1+sign*p2
+        sumdot=dot(p,p)
       end function sumdot
 
       double precision function dot(p1,p2)
@@ -572,25 +579,56 @@ c Also check their on-shell invariants at the actual phase-space point.
 
       subroutine boost_isr_recoil(pin,pout,xi,y,phi,idir,inverse,
      $     mass2)
+c Compatibility entry for a single momentum. Maps prepare the same
+c coefficients once and apply them to all of their hard momenta.
+      implicit none
+      double precision pin(0:3),pout(0:3),xi,y,phi
+      integer idir
+      logical inverse
+      double precision,optional,intent(in) :: mass2
+      type(isr_recoil_boost) boost
+      call prepare_isr_recoil_boost(xi,y,phi,boost)
+      call apply_isr_recoil_boost(pin,pout,boost,idir,inverse,mass2)
+      end subroutine boost_isr_recoil
+
+
+      subroutine prepare_isr_recoil_boost(xi,y,phi,boost)
+      implicit none
+      double precision,intent(in) :: xi,y,phi
+      type(isr_recoil_boost),intent(out) :: boost
+      double precision z,bnorm
+      boost%identity=xi.eq.0d0.or.y.eq.1d0
+      boost%a=1d0
+      boost%b=0d0
+      boost%b_squared=0d0
+      if(boost%identity)return
+      z=1d0-xi
+      boost%a=1d0+xi*(1d0-y)/(2d0*z)
+      bnorm=-xi*sqrt((1d0-y)*(1d0+y))/(2d0*sqrt(z))
+      boost%b(1)=bnorm*cos(phi)
+      boost%b(2)=bnorm*sin(phi)
+      boost%b_squared=sum(boost%b*boost%b)
+      end subroutine prepare_isr_recoil_boost
+
+
+      subroutine apply_isr_recoil_boost(pin,pout,boost,idir,inverse,
+     $     mass2)
 c A Lorentz transformation preserving the spectator beam's null ray.
 c It maps the Born total momentum to the hard real total in the Born
 c CM. The inverse uses the same radiation variables and frame. Both
 c directions permit pin and pout to alias, as in the FSR boost helpers.
 c An optional on-shell mass stabilizes the inverse at small 1-xi.
       implicit none
-      double precision pin(0:3),pout(0:3),xi,y,phi
+      double precision pin(0:3),pout(0:3)
+      type(isr_recoil_boost),intent(in) :: boost
       integer idir
       logical inverse
       double precision,optional,intent(in) :: mass2
-      double precision z,a,b(2),pplus,pminus,transverse(2)
-      if(xi.eq.0d0.or.y.eq.1d0)then
+      double precision pplus,pminus,transverse(2)
+      if(boost%identity)then
          pout=pin
          return
       endif
-      z=1d0-xi
-      a=1d0+xi*(1d0-y)/(2d0*z)
-      b=-xi*sqrt((1d0-y)*(1d0+y))/(2d0*sqrt(z))
-     &     *[cos(phi),sin(phi)]
       pplus=pin(0)+idir*pin(3)
       pminus=pin(0)-idir*pin(3)
       if(inverse)then
@@ -601,8 +639,8 @@ c boosted input would retain the roundoff which the inverse amplifies.
             if(pminus.gt.pplus)
      $           pplus=(mass2+sum(pin(1:2)**2))/pminus
          endif
-         pplus=pplus/a
-         transverse=pin(1:2)-b*pplus
+         pplus=pplus/boost%a
+         transverse=pin(1:2)-boost%b*pplus
          if(present(mass2))then
 c The direct Lorentz formula subtracts O(1/(1-xi)) terms. Enforce
 c p+ p- = m^2 + pt^2 instead. The exact spectator-beam null ray has
@@ -610,19 +648,21 @@ c p+=pt=m=0 and transforms by rescaling p-; do not divide by zero.
             if(pplus.gt.0d0)then
                pminus=(mass2+sum(transverse**2))/pplus
             else
-               pminus=a*pminus
+               pminus=boost%a*pminus
             endif
          else
-            pminus=a*pminus-2d0*sum(b*transverse)-sum(b*b)*pplus
+            pminus=boost%a*pminus-2d0*sum(boost%b*transverse)
+     $           -boost%b_squared*pplus
          endif
       else
-         transverse=pin(1:2)+b*pplus
-         pminus=(pminus+2d0*sum(b*pin(1:2))+sum(b*b)*pplus)/a
-         pplus=a*pplus
+         transverse=pin(1:2)+boost%b*pplus
+         pminus=(pminus+2d0*sum(boost%b*pin(1:2))+
+     $        boost%b_squared*pplus)/boost%a
+         pplus=boost%a*pplus
       endif
       pout(0)=(pplus+pminus)/2d0
       pout(1:2)=transverse
       pout(3)=idir*(pplus-pminus)/2d0
-      end subroutine boost_isr_recoil
+      end subroutine apply_isr_recoil_boost
 
       end module fks_phase_space_helpers

@@ -2015,7 +2015,7 @@ c equal to ione, so no need to define separate factors.
 
       
       subroutine add_wgt(type,orders,wgt1,wgt2,wgt3)
-      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      use mc_born_types, only: born_is_finite
       use fks_phase_space_data,only: p_born,p_ev,ybst_til_tolab,ybst_til_tocm,sqrtshat,shat,p1_cnt,
      $     jac_cnt
 c Adds a contribution to the list in weight_lines. 'type' sets the type
@@ -2118,7 +2118,7 @@ c        contribution
       include 'fks_info.inc'
       include 'q_es.inc'
       include 'orders.inc'
-      integer type,i,j
+      integer type,i,j,cntslot
       logical foundIt,foundOrders
       double precision wgt1,wgt2,wgt3
       integer orders(nsplitorders)
@@ -2220,7 +2220,9 @@ c$$$      endif
       
 c Report invalid weights to the NLOPS driver, which rejects all folds
 c after restoring the native state. A partial subtraction is not valid.
-      if (.not.all(ieee_is_finite([wgt1,wgt2,wgt3]))) then
+      if (.not.born_is_finite(wgt1).or.
+     $     .not.born_is_finite(wgt2).or.
+     $     .not.born_is_finite(wgt3)) then
          if (.not.nonfinite_contribution) then
             nonfinite_type=type
             nonfinite_sector=nFKSprocess
@@ -2260,8 +2262,9 @@ C for UPC processes set scale to Ellis-Sexton scale
       g_strong(icontr)=g
       nFKS(icontr)=nFKSprocess
       event_nFKS(icontr)=nFKSprocess
-      native_ids(:,icontr)=[native_provider_ids(nFKSprocess),
-     $     native_context_ids(nFKSprocess),active_history]
+      native_ids(1,icontr)=native_provider_ids(nFKSprocess)
+      native_ids(2,icontr)=native_context_ids(nFKSprocess)
+      native_ids(3,icontr)=active_history
       y_bst(icontr)=ybst_til_tolab
       shower_scale(icontr)=-99d9
       ifold_cnt(icontr)=ifold_counter
@@ -2277,15 +2280,19 @@ c identical particle symmetry factor of the corresponding real emission
 c matrix elements
       wgt_ME_tree(1,icontr)=wgt_me_born
       wgt_ME_tree(2,icontr)=wgt_me_real
-      do i=1,nexternal
-         do j=0,3
-            if (p1_cnt(0,1,0).gt.0d0.and.type.ne.5) then
-               momenta_m(j,i,1,icontr)=p1_cnt(j,i,0)
-            elseif (p1_cnt(0,1,1).gt.0d0) then
-               momenta_m(j,i,1,icontr)=p1_cnt(j,i,1)
-            elseif (p1_cnt(0,1,2).gt.0d0) then
-               momenta_m(j,i,1,icontr)=p1_cnt(j,i,2)
-            else
+      cntslot=-1
+      if (p1_cnt(0,1,0).gt.0d0.and.type.ne.5) then
+         cntslot=0
+      elseif (p1_cnt(0,1,1).gt.0d0) then
+         cntslot=1
+      elseif (p1_cnt(0,1,2).gt.0d0) then
+         cntslot=2
+      endif
+      if(cntslot.ge.0)then
+         momenta_m(:,:,1,icontr)=p1_cnt(:,:,cntslot)
+      else
+         do i=1,nexternal
+            do j=0,3
                if (i.lt.fks_i_d(nFKSprocess)) then
                   momenta_m(j,i,1,icontr)=p_born(j,i)
                elseif(i.eq.fks_i_d(nFKSprocess)) then
@@ -2293,10 +2300,10 @@ c matrix elements
                else
                   momenta_m(j,i,1,icontr)=p_born(j,i-1)
                endif
-            endif
-            momenta_m(j,i,2,icontr)=p_ev(j,i)
+            enddo
          enddo
-      enddo
+      endif
+      momenta_m(:,:,2,icontr)=p_ev
 
       if(type.eq.1 .or. type.eq. 8 .or. type.eq.9 .or. type.eq.10 .or.
      &     type.eq.13) then
@@ -2385,7 +2392,8 @@ c or to fill histograms.
       integer, parameter :: lum_cache_size=16
       integer lum_count,lum_next,lum_hit,lum_slot,lum_test
       integer lum_fks(lum_cache_size),lum_history(lum_cache_size)
-     $     ,lum_iproc(lum_cache_size)
+     $     ,lum_iproc(lum_cache_size),lum_flavours(lum_cache_size)
+      integer flavour_source,lum_current
       double precision lum_x(2,lum_cache_size)
      $     ,lum_q2(2,lum_cache_size),lum_value(lum_cache_size)
      $     ,lum_pd(0:maxproc,lum_cache_size)
@@ -2408,6 +2416,7 @@ c fixed, while every contribution still activates its native history.
 c UPC and dressed-lepton PDFs have additional side effects; bypass them.
       lum_count=0
       lum_next=0
+      lum_flavours=0
       lum_cache_allowed=all(abs(lpp(1:2)).le.1)
 c number of contributions before they are (possibly) increased through a
 c call to separate_flavour_config().
@@ -2432,6 +2441,8 @@ c for UPC processes set scale to Ellis-Sexton scale
 c Reuse the complete active luminosity result, including subprocess
 c flavours. Equal scalar luminosities alone do not determine PD/IPROC.
          lum_hit=0
+         lum_current=0
+         flavour_source=0
          if(lum_cache_allowed)then
             do lum_test=1,lum_count
                lum_slot=modulo(lum_next-lum_test,lum_cache_size)+1
@@ -2444,6 +2455,7 @@ c flavours. Equal scalar luminosities alone do not determine PD/IPROC.
             enddo
          endif
          if(lum_hit.gt.0)then
+            lum_current=lum_hit
             iproc=lum_iproc(lum_hit)
             pd(0:iproc)=lum_pd(0:iproc,lum_hit)
             xlum=lum_value(lum_hit)
@@ -2461,6 +2473,8 @@ c flavours. Equal scalar luminosities alone do not determine PD/IPROC.
                lum_iproc(lum_next)=iproc
                lum_pd(0:iproc,lum_next)=pd(0:iproc)
                lum_value(lum_next)=xlum
+               lum_current=lum_next
+               lum_flavours(lum_next)=0
             endif
          endif
 c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
@@ -2471,7 +2485,43 @@ c parton_pdg_uborn [Do only for the contributions that were already
 c available as part of the input -- NOT the ones that are created
 c through the call to separate_flavour_config(), since that will
 c overwrite the relevant information.]
-         if (i.le.icontr_orig) call set_pdg_codes(iproc,pd,nFKSprocess,i)
+         if (i.le.icontr_orig)then
+c Equal luminosity keys have identical native flavour tables. Reuse
+c their labels only for the same event kind and PDGs. The density is
+c restored from unweighted PD, since earlier records are already scaled.
+c Flavour splitting can modify old records; leave that path unchanged.
+            if(lum_current.gt.0.and..not.separate_flavour_configs)then
+               flavour_source=lum_flavours(lum_current)
+               if(flavour_source.gt.0)then
+                  if(H_event(flavour_source).neqv.H_event(i))
+     $                 flavour_source=0
+               endif
+               if(flavour_source.gt.0)then
+                  if(any(pdg(:,flavour_source).ne.pdg(:,i)))
+     $                 flavour_source=0
+               endif
+            endif
+            if(flavour_source.gt.0)then
+               niproc(i)=iproc
+               do j=1,iproc
+                  if(nincoming.eq.2)then
+                     parton_iproc(j,i)=pd(j)*conv
+                  else
+                     parton_iproc(j,i)=pd(j)
+                  endif
+                  do k=1,nexternal
+                     parton_pdg(k,j,i)=
+     $                    parton_pdg(k,j,flavour_source)
+                     parton_pdg_uborn(k,j,i)=
+     $                    parton_pdg_uborn(k,j,flavour_source)
+                  enddo
+               enddo
+            else
+               call set_pdg_codes(iproc,pd,nFKSprocess,i)
+            endif
+            if(lum_current.gt.0.and..not.separate_flavour_configs)
+     $           lum_flavours(lum_current)=i
+         endif
          if (separate_flavour_configs .and. ipr(i).eq.0) then
             call separate_flavour_config(i) ! this increases icontr
          endif

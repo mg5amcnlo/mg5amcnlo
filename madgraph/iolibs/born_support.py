@@ -608,8 +608,10 @@ def write_helicity_state_comparator(path, members, signature):
         return
     sizes = {kind: max([int(index.split(':')[-1]) for _, k, index in members if k == kind] or [0])
              for kind in ('real', 'complex')}
-    lines = ['  logical function born_helicity_state_equal(a,b)',
+    lines = ['  logical function born_helicity_state_equal(a,b,model_changed)',
              '    type(BornModelState),intent(in)::a,b',
+             '    logical,intent(in),optional::model_changed',
+             '    logical::same_model',
              '    real(8)::ga,gb,pa,pb', '    complex(8)::ca,cb',
              '    born_helicity_state_equal=.false.',
              '    if(.not.allocated(a%real_values).or..not.allocated(b%real_values))return',
@@ -620,7 +622,12 @@ def write_helicity_state_comparator(path, members, signature):
         lines += ['    if(size(a%%%s_values).ne.%d)return' % (kind, sizes[kind])
                   for kind in ('real', 'complex')]
     lines += [
-             '    if(born_model_state_equal(a,b))then',
+             '    if(present(model_changed))then',
+             '      same_model=.not.model_changed',
+             '    else',
+             '      same_model=born_model_state_equal(a,b)',
+             '    endif',
+             '    if(same_model)then',
              '      born_helicity_state_equal=.true.', '      return', '    endif',
              '    ga=a%%real_values(%d)' % signature['g'],
              '    gb=b%%real_values(%d)' % signature['g'],
@@ -645,8 +652,15 @@ def write_helicity_state_comparator(path, members, signature):
         lines.append('    if(ca.ne.cb)return')
     lines += ['    born_helicity_state_equal=.true.', '  end function']
     source = path.read_text()
-    source = re.sub(r'  logical function born_helicity_state_equal\(a,b\)[\s\S]*?  end function',
+    source = re.sub(r'  logical function born_helicity_state_equal\(a,b(?:,model_changed)?\)[\s\S]*?  end function',
                     '\n'.join(lines), source)
+    # Reject the common strong-coupling changes before scanning all other
+    # model inputs. Keep the general predicate valid for smaller states.
+    fast_check = ('    if(size(a%%real_values).ge.%d)then\n'
+                  '      if(a%%real_values(%d).ne.b%%real_values(%d))return\n'
+                  '    endif\n' % (signature['g'], signature['g'], signature['g']))
+    source = source.replace('    born_model_state_equal=all(',
+                            fast_check + '    born_model_state_equal=all(', 1)
     path.write_text(source)
 
 
@@ -842,16 +856,17 @@ def finalize(exporter):
     model_members, model_sizes = common_members(model_lines)
     model_commons = {m.lower(): 'mcb_model_'+m.lower() for line in model_lines
                      for m in re.findall(r'(?i)common\s*/(\w+)/', line)}
+    signature = helicity_state_signature(root, records, exporter.model, model_members)
     providers = {}
     for record in records:
         if record['directory'] == record['source']:
             providers[record['provider']] = record
     for provider, record in sorted(providers.items()):
-        write_provider(root, support, record, model_members, model_commons)
+        write_provider(root, support, record, model_members, model_commons,
+                       cache_model_installation=signature is not None)
     for record in records:
         write_metadata(root, support, record)
     write_api(support, records, providers, model_sizes, histories)
-    signature = helicity_state_signature(root, records, exporter.model, model_members)
     write_helicity_state_comparator(support/'mc_born_types.f90', model_members, signature)
     write_amplitude_state_comparator(support/'mc_born_types.f90', model_members, signature)
     (support/'helicity_signature.json').write_text(json.dumps(
@@ -867,7 +882,8 @@ def finalize(exporter):
             write_real_helicity_filter(source)
 
 
-def write_provider(root, support, record, model_members, model_commons):
+def write_provider(root, support, record, model_members, model_commons,
+                   cache_model_installation=False):
     """Private provider implementation; no caller-sized Born COMMON is shared."""
     source = root/'SubProcesses'/record['directory']
     pid = record['provider']
@@ -911,7 +927,7 @@ def write_provider(root, support, record, model_members, model_commons):
         for n in re.findall(r'(?i)common\s*/(\w+)/', line):
             names.setdefault(n.lower(), 'mcb%d_' % pid+n.lower())
     write_fortran(directory/'matrix.f', [rename(line, names) for line in lines])
-    adapter = provider_adapter(record, source, model_members)
+    adapter = provider_adapter(record, source, model_members, cache_model_installation)
     write_fortran(directory/'adapter.f', [rename(line, names) for line in adapter])
 
 
@@ -1047,7 +1063,7 @@ def write_metadata(root, support, record):
     write_fortran(directory/'metadata.f', meta)
 
 
-def provider_adapter(r, source, members):
+def provider_adapter(r, source, members, cache_model_installation=False):
     n = r['nexternal']-1
     ng, nc, nh = r['ngraphs'], r['ncolor'], r['nhelicity']
     na, ns = r['namps'], r['nsqamps']
@@ -1138,7 +1154,7 @@ def provider_adapter(r, source, members):
         lines += ['if(request%colour)then','status=4','return','endif']
     lines += ['model_changed=.not.born_model_state_equal(state,cached_state)',
               'if(model_changed)then',
-              'if(.not.born_helicity_state_equal(state,cached_state))then',
+              'if(.not.born_helicity_state_equal(state,cached_state,model_changed))then',
               'model_epoch=model_epoch+1', 'points%valid=.false.',
               'points%age=0', 'active_slot=0', 'endif',
               'cached_state%real_values=state%real_values',
@@ -1156,7 +1172,7 @@ def provider_adapter(r, source, members):
               # change in tree inputs needs the strong-rescaling path below.
               'if(.not.born_amplitude_state_equal(state,points(i)%state))then']
     if degrees and strong:
-        lines += ['if(.not.born_helicity_state_equal(state,points(i)%state))cycle',
+        lines += ['if(.not.born_helicity_state_equal(state,points(i)%state,.true.))cycle',
                   'scaled=.true.']
     else:
         lines += ['cycle']
@@ -1173,9 +1189,16 @@ def provider_adapter(r, source, members):
                   'if(.not.born_is_finite(ratio).or.any(.not.born_is_finite(factors)).or.'
                   'any(factors.eq.0d0))reuse_amplitudes=.false.', 'endif']
     lines += ['clock=clock+1', 'points(slot)%age=clock']
-    # The model COMMONs are shared by providers inside the DSO. Transfer even
-    # on a cache hit: an intervening provider may have installed another state.
+    # The model COMMONs are shared by providers inside the DSO. A certified
+    # tree evaluator only reads these inputs, so an exact repeated state in
+    # the same provider needs no transfer. Always reinstall after a provider
+    # switch; retain unconditional transfers for custom/uncertified HELAS.
+    if cache_model_installation:
+        lines += ['if(model_changed.or.born_installed_provider.ne.%d)then' % r['provider']]
     lines += ['%s=state%%%s_values(%s)' % v for v in members]
+    lines += ['born_installed_provider=%d' % r['provider']]
+    if cache_model_installation:
+        lines += ['endif']
     flags = [any(o in s['fks']['splitting_type'] for s in r['sectors']) for o in r['orders']]
     lines += ['split_type_used(%d)=%s' % (i, '.true.' if v else '.false.')
               for i,v in enumerate(flags,1)]

@@ -53,12 +53,24 @@ program check_pdf_luminosity_cache
      call include_PDF_and_alphas()
      expected_calls=6
      if(mode.eq.2.or.mode.eq.3)expected_calls=14
-     if(calls.ne.expected_calls.or.set_calls.ne.14)then
+     if(calls.ne.expected_calls.or.set_calls.ne.expected_calls)then
         write(*,*)'PDF calls',mode,calls,expected_calls,set_calls
         error stop 'incorrect central PDF reuse'
      endif
      call check_weights()
   enddo
+
+  ! Equal PDFs do not make H/S labelling or emitted flavours identical.
+  ! Repeated labels can be copied, while a changed key must be rebuilt.
+  call prepare(6)
+  lpp=1
+  H_event(2:6)=.false.
+  pdg(5,4:5)=22
+  calls=0
+  set_calls=0
+  call include_PDF_and_alphas()
+  if(calls.ne.1.or.set_calls.ne.4)error stop 'flavour label key ignored event identity'
+  call check_weights()
 
   ! Fill and wrap the bounded ring. An evicted key must be recalculated,
   ! while its immediate repeat and a remaining recent key are reused.
@@ -111,6 +123,7 @@ contains
     cpower=0d0
     itype=1
     H_event=.true.
+    pdg=21
     y_bst=0d0
     orderstag=1
     momenta=1d0
@@ -134,6 +147,10 @@ contains
           do k=1,np
              if(parton_iproc(k,j).ne.densities(k)*conv*wgt(1,j)*4d0) &
                   error stop 'cached PD changed flavour weight'
+             if(any(parton_pdg(:,k,j).ne.k+10*nFKS(j)+100*native_ids(3,j)+ &
+                  merge(1000,0,H_event(j))+pdg(:,j)))error stop 'cached real flavour labels changed'
+             if(any(parton_pdg_uborn(:,k,j).ne.-parton_pdg(:,k,j))) &
+                  error stop 'cached Born flavour labels changed'
           enddo
        endif
        if(wgts(1,j).ne.expected)error stop 'central luminosity weight changed'
@@ -179,8 +196,8 @@ subroutine set_pdg_codes(iproc,pd,fks,ict)
   niproc(ict)=iproc
   do k=1,iproc
      parton_iproc(k,ict)=pd(k)*389379660d0
-     parton_pdg(:,k,ict)=k
-     parton_pdg_uborn(:,k,ict)=k
+     parton_pdg(:,k,ict)=k+10*fks+100*active_history+merge(1000,0,H_event(ict))+pdg(:,ict)
+     parton_pdg_uborn(:,k,ict)=-parton_pdg(:,k,ict)
   enddo
 end subroutine
 

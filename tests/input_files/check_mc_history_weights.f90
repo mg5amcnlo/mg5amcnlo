@@ -37,6 +37,9 @@ program check_mc_history_weights
   implicit none
   double precision :: baseline(3,15,3),specialized(3,15,3),probne
   double precision :: probabilities(3),gvalues(3),bad(3),bad_values(3)
+  double precision :: expected_momenta(0:3,nexternal)
+  integer,parameter :: record_types(3)=[1,5,12]
+  integer missing,selected
   integer :: j,k,old_icontr
   integer :: imass,ip,igs,igc,icuts,mode,i,cases,baseline_reals
   logical :: cuts_born,cuts_real
@@ -176,6 +179,29 @@ program check_mc_history_weights
   VetoedContributionTypes=0
   call add_wgt(8,[2,0],1d0,0d0,0d0)
   if(nonfinite_contribution.or.icontr.ne.old_icontr+1)error stop 'valid weight did not recover'
+  ! Distinct endpoint momenta expose priority and fallback mistakes in
+  ! record storage. Collinear weights must skip slot zero even if valid.
+  do missing=0,3
+    do k=0,2
+      p1_cnt(:,:,k)=p_ev+10d0*(k+1)
+      if(k.lt.missing)p1_cnt(0,1,k)=-99d0
+    enddo
+    do j=1,size(record_types)
+      if(missing.lt.3)then
+        selected=missing
+        if(record_types(j).eq.5)selected=max(1,selected)
+        expected_momenta=p1_cnt(:,:,selected)
+      else
+        expected_momenta(:,1:nexternal-1)=p_born
+        expected_momenta(:,nexternal)=0d0
+      endif
+      call add_wgt(record_types(j),[2,0],1d0,2d0,3d0)
+      if(any(momenta_m(:,:,1,icontr).ne.expected_momenta).or. &
+           any(momenta_m(:,:,2,icontr).ne.p_ev))error stop 'recorded subtraction momenta differ'
+      if(record_types(j).eq.1)expected_momenta=p_ev
+      if(any(momenta(:,:,icontr).ne.expected_momenta))error stop 'recorded event momenta differ'
+    enddo
+  enddo
   write(*,*) 'PASS native H and S weights' ,cases,' cases'
 end program
 
