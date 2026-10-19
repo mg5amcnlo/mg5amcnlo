@@ -149,7 +149,8 @@ subroutine check_native_projection()
        spin => xij_aor
   use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
   use mc_native_context, only: native_mapping
-  use fks_phase_space, only: generate_FKS_kinematics,generate_native_momenta
+  use fks_phase_space, only: generate_FKS_kinematics,generate_native_momenta, &
+       fks_phase_space_point,reset_fks_kinematics,restore_fks_phase_space
   use fks_phase_space_helpers, only: boost_n1_to_lab
   implicit none
   include 'genps.inc'
@@ -171,6 +172,7 @@ subroutine check_native_projection()
   double precision :: stot,sborn,sqrtborn,taub,yb,yhat,xbb(2),j0,ps0,jac,jnew,u,e3,e4
   double precision :: reference(256),actual(256),ratio(-2:2),cntref(0:3,nexternal,-2:2)
   double precision :: bounds_poison(3),omx_poison(2)
+  type(fks_phase_space_point) :: point
   double precision,parameter :: radii(4)=[0.02d0,0.45d0,0.9d0,0.999d0]
   double precision,parameter :: angles(3)=[0.15d0,0.6d0,0.95d0]
   logical :: pass,valid(-2:2),nocnt_ref
@@ -280,6 +282,37 @@ subroutine check_native_projection()
           if(.not.all(ieee_is_finite(actual(1:n))))error stop 'nonfinite native phase-space state'
           if(any(abs(actual(1:n)-reference(1:n)).gt.1d-8*max(1d0,abs(reference(1:n))))) &
                error stop 'native phase-space state differs'
+          ! Requesting a snapshot must preserve the result of the path
+          ! used by native history replay, including all counterevents.
+          ! Reuse a deliberately dirty result to expose incomplete writes.
+          point%born%sampled=.true.
+          point%nbody_only=.true.
+          point%has_collinear_born=.true.
+          point%has_reduced_born=.true.
+          point%radiation_coordinates=-999d0
+          call generate_native_momenta(lab,out,outlab,cms,jnew,pass,point)
+          if(.not.pass.or..not.point%valid.or..not.point%born%native.or. &
+               point%born%sampled.or.point%nbody_only.or..not.point%has_radiation.or. &
+               point%has_collinear_born.or.point%has_reduced_born) &
+               error stop 'incomplete native snapshot'
+          if(any(point%p.ne.out).or.any(point%p_lab.ne.outlab).or.any(point%p_cms.ne.cms).or. &
+               point%weight.ne.jnew.or.any(point%bounds.ne.bounds_poison).or. &
+               any(point%omx.ne.omx_poison))error stop 'native snapshot outputs or controls differ'
+          if(any(point%counterevent%valid.neqv.valid))error stop 'native snapshot validity differs'
+          ! Save/restore must still reproduce the active data consumed by
+          ! matching after another history has overwritten the workspace.
+          call reset_fks_kinematics()
+          call restore_fks_phase_space(point)
+          call snapshot(actual,n)
+          if(any(abs(actual(1:n)-reference(1:n)).gt.1d-8*max(1d0,abs(reference(1:n))))) &
+               error stop 'native snapshot round trip differs'
+          if(any(pb.ne.point%p_born).or.any(pbl.ne.point%p_born_l).or.any(pbe.ne.point%p_born_ev)) &
+               error stop 'native snapshot Born round trip differs'
+          do k=-2,2
+            if(any(pc(:,:,k).ne.point%counterevent(k)%p).or. &
+                 jc(k).ne.point%counterevent(k)%jacobian.or.ycmc(k).ne.point%counterevent(k)%ycm) &
+                 error stop 'native snapshot endpoint round trip differs'
+          enddo
         enddo
       enddo
     enddo
@@ -290,6 +323,10 @@ subroutine check_native_projection()
   if(pass.or.jnew.ge.0d0.or.out(0,1).ge.0d0)error stop 'invalid input accepted'
   if(any([bound_born,bound_res,bound_tau].ne.bounds_poison).or.any(omx.ne.omx_poison).or. &
        .not.nbody)error stop 'invalid input changed controls'
+  call generate_native_momenta(lab,out,outlab,cms,jnew,pass,point)
+  if(pass.or.point%valid.or.point%event%valid.or.any(point%counterevent%valid).or. &
+       point%weight.ge.0d0.or.any(point%bounds.ne.bounds_poison).or.any(point%omx.ne.omx_poison)) &
+       error stop 'stale valid native snapshot after rejection'
 contains
   subroutine snapshot(v,n)
     double precision,intent(out) :: v(256)

@@ -49,7 +49,8 @@ def fortran_routine(path, name):
 
 FKS_MAIN_ROUTINES = (
     "generate_native_momenta", "invert_fks_radiation",
-    "generate_fks_radiation", "reject_fks_phase_space",
+    "generate_fks_radiation", "generate_fks_radiation_momenta",
+    "reject_fks_phase_space", "restore_fks_phase_space",
     "record_fks_phase_space", "capture_fks_phase_space",
     "generate_FKS_kinematics", "reset_fks_kinematics",
     "compute_flux", "fill_fks_point_data", "boost_born_momenta_noevpr")

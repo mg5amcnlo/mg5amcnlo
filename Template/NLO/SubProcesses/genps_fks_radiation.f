@@ -3,7 +3,8 @@ c Forward and inverse FKS radiation maps, including the coupled ISR
 c map without event projection. Recoil adapters use this module without
 c depending on the higher-level phase-space orchestration.
       use fks_phase_space_helpers, only: getangles,get_recoil,
-     $     get_massive_fsr_bounds,boost_isr_recoil
+     $     get_massive_fsr_bounds,isr_recoil_boost,
+     $     prepare_isr_recoil_boost,apply_isr_recoil_boost
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -917,6 +918,7 @@ c soft and emitter-collinear limits leave the underlying Born unchanged.
       parameter (ximag=(0d0,1d0))
       double precision stiny,ctiny,pi
       parameter (stiny=1d-6,ctiny=5d-7,pi=3.1415926535897932d0)
+      type(isr_recoil_boost) recoil_boost
 
       pass=.true.
       if(j_fks.ne.1.and.j_fks.ne.2)then
@@ -981,9 +983,11 @@ c when the real invariant mass has a larger lower bound than the Born.
       xbjrk(j_fks)=xbjrk_born(j_fks)/z
 c Work in the underlying Born CM (the common tilde frame), so that
 c the usual single Born-to-lab boost also applies to the real event.
+      call prepare_isr_recoil_boost(xi_i_fks,y_ij_fks,phi_i_fks,
+     &     recoil_boost)
       do i=3,nexternal
-         if(i.ne.i_fks)call boost_isr_recoil(xp(0,i),xp(0,i),
-     &        xi_i_fks,y_ij_fks,phi_i_fks,idir,.false.)
+         if(i.ne.i_fks)call apply_isr_recoil_boost(xp(0,i),xp(0,i),
+     &        recoil_boost,idir,.false.)
       enddo
       xp(0,1:2)=sqrtborn/2d0
       xp(0,j_fks)=sqrtborn/(2d0*z)
@@ -1346,6 +1350,7 @@ c Use the same run-level choice for the event and every counterevent.
      $     ,sstiny,cctiny,pplus,pminus,exp_y
       double precision pmass(nexternal),transverse_mass2
       common/to_mass/pmass
+      type(isr_recoil_boost) recoil_boost
       double precision pi,stiny,ctiny
       parameter(pi=3.1415926535897932d0,stiny=1d-6,ctiny=5d-7)
       logical softtest,colltest
@@ -1403,6 +1408,8 @@ c Use the same run-level choice for the event and every counterevent.
 c Undo the common laboratory boost, then the light-cone recoil. Work
 c with light-cone components to retain the smaller beam at large y.
       exp_y=exp(ycm_born)
+      call prepare_isr_recoil_boost(xi_i_fks,y_ij_fks,phi_i_fks,
+     &     recoil_boost)
       do i=3,nexternal
          if(i.eq.i_fks)cycle
          iborn=i
@@ -1422,8 +1429,8 @@ c when undoing a large Born rapidity. Its mass is supplied by the model.
          pred(0)=(pplus+pminus)/2d0
          pred(1:2)=xp(1:2,i)
          pred(3)=(pplus-pminus)/2d0
-         call boost_isr_recoil(pred,p_born(0,iborn),xi_i_fks,
-     &        y_ij_fks,phi_i_fks,idir,.true.,pmass(i)**2)
+         call apply_isr_recoil_boost(pred,p_born(0,iborn),
+     &        recoil_boost,idir,.true.,pmass(i)**2)
       enddo
       p_born(0,1:2)=sqrtborn/2d0
       p_born(1:2,1:2)=0d0
