@@ -66,6 +66,59 @@ class PolynomialPoolTests(unittest.TestCase):
         np.testing.assert_array_equal(predicted[b==0], 0.)
         self.assertEqual((self.root/'model').read_text(), pool._model_text(model['metadata'],model['orders']))
 
+    def test_fixed_compact_recipe_has_linear_size_and_no_hyperparameter_scan(self):
+        rows = self.records(900)
+        for row in rows:
+            x = row['features']
+            row['virtual'] = row['born']*(.2+.4*x[0]+.6*x[3]**2)
+        with mock.patch.object(poly, 'fit', wraps=poly.fit) as fits:
+            entry, report = poly.fit_order(rows, pool._folds(rows, 3), self.metadata, 1,
+                                           strategy='compact_only')
+        self.assertGreater(entry['blend'], 0., report)
+        self.assertEqual(fits.call_count, 5)  # three complements, forward, all rows
+        self.assertLessEqual(len(entry['terms']), 1+2*self.metadata['nf'])
+        self.assertTrue(all(t['pair'][1] < 0 or t['pair'][0] == t['pair'][1]
+                            for t in entry['terms']))
+        self.assertEqual({(c['ridge'], c['loss'], c['basis']) for c in report['candidates']},
+                         {(poly.COMPACT_RIDGE, 'born_square', 'compact')})
+
+    def test_physics_fit_continues_one_loop_shapes_without_artificial_threshold_powers(self):
+        rng = np.random.default_rng(4912)
+        rows = self.records(1200)
+        meta = dict(self.metadata, version=4, catalog=9, nf=16, colours=(8, 8, 3, -3))
+        x = rng.uniform(-1., 1., (len(rows), 16)); x[:, 9] = rng.uniform(1., 4., len(rows))
+        truth = lambda a: .2+.4*a[:, 0]-.3*a[:, 0]**2+.7*a[:, 9]+.05*a[:, 13]
+        for row, features, value in zip(rows, x, truth(x)):
+            row.update(features=features.tolist(), mint_born=row['born'], born=.02*row['born'])
+            row['virtual'] = row['born']*value
+        entry, report = poly.fit_order(rows, pool._folds(rows, 3), meta, 1, strategy='compact')
+        self.assertGreater(entry['blend'], 0., report)
+        self.assertTrue(entry['unclipped'])
+        self.assertEqual(report['selected']['basis'], 'operator')
+        self.assertEqual(report['richer_screen'], 'coupling_carried_residual_small')
+        for term in entry['terms']:
+            indices = [i for i in term['pair'] if i >= 0]
+            self.assertFalse(len(indices) > 1 and any(9 <= i <= 13 for i in indices))
+        (self.root/'model').write_text(pool._model_text(meta, [entry]))
+        loaded = pool.load_model(self.root/'model')
+        other = rng.uniform(-1., 1., (100, 16)); other[:, 0] = 2.; other[:, 9] = 100.
+        prediction = pool.predict(loaded, 1, other, np.ones(100), np.zeros(100))
+        np.testing.assert_allclose(prediction, truth(other), rtol=1.e-3)
+        # The budget must count the restricted basis exactly before fitting.
+        for degree, basis in ((2, 'compact'), (2, 'full'), (3, 'full'), (3, 'relative')):
+            _, count = poly.basis_size(x, degree, 15, basis, tuple(range(9, 14)))
+            self.assertIsInstance(count, int)  # candidate reports must be JSON serializable
+            self.assertEqual(count, len(poly.pairs_for(x, degree, 15, basis, tuple(range(9, 14)))))
+
+    def test_compact_strategy_screens_interactions_against_forward_residual(self):
+        rows = self.records(900)
+        entry, report = poly.fit_order(rows, pool._folds(rows, 3), self.metadata, 1,
+                                       strategy='compact')
+        self.assertGreater(entry['blend'], 0., report)
+        self.assertEqual(report['interaction_screen']['reason'], 'passed')
+        self.assertEqual(report['selected']['basis'], 'full')
+        self.assertLess(report['selected']['cv_rms'], .15*report['baseline_cv_rms'])
+
     def test_causal_baseline_cannot_influence_selection_and_folds_do_not_leak(self):
         rows = self.records()
         folds = np.arange(len(rows))%3

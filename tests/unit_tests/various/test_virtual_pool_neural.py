@@ -59,6 +59,73 @@ class ConditionalPoolTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
 
+    def test_threshold_coordinates_are_invariant_and_unresolved_points_fall_back(self):
+        meta = metadata()
+        beta = np.array([.01, .1, .8])
+        energy = 173./np.sqrt(1-beta**2)
+        p = np.zeros((3, 4, 4))
+        p[:, :, 0] = energy[:, None]
+        p[:, 0, 3], p[:, 1, 3] = energy, -energy
+        p[:, 2, 1], p[:, 3, 1] = beta*energy, -beta*energy
+        expected = ((1+beta**2)/(2*beta))[:, None]
+        np.testing.assert_allclose(pool.threshold_features(meta, p), expected, rtol=2.e-12)
+        scaled = dict(meta, masses=tuple(m*1.e100 for m in meta['masses']))
+        np.testing.assert_allclose(pool.threshold_features(scaled, p*1.e100), expected, rtol=3.e-12)
+        boosted = p.copy()
+        boosted[:, :, 0] = (p[:, :, 0]+.4*p[:, :, 3])/np.sqrt(1-.4**2)
+        boosted[:, :, 3] = (p[:, :, 3]+.4*p[:, :, 0])/np.sqrt(1-.4**2)
+        np.testing.assert_allclose(pool.threshold_features(meta, boosted), expected, rtol=3.e-12)
+        rows = [dict(features=[0.]*11, momenta=point.ravel().tolist()) for point in p]
+        enriched, converted, reason = pool._physics_rows(meta, rows)
+        self.assertEqual((enriched['catalog'], enriched['nf']), (8, 12))
+        np.testing.assert_allclose([r['features'][9] for r in converted], expected[:, 0])
+        self.assertEqual(len(rows[0]['features']), 11)
+        p[0, 2:] = [173., 0., 0., 0.]
+        with self.assertRaisesRegex(ValueError, 'unresolved'):
+            pool.threshold_features(meta, p)
+        rows[0]['momenta'] = p[0].ravel().tolist()
+        unchanged, original, reason = pool._physics_rows(meta, rows)
+        self.assertIs(unchanged, meta)
+        self.assertIs(original, rows)
+        self.assertEqual(reason, 'threshold_geometry_unresolved')
+
+    def test_coupled_linear_heads_match_dense_and_sparse_solvers_with_signed_zero_born(self):
+        try:
+            import scipy.sparse.linalg
+        except ImportError:
+            self.skipTest('optional scipy unavailable')
+        rng = np.random.default_rng(928)
+        n = 1800
+        inputs = rng.uniform(-1, 1, (n, 4))
+        q = rng.dirichlet([2., 1., 2.], n)
+        mixing = np.eye(3)[rng.integers(0, 3, n)]
+        mixing[::7] = q[::7]
+        born = rng.uniform(.2, 2., n)
+        born[::13] *= -1
+        born[::31] = 0.
+        coefficients = rng.normal(size=(5, 3))
+        coefficients[:, 1] = 0.
+        # A large spread in column sizes exercises the preconditioner and
+        # the conversion back to portable, unscaled inference coefficients.
+        inputs[:, 0] *= 1.e-3
+        inputs[:, 1] *= 1.e3
+        truth = np.column_stack((inputs, np.ones(n)))@coefficients
+        target = born*np.sum(mixing*truth, axis=1)
+        target[::31] = .1  # irreducible observations still belong in V-B*f
+        configuration = dict(neural.LINEAR_CONFIGURATION, ridge=1.e-10, column_scale=True)
+        args = (inputs[:1200], mixing[:1200], born[:1200], target[:1200],
+                np.ones(1200), [1, 2, 3], [1, 0, 1], configuration)
+        dense = neural.fit(*args)
+        with mock.patch.object(neural, 'MAX_DENSE_LINEAR_PARAMETERS', 0):
+            sparse = neural.fit(*args)
+        a, b = neural.forward(dense, inputs), neural.forward(sparse, inputs)
+        a *= dense['target_scale']/dense['born_scale']
+        b *= sparse['target_scale']/sparse['born_scale']
+        np.testing.assert_allclose(a, b, rtol=2.e-6, atol=1.e-6)
+        np.testing.assert_allclose(a[:, (0, 2)], truth[:, (0, 2)], rtol=1.e-5, atol=1.e-5)
+        np.testing.assert_array_equal(a[:, 1], 0.)
+        self.assertEqual(dense['optimizer_iterations'], 0)
+
     def test_native_probability_mean_selected_identity_and_signed_zero_born(self):
         model = companion((3, 2)); entry = model['orders'][0]
         x = np.zeros((4, 11)); x[:, 0] = [-4., -.5, .2, 8.]
@@ -151,6 +218,15 @@ class ConditionalPoolTests(unittest.TestCase):
         np.testing.assert_array_equal(outside, [True, False, False, False])
         self.assertEqual(values[0, 0], 0.)
         np.testing.assert_array_equal(values[:, 1], 0.)
+
+    def test_physical_inputs_preserve_logarithmic_continuation_and_exact_tail_flags(self):
+        x = np.zeros((4, 11)); x[:, 0] = [-1.21, -1.1, 1.1, 1.21]
+        descriptors = [(9, 1, 0, 0, -1., 1.), (10, 1, 0, 0, -1., 1.)]
+        values, outside = neural.input_values(descriptors, x, momenta(4),
+            np.tile([.6, 0., .4], (4, 1)), metadata()['incoming'], return_outside=True)
+        np.testing.assert_allclose(values[:, 0], x[:, 0])
+        np.testing.assert_allclose(values[:, 1], x[:, 0]**2)
+        np.testing.assert_array_equal(outside, [True, False, False, True])
 
     def test_codec_roundtrip_and_strict_native_map_bounds(self):
         for widths in ((3,), (3, 2)):
@@ -331,6 +407,12 @@ class ConditionalPoolTests(unittest.TestCase):
         self.assertEqual(blend, 0.)
 
     def test_production_capture_to_guarded_nonzero_companion(self):
+        self.check_production_capture(3)
+
+    def test_coupling_colour_capture_to_guarded_nonzero_companion(self):
+        self.check_production_capture(4)
+
+    def check_production_capture(self, version):
         try:
             import scipy.optimize
         except ImportError:
@@ -340,6 +422,9 @@ class ConditionalPoolTests(unittest.TestCase):
         lines = ['VIRTUAL_POOL_SAMPLES 3', '7 11 1 4 2', '21 21 6 -6',
                  '0 0 173 173', '1 1 0 0', '3', '1 2 1 -1 1 -1',
                  '2 0 -1 1 1 -1', '3 1 1 1 -1 -1']
+        if version == 4:
+            lines[:2] = ['VIRTUAL_POOL_SAMPLES 4', '9 16 1 4 2']
+            lines.insert(5, '8 8 3 -3')
         for i in range(900):
             x = np.zeros(11); x[0] = rng.uniform(-1, 1)
             b = rng.uniform(.2, 1.5)*(-1 if i%13 == 0 else 1)
@@ -348,6 +433,13 @@ class ConditionalPoolTests(unittest.TestCase):
             y = b*(.2*x[0] + (.6*.8-.4*.9 if full else .8 if h == 1 else -.9))
             native_q = [.6, 0., .4] if i%37 else [0., 0., 0.]
             row = [i+1, 1, 1+i//300, 1, 8, 1., b, y, 0.]+x.tolist()+rng.random(2).tolist()
+            if version == 4:
+                coupling = .02*(1+.2*x[0])
+                row[7] *= coupling
+                # Insert the massive-pair and four colour kernels before
+                # absolute log(shat); the native Born stays undressed.
+                row[18:18] = [1.1, 0., 0., 0., 0.]
+                row.insert(9, coupling)
             row += [int(full), -1 if full else h, 1. if full else .6 if h == 1 else .4]+native_q+momenta(1).ravel().tolist()
             lines.append(' '.join(map(str, row)))
         (job/pool.SAMPLES).write_text('\n'.join(lines)+'\n')
@@ -363,12 +455,48 @@ class ConditionalPoolTests(unittest.TestCase):
         self.assertEqual(report['neural']['additional_loop_calls'], 0)
         self.assertEqual(report['model_format_version'], 3)
         detail = report['neural']['orders'][0]
+        self.assertEqual(detail['selected']['configuration']['family'], 'linear')
+        self.assertEqual(detail['neural_screen'], 'compact_linear_residual_small')
         self.assertEqual(detail['skipped_unknown_native_probabilities'], 25)
         for fold in detail['selected']['folds']:
             self.assertLess(fold['l1'], fold['baseline']['l1'])
             self.assertLessEqual(fold['rms'], 1.05*fold['baseline']['rms'])
         model = neural.load_model(companion_path, base)
         self.assertTrue(model['orders'][0]['enabled'])
+        if version == 4:
+            self.assertEqual(report['neural']['format_version'], 4)
+            self.assertEqual(model['metadata']['colours'], (8, 8, 3, -3))
+            self.assertTrue(detail['selected']['configuration']['column_scale'])
+
+    def test_nonlinear_fit_requires_forward_improvement_over_linear_heads(self):
+        try:
+            import scipy.optimize
+        except ImportError:
+            self.skipTest('optional scipy unavailable')
+        rng = np.random.default_rng(8472)
+        rows = []
+        for i in range(900):
+            x = rng.uniform(-1., 1.)
+            head = 1 if rng.random() < .6 else 3
+            full = i%11 == 0
+            sign = .2 if full else 1. if head == 1 else -1.
+            rows.append(dict(sample=i+1, directory='job', channel=1, iteration=1+i//300,
+                             order=1, bins=8, x=[.2, .4], features=[x]+[0.]*10,
+                             born=1., virtual=sign*(.2+.8*np.sin(4*x)), weight=1.,
+                             q=(.6, 0., .4), selected_helicity=-1 if full else head,
+                             full_branch=full, momenta=momenta(1).ravel().tolist()))
+        common = polynomial.empty_order(1, 11, 'test')
+        zeros = np.zeros(len(rows))
+        configuration = dict(widths=(8,), ridge=1.e-4, alpha=1., iterations=250)
+        with mock.patch.object(neural, '_refit_base', return_value=(zeros, None, 0., common, zeros)), \
+                mock.patch.object(neural, 'DEFAULT_CONFIGURATIONS', (configuration,)):
+            entry, report = neural.train_order(rows, metadata(), common, {'strategy': 'compact'})
+        self.assertTrue(entry['enabled'], report)
+        self.assertNotEqual(report['selected']['configuration'].get('family'), 'linear')
+        self.assertTrue(report['selected']['versus_linear']['eligible'])
+        linear = [c for c in report['candidates'] if c['configuration'].get('family') == 'linear' and c['eligible']]
+        self.assertTrue(linear)
+        self.assertLess(report['selected']['mean_l1'], .5*min(c['mean_l1'] for c in linear))
 
     def test_final_refit_cannot_activate_a_head_absent_from_earliest_fold(self):
         rows = []

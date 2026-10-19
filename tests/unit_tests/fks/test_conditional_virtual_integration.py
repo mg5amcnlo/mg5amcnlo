@@ -47,7 +47,8 @@ class ConditionalVirtualIntegration(unittest.TestCase):
         self.resources.mkdir()
         self.rng = np.random.default_rng(74618)
 
-    def setup_case(self, widths=(5,), collect=False, incoming=(1, 1, 0, 0), symmetry=False):
+    def setup_case(self, widths=(5,), collect=False, incoming=(1, 1, 0, 0), symmetry=False,
+                   physics=False, replacement_blend=None):
         n = 15
         mult = np.zeros(16, dtype=int)
         heads = np.array([2, 3, 5, 6, 8])  # Native gg -> tt representatives.
@@ -100,9 +101,20 @@ class ConditionalVirtualIntegration(unittest.TestCase):
                        (5, 1, 2, 3, -1., 1.), (6, 6, 0, 0, -1., 1.)]
         if incoming[2]:
             descriptors[2] = (3, 1, 2, 0, -1., 1.)
+        if physics:
+            metadata.update(catalog=8, nf=12)
+            descriptors[1] = (2, 12, 0, 0, -1., 1.)
+            descriptors += [(7, 1, 0, 0, -2., 2.), (1, 10, 0, 0, 1., 3.),
+                            (7, 10, 0, 0, 1., 3.)]
         base_orders = [dict(order=k+1, blend=1., born_scale=1., target_scale=1., degree=0,
-                            lower=[-2.]*10+[-1.], upper=[2.]*10+[1.],
+                            lower=[-2.]*(metadata['nf']-1)+[-1.],
+                            upper=[2.]*(metadata['nf']-1)+[1.],
                             terms=[dict(pair=(-1, -1, -1), coefficient=(k+1)*.2)]) for k in range(3)]
+        if physics:
+            for k, entry in enumerate(base_orders):
+                entry['degree'] = 1
+                entry['lower'][9], entry['upper'][9] = 1., 3.
+                entry['terms'].append(dict(pair=(9, -1, -1), coefficient=(k+1)*.15))
         if symmetry:
             for k, entry in enumerate(base_orders):
                 entry['degree'] = 1
@@ -123,6 +135,15 @@ class ConditionalVirtualIntegration(unittest.TestCase):
                                heads=heads[:-1].tolist(), trained=trained,
                                theta=self.rng.normal(scale=.17, size=size).tolist(),
                                born_scale=2.+k, target_scale=3.-k))
+            if physics:
+                # The native affine skip implements the linear-head model;
+                # hidden weights/output remain exactly zero.
+                parts = neural.unpack(orders[-1]['theta'], len(descriptors), len(heads)-1, widths)
+                for part in parts[:-1]:
+                    part[:] = 0.
+                orders[-1]['theta'] = np.concatenate([part.ravel() for part in parts]).tolist()
+            if replacement_blend is not None:
+                orders[-1].update(replaces_common=True, replacement_blend=replacement_blend)
         model = dict(metadata=metadata, base_sha256=hashlib.sha256(base_text.encode()).hexdigest(), orders=orders)
         if symmetry:
             model['permutations'] = [[1, 2, 3, 4], [1, 2, 4, 3]]
@@ -142,6 +163,9 @@ class ConditionalVirtualIntegration(unittest.TestCase):
                             mint[i], born[i], target[i]]
                 f.write(' '.join('%.17e' % x for x in row)+'\n')
         features = self.point_features(p, masses, incoming, mur2, qes2)
+        if physics:
+            threshold = pool.threshold_features(metadata, p)
+            features = np.column_stack((features[:, :9], threshold, features[:, 9:]))
         return dict(n=n, model=model, p=p, q=q, heads=heads, born=born, target=target,
                     mint=mint, features=features, mur2=mur2, qes2=qes2, base_orders=base_orders)
 
@@ -165,18 +189,22 @@ class ConditionalVirtualIntegration(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
         return result
 
-    def check_prediction(self, widths, incoming=(1, 1, 0, 0)):
-        data = self.setup_case(widths=widths, incoming=incoming)
+    def check_prediction(self, widths, incoming=(1, 1, 0, 0), physics=False):
+        data = self.setup_case(widths=widths, incoming=incoming, physics=physics)
         result = self.run_native()
         actual = np.loadtxt(result.stdout.splitlines()).reshape(data['n'], 6, 6)
         model = data['model']
+        common = pool.load_model(self.work/'virtual_pool_model.dat')
         for block, selected in enumerate([-1]+data['heads'].tolist()):
             for k, entry in enumerate(model['orders']):
                 chosen, mean = neural.predict_correction(entry, model['metadata'], data['features'],
                                                          data['p'], data['q'], np.ones(data['n']),
-                                                         np.full(data['n'], selected))
-                expected_mean = .2*(k+1)+mean
-                expected_chosen = .2*(k+1)+chosen
+                                                         np.full(data['n'], selected),
+                                                         common=pool.predict(common, k+1, data['features'],
+                                                                             np.ones(data['n']), data['mint'][:, k]))
+                base = pool.predict(common, k+1, data['features'], np.ones(data['n']), data['mint'][:, k])
+                expected_mean = base+mean
+                expected_chosen = base+chosen
                 np.testing.assert_allclose(actual[:, block, k], expected_mean, rtol=2.e-12, atol=2.e-13)
                 np.testing.assert_allclose(actual[:, block, k+3], expected_chosen, rtol=2.e-12, atol=2.e-13)
         # Native q includes nonunit GOODHEL exactly once; unknown/masked heads
@@ -192,6 +220,116 @@ class ConditionalVirtualIntegration(unittest.TestCase):
 
     def test_nonzero_two_layers_masks_and_deferred_context_match_python(self):
         self.check_prediction((5, 3))
+
+    def test_compact_linear_heads_with_thresholds_and_squared_inputs_match_python(self):
+        self.check_prediction((1,), physics=True)
+        model = neural.load_model(self.work/'virtual_pool_neural.dat', self.work/'virtual_pool_model.dat')
+        self.assertEqual(model['metadata']['catalog'], 8)
+        self.assertTrue(any(d[0] == 7 for d in model['orders'][0]['descriptors']))
+
+    def test_colour_coupling_and_antenna_heads_match_python_and_survive_deferred_context(self):
+        try:
+            import scipy.special
+        except ImportError:
+            self.skipTest('optional scipy unavailable')
+        data = self.setup_case(widths=(1,), physics=True, replacement_blend=.5)
+        model = data['model']; meta = model['metadata']
+        meta.update(version=4, catalog=9, nf=16, colours=[8, 8, 3, -3])
+        coupling = np.array([.017, .023, .031])
+        dipoles = np.zeros((4, 4)); dipoles[0, 1] = .75; dipoles[0, 2] = -.25; dipoles[2, 3] = .5
+        with (self.work/'physics.dat').open('w') as stream:
+            stream.write('8 8 3 -3\n'+' '.join(map(str, coupling))+'\n')
+            stream.write(' '.join(map(str, dipoles.ravel(order='F')))+'\n')
+        # Independent analytic colour kernels for the three nonzero links.
+        p, scale = data['p'], data['qes2']
+        kernels = np.zeros((data['n'], 4))
+        for i, j in ((0, 1), (0, 2), (2, 3)):
+            dot = neural._dot(p[:, i], p[:, j])
+            logarithm = np.log(2*dot/scale)
+            cusp = logarithm.copy()
+            for leg in (i, j):
+                if meta['masses'][leg]: cusp -= .5*np.log(meta['masses'][leg]**2/scale)
+            if i == 2:
+                velocity = np.sqrt(1-(173.**2/dot)**2)
+                cusp = np.arctanh(velocity)/velocity
+                kernels[:, 2] += dipoles[i, j]*cusp*logarithm
+                kernels[:, 3] += dipoles[i, j]*np.pi**2/velocity
+            kernels[:, 0] += dipoles[i, j]*cusp
+            kernels[:, 1] += dipoles[i, j]*(logarithm**2-(np.pi**2 if i == 0 and j == 1 or i == 2 else 0.))
+        data['features'] = np.column_stack((data['features'][:, :10], kernels, data['features'][:, 10:]))
+        for entry in data['base_orders']:
+            entry['lower'] = [-100.]*15+[-1.]; entry['upper'] = [100.]*15+[1.]
+        base_text = pool._model_text(meta, data['base_orders'])
+        (self.work/'virtual_pool_model.dat').write_text(base_text)
+        model['base_sha256'] = hashlib.sha256(base_text.encode()).hexdigest()
+        for entry in model['orders'][:2]:
+            # New kinds replace existing inputs, retaining the affine shape.
+            entry['descriptors'] = [(9, 11, 0, 0, -10., 10.), (2, 16, 0, 0, -1., 1.),
+                (8, 1, 2, 3, -3., 3.), (8, 1, 3, 2, -3., 3.), (10, 1, 0, 0, -2., 2.),
+                (9, 12, 0, 0, -100., 100.), (9, 13, 0, 0, -100., 100.),
+                (9, 14, 0, 0, -100., 100.), (9, 15, 0, 0, -10., 20.)]
+        text = neural.model_text(model)
+        self.assertTrue(text.startswith('VIRTUAL_POOL_NEURAL 4\n'))
+        (self.work/'virtual_pool_neural.dat').write_text(text)
+        self.assertEqual(neural.model_text(neural.load_model(self.work/'virtual_pool_neural.dat',
+                                                            self.work/'virtual_pool_model.dat')), text)
+        actual = np.loadtxt(self.run_native().stdout.splitlines()).reshape(data['n'], 6, 6)
+        common = pool.load_model(self.work/'virtual_pool_model.dat')
+        for block, head in enumerate([-1]+data['heads'].tolist()):
+            for k in range(3):
+                chosen, mean = neural.predict_model(model, common, k+1, data['features'], data['p'], data['q'],
+                    np.full(data['n'], coupling[k]), data['mint'][:, k], np.full(data['n'], head))
+                np.testing.assert_allclose(actual[:, block, k], mean, rtol=3.e-12, atol=3.e-13)
+                np.testing.assert_allclose(actual[:, block, k+3], chosen, rtol=3.e-12, atol=3.e-13)
+
+    def test_absolute_linear_heads_blend_with_common_and_preserve_untrained_heads(self):
+        data = self.setup_case(widths=(1,), physics=True, replacement_blend=.5)
+        actual = np.loadtxt(self.run_native().stdout.splitlines()).reshape(data['n'], 6, 6)
+        common = pool.load_model(self.work/'virtual_pool_model.dat')
+        model = neural.load_model(self.work/'virtual_pool_neural.dat', self.work/'virtual_pool_model.dat')
+        entry = model['orders'][0]
+        inputs = neural.input_values(entry['descriptors'], data['features'], data['p'], data['q'],
+                                      model['metadata']['incoming'])
+        absolute = neural.forward(entry, inputs)[:, 0]*entry['target_scale']/entry['born_scale']
+        base = pool.predict(common, 1, data['features'], np.ones(data['n']), data['mint'][:, 0])
+        np.testing.assert_allclose(actual[:, 1, 3], .5*base+.5*absolute, rtol=2.e-12, atol=2.e-13)
+        np.testing.assert_allclose(actual[:, 2, 3], base, rtol=2.e-12, atol=2.e-13)
+        for block, head in enumerate([-1]+data['heads'].tolist()):
+            selected, mean = neural.predict_model(model, common, 1, data['features'], data['p'], data['q'],
+                                                  np.ones(data['n']), data['mint'][:, 0], np.full(data['n'], head))
+            np.testing.assert_allclose(actual[:, block, 0], mean, rtol=2.e-12, atol=2.e-13)
+            np.testing.assert_allclose(actual[:, block, 3], selected, rtol=2.e-12, atol=2.e-13)
+
+    def test_unresolved_threshold_requests_exact_loop_and_uses_mint(self):
+        data = self.setup_case(widths=(1,), physics=True)
+        path = self.work/'points.dat'
+        lines = path.read_text().splitlines()
+        row = np.fromstring(lines[5], sep=' ')
+        p = row[2:18].reshape(4, 4)
+        p[2:] = [173., 0., 0., 0.]
+        lines[5] = ' '.join('%.17e' % value for value in row)
+        path.write_text('\n'.join(lines)+'\n')
+        probabilities = np.loadtxt(self.run_native('ood').stdout.splitlines())
+        self.assertEqual(probabilities[0], 1.)
+
+    def test_absolute_head_is_preserved_when_the_common_baseline_is_huge(self):
+        data = self.setup_case(widths=(1,), physics=True, replacement_blend=1.)
+        for entry in data['base_orders']:
+            entry.update(degree=0, terms=[dict(pair=(-1, -1, -1), coefficient=1.e25)])
+        text = pool._model_text(data['model']['metadata'], data['base_orders'])
+        (self.work/'virtual_pool_model.dat').write_text(text)
+        data['model']['base_sha256'] = hashlib.sha256(text.encode()).hexdigest()
+        (self.work/'virtual_pool_neural.dat').write_text(neural.model_text(data['model']))
+        actual = np.loadtxt(self.run_native().stdout.splitlines()).reshape(data['n'], 6, 6)
+        common = pool.load_model(self.work/'virtual_pool_model.dat')
+        entry = data['model']['orders'][0]
+        inputs = neural.input_values(entry['descriptors'], data['features'], data['p'], data['q'],
+                                      data['model']['metadata']['incoming'])
+        expected = neural.forward(entry, inputs)[:, 0]*entry['target_scale']/entry['born_scale']
+        prediction, _ = neural.predict_model(data['model'], common, 1, data['features'], data['p'], data['q'],
+                                             np.ones(data['n']), data['mint'][:, 0], np.full(data['n'], 2))
+        np.testing.assert_allclose(prediction, expected, rtol=2.e-12, atol=2.e-13)
+        np.testing.assert_allclose(actual[:, 1, 3], expected, rtol=2.e-12, atol=2.e-13)
 
     def test_one_incoming_nonfirst_leg_matches_python(self):
         self.check_prediction((4, 3), incoming=(0, 1, 0, 0))

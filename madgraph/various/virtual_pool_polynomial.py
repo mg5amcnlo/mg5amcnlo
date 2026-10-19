@@ -5,6 +5,7 @@ no dependency on validation scripts or on a particular physics process.
 """
 import itertools
 import math
+from collections import namedtuple
 from functools import lru_cache
 
 MAX_TERMS = 512
@@ -15,6 +16,8 @@ MAX_CUBIC_DESIGN_ELEMENTS = 40000000
 # Cache complete fold-local designs and both noise scalings within this budget.
 MAX_FIT_CACHE_ELEMENTS = 8000000
 CUBIC_RIDGE = .01
+COMPACT_RIDGE = 1.e-4
+OPERATOR_RIDGE = 1.e-8
 MIN_ROWS = 60
 ROWS_PER_TERM = 5
 TAIL_MARGIN = .10
@@ -22,13 +25,17 @@ RIDGES = (1.e-4, .01, 1.)
 LOSSES = ('huber', 'square', 'born_huber', 'born_square')
 BLENDS = (.25, .5, .75, 1.)
 
+_Regression = namedtuple('_Regression', (
+    'matrix', 'noise', 'weight', 'column_scale', 'active', 'target',
+    'born_scale', 'target_scale', 'gram', 'rhs'))
+
 
 def empty_order(order, nf, reason):
     return dict(order=order, blend=0., born_scale=1., target_scale=1., degree=0,
                 lower=[0.] * nf, upper=[0.] * nf, terms=[], reason=reason)
 
 
-def coordinates(x, lower, upper):
+def coordinates(x, lower, upper, clip=True):
     import numpy as np
     x, lo, hi = (np.asarray(a, dtype=float) for a in (x, lower, upper))
     width = hi - lo
@@ -36,17 +43,21 @@ def coordinates(x, lower, upper):
     z = np.divide(2. * (x-lo), width, out=np.ones_like(x), where=active)-1.
     allowance = np.where(active, TAIL_MARGIN*width, 1.e-10*np.maximum(1., np.abs(lo)))
     outside = np.any((x < lo-allowance) | (x > hi+allowance), axis=1)
-    return np.clip(z, -1., 1.), outside
+    return (np.clip(z, -1., 1.) if clip else z), outside
 
 
-def pairs_for(x, degree, nscalar=None, basis='full'):
+def pairs_for(x, degree, nscalar=None, basis='full', linear_only=(), feature_subset=None):
     import numpy as np
     active = np.flatnonzero(np.ptp(x, axis=0) > 1.e-12).tolist()
+    if feature_subset is not None:
+        active = [i for i in active if i in feature_subset]
     if nscalar is not None:
         active = [i for i in active if basis != 'relative' or i != nscalar-1]
     pairs = [(-1, -1)] + [(i, -1) for i in active]
     if degree >= 2:
-        pairs += list(itertools.combinations_with_replacement(active, 2))
+        pairs += ([(i, i) for i in active if nscalar is None or i < nscalar]
+                  if basis in ('compact', 'operator') else
+                  list(itertools.combinations_with_replacement(active, 2)))
     if degree == 3:
         pairs = [pair + (-1,) for pair in pairs]
         pairs += list(itertools.combinations_with_replacement(active, 3))
@@ -55,13 +66,21 @@ def pairs_for(x, degree, nscalar=None, basis='full'):
         # of two signed orientation coordinates would erase this separation.
         pairs = [p for p in pairs if sum(i >= nscalar for i in p) <= 1 and
                  not (sum(i >= nscalar for i in p) and sum(i >= 0 for i in p) > 2)]
+    if linear_only:
+        pairs = [p for p in pairs if sum(i >= 0 for i in p) <= 1 or
+                 not any(i in linear_only for i in p)]
     return pairs
 
 
-def basis_size(x, degree, nscalar=None, basis='full'):
+def basis_size(x, degree, nscalar=None, basis='full', linear_only=(), feature_subset=None):
     """Count before allocating a potentially enormous high-multiplicity basis."""
     import numpy as np
     active = np.flatnonzero(np.ptp(x, axis=0) > 1.e-12)
+    if feature_subset is not None:
+        active = np.asarray([i for i in active if i in feature_subset], dtype=int)
+    if basis in ('compact', 'operator'):
+        even = [i for i in active if nscalar is None or i < nscalar]
+        return len(even), 1+len(active)+(sum(i not in linear_only for i in even) if degree >= 2 else 0)
     if nscalar is None:
         # Degrees are at most three; keep this available on Python 3.7 too.
         count = 1
@@ -70,12 +89,14 @@ def basis_size(x, degree, nscalar=None, basis='full'):
         return len(active), count
     even = int(sum(i < nscalar and (basis != 'relative' or i != nscalar-1) for i in active))
     odd = int(sum(i >= nscalar for i in active))
+    free = even-sum(i in linear_only and i < nscalar and
+                    (basis != 'relative' or i != nscalar-1) for i in active)
     count = 1+even+odd
     if degree >= 2:
-        count += even*(even+1)//2 + even*odd
+        count += free*(free+1)//2 + free*odd
     if degree == 3:
-        count += even*(even+1)*(even+2)//6
-    return even, count
+        count += free*(free+1)*(free+2)//6
+    return even, int(count)
 
 
 def design(z, pairs):
@@ -111,17 +132,19 @@ def _ridge_solve(gram, rhs, ridge):
 
 
 def fit(x, born, virtual, weight, degree, ridge, loss, basis='full', nscalar=None,
-        _cache=None):
+        _cache=None, unclipped=False, linear_only=(), feature_subset=None):
     import numpy as np
     if degree not in (1, 2, 3):
         raise ValueError('invalid polynomial degree')
-    if basis not in ('full', 'relative') or (basis == 'relative' and degree != 3):
+    if (basis not in ('full', 'relative', 'compact', 'operator') or
+            (basis == 'relative' and degree != 3) or
+            (basis in ('compact', 'operator') and degree != 2)):
         raise ValueError('invalid polynomial feature subset')
     # Catalog 6's final coordinate is absolute log(shat). A relative-only
     # candidate excludes it at every degree, while retaining full-catalog
     # bounds and index numbering for the common native serialization.
     basis_x = x[:, :-1] if basis == 'relative' and nscalar is None else x
-    scalar_active, count = basis_size(basis_x, degree, nscalar, basis)
+    scalar_active, count = basis_size(basis_x, degree, nscalar, basis, linear_only, feature_subset)
     if degree == 3 and (scalar_active > MAX_CUBIC_FEATURES or
                        len(x)*count > MAX_CUBIC_DESIGN_ELEMENTS):
         raise ValueError('cubic selection exceeds fit budget')
@@ -129,7 +152,7 @@ def fit(x, born, virtual, weight, degree, ridge, loss, basis='full', nscalar=Non
         raise ValueError('polynomial exceeds coefficient budget')
     geometry = None if _cache is None else _cache.get('geometry')
     if geometry is None:
-        pairs = pairs_for(basis_x, degree, nscalar, basis)
+        pairs = pairs_for(basis_x, degree, nscalar, basis, linear_only, feature_subset)
         if degree < 3 and len(pairs) > MAX_TERMS:
             raise ValueError('polynomial exceeds coefficient budget')
         lo, hi = x.min(axis=0), x.max(axis=0)
@@ -157,53 +180,63 @@ def fit(x, born, virtual, weight, degree, ridge, loss, basis='full', nscalar=Non
             matrix[:, selected], born, virtual, weight, ridge, loss)
     terms = [dict(pair=indices, coefficient=float(value)) for indices, value, size in
              zip(pairs, coeff, norm) if size > 0]
-    return dict(degree=degree, lower=lo.tolist(), upper=hi.tolist(), terms=terms,
-                born_scale=bscale, target_scale=vscale)
+    result = dict(degree=degree, lower=lo.tolist(), upper=hi.tolist(), terms=terms,
+                  born_scale=bscale, target_scale=vscale)
+    if unclipped:
+        result['unclipped'] = True
+    return result
 
 
-def _solve_design(matrix, born, virtual, weight, ridge, loss, _cache=None):
+def _prepare_regression(matrix, born, virtual, weight, born_noise):
+    """Normalize a Born-carried regression and prepare its first linear system."""
     import numpy as np
     # A Born-dependent noise scale prevents a few very large integration
     # weights from determining a polynomial for the whole subprocess. Keep
     # V-B*P as the regression residual, including signed and zero Born rows;
     # never construct the potentially singular target V/B.
+    w = weight / weight.sum()
+    bscale = float(w @ np.abs(born))
+    vscale = float(w @ np.abs(virtual))
+    if not math.isfinite(bscale) or not math.isfinite(vscale) or not bscale or not vscale:
+        raise ValueError('zero fit scale')
+    a = (born/bscale)[:, None] * matrix
+    noise = np.maximum(np.abs(born)/bscale, 1.e-12) if born_noise else np.ones(len(born))
+    fit_weight = w/noise
+    norm = np.sqrt(fit_weight @ (a*a))
+    if not np.all(np.isfinite(norm)):
+        raise ValueError('nonfinite design scale')
+    keep = norm > max(float(norm.max())*1.e-10, 1.e-20)
+    if not np.any(keep):
+        raise ValueError('empty design')
+    a = a[:, keep] / norm[keep]
+    y = virtual/vscale
+    gram = a.T @ (fit_weight[:, None]*a)
+    rhs = a.T @ (fit_weight*y)
+    norm[~keep] = 0.
+    return _Regression(a, noise, fit_weight, norm, keep, y, bscale, vscale, gram, rhs)
+
+
+def _solve_design(matrix, born, virtual, weight, ridge, loss, _cache=None):
+    import numpy as np
     born_noise = loss.startswith('born_')
     key = 'born_noise' if born_noise else 'constant_noise'
     prepared = None if _cache is None else _cache.get(key)
     if prepared is None:
-        w = weight / weight.sum()
-        bscale = float(w @ np.abs(born))
-        vscale = float(w @ np.abs(virtual))
-        if not math.isfinite(bscale) or not math.isfinite(vscale) or not bscale or not vscale:
-            raise ValueError('zero fit scale')
-        a = (born/bscale)[:, None] * matrix
-        noise = np.maximum(np.abs(born)/bscale, 1.e-12) if born_noise else np.ones(len(born))
-        fit_weight = w/noise
-        norm = np.sqrt(fit_weight @ (a*a))
-        if not np.all(np.isfinite(norm)):
-            raise ValueError('nonfinite design scale')
-        keep = norm > max(float(norm.max())*1.e-10, 1.e-20)
-        if not np.any(keep):
-            raise ValueError('empty design')
-        a = a[:, keep] / norm[keep]
-        y = virtual/vscale
-        gram = a.T @ (fit_weight[:, None]*a)
-        rhs = a.T @ (fit_weight*y)
-        norm[~keep] = 0.
-        prepared = a, noise, fit_weight, norm, keep, y, bscale, vscale, gram, rhs
+        prepared = _prepare_regression(matrix, born, virtual, weight, born_noise)
         if _cache is not None:
             _cache[key] = prepared
-    a, noise, fit_weight, norm, keep, y, bscale, vscale, gram, rhs = prepared
+    a, y = prepared.matrix, prepared.target
+    gram, rhs = prepared.gram, prepared.rhs
     irls = np.ones(len(born))
     huber = loss.endswith('huber')
     for iteration in range((20 if born_noise else 8) if huber else 1):
         if iteration:
-            ww = fit_weight*irls
+            ww = prepared.weight*irls
             gram = a.T @ (ww[:, None]*a)
             rhs = a.T @ (ww*y)
         coeff = _ridge_solve(gram, rhs, ridge)
         if huber:
-            updated = np.minimum(1., .25*noise/np.maximum(np.abs(y-a@coeff), 1.e-20))
+            updated = np.minimum(1., .25*prepared.noise/np.maximum(np.abs(y-a@coeff), 1.e-20))
             # Identical weights imply an identical next solve. Preserve the
             # prescribed iteration cap for fits which have not converged.
             if np.array_equal(updated, irls):
@@ -212,8 +245,8 @@ def _solve_design(matrix, born, virtual, weight, ridge, loss, _cache=None):
     if not np.all(np.isfinite(coeff)):
         raise ValueError('nonfinite fit')
     result = np.zeros(matrix.shape[1])
-    result[keep] = coeff/norm[keep]
-    return result, norm, bscale, vscale
+    result[prepared.active] = coeff/prepared.column_scale[prepared.active]
+    return result, prepared.column_scale, prepared.born_scale, prepared.target_scale
 
 
 def predict(entry, x, born, mint, blend=None):
@@ -221,14 +254,14 @@ def predict(entry, x, born, mint, blend=None):
     lam = entry.get('blend', 1.) if blend is None else blend
     if not lam:
         return mint.copy()
-    z, _ = coordinates(x, entry['lower'], entry['upper'])
+    z, _ = coordinates(x, entry['lower'], entry['upper'], clip=not entry.get('unclipped', False))
     value = design(z, [t['pair'] for t in entry['terms']]) @ np.asarray(
         [t['coefficient'] for t in entry['terms']])
     shared = (born/entry['born_scale'])*value*entry['target_scale']
     answer = mint + lam*(shared-mint)
-    # Keep the bounded prediction outside the training box. Native inference
-    # requests an exact loop there, so continuation cannot bias the estimator.
-    # Falling back to MINT would reintroduce its largest residuals at the edge.
+    # Catalog 9 preserves physical logarithmic/Coulomb continuation; earlier
+    # catalogs remain bounded. Native inference requests exact loops outside
+    # the supported box in either case.
     invalid = ~np.isfinite(answer)
     answer[invalid] = mint[invalid]
     return answer
@@ -268,6 +301,10 @@ class Marginals:
             count[:, 2*i] = np.where(n, np.maximum(n//(2 if not i else 4), 1), 0)
         self.average, self.count, self.bins = average, count, bins
 
+    def _cells(self, coordinates):
+        import numpy as np
+        return np.minimum((np.asarray(coordinates)*self.bins).astype(int), self.bins-1)
+
     def update(self, rows):
         import numpy as np
         if not rows:
@@ -275,8 +312,8 @@ class Marginals:
         b = np.zeros_like(self.average)
         v = np.zeros_like(b)
         n = np.zeros_like(b, dtype=int)
-        cells = np.minimum((np.asarray([r['x'] for r in rows])*self.bins).astype(int), self.bins-1)
-        born = np.asarray([r['born'] for r in rows])
+        cells = self._cells([r['x'] for r in rows])
+        born = np.asarray([r.get('mint_born', r['born']) for r in rows])
         virtual = np.asarray([r['virtual'] for r in rows])
         for dim in range(self.nx):
             b[dim] = np.bincount(cells[:, dim], weights=born, minlength=self.bins)
@@ -292,14 +329,14 @@ class Marginals:
 
     def predict(self, row):
         import numpy as np
-        cells = np.minimum((np.asarray(row['x'])*self.bins).astype(int), self.bins-1)
-        return float(self.average[np.arange(self.nx), cells].mean())*row['born']
+        cells = self._cells(row['x'])
+        return float(self.average[np.arange(self.nx), cells].mean())*row.get('mint_born', row['born'])
 
     def predict_many(self, rows):
         import numpy as np
-        cells = np.minimum((np.asarray([r['x'] for r in rows])*self.bins).astype(int), self.bins-1)
+        cells = self._cells([r['x'] for r in rows])
         ratios = self.average[np.arange(self.nx), cells].mean(axis=1)
-        return ratios*np.asarray([r['born'] for r in rows])
+        return ratios*np.asarray([r.get('mint_born', r['born']) for r in rows])
 
 
 def mint_predictions(rows, include):
@@ -345,10 +382,20 @@ def forward_split(rows):
                        for row in rows])
 
 
-def fit_order(rows, folds, metadata, order):
+def physics_sufficient(selected):
+    """Stop refining an already small physical residual on both held-out tests."""
+    return bool(selected) and all(
+        selected.get(prefix+'relative_l1', float('inf')) <= .002 and
+        selected.get(prefix+'relative_rms', float('inf')) <= .01
+        for prefix in ('cv_', 'forward_'))
+
+
+def fit_order(rows, folds, metadata, order, strategy='search'):
+    if strategy not in ('search', 'compact', 'compact_only'):
+        raise ValueError('unknown polynomial fitting strategy')
     indices = [i for i, r in enumerate(rows) if r['order'] == order]
     subset = [rows[i] for i in indices]
-    report = dict(order=order, training_rows=len(subset), candidates=[],
+    report = dict(order=order, training_rows=len(subset), candidates=[], strategy=strategy,
                   comparator='cross-fitted frozen native MINT on identical fold complements')
     fallback = lambda reason: (empty_order(order, metadata['nf'], reason), report)
     if len(subset) < MIN_ROWS:
@@ -407,9 +454,23 @@ def fit_order(rows, folds, metadata, order):
     else:
         report['forward_validation'] = dict(reason='insufficient_distinct_iteration_history')
     nscalar = None
-    if metadata.get('catalog') == 7:
+    if metadata.get('catalog') in (7, 8, 9):
         from .virtual_pool import scalar_feature_count
         nscalar = scalar_feature_count(metadata)
+    physics = metadata.get('catalog') == 9
+    linear_only = ()
+    if physics:
+        from .virtual_pool import threshold_pairs
+        # One-loop cusp and Coulomb inputs already carry their logarithms or
+        # 1/v. Do not fit artificial products or stronger threshold poles.
+        linear_only = tuple(range(nscalar-5-len(threshold_pairs(metadata)), nscalar-1))
+    physical_options = dict(unclipped=True, linear_only=linear_only) if physics else {}
+    operator_indices = None
+    if physics:
+        # Keep scale/mass logs and the correlated inputs, without independent
+        # angular invariants or signed orientation coordinates.
+        pair_end = 1+metadata['nlegs']*(metadata['nlegs']-1)//2
+        operator_indices = (0,)+tuple(range(pair_end, nscalar))
     caches = {}
     cache_elements = 0
 
@@ -428,28 +489,46 @@ def fit_order(rows, folds, metadata, order):
                 if cache_elements+cost <= MAX_FIT_CACHE_ELEMENTS:
                     cache = caches[key] = {}
                     cache_elements += cost
+        options = (dict(physical_options, feature_subset=operator_indices)
+                   if basis == 'operator' else physical_options)
         return fit(x[train], b[train], y[train], w[train], degree, ridge, loss,
-                   basis, nscalar, cache)
+                   basis, nscalar, cache, **options)
 
     eligible = []
     candidate_residuals = {}
-    for degree in (1, 2, 3):
+    if strategy == 'search':
+        recipes = [(1, 'full'), (2, 'full'), (3, 'full')]
+    else:
+        recipes = [(2, 'operator')] if physics else []
+        recipes.append((2, 'compact'))
+        if strategy != 'compact_only':
+            recipes.extend([(2, 'full'), (3, 'full')])
+    for degree, fixed_basis in recipes:
+        if physics and any(physics_sufficient(c) for c in eligible):
+            report['richer_screen'] = 'coupling_carried_residual_small'
+            break
         caches.clear()
         cache_elements = 0
         # Cap both work and flexibility before allocating quadratic matrices.
-        active, dense_terms = basis_size(x, degree, nscalar)
+        active, dense_terms = basis_size(x, degree, nscalar, fixed_basis, linear_only,
+                                        operator_indices if fixed_basis == 'operator' else None)
         nterms = min(dense_terms, MAX_TERMS) if degree == 3 else dense_terms
         smallest = min(np.count_nonzero(assignment != f) for f in range(3))
         if degree < 3 and (nterms > MAX_TERMS or smallest < ROWS_PER_TERM*dense_terms):
             report.setdefault('skipped_degrees', []).append(degree)
             continue
-        choices = ([(CUBIC_RIDGE, 'born_square', basis) for basis in
-                    (('full', 'relative') if metadata.get('catalog') in (6, 7) else ('full',))]
-                   if degree == 3 else ((r, loss, 'full') for r, loss in itertools.product(RIDGES, LOSSES)))
+        if degree == 3:
+            bases = ('full', 'relative') if metadata.get('catalog') in (6, 7, 8, 9) else ('full',)
+            choices = [(CUBIC_RIDGE, 'born_square', basis) for basis in bases]
+        elif strategy == 'search':
+            choices = ((r, loss, 'full') for r, loss in itertools.product(RIDGES, LOSSES))
+        else:
+            ridge = OPERATOR_RIDGE if fixed_basis == 'operator' else COMPACT_RIDGE
+            choices = [(ridge, 'born_square', fixed_basis)]
         for ridge, loss, basis in choices:
             if degree == 3:
                 basis_x = x[:, :-1] if basis == 'relative' and nscalar is None else x
-                active, dense_terms = basis_size(basis_x, 3, nscalar, basis)
+                active, dense_terms = basis_size(basis_x, 3, nscalar, basis, linear_only)
                 nterms = min(dense_terms, MAX_TERMS)
                 screen = dict(basis=basis)
                 report.setdefault('cubic_screens', []).append(screen)
@@ -465,6 +544,32 @@ def fit_order(rows, folds, metadata, order):
             proposal = np.zeros(len(subset))
             forward_proposal = None
             try:
+                if strategy == 'compact' and degree == 2 and basis == 'full':
+                    # Spend three CV fits on interactions only when an earlier
+                    # fit improves the chronological residual over the compact
+                    # model (or MINT if the compact model was rejected).
+                    screen = dict(basis=basis)
+                    report['interaction_screen'] = screen
+                    if not forward or np.count_nonzero(earlier) < ROWS_PER_TERM*nterms:
+                        screen['reason'] = 'insufficient_forward_history'
+                        continue
+                    reference = min(eligible, key=lambda a: a['cv_l1']) if eligible else None
+                    ref_l1 = forward_l1*scale
+                    ref_rms = math.sqrt(forward_second)*scale
+                    if reference is not None:
+                        ref_l1 = reference.get('forward_l1', ref_l1)
+                        ref_rms = reference.get('forward_rms', ref_rms)
+                    model = fit_subset(earlier, 'forward', degree, ridge, loss, basis, nterms)
+                    forward_proposal = predict(model, x[later], b[later], forward_mint[later])
+                    fr = (y[later]-forward_proposal)/scale
+                    screen_l1 = float(fw @ np.abs(fr))*scale
+                    screen_rms = math.sqrt(float(fw @ (fr*fr)))*scale
+                    useful = screen_l1 < .98*ref_l1 and screen_rms <= 1.05*ref_rms
+                    screen.update(reason='passed' if useful else 'no_forward_improvement',
+                                  forward_l1=screen_l1, forward_rms=screen_rms,
+                                  reference_l1=ref_l1, reference_rms=ref_rms)
+                    if not useful:
+                        continue
                 if degree == 3:
                     # Cheap rejection of unhelpful richer fits before the
                     # three additional CV fits. This screen does not replace
@@ -556,9 +661,12 @@ def fit_order(rows, folds, metadata, order):
                 return False
         return entry['cv_l1'] <= best['cv_l1']+paired
     selected = min((a for a in eligible if comparable(a)),
-                   key=lambda a: (a['degree'], a['cv_l1']))
+                   key=lambda a: (a['degree'], a['parameters'] if strategy != 'search' else 0, a['cv_l1']))
     try:
-        model = fit(x, b, y, w, selected['degree'], selected['ridge'], selected['loss'], selected['basis'], nscalar)
+        options = (dict(physical_options, feature_subset=operator_indices)
+                   if selected['basis'] == 'operator' else physical_options)
+        model = fit(x, b, y, w, selected['degree'], selected['ridge'], selected['loss'],
+                    selected['basis'], nscalar, **options)
     except (ValueError, np.linalg.LinAlgError, FloatingPointError):
         return fallback('final_fit_failed')
     model.update(order=order, blend=selected['blend'], reason='selected_by_matched_cross_validation')

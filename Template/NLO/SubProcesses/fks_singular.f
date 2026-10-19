@@ -6834,8 +6834,10 @@ C to keep track of the various split orders
 
       double precision amp_tot
       double precision feature_mass(nexternal-1)
+      double precision feature_coupling(amp_split_size)
       logical feature_incoming(nexternal-1)
       integer feature_pdg(nexternal-1)
+      integer feature_colour(nexternal-1)
 
       include "pmass.inc"
       
@@ -7091,17 +7093,28 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
             do i=1,nexternal-1
                if (i.lt.i_fks) then
                   feature_mass(i)=pmass(i)
+                  feature_colour(i)=particle_type(i)
                else
                   feature_mass(i)=pmass(i+1)
+                  feature_colour(i)=particle_type(i+1)
                endif
                feature_incoming(i)=i.le.nincoming
             enddo
             feature_pdg=native_metadata%born_ids(:,1)
+            feature_coupling=1d0
+            do iamp=1,amp_split_size
+               if(dble(amp_split_cnt(iamp,1,qcd_pos)).ne.0d0)then
+                  feature_coupling(iamp)=g**2/(8d0*pi**2)
+               elseif(dble(amp_split_cnt(iamp,1,qed_pos)).ne.0d0)then
+                  feature_coupling(iamp)=dble(gal(1))**2/(8d0*pi**2)
+               endif
+            enddo
             call pooled_virtual_prepare(p_born,feature_mass,
      $           feature_incoming,feature_pdg,scale**2,
      $           average_virtual(1:amp_split_size,ichan),QES2,.true.,
-     $           active_context.eq.local_context)
-            call prepare_pooled_helicities(p_born)
+     $           active_context.eq.local_context,
+     $           feature_coupling,feature_colour)
+            call prepare_pooled_helicities(p_born,feature_colour)
          endif
          ! Training and validation keep the Born-based approximate
          ! virtual below, but exclude the one-loop residual from the fit.
@@ -8658,18 +8671,22 @@ c     reset the default dynamical_scale_choice
       end
 
 
-      subroutine prepare_pooled_helicities(p)
+      subroutine prepare_pooled_helicities(p,colours)
 c Compute precisely the native mixture of nonzero Born squared orders,
 c without drawing a helicity or evaluating a virtual matrix element.
       use mc_born_types
       use virtual_pooled, only: pooled_virtual_needs_helicities,
-     $ pooled_virtual_set_helicity_weights
+     $ pooled_virtual_set_helicity_weights,pooled_virtual_uses_physics
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
       include 'q_es.inc'
+      include 'orders.inc'
       include '../../Source/MODEL/input.inc'
       double precision p(0:3,nexternal-1),saved_mu_r
+      integer colours(nexternal-1),i,j
+      double precision dipoles(nexternal-1,nexternal-1),norm
+      double precision,allocatable :: weights(:,:)
       logical updateloop,saved_updateloop
       common/to_updateloop/updateloop
       type(BornRequest) request
@@ -8683,9 +8700,35 @@ c model parameters after this cheap prediction pass for subsequent terms.
       updateloop=.true.
       call update_as_param()
       updateloop=.false.
+c Workers use static locals. Clear the previous point's colour request before
+c obtaining the uncorrelated Born used to normalize the colour contractions.
+      request=BornRequest()
       request%helicities=.true.
       call mc_born_local(p,request,result)
-      call pooled_virtual_set_helicity_weights(result%helicity_orders)
+      weights=result%helicity_orders
+      if(pooled_virtual_uses_physics())then
+c The cached tree amplitudes have already been built for the soft terms.
+c Contract their colour links without extra helicity draws or loop calls.
+         dipoles=0d0
+         norm=sum(abs(result%split_counterterms(:,1,qcd_pos)))*g**2
+         if(norm.gt.0d0)then
+            request%helicities=.false.
+            request%colour=.true.
+            do i=1,nexternal-2
+               if(abs(colours(i)).eq.1)cycle
+               do j=i+1,nexternal-1
+                  if(abs(colours(j)).eq.1)cycle
+                  request%m=i
+                  request%n=j
+                  call mc_born_local(p,request,result)
+                  dipoles(i,j)=sum(result%soft)/norm
+               enddo
+            enddo
+         endif
+         call pooled_virtual_set_helicity_weights(weights,dipoles)
+      else
+         call pooled_virtual_set_helicity_weights(weights)
+      endif
       mu_r=saved_mu_r
       updateloop=.true.
       call update_as_param()

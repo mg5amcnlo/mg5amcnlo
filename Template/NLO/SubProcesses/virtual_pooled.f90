@@ -21,14 +21,17 @@ module virtual_pooled
   end type
   type :: neural_model
      integer :: inputs=0, heads=0, depth=0
+     real(dp) :: replacement_blend=-1d0
      real(dp) :: born_scale=1d0, target_scale=1d0
-     integer, allocatable :: descriptor(:,:), helicity(:), trained(:), width(:)
+     integer, allocatable :: descriptor(:,:), helicity(:), trained(:), width(:), unrepresented(:)
      real(dp), allocatable :: lower(:), upper(:), output(:,:), bias(:), linear(:,:)
      type(neural_layer), allocatable :: hidden(:)
   end type
   type, public :: pooled_virtual_context
      real(dp), allocatable :: mean(:), actual(:), base(:), heads(:,:), probability(:)
+     real(dp), allocatable :: coupling(:)
      logical :: conditional=.false., full_branch=.true.
+     logical :: prepared=.false., exact_tail=.false.
      integer :: selected=-1
      real(dp) :: selected_probability=1d0
      real(dp) :: velocity_factor=1d0
@@ -46,7 +49,7 @@ module virtual_pooled
   integer :: nx=0
   logical :: exact_tail=.false.
   integer :: sample_unit=0, iteration_unit=0, serial=0, iteration_serial=1
-  integer, allocatable :: saved_pdg(:)
+  integer, allocatable :: saved_pdg(:), saved_colour(:)
   real(dp), allocatable :: saved_mass(:), raw_ratio(:), common_ratio(:), features(:)
   logical, allocatable :: saved_incoming(:)
   type(order_model), allocatable :: models(:)
@@ -54,9 +57,11 @@ module virtual_pooled
   integer, allocatable :: native_multiplicity(:), native_labels(:,:)
   integer, allocatable :: symmetry_legs(:,:), symmetry_helicity(:,:)
   real(dp), allocatable :: native_q(:), point_p(:,:), point_weights(:,:), head_ratio(:,:)
+  real(dp), allocatable :: point_coupling(:)
   real(dp) :: point_mur2=1d0,point_qes2=1d0
   logical :: conditional_capture=.false., header_written=.false., have_neural=.false.
   logical :: conditional_point=.false., full_branch=.true., map_locked=.false.
+  logical :: physics_point_valid=.false.
   integer :: selected_helicity=-1
   real(dp) :: selected_probability=1d0
   logical :: have_metadata=.false., prepared=.false., recorded=.false.
@@ -67,6 +72,8 @@ module virtual_pooled
   public :: pooled_virtual_needs_helicities, pooled_virtual_set_helicity_weights
   public :: pooled_virtual_set_selection, pooled_virtual_validate_native_map
   public :: pooled_virtual_probabilities, pooled_virtual_save_context, pooled_virtual_restore_context
+  public :: pooled_virtual_uses_physics, pooled_virtual_dipole_inputs
+  public :: pooled_virtual_antenna_remainder
 contains
   subroutine fail(message)
     character(len=*), intent(in) :: message
@@ -85,6 +92,8 @@ contains
     sample_unit=0
     iteration_unit=0
     if(allocated(saved_pdg)) deallocate(saved_pdg,saved_mass,saved_incoming)
+    if(allocated(saved_colour)) deallocate(saved_colour)
+    if(allocated(point_coupling)) deallocate(point_coupling)
     if(allocated(raw_ratio)) deallocate(raw_ratio)
     if(allocated(pooled_virtual_ratio)) deallocate(pooled_virtual_ratio)
     if(allocated(pooled_virtual_actual_ratio)) deallocate(pooled_virtual_actual_ratio,common_ratio)
@@ -116,6 +125,7 @@ contains
     call pooled_virtual_begin_point()
     if(orders<1.or.orders>1024) call fail('invalid number of coupling orders')
     allocate(pooled_virtual_ratio(orders),pooled_virtual_actual_ratio(orders),common_ratio(orders),raw_ratio(orders))
+    allocate(point_coupling(orders));point_coupling=1d0
     pooled_virtual_ratio=0d0
     pooled_virtual_actual_ratio=0d0
     common_ratio=0d0
@@ -154,15 +164,17 @@ contains
     pooled_virtual_probability=0d0
     exact_tail=.false.
     conditional_point=.false.
+    physics_point_valid=.false.
     full_branch=.true.
     selected_helicity=-1
     selected_probability=1d0
     pooled_virtual_velocity_factor=1d0
     pooled_virtual_velocity_valid=.true.
     if(allocated(native_q)) native_q=0d0
+    if(allocated(point_coupling)) point_coupling=1d0
   end subroutine
 
-  subroutine pooled_virtual_prepare(p,mass,incoming,pdg,mur2,ratio,qes2,conditional,context_valid)
+  subroutine pooled_virtual_prepare(p,mass,incoming,pdg,mur2,ratio,qes2,conditional,context_valid,coupling,colours)
     real(dp), intent(in) :: p(0:,:),mass(:),mur2
     logical, intent(in) :: incoming(:)
     integer, intent(in) :: pdg(:)
@@ -170,9 +182,11 @@ contains
     real(dp), intent(in), optional :: qes2
     logical, intent(in), optional :: conditional
     logical, intent(in), optional :: context_valid
+    real(dp), intent(in), optional :: coupling(:)
+    integer, intent(in), optional :: colours(:)
     real(dp), allocatable :: coordinate(:)
     integer :: cat
-    logical :: valid, oriented
+    logical :: valid, oriented, physics
     prepared=.false.
     conditional_point=.false.
     if(size(ratio)/=norders) call fail('coupling-order mismatch at point')
@@ -182,6 +196,18 @@ contains
     call virtual_envelope_carrier_factor(p,mass,incoming,pooled_virtual_velocity_factor,pooled_virtual_velocity_valid)
     if(.not.pooled_virtual_enabled) return
     if(.not.all(ieee_is_finite(ratio))) call fail('nonfinite MINT ratio')
+    physics=(mode==1.and.present(coupling).and.present(colours)).or.(have_metadata.and.catalog==9)
+    if(physics) then
+       if(.not.present(qes2)) call fail('physics inputs require the loop scale')
+       if(.not.present(coupling).or..not.present(colours)) then
+          exact_tail=mode==2
+          return
+       endif
+       if(size(coupling)/=norders.or.size(colours)/=size(pdg)) call fail('invalid physics input dimensions')
+       if(.not.all(ieee_is_finite(coupling)).or.any(coupling<0d0).or.any(colours==0)) &
+            call fail('invalid coupling/colour inputs')
+       point_coupling=coupling
+    endif
     if(present(context_valid)) then
        if(.not.context_valid) then
           ! Native HEL IDs belong to the local MadLoop process. A foreign
@@ -193,13 +219,15 @@ contains
     endif
     ! Existing catalog-5 captures/models keep their original scale meaning.
     ! New captures include the actual loop scale and an absolute energy scale.
-    oriented=have_metadata.and.catalog==7
+    oriented=have_metadata.and.catalog>=7
     if(present(conditional)) then
        if(mode==1) conditional_capture=conditional
     endif
+    if(physics.and.mode==1) conditional_capture=.true.
     if(.not.have_metadata.and.conditional_capture) oriented=.true.
     if(present(qes2).and..not.(have_metadata.and.catalog==5)) then
-       call pooled_virtual_invariants(p,mass,incoming,pdg,mur2,cat,coordinate,valid,qes2,oriented)
+       call pooled_virtual_invariants(p,mass,incoming,pdg,mur2,cat,coordinate,valid,qes2,oriented, &
+            (have_metadata.and.catalog>=8).or.physics,physics)
     else
        call pooled_virtual_invariants(p,mass,incoming,pdg,mur2,cat,coordinate,valid)
     endif
@@ -215,6 +243,7 @@ contains
        saved_pdg=pdg
        saved_mass=mass
        saved_incoming=incoming
+       if(physics) saved_colour=colours
        have_metadata=.true.
        if(.not.conditional_capture) then
           call write_header(sample_unit,'VIRTUAL_POOL_SAMPLES 2')
@@ -223,6 +252,9 @@ contains
     else
        if(cat/=catalog.or.size(coordinate)/=nf.or.size(pdg)/=nlegs) call fail('point/model catalog mismatch')
        if(any(saved_pdg/=pdg).or.any(saved_incoming.neqv.incoming)) call fail('point/model particle mismatch')
+       if(physics) then
+          if(any(saved_colour/=colours)) call fail('point/model colour mismatch')
+       endif
        if(any(abs(saved_mass-mass)>1d-10*max(1d0,abs(saved_mass),abs(mass)))) &
             call fail('point/model mass mismatch')
     endif
@@ -233,7 +265,7 @@ contains
     if(present(qes2)) point_qes2=qes2
     if(conditional_capture.and..not.allocated(native_multiplicity)) call load_native_map()
     prepared=.true.
-    if(mode/=2) return
+    if(mode/=2.or.physics) return
     call predict_common()
     pooled_virtual_actual_ratio=pooled_virtual_ratio
   end subroutine
@@ -248,9 +280,9 @@ contains
        if(any([(outside_bounds(features(r),models(k)%lower(r),models(k)%upper(r)),r=1,nf)])) then
           exact_tail=.true.
        endif
-       ! A bounded continuation avoids replacing a useful prediction with
-       ! MINT precisely on the rare points that set the rejection envelope.
-       ! The exact residual is still sampled with probability one there.
+       ! Catalog 9 continues the physical logarithms and 1/v rather than
+       ! flattening them at a training boundary. Older catalogs stay bounded.
+       ! Unsupported points still request an exact residual with p=1.
        do r=1,models(k)%terms
           xa=1d0
           xb=1d0
@@ -261,6 +293,7 @@ contains
           value=value+models(k)%coefficient(r)*xa*xb*xc
        enddo
        value=value*models(k)%target_scale/models(k)%born_scale
+       if(catalog==9) value=value*point_coupling(k)
        if(.not.ieee_is_finite(value)) call fail('nonfinite model prediction')
        pooled_virtual_ratio(k)=(1d0-models(k)%blend)*raw_ratio(k)+models(k)%blend*value
        if(.not.ieee_is_finite(pooled_virtual_ratio(k))) call fail('nonfinite blended prediction')
@@ -313,7 +346,11 @@ contains
     nh=0
     if(allocated(native_multiplicity)) nh=size(native_multiplicity)
     if(.not.header_written) then
-       call write_header(sample_unit,'VIRTUAL_POOL_SAMPLES 3')
+       if(catalog==9) then
+          call write_header(sample_unit,'VIRTUAL_POOL_SAMPLES 4')
+       else
+          call write_header(sample_unit,'VIRTUAL_POOL_SAMPLES 3')
+       endif
        write(sample_unit,'(I0)') nh
        do h=1,nh
           write(sample_unit,'(*(I0,1X))') h,native_multiplicity(h),native_labels(:,h)
@@ -330,7 +367,17 @@ contains
        ! Retain exact zeros and signed/zero Born values.  Probability is kept so
        ! the controller can undo selective expensive-loop sampling in the fit.
        if(conditional_capture) then
-          if(nh>0) then
+          if(catalog==9) then
+             if(nh>0) then
+                write(sample_unit,'(5(I0,1X),*(ES25.16E3,1X))') serial,channel,iteration_serial,k,bins, &
+                     loop_probability,born(k),exact,approximation,point_coupling(k),features,x,real(merge(1,0,full_branch),dp), &
+                     real(selected_helicity,dp),selected_probability,native_q,point_p
+             else
+                write(sample_unit,'(5(I0,1X),*(ES25.16E3,1X))') serial,channel,iteration_serial,k,bins, &
+                     loop_probability,born(k),exact,approximation,point_coupling(k),features,x,real(merge(1,0,full_branch),dp), &
+                     real(selected_helicity,dp),selected_probability,point_p
+             endif
+          elseif(nh>0) then
              write(sample_unit,'(5(I0,1X),*(ES25.16E3,1X))') serial,channel,iteration_serial,k,bins, &
                   loop_probability,born(k),exact,approximation,features,x,real(merge(1,0,full_branch),dp), &
                   real(selected_helicity,dp),selected_probability,native_q,point_p
@@ -348,7 +395,11 @@ contains
   end subroutine
 
   logical function pooled_virtual_needs_helicities() result(needed)
-    needed=prepared.and.(conditional_capture.or.have_neural)
+    needed=prepared.and.(conditional_capture.or.have_neural.or.catalog==9)
+  end function
+
+  logical function pooled_virtual_uses_physics() result(needed)
+    needed=prepared.and.catalog==9
   end function
 
   pure recursive subroutine pooled_virtual_probabilities(weights,multiplicity,q,valid)
@@ -380,10 +431,33 @@ contains
     valid=all(ieee_is_finite(q)).and.abs(sum(q)-1d0)<1d-10
   end subroutine
 
-  subroutine pooled_virtual_set_helicity_weights(weights)
+  subroutine pooled_virtual_set_helicity_weights(weights,dipoles)
     real(dp),intent(in) :: weights(:,:)
+    real(dp),intent(in),optional :: dipoles(:,:)
     logical :: valid
+    real(dp) :: inputs(4)
+    integer :: ns
     if(.not.pooled_virtual_needs_helicities()) return
+    if(catalog==9) then
+       valid=physics_point_valid
+       if(present(dipoles)) then
+          call pooled_virtual_dipole_inputs(point_p,saved_mass,saved_incoming,point_qes2,dipoles,inputs,valid)
+          if(valid) then
+             ns=nf-(nlegs-2)*(nlegs-3)/2
+             features(ns-4:ns-1)=inputs
+          endif
+       endif
+       if(.not.valid) then
+          exact_tail=mode==2
+          prepared=.false.
+          return
+       endif
+       physics_point_valid=.true.
+       if(mode==2) then
+          call predict_common()
+          pooled_virtual_actual_ratio=pooled_virtual_ratio
+       endif
+    endif
     point_weights=weights
     if(.not.allocated(native_multiplicity)) return
     call pooled_virtual_probabilities(weights,native_multiplicity,native_q,valid)
@@ -497,11 +571,14 @@ contains
     if(allocated(head_ratio)) context%heads=head_ratio
     if(allocated(native_q)) context%probability=native_q
     context%conditional=conditional_point
+    context%prepared=prepared
+    context%exact_tail=exact_tail
     context%full_branch=full_branch
     context%selected=selected_helicity
     context%selected_probability=selected_probability
     context%velocity_factor=pooled_virtual_velocity_factor
     context%velocity_valid=pooled_virtual_velocity_valid
+    context%coupling=point_coupling
   end subroutine
 
   subroutine pooled_virtual_restore_context(context)
@@ -512,19 +589,23 @@ contains
     if(allocated(context%heads)) head_ratio=context%heads
     if(allocated(context%probability)) native_q=context%probability
     conditional_point=context%conditional
+    prepared=context%prepared
+    exact_tail=context%exact_tail
     full_branch=context%full_branch
     selected_helicity=context%selected
     selected_probability=context%selected_probability
     pooled_virtual_velocity_factor=context%velocity_factor
     pooled_virtual_velocity_valid=context%velocity_valid
+    if(allocated(context%coupling)) point_coupling=context%coupling
   end subroutine
 
   subroutine pooled_virtual_iteration(iteration,accepted,attempts)
     integer, intent(in) :: iteration,attempts
     logical, intent(in) :: accepted
     if(.not.pooled_virtual_collecting) return
-    if(iteration<1.or.attempts<0) call fail('invalid iteration accounting')
+    if(iteration<0.or.(iteration==0.and.accepted).or.attempts<0) call fail('invalid iteration accounting')
     ! MINT can restart its iteration counter after a rejected grid iteration.
+    ! The reset happens before this callback, so that rejection arrives as 0.
     ! The file uses a monotonic ordinal to keep those sample sets distinct.
     write(iteration_unit,'(3(I0,1X))') iteration_serial,merge(1,0,accepted),attempts
     flush(iteration_unit)
@@ -537,7 +618,10 @@ contains
     real(dp) :: width
     width=models(k)%upper(a)-models(k)%lower(a)
     z=0.5d0
-    if(width>1d-12) z=max(0d0,min(1d0,(features(a)-models(k)%lower(a))/width))
+    if(width>1d-12) then
+       z=(features(a)-models(k)%lower(a))/width
+       if(catalog/=9) z=max(0d0,min(1d0,z))
+    endif
   end function
 
   subroutine write_header(unit,title)
@@ -548,10 +632,11 @@ contains
     write(unit,'(*(I0,1X))') saved_pdg
     write(unit,'(*(ES25.16E3,1X))') saved_mass
     write(unit,'(*(I0,1X))') merge(1,0,saved_incoming)
+    if(catalog==9) write(unit,'(*(I0,1X))') saved_colour
   end subroutine
 
   subroutine read_model()
-    integer :: unit,ios,version_orders,k,order,r,nt,degree,model_nx,nm,version,nscalar
+    integer :: unit,ios,version_orders,k,order,r,nt,degree,model_nx,nm,version,nscalar,nmassive
     real(dp) :: unique(maxlegs)
     integer, allocatable :: incoming_int(:)
     character(len=65536) :: line
@@ -571,7 +656,7 @@ contains
     read(line,*,iostat=ios) catalog,nf,version_orders,nlegs,model_nx
     if(ios/=0) call fail('invalid model dimensions')
     if(model_nx/=nx) call fail('model MINT coordinate mismatch')
-    if((catalog<5.or.catalog>7).or.nf<1.or.nf>maxfeatures.or.nlegs<3.or.nlegs>maxlegs) &
+    if((catalog<5.or.catalog>9).or.nf<1.or.nf>maxfeatures.or.nlegs<3.or.nlegs>maxlegs) &
          call fail('model dimensions outside limits')
     if(version_orders/=norders) call fail('model coupling-order mismatch')
     allocate(saved_pdg(nlegs),saved_mass(nlegs),saved_incoming(nlegs),incoming_int(nlegs),features(nf))
@@ -584,16 +669,22 @@ contains
     if(.not.all(ieee_is_finite(saved_mass))) call fail('nonfinite model masses')
     if(any(saved_mass<0d0)) call fail('negative model masses')
     call distinct_masses(saved_mass,unique,nm)
-    nscalar=1+nlegs*(nlegs-1)/2+nm+merge(2,0,catalog>=6)
-    if(nf/=1+nlegs*(nlegs-1)/2+nm+merge(2,0,catalog>=6)+ &
-         merge((nlegs-2)*(nlegs-3)/2,0,catalog==7)) &
-         call fail('invalid invariant catalog feature count')
     call record_line(unit,line,nlegs)
     read(line,*,iostat=ios) incoming_int
     if(ios/=0) call fail('invalid incoming flags')
     if(any(incoming_int<0).or.any(incoming_int>1).or.sum(incoming_int)<1.or.sum(incoming_int)>2) &
          call fail('model requires one or two incoming legs')
     saved_incoming=incoming_int==1
+    if(catalog==9) then
+       allocate(saved_colour(nlegs))
+       call record_line(unit,line,nlegs);read(line,*,iostat=ios) saved_colour
+       if(ios/=0.or.any(saved_colour==0)) call fail('invalid model colour representations')
+    endif
+    nmassive=count(saved_mass>0d0.and..not.saved_incoming)
+    nscalar=1+nlegs*(nlegs-1)/2+nm+merge(2,0,catalog>=6)+ &
+         merge(nmassive*(nmassive-1)/2,0,catalog>=8)+merge(4,0,catalog==9)
+    if(nf/=nscalar+merge((nlegs-2)*(nlegs-3)/2,0,catalog>=7)) &
+         call fail('invalid invariant catalog feature count')
     allocate(models(norders))
     do k=1,norders
        call record_line(unit,line,6)
@@ -619,7 +710,7 @@ contains
        if(.not.all(ieee_is_finite(models(k)%lower)).or..not.all(ieee_is_finite(models(k)%upper))) &
             call fail('nonfinite model bounds')
        if(any(models(k)%upper<models(k)%lower)) call fail('reversed model bounds')
-       if(catalog==7.and.models(k)%blend>0d0) then
+       if(catalog>=7.and.models(k)%blend>0d0) then
           if(any(models(k)%lower(nscalar+1:)/=-1d0).or.any(models(k)%upper(nscalar+1:)/=1d0)) &
                call fail('signed orientation coordinates require fixed bounds')
        endif
@@ -639,7 +730,7 @@ contains
           if(degree<3.and.models(k)%c(r)>0) call fail('term exceeds polynomial degree')
           if(degree<2.and.models(k)%b(r)>0) call fail('term exceeds polynomial degree')
           if(degree==0.and.models(k)%a(r)>0) call fail('term exceeds polynomial degree')
-          if(catalog==7.and.count([models(k)%a(r),models(k)%b(r),models(k)%c(r)]>nscalar)>1) &
+          if(catalog>=7.and.count([models(k)%a(r),models(k)%b(r),models(k)%c(r)]>nscalar)>1) &
                call fail('polynomial term contains multiple orientation factors')
           if(.not.ieee_is_finite(models(k)%coefficient(r))) call fail('nonfinite polynomial coefficient')
        enddo
@@ -652,8 +743,10 @@ contains
 
   recursive subroutine read_neural_model()
     integer :: unit,ios,cat,nfeat,nord,nleg,ncoord,nh,k,r,h,i,j,enabled,order,w1,w2,ident,mult,version,nsym
-    integer,allocatable :: pdg(:),flags(:),labels(:)
+    integer,allocatable :: pdg(:),flags(:),labels(:),colours(:)
+    logical,allocatable :: unrepresented(:)
     real(dp),allocatable :: mass(:)
+    real(dp) :: replacement
     character(len=65536) :: line
     open(newunit=unit,file='virtual_pool_neural.dat',status='old',action='read',iostat=ios)
     if(ios/=0) call fail('cannot open neural companion')
@@ -661,6 +754,8 @@ contains
     version=0
     if(trim(line)=='VIRTUAL_POOL_NEURAL 1') version=1
     if(trim(line)=='VIRTUAL_POOL_NEURAL 2') version=2
+    if(trim(line)=='VIRTUAL_POOL_NEURAL 3') version=3
+    if(trim(line)=='VIRTUAL_POOL_NEURAL 4') version=4
     if(ios/=0.or.version==0) call fail('unsupported neural companion header')
     call record_line(unit,line,6)
     read(line,*,iostat=ios) cat,nfeat,nord,nleg,ncoord,nh
@@ -678,6 +773,11 @@ contains
     if(any(pdg/=saved_pdg).or.any(flags/=merge(1,0,saved_incoming))) call fail('neural particle metadata mismatch')
     if(.not.all(ieee_is_finite(mass))) call fail('nonfinite neural masses')
     if(any(abs(mass-saved_mass)>1d-10*max(1d0,abs(mass),abs(saved_mass)))) call fail('neural mass mismatch')
+    if(catalog==9) then
+       allocate(colours(nlegs))
+       call record_line(unit,line,nlegs);read(line,*,iostat=ios) colours
+       if(ios/=0.or.any(colours/=saved_colour)) call fail('neural colour mismatch')
+    endif
     call record_line(unit,line,1)
     if(len_trim(line)/=64) call fail('invalid neural base SHA256')
     do i=1,64
@@ -698,14 +798,14 @@ contains
             call fail('neural/native helicity map mismatch')
     enddo
     nsym=1
-    if(version==2) then
+    if(version>=2) then
        call record_line(unit,line,1);read(line,*,iostat=ios) nsym
        if(ios/=0.or.nsym<1.or.nsym>2) call fail('invalid neural permutation count')
     endif
     allocate(symmetry_legs(nlegs,nsym),symmetry_helicity(nh,nsym))
     symmetry_legs(:,1)=[(i,i=1,nlegs)]
     symmetry_helicity(:,1)=[(h,h=1,nh)]
-    if(version==2) then
+    if(version>=2) then
        do r=1,nsym
           call record_line(unit,line,nlegs);read(line,*,iostat=ios) symmetry_legs(:,r)
           if(ios/=0) call fail('invalid neural permutation row')
@@ -714,11 +814,21 @@ contains
     allocate(neural(norders))
     have_neural=.false.
     do k=1,norders
-       call record_line(unit,line,8)
-       read(line,*,iostat=ios) order,enabled,neural(k)%inputs,neural(k)%heads,w1,w2, &
-            neural(k)%born_scale,neural(k)%target_scale
+       replacement=-1d0
+       call record_line(unit,line,merge(9,8,version>=3))
+       if(version>=3) then
+          read(line,*,iostat=ios) order,enabled,neural(k)%inputs,neural(k)%heads,w1,w2, &
+               neural(k)%born_scale,neural(k)%target_scale,replacement
+       else
+          read(line,*,iostat=ios) order,enabled,neural(k)%inputs,neural(k)%heads,w1,w2, &
+               neural(k)%born_scale,neural(k)%target_scale
+       endif
        if(ios/=0) call fail('invalid neural order header')
        if(order/=k.or.enabled<0.or.enabled>1) call fail('invalid neural order index')
+       if(.not.ieee_is_finite(replacement)) call fail('nonfinite absolute-head blend')
+       if((replacement/=-1d0.and.(replacement<0d0.or.replacement>1d0)).or. &
+            (enabled==0.and.replacement/=-1d0)) call fail('invalid head interpretation')
+       neural(k)%replacement_blend=replacement
        if(.not.ieee_is_finite(neural(k)%born_scale).or..not.ieee_is_finite(neural(k)%target_scale)) &
             call fail('nonfinite neural scales')
        if(neural(k)%born_scale<=0d0.or.neural(k)%target_scale<=0d0) call fail('nonpositive neural scales')
@@ -746,12 +856,15 @@ contains
           if(neural(k)%lower(r)>neural(k)%upper(r)) call fail('reversed neural input bounds')
           i=neural(k)%descriptor(2,r);j=neural(k)%descriptor(3,r);h=neural(k)%descriptor(4,r)
           select case(neural(k)%descriptor(1,r))
-          case(1,2)
+          case(1,2,7,9,10)
+             if(neural(k)%descriptor(1,r)==7.and.version<3) call fail('squared input requires format 3')
+             if(neural(k)%descriptor(1,r)>=9.and.version<4) call fail('physics input requires format 4')
              if(i<1.or.i>nf.or.j/=0.or.h/=0) call fail('invalid neural catalog index')
           case(3)
              if(i<1.or.i>nlegs.or.j<0.or.j>3.or.h/=0) call fail('invalid canonical Born input')
              if(saved_incoming(i)) call fail('canonical input must reference outgoing Born leg')
-          case(4,5)
+          case(4,5,8)
+             if(neural(k)%descriptor(1,r)==8.and.version<4) call fail('antenna input requires format 4')
              if(min(i,j,h)<1.or.max(i,j,h)>nlegs.or.i==j.or.i==h.or.j==h) &
                   call fail('invalid neural triple-invariant legs')
           case(6)
@@ -768,6 +881,12 @@ contains
                neural(k)%trained(h)<0.or.neural(k)%trained(h)>1) call fail('invalid neural head ID/mask')
           if(any(neural(k)%helicity(:h-1)==neural(k)%helicity(h))) call fail('duplicate neural output head')
        enddo
+       allocate(unrepresented(nh));unrepresented=.true.
+       do h=1,neural(k)%heads
+          if(neural(k)%trained(h)/=0) unrepresented(neural(k)%helicity(h))=.false.
+       enddo
+       neural(k)%unrepresented=pack([(i,i=1,nh)],unrepresented)
+       deallocate(unrepresented)
        i=neural(k)%inputs
        do r=1,neural(k)%depth
           j=neural(k)%width(r)
@@ -877,7 +996,7 @@ contains
   recursive subroutine predict_neural()
     real(dp),allocatable :: saved_p(:,:),saved_features(:),saved_q(:),base(:),heads(:,:),coordinate(:)
     real(dp) :: first_base(norders)
-    integer :: ns,s,k,h,j,r,cat
+    integer :: ns,s,k,h,j,r,cat,i
     logical :: valid
     ns=size(symmetry_legs,2)
     if(ns==1) then
@@ -894,7 +1013,11 @@ contains
              call pooled_virtual_invariants(point_p,saved_mass,saved_incoming,saved_pdg,point_mur2,cat,coordinate,valid)
           else
              call pooled_virtual_invariants(point_p,saved_mass,saved_incoming,saved_pdg,point_mur2,cat,coordinate,valid, &
-                  point_qes2,catalog==7)
+                  point_qes2,catalog>=7,catalog>=8,catalog==9)
+             if(catalog==9.and.valid) then
+                i=nf-(nlegs-2)*(nlegs-3)/2
+                coordinate(i-4:i-1)=saved_features(i-4:i-1)
+             endif
           endif
           if(.not.valid) then
              ! All heads must share the same supported fallback. Force the
@@ -949,6 +1072,22 @@ contains
        if(nh==0) cycle
        call neural_inputs(neural(k),shat,canonical,canonical_ready,z(:ni))
        call neural_correction(neural(k),z(:ni),delta(:nh))
+       if(catalog==9) delta(:nh)=delta(:nh)*point_coupling(k)
+       if(neural(k)%replacement_blend>=0d0) then
+          ! Avoid common+(absolute-common), which loses the head when the
+          ! statistical MINT baseline is much larger than the physical value.
+          pooled_virtual_ratio(k)=common_ratio(k)*(1d0-neural(k)%replacement_blend+ &
+               neural(k)%replacement_blend*sum(native_q(neural(k)%unrepresented)))
+          do h=1,nh
+             head_ratio(h,k)=common_ratio(k)
+             if(neural(k)%trained(h)==0) cycle
+             head_ratio(h,k)=(1d0-neural(k)%replacement_blend)*common_ratio(k)+ &
+                  neural(k)%replacement_blend*delta(h)
+             pooled_virtual_ratio(k)=pooled_virtual_ratio(k)+ &
+                  neural(k)%replacement_blend*native_q(neural(k)%helicity(h))*delta(h)
+          enddo
+          cycle
+       endif
        do h=1,nh
           head_ratio(h,k)=common_ratio(k)+delta(h)
           pooled_virtual_ratio(k)=pooled_virtual_ratio(k)+native_q(neural(k)%helicity(h))*delta(h)
@@ -971,7 +1110,7 @@ contains
        j=model%descriptor(3,r)
        c=model%descriptor(4,r)
        select case(kind)
-       case(1,2)
+       case(1,2,7,9,10)
           value=features(i)
        case(3)
           if(.not.canonical_ready) then
@@ -994,13 +1133,18 @@ contains
           endif
        case(6)
           value=2d0*native_q(i)-1d0
+       case(8)
+          call pooled_virtual_antenna_remainder(point_p,saved_incoming,i,j,c,value,valid)
+          if(.not.valid) exact_tail=.true.
        end select
        z(r)=value
-       if(kind==1.or.kind==4) then
+       if(kind==1.or.kind==4.or.kind>=7) then
           width=model%upper(r)-model%lower(r)
           z(r)=0d0
           if(width>1d-12) z(r)=max(-1d0,min(1d0,2d0*(value-model%lower(r))/width-1d0))
+          if(kind>=8.and.width>1d-12) z(r)=2d0*(value-model%lower(r))/width-1d0
           if(outside_bounds(value,model%lower(r),model%upper(r))) exact_tail=.true.
+          if(kind==7.or.kind==10) z(r)=z(r)*z(r)
        endif
     enddo
   end subroutine
@@ -1089,7 +1233,109 @@ contains
     enddo
   end subroutine
 
-  subroutine pooled_virtual_invariants(p,mass,incoming,pdg,mur2,cat,x,valid,qes2,orientation)
+  recursive real(dp) function real_dilog(x) result(value)
+    ! Real Li_2 on the real axis. Transform to a convergent power series
+    ! on [0,1/2], including the real analytic continuation across x=1.
+    real(dp),intent(in) :: x
+    real(dp),parameter :: pi2=9.869604401089358618834490999876d0
+    real(dp) :: term,add
+    integer :: k
+    if(x>2d0) then
+       value=pi2/3d0-0.5d0*log(x)**2-real_dilog(1d0/x)
+    elseif(x>1d0) then
+       value=pi2/6d0-log(x)*log(x-1d0)-real_dilog(1d0-x)
+    elseif(x==1d0) then
+       value=pi2/6d0
+    elseif(x>0.5d0) then
+       value=pi2/6d0-log(x)*log(1d0-x)-real_dilog(1d0-x)
+    elseif(x<0d0) then
+       value=-real_dilog(x/(x-1d0))-0.5d0*log(1d0-x)**2
+    else
+       value=0d0;term=x
+       do k=1,100
+          add=term/real(k,dp)**2
+          value=value+add
+          if(abs(add)<=2d-16) exit
+          term=term*x
+       enddo
+    endif
+  end function
+
+  subroutine pooled_virtual_antenna_remainder(p,incoming,i,j,k,value,valid)
+    real(dp),intent(in) :: p(0:,:)
+    logical,intent(in) :: incoming(:)
+    integer,intent(in) :: i,j,k
+    real(dp),intent(out) :: value
+    logical,intent(out) :: valid
+    real(dp),parameter :: pi2=9.869604401089358618834490999876d0
+    real(dp) :: total(0:3),triple(0:3),den,u,v,shat
+    integer :: leg
+    value=0d0;valid=.false.;total=0d0
+    do leg=1,size(incoming)
+       if(incoming(leg)) total=total+p(:,leg)
+    enddo
+    shat=dot4(total,total)
+    triple=merge(-1d0,1d0,incoming(i))*p(:,i)+merge(-1d0,1d0,incoming(j))*p(:,j)+ &
+         merge(-1d0,1d0,incoming(k))*p(:,k)
+    den=dot4(triple,triple)
+    if(shat<=0d0.or.abs(den)<=1d-12*shat) return
+    u=2d0*dot4(p(:,i),p(:,j))*merge(1d0,-1d0,incoming(i).eqv.incoming(j))/den
+    v=2d0*dot4(p(:,j),p(:,k))*merge(1d0,-1d0,incoming(j).eqv.incoming(k))/den
+    if(u==0d0.or.v==0d0) return
+    value=real_dilog(1d0-u)+real_dilog(1d0-v)+log(abs(u))*log(abs(v))-pi2/6d0
+    if(u<0d0.and.v<0d0) value=value-pi2
+    valid=ieee_is_finite(value)
+    if(.not.valid) value=0d0
+  end subroutine
+
+  subroutine pooled_virtual_dipole_inputs(p,mass,incoming,qes2,correlation,x,valid)
+    ! Colour-space one-loop logarithms and the massive cusp/Coulomb shapes.
+    ! Correlations retain the Born provider's normalization and sign. Their
+    ! coefficients are fitted, not assumed universal for finite remainders.
+    real(dp),intent(in) :: p(0:,:),mass(:),qes2,correlation(:,:)
+    logical,intent(in) :: incoming(:)
+    real(dp),intent(out) :: x(4)
+    logical,intent(out) :: valid
+    real(dp),parameter :: pi=3.1415926535897932384626433832795d0
+    real(dp) :: s,l,cusp,v,a(0:3),b(0:3),scale,dot,mm,delta,error,c
+    integer :: i,j,n
+    x=0d0;valid=.false.;n=size(mass)
+    if(size(correlation,1)/=n.or.size(correlation,2)/=n.or.size(p,2)/=n.or.size(incoming)/=n) return
+    if(.not.all(ieee_is_finite(correlation)).or.qes2<=0d0) return
+    do i=1,n-1
+       do j=i+1,n
+          c=correlation(i,j)
+          if(c==0d0) cycle
+          s=2d0*dot4(p(:,i),p(:,j))
+          if(s<=0d0.or..not.ieee_is_finite(s)) return
+          l=logratio(s,qes2)
+          cusp=l
+          if(mass(i)>0d0) cusp=cusp-0.5d0*logratio(mass(i)**2,qes2)
+          if(mass(j)>0d0) cusp=cusp-0.5d0*logratio(mass(j)**2,qes2)
+          if(mass(i)>0d0.and.mass(j)>0d0) then
+             scale=max(maxval(abs(p(:,i))),maxval(abs(p(:,j))),mass(i),mass(j))
+             a=p(:,i)/scale;b=p(:,j)/scale
+             dot=dot4(a,b);mm=(mass(i)/scale)*(mass(j)/scale)
+             delta=dot-mm
+             error=64d0*epsilon(1d0)*(abs(a(0)*b(0))+sum(abs(a(1:3)*b(1:3)))+mm)
+             if(delta<=error.or.mm<=0d0) return
+             v=sqrt((delta/dot)*((dot+mm)/dot))
+             if(v<1d-4) then
+                cusp=1d0+v*v/3d0+v**4/5d0
+             else
+                cusp=(log(dot)+log(1d0+v)-log(mm))/v
+             endif
+             x(3)=x(3)+c*cusp*l
+             if(.not.incoming(i).and..not.incoming(j)) x(4)=x(4)+c*pi*pi/v
+          endif
+          x(1)=x(1)+c*cusp
+          x(2)=x(2)+c*(l*l-merge(pi*pi,0d0,incoming(i).eqv.incoming(j)))
+       enddo
+    enddo
+    valid=all(ieee_is_finite(x))
+  end subroutine
+
+  subroutine pooled_virtual_invariants(p,mass,incoming,pdg,mur2,cat,x,valid,qes2,orientation,thresholds,physics)
     real(dp),intent(in) :: p(0:,:),mass(:),mur2
     logical,intent(in) :: incoming(:)
     integer,intent(in) :: pdg(:)
@@ -1097,15 +1343,22 @@ contains
     real(dp),allocatable,intent(out) :: x(:)
     logical,intent(out) :: valid
     real(dp),intent(in),optional :: qes2
-    logical,intent(in),optional :: orientation
+    logical,intent(in),optional :: orientation,thresholds,physics
     real(dp) :: total(0:3),shat,unique(maxlegs),a(0:3),b(0:3),c(0:3),d(0:3),den
-    integer :: i,j,k,n,nm,ia,ib
+    real(dp) :: scale,energy,spatial,dot,mm,delta,error
+    integer :: i,j,k,n,nm,ia,ib,nmassive
     valid=.false.
     cat=5
     if(present(qes2)) then
        cat=6
        if(present(orientation)) then
           if(orientation) cat=7
+       endif
+       if(present(thresholds)) then
+          if(thresholds) cat=8
+       endif
+       if(present(physics)) then
+          if(physics) cat=9
        endif
        if(.not.ieee_is_finite(qes2)) return
        if(qes2<=0d0) return
@@ -1121,7 +1374,9 @@ contains
     shat=dot4(total,total)
     if(shat<=0d0) return
     call distinct_masses(mass,unique,nm)
-    k=1+n*(n-1)/2+nm+merge(2,0,cat>=6)+merge((n-2)*(n-3)/2,0,cat==7)
+    nmassive=count(mass>0d0.and..not.incoming)
+    k=1+n*(n-1)/2+nm+merge(2,0,cat>=6)+merge((n-2)*(n-3)/2,0,cat>=7)+ &
+         merge(nmassive*(nmassive-1)/2,0,cat>=8)+merge(4,0,cat==9)
     if(k>maxfeatures) return
     allocate(x(k))
     x(1)=logratio(shat,mur2)
@@ -1138,10 +1393,31 @@ contains
     enddo
     if(present(qes2)) then
        x(k+1)=logratio(shat,qes2)
-       x(k+2)=log(shat)
-       k=k+2
+       k=k+1
+       if(cat>=8) then
+          do i=1,n-1
+             if(incoming(i).or.mass(i)<=0d0) cycle
+             do j=i+1,n
+                if(incoming(j).or.mass(j)<=0d0) cycle
+                scale=max(maxval(abs(p(:,i))),maxval(abs(p(:,j))),mass(i),mass(j))
+                a=p(:,i)/scale;b=p(:,j)/scale
+                energy=a(0)*b(0);spatial=sum(a(1:3)*b(1:3))
+                dot=energy-spatial;mm=(mass(i)/scale)*(mass(j)/scale)
+                delta=dot-mm
+                error=64d0*epsilon(1d0)*(abs(energy)+abs(spatial)+mm)
+                if(delta<=error.or.dot<=0d0) return
+                k=k+1
+                x(k)=1d0/sqrt((delta/dot)*((dot+mm)/dot))
+             enddo
+          enddo
+       endif
+       if(cat==9) then
+          x(k+1:k+4)=0d0
+          k=k+4
+       endif
+       k=k+1;x(k)=log(shat)
     endif
-    if(cat==7) then
+    if(cat>=7) then
        ia=1;ib=2
        if(count(incoming)==2) then
           do ia=1,n

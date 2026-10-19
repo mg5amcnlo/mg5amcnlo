@@ -72,6 +72,101 @@ class TestVirtualPooled(unittest.TestCase):
         self.mode(0)
         self.run_case('inactive')
 
+    def test_fks_born_query_resets_the_previous_colour_request_with_static_locals(self):
+        work = self.path/'SubProcesses/P0_check'
+        work.mkdir(parents=True)
+        model = self.path/'Source/MODEL'
+        model.mkdir(parents=True)
+        (work/'nexternal.inc').write_text('      integer nexternal\n      parameter(nexternal=5)\n')
+        (work/'orders.inc').write_text('      integer qcd_pos\n      parameter(qcd_pos=1)\n')
+        (work/'coupl.inc').write_text('      real(8) g\n      common/test_g/g\n')
+        (work/'q_es.inc').write_text('      real(8) qes2\n      common/test_qes/qes2\n')
+        (model/'input.inc').write_text('      real(8) mu_r\n      common/test_mu/mu_r\n')
+        # Compile the production subroutine, rather than a copy in the fixture.
+        source = (TEMPLATE/'fks_singular.f').read_text()
+        helper = source[source.index('      subroutine prepare_pooled_helicities('):]
+        helper = helper[:helper.index('      subroutine deferred_virtual_context(')]
+        (work/'prepare.f').write_text(helper)
+        executable = work/'check'
+        result = subprocess.run([shutil.which('gfortran'), '-O1', '-fno-automatic', '-fcheck=all',
+            '-ffixed-line-length-none', '-I', str(work),
+            str(ROOT/'Template/NLO/Source/BornSupport/mc_born_types.f90'),
+            str(ROOT/'tests/input_files/check_virtual_physics_born.f90'), str(work/'prepare.f'),
+            '-o', str(executable)], cwd=work, capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        result = subprocess.run([str(executable)], cwd=work, capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+
+    @unittest.skipUnless(np is not None, 'requires numpy')
+    def test_physics_capture_dresses_the_fit_without_changing_mint(self):
+        from madgraph.various import virtual_pool as pool
+        from madgraph.various.virtual_pool_polynomial import Marginals
+        self.mode(1)
+        inputs = np.fromstring(self.run_case('collect_physics'), sep=' ')
+        metadata, rows, _ = pool.collect_samples([self.path])
+        self.assertEqual((metadata['version'], metadata['catalog'], metadata['nf']), (4, 9, 16))
+        self.assertEqual(metadata['colours'], (8, 8, 3, -3))
+        np.testing.assert_allclose([r['born'] for r in rows], [2., -3.])
+        np.testing.assert_allclose([r['coupling_factor'] for r in rows], [.02, .03])
+        ns = pool.scalar_feature_count(metadata)
+        np.testing.assert_allclose(rows[0]['features'][ns-5:ns-1], inputs)
+        _, dressed, _ = pool._physics_rows(metadata, rows)
+        np.testing.assert_allclose([r['born'] for r in dressed], [.04, -.09])
+        np.testing.assert_allclose([r['mint_born'] for r in dressed], [2., -3.])
+        self.assertEqual(pool._physics_rows(metadata, dressed)[1], dressed)
+        ordinary, carried = Marginals(2, 4), Marginals(2, 4)
+        ordinary.update(rows); carried.update(dressed)
+        np.testing.assert_array_equal(ordinary.average, carried.average)
+        np.testing.assert_allclose(ordinary.predict_many(rows), carried.predict_many(dressed))
+
+    @unittest.skipUnless(np is not None, 'requires numpy')
+    def test_antenna_remainder_matches_crossed_continuations_and_invalid_domains(self):
+        try:
+            import scipy.special
+        except ImportError:
+            self.skipTest('optional scipy unavailable')
+        import itertools
+        from madgraph.various.virtual_pool_neural import antenna_remainder
+        p = np.zeros((5, 4))
+        p[:2] = [[300., 0., 0., 300.], [300., 0., 0., -300.]]
+        angle = np.arange(3)*2*np.pi/3
+        p[2:, 0] = 200.
+        p[2:, 1] = 200.*np.cos(angle)
+        p[2:, 2] = 200.*np.sin(angle)
+        triplets = list(itertools.permutations(range(5), 3))
+        lines = [f'5 {len(triplets)+1}', '1 1 0 0 0']
+        expected, valid = [], []
+        for triplet in triplets:
+            value, accepted = antenna_remainder(p[None], (1, 1, 0, 0, 0), *triplet)
+            expected.append(value[0]); valid.append(accepted[0])
+            lines.append(' '.join(str(i+1) for i in triplet))
+            lines.extend(' '.join(map(str, point)) for point in p)
+        # A zero three-parton invariant has no resolvable R(u,v).
+        degenerate = p.copy(); degenerate[2:] = [200., 200., 0., 0.]
+        lines.append('3 4 5')
+        lines.extend(' '.join(map(str, point)) for point in degenerate)
+        (self.path/'antenna_input.dat').write_text('\n'.join(lines)+'\n')
+        answer = np.fromstring(self.run_case('antenna'), sep=' ').reshape(-1, 2)
+        np.testing.assert_array_equal(answer[:, 0], list(valid)+[False])
+        np.testing.assert_allclose(answer[:, 1], expected+[0.], rtol=2.e-13, atol=3.e-14)
+
+    @unittest.skipUnless(np is not None, 'requires numpy')
+    def test_physics_prediction_applies_the_known_coupling_once(self):
+        from madgraph.various import virtual_pool as pool
+        self.mode(1)
+        self.run_case('collect_physics')
+        metadata, _, _ = pool.collect_samples([self.path])
+        ns = pool.scalar_feature_count(metadata)
+        orders = [dict(order=k, blend=1., born_scale=1., target_scale=1., degree=0,
+                       terms=[dict(pair=(-1, -1), coefficient=value)],
+                       lower=[-1.e6]*ns+[-1.], upper=[1.e6]*ns+[1.])
+                  for k, value in ((1, 5.), (2, -7.))]
+        (self.path/'virtual_pool_model.dat').write_text(pool._model_text(metadata, orders))
+        loaded = pool.load_model(self.path/'virtual_pool_model.dat')
+        self.assertEqual(loaded['metadata']['colours'], metadata['colours'])
+        self.mode(2)
+        self.run_case('apply_physics')
+
     @unittest.skipUnless(np is not None, 'requires numpy')
     def test_collection_reconstructs_virtual_and_iteration_resets(self):
         self.mode(1)
@@ -97,6 +192,18 @@ class TestVirtualPooled(unittest.TestCase):
         self.model()
         self.run_case('apply')
         self.assertFalse((self.path / 'virtual_pool_samples.dat').exists())
+
+    @unittest.skipUnless(np is not None, 'requires numpy')
+    def test_rejected_grid_reset_keeps_monotonic_capture_ordinals(self):
+        from madgraph.various import virtual_pool
+        self.mode(1)
+        self.run_case('collect_reset_zero')
+        ledger = np.loadtxt(self.path/'virtual_pool_iterations.dat', dtype=int)
+        np.testing.assert_array_equal(ledger, [[1, 0, 19], [2, 1, 23]])
+        _, rows, attempted, _ = virtual_pool._read_job(str(self.path))
+        self.assertEqual(attempted, 23)  # rejected attempts never enter fitting weights
+        self.assertEqual(len(rows), 2)
+        self.assertEqual({row['iteration'] for row in rows}, {2})
 
     def test_zero_blend_reproduces_mint(self):
         self.model(blend=0)

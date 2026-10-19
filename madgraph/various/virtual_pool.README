@@ -45,10 +45,75 @@ Rejected and uncommitted iterations are discarded. A monotonically increasing
 iteration ordinal remains unique even when native MINT restarts its counter.
 Born-spreading calibration restarts discard pre-calibration observations.
 
+Physics carrier and inputs
+--------------------------
+New native captures use catalog 9 and capture version 4. The fit carries the
+exact runtime extra coupling, g^2/(8*pi^2) for QCD or e^2/(8*pi^2) for QED:
+
+  B_fit = B_native * extra_coupling.
+
+Running alpha_s is consequently not learned by the approximation. Captures
+retain B_native and store the coupling separately. MINT replay still adapts
+V/B_native. Python fitting/prediction uses B_fit; native inference applies the
+runtime coupling exactly once. Signed and zero Born components remain valid.
+When both corrections contribute to an order, QCD takes precedence as in the
+native Born-carrier selection; the remaining dependence is fitted.
+
+Catalog 8 adds 1/v_ij for each massive outgoing pair to catalog 7, before
+absolute log(shat). Catalog 9 also inserts four colour-dressed inputs there.
+Writing L_ij=log(2*pi.pj/QES2), they are:
+
+  sum_ij C_ij * cusp_ij,
+  sum_ij C_ij * (L_ij^2 - pi^2 for like incoming/outgoing directions),
+  sum_massive_pairs C_ij * cusp_ij * L_ij,
+  sum_massive_outgoing_pairs C_ij * pi^2/v_ij.
+
+For massless pairs cusp=L_ij; each massive leg subtracts
+log(m_i^2/QES2)/2. For two massive legs it is atanh(v_ij)/v_ij instead, with
+the stable small-velocity limit. The colour weights are the native soft Born
+contractions divided by g^2*sum_order(abs(B_QCD_order)). Their provider sign
+and normalization are retained and their coefficients are fitted. They use
+the cached tree amplitudes and require no extra loop calls or random draws.
+These are full-sum colour correlations shared by the native helicity heads,
+not joint colour-helicity amplitudes. They model the spin-independent soft
+operator; finite helicity dependence is fitted separately.
+
+The common fit keeps the cusp, Coulomb and 1/v inputs linear. It does not
+generate 1/v^2 or products of already singular operator inputs. The compact
+linear heads additionally use the real finite-antenna building block
+
+  R(u,v) = Re[Li2(1-u)+Li2(1-v)+log(u)*log(v)-pi^2/6],
+  u=s_ij/s_ijk, v=s_jk/s_ijk,
+
+for massless coloured triples, crossing incoming momenta negative. Input bounds
+and inclusion are chosen within each fitting fold. This is an antenna-inspired
+basis, not a complete finite antenna or a universal formula for the hard
+one-loop remainder. In particular it does not infer an arbitrary process's
+finite amplitude from its infrared poles. The theoretical motivation is the
+colour-space infrared operator and factorisation-aware one-loop emulation:
+  https://arxiv.org/abs/hep-ph/9802439
+  https://arxiv.org/abs/hep-ph/0011222
+  https://arxiv.org/abs/2302.04005
+
+Known physical functions continue beyond fitting bounds instead of flattening
+their logarithmic or Coulomb behaviour. The same support checks still request
+an exact loop there. Unresolved massive thresholds or triple invariants also
+take the exact path. Older catalogs preserve their original bounded behaviour.
+
 Model and conservative selection
 --------------------------------
-The candidate is A_new=(1-lambda) A_MINT + lambda B P(z). P is linear,
-quadratic including all cross terms, or a validated sparse cubic.
+The candidate is A_new=(1-lambda) A_MINT + lambda B_fit P(z). Catalog 9 first
+tries an operator basis: scale and mass logarithms and their squares, plus
+linear colour/threshold inputs, with ridge 1e-8. It has no separate angular
+inputs. This avoids fitting spurious angular dependence when the correction
+is already described by the one-loop operator. Production then tries a compact
+quadratic (linear inputs and their squares), with ridge 1e-4 and Born-dependent
+squared loss. Cusp/Coulomb inputs stay linear. Full
+quadratic interactions and a sparse cubic require improvement on the earlier
+to later validation before their matched CV fits. Catalog 9 stops refinement
+when both CV and chronological errors have relative L1 <= .002 and RMS <= .01;
+the helicity fit is also unnecessary in that case. The broader historical
+linear/quadratic hyperparameter search remains an explicit research option.
 Invariant coordinate catalog 6 is:
   log(shat/muR^2),
   log(max(abs(2*pi.pj)/shat,1e-15)) for all i<j in native Born order,
@@ -67,7 +132,7 @@ This is a generic fitting basis, not an exact formula for arbitrary virtuals.
 Scalers use fitting rows only and map nonconstant coordinates to [-1,1].
 Constants and negligible columns are removed. Regression fits weighted V
 through V-B*P without per-point Born division. Born/target/column normalization
-keeps the small linear systems well scaled. The fixed candidate scan is:
+keeps the small linear systems well scaled. The optional research scan is:
   degree 1 or 2; ridge 1e-4,0.01,1; Huber or squared loss, with constant
   or Born-dependent noise scale; blend 0,0.25,0.5,0.75,1.
 Constant-noise Huber IRLS has at most eight iterations and a residual threshold of
@@ -127,7 +192,7 @@ diagnostics are not independent performance measurements.
 At least 60 observations and ten observations in every validation fold are
 required. Each fitting fold must have at least five rows per candidate
 coefficient; at most 512 coefficients are allowed. Higher multiplicities or
-small samples therefore use a linear model or MINT automatically. Zero
+small samples therefore retain a validated compact model or MINT. Zero
 Born/virtual orders, unsuccessful fits or no admissible improvement produce an
 explicit zero-blend MINT fallback. Without NumPy on the controller, no model is
 installed: ordinary MINT marginals and adaptive virtual-call fractions remain
@@ -136,22 +201,30 @@ model does not need NumPy; workers evaluate it in Fortran and retain its frozen
 event envelope. Legacy captures remain format version 2. Models
 without cubics remain version 2 for those captures; a selected cubic or a new
 conditional capture uses model version 3.
-Both model versions and coordinate catalogs 5/6/7 are read explicitly.
+Both model versions and coordinate catalogs 5/6/7/8/9 are read explicitly.
 Earlier experimental formats are rejected; restart their integration from
 grid setup before using this implementation.
 
 Conditional helicity correction
 ------------------------------
-New capture version 3 stores catalog 7, the complete native helicity tuples and
+Capture version 3 stores catalog 7, the complete native helicity tuples and
 GOODHEL multiplicities, the actual selected/full-sum branch, selected native
 probability, complete probability vector and Born momenta. Catalog 7 appends
 signed, normalized epsilon contractions to catalog 6. Polynomial terms contain
 at most one such odd coordinate. These orientation inputs distinguish reflected
 points which share all scalar products but can have different virtuals.
 
-The optional neural correction has one or two tanh layers, a linear skip and
-one output per trained native helicity representative. Its finite target is
-V-A_common, with a Born carrier multiplying the prediction. Training never
+The first conditional candidate is a coupled linear fit per native helicity,
+using compact inputs and the native full-branch probability mixture. It fits
+an absolute Born-carried prediction and replaces only represented heads;
+untrained heads retain the common model. The weighted design columns are
+normalized before ridge solving for catalog 9 and converted back for inference.
+If all its forward L1/RMS errors are below .005/.01 for catalog 9 (.02/.05 for
+older catalogs), nonlinear fitting is skipped. The tighter physical-input
+threshold avoids leaving a needlessly large hard remainder for unweighting.
+Otherwise an optional tanh correction with a linear skip is tested, and must
+improve on an accepted linear candidate under the same paired guards.
+Its finite target is V-A_common. Training never
 divides a target by the point's Born. Input bounds, common-model coefficients
 and neural coefficients are refitted independently in three
 chronological forward splits (one half, two thirds and four fifths of each
@@ -185,9 +258,9 @@ frozen at the barrier. Channel call probabilities continue adapting to the
 measured residual errors. Native driver policies can still explicitly require
 exact loops. Event generation uses a separately trained residual proposal.
 
-Features clamp to their training boundaries. If any coordinate of an active
+Legacy features clamp to their training boundaries. If any coordinate of an active
 model lies more than 10% of its training range beyond a boundary, the bounded
-polynomial is retained and the point requests an exact virtual (p=1). Hard
+polynomial (or physical catalog-9 continuation) is retained and the point requests an exact virtual (p=1). Hard
 replacement by MINT would recreate large residuals in just those tails.
 A constant coordinate
 has tolerance 1e-10*max(1,abs(value)). Invalid coordinates in apply mode also
@@ -376,11 +449,19 @@ a decay. Polynomial bounds for these signed inputs are fixed [-1,1]. The
 common fit adds an odd-times-linear block to the even polynomial, with at
 most one signed factor per term. Legacy catalogs retain their original meaning.
 
+Capture version 4 uses catalog 9. It inserts a colour-representation row after
+the incoming flags, before nhel, and inserts extra_coupling after A in each
+data row. B and V keep their native physical values. The threshold and four
+colour-kernel coordinates precede absolute log(shat) and the orientation
+suffix. Catalog-9 common and companion models also include the colour row.
+Incompatible capture versions/catalogs are not pooled together.
+
 train_pool(..., neural=True, output_neural=...) optionally trains
 virtual_pool_neural.dat. Missing NumPy/SciPy or rejected validation yields an
-explicit fallback and removes any stale companion. The automatic default recipe has one
-64-unit tanh layer, ridge .001, Born-noise exponent 1 and at most 400 L-BFGS
-iterations, using the scalar input bank. Larger optimization budgets, two-layer
+explicit fallback and removes any stale companion. After the compact linear
+candidate, the automatic nonlinear recipe has one 64-unit tanh layer, ridge
+.001, Born-noise exponent 1 and at most 400 L-BFGS iterations, using the scalar
+input bank. Larger optimization budgets, two-layer
 architectures and canonical/composite input banks are manually selected
 research recipes; they do not change this default. Only existing native selected/full branches are labels; no extra
 full-helicity evaluations are requested. The direct loss is V-Acommon-B*NN,
@@ -463,6 +544,22 @@ or version-2 predictions; predict_correction is the unsymmetrized correction
 primitive. No particle species or process name enables a permutation.
 No process name chooses a basis, model architecture or exception.
 
+Companion version 3 retains the version-2 permutation table, adds a field to
+every order header (replacement_blend, -1 for an additive correction, otherwise
+in [0,1] for an absolute head), and adds input kind 7: the square of the bounded,
+normalized catalog feature a. A width-one network with zero hidden/output
+parameters and an affine skip represents coupled linear heads.
+
+Companion version 4 adds input kinds 8 (real crossed antenna R for legs a,b,c),
+9 (normalized catalog feature a with physical continuation), and 10 (its
+square). Bounds still set exact-tail flags; kinds 8/9/10 do not clip the input
+at those bounds. No squares of cusp/Coulomb/threshold inputs are generated.
+The native Li2 evaluator includes real analytic continuation across the cut,
+and is tested against SciPy in crossed channels. Python predict_model expects
+the dressed B_fit for catalog 9, together with the undressed MINT prediction.
+The selected/full probability identity and deferred first-fold context apply
+to all companion versions, including the extra coupling and support flags.
+
 Training cost
 -------------
 Linear and quadratic searches cache their design, column normalization and
@@ -481,7 +578,9 @@ transition. Neural optimisation prepares its affine inputs and trained native
 mixture once per fit. At least 32 heads and fewer than 25% nonzero mixture
 entries enable grouped single-head observations; multi-head full branches
 still use the complete native probability mixture. The default 64-unit network,
-400-iteration cap, candidate scan, chronology and promotion guards are retained.
+400-iteration cap, chronology and promotion guards are retained for the
+nonlinear fallback. The compact linear candidate avoids that optimizer when
+its validated residual is already small.
 
 The standalone synthetic benchmark is:
 
@@ -507,6 +606,55 @@ floating-point summation and the optimiser trajectory, while preserving the
 loss and gradient algebra. These synthetic training measurements do not
 measure event-generation efficiency; use benchmark_virtual_quality.py for
 native loop calls, event distributions and envelope cost.
+
+For matched native observations, use --captures JOBDIR... instead of synthetic
+cases. The earlier two thirds train the models and the later suffix measures
+weighted L1/RMS/p99/maximum residuals. --reference-source FROZEN_CHECKOUT is an
+alternative to --reference-ref. When the reference predates catalog 9, its
+inputs are projected back to catalog 7 (then enriched as that reference
+normally does), keeping identical native B, V, probabilities and chronology.
+This compares the implementations on the same targets without requiring the
+older parser to understand a newer capture format.
+
+Native physics-basis validation (2026-10-19)
+------------------------------------------
+Matched 10,000-event runs at 13 TeV, seed 3731, requested accuracy .05, one
+native core and one BLAS thread compared against the starting working checkout
+(which already included the compact polynomial/linear-head optimizations).
+W+jet used ptj=30 GeV. W+bb used MB=4.7 GeV, ptb=20 GeV and the nf=4 PDF
+NNPDF31_nlo_as_0118_nf_4, ID 320500. All models and envelopes were retrained.
+CPU below is controller fitting CPU, including sample reading and validation;
+loop calls below are for event generation only.
+
+  case       training CPU seconds     generation loop calls     integral |R| pb
+  DY          24.07 ->  2.18             456 ->    0             .7712 -> 2.224e-5
+  W+jet       30.69 -> 22.59             123 ->  112            28.90  -> 33.51
+  ttbar       11.17 -> 10.21             197 ->  152             .4296 -> .3280
+  W+bb 4FS    31.74 -> 27.54            1449 -> 1201            10.36  -> 9.406
+
+Combined fitting CPU fell 36.0% and generation loop calls 34.2%. Mandatory
+collection calls were unchanged (44,294); including all integration stages,
+loop calls were 56,810 -> 56,073. These single-seed measurements do not imply
+uniform gains. In particular W+jet's residual integral increased 16%, despite
+using fewer generation loops. Independent chronological holds also had mixed
+tails, including a larger gg->ttbar p99. Optimizing residual L1/RMS alone is
+insufficient to predict generation cost.
+
+Cross sections agreed within .22 combined standard deviations; the largest
+bin pull across the four signed-event distributions was 1.73. All 154 relevant
+tests passed, including native/Python coupling and antenna parity, signed/zero
+Borns, deferred contexts and old file formats. A static-local two-call test
+checks that each new Born query clears the previous point's colour request.
+Removing that reset makes the regression fail. Colour-conservation checks on
+the native DY/W+jet captures agreed with the analytic two/three-parton colour
+operators within 5e-15 in scaled absolute error.
+
+The benchmark artifacts in /export/tmp/rikkert/virtual_physics_20261019 include
+results_checked.json, per-case comparisons and reports, native capture/model/
+grid snapshots, cards and source checksums, and holdouts_checked/*.json.
+Runtime source checksums identify the measured implementation. Subsequent
+readability cleanup of fit selection and codecs reproduced identical fitting
+diagnostics and serialized common/conditional models against these sources.
 
 Implementation
 --------------

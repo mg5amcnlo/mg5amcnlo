@@ -67,6 +67,11 @@ class TestVirtualQualityBenchmark(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'different configuration'):
                 run_one(root, 'pool', 10000, 1731, .02, 2,
                         dict(settings, ebeam1=7000))
+            foreign = json.loads(report.read_text())
+            foreign['process_dir'] = str(root/'another_export')
+            report.write_text(json.dumps(foreign))
+            with self.assertRaisesRegex(RuntimeError, 'different configuration'):
+                run_one(root, 'pool', 10000, 1731, .02, 2, settings)
             failed = json.loads(report.read_text())
             failed['returncode'] = 1
             report.write_text(json.dumps(failed))
@@ -89,6 +94,7 @@ class TestVirtualQualityBenchmark(unittest.TestCase):
             (source / 'Source/external.inc').symlink_to(external)
             (source / 'Source/missing.inc').symlink_to('../missing.inc')
             (source / 'SubProcesses/job_status.pkl').write_text('old jobs')
+            (source/'pool_3731.json').write_text('old benchmark report')
             destination = clone_export(source, base / 'clone')
             copied = destination / 'Source/timing_variables.inc'
             self.assertTrue(copied.is_file())
@@ -104,6 +110,7 @@ class TestVirtualQualityBenchmark(unittest.TestCase):
             self.assertEqual(external.read_text(), 'external original\n')
             self.assertFalse((destination / 'Source/missing.inc').exists())
             self.assertFalse((destination / 'SubProcesses/job_status.pkl').exists())
+            self.assertFalse((destination/'pool_3731.json').exists())
             self.assertFalse((destination / 'SubProcesses/P0_test/GF1.0').exists())
 
     def test_clone_keeps_worker_configuration_and_seed_linked_to_clone(self):
@@ -126,6 +133,20 @@ class TestVirtualQualityBenchmark(unittest.TestCase):
             self.assertEqual((worker / 'randinit').read_text(), 'r=1731\n')
             self.assertEqual((process / 'FKS_params.dat').read_text(), 'pooled true\n')
             self.assertEqual((process / 'randinit').read_text(), 'r=32\n')
+
+    def test_fresh_clone_retains_links_to_includes_generated_at_launch(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            source = base/'source'
+            (source/'SubProcesses/P0_test').mkdir(parents=True)
+            (source/'Source').mkdir()
+            (source/'SubProcesses/P0_test/run_card.inc').symlink_to('../run_card.inc')
+            (source/'Source/run_card.inc').symlink_to('../SubProcesses/run_card.inc')
+            destination = clone_export(source, base/'clone')
+            (destination/'SubProcesses/run_card.inc').write_text('generated in clone\n')
+            self.assertEqual((destination/'SubProcesses/P0_test/run_card.inc').read_text(), 'generated in clone\n')
+            self.assertEqual((destination/'Source/run_card.inc').read_text(), 'generated in clone\n')
+            self.assertFalse((source/'SubProcesses/run_card.inc').exists())
 
     def test_summary_uses_archived_channels_without_counting_split_copies(self):
         with tempfile.TemporaryDirectory() as temporary:

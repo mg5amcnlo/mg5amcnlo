@@ -20,12 +20,79 @@ MODEL_FORMAT_VERSION = 3
 FEATURE_CATALOG = 6
 LEGACY_FEATURE_CATALOG = 5
 CONDITIONAL_FEATURE_CATALOG = 7
-CAPTURE_FORMAT_VERSION = 3
+PHYSICS_FEATURE_CATALOG = 8
+COLOUR_FEATURE_CATALOG = 9
+CAPTURE_FORMAT_VERSION = 4
 
 
 def scalar_feature_count(metadata):
     return (3 + metadata['nlegs']*(metadata['nlegs']-1)//2 +
-            len({m for m in metadata['masses'] if m > 0}))
+            len({m for m in metadata['masses'] if m > 0}) +
+            (len(threshold_pairs(metadata)) if metadata['catalog'] in (8, 9) else 0) +
+            (4 if metadata['catalog'] == COLOUR_FEATURE_CATALOG else 0))
+
+
+def threshold_pairs(metadata):
+    """Massive outgoing pairs, in the same leg order as native inference."""
+    legs = [i for i, (mass, inc) in enumerate(zip(metadata['masses'], metadata['incoming']))
+            if mass > 0 and not inc]
+    return [(i, j) for k, i in enumerate(legs) for j in legs[k+1:]]
+
+
+def threshold_features(metadata, momenta):
+    """Stable 1/v_ij inputs; unresolved thresholds require exact evaluation."""
+    import numpy as np
+    p = np.asarray(momenta, dtype=float)
+    if p.ndim != 3 or p.shape[1:] != (metadata['nlegs'], 4) or not np.all(np.isfinite(p)):
+        raise ValueError('invalid threshold momenta')
+    columns = []
+    for i, j in threshold_pairs(metadata):
+        mi, mj = metadata['masses'][i], metadata['masses'][j]
+        scale = np.maximum(np.maximum(np.max(np.abs(p[:, (i, j)]), axis=(1, 2)), mi), mj)
+        a, b = p[:, i]/scale[:, None], p[:, j]/scale[:, None]
+        energy = a[:, 0]*b[:, 0]
+        spatial = np.sum(a[:, 1:]*b[:, 1:], axis=1)
+        dot = energy-spatial
+        mass = (mi/scale)*(mj/scale)
+        delta = dot-mass
+        error = 64*np.finfo(float).eps*(np.abs(energy)+np.abs(spatial)+mass)
+        if np.any(delta <= error) or np.any(dot <= 0):
+            raise ValueError('unresolved massive-pair threshold')
+        value = 1/np.sqrt((delta/dot)*((dot+mass)/dot))
+        if not np.all(np.isfinite(value)):
+            raise ValueError('nonfinite massive-pair velocity')
+        columns.append(value)
+    return np.column_stack(columns) if columns else np.zeros((len(p), 0))
+
+
+def _physics_rows(metadata, rows):
+    """Build Born carriers and physical inputs without altering captures."""
+    import numpy as np
+    if metadata['catalog'] == COLOUR_FEATURE_CATALOG:
+        # MINT adapts V/B, while the fit carries the exactly known extra
+        # coupling. Preserve its original Born when replaying the marginals.
+        dressed = [dict(r, mint_born=r.get('mint_born', r['born']),
+                        born=r.get('mint_born', r['born'])*r['coupling_factor'])
+                   for r in rows]
+        return metadata, dressed, 'coupling_carried_colour_dipoles'
+    if metadata['catalog'] != CONDITIONAL_FEATURE_CATALOG or not threshold_pairs(metadata):
+        return metadata, rows, 'no_additional_threshold_inputs'
+    if not rows or any('momenta' not in row for row in rows):
+        return metadata, rows, 'threshold_momenta_unavailable'
+    if metadata['nf']+len(threshold_pairs(metadata)) > 2048:
+        return metadata, rows, 'threshold_feature_budget_exceeded'
+    try:
+        p = np.asarray([r['momenta'] for r in rows]).reshape(len(rows), metadata['nlegs'], 4)
+        values = threshold_features(metadata, p)
+    except ValueError:
+        return metadata, rows, 'threshold_geometry_unresolved'
+    # Keep absolute log(shat) last among scalar coordinates, followed by the
+    # signed orientation suffix. Older model catalogs retain their numbering.
+    index = scalar_feature_count(metadata)-1
+    enriched = [dict(r, features=r['features'][:index]+v.tolist()+r['features'][index:])
+                for r, v in zip(rows, values)]
+    return dict(metadata, catalog=PHYSICS_FEATURE_CATALOG,
+                nf=metadata['nf']+values.shape[1]), enriched, 'massive_pair_inverse_velocity'
 
 
 def _floats(line):
@@ -37,7 +104,7 @@ def _floats(line):
 
 def _header(stream, magic):
     header = stream.readline().split()
-    versions = (2, MODEL_FORMAT_VERSION) if magic == 'VIRTUAL_POOL_MODEL' else (2, CAPTURE_FORMAT_VERSION)
+    versions = (2, MODEL_FORMAT_VERSION) if magic == 'VIRTUAL_POOL_MODEL' else (2, 3, CAPTURE_FORMAT_VERSION)
     if (len(header) != 2 or header[0] != magic or
             header[1] not in tuple(str(v) for v in versions)):
         raise ValueError('unsupported virtual-pool file header; restart integration')
@@ -50,19 +117,28 @@ def _header(stream, magic):
     masses = _floats(stream.readline())
     incoming = tuple(int(x) for x in stream.readline().split())
     expected = 1 + nlegs*(nlegs-1)//2 + len({m for m in masses if m > 0})
-    if catalog in (FEATURE_CATALOG, CONDITIONAL_FEATURE_CATALOG):
+    if catalog in (FEATURE_CATALOG, CONDITIONAL_FEATURE_CATALOG, PHYSICS_FEATURE_CATALOG, COLOUR_FEATURE_CATALOG):
         expected += 2
-    if catalog == CONDITIONAL_FEATURE_CATALOG:
+    if catalog in (CONDITIONAL_FEATURE_CATALOG, PHYSICS_FEATURE_CATALOG, COLOUR_FEATURE_CATALOG):
         expected += (nlegs-2)*(nlegs-3)//2
-    if (catalog not in (LEGACY_FEATURE_CATALOG, FEATURE_CATALOG, CONDITIONAL_FEATURE_CATALOG) or nf != expected or not 1 <= nf <= 2048
+    if catalog in (PHYSICS_FEATURE_CATALOG, COLOUR_FEATURE_CATALOG):
+        expected += len(threshold_pairs(dict(masses=masses, incoming=incoming)))
+    if catalog == COLOUR_FEATURE_CATALOG:
+        expected += 4
+    if (catalog not in (LEGACY_FEATURE_CATALOG, FEATURE_CATALOG, CONDITIONAL_FEATURE_CATALOG, PHYSICS_FEATURE_CATALOG, COLOUR_FEATURE_CATALOG) or nf != expected or not 1 <= nf <= 2048
             or not 3 <= nlegs <= 64 or not 1 <= norders <= 1024 or not 1 <= nx <= 256
             or any(len(x) != nlegs for x in (pdgs, masses, incoming))
             or any(x < 0 for x in masses) or any(x not in (0, 1) for x in incoming)
-            or sum(incoming) not in ((1, 2) if catalog == CONDITIONAL_FEATURE_CATALOG else (2,))):
+            or sum(incoming) not in ((1, 2) if catalog >= CONDITIONAL_FEATURE_CATALOG else (2,))):
         raise ValueError('invalid virtual-pool particle metadata')
     metadata = dict(version=version, catalog=catalog, nf=nf, norders=norders,
                     nlegs=nlegs, nx=nx, pdgs=pdgs, masses=masses, incoming=incoming)
-    if magic == 'VIRTUAL_POOL_SAMPLES' and version == CAPTURE_FORMAT_VERSION:
+    if catalog == COLOUR_FEATURE_CATALOG:
+        colours = tuple(int(x) for x in stream.readline().split())
+        if len(colours) != nlegs or any(c == 0 for c in colours):
+            raise ValueError('invalid virtual-pool colour representations')
+        metadata['colours'] = colours
+    if magic == 'VIRTUAL_POOL_SAMPLES' and version >= 3:
         fields = stream.readline().split()
         if len(fields) != 1 or not 0 <= int(fields[0]) <= 65536:
             raise ValueError('invalid native helicity map size')
@@ -130,10 +206,13 @@ def _read_job(directory):
         metadata = _header(stream, 'VIRTUAL_POOL_SAMPLES')
         rows = []
         seen = set()
-        conditional = metadata['version'] == CAPTURE_FORMAT_VERSION
-        prefix = metadata['nf'] + 9 + metadata['nx']
+        conditional = metadata['version'] >= 3
+        coupled = metadata['version'] >= 4
+        if coupled != (metadata['catalog'] == COLOUR_FEATURE_CATALOG):
+            raise ValueError('capture version/physics catalog mismatch')
+        prefix = metadata['nf'] + 9 + metadata['nx'] + int(coupled)
         suffix = 3 + metadata['nhel'] + 4*metadata['nlegs'] if conditional else 0
-        first_row = 7 + metadata['nhel'] if conditional else 6
+        first_row = 7 + metadata['nhel'] + int(coupled) if conditional else 6
         for number, line in enumerate(stream, first_row):
             if not line.strip():
                 continue
@@ -142,10 +221,11 @@ def _read_job(directory):
                 raise ValueError('%s:%s: incorrect sample width' % (path, number))
             sample, channel, iteration, order = (int(v) for v in fields[:4])
             probability, born, virtual, baseline, *values = _floats(' '.join(fields[5:prefix]))
+            factor = values.pop(0) if coupled else 1.
             features = values[:metadata['nf']]
             if (sample < 1 or channel < 1 or iteration < 1
                     or not 1 <= order <= metadata['norders']
-                    or not 0 < probability <= 1):
+                    or not 0 < probability <= 1 or factor < 0):
                 raise ValueError('%s:%s: invalid sample metadata' % (path, number))
             key = (sample, channel, iteration, order)
             if key in seen:
@@ -156,6 +236,8 @@ def _read_job(directory):
                        virtual=virtual, baseline=baseline, features=features,
                        directory=directory)
             row.update(bins=int(fields[4]), x=values[metadata['nf']:metadata['nf']+metadata['nx']])
+            if coupled:
+                row['coupling_factor'] = factor
             if conditional:
                 row.update(_native_selection(fields[prefix:], metadata))
             if row['bins'] not in (4, 8) or any(v < 0 or v > 1 for v in row['x']):
@@ -249,7 +331,7 @@ def _atomic_write(path, text):
 
 
 def _model_version(metadata, orders):
-    if (metadata.get('version') == CAPTURE_FORMAT_VERSION or
+    if (metadata.get('version', 2) >= 3 or
             any(order['degree'] == 3 for order in orders)):
         return MODEL_FORMAT_VERSION
     return FORMAT_VERSION
@@ -263,6 +345,8 @@ def _model_text(metadata, orders):
                                       ('catalog', 'nf', 'norders', 'nlegs', 'nx')),
              ' '.join(str(x) for x in metadata['pdgs']), floats(metadata['masses']),
              ' '.join(str(x) for x in metadata['incoming'])]
+    if metadata['catalog'] == COLOUR_FEATURE_CATALOG:
+        lines.append(' '.join(str(x) for x in metadata['colours']))
     for entry in orders:
         lines.append('%d %.17e %.17e %.17e %d %d' %
                      (entry['order'], entry['blend'], entry['born_scale'], entry['target_scale'],
@@ -298,7 +382,7 @@ def train_pool(job_dirs, output_model, report_path=None, job_groups=None,
             os.unlink(output_neural)
     metadata, rows, jobs = collect_samples(job_dirs, job_groups)
     report = dict(version=FORMAT_VERSION, status='skipped', enabled=False, model_written=False,
-                  family='born_invariant_polynomial', accepted_rows=len(rows), jobs=jobs, orders=[],
+                  family='born_compact_physics', accepted_rows=len(rows), jobs=jobs, orders=[],
                   accepted_samples=len({(r['directory'], r['channel'], r['iteration'], r['sample'])
                                         for r in rows}),
                   objective='physical residual; inverse accepted attempts and loop probability',
@@ -324,10 +408,14 @@ def train_pool(job_dirs, output_model, report_path=None, job_groups=None,
             if neural:
                 report['neural'] = dict(model_written=False, enabled=False, reason='numpy_unavailable')
         else:
+            metadata, rows, report['physics_inputs'] = _physics_rows(metadata, rows)
+            report['metadata'] = metadata
+            if metadata['catalog'] == COLOUR_FEATURE_CATALOG:
+                report['boundary_prediction'] = 'physical function continuation; exact residual correction'
             folds = _folds(rows, 3)
             orders = []
             for order in range(1, metadata['norders'] + 1):
-                entry, diagnostics = polynomial.fit_order(rows, folds, metadata, order)
+                entry, diagnostics = polynomial.fit_order(rows, folds, metadata, order, strategy='compact')
                 orders.append(entry)
                 diagnostics.update(blend=entry['blend'], reason=entry['reason'])
                 report['orders'].append(diagnostics)
@@ -373,7 +461,7 @@ def load_model(path):
                 raise ValueError('invalid pooled model order metadata')
             if blend and not nterms:
                 raise ValueError('active polynomial has no coefficients')
-            if metadata['catalog'] == CONDITIONAL_FEATURE_CATALOG and blend:
+            if metadata['catalog'] in (CONDITIONAL_FEATURE_CATALOG, PHYSICS_FEATURE_CATALOG, COLOUR_FEATURE_CATALOG) and blend:
                 ns = scalar_feature_count(metadata)
                 if any(a != -1 or b != 1 for a, b in zip(lower[ns:], upper[ns:])):
                     raise ValueError('signed orientation coordinates require fixed bounds')
@@ -388,13 +476,15 @@ def load_model(path):
                         any(a == -1 and b >= 0 for a, b in zip(pair, pair[1:])) or
                         sum(i >= 0 for i in pair) > degree):
                     raise ValueError('invalid polynomial indices/degree')
-                if (metadata['catalog'] == CONDITIONAL_FEATURE_CATALOG and
+                if (metadata['catalog'] in (CONDITIONAL_FEATURE_CATALOG, PHYSICS_FEATURE_CATALOG, COLOUR_FEATURE_CATALOG) and
                         sum(i >= scalar_feature_count(metadata) for i in pair) > 1):
                     raise ValueError('polynomial term contains multiple orientation factors')
                 terms.append(dict(pair=pair, coefficient=coefficient))
             orders.append(dict(order=order, blend=blend, born_scale=born_scale,
                                target_scale=target_scale, degree=degree,
                                lower=lower, upper=upper, terms=terms))
+            if metadata['catalog'] == COLOUR_FEATURE_CATALOG:
+                orders[-1]['unclipped'] = True
         if stream.read().strip():
             raise ValueError('unexpected trailing pooled model data')
     return dict(metadata=metadata, orders=orders)
