@@ -175,7 +175,7 @@ program check_mc_flow_sum
       expected=expected+flow_expected
     enddo
     mutate_prefactors=.true.
-    call compute_NLOPS_flow_weights(p,p,p,1d0,.true.,.true.,probne,weights_valid)
+    call compute_NLOPS_flow_weights(p,p,.true.,.true.,probne,weights_valid)
     if (.not.weights_valid) error stop 'valid flows rejected'
     do i=1,2
       call assert_close(totals(i),expected(i),'summed H/S contribution')
@@ -217,7 +217,7 @@ program check_mc_flow_sum
   fraction=raw_weights(2)/sum(raw_weights)
   call oracle(2,fraction,base,expected)
   call include_born_flow_weight(fraction,fraction)
-  call compute_NLOPS_flow_weights(p,p,p,1d0,.true.,.true.,probne,weights_valid)
+  call compute_NLOPS_flow_weights(p,p,.true.,.true.,probne,weights_valid)
   do i=1,2
     call assert_close(totals(i),expected(i)/fraction,'fixed flow sampling')
   enddo
@@ -233,7 +233,7 @@ program check_mc_flow_sum
     raw_weights=[0d0,3d0,0d0]
     MCSubtractionAtFixedFlow=mode.eq.1
     if (MCSubtractionAtFixedFlow) call include_born_flow_weight(1d0,1d0)
-    call compute_NLOPS_flow_weights(p,p,p,1d0,.true.,.true.,probne,weights_valid)
+    call compute_NLOPS_flow_weights(p,p,.true.,.true.,probne,weights_valid)
     if (mode.eq.1) then
       one_flow=totals
     else
@@ -246,7 +246,7 @@ program check_mc_flow_sum
   call setup()
   MCSubtractionAtFixedFlow=.false.
   raw_weights=[-1d0,3d0,0d0]
-  call compute_NLOPS_flow_weights(p,p,p,1d0,.true.,.true.,probne,weights_valid)
+  call compute_NLOPS_flow_weights(p,p,.true.,.true.,probne,weights_valid)
   if (weights_valid.or.any(evaluations.ne.0)) error stop 'invalid colour weights accepted'
   ! An invalid evaluated flow propagates failure after the dispatcher
   ! restores all saved state, including when earlier flows were valid.
@@ -258,7 +258,7 @@ program check_mc_flow_sum
     base=[ordinary,matching,pdfscheme]
     saved_scales=shower_scale_n1body
     saved_dipoles=valid_dipole_n1
-    call compute_NLOPS_flow_weights(p,p,p,1d0,.true.,.true.,probne,weights_valid)
+    call compute_NLOPS_flow_weights(p,p,.true.,.true.,probne,weights_valid)
     if(weights_valid.or..not.nonfinite_contribution)error stop 'invalid native flow accepted'
     if(mode.eq.2)then
       if(maxval(abs([ordinary,matching,pdfscheme]-base)).gt.1d-12) &
@@ -272,10 +272,10 @@ program check_mc_flow_sum
   print *, 'PASS Born-flow sum, sampling, compensation and owner restoration'
 end program
 
-subroutine compute_native_NLOPS_weights(p,p_lab,p_cms,jacPS,cuts_born,cuts_real,probne)
+subroutine compute_native_NLOPS_weights(p,p_cms,cuts_born,cuts_real,probne)
   use flow_test_state
   implicit none
-  real(8) :: p(0:3,5),p_lab(0:3,5),p_cms(0:3,5),jacPS,probne
+  real(8) :: p(0:3,5),p_cms(0:3,5),probne
   logical :: cuts_born,cuts_real
   real(8) :: real_weight,mc_weight,g_weight,c_weight,contribution(2)
   integer :: flow

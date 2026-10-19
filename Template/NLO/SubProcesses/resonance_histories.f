@@ -1,6 +1,4 @@
       subroutine select_native_recoil(iconfig_native)
-      use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
-     $     resonance_members,initial_recoil_leg
 c Select the chart's own decay tree. Evaluate its resonance criterion
 c with the ordinary generation cuts; native radiation projection itself
 c still covers the full physical real phase space.
@@ -33,8 +31,7 @@ c still covers the full physical real phase space.
 
 
       subroutine native_recoil_groups(ngroups,group_config,group_of)
-      use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
-     $     resonance_members,initial_recoil_leg
+      use fks_phase_space_data,only: resonance_members,initial_recoil_leg
 c Diagrams with the same recoil mask and beam share a native projection.
 c Born-channel weights are added, so no extra chart sampling or Jacobian
 c enters the native H density. With no resonances this is one group.

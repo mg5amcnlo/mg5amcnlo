@@ -35,7 +35,7 @@ c point generated from it, including a rejected radiation trial.
          double precision :: p(0:3,nexternal-1)=0d0
          double precision :: mass(nexternal-1)=0d0
          double precision :: stot=0d0,shat=0d0,sqrtshat=0d0
-         double precision :: tau=0d0,ycm=0d0,ycmhat=0d0
+         double precision :: tau=0d0,ycm=0d0
          double precision :: xbjrk(2)=0d0,xjac=1d0,xpswgt=1d0
          double precision :: bounds(3)=0d0,omx(2)=0d0
 c Provenance for reuse by the integration drivers. Imported/projected
@@ -378,9 +378,7 @@ c with no preceding tau coordinate; never form the unused x(0:1) slice.
       beam_coordinates=0.5d0
       if(ndim.gt.4)beam_coordinates(1)=x(ndim-4)
       if(ndim.gt.3)beam_coordinates(2)=x(ndim-3)
-      call generate_tau_y_wrapper(qmass,qwidth,totmass,born%stot,
-     $     beam_coordinates,born%tau,born%ycm,born%ycmhat,
-     $     born%xjac)
+      call generate_tau_y_wrapper(qmass,qwidth,totmass,born%stot,beam_coordinates,born%tau,born%ycm,born%xjac)
       if(born%xjac.lt.0d0)goto 9909
       born%xbjrk(1)=sqrt(born%tau)*exp(born%ycm)
       born%xbjrk(2)=sqrt(born%tau)*exp(-born%ycm)
@@ -513,10 +511,8 @@ c Copy the reusable input before replacing the generated result.
             p(0,1)=-99d0
             p_lab=p
             p_cms=p
-            call generate_noevpr_kinematics(x,ndim,nbody_only,born%xjac,
-     $           born%xpswgt,born%stot,born%shat,born%sqrtshat,
-     $           born%tau,born%ycm,born%ycmhat,totmass,born%xbjrk,
-     $           m,s,qmass,qwidth,born%mass,jac,p,pass)
+            call generate_noevpr_kinematics(x,ndim,nbody_only,born%xjac,born%xpswgt,born%shat,born%sqrtshat,born%tau,born%ycm,
+     $     totmass,born%xbjrk,m,s,qmass,qwidth,born%mass,jac,p,pass)
             if(.not.pass.or.born%xjac.lt.0d0)goto 900
             jac_cnt=jac_cnt*wgt
             wgt=wgt*jac
@@ -608,8 +604,7 @@ c the caller weight: apply it once to real and counterevent Jacobians.
       omx=born%omx
       use_evpr=.true.
       xjac=born%xjac
-      call generate_FKS_kinematics(rad,nbody_only,xjac,born%xpswgt,born%stot,
-     $     born%shat,born%sqrtshat,born%tau,born%ycm,born%ycmhat,
+      call generate_FKS_kinematics(rad,nbody_only,xjac,born%xpswgt,born%stot,born%shat,born%sqrtshat,born%tau,born%ycm,
      $     born%xbjrk,born%mass,jac,p,pass)
       if(.not.pass.or.xjac.lt.0d0)then
          pass=.false.
@@ -716,15 +711,13 @@ c absent endpoints cannot inherit data from a previous radiation trial.
       end subroutine reset_fks_kinematics
 
 
-      subroutine generate_FKS_kinematics(rad,nbody_only,xjac0,xpswgt0,
-     $  stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,
-     $  xbjrk_born,m_born,jac,p,pass)
+      subroutine generate_FKS_kinematics(rad,nbody_only,xjac0,xpswgt0,stot,shat_born,sqrtshat_born,tau_born,ycm_born,
+     $     xbjrk_born,m_born,jac,p,pass)
       use fks_phase_space_data, only: resonance_momentum,resonance_mass2,resonance_recoil,
      $     resonance_members,initial_recoil_leg,nocntevents,sqrtshat,shat,isolsign
       implicit none
 
-      double precision xjac0,xpswgt0,p(0:3,nexternal),
-     $   stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,jac
+      double precision xjac0,xpswgt0,p(0:3,nexternal),stot,shat_born,sqrtshat_born,tau_born,ycm_born,jac
       double precision xbjrk_born(2)
 c The momentum checker expects the full legacy branch-indexed layout.
       double precision m(-max_branch:max_particles),m_born(nexternal-1)
@@ -875,10 +868,8 @@ c selected physical incoming momentum (and its PDF argument) changes.
          endif
       elseif(j_fks.le.nincoming) then
          isolsign=1
-         call generate_momenta_initial(icountevts,i_fks,j_fks,xbjrk_born
-     &        ,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks,xp,rad(1:2)
-     &        ,shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm
-     &        ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac ,pass)
+         call generate_momenta_initial(icountevts,i_fks,j_fks,xbjrk_born,tau_born,ycm_born,shat_born,phi_i_fks,xp,rad(1:2),
+     $     shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,pass)
          if (.not.pass) goto 112
       else
          write (*,*) 'Error #2 in genps_fks.f',j_fks
@@ -953,15 +944,14 @@ c must stay so for the computation of enhancement factors.
       nocntevents=(jac_cnt(0).le.0.d0) .and.
      &            (jac_cnt(1).le.0.d0) .and.
      &            (jac_cnt(2).le.0.d0)
-      call xmom_compare(i_fks,j_fks,jac,jac_cnt,p,p1_cnt,pass)
+      call xmom_compare(i_fks,j_fks,jac_cnt,p1_cnt,pass)
 c
       return
       end subroutine generate_FKS_kinematics
 
 
-      subroutine generate_noevpr_kinematics(x,ndim,nbody_only,xjac0,xpswgt0,
-     $  stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,totmass,
-     $  xbjrk_born,m,s,qmass,qwidth,m_born,jac,p,pass)
+      subroutine generate_noevpr_kinematics(x,ndim,nbody_only,xjac0,xpswgt0,shat_born,sqrtshat_born,tau_born,ycm_born,
+     $     totmass,xbjrk_born,m,s,qmass,qwidth,m_born,jac,p,pass)
       use fks_phase_space_data, only: p_born_coll,p_born_norad,nocntevents,sqrtshat,shat,isolsign
       ! generate the kinematics without event projection.
       ! In this case, the bjorken x's are kept the same for all contributions
@@ -971,8 +961,7 @@ c
       implicit none
 
 
-      double precision xjac0,xpswgt0,x(99),p(0:3,nexternal),
-     $   stot,shat_born,sqrtshat_born,tau_born,ycm_born,ycmhat,totmass,jac
+      double precision xjac0,xpswgt0,x(99),p(0:3,nexternal),shat_born,sqrtshat_born,tau_born,ycm_born,totmass,jac
       double precision xbjrk_born(2)
       double precision M(-max_branch:max_particles),S(-max_branch:max_particles),
      $   m_born(nexternal-1)
@@ -1057,10 +1046,8 @@ c
       phi_i_fks=2d0*pi*x(ixpi)
       xjac=xjac*2d0*pi
 
-      call generate_momenta_initial_noevpr(icountevts,i_fks,j_fks,xbjrk_born
-     &        ,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks,xp,x(ixEi)
-     &        ,shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm
-     &        ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,srec,pass)
+      call generate_momenta_initial_noevpr(icountevts,i_fks,j_fks,xbjrk_born,tau_born,ycm_born,shat_born,phi_i_fks,xp,
+     $     x(ixEi),shat,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,srec,pass)
 
 c A rejected radiation map has no reduced Born invariant to sample.
       if(.not.pass.or.xjac.lt.0d0)then
@@ -1089,8 +1076,7 @@ c A rejected radiation map has no reduced Born invariant to sample.
 
 C If we are not doing event projection, we need to boost the 
 C   born momenta in the partonic com frame 
-      call boost_born_momenta_noevpr(p_born_l,xp,xi_i_fks,
-     &     y_ij_fks,phi_i_fks,i_fks,j_fks,shat,srec)
+      call boost_born_momenta_noevpr(p_born_l,xp,xi_i_fks,y_ij_fks,phi_i_fks,i_fks,j_fks,shat)
 
 C In the case of the event, store the born momenta without the radiation
 C It will be employed to compute the multi-channel enhancement factor
@@ -1188,15 +1174,14 @@ c
       end subroutine generate_noevpr_kinematics
 
 
-      subroutine boost_born_momenta_noevpr(pborn,xp,xi_i_fks,
-     &     y_ij_fks,phi_i_fks,i_fks,j_fks,shat,srec)
+      subroutine boost_born_momenta_noevpr(pborn,xp,xi_i_fks,y_ij_fks,phi_i_fks,i_fks,j_fks,shat)
 c The lepton chart samples the real incoming fractions first. Both
 c choices return the real CM: the symmetric map retains its original
 c single boost, while the asymmetric map uses the event-projection
 c light-cone recoil followed by the boost to the real CM.
       implicit none
       double precision pborn(0:3,nexternal-1),xp(0:3,nexternal)
-      double precision xi_i_fks,y_ij_fks,phi_i_fks,shat,srec
+      double precision xi_i_fks,y_ij_fks,phi_i_fks,shat
       double precision pred(0:3),sqrtz,pplus,pminus
       double precision chy,shy,chy_minus_one,direction(3)
       type(isr_recoil_boost) recoil_boost
@@ -1427,8 +1412,6 @@ c run_card). This fix is needed for set_cms_stuff to work properly.
       born%xbjrk=xbjrk_born
       born%shat=tau_born*stot
       born%sqrtshat=sqrt(born%shat)
-      if(tau_born.lt.1d0)
-     $     born%ycmhat=ycm_born/(-0.5d0*log(tau_born))
       born%bounds(1)=tau_Born_lower_bound
       born%bounds(2)=tau_lower_bound_resonance
       born%bounds(3)=tau_lower_bound
@@ -1543,7 +1526,7 @@ c a direct inversion in the lab would use a different transverse basis.
 
       call boost_n1_to_its_cms(p_lab,p_cms,y_lab_to_cms)
 
-      xi_i_fks=get_xi_from_p(i_fks,j_fks,p_cms)
+      xi_i_fks=get_xi_from_p(i_fks,p_cms)
       y_ij_fks=get_yij_from_p(i_fks,j_fks,p_cms,
      $     p_i_fks_cnt(:,0))
       phi_i_fks=get_phi_from_p(i_fks,j_fks,p_cms)
@@ -1572,10 +1555,8 @@ c a direct inversion in the lab would use a different transverse basis.
          ycm_born=ycm
          xbjrk_born(1:2)=xbjrk(1:2)
       else
-         call generate_momenta_initial_inverse(p_lab,xi_i_fks,y_ij_fks
-     $        ,phi_i_fks,pb,xx,xjac0,xpswgt0,shat,sqrtshat
-     $        ,i_fks,j_fks,stot,tau,ycm,xbjrk,tau_born,ycm_born
-     $        ,xbjrk_born,y_lab_to_cms)
+         call generate_momenta_initial_inverse(p_lab,xi_i_fks,y_ij_fks,phi_i_fks,pb,xx,xjac0,xpswgt0,shat,sqrtshat,i_fks,
+     $     j_fks,stot,tau,ycm,xbjrk,tau_born,ycm_born,xbjrk_born)
       endif
       end subroutine invert_fks_radiation
 

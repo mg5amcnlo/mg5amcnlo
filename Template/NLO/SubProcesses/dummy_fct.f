@@ -96,11 +96,12 @@ c      'bias' = event_norm
 c
       implicit none
       include 'nexternal.inc'
-      double precision bias_wgt,p(0:3,nexternal),H_T
-      integer ipdg(nexternal),i
+      double precision bias_wgt,p(0:3,nexternal)
+      integer ipdg(nexternal)
 
       bias_wgt=1d0
 
+c Declare integer i and double precision H_T before using the examples.
 c How to enhance the tails is very process dependent. For example for
 c top quark production one could use:
 c      do i=1,nexternal

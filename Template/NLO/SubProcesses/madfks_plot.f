@@ -7,7 +7,7 @@ c Wrapper routines for the fixed order analyses
       integer nwgt
       character(len=50),allocatable :: weights_info(:),ctemp(:)
       character*13 temp
-      integer i,npdfs,ii,jj,n,kk,nn
+      integer ii,jj,n,kk,nn
       double precision xsecScale_acc(maxscales,maxscales,maxdynscales)
      $     ,xsecPDFr_acc(0:maxPDFs,maxPDFsets)
       common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
@@ -338,5 +338,5 @@ c Fill the accumulated results
             endif
          enddo
       endif
- 999  return      
+      return
       end

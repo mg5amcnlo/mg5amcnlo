@@ -10,16 +10,14 @@ c
       include "coupl.inc"
       include "../../Source/MODEL/input.inc"
       include 'born_nhel.inc'
-      double precision pi, zero,mone
+      double precision pi,zero
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0d0)
       double precision p(0:3,nexternal-1)
       double precision virt_wgt,born_wgt,double,single
-     $     ,born_wgt_recomputed,born_wgt_recomp_direct
-      double precision, allocatable :: virt_wgts(:,:)
-      double precision, allocatable :: virt_wgts_hel(:,:)
-      double precision mu,ao2pi,conversion,alpha_S
-      save conversion
+      double precision, allocatable, save :: virt_wgts(:,:)
+      double precision, allocatable, save :: virt_wgts_hel(:,:)
+      double precision ao2pi,alpha_S
       logical firsttime,firsttime_conversion
       data firsttime,firsttime_conversion /.true.,.true./
       logical firsttime_run
@@ -31,16 +29,18 @@ c
       integer ret_code
       double precision madfks_single, madfks_double
       double precision tolerance
-      double precision, allocatable :: accuracies(:)
+      double precision, allocatable, save :: accuracies(:)
       integer i,j,IOErr, IOErrCounter
       integer dt(8)
       integer nbad, nbadmax
-      double precision target,ran2,accum
+      double precision ran2
       external ran2
       double precision hel_fact
 CCC      double precision wgt_hel(max_bhel)
 CCC      common/c_born_hel/wgt_hel
       integer nsqso, MLResArrayDim
+c Dimensions and buffers are initialized once, with firsttime_run.
+      save nsqso, MLResArrayDim
 c statistics for MadLoop
       double precision avgPoleRes(2),PoleDiff(2)
       integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1(0:9)
@@ -566,12 +566,11 @@ c weight, screwing up the complete integration afterward.
 
 
       subroutine BinothLHAInit(filename)
-      use fks_phase_space_data, only: p_born
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
-      integer status,procnum
-      double precision s,mu,sumdot
+      integer procnum
+      double precision sumdot
       external sumdot
       character*13 filename
       common /LH_procnum /procnum
@@ -661,7 +660,7 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 
       subroutine get_procnum(filename,procnum)
       implicit none
-      integer procnum,lookhere,procsize
+      integer procnum,lookhere
       character*13 filename
       character*176 buff
       logical done
@@ -671,6 +670,7 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       do while (.not.done)
          read (68,'(a)',end=889)buff
          if (index(buff,'->').ne.0) then
+            lookhere=0 ! Enable a provider-specific parser below first.
 c Rocket
 c            lookhere=index(buff,'process')+7
 c BlackHat

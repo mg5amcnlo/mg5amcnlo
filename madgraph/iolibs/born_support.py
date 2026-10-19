@@ -693,6 +693,7 @@ def optimize_real_helicities(lines):
             continue
         line = re.sub(r'(?i),\s*t_ident\(ncomb\)', '', line)
         line = re.sub(r'(?i),\s*t_save\(ncomb,0:nsqampso\)', '', line)
+        line = re.sub(r'(?i)^(\s*integer\s+ihel\s*,\s*iden\s*,\s*i)\s*,\s*j\s*$', r'\1', line)
         if re.match(r'(?i)\s*implicit\s+none\s*$', line):
             result += ['use mc_born_types,only:BornModelState,born_helicity_state_equal', line,
                        'type(BornModelState),save::helicity_model_state,helicity_current_state']
@@ -1004,8 +1005,7 @@ def provider_adapter(r, source, members, cache_model_installation=False):
              'common/to_amps_born/amp2b,jamp2b',
              'double precision wgt_hel(%d),wgt_hel_split(%d,%d)' % (nh,ns,nh),
              'common/c_born_hel/wgt_hel',
-             'common/c_born_hel_split/wgt_hel_split',
-             'double complex ans_split(2,0:%d)' % ns]
+             'common/c_born_hel_split/wgt_hel_split']
     if degrees and strong:
         lines += ['integer,parameter::strong_degrees(%d)=[%s]' %
                   (ng,','.join(map(str,degrees)))]
@@ -1341,7 +1341,8 @@ def write_wrappers(root, r, members):
     # queries, but the matrix-element implementation is in the provider.
     extra_path = directory/'extra_cnt_wrapper.f'
     extra = extra_path.read_text()
-    body = ['subroutine extra_cnt(p,icnt,cnts)']+declarations+[
+    extra_declarations = [line.replace('),ans', ')') for line in declarations]
+    body = ['subroutine extra_cnt(p,icnt,cnts)']+extra_declarations+[
         'integer icnt', 'double complex cnts(2,nsplitorders)',
         'cnts=(0d0,0d0)', 'if(icnt.le.0)return', 'request%extra=icnt',
         'call mc_born_local(p,request,result)', 'cnts=result%extra',

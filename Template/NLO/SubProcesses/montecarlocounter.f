@@ -734,8 +734,7 @@ c q->gq, q->aq, e->ae (icode=3)
      $           ,needs_shower_jacobian,kernel_limits)
          elseif(i_type.eq.8.or.(i_type.eq.1.and.dabs(ch_i).lt.tiny))then
 c q->qg, q->qa, sq->sqg, sq->sqa, e->ea (icode=4)
-            call compute_splitting_kernel_icode4(xkern,xkernazi,z,xi
-     $           ,needs_shower_jacobian,kernel_limits)
+            call compute_splitting_kernel_icode4(xkern,z,xi,needs_shower_jacobian,kernel_limits)
          else
             write(*,*)'Error 2 in xmcsubt: unknown particle type'
             write(*,*)i_type
@@ -1054,13 +1053,11 @@ c
       endif
       end subroutine compute_splitting_kernel_icode3
 
-      subroutine compute_splitting_kernel_icode4(xkern,xkernazi,z,xi
-     $     ,needs_shower_jacobian,kernel_limits)
+      subroutine compute_splitting_kernel_icode4(xkern,z,xi,needs_shower_jacobian,kernel_limits)
       use process_module
       implicit none
       include "coupl.inc"
-      double precision xkern(1:2),xkernazi(1:2),s,z,xi,xfact
-     $     ,ap(1:2)
+      double precision xkern(1:2),s,z,xi,xfact,ap(1:2)
       integer N_P
       double precision vcf,one
       parameter (vcf=4d0/3d0)
@@ -2631,9 +2628,6 @@ c
       xjacPY6PT=abs(tmp)
 
       return
- 999  continue
-      xjacPY6PT=0d0
-      return
       end function xjacPY6PT
 
 
@@ -2940,7 +2934,8 @@ c
       use scale_module
       use FKSParams, only: Pythia8MMaxGamma
       implicit none
-      integer ipartner,i
+      integer ipartner,i,shower_leg
+      character(10) shower_name
       integer, optional, intent(in) :: kernel_index
       logical qed_conversion
 c Exact collider COMMON layout from run.inc; only beam types are needed.
@@ -2965,14 +2960,21 @@ c Exact collider COMMON layout from run.inc; only beam types are needed.
       double precision parp67
       parameter (mstj50=2,mstp67=2,parp67=1d0)
 
+c Fix the shower mode for this evaluation across the kinematic helpers.
+      shower_leg=ileg
+      shower_name=shower_mc_mod
+      if(shower_leg.lt.1.or.shower_leg.gt.4)then
+         write(*,*) 'Unknown shower leg in get_dead_zone',shower_leg
+         stop 1
+      endif
 c Define the auxiliary weight even for an invalid shower point.
       PY6PTweight=1d0
       qed_conversion=.false.
       if (present(kernel_index)) then
-         if (kernel_index.eq.2.and.ileg.gt.2)
+         if (kernel_index.eq.2.and.shower_leg.gt.2)
      $        qed_conversion=m_type.eq.1.and.abs(ch_m).lt.tiny
-         if (kernel_index.eq.2.and.ileg.le.2.and.
-     $        shower_mc_mod.eq.'PYTHIA8') then
+         if (kernel_index.eq.2.and.shower_leg.le.2.and.
+     $        shower_name.eq.'PYTHIA8') then
 c The launch script disables ISR for two elastic-photon/UPC beams.
 c Otherwise test channels against the physical beam, not its PDF species.
             if ((lpp(1).eq.2.and.lpp(2).eq.2).or.
@@ -2997,30 +2999,20 @@ c Definition and initialisation of variables
          ppartner(i)=p_born(i,ipartner) ! partner momentum (Born level)
       enddo
       e0sq=dot(ppartner,pfather)
-      if (shower_mc_mod(1:8).eq.'PYTHIA6Q')
-     &     theta2p=get_angle(ppartner,pfather)**2
-      if(ileg.eq.3 .or. ileg.eq.4) then
-         if (ileg.eq.3) then
-            xmm2=xm12           ! emitter mass squared
-            ww=w1               ! FKS parent/sister dot product
-            xmr2=xm22           ! global-recoiler mass squared
-         elseif (ileg.eq.4) then
-            xmm2=0d0
-            ww=w2               ! FKS parent/sister dot product
-            xmr2=xm12           ! global-recoiler mass squared
-         endif
+      xmm2=0d0 ! Incoming shower legs are massless.
+      ww=w2
+      xmr2=xm12
+      if (shower_leg.eq.3) then
+         xmm2=xm12           ! emitter mass squared
+         ww=w1               ! FKS parent/sister dot product
+         xmr2=xm22           ! global-recoiler mass squared
+      endif
+      if(shower_leg.gt.2) then
          Q2=sumdot(pfather,ppartner,1d0) ! parent dipole mass squared (Born level)
 ! Use the on-shell mass: reconstructing a massless partner's invariant
 ! can give a small negative value and silently lose the PYTHIA8 bound.
          xmp2=mass_n(ipartner)**2        ! mass squared of the partner
-         if (shower_mc_mod(1:7).eq.'HERWIG7')
-     &        lambda=sqrt((Q2+xmm2-xmp2)**2-4*Q2*xmm2)
-         if (shower_mc_mod(1:8).eq.'PYTHIA6Q') then
-            beta=sqrt(1-4*shat_n1*(xmm2+ww)/(shat_n1-xmr2+xmm2+ww)**2)
-            zp1=(1+(xmm2+beta*ww)/(xmm2+ww))/2
-            zm1=(1+(xmm2-beta*ww)/(xmm2+ww))/2
-         endif
-         if (shower_mc_mod(1:7).eq.'PYTHIA8') then
+         if (shower_name(1:7).eq.'PYTHIA8') then
             if (.not.py8_global_fsr_support(z,xi,shat_n1,xmm2,
      $           xmr2,xmm2+ww,qed_conversion,Pythia8MMaxGamma)) then
                lzone=.false.
@@ -3037,6 +3029,7 @@ c Clamp those before the square root of the global spectator mass.
             ! Global-recoil adaption of the above
             ! Both global z bounds were checked without square roots
             ! in py8_global_fsr_support above.
+            max_scale=min(max_scale,mdip/2,mdip_g/2)
          endif
       endif
 
@@ -3045,27 +3038,34 @@ c QED photon radiation has the same global recoil support as QCD.
 c Photon conversion additionally has a maximum pair invariant mass.
 c Keep the singular limits: the shower infrared cutoff is not an MC
 c subtraction dead zone.
-      if(shower_mc_mod(1:7).eq.'HERWIG6')then
+      if(shower_name(1:7).eq.'HERWIG6')then
          lzone=.false.
-         if(ileg.le.2.and.z**2.ge.xi)lzone=.true.
-         if(ileg.gt.2.and.e0sq*xi*z**2.ge.xmm2
+         if(shower_leg.le.2.and.z**2.ge.xi)lzone=.true.
+         if(shower_leg.gt.2.and.e0sq*xi*z**2.ge.xmm2
      &               .and.xi.le.1d0)lzone=.true.
          if(e0sq.eq.0d0)lzone=.false.
 c
-      elseif(shower_mc_mod(1:7).eq.'HERWIG7')then
+      elseif(shower_name(1:7).eq.'HERWIG7')then
          lzone=.false.
-         if(ileg.le.2)upscale2=2*e0sq
-         if(ileg.gt.2)then
+         if(shower_leg.le.2)upscale2=2*e0sq
+         if(shower_leg.gt.2)then
             upscale2=2*e0sq+xmm2
-            if(ipartner.gt.2)upscale2=(Q2+xmm2-xmp2+lambda)/2
+            if(ipartner.gt.2)then
+               lambda=sqrt((Q2+xmm2-xmp2)**2-4*Q2*xmm2)
+               upscale2=(Q2+xmm2-xmp2+lambda)/2
+            endif
          endif
          if(xi.lt.upscale2)lzone=.true.
 c
-      elseif(shower_mc_mod(1:8).eq.'PYTHIA6Q')then
-         if(ileg.le.2)then
+      elseif(shower_name(1:8).eq.'PYTHIA6Q')then
+         theta2p=get_angle(ppartner,pfather)**2
+         if(shower_leg.le.2)then
             if(mstp67.eq.2.and.ipartner.gt.2.and.
      &         4*xi/shat_n1/(1-z).ge.theta2p)lzone=.false.
-         elseif(ileg.gt.2)then
+         else
+            beta=sqrt(1-4*shat_n1*(xmm2+ww)/(shat_n1-xmr2+xmm2+ww)**2)
+            zp1=(1+(xmm2+beta*ww)/(xmm2+ww))/2
+            zm1=(1+(xmm2-beta*ww)/(xmm2+ww))/2
             if(mstj50.eq.2.and.ipartner.le.2.and.
 c around line 71636 of pythia6428: V(IEP(1),5)=virtuality, P(IM,4)=sqrt(s)
      &           max(z/(1-z),(1-z)/z)*4*(xi+xmm2)/shat_n1.ge.theta2p)
@@ -3073,19 +3073,14 @@ c around line 71636 of pythia6428: V(IEP(1),5)=virtuality, P(IM,4)=sqrt(s)
             if(z.gt.zp1.or.z.lt.zm1)lzone=.false.
          endif
 c
-      elseif(shower_mc_mod(1:9).eq.'PYTHIA6PT')then
+      elseif(shower_name(1:9).eq.'PYTHIA6PT')then
          ycc=1-parp67*x/(1-x)**2/2
          if(mstp67.eq.1.and.yij.lt.ycc)lzone=.false.
          if(mstp67.eq.2) PY6PTweight=min(1d0,(1-ycc)/(1-yij))
 c
-      elseif(shower_mc_mod(1:7).eq.'PYTHIA8')then
-         if(ileg.le.2.and.z.gt.1-sqrt(xi/z/shat_n1)*
+      elseif(shower_name(1:7).eq.'PYTHIA8')then
+         if(shower_leg.le.2.and.z.gt.1-sqrt(xi/z/shat_n1)*
      &      (sqrt(1+xi/4/z/shat_n1)-sqrt(xi/4/z/shat_n1)))lzone=.false.
-         if(ileg.gt.2)then
-   ! Pythia as well in the global recoil scheme, constrains radiation to be
-   ! softer than local dipole mass divided by two
-            max_scale=min(max_scale,mdip/2,mdip_g/2)
-         endif
 
       endif
 
@@ -3186,7 +3181,10 @@ c the damping.
         elseif(ileg.eq.3)then
            get_qMC=qMC_ileg3(xi_i_fks,y_ij_fks)
         elseif(ileg.eq.4)then
-           get_qMC=qMC_ileg4(xi_i_fks,y_ij_fks)
+           get_qMC=qMC_ileg4(xi_i_fks)
+        else
+           write(*,*) 'Invalid emitting leg in get_qMC',ileg
+           stop 1
         endif
         if(get_qMC.lt.0d0)then
            write(*,*) 'Error in get_qMC: qMC=',get_qMC
@@ -3198,21 +3196,31 @@ c the damping.
       double precision function qMC_ileg1(xi_i_fks,y_ij_fks)
         implicit none
         double precision :: xi_i_fks,y_ij_fks
-        if(shower_mc_mod.eq.'HERWIG6'  .or.
-     $     shower_mc_mod.eq.'HERWIG7') qMC_ileg1=xi_i_fks/2d0*sqrt(shat_n1*(1-y_ij_fks**2))
-        if(shower_mc_mod.eq.'PYTHIA6Q') qMC_ileg1=sqrt(-xtk)
-        if(shower_mc_mod.eq.'PYTHIA6PT'.or.
-     $     shower_mc_mod.eq.'PYTHIA8') qMC_ileg1=sqrt(-xtk*xi_i_fks)
+        if(shower_mc_mod.eq.'HERWIG6'.or.shower_mc_mod.eq.'HERWIG7')then
+           qMC_ileg1=xi_i_fks/2d0*sqrt(shat_n1*(1-y_ij_fks**2))
+        elseif(shower_mc_mod.eq.'PYTHIA6Q')then
+           qMC_ileg1=sqrt(-xtk)
+        elseif(shower_mc_mod.eq.'PYTHIA6PT'.or.shower_mc_mod.eq.'PYTHIA8')then
+           qMC_ileg1=sqrt(-xtk*xi_i_fks)
+        else
+           write(*,*) 'Unsupported shower in qMC_ileg1',shower_mc_mod
+           stop 1
+        endif
       end function qMC_ileg1
 
       double precision function qMC_ileg2(xi_i_fks,y_ij_fks)
         implicit none
         double precision :: xi_i_fks,y_ij_fks
-        if(shower_mc_mod.eq.'HERWIG6'  .or.
-     $     shower_mc_mod.eq.'HERWIG7') qMC_ileg2=xi_i_fks/2d0*sqrt(shat_n1*(1-y_ij_fks**2))
-        if(shower_mc_mod.eq.'PYTHIA6Q') qMC_ileg2=sqrt(-xuk)
-        if(shower_mc_mod.eq.'PYTHIA6PT'.or.
-     $     shower_mc_mod.eq.'PYTHIA8') qMC_ileg2=sqrt(-xuk*xi_i_fks)
+        if(shower_mc_mod.eq.'HERWIG6'.or.shower_mc_mod.eq.'HERWIG7')then
+           qMC_ileg2=xi_i_fks/2d0*sqrt(shat_n1*(1-y_ij_fks**2))
+        elseif(shower_mc_mod.eq.'PYTHIA6Q')then
+           qMC_ileg2=sqrt(-xuk)
+        elseif(shower_mc_mod.eq.'PYTHIA6PT'.or.shower_mc_mod.eq.'PYTHIA8')then
+           qMC_ileg2=sqrt(-xuk*xi_i_fks)
+        else
+           write(*,*) 'Unsupported shower in qMC_ileg2',shower_mc_mod
+           stop 1
+        endif
       end function qMC_ileg2
 
       double precision function qMC_ileg3(xi_i_fks,y_ij_fks)
@@ -3238,6 +3246,9 @@ c the damping.
            call py8_massive_fsr_fractions(xi_i_fks,y_ij_fks,z,omz)
            gap=xm12/(kn0+kn)+(1d0-y_ij_fks)*kn
            qMC_ileg3=sqrt(z*omz*sqrt(shat_n1)*xi_i_fks*gap)
+        else
+           write(*,*) 'Unsupported shower in qMC_ileg3',shower_mc_mod
+           stop 1
         endif
       end function qMC_ileg3
 
@@ -3256,9 +3267,9 @@ c support scale stays consistent with the radiation variable at endpoints.
         omz=(xm12/(2d0*gap)+emitted)/(kn0+emitted)
       end subroutine py8_massive_fsr_fractions
 
-      double precision function qMC_ileg4(xi_i_fks,y_ij_fks)
+      double precision function qMC_ileg4(xi_i_fks)
         implicit none
-        double precision :: xi_i_fks,y_ij_fks,zeta2,qMCarg,z,omz
+        double precision :: xi_i_fks,zeta2,qMCarg,z,omz
         if(shower_mc_mod.eq.'HERWIG6'.or.shower_mc_mod.eq.'HERWIG7')then
            zeta2=get_zeta(shat_n1,w2,w1,xm22,xm12)
            qMCarg=zeta2*(1d0-zeta2)*w2
@@ -3278,6 +3289,9 @@ c support scale stays consistent with the radiation variable at endpoints.
            omz=shat_n1*xi_i_fks/(shat_n1+w2-xm12)
            z=1d0-omz
            qMC_ileg4=sqrt(z*omz*w2)
+        else
+           write(*,*) 'Unsupported shower in qMC_ileg4',shower_mc_mod
+           stop 1
         endif
       end function qMC_ileg4
 
@@ -3390,7 +3404,7 @@ c azimuth = irrelevant (hence set = 0)
            call fill_invariants_ileg2(xi_i_fks,y_ij_fks)
            call check_invariants_ileg12
         elseif(ileg.eq.3)then
-           call fill_invariants_ileg3(xi_i_fks,y_ij_fks)
+           call fill_invariants_ileg3()
            call check_invariants_ileg3
         elseif(ileg.eq.4)then
            call fill_invariants_ileg4(xi_i_fks,y_ij_fks)
@@ -3421,9 +3435,8 @@ c azimuth = irrelevant (hence set = 0)
         xuk=-shat_n1*xi_i_fks*(1-y_ij_fks)/2d0
       end subroutine fill_invariants_ileg2
 
-      subroutine fill_invariants_ileg3(xi_i_fks,y_ij_fks)
+      subroutine fill_invariants_ileg3()
         implicit none
-        double precision :: xi_i_fks,y_ij_fks
         xm12=jmass**2
         xm22=dot(pp_rec,pp_rec)
         xtk=-2d0*dot(xp1,xk3)
@@ -3626,7 +3639,7 @@ c   0 < |beta| <= 1;
 c   0 < delta <= 2.
         implicit none
         double precision,parameter :: tiny=1d-5,cutoff=1d0,cutoff2=0.99d0
-        double precision :: alpha,beta,delta,w,wmin,wg,tt,tmp
+        double precision :: alpha,beta,delta,w,wmin,wg,tt
         gfunction=1d0
         if(alpha.gt.0d0)then
            if(beta.lt.0d0)then

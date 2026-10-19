@@ -310,8 +310,7 @@ c and the physical recoil are still those of the local resonance map.
 
       subroutine resonance_shower_frame(p,i_fks,j_fks,plocal,
      $     kn,knbar,kn0,mass2)
-      use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
-     $     resonance_members,initial_recoil_leg,p_born
+      use fks_phase_space_data,only: resonance_recoil,resonance_members,p_born
 c The shower kernels use the same emission variables and recoil system
 c as the FKS map. Born matrix elements, colour connections and PDFs keep
 c their physical momenta outside this auxiliary decay frame.

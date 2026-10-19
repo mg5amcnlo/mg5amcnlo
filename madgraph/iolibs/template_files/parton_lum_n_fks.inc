@@ -21,12 +21,12 @@ C
 C                                                                     
 C LOCAL VARIABLES                                                     
 C                                                                     
-      INTEGER I, ICROSS,LP                                      
+      INTEGER I, ICROSS
 %(pdf_vars)s
 C                                                                     
 C     STUFF FOR UPC
 C
-      DOUBLE PRECISION PHOTONPDFSQUARE
+%(photon_pdf_declaration)s
 C                                                                     
 C EXTERNAL FUNCTIONS                                                  
 C                                                                     
@@ -47,7 +47,6 @@ C
       include 'eepdf.inc'
       double precision ee_comp_prod
 %(ee_comp_vars)s
-      integer i_ee
       include "../../Source/PDF/pdf.inc"
 C                                                                     
 C DATA                                                                

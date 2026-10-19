@@ -8,14 +8,13 @@ c       Change it to the factor you need to reweight.
       use extra_weights
       implicit none
       double precision cpower_in
-      double precision scale,vev,mbmb,apimuR,apimZ,apimb,mbmuR,alphas,pi
+      double precision scale,pi
       parameter (pi=3.14159265358979323846d0)
       include "nexternal.inc"
       include "genps.inc"
       include "coupl.inc"
       include "../../Source/MODEL/input.inc"
-      integer i
-      double precision central,tootiny,apicentral,mbcentral
+      double precision central,tootiny
       parameter (tootiny=1d-9)
       rwgt_muR_dep_fac = 1d0
 c     This is relevant for a muR-dependent bottom-mass in Yukawa.
@@ -72,6 +71,7 @@ c..   transscribed to real*8 by R. Harlander, Feb.2002
       nok=0
       nbad=0
       kount=0
+      xsav=x
       do 11 i=1,nvar
         y(i)=ystart(i)
 11    continue

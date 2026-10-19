@@ -230,8 +230,7 @@ subroutine check_native_projection()
           ! Arbitrary nonunit Born factors must cancel from all ratios.
           j0=7d0
           ps0=3d0
-          call generate_FKS_kinematics(x(1:3),nbody,j0,ps0,stot,sborn,sqrtborn,taub,yb,yhat, &
-               xbb,mb,jac,p,pass)
+          call generate_FKS_kinematics(x(1:3),nbody,j0,ps0,stot,sborn,sqrtborn,taub,yb,xbb,mb,jac,p,pass)
           if(jac.le.0d0)error stop 'invalid reference radiation point'
           call boost_n1_to_lab(p,lab,-yb)
           valid=jc.gt.0d0

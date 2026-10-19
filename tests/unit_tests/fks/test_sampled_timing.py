@@ -42,7 +42,7 @@ class TestSampledTiming(unittest.TestCase):
         cls.executable = work / 'check'
         result = subprocess.run([
             shutil.which('gfortran'), '-O2', '-std=legacy', '-fcheck=all',
-            '-ffixed-line-length-132', '-fno-automatic', '-fbacktrace',
+            '-ffixed-line-length-132', '-fbacktrace',
             '-I', str(TEMPLATE), str(work / 'clock.f90'), str(work / 'timing.f'),
             str(work / 'mint.f90'), str(ROOT / 'tests/input_files/check_sampled_timing.f'),
             '-o', str(cls.executable)], cwd=work, capture_output=True, text=True)

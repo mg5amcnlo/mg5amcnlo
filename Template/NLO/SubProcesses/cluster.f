@@ -106,12 +106,9 @@ c Links the configurations (given in iforest) to the allowed clusterings
 c (in cluster_list) with their corresponding PDG codes (in cluster_pdg)
          do iconf=1,mapconfig(0,iproc)
 c Empty propagator slices for nbr=0 still need valid base addresses.
-            call iforest_to_list(next,nincoming,nbr,iforest(1,-(nbr+1)
-     $           ,iconf,iproc),sprop(-max(nbr,1),iconf,iproc)
-     $           ,tprid(-max(nbr,1),iconf,iproc)
-     $           ,pwidth(-nbr,iconf,iproc),table%ipdg,
-     $           table%cluster_list(:,iconf),
-     $           table%cluster_pdg(:,:,iconf),table%cluster_type)
+            call iforest_to_list(next,nincoming,nbr,iforest(1,-(nbr+1),iconf,iproc),sprop(-max(nbr,1),iconf,iproc),
+     $     tprid(-max(nbr,1),iconf,iproc),table%ipdg,table%cluster_list(:,iconf),table%cluster_pdg(:,:,iconf),
+     $     table%cluster_type)
          enddo
 c Index each clustering label by the diagrams containing it. These masks
 c depend only on the topology and can be reused at every phase-space point.
@@ -188,19 +185,15 @@ c form factor and renormalisation and factorisation scales.
          skip_first=.true. ! for real-emission: skip the first clustering
       endif
       need_matching(1:nexternal)=-99
-      call reweighting(next,pcl,nbr,skip_first,cluster_ij,table%ipdg
-     $     ,table%cluster_pdg(:,:,cluster_conf),cluster_scales,iord,
-     $     qcd_count,sudakov
-     $     ,expanded_sudakov,nqcdrenscale,qcd_ren_scale,qcd_fac_scale
-     $     ,need_matching(1),for_mcatnlo_scale)
+      call reweighting(next,nbr,skip_first,cluster_ij,table%ipdg,table%cluster_pdg(:,:,cluster_conf),cluster_scales,iord,
+     $     qcd_count,sudakov,expanded_sudakov,nqcdrenscale,qcd_ren_scale,qcd_fac_scale,need_matching(1),for_mcatnlo_scale)
       if(timing_sampled)call timing_leave(timing_clustering)
       return
       end
       
 CCCCCCCCCCCCCCC-- INITIALISATION -- CCCCCCCCCCCCCCCC
 
-      subroutine iforest_to_list(next,ninc,nbr,iforest,sprop
-     $     ,tprid,prwidth,ipdg,cluster_list,cluster_pdg,cluster_type)
+      subroutine iforest_to_list(next,ninc,nbr,iforest,sprop,tprid,ipdg,cluster_list,cluster_pdg,cluster_type)
 c Given iforest it returns cluster_list. This is a binary list where the
 c intermediate particle numbers are the sums of the external ones (which
 c go from 1,2,4,8... If 4 and 8 are connected, the label of intermediate
@@ -216,7 +209,7 @@ c codes for particles in the cluster_list as well as their daughters.
      $     ,ipdg(next),ninc,sprop(-nbr:-1),tprid(-nbr:-1),n_tchan
      $     ,cluster_type(maskr(next)),iclus,ico,imo
      $     ,get_color
-      double precision prwidth(-nbr:-1),mass,get_mass_from_id
+      double precision mass,get_mass_from_id
       logical s_chan
       external get_color,get_mass_from_id
       if (ninc.ne.2) then
@@ -391,10 +384,11 @@ c automatic arrays would allocate it on every clustering call.
      $     ,scale,p_inter(0:4,0:2,0:nexternal-3),prmass(-nbr:-1),prwidth(-nbr:-1)
      $     ,djb_clus,get_mass_from_id,mt_2to2,mass
       integer(kind=8) config_masks((nconf+63)/64,*),
-     $     valid_words((lmaxconfigs+63)/64)
+     $     valid_words(ishft(lmaxconfigs+63,-6))
       logical valid_conf(lmaxconfigs),is_bw,cluster_according_to_iconfig
       parameter (cluster_according_to_iconfig=.false.)
       external djb_clus,get_mass_from_id,get_color,qcd_vertex_mask
+      mt_2to2=-1d0
       do i=1,next
          do j=0,3
             pcl(j,i)=p(j,i)
@@ -541,20 +535,15 @@ c     - The factorisation scale will be set to the smallest
 c     cluster_scale (irrespective if that is an initial scale
 c     splitting). In case there is no valid QCD-vertex, its set equal to
 c     the renormalisation scale.
-      subroutine Reweighting(next,p,nbr,skip_first,cluster_ij,ipdg
-     $     ,cluster_pdg,cluster_scales,iord,qcd_count,sudakov,expanded_sudakov
-     $     ,nqcdrenscale,qcd_ren_scale,qcd_fac_scale,need_matching
-     $     ,for_mcatnlo_scale)
+      subroutine Reweighting(next,nbr,skip_first,cluster_ij,ipdg,cluster_pdg,cluster_scales,iord,qcd_count,sudakov,
+     $     expanded_sudakov,nqcdrenscale,qcd_ren_scale,qcd_fac_scale,need_matching,for_mcatnlo_scale)
       implicit none
       include 'nexternal.inc'
       integer next,i,nbr,cluster_ij(nbr),iord(0:nbr),cluster_pdg(0:2
      $     ,0:2*nbr),type(0:nexternal),nqcdrenscale,nqcdrenscalecentral
      $     ,ipdg(next),first,need_matching(next),qcd_count(0:nbr)
-      double precision prev_qcd_scale,hard_qcd_scale,sudakov
-     $     ,expanded_sudakov,mass(nexternal)
-     $     ,cluster_scales(0:nbr),qcd_ren_scale(0:nbr),lowest_qcd_scale
-     $     ,p(0:3,next),qcd_fac_scale,expanded_exponent_sudakov
-     $     ,exponent_sudakov
+      double precision prev_qcd_scale,hard_qcd_scale,sudakov,expanded_sudakov,mass(nexternal),cluster_scales(0:nbr),
+     $     qcd_ren_scale(0:nbr),lowest_qcd_scale,qcd_fac_scale,expanded_exponent_sudakov,exponent_sudakov
       logical skip_first,startQCDvertex
      $     ,for_mcatnlo_scale
       external startQCDvertex
@@ -808,11 +797,13 @@ c     Always remove if daughter is final-state (and identical)
                   OnBW(-i)=.false.
 c     Else remove either this resonance or daughter, whichever is closer
 c     to mass shell
-               elseif(idenpart.lt.0 .and. abs(mass(i)-prmass(i)).gt.
-     $                 abs(mass(idenpart)-prmass(i))) then
-                  OnBW(-i)=.false.         ! mother off-shell
                elseif(idenpart.lt.0) then
-                  OnBW(-idenpart)=.false.  ! daughter off-shell
+                  if(abs(mass(i)-prmass(i)).gt.
+     $                 abs(mass(idenpart)-prmass(i))) then
+                     OnBW(-i)=.false.         ! mother off-shell
+                  else
+                     OnBW(-idenpart)=.false.  ! daughter off-shell
+                  endif
                endif
             endif
          endif
@@ -1305,6 +1296,9 @@ c A named fixed-size vector avoids a heap temporary for dot(pi+pj).
                endif
             elseif (itype.eq.8) then
                cluster_scale=sqrt(max(sumdot(pi,pj,1d0),0d0))
+            else
+               write (*,*) 'Invalid clustering type in cluster_scale',itype
+               stop 1
             endif
          endif
       endif
@@ -1882,8 +1876,8 @@ c Gauss
       parameter (eps=1d-7)
       external DGAUSS
 c Function to integrate
-      double precision Gamma
-      external Gamma
+      double precision sudakov_gamma
+      external sudakov_gamma
       integer type,mode
       double precision Q1,mass
       common /to_sud_exp/Q1,mass,type,mode
@@ -1931,7 +1925,7 @@ c Cannot reuse anything. Compute a new value
       type=itype
       mass=imass
       mode=2
-      sudakov_exp=DGAUSS(Gamma,q0,Q1,eps)
+      sudakov_exp=DGAUSS(sudakov_gamma,q0,Q1,eps)
 c Calculated a new value: replace the value in cache computed longest
 c ago with the newly computed one
       i_replace=mod(i_replace,20)+1
@@ -1961,8 +1955,8 @@ c Gauss
       parameter (eps=1d-7)
       external DGAUSS
 c Function to integrate
-      double precision Gamma
-      external Gamma
+      double precision sudakov_gamma
+      external sudakov_gamma
       integer type,mode
       double precision Q1,mass
       common /to_sud_exp/Q1,mass,type,mode
@@ -2010,7 +2004,7 @@ c Cannot reuse anything. Compute a new value
       type=itype
       mass=imass
       mode=1
-      expanded_sudakov_exp=DGAUSS(Gamma,q0,Q1,eps)
+      expanded_sudakov_exp=DGAUSS(sudakov_gamma,q0,Q1,eps)
 c Calculated a new value: replace the value in cache computed longest
 c ago with the newly computed one
       i_replace=mod(i_replace,20)+1
@@ -2024,7 +2018,7 @@ c ago with the newly computed one
       end
 
       
-      double precision function Gamma(q0)
+      double precision function sudakov_gamma(q0)
 c Calculates the argument of the integral of the exponent of the Sudakov
 c Form Factor. (Type, mass, Q^2, etc, given in the to_sud_exp common
 c block)
@@ -2045,15 +2039,13 @@ c   5 : massive particle, colour octet   (treated in inf. mass limit)
       implicit none
       include 'cuts.inc'        ! includes maxjetflavor
       integer i
-      double precision q0,alphasq0,mu,qom,moq2,alphas,qmass(6)
-     $     ,get_mass_from_id,colfac,r,zcut,zmax,softlog,pairshape
+      double precision q0,alphasq0,qom,moq2,alphas,qmass(6),get_mass_from_id,colfac,r,zcut,zmax,softlog,pairshape
       external alphas,get_mass_from_id
       logical firsttime,finite_terms
       save qmass,firsttime
       data firsttime/.true./
 c Constants
-      double precision ZERO,PI,CA,CF,kappa
-      parameter (ZERO=0d0)
+      double precision PI,CA,CF,kappa
       parameter (PI = 3.14159265358979323846d0)
       parameter (CA = 3d0)
       parameter (CF = 4d0/3d0)
@@ -2070,7 +2062,7 @@ c infinitely heavy).
          enddo
          firsttime=.false.
       endif
-      Gamma=0.0d0
+      sudakov_gamma=0.0d0
       kappa = CA*(67d0/18d0-pi**2/6d0)-maxjetflavor*5d0/9d0
       if (q0.ge.Q1) then
          return
@@ -2103,46 +2095,46 @@ c Normalized integral of 2*z*T_R*(z**2+(1-z)**2), T_R=1/2.
       if(type.eq.1 .or. type.eq.2) then
 c Quark Sudakov
 c     q->q+g
-         Gamma=CF*alphasq0*(log(Q1/q0)-3d0/4d0)/pi ! A1+B1
+         sudakov_gamma=CF*alphasq0*(log(Q1/q0)-3d0/4d0)/pi ! A1+B1
          if (finite_terms.and.type.eq.1) then
 c Integral of z*(P_qq+P_gq) over 0 < z < zmax, divided by 2*C_F.
-            Gamma=CF*alphasq0*(softlog-0.75d0*zmax**2)/pi
+            sudakov_gamma=CF*alphasq0*(softlog-0.75d0*zmax**2)/pi
          endif
          if (type.eq.2) then ! include mass effects
             qom=q0/mass
-            Gamma=Gamma+CF*alphasq0/pi/2d0*( 0.5d0 - qom*atan(1d0/qom) -
+            sudakov_gamma=sudakov_gamma+CF*alphasq0/pi/2d0*( 0.5d0 - qom*atan(1d0/qom) -
      $           (1d0-0.5d0*qom**2)*log(1d0+1d0/qom**2) )
          endif
          if (mode.eq.2) then
-c$$$            Gamma=Gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
-            Gamma=Gamma+CF*alphasq0*log(Q1/q0)/pi*alphasq0*kappa/(2d0*pi) ! A2
+c$$$            sudakov_gamma=sudakov_gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
+            sudakov_gamma=sudakov_gamma+CF*alphasq0*log(Q1/q0)/pi*alphasq0*kappa/(2d0*pi) ! A2
          endif
       elseif (type.eq.3) then !  massless vector, colour octet
 c Gluon sudakov         
 c     g->g+g contribution
-         Gamma=CA*alphasq0*(log(Q1/q0)-11d0/12d0)/pi ! A1+B1
+         sudakov_gamma=CA*alphasq0*(log(Q1/q0)-11d0/12d0)/pi ! A1+B1
          if (finite_terms) then
 c Integral of z*P_gg over 0 < z < zmax, divided by 2*C_A.
-            Gamma=CA*alphasq0*(softlog-zmax**2+zmax**3/3d0
+            sudakov_gamma=CA*alphasq0*(softlog-zmax**2+zmax**3/3d0
      $           -zmax**4/4d0)/pi
          endif
 c     g->q+qbar contribution
          do i=1,6 ! assume 6 quark flavours
             if (i.le.maxjetflavor) then   ! massless splitting
                if (finite_terms) then
-                  Gamma=Gamma+alphasq0/(6d0*pi)*pairshape
+                  sudakov_gamma=sudakov_gamma+alphasq0/(6d0*pi)*pairshape
                else
-                  Gamma=Gamma+alphasq0/(6d0*pi) ! B1
+                  sudakov_gamma=sudakov_gamma+alphasq0/(6d0*pi) ! B1
                endif
             else                          ! massive splitting
                moq2=(qmass(i)/q0)**2
-               Gamma=Gamma+alphasq0/(4d0*pi)/(1d0+moq2)*
+               sudakov_gamma=sudakov_gamma+alphasq0/(4d0*pi)/(1d0+moq2)*
      &              (1d0 - 1d0/(3d0*(1+moq2)))  ! B1
             endif
          enddo
          if (mode.eq.2) then
-c$$$            Gamma=Gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
-            Gamma=Gamma+CA*alphasq0*log(Q1/q0)/pi*alphasq0*kappa/(2d0*pi) ! A2
+c$$$            sudakov_gamma=sudakov_gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
+            sudakov_gamma=sudakov_gamma+CA*alphasq0*log(Q1/q0)/pi*alphasq0*kappa/(2d0*pi) ! A2
          endif
       elseif (type.eq.4 .or. type.eq.5) then
 c Sudakov for massive particle (in the large-mass limit, hence no spin
@@ -2153,10 +2145,10 @@ c     X->X+g
          elseif(type.eq.5) then
             colfac=CA ! X is colour octet
          endif
-         Gamma=colfac*alphasq0*(log(Q1/mass)-1d0/2d0)/pi
+         sudakov_gamma=colfac*alphasq0*(log(Q1/mass)-1d0/2d0)/pi
 c$$$         if (mode.eq.2) then
-c$$$            Gamma=Gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
-c$$$            Gamma=Gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
+c$$$            sudakov_gamma=sudakov_gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
+c$$$            sudakov_gamma=sudakov_gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
 c$$$         endif
       else
          write (*,*) 'ERROR in reweight.f: do not know'/
@@ -2167,7 +2159,7 @@ c$$$         endif
       endif
 c Integration is over dq^2/q^2 = 2*dq/q, so factor 2. Also, include
 c already the minus sign here
-      Gamma=-Gamma*2d0/q0
+      sudakov_gamma=-sudakov_gamma*2d0/q0
       return
       end
 
@@ -2243,7 +2235,7 @@ c            nn2       squared norm of n to improve numerics
 c            ct, st    cos/sin theta of rotation in plane 
 c**************************************************************************
       implicit none
-      real*8 p1(0:3), p2(0:3), n(0:3), tr(0:3)
+      real*8 p1(0:3),p2(0:3),n(0:3)
       double precision nn2, ct, st, mct
 
       ct=p1(1)*p2(1)+p1(2)*p2(2)+p1(3)*p2(3)
@@ -2278,9 +2270,7 @@ c***************************************************************************
       include 'cuts.inc'        ! includes maxjetflavor
       double precision D
       common/to_dj/D            ! for FxFx: D=1 (set in setrun)
-      double precision pt1,pt2,ptm1,ptm2,eta1,eta2,phi1,phi2,p1a,p2a
-     $     ,costh,p1(0:4),p2(0:4),m1,m2,djb_clus
-      integer j
+      double precision pt1,pt2,eta1,eta2,p1a,p2a,costh,p1(0:4),p2(0:4),m1,m2,djb_clus
       external djb_clus
       m1=p1(4)
       m2=p2(4)

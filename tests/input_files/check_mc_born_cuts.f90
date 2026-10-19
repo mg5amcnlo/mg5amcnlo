@@ -188,7 +188,7 @@ logical function passcuts(p,rwgt)
   status=[-1,-1,1,1,1,1,1]
   is_iso=.true.
   call identify_QCD_partons(is_iso,pp,status,pdg,is_a_j,pqcd,nqcd)
-  passcuts=passcuts_fxfx(pp,pqcd,nqcd)
+  passcuts=passcuts_fxfx(pqcd,nqcd)
 end function
 
 double precision function ran2()

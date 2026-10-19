@@ -15,7 +15,7 @@ program check_isr_mapping_selection
   implicit none
   character(32) :: mode,shower,arg
   integer :: choice,mapping
-  logical :: fixed_order,nlo_ps
+  logical :: nlo_ps
 
   call get_command_argument(1,mode)
   select case(trim(mode))
@@ -42,11 +42,9 @@ program check_isr_mapping_selection
     read(arg,*)choice
     FKSISRMapping=choice
     call get_command_argument(3,arg)
-    read(arg,*)fixed_order
-    call get_command_argument(4,arg)
     read(arg,*)nlo_ps
-    call get_command_argument(5,shower)
-    mapping=get_fks_isr_mapping(fixed_order,nlo_ps,trim(shower))
+    call get_command_argument(4,shower)
+    mapping=get_fks_isr_mapping(nlo_ps,trim(shower))
     write(*,'(a,i0)')'MAPPING ',mapping
   case default
     error stop 'unknown mode'
@@ -80,8 +78,8 @@ class TestISRMappingSelection(unittest.TestCase):
         return subprocess.run([str(self.work / "check"), *map(str, args)],
                               cwd=self.work, capture_output=True, text=True)
 
-    def assert_mapping(self, choice, fixed_order, nlo_ps, shower, expected):
-        result = self.run_mode("policy", choice, fixed_order, nlo_ps, shower)
+    def assert_mapping(self, choice, nlo_ps, shower, expected):
+        result = self.run_mode("policy", choice, nlo_ps, shower)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("MAPPING %d" % expected, result.stdout)
 
@@ -104,31 +102,30 @@ class TestISRMappingSelection(unittest.TestCase):
         for shower in ("PYTHIA8", "HERWIG7", "HERWIG6", "PYTHIA6Q", "PYTHIA6PT", ""):
             for choice, expected in ((0, 2), (1, 1), (2, 2)):
                 with self.subTest(shower=shower, choice=choice):
-                    self.assert_mapping(choice, True, False, shower, expected)
+                    self.assert_mapping(choice, False, shower, expected)
 
     def test_matching_preserves_asymmetric_default(self):
         for shower in ("PYTHIA8", "HERWIG7", "HERWIG6", "PYTHIA6Q", "PYTHIA6PT"):
             for choice in (0, 2):
                 with self.subTest(shower=shower, choice=choice):
-                    self.assert_mapping(choice, False, True, shower, 2)
+                    self.assert_mapping(choice, True, shower, 2)
 
     def test_diagnostic_default_preserves_current_map(self):
-        self.assert_mapping(0, False, False, "PYTHIA8", 2)
-        self.assert_mapping(1, False, False, "PYTHIA8", 1)
+        self.assert_mapping(0, False, "PYTHIA8", 2)
+        self.assert_mapping(1, False, "PYTHIA8", 1)
 
     def test_incompatible_shower_mapping_is_rejected(self):
         for shower in ("PYTHIA8", "HERWIG7", "HERWIG6", "PYTHIA6Q", "PYTHIA6PT"):
-            for fixed_order in (False, True):
-                with self.subTest(shower=shower, fixed_order=fixed_order):
-                    result = self.run_mode("policy", 1, fixed_order, True, shower)
-                    self.assertNotEqual(result.returncode, 0)
-                    self.assertIn("FKSISRMapping", result.stdout + result.stderr)
-                    self.assertIn(shower, result.stdout + result.stderr)
-                    self.assertNotIn("MAPPING 1", result.stdout)
+            with self.subTest(shower=shower):
+                result = self.run_mode("policy", 1, True, shower)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("FKSISRMapping", result.stdout + result.stderr)
+                self.assertIn(shower, result.stdout + result.stderr)
+                self.assertNotIn("MAPPING 1", result.stdout)
 
     def test_invalid_direct_selector_values(self):
         for choice in (-1, 3):
             with self.subTest(choice=choice):
-                result = self.run_mode("policy", choice, True, False, "PYTHIA8")
+                result = self.run_mode("policy", choice, False, "PYTHIA8")
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("FKSISRMapping", result.stdout + result.stderr)

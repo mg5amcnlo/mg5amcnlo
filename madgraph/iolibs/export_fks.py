@@ -1495,7 +1495,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         """writes the declarations for the variables relevant for configs_and_props
         """
         lines = []
-        lines.append("integer ifr,lmaxconfigs_used,max_branch_used")
+        lines.append("integer lmaxconfigs_used,max_branch_used")
         lines.append("parameter (lmaxconfigs_used=%4d)" % max_iconfig)
         lines.append("parameter (max_branch_used =%4d)" % -max_leg_number)
         lines.append("integer mapconfig_d(%3d,0:lmaxconfigs_used)" % nfksconfs)
@@ -3077,6 +3077,12 @@ Parameters              %(params)s\n\
             calls_to_me += "endif\n"
             
         replace_dict['calls_to_me'] = calls_to_me
+        replace_dict['process_declarations'] = '\n'.join(
+            declaration for name, declaration in (
+                ('pdglist', 'integer pdglist(nexternal-1)'),
+                ('pdglist_oth', 'integer pdglist_oth(nexternal-1)'),
+                ('comp_idfac', 'double precision comp_idfac'))
+            if re.search(r'\b%s\b' % name, calls_to_me, re.IGNORECASE))
 
         # FKS providers own their amplitude cache. Standalone Sudakov
         # exports keep the original Born evaluator and its shared flag.
@@ -4018,6 +4024,9 @@ Parameters              %(params)s\n\
         replace_dict['ee_comp_vars'] = eepdf_vars
         replace_dict['pdf_data'] = pdf_data
         replace_dict['pdf_lines'] = pdf_lines
+        replace_dict['photon_pdf_declaration'] = (
+            'DOUBLE PRECISION PHOTONPDFSQUARE'
+            if 'PHOTONPDFSQUARE(' in pdf_lines.upper() else '')
 
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/parton_lum_n_fks.inc')).read()
@@ -4589,7 +4598,6 @@ Parameters              %(params)s\n\
                     pdgtopdf[pdg] = 6000000 + pdg
 
             # Get PDF variable declarations for all initial states
-            ee_pdf_definition_lines += "DOUBLE PRECISION dummy_components(n_ee)\n" 
             for i in [0,1]:
                 pdf_definition_lines += "DOUBLE PRECISION " + \
                                        ",".join(["%s%d" % (pdf_codes[pdg],i+1) \
@@ -4707,6 +4715,9 @@ Parameters              %(params)s\n\
                 pdf_lines += "if (ABS(LPP(1)).EQ.ABS(LPP(2)).and. (ABS(LPP(1)).EQ.3.or.ABS(LPP(1)).EQ.4).and.pdlabel.ne.'none')" + \
                              "PD(IPROC)=ee_comp_prod(%s_components,%s_components)\n" % \
                              tuple(comp_list)
+
+        if 'DUMMY_COMPONENTS' in pdf_lines.upper():
+            ee_pdf_definition_lines = "DOUBLE PRECISION dummy_components(n_ee)\n" + ee_pdf_definition_lines
 
         # Remove last line break from pdf_lines
         return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1], ee_pdf_definition_lines

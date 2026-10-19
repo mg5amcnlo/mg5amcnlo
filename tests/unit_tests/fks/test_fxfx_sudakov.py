@@ -51,17 +51,17 @@ class TestFxFxSudakov(unittest.TestCase):
             '      integer nsplitorders\n      parameter(nsplitorders=1)\n')
         (cls.work / 'cuts.inc').write_text(
             '      integer maxjetflavor\n      parameter(maxjetflavor=5)\n')
-        names = ('Gamma', 'sudakov_exp', 'expanded_sudakov_exp', 'QCDsudakov')
+        names = ('sudakov_gamma', 'sudakov_exp', 'expanded_sudakov_exp', 'QCDsudakov')
         (cls.work / 'kernel.f').write_text('\n'.join(
             fortran_routine(TEMPLATE / 'cluster.f', name) for name in names))
         (cls.work / 'driver.f90').write_text('''program check
 use FKSParams
 implicit none
-real*8 q,hard,m,alpha,g1,g2,e,e1,rate,Q1,mass,sudakov_exp,expanded_sudakov_exp,Gamma
+real*8 q,hard,m,alpha,g1,g2,e,e1,rate,Q1,mass,sudakov_exp,expanded_sudakov_exp,sudakov_gamma
 real*8 qe,qe1,masses(1)
 integer kind,finite,itype,mode,types(0:1),ickkw
 logical nlo_ps
-external Gamma
+external sudakov_gamma
 character(1024) card,argument
 character(10) shower
 common /fixture_alpha/ alpha
@@ -91,9 +91,9 @@ do
   mass=m
   itype=kind
   mode=1
-  g1=Gamma(q)
+  g1=sudakov_gamma(q)
   mode=2
-  g2=Gamma(q)
+  g2=sudakov_gamma(q)
   e=sudakov_exp(q,hard,kind,m)
   e1=expanded_sudakov_exp(q,hard,kind,m)
   types=[1,kind]

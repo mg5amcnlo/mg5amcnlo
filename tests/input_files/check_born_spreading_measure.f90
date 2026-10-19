@@ -117,10 +117,8 @@ contains
     if (kind.le.2) then
        xborn=(/0.2d0,0.3d0/)
        shat_born=shat
-       call generate_momenta_initial(0,i_fks,j_fks,xborn,product(xborn), &
-            0.5d0*log(xborn(1)/xborn(2)),0d0,shat_born,0.3d0,xp,x,shat, &
-            shat_born/product(xborn),sqrts,tau,ycm,xbj,p_i,xiimax_ev,xinorm_ev, &
-            xi,y,xi_hat,xpswgt,xjac,pass)
+       call generate_momenta_initial(0,i_fks,j_fks,xborn,product(xborn),0.5d0*log(xborn(1)/xborn(2)),shat_born,0.3d0,xp,x, &
+            shat,shat_born/product(xborn),sqrts,tau,ycm,xbj,p_i,xiimax_ev,xinorm_ev,xi,y,xi_hat,xpswgt,xjac,pass)
     elseif (kind.eq.3) then
        call generate_momenta_massless_final(0,i_fks,j_fks,pborn,shat,sqrts, &
             x,mass**2,xp,0.3d0,xiimax_ev,xinorm_ev,xi,y,xi_hat,p_i,xjac,xpswgt,pass)

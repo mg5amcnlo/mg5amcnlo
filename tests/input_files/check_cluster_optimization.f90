@@ -217,11 +217,10 @@ contains
     matching=-99
     other_matching=-99
     calls=sudakov_calls
-    call reweighting(4,p_born,1,.false.,ij,pdgs,cpdg,scales,iord,qcd_count,sud,expanded, &
-         nren,ren,fac,matching,.true.)
+    call reweighting(4,1,.false.,ij,pdgs,cpdg,scales,iord,qcd_count,sud,expanded,nren,ren,fac,matching,.true.)
     if (sudakov_calls.ne.calls.or.sud.ne.1d0.or.expanded.ne.0d0) error stop 'scale-only Sudakov work'
-    call reweighting(4,p_born,1,.false.,ij,pdgs,cpdg,scales,iord,qcd_count,sud,expanded, &
-         other_nren,other_ren,other_fac,other_matching,.false.)
+    call reweighting(4,1,.false.,ij,pdgs,cpdg,scales,iord,qcd_count,sud,expanded,other_nren,other_ren,other_fac, &
+         other_matching,.false.)
     call same(ren,fac,nren,matching,other_ren,other_fac,other_nren,other_matching)
     if (sudakov_calls.le.calls.or.sud.ge.1d0.or.expanded.ge.0d0) error stop 'FxFx omitted Sudakovs'
     if (nren.ne.1.or.ren(0).ne.100d0.or.ren(1).ne.20d0.or.fac.ne.20d0) error stop 'QCD scales'

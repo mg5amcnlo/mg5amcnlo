@@ -2,7 +2,7 @@ module mc_native_context
 use mc_born_support
 use mc_born_types
 implicit none
-integer,parameter::local_context=2,local_provider=2
+integer,parameter::local_context=2
 integer,parameter::native_context_ids(16)=[2,2,2,2,2,2,2,2,2,2,2,2,1,4,5,5]
 integer,parameter::native_sector_ids(16)=[1,2,3,4,5,6,7,8,9,10,11,12,4,5,2,5]
 integer,parameter::native_provider_ids(16)=[2,2,2,2,2,2,2,2,2,2,2,2,1,4,5,5]

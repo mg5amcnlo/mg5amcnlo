@@ -70,10 +70,11 @@ program check_fks_sum_born_chart
   write(*,*) 'PASS common Born chart and local recoil'
 end program
 
-subroutine set_granny(sector,config,masses)
+subroutine set_granny(config,masses)
   implicit none
   integer :: sector,config,granny_sector
   double precision :: masses(*)
+  common/c_nFKSprocess/sector
   common/test_granny/granny_sector
   granny_sector=sector
 end subroutine

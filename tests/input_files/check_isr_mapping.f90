@@ -247,7 +247,7 @@ subroutine check_isr_mapping(mode)
             bn=born
             call boost_n1_to_its_cms(p,pcm,rapidity)
             pno=pcm
-            call boost_born_momenta_noevpr(bn,pno,xi,y,phi,ifks,jfks,sb/z,sb)
+            call boost_born_momenta_noevpr(bn,pno,xi,y,phi,ifks,jfks,sb/z)
             if(symmetric_map)then
               reference=pcm
               do k=3,4
@@ -279,9 +279,8 @@ subroutine check_isr_mapping(mode)
       tmp_jac=1d0
       tmp_ps=1d0
       p(:,1:4)=born
-      call generate_momenta_initial(-100,ifks,jfks,bx,tb,yb,0d0,sb,.3d0,p,x, &
-           tmp_s,stot,tmp_sqrt,tmp_tau,tmp_ycm,tmp_xb,tmp_pi,tmp_xmax,tmp_norm, &
-           tmp_xi,tmp_y,tmp_hat,tmp_ps,tmp_jac,pass)
+      call generate_momenta_initial(-100,ifks,jfks,bx,tb,yb,sb,.3d0,p,x,tmp_s,stot,tmp_sqrt,tmp_tau,tmp_ycm,tmp_xb,tmp_pi, &
+           tmp_xmax,tmp_norm,tmp_xi,tmp_y,tmp_hat,tmp_ps,tmp_jac,pass)
       if(pass.or.tmp_jac.ge.0d0)error stop 'ISR accepted an empty radiation interval'
       endif
       ! Exactly soft no-event-projection recoil must not divide by xi.
@@ -290,7 +289,7 @@ subroutine check_isr_mapping(mode)
       bound_tau=0d0
       bn=born
       pno=0d0
-      call boost_born_momenta_noevpr(bn,pno,0d0,.2d0,.7d0,ifks,jfks,sb,sb)
+      call boost_born_momenta_noevpr(bn,pno,0d0,.2d0,.7d0,ifks,jfks,sb)
       if(.not.all(ieee_is_finite(pno)).or.maxval(abs(pno(:,1:4)-born)).gt.1d-12*mass) &
            error stop 'ISR no-event-projection soft endpoint'
       ! Both exact singular projections must retain the hard Born momenta.
@@ -342,8 +341,7 @@ contains
           pb=born
           pbl=born
           pbe=born
-          call generate_FKS_kinematics(x(1:3),nbody,1d0,1d0,stot,sb,mass,tb,yb,0d0, &
-               bx,mb,jac,p,pass)
+          call generate_FKS_kinematics(x(1:3),nbody,1d0,1d0,stot,sb,mass,tb,yb,bx,mb,jac,p,pass)
           if(.not.pass.or.jac.le.0d0.or..not.all(ieee_is_finite(p))) &
                error stop 'symmetric restricted angular domain rejected'
           if(xi.lt.minimum.or.any(xb.gt.1d0).or.abs(y).ge.1d0) &
@@ -390,9 +388,8 @@ contains
     tmp_ps=1d0
     p=0d0
     p(:,1:4)=born
-    call generate_momenta_initial(slot,ifks,jfks,bx,tb,yb,0d0,sb,2d0*pi*x(3),p,x, &
-         tmp_s,stot,tmp_sqrt,tmp_tau,tmp_ycm,tmp_xb,tmp_pi,tmp_xmax,tmp_norm, &
-         tmp_xi,tmp_y,tmp_hat,tmp_ps,tmp_jac,pass)
+    call generate_momenta_initial(slot,ifks,jfks,bx,tb,yb,sb,2d0*pi*x(3),p,x,tmp_s,stot,tmp_sqrt,tmp_tau,tmp_ycm,tmp_xb, &
+         tmp_pi,tmp_xmax,tmp_norm,tmp_xi,tmp_y,tmp_hat,tmp_ps,tmp_jac,pass)
   end subroutine
 
   double precision function symmetric_bound(bx,y,side) result(bound)
@@ -513,8 +510,7 @@ contains
     pb=born
     pbl=born
     pbe=born
-    call generate_FKS_kinematics(x(1:3),nbody,1d0,1d0,stot,sb,mass,tb,yb,0d0, &
-         bx,mb,jac,p,pass)
+    call generate_FKS_kinematics(x(1:3),nbody,1d0,1d0,stot,sb,mass,tb,yb,bx,mb,jac,p,pass)
     if(jac.le.0d0.or..not.pass.or..not.all(ieee_is_finite(p)))error stop 'ISR generation failed'
     if(any(jc(0:2).le.0d0))error stop 'ISR counterevents missing'
   end subroutine

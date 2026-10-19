@@ -10,15 +10,12 @@ c**************************************************************************
 C
 C     CONSTANTS
 C
-      double precision zero
-      parameter       (ZERO = 0d0)
       include 'nexternal.inc'
       include 'genps.inc'
 C
 C     LOCAL
 C
-      integer i,j,k,l,l1,l2,kchan
-      character*130 buf
+      integer i,j,kchan
 c
 c     Global
 c
@@ -33,9 +30,6 @@ c     Vegas stuff
       real*8 sigint
       external sigint
 
-      integer irestart
-      logical savegrid
-
       logical            flat_grid
       common/to_readgrid/flat_grid                !Tells if grid read from file
 
@@ -45,14 +39,10 @@ c     Vegas stuff
 
       character*4      abrv
       common /to_abrv/ abrv
-      integer n_mp, n_disc
-      integer ixi_i,iphi_i,iy_ij,vn
-      logical putonshell
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
 
-      logical SHsep
       logical Hevents
       common/SHevents/Hevents
       character*10 dum
@@ -73,7 +63,6 @@ c PineAPPL
 
       logical useitmax
       common/cuseitmax/useitmax
-      include 'leshouche_decl.inc'
       include 'born_nhel.inc'
 C-----
 C  BEGIN CODE
@@ -121,7 +110,7 @@ c
       
       call setrun                !Sets up run parameters
       call configure_fxfx_sudakov(ickkw,nlo_ps,shower_mc,.true.)
-      call print_fks_isr_mapping(fixed_order,nlo_ps,shower_mc)
+      call print_fks_isr_mapping(nlo_ps,shower_mc)
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters
@@ -184,7 +173,7 @@ c
 
       ! initialise the global, but process dependent, information in the process module.
       call init_process_module_global(shower_mc,abrv,nexternal,nincoming
-     $     ,mcatnlo_delta,ebeam(1)+ebeam(2),max_bcol,maxflow_used,ickkw)
+     $     ,mcatnlo_delta,ebeam(1)+ebeam(2),max_bcol,maxflow,ickkw)
       ! Also put all the n-body process dependent stuff here. It does
       ! not depend on PS point or FKS config, so all global information.
       call init_process_module_nbody_wrapper()
@@ -275,7 +264,7 @@ c
 
 
       double precision function sigint(xx,vegas_wgt,ifl,f)
-      use fks_phase_space_data, only: p1_cnt,jac_cnt,p_born
+      use fks_phase_space_data, only: p1_cnt,p_born
       use fks_phase_space, only: fks_phase_space_point,
      $     generate_born_contribution,generate_real_phase_space
       use weight_lines
@@ -674,7 +663,7 @@ c
 c
 c     Local
 c
-      integer i, j, kchan
+      integer i,kchan
       double precision dconfig(maxchannels)
 c
 c     Global
@@ -713,9 +702,7 @@ c
 c
 c Vegas stuff
 c
-      integer irestart,itmp
-      character * 70 idstring
-      logical savegrid
+      integer irestart
 
       logical unwgt
       double precision evtsgn
@@ -889,13 +876,12 @@ c
       end
 c
       subroutine init_process_module_nbody_wrapper()
-      use fks_phase_space_data, only: p_born
       use process_module
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
       include 'born_nhel.inc'
-      integer iFKS,colour(1:nexternal-1),i,j,k,get_color
+      integer colour(1:nexternal-1),i,get_color
       external get_color
       double precision mass(1:nexternal-1),get_mass_from_id
       external get_mass_from_id
@@ -916,17 +902,16 @@ c
 
       
       subroutine init_process_module_n1body_wrapper(dum)
+c Keep the calling convention of the MC wrapper, which selects a Born flow.
       use process_module
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
-      integer iFKS,colour(1:nexternal),i,j,k,get_color,dum
+      integer colour(1:nexternal),i,get_color,dum
       double precision mass(1:nexternal),get_mass_from_id
       external get_color
       external get_mass_from_id
       logical valid_dipole(1:nexternal,1:nexternal)
-      integer icolup(1:2,1:nexternal)
-      integer jpart(7,-nexternal+3:2*nexternal-3)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     dummy(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,dummy,niprocs

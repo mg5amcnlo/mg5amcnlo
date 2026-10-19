@@ -297,8 +297,7 @@ contains
     xgen(1:3)=rnd
     j0=7d0
     ps0=3d0
-    call generate_FKS_kinematics(xgen(1:3),nbody,j0,ps0,stot,s,sqrts,taub,yb,yhat, &
-         xb,mb,jout,out,valid)
+    call generate_FKS_kinematics(xgen(1:3),nbody,j0,ps0,stot,s,sqrts,taub,yb,xb,mb,jout,out,valid)
     if(.not.valid.or.jout.le.0d0)error stop 'production map rejected'
     if(maxval(abs(out-p)).gt.2d-7*mr)error stop 'production map differs from local map'
     flux=1d0/(2d0*s)

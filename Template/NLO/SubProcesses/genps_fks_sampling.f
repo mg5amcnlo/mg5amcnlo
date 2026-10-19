@@ -176,7 +176,7 @@ c Set one_body to true if it's a 2->1 process at the Born (i.e. 2->2 for the n+1
       double precision s(-max_branch:max_particles)
       double precision sqrtshat_born,totmass,xjac0
       integer itree(2,-max_branch:-1)
-      integer i,j,ii,order(-nexternal:0)
+      integer i,ii,order(-nexternal:0)
       double precision smin,smax,totalmass
       logical pass
       integer cBW(-nexternal:-1)
@@ -309,8 +309,7 @@ c with the s channel decay sequence
       integer ns_channel,nbranch
       logical pass
 c
-      double precision totalmass,smin,smax,s1,ma2,mbq,m12,mnq,tmin,tmax
-     &     ,t,tmax_temp,phi,dum,dum3(-1:1),s_m,tm,tiny
+      double precision totalmass,smin,smax,s1,ma2,mbq,m12,mnq,tmin,tmax,t,phi,dum,dum3(-1:1),s_m,tm,tiny
       parameter (tiny=1d-8)
       integer i,ibranch,idim
       double precision dot
@@ -389,7 +388,7 @@ c
          mbq = dot(pb(0,itree(1,ibranch)),pb(0,itree(1,ibranch)))
          m12 = m(itree(2,ibranch))**2
          mnq = m(ibranch-1)**2
-         call yminmax(s1,t,m12,ma2,mbq,mnq,tmin,tmax)
+         call yminmax(s1,m12,ma2,mbq,mnq,tmin,tmax)
          call trans_x(1,-ibranch,x(-ibranch),-tmax,-tmin,s_mass(ibranch)
      $        ,dum,dum,dum3(-1),dum3(-1),xjac0,tm)
          if (xjac0.le.0d0) then
@@ -710,10 +709,8 @@ c     S=A/(B-x) transformation:
       end subroutine trans_x
 
 
-      subroutine generate_tau_y_wrapper(
-     $     qmass,qwidth,totmass,stot,rndx,tau_born,ycm_born,ycmhat,xjac)
-      use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
-     $     resonance_members,initial_recoil_leg
+      subroutine generate_tau_y_wrapper(qmass,qwidth,totmass,stot,rndx,tau_born,ycm_born,xjac)
+      use fks_phase_space_data,only: initial_recoil_leg
       ! generates tau and y, calling the functions that correpsond to the
       ! case at hand
       implicit none
@@ -721,11 +718,10 @@ c     S=A/(B-x) transformation:
       double precision qmass(-nexternal:0),qwidth(-nexternal:0)
       double precision totmass, stot
       double precision rndx(2)
-      double precision tau_born, ycm_born, ycmhat, xjac
+      double precision tau_born,ycm_born,xjac
 C
       include 'run.inc'
       integer ndim_dummy
-      double precision fksmass
 c Conflicting BW stuff
       integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
       double precision cBW_mass(-1:1,-nexternal:-1),
@@ -769,14 +765,11 @@ c     not a Breit Wigner
            endif
 
 c Generate the rapditity of the Born system
-           call generate_y(tau_born,rndx(2),ycm_born,ycmhat,xjac)
+           call generate_y(tau_born,rndx(2),ycm_born,xjac)
 
         else                    ! this is for dressed ee collisions
-           call generate_ee_tau_y(rndx(1), rndx(2), one_body, totmass,
-     $        stot, nt_channel, qmass(-ns_channel-1),qwidth(-ns_channel-1),
-     $        cBW(-ns_channel-1),cBW_mass(-1, -ns_channel-1),
-     $        cBW_width(-1,-ns_channel-1),
-     $        tau_born, ycm_born, ycmhat, xjac)
+           call generate_ee_tau_y(rndx(1),rndx(2),one_body,totmass,stot,nt_channel,qmass(-ns_channel-1),qwidth(-ns_channel-1),
+     $     cBW(-ns_channel-1),cBW_mass(-1, -ns_channel-1),cBW_width(-1,-ns_channel-1),tau_born,ycm_born,xjac)
            ! for non-physical configurations, xjac=-1000
            if (xjac.eq.-1000d0) return
          endif
@@ -790,8 +783,7 @@ c Generate the rapditity of the Born system
          stop
       else
 c No PDFs (also use fixed energy when performing tests)
-         call compute_tau_y_epem(j_fks,one_body,totmass,stot,
-     &        tau_born,ycm_born,ycmhat)
+         call compute_tau_y_epem(j_fks,one_body,totmass,stot,tau_born,ycm_born)
 c FI limit tests need nonzero beam momentum available for recoil. Keep
 c their Born energy fixed, with xbar=1/2 instead of the usual xbar=1.
 c A one-body Born fixes tau from its physical mass.
@@ -826,7 +818,7 @@ c Jacobian due to delta() of tau_born
 
       subroutine generate_tau_BW(stot,idim,x,mass,width,cBW,BWmass
      $     ,BWwidth,tau,jac)
-      use fks_phase_space_data, only: tau_Born_lower_bound,tau_lower_bound_resonance,tau_lower_bound
+      use fks_phase_space_data, only: tau_Born_lower_bound
       implicit none
       integer cBW,idim
       double precision stot,x,tau,jac,mass,width,BWmass(-1:1),BWwidth(
@@ -854,7 +846,7 @@ c Jacobian due to delta() of tau_born
 
 
       subroutine generate_tau(stot,idim,x,tau,jac)
-      use fks_phase_space_data, only: tau_Born_lower_bound,tau_lower_bound_resonance,tau_lower_bound
+      use fks_phase_space_data, only: tau_Born_lower_bound,tau_lower_bound_resonance
       use mc_native_context, only: native_mapping
       implicit none
       integer idim
@@ -885,24 +877,22 @@ c Jacobian due to delta() of tau_born
       end subroutine generate_tau
 
 
-      subroutine generate_y(tau,x,ycm,ycmhat,jac)
+      subroutine generate_y(tau,x,ycm,jac)
       implicit none
       double precision tau,x,ycm,jac
-      double precision ylim,ycmhat
+      double precision ylim
       ylim=-0.5d0*log(tau)
-      ycmhat=2*x-1
-      ycm=ylim*ycmhat
+      ycm=ylim*(2*x-1)
       jac=jac*ylim*2
       return
       end subroutine generate_y
 
 
-      subroutine compute_tau_y_epem(j_fks,one_body,fksmass,
-     &                              stot,tau,ycm,ycmhat)
+      subroutine compute_tau_y_epem(j_fks,one_body,fksmass,stot,tau,ycm)
       implicit none
       integer j_fks
       logical one_body
-      double precision fksmass,stot,tau,ycm,ycmhat
+      double precision fksmass,stot,tau,ycm
       if(j_fks.le.nincoming)then
 c This should never happen in normal integration: when no PDFs, j_fks
 c cannot be initial state (but needed for testing). If tau set to one,
@@ -919,16 +909,15 @@ c For e+e- collisions, set tau to one and y to zero
          tau=1.d0
          ycm=0.d0
       endif
-      ycmhat=0.d0
       return
       end subroutine compute_tau_y_epem
 
 
-      subroutine get_tau_y_from_x12(x1, x2, omx1, omx2, tau, ycm, ycmhat, jac)
-      use fks_phase_space_data, only: tau_Born_lower_bound,tau_lower_bound_resonance,tau_lower_bound
+      subroutine get_tau_y_from_x12(x1,x2,omx1,omx2,tau,ycm,jac)
+      use fks_phase_space_data, only: tau_Born_lower_bound
       implicit none
-      double precision x1, x2, omx1, omx2, tau, ycm, ycmhat, jac
-      double precision ylim
+      double precision x1,x2,omx1,omx2,tau,ycm,jac
+      double precision ylim,ycmhat
       double precision tolerance
       parameter (tolerance=1e-3)
       double precision y_settozero
@@ -964,13 +953,9 @@ c For e+e- collisions, set tau to one and y to zero
         ycmhat = 1d0
       endif
 
-      if (abs(ycmhat).gt.1d0) then
-        if (abs(ycmhat).gt.1d0 + tolerance) then
-          write(*,*) 'ERROR YCMHAT', ycmhat, x1, x2
-          stop 1
-        else
-          ycmhat = sign(1d0, ycmhat)
-        endif
+      if (abs(ycmhat).gt.1d0 + tolerance) then
+        write(*,*) 'ERROR YCMHAT', ycmhat, x1, x2
+        stop 1
       endif
 
       if (tau.lt.tau_born_lower_bound) then
@@ -1020,17 +1005,16 @@ c For e+e- collisions, set tau to one and y to zero
       end subroutine generate_x_ee
 
 
-      subroutine generate_ee_tau_y(rnd1_in, rnd2_in, one_body, totmass,
-     $     stot, nt_channel, qmass, qwidth, cBW, cBW_mass, cBW_width,
-     $     tau_born, ycm_born, ycmhat, xjac0)
-      use fks_phase_space_data, only: tau_Born_lower_bound,tau_lower_bound_resonance,tau_lower_bound
+      subroutine generate_ee_tau_y(rnd1_in,rnd2_in,one_body,totmass,stot,nt_channel,qmass,qwidth,cBW,cBW_mass,cBW_width,
+     $     tau_born,ycm_born,xjac0)
+      use fks_phase_space_data, only: tau_Born_lower_bound
       implicit none
       double precision rnd1_in, rnd2_in
       double precision rnd1, rnd2, totmass, stot, qmass, qwidth
       double precision cBW_mass(-1:1), cBW_width(-1:1)
       integer nt_channel, cBW
       logical one_body
-      double precision tau_born, ycm_born, ycmhat, xjac0
+      double precision tau_born,ycm_born,xjac0
 
       logical bw_exists, generate_with_bw
       common /to_ee_generatebw/ generate_with_bw
@@ -1164,7 +1148,7 @@ C dressed lepton stuff
       ! in order to (re-)generate tau and ycm
       ! from x1 and x2. It also (re-)checks that tau_born
       ! is pysical, and otherwise sets xjac0=-1000
-      call get_tau_y_from_x12(x1_ee, x2_ee, omx_ee(1), omx_ee(2), tau_born, ycm_born, ycmhat, xjac0)
+      call get_tau_y_from_x12(x1_ee,x2_ee,omx_ee(1),omx_ee(2),tau_born,ycm_born,xjac0)
 
       x1bk=x1_ee
       x2bk=x2_ee

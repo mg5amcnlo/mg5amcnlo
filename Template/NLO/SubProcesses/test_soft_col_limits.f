@@ -711,7 +711,7 @@ c-----
       call setrun               !Sets up run parameters
       call FKSParamReader(paramFileName,.true.,.false.)
       call configure_fxfx_sudakov(ickkw,nlo_ps,shower_mc,.true.)
-      call print_fks_isr_mapping(fixed_order,nlo_ps,shower_mc)
+      call print_fks_isr_mapping(nlo_ps,shower_mc)
       call setpara('param_card.dat') !Sets up couplings and masses
       call fill_configurations_common
       ! initialise the global, but process dependent, information in the process module.

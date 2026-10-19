@@ -23,7 +23,7 @@ class TestQEDShowerScales(unittest.TestCase):
             executable = work / 'check'
             result = subprocess.run([
                 shutil.which('gfortran'), '-O2', '-std=legacy',
-                '-ffixed-line-length-none', '-fcheck=all', '-fno-automatic',
+                '-ffixed-line-length-none', '-fcheck=all',
                 '-ffpe-trap=invalid,zero,overflow', '-I', str(work),
                 '-ffunction-sections', '-fdata-sections',
                 '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',

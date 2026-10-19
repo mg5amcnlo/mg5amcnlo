@@ -401,7 +401,7 @@ c a scale to be used as a reference for factorizations scales
       include 'nexternal.inc'
       include 'run.inc'
       double precision muF_ref_dynamic,pp(0:3,nexternal)
-      double precision tmp,scale_global_reference,pt,et,dot,xm2,sumdot
+      double precision tmp,scale_global_reference,pt,et,dot,sumdot
       external pt,et,dot,sumdot
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
@@ -449,8 +449,6 @@ c (Ellis-Sexton scale squared) in common block /COUPL_ES/
       include 'q_es.inc'
       double precision pp(0:3,nexternal),QES
       double precision QES_temp,QES_ref_dynamic
-      double precision pi
-      parameter (pi=3.14159265358979323846d0)
       character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
       common/cscales_id_string/muR_id_str,muF1_id_str,
      #                         muF2_id_str,QES_id_str
@@ -525,9 +523,9 @@ c a scale to be used as a reference for renormalization scale
       include 'run.inc'
       include 'cuts.inc'
       double precision scale_global_reference,pp(0:3,nexternal)
-      double precision tmp,pt,et,dot,xm2,sumdot,xmt2,ptmp(0:3)
+      double precision tmp,pt,et,dot,sumdot
       external pt,et,dot,sumdot
-      integer i,j
+      integer i
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
       double precision user_dynamical_scale

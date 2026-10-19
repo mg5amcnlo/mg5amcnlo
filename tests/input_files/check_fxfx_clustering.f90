@@ -202,7 +202,7 @@ contains
     mass=0d0
     width=0d0
     ctype=0
-    call iforest_to_list(4,2,1,tree,sp,tp,width,ipdg,lst,cpdg,ctype)
+    call iforest_to_list(4,2,1,tree,sp,tp,ipdg,lst,cpdg,ctype)
     call make_cluster_config_masks(4,1,1,lst,config_masks)
     do i=1,2
        qcd_mask(i,1)=qcd_vertex_mask(cpdg(:,i,1))

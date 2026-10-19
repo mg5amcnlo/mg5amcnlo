@@ -30,7 +30,7 @@ class TestPythia8QEDDipoles(unittest.TestCase):
         cls.tempdir = tempfile.TemporaryDirectory(prefix='mg5_qed_dipoles_')
         cls.binary = Path(cls.tempdir.name) / 'check_qed_dipoles'
         subprocess.run([
-            'gfortran', '-O0', '-g', '-fno-automatic', '-fcheck=all',
+            'gfortran', '-O0', '-g', '-fcheck=all',
             '-ffpe-trap=invalid,zero,overflow',
             '-J', cls.tempdir.name,
             str(ROOT / 'Template/NLO/SubProcesses/qed_shower_support.f90'),

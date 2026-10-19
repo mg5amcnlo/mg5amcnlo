@@ -4,7 +4,7 @@ include 'nexternal.inc'
 include "born_nhel.inc"
 double precision p(0:3, nexternal-1)
 
-integer i,j
+integer i
 INTEGER IHEL
 INTEGER     NCOMB
 PARAMETER ( NCOMB=  %(ncomb)d )
@@ -33,7 +33,8 @@ common /to_amp_born_onehel/amp_split_born_onehel
 DOUBLE COMPLEX AMP_SPLIT_EWSUD_PARQCD(AMP_SPLIT_SIZE)
 COMMON /TO_AMP_EWSUD_PARQCD/AMP_SPLIT_EWSUD_PARQCD
 
-integer iflist(nexternal-1), pdglist(nexternal-1), pdglist_oth(nexternal-1)
+integer iflist(nexternal-1)
+%(process_declarations)s
 
 double precision invariants(nexternal-1, nexternal-1)
 
@@ -53,7 +54,6 @@ common/to_ewsud_helselect/ewsud_helselect
 
 double precision compensate_identical_factor
 external compensate_identical_factor
-double precision comp_idfac
 
 logical good_hel(ncomb), firsttime_hel(ncomb)
 data good_hel  /ncomb*.true./
@@ -66,6 +66,7 @@ LOGICAL SUD_MC_HEL
 COMMON /TO_MC_HEL/ SUD_MC_HEL
 integer igood_hel(ncomb), HEL(0:ncomb)
 DATA IGOOD_HEL  /NCOMB * 0/
+SAVE HEL
 logical firsttime
 data firsttime /.true./
 integer hel_min, hel_max, hel_pick

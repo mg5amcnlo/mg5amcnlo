@@ -59,7 +59,7 @@ class TestInitialRecoil(unittest.TestCase):
             shutil.which("gfortran"), str(TEMPLATE.parent / 'Source/timing.f'), "-O2", "-std=legacy", "-fcheck=all",
             "-ffixed-line-length-none", "-ffunction-sections", "-fdata-sections",
             "-Wl,-dead_strip" if sys.platform == "darwin" else "-Wl,--gc-sections",
-            "-fno-automatic", "-I", str(work),
+            "-I", str(work),
             str(work / "native_context.f90"),
             str(TEMPLATE / "fks_phase_space_data.f"),
             str(TEMPLATE / "genps_fks_helpers.f"),

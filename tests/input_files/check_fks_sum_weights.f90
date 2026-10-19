@@ -45,7 +45,9 @@ program check_fks_sum_weights
     parton_iproc(1,1:3)=parton_iproc(1,1:3)/prob(sector)
     wgts(1,1:3)=parton_iproc(1,1:3)
     call sum_identical_contributions()
+    f=ieee_value(0d0,ieee_quiet_nan)
     call fill_mint_function_NLOPS(f,n1body)
+    if(any(f(9:).ne.0d0))error stop 'unused MC integration components'
     mc_abs=mc_abs+prob(sector)*f(1)
     mc_signed=mc_signed+prob(sector)*f(2)
   enddo
@@ -72,6 +74,9 @@ program check_fks_sum_weights
   negative_sum=(f(1)-f(2))/(2d0*f(1))
   if(abs(negative_mc-0.4d0).gt.1d-12.or.abs(negative_sum-0.25d0).gt.1d-12) &
     error stop 'unweighted negative fractions'
+  f=ieee_value(0d0,ieee_quiet_nan)
+  call fill_mint_function(f)
+  if(any(f(9:).ne.0d0))error stop 'unused FO integration components'
   ! These invalid points must return before the Born-spreading fit;
   ! no training storage is allocated, so observing them is also an error.
   born_spread_phase=1

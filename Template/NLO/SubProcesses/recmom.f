@@ -22,7 +22,7 @@
       integer n_ph, i_ph
       integer i,j
       integer ifreco
-      double precision dreco, dthis, iso_getdrv40
+      double precision dreco,dthis
       integer skip
       logical is_light_charged_fermion
       logical iso_in(nexternal), iso_out(nexternal)
@@ -64,6 +64,7 @@ c      common / photon_reco / is_nextph_iso_reco
 
       ! count the photons that are not isolated
       n_ph=0
+      i_ph=0
       do i=nincoming+1, nexternal
         if (pdg_in(i).eq.id_ph .and. pt(p_in(0,i)).ne.0d0 .and.
      $   (abs(eta_04(p_in(0,i))).lt.etaph.or.etaph.lt.0d0)

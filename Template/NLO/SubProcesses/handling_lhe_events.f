@@ -136,7 +136,7 @@ c MonteCarlo Masses
 c     parameter to allow to include run_card.inc 
       include './run.inc'
       include './cuts.inc'
-      integer lhaid,pdfscheme
+      integer pdfscheme
       character*20 pdlabel
       logical pineappl
       character*7 event_norm
@@ -309,7 +309,6 @@ c Write here the reweight information if need be
          write(ifile,'(a)') '  </initrwgt>'
       endif
       write(ifile,'(a)') '  </header>'
- 250  format(1x,i8)
       return
  99   write (*,*) 'ERROR in write_lhef_header_banner: '/
      &     /' proc_card_mg5.dat not found   :',path(1:index(path," ")-1)
@@ -331,7 +330,7 @@ c Write here the reweight information if need be
       implicit none 
       include './run.inc'
       logical already_found
-      integer ifile,nevents,i,ii,ii2,iistr,itemp
+      integer ifile,nevents,i,ii,ii2,iistr
       double precision temp
       character*10 MonteCarlo
       character*180 string,string0
@@ -650,7 +649,6 @@ c if the file is a partial file the header is non-standard
       integer ifile,i,IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP
      $     ,LPRUP(100)
       double precision EBMUP(2),XSECUP(100),XERRUP(100),XMAXUP(100)
-      double precision XSECUP2(100),XERRUP2(100),XMAXUP2(100)
 c
       write(ifile,'(a)')
      # '  <init>'
@@ -703,7 +701,7 @@ c
       character*9 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
-      integer ii,j,nps,nng,iFKS,idwgt
+      integer ii,j,idwgt
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
       integer event_id
       common /c_event_id/ event_id
@@ -895,14 +893,6 @@ c Write the <scales> block only for scales related to valid colour lines
          write(ifile,'(a)') "  </scales>"
       endif
       write(ifile,'(a)') '  </event>'
- 401  format(2(1x,e14.8))
- 402  format(8(1x,e14.8))
- 403  format(6(1x,e14.8))
- 404  format(3(1x,e14.8))
- 405  format(4(1x,e14.8))
- 406  format(2(1x,e14.8),2(1x,i3))
- 441  format(4(1x,e16.10))
- 442  format(1x,e16.10,2(1x,e14.8))
  503  format(1x,i2,1x,i6,4(1x,e14.8))
  504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e24.17),2(1x,e10.4))
  601  format(a12,i4,a2,1x,e11.5,a7)
@@ -923,12 +913,10 @@ c
       integer ifile,i,kk,jj,oo
       character*1000 buff
       character*500 string
-      character*12 dummy12
-      character*2 dummy2
       character*9 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
-      integer ii,j,nps,nng,iFKS,idwgt
+      integer ii,j,idwgt
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
       integer i_process
       common/c_i_process/i_process
@@ -1113,16 +1101,6 @@ c Read the <scales> block
          write (*,*) string
          stop 1
       endif
- 401  format(2(1x,e14.8))
- 402  format(8(1x,e14.8))
- 403  format(6(1x,e14.8))
- 404  format(3(1x,e14.8))
- 405  format(4(1x,e14.8))
- 406  format(2(1x,e14.8),2(1x,i3))
- 441  format(4(1x,e16.10))
- 442  format(1x,e16.10,2(1x,e14.8))
- 503  format(1x,i2,1x,i6,4(1x,e14.8))
- 504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e14.8),2(1x,e10.4))
 c
       return
       end
@@ -1140,12 +1118,10 @@ c Same as read_lhef_event, except for the end-of-file catch
       integer ifile,i,kk,jj,oo
       character*1000 buff
       character*500 string
-      character*12 dummy12
-      character*2 dummy2
       character*9 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
-      integer ii,j,nps,nng,iFKS,idwgt
+      integer ii,j,idwgt
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
       integer i_process
       common/c_i_process/i_process
@@ -1314,16 +1290,6 @@ c Read the <scales> block
      $        /' handling_lhe_event.f'
          stop 1
       endif
- 401  format(2(1x,e14.8))
- 402  format(8(1x,e14.8))
- 403  format(6(1x,e14.8))
- 404  format(3(1x,e14.8))
- 405  format(4(1x,e14.8))
- 406  format(2(1x,e14.8),2(1x,i3))
- 441  format(4(1x,e16.10))
- 442  format(1x,e16.10,2(1x,e14.8))
- 503  format(1x,i2,1x,i6,4(1x,e14.8))
- 504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e14.8),2(1x,e10.4))
 c
       return
       end

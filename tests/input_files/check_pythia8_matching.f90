@@ -133,7 +133,7 @@ program check_pythia8_matching
     ps=1d0
     call invert_fks_radiation(rt,jac,ps,4d6,tau,yb,xb,p,pb)
     if (jac.le.0d0) stop 2
-    rad=get_xi_from_p(6,3,p)
+    rad=get_xi_from_p(6,p)
     delta=get_yij_from_p(6,3,p,p_i_fks_cnt(:,0))
     vk=rho(p(:,3))
     vkb=rho(pb(:,3))

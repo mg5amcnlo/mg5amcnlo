@@ -110,7 +110,7 @@ C     avoid fake non-zeros
       INTEGER NSQAMPSO
       PARAMETER (NSQAMPSO=1)
       REAL*8 P(0:3,NEXTERNAL),ANS(0:NSQAMPSO)
-      INTEGER IHEL,IDEN,I,J
+      INTEGER IHEL,IDEN,I
       REAL*8 T(0:NSQAMPSO)
       INTEGER NHEL(NEXTERNAL,NCOMB)
       DATA (NHEL(I,   1),I=1,5) /-1, 1,-1, 1,-1/
@@ -280,8 +280,8 @@ C     JAMPs contributing to orders QCD=2 QED=1
             ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J,M)
           ENDDO
           DO N = 1, NAMPSO
-            RES(SQSOINDEX2(M,N)) = RES(SQSOINDEX2(M,N)) + ZTEMP
-     $       *DCONJG(JAMP(I,N))
+            RES(SQSOINDEX2(M,N)) = RES(SQSOINDEX2(M,N)) + DBLE(ZTEMP
+     $       *DCONJG(JAMP(I,N)))
           ENDDO
         ENDDO
 

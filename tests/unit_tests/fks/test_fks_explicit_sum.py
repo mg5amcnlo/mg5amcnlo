@@ -38,7 +38,7 @@ class TestFKSExplicitSum(unittest.TestCase):
         # A stale multi-bin grid must never supply a nonunit explicit-sum weight.
         (work / 'grid.MC_integer').write_text('AVE 0 0.25 0.75 1\n' * 50)
         result = subprocess.run([
-            shutil.which('gfortran'), '-O2', '-fcheck=all', '-fno-automatic',
+            shutil.which('gfortran'), '-O2', '-fcheck=all',
             '-ffixed-line-length-132', '-I', str(work),
             str(TEMPLATE / 'FKSParams.f90'), str(work / 'map.f'),
             str(TEMPLATE / 'MC_integer.f'),
@@ -99,7 +99,7 @@ class TestFKSExplicitSum(unittest.TestCase):
                 'logical :: native_mapping=.false.\nend module\n')
             (work / 'chart.f').write_text(fortran_routine(TEMPLATE / 'setcuts.f', 'set_tau_min'))
             result = subprocess.run([
-                shutil.which('gfortran'), '-O2', '-fcheck=all', '-fno-automatic',
+                shutil.which('gfortran'), '-O2', '-fcheck=all',
                 '-ffixed-line-length-132', '-I', str(work), str(TEMPLATE / 'FKSParams.f90'),
                 str(TEMPLATE / 'fks_phase_space_data.f'), str(work / 'contexts.f90'),
                 str(work / 'chart.f'),
@@ -133,10 +133,10 @@ class TestFKSExplicitSum(unittest.TestCase):
                 'module scale_module\nreal(8) :: emsca_H(2,2,1,1)=1d0\nend module\n')
             (work / 'weights.f').write_text('\n'.join(fortran_routine(
                 TEMPLATE / 'fks_singular.f', name) for name in
-                ('sum_identical_contributions', 'fill_mint_function_NLOPS',
+                ('sum_identical_contributions', 'fill_mint_function_NLOPS', 'fill_mint_function',
                  'pdg_equal', 'momenta_equal')))
             result = subprocess.run([
-                shutil.which('gfortran'), '-O2', '-fcheck=all', '-fno-automatic',
+                shutil.which('gfortran'), '-O2', '-fcheck=all',
                 '-ffixed-line-length-132', *support, str(work / 'contexts.f90'),
                 str(TEMPLATE / 'weight_lines.f'), str(work / 'weights.f'),
                 str(ROOT / 'tests/input_files/check_fks_sum_weights.f90'),

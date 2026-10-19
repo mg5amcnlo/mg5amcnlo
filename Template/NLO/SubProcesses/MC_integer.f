@@ -148,7 +148,6 @@ c Compute the volume 'vol'
       integer i,this_dim
       integer maxdim
       parameter (maxdim=50)
-      logical firsttime(maxdim)
       integer maxintervals
       parameter (maxintervals=200)
       integer ncall(0:maxintervals,maxdim),nintervals(maxdim)
@@ -213,7 +212,6 @@ c (for 'this_dim') has been picked.
       character*101 buff
       integer maxdim
       parameter (maxdim=50)
-      logical firsttime(maxdim)
       integer nintervals(maxdim),maxintervals
       parameter (maxintervals=200)
       integer ncall(0:maxintervals,maxdim)

@@ -53,8 +53,7 @@ endif
 
 # Increase the number of allowed charcters in a Fortran line
 FFLAGS+= -ffixed-line-length-132
-# ensure that no-automatic is done
-FFLAGS+= -fno-automatic
+# Persistent local state must be declared with SAVE in the source.
 
 # Set FC unless it's defined by an environment variable
 ifeq ($(origin FC),default)

@@ -112,7 +112,7 @@ program check_momentum_maps
         ! both orderings. Neither finite physical leg may use it.
         saved_pi_cnt=0d0
         saved_pi_cnt(:,0)=pcm(:,4)
-        xi=get_xi_from_p(5,4,p)
+        xi=get_xi_from_p(5,p)
         yij=get_yij_from_p(5,4,p,saved_pi_cnt(:,0))
         phi=get_phi_from_p(5,4,p)
         if(abs(yij).gt.0.99d0)error stop 'soft history became collinear'
@@ -203,7 +203,7 @@ program check_momentum_maps
            p(:,3)=[energy,energy,0d0,0d0]
            p(:,4)=[momentum,0d0,momentum,0d0]
            p(:,5)=[sqrtshat-momentum-energy,-energy,-momentum,0d0]
-           xi=get_xi_from_p(5,3,p)
+           xi=get_xi_from_p(5,p)
            yij=get_yij_from_p(5,3,p,saved_pi_cnt(:,0))
            phi=get_phi_from_p(5,3,p)
            jacinv=1d0
@@ -293,7 +293,7 @@ program check_momentum_maps
         error stop 'soft daughter is off shell'
      endif
      native_mapping=.true.
-     xi=get_xi_from_p(5,3,p)
+     xi=get_xi_from_p(5,p)
      yij=get_yij_from_p(5,3,p,saved_pi_cnt(:,0))
      phi=get_phi_from_p(5,3,p)
      jacinv=1d0
@@ -329,7 +329,7 @@ program check_momentum_maps
         jac=1d0
         transfer=(born(0,1)-born(0,3))**2-sum((born(1:3,1)-born(1:3,3))**2)
         phi=atan2(born(2,3),born(1,3))
-        call yminmax((2d0*energy)**2,transfer,mass**2,0d0,0d0,0d0,tmin,tmax)
+        call yminmax((2d0*energy)**2,mass**2,0d0,0d0,0d0,tmin,tmax)
         if (tmin.ge.tmax.or.transfer.lt.tmin.or.transfer.gt.tmax) &
              error stop 'physical Born momentum outside t-channel bounds'
         call gentcms(born(:,1),born(:,2),transfer,phi,mass,0d0, &
@@ -417,7 +417,7 @@ program check_momentum_maps
      call boost_n1_to_its_cms(plab,pcm,rapidity)
      shat=4d0*pcm(0,1)*pcm(0,2)
      sqrtshat=sqrt(shat)
-     xi=get_xi_from_p(5,father,pcm)
+     xi=get_xi_from_p(5,pcm)
      yij=get_yij_from_p(5,father,pcm,saved_pi_cnt(:,0))
      phi=get_phi_from_p(5,father,pcm)
      jacinv=1d0
@@ -521,7 +521,7 @@ program check_momentum_maps
            if (abs(plab(0,1)/(sqrtshat/2d0*exp(rapidity))-1d0).gt.1d-12) &
                 error stop 'stale rapidity without counterevent'
            call boost_n1_to_its_cms(plab,pcm,rapidity)
-           xi=get_xi_from_p(5,3,pcm)
+           xi=get_xi_from_p(5,pcm)
            yij=get_yij_from_p(5,3,pcm,saved_pi_cnt(:,0))
            phi=get_phi_from_p(5,3,pcm)
            jacinv=1d0
@@ -568,7 +568,7 @@ contains
     double precision :: xmax,xnorm,xhat,rat
     integer :: sign_branch
     logical :: good
-    local_xi=get_xi_from_p(5,3,real_p)
+    local_xi=get_xi_from_p(5,real_p)
     local_y=get_yij_from_p(5,3,real_p,saved_pi_cnt(:,0))
     local_phi=get_phi_from_p(5,3,real_p)
     native_mapping=.false.

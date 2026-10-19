@@ -56,7 +56,7 @@ class TestResonanceRecoil(unittest.TestCase):
                        "-ffixed-line-length-none", "-fcheck=all",
                        "-ffunction-sections", "-fdata-sections",
                        "-Wl,-dead_strip" if sys.platform == "darwin" else "-Wl,--gc-sections",
-                       "-fno-automatic", "-I", str(work), "-I", str(TEMPLATE),
+                       "-I", str(work), "-I", str(TEMPLATE),
                        str(work / "native_context.f90"),
                        str(TEMPLATE / "fks_phase_space_data.f"),
                        str(TEMPLATE / "genps_fks_helpers.f"),
