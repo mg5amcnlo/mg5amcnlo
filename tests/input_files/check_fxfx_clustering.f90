@@ -39,7 +39,8 @@ contains
     integer :: ctype(63),particle_type(6),imap(6),bw(2,0:3),lst(6,1)
     integer :: i,win,iwin,jwin
     double precision :: p(0:4,6),scale,p_inter(0:4,0:2),expected_mass
-    logical :: is_bw,valid(1)
+    logical :: is_bw
+    integer(kind=8) :: valid_words(1),config_masks(1,63)
     p=0d0
     p(:,1)=[145d0,0d0,0d0,145d0,0d0]
     p(:,2)=[145d0,0d0,0d0,-145d0,0d0]
@@ -69,9 +70,10 @@ contains
        expected_mass=0d0
     endif
     lst(:,1)=[12,48,13,51,15,50]
-    valid=.true.
+    valid_words=1_8
+    call make_cluster_config_masks(6,3,1,lst,config_masks)
     is_bw=.not.resonance_first
-    call cluster_one_step(6,p,imap,3,1,valid,lst,bw,iwin,jwin,win,scale,is_bw,ctype,particle_type)
+    call cluster_one_step(6,p,imap,3,1,valid_words,config_masks,bw,iwin,jwin,win,scale,is_bw,ctype,particle_type)
     if (win.ne.12.or.iwin.ne.4.or.jwin.ne.3) error stop 'wrong winning candidate'
     if (is_bw.neqv.resonance_first) error stop 'resonance flag belongs to losing candidate'
     if (resonance_first) call close(scale,90d0,'resonance clustering scale')
@@ -99,11 +101,13 @@ contains
 
   subroutine check_zero(wrapper)
     use fks_phase_space_data, only: p_born
-    use mc_native_context, only: native_epoch
+    use mc_native_context, only: native_epoch,active_context
     use weight_lines, only: pdg_uborn
     logical, intent(in) :: wrapper
     integer :: ipdg(3),cpdg(0:2,0:0,2),tree(2,-1:-1),ij(0),iord(0:0)
     integer :: conf,empty(0,2),sp(0),ctype(7),process,ib,repeat_call
+    integer :: qcd_mask(0:0,2),qcd_count(0:0)
+    integer(kind=8) :: config_masks(1,7)
     integer :: nren,matching(4),this_config,nFKSprocess
     double precision :: p(0:3,3),scales(0:0),mass(0),width(0),m,rapidity
     double precision :: sudakov,expanded,ren(0:4),fac
@@ -150,6 +154,7 @@ contains
           p(:,3)=p(:,1)+p(:,2)
           if (wrapper) then
              native_epoch=native_epoch+1
+             active_context=process
              p_born=p
              pdg_uborn=0
              pdg_uborn(1:3,0)=ipdg
@@ -167,7 +172,8 @@ contains
              ctype=0
              cpdg=-777
              iord=-777
-             call cluster(3,p,2,0,empty,cpdg,tree,ipdg,mass,width,2,sp,conf,scales,ij,iord,ctype)
+             call make_cluster_config_masks(3,0,2,empty,config_masks)
+             call cluster(3,p,2,0,empty,config_masks,cpdg,qcd_mask,tree,ipdg,mass,width,2,sp,conf,scales,ij,iord,ctype,qcd_count)
              if (conf.ne.2) error stop '2->1 lost configuration selection'
              if (iord(0).ne.0) error stop '2->1 core ordering'
              if (any(cpdg(:,0,conf).ne.[ipdg(3),ipdg(1),ipdg(2)])) error stop '2->1 core PDGs'
@@ -180,6 +186,9 @@ contains
   subroutine check_qcd_core()
     integer :: ipdg(4),cpdg(0:2,0:2,1),tree(2,-2:-1),ij(1),iord(0:1)
     integer :: conf,lst(2,1),sp(-1:-1),tp(-1:-1),ctype(15)
+    integer :: qcd_mask(0:2,1),qcd_count(0:1),i
+    integer, external :: qcd_vertex_mask
+    integer(kind=8) :: config_masks(1,15)
     double precision :: p(0:3,4),scales(0:1),mass(-1:-1),width(-1:-1)
     ipdg=[2,-2,21,21]
     p(:,1)=[50d0,0d0,0d0,50d0]
@@ -194,7 +203,12 @@ contains
     width=0d0
     ctype=0
     call iforest_to_list(4,2,1,tree,sp,tp,width,ipdg,lst,cpdg,ctype)
-    call cluster(4,p,1,1,lst,cpdg,tree,ipdg,mass,width,1,sp,conf,scales,ij,iord,ctype)
+    call make_cluster_config_masks(4,1,1,lst,config_masks)
+    do i=1,2
+       qcd_mask(i,1)=qcd_vertex_mask(cpdg(:,i,1))
+    enddo
+    call cluster(4,p,1,1,lst,config_masks,cpdg,qcd_mask,tree,ipdg,mass,width,1,sp,conf,scales,ij,iord,ctype,qcd_count)
+    if (any(qcd_count.ne.3)) error stop 'QCD vertex classification'
     if (conf.ne.1.or.ij(1).ne.12.or.iord(1).ne.1) error stop 'QCD core clustering'
     if (any(cpdg(:,0,1).ne.[21,2,-2])) error stop 'QCD core PDGs'
     call close(scales(0),30d0,'QCD core transverse scale')
