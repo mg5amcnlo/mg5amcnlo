@@ -3788,11 +3788,14 @@ RESTART = %(mint_mode)s
     
         timing_stat_finder = re.compile(r"\s*Time spent in\s*(?P<name>\w*)\s*:\s*"+\
                      r"(?P<time>[\d\+-Eed\.]*)\s*")
+        sampled_timing = False
 
         for logf in log_GV_files:
             logfile=open(logf,'r')
             log = logfile.read()
             logfile.close()
+            if 'Category times are exclusive estimates' in log:
+                sampled_timing = True
             channel_name = '/'.join(logf.split('/')[-3:-1])
             mint = re.search(mint_search,logf)
             if not mint is None:
@@ -3819,6 +3822,9 @@ RESTART = %(mint_mode)s
         totTimeList.sort()
         if len(totTimeList)>0:
             debug_msg += '\n\n  Inclusive timing profile :'
+            if sampled_timing:
+                debug_msg += ('\n    Detailed categories estimated from 1% of integration points;'
+                              '\n    total CPU time measured over each complete job.')
             debug_msg += '\n    Overall slowest channel          %s (%s)'%\
                                      (Tstr(totTimeList[-1][0]),totTimeList[-1][1])
             debug_msg += '\n    Average channel running time     %s'%\

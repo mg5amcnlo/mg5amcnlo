@@ -288,6 +288,7 @@ end function
         (sub / 'proc_characteristics').write_text('')
         (sub / 'analyse_opts').write_text('')
         shutil.copyfile(TEMPLATE / 'makefile_fks_dir', work / 'makefile')
+        shutil.copyfile(TEMPLATE / 'timing_variables.inc', work / 'timing_variables.inc')
         shutil.copyfile(TEMPLATE / 'FKSParams.f90', work / 'FKSParams.f90')
         shutil.copyfile(ROOT / 'Template/NLO/Source/dgauss.f', work / 'dgauss.f')
         shutil.copyfile(self.work / 'kernel.f', work / 'cluster.f')

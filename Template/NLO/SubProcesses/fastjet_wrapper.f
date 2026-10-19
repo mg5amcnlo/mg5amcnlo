@@ -11,11 +11,11 @@ c     arguments
 c     timing statistics
       include "timing_variables.inc"
 
-      call cpu_time(tBefore)
+      if(timing_sampled)call timing_enter(timing_cuts)
       call amcatnlo_fastjetppgenkt(pQCD,NN,rfj,sycut,palg,
      &pjet,njet,jet)
-      call cpu_time(tAfter)
-      tFastJet = tFastJet + (tAfter-tBefore)
+      if(timing_sampled)call timing_leave(timing_cuts)
+      return
       end
 
 
@@ -32,9 +32,9 @@ c     arguments
 c     timing statistics
       include "timing_variables.inc"
 
-      call cpu_time(tBefore)
+      if(timing_sampled)call timing_enter(timing_cuts)
       call amcatnlo_fastjetppgenkt_etamax(
      & pQCD,NN,rfj,sycut,etamax,palg,pjet,njet,jet)
-      call cpu_time(tAfter)
-      tFastJet = tFastJet + (tAfter-tBefore)
+      if(timing_sampled)call timing_leave(timing_cuts)
+      return
       end

@@ -14,6 +14,7 @@ C common block.
       use mc_native_context, only: active_context,context_providers
       use weight_lines
       implicit none
+      include 'timing_variables.inc'
       include 'nexternal.inc'
       include 'maxconfigs.inc'
       include 'maxparticles.inc'
@@ -50,6 +51,7 @@ C common block.
      $     ,nexternal),mass,get_mass_from_id
       logical skip_first,for_mcatnlo_scale,refresh_types
       external get_color,get_mass_from_id,qcd_vertex_mask
+      if(timing_sampled)call timing_enter(timing_clustering)
       if (iproc_input.le.0) then      ! n-body contribution
          iproc=0
          next=nexternal-1
@@ -191,6 +193,7 @@ c form factor and renormalisation and factorisation scales.
      $     qcd_count,sudakov
      $     ,expanded_sudakov,nqcdrenscale,qcd_ren_scale,qcd_fac_scale
      $     ,need_matching(1),for_mcatnlo_scale)
+      if(timing_sampled)call timing_leave(timing_clustering)
       return
       end
       

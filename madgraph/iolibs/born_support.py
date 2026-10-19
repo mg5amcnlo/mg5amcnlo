@@ -1245,6 +1245,7 @@ def write_wrappers(root, r, members):
     lines = ['subroutine mc_born_local(p,request,result)',
              'use mc_born_support', 'use mc_born_types', 'implicit none',
              "include 'nexternal.inc'", "include 'coupl.inc'",
+             "include 'timing_variables.inc'",
              'double precision p(0:3,nexternal-1)',
              'type(BornRequest) request', 'type(BornResult) result',
              'type(BornModelState),save::state', 'integer nr,nc,status,nfksprocess',
@@ -1252,13 +1253,14 @@ def write_wrappers(root, r, members):
              'double precision charges(nexternal-1)', 'common/c_charges_born/charges',
              ]
     lines += expand(root/'Source'/'MODEL'/'input.inc')
-    lines += ['call born_model_dimensions(nr,nc)',
+    lines += ['if(timing_sampled)call timing_enter(timing_born)',
+              'call born_model_dimensions(nr,nc)',
               'call born_resize_model_state(state,nr,nc)']
     lines += ['state%%%s_values(%s)=%s' % (kind, index, name) for name,kind,index in members]
     lines += ['request%sector=nfksprocess', 'request%charges=charges',
               'call born_evaluate(%d,%d,p,state,request,result,status)' % (r['provider'],r['context']),
               'if(status.ne.0)then', "write(*,*)'Born support evaluation failed',status", 'stop 1',
-              'endif', 'end']
+              'endif', 'if(timing_sampled)call timing_leave(timing_born)', 'end']
     capture = ['subroutine mc_capture_model_state(state)',
                'use mc_born_support','use mc_born_types','implicit none',
                "include 'coupl.inc'",'type(BornModelState) state','integer nr,nc']

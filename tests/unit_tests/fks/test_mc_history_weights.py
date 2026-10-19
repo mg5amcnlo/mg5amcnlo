@@ -56,7 +56,7 @@ class TestMCHistoryWeights(unittest.TestCase):
                 fortran_routine(TEMPLATE / 'fks_singular.f', name) for name in routines))
             executable = work / 'check_history_weights'
             result = subprocess.run([
-                shutil.which('gfortran'), '-O2', '-std=legacy', '-fcheck=all',
+                shutil.which('gfortran'), str(TEMPLATE.parent / 'Source/timing.f'), '-O2', '-std=legacy', '-fcheck=all',
                 '-ffixed-line-length-none', '-I', str(work),
                 str(TEMPLATE / 'fks_phase_space_data.f'),
                 str(work / 'contexts.f90'), str(TEMPLATE / 'weight_lines.f'),

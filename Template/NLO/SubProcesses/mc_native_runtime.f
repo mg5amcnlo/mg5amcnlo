@@ -97,6 +97,7 @@
       subroutine mc_native_evaluate(p,m,n,extra)
       use mc_native_context
       implicit none
+      include 'timing_variables.inc'
       include 'nexternal.inc'
       include 'orders.inc'
       double precision p(0:3,nexternal-1),charges(nexternal-1)
@@ -114,6 +115,7 @@
       common/ccalculatedBorn/calculatedBorn
       type(BornRequest),save::request
       type(BornModelState),save::state
+      if(timing_sampled)call timing_enter(timing_born)
       call ensure_native_context()
       request%colour=.false.
       request%charge=.false.
@@ -160,6 +162,8 @@
       enddo
       wgt_me_born=native_result%born
       calculatedBorn=.true.
+      if(timing_sampled)call timing_leave(timing_born)
+      return
       end
 
       subroutine sborn_native(p,ans)

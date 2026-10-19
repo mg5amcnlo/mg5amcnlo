@@ -50,6 +50,7 @@ class TestFxFxClustering(unittest.TestCase):
         }
         for filename, contents in includes.items():
             (work / filename).write_text(contents)
+        shutil.copyfile(TEMPLATE / 'timing_variables.inc', work / 'timing_variables.inc')
         # Exported topology and model data are supplied by the fixture. Retain
         # the production wrapper, clustering, reweighting and kinematic code.
         (work / 'state.f90').write_text(
@@ -67,7 +68,7 @@ class TestFxFxClustering(unittest.TestCase):
         (work / 'clustering.f').write_text('\n'.join(routines))
         cls.executable = work / 'check_clustering'
         result = subprocess.run([
-            shutil.which('gfortran'), '-O0', '-g', '-std=legacy',
+            shutil.which('gfortran'), str(TEMPLATE.parent / 'Source/timing.f'), '-O0', '-g', '-std=legacy',
             '-ffixed-line-length-none', '-fcheck=all',
             '-finit-integer=-777', '-finit-real=snan',
             '-ffpe-trap=invalid,zero,overflow', '-I', str(work),

@@ -56,7 +56,7 @@ class TestInitialRecoil(unittest.TestCase):
         (work / "maps.f").write_text("\n".join(routines))
         executable = work / "check_initial_recoil"
         result = subprocess.run([
-            shutil.which("gfortran"), "-O2", "-std=legacy", "-fcheck=all",
+            shutil.which("gfortran"), str(TEMPLATE.parent / 'Source/timing.f'), "-O2", "-std=legacy", "-fcheck=all",
             "-ffixed-line-length-none", "-ffunction-sections", "-fdata-sections",
             "-Wl,-dead_strip" if sys.platform == "darwin" else "-Wl,--gc-sections",
             "-fno-automatic", "-I", str(work),

@@ -52,11 +52,11 @@ class TestResonanceRecoil(unittest.TestCase):
                     ROOT / "Template/NLO/Source/kin_functions.f", name))
             (work / "maps.f").write_text("\n".join(routines))
             executable = work / "check_resonance_recoil"
-            command = [shutil.which("gfortran"), "-O2", "-std=legacy",
+            command = [shutil.which("gfortran"), str(TEMPLATE.parent / 'Source/timing.f'), "-O2", "-std=legacy",
                        "-ffixed-line-length-none", "-fcheck=all",
                        "-ffunction-sections", "-fdata-sections",
                        "-Wl,-dead_strip" if sys.platform == "darwin" else "-Wl,--gc-sections",
-                       "-fno-automatic", "-I", str(work),
+                       "-fno-automatic", "-I", str(work), "-I", str(TEMPLATE),
                        str(work / "native_context.f90"),
                        str(TEMPLATE / "fks_phase_space_data.f"),
                        str(TEMPLATE / "genps_fks_helpers.f"),
@@ -134,8 +134,8 @@ class TestResonancePartition(unittest.TestCase):
             (work / "partitions.f").write_text("\n".join(routines))
             executable = work / "check_partitions"
             result = subprocess.run([
-                shutil.which("gfortran"), "-O2", "-std=legacy", "-fcheck=all",
-                "-ffixed-line-length-none", "-I", str(work),
+                shutil.which("gfortran"), str(TEMPLATE.parent / 'Source/timing.f'), "-O2", "-std=legacy", "-fcheck=all",
+                "-ffixed-line-length-none", "-I", str(work), "-I", str(TEMPLATE),
                 str(TEMPLATE / "fks_phase_space_data.f"),
                 str(ROOT / "tests/input_files/check_resonance_partition.f90"),
                 str(work / "partitions.f"), "-o", str(executable)],

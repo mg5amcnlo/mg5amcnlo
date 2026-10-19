@@ -6,7 +6,6 @@ c to the list of weights using the add_wgt subroutine
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
-      include 'timing_variables.inc'
       include 'orders.inc'
       include 'run.inc'
       include 'genps.inc'
@@ -26,7 +25,6 @@ c to the list of weights using the add_wgt subroutine
       common /cxiScut_used/xiScut_used,xiBSVcut_used
       double precision g22
       integer get_orders_tag
-      call cpu_time(tBefore)
       if (f_b.eq.0d0) return
       if (xi_i_hat_ev*xiimax_cnt(0) .gt. xiBSVcut_used) return
       call sborn_native(p_born,wgt_c)
@@ -48,8 +46,6 @@ c     photon-photon initial state
         call add_wgt(2,orders,wgt1,0d0,0d0)
       enddo
 
-      call cpu_time(tAfter)
-      tBorn=tBorn+(tAfter-tBefore)
       return
       end
 
@@ -61,6 +57,7 @@ C of parton distributions (e.g. NNPDF2.3).
 C It is called in this function such that if is included
 C in the LO cross section
       implicit none
+      include 'timing_variables.inc'
       include 'nexternal.inc'
       include 'coupl.inc' 
       include 'q_es.inc'
@@ -97,13 +94,14 @@ c     wgt2 : coefficient of the weight multiplying the log[mu_R^2/Q^2]
 c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
 
       ! set everything to 0
+      if(timing_sampled)call timing_enter(timing_fks_integrated)
       amp_split_6to5f(1:amp_split_size) = 0d0
       amp_split_6to5f_muf(1:amp_split_size) = 0d0
       amp_split_6to5f_mur(1:amp_split_size) = 0d0
 
       ! skip if we don't want this piece or if the scale is
       ! below mt
-      if (.not.include_6to5_cnt.or.scale.lt.mdl_mt) return
+      if (.not.include_6to5_cnt.or.scale.lt.mdl_mt) goto 9909
 
 C the contribution is the following (if mu > mt):
 C      Add a term -alphas n TF/3pi log (muR^2/mt^2) sigma(0) 
@@ -147,6 +145,8 @@ C      gluon in the initial state
         endif
       enddo
 
+ 9909 continue
+      if(timing_sampled)call timing_leave(timing_fks_integrated)
       return
       end
 
@@ -192,10 +192,9 @@ c   approximation
       include 'ewsudakov_haslo.inc' 
 
       if (.not.has_ewsudakov) return
-
-      call cpu_time(tBefore)
       if (f_b.eq.0d0) return
       if (xi_i_hat_ev*xiimax_cnt(0) .gt. xiBSVcut_used) return
+      if(timing_sampled)call timing_enter(timing_ewsudakov)
 
       if (cpower_pos.gt.0) then
           write(*,*)'Error, cannot compute EW sudakov with Cpower >0'
@@ -258,8 +257,7 @@ c   approximation
         endif
        enddo
       enddo
-      call cpu_time(tAfter)
-      t_ewsud=t_ewsud+(tAfter-tBefore)
+      if(timing_sampled)call timing_leave(timing_ewsudakov)
       return
       end
 
@@ -273,6 +271,7 @@ C wrt the hard matrix element. Relevant for lepton collisions.
 C It is called in this function such that if is included
 C in the LO cross section
       implicit none
+      include 'timing_variables.inc'
       include 'nexternal.inc'
       include 'coupl.inc' 
       include 'q_es.inc'
@@ -311,6 +310,7 @@ c     wgt2 : coefficient of the weight multiplying the log[mu_R^2/Q^2]
 c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
 
       ! set everything to 0
+      if(timing_sampled)call timing_enter(timing_fks_integrated)
       amp_split_alpha(1:amp_split_size) = 0d0
       amp_split_alpha_muf(1:amp_split_size) = 0d0
       amp_split_alpha_mur(1:amp_split_size) = 0d0
@@ -330,7 +330,7 @@ c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
       if (alphascheme.eq.0) then
          ! do nothing, assumes same UV scheme in alpha for
          ! PDF's and model
-         return
+         goto 9909
       else if (abs(alphascheme).eq.1) then
          ! the sign of alphascheme controls the sign of the counterterm.
          ! negative sign used for testing (in the test process, the
@@ -407,6 +407,8 @@ c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
          stop 1
       endif
 
+ 9909 continue
+      if(timing_sampled)call timing_leave(timing_fks_integrated)
       return
       end
 
@@ -470,9 +472,9 @@ c value to the list of weights using the add_wgt subroutine
       character*4      abrv
       common /to_abrv/ abrv
       integer iamp_test
-      call cpu_time(tBefore)
-      if (f_nb.eq.0d0) return
-      if (xi_i_hat_ev*xiimax_cnt(0) .gt. xiBSVcut_used) return
+      if(timing_sampled)call timing_enter(timing_fks_integrated)
+      if (f_nb.eq.0d0) goto 9909
+      if (xi_i_hat_ev*xiimax_cnt(0) .gt. xiBSVcut_used) goto 9909
       call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt)
       if (ickkw.eq.-1) then
          if (wgtbpower.ne.0) then
@@ -590,8 +592,8 @@ C wrt the hard matrix element. Relevant for lepton collisions.
         call add_wgt(3,orders,wgtal1,wgtal2,wgtal3)
       enddo
 
-      call cpu_time(tAfter)
-      tIS=tIS+(tAfter-tBefore)
+ 9909 continue
+      if(timing_sampled)call timing_leave(timing_fks_integrated)
       return
       end
 
@@ -604,7 +606,6 @@ c its value to the list of weights using the add_wgt subroutine
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
-      include 'timing_variables.inc'
       include 'orders.inc'
       integer orders(nsplitorders)
       integer iamp
@@ -616,7 +617,6 @@ c its value to the list of weights using the add_wgt subroutine
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       integer get_orders_tag
-      call cpu_time(tBefore)
       if (f_r.eq.0d0) return
 ! Do not evaluate a real matrix element whose only records are discarded.
       if (mc_H_only.and.sudakov_damp.le.0d0) return
@@ -640,8 +640,6 @@ c its value to the list of weights using the add_wgt subroutine
           call add_wgt(11,orders,wgt1*(1d0-sudakov_damp),0d0,0d0)
         endif
       enddo
-      call cpu_time(tAfter)
-      tReal=tReal+(tAfter-tBefore)
       return
       end
 
@@ -673,15 +671,15 @@ c the list of weights using the add_wgt subroutine
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       integer get_orders_tag
-      call cpu_time(tBefore)
 ! Inner histories need only the G replacement, never the ordinary S term.
+      if(timing_sampled)call timing_enter(timing_fks_local)
       if (mc_H_only.and.(replace_MC_subt.le.0d0.or.
-     $     f_s_MC_H.eq.0d0)) return
-      if (f_s.eq.0d0 .and. f_s_MC_S.eq.0d0 .and. f_s_MC_H.eq.0d0) return
+     $     f_s_MC_H.eq.0d0)) goto 9909
+      if (f_s.eq.0d0 .and. f_s_MC_S.eq.0d0 .and. f_s_MC_H.eq.0d0) goto 9909
       if (xi_i_hat_ev*xiimax_cnt(0).gt.xiScut_used .and. replace_MC_subt.eq.0d0)
-     $     return
+     $     goto 9909
       s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
-      if (s_s.le.0d0) return
+      if (s_s.le.0d0) goto 9909
       call sreal(p1_cnt(0,1,0),0d0,y_ij_fks_ev,fx_s)
 
       do iamp=1, amp_split_size
@@ -707,8 +705,8 @@ c the list of weights using the add_wgt subroutine
         if (wgt1.ne.0d0) call add_wgt(4,orders,wgt1,0d0,0d0)
       enddo
 
-      call cpu_time(tAfter)
-      tCount=tCount+(tAfter-tBefore)
+ 9909 continue
+      if(timing_sampled)call timing_leave(timing_fks_local)
       return
       end
 
@@ -754,16 +752,16 @@ c to the list of weights using the add_wgt subroutine
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       double precision pmass(nexternal)
       integer get_orders_tag
-      call cpu_time(tBefore)
       include 'pmass.inc'
+      if(timing_sampled)call timing_enter(timing_fks_local)
       if (mc_H_only.and.(replace_MC_subt.le.0d0.or.
-     $     f_c_MC_H.eq.0d0)) return
+     $     f_c_MC_H.eq.0d0)) goto 9909
       if (f_c.eq.0d0 .and. f_dc.eq.0d0 .and. f_c_MC_S.eq.0d0 .and.
-     $     f_c_MC_H.eq.0d0)return
+     $     f_c_MC_H.eq.0d0)goto 9909
       if ( (y_ij_fks_ev.le.1d0-deltaS .and. replace_MC_subt.eq.0d0) .or.
-     $     pmass(j_fks).ne.0.d0 ) return
+     $     pmass(j_fks).ne.0.d0 ) goto 9909
       s_c = fks_Sij(p1_cnt(0,1,1),i_fks,j_fks,xi_i_fks_cnt(1),one)
-      if (s_c.le.0d0) return
+      if (s_c.le.0d0) goto 9909
       ! sreal_deg should be called **BEFORE** sreal 
       ! in order not to overwrtie the amp_split array
 ! Degenerate remnants and PDF-scheme terms contribute only to S events.
@@ -812,8 +810,8 @@ c to the list of weights using the add_wgt subroutine
         if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(5,orders,wgt1,0d0,wgt3)
       enddo
 
-      call cpu_time(tAfter)
-      tCount=tCount+(tAfter-tBefore)
+ 9909 continue
+      if(timing_sampled)call timing_leave(timing_fks_local)
       return
       end
 
@@ -865,17 +863,17 @@ c value to the list of weights using the add_wgt subroutine
       double precision pmass(nexternal)
       integer get_orders_tag
       include 'pmass.inc'
-      call cpu_time(tBefore)
+      if(timing_sampled)call timing_enter(timing_fks_local)
       if (mc_H_only.and.(replace_MC_subt.le.0d0.or.
-     $     f_sc_MC_H.eq.0d0)) return
+     $     f_sc_MC_H.eq.0d0)) goto 9909
       if (f_sc.eq.0d0 .and. f_dsc(1).eq.0d0 .and. f_dsc(2).eq.0d0 .and.
      $     f_dsc(3).eq.0d0 .and. f_dsc(4).eq.0d0 .and. f_sc_MC_S.eq.0d0
-     $     .and. f_sc_MC_H.eq.0d0) return
+     $     .and. f_sc_MC_H.eq.0d0) goto 9909
       if ( ((xi_i_hat_ev*xiimax_cnt(1).ge.xiScut_used .or. y_ij_fks_ev.le.1d0
      $     -deltaS) .and. replace_MC_subt.eq.0d0).or.
-     $     pmass(j_fks).ne.0.d0 ) return
+     $     pmass(j_fks).ne.0.d0 ) goto 9909
       s_sc = fks_Sij(p1_cnt(0,1,2),i_fks,j_fks,zero,one)
-      if (s_sc.le.0d0) return
+      if (s_sc.le.0d0) goto 9909
       ! sreal_deg should be called **BEFORE** sreal 
       ! in order not to overwrtie the amp_split array
       if (.not.mc_H_only)
@@ -927,8 +925,8 @@ c value to the list of weights using the add_wgt subroutine
         if (wgt1.ne.0d0 .or. wgt3.ne.0d0) call add_wgt(6,orders,wgt1,0d0,wgt3)
       enddo
 
-      call cpu_time(tAfter)
-      tCount=tCount+(tAfter-tBefore)
+ 9909 continue
+      if(timing_sampled)call timing_leave(timing_fks_local)
       return
       end
 
@@ -1050,12 +1048,12 @@ c     respectively.
       integer orders(nsplitorders)
       integer get_orders_tag
       logical include_gfun
-      call cpu_time(tBefore)
+      if(timing_sampled)call timing_enter(timing_mc)
       probne=1d0
-      if (p(0,1).le.0d0) return
+      if (p(0,1).le.0d0) goto 9909
       sevmc_Hev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       sevmc_Sev = fks_Hij(p,i_fks,j_fks)
-      if (sevmc_Hev.eq.0d0 .and. sevmc_Sev.eq.0d0) return
+      if (sevmc_Hev.eq.0d0 .and. sevmc_Sev.eq.0d0) goto 9909
 
 c Use the coordinates of the active map, including the resonance frame.
       xi=xi_i_fks_ev
@@ -1104,8 +1102,8 @@ c Use the coordinates of the active map, including the resonance frame.
       enddo
 
 !     The native driver adds the corresponding G replacement exactly once.
-      call cpu_time(tAfter)
-      t_MC_subt=t_MC_subt+(tAfter-tBefore)
+ 9909 continue
+      if(timing_sampled)call timing_leave(timing_mc)
       return
       end
 
@@ -1348,13 +1346,13 @@ c     iterm= -3 : only restore scales for n+1-body w/o recomputing
       common /c_need_matching/ need_matching_S,need_matching_H
      $     ,need_matching_cuts
       save need_matching_izero
-      call cpu_time(tBefore)
+      if(timing_sampled)call timing_enter(timing_clustering)
       ktscheme=1
       if (iterm.eq.0) then
          rewgt_mohdr_calculated=.false.
          rewgt_izero_calculated=.false.
          fxfx_exp_rewgt=0d0
-         return
+         goto 9909
       endif
       already_set=.false.
       if (iterm.eq.1 .or. iterm.eq.2) then
@@ -1460,9 +1458,7 @@ c Their Sudakov must therefore also come from the n+1-body state.
          f_s_MC_H =f_s_MC_H *rewgt_mohdr
          f_c_MC_H =f_c_MC_H *rewgt_mohdr
          f_sc_MC_H=f_sc_MC_H*rewgt_mohdr
-         call cpu_time(tAfter)
-         tFxFx=tFxFx+(tAfter-tBefore)
-         return
+         goto 9909
       elseif (iterm.eq.-1 .or. iterm.eq.-2) then
 c Restore scales for the n-body FxFx terms
          need_matching_cuts(1:nexternal)=[need_matching_S(1:i_fks-1),1,
@@ -1488,8 +1484,8 @@ c Restore scales for the n+1-body FxFx terms
          write (*,*) 'ERROR: unknown iterm in set_FxFx_scale',iterm
          stop 1
       endif
-      call cpu_time(tAfter)
-      tFxFx=tFxFx+(tAfter-tBefore)
+ 9909 continue
+      if(timing_sampled)call timing_leave(timing_clustering)
       return
       end
       
@@ -1507,7 +1503,6 @@ c bpower.
       include 'nexternal.inc'
       include 'run.inc'
       include 'genps.inc'
-      include 'timing_variables.inc'
       double precision pi,vegas_wgt,radiation_mass2
       integer i,j
       logical firsttime
@@ -1533,7 +1528,6 @@ c bpower.
       include "pineappl_common.inc" 
       integer orders(nsplitorders)
 C
-      call cpu_time(tBefore)
 c Random numbers to be used in the plotting routine: these numbers will
 c not change between events, counter events and n-body contributions.
       if(needrndec)then
@@ -1565,8 +1559,6 @@ c so the same local radiation normalization also removes that map.
       f_b=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*radiation_mass2/(16
      $     *pi**2))*fkssymmetryfactorBorn*vegas_wgt
       f_nb=f_b
-      call cpu_time(tAfter)
-      tf_nb=tf_nb+(tAfter-tBefore)
       return
       end
 
@@ -1665,7 +1657,6 @@ c partitions of unity at their respective phase-space points.
       include 'run.inc'
       include 'genps.inc'
       include 'nFKSconfigs.inc'
-      include 'timing_variables.inc'
       double precision xnoborn_cnt,xtot,wgt_c,enhance,enhance_real
      $     ,pas(0:3,nexternal)
       data xnoborn_cnt /0d0/
@@ -1708,7 +1699,6 @@ c partitions of unity at their respective phase-space points.
 
 ! Native inner densities contain no integration-channel proposal.
       if(mc_H_only)return
-      call cpu_time(tBefore)
 
 c Compute the multi-channel enhancement factor 'enhance'.
       enhance=1.d0
@@ -1833,8 +1823,6 @@ c Compute the multi-channel enhancement factor 'enhance_real'.
          f_pdfsch_p=  f_pdfsch_p  *enhance
          f_pdfsch_l=  f_pdfsch_l  *enhance
       endif
-      call cpu_time(tAfter)
-      tf_nb=tf_nb+(tAfter-tBefore)
 
       return
       end
@@ -1853,7 +1841,6 @@ c terms.
       include 'genps.inc'
       include 'fks_powers.inc'
       include 'coupl.inc'
-      include 'timing_variables.inc'
       double precision vegas_wgt,prefact,prefact_cnt_ssc,prefact_deg
      $     ,prefact_c,prefact_coll,jac_ev,pi,prefact_cnt_ssc_c
      $     ,prefact_coll_c,prefact_deg_slxi,prefact_deg_sxi,zero
@@ -1887,7 +1874,6 @@ c terms.
       common/factor_pdfsch/f_pdfsch_d,f_pdfsch_p,f_pdfsch_l
       double precision pmass(nexternal)
       include 'pmass.inc'
-      call cpu_time(tBefore)
 
 c f_* multiplication factors for real-emission, soft counter, ... etc.       
       prefact=xinorm_ev/xi_i_fks_ev/(1-y_ij_fks_ev)
@@ -2016,8 +2002,6 @@ c equal to ione, so no need to define separate factors.
          f_sc_MC_S=0d0
          f_sc_MC_H=0d0
       endif
-      call cpu_time(tAfter)
-      tf_all=tf_all+(tAfter-tBefore)
       return
       end
 
@@ -2368,10 +2352,10 @@ c or to fill histograms.
       use mint_module
       use FKSParams
       implicit none
+      include 'timing_variables.inc'
       include 'nexternal.inc'
       include 'run.inc'
       include 'coupl.inc'
-      include 'timing_variables.inc'
       include 'genps.inc'
       include 'orders.inc'
       include 'q_es.inc'
@@ -2398,7 +2382,6 @@ c or to fill histograms.
       logical lum_cache_allowed
       save lum_fks,lum_history,lum_iproc,lum_x,lum_q2,lum_value,lum_pd
       parameter (conv=389379660d0) ! conversion to picobarns
-      call cpu_time(tBefore)
       if (icontr.eq.0) return
       virt_found=.false.
 c Cache only within this call: PDF set/member and run/model inputs stay
@@ -2446,7 +2429,9 @@ c flavours. Equal scalar luminosities alone do not determine PD/IPROC.
             pd(0:iproc)=lum_pd(0:iproc,lum_hit)
             xlum=lum_value(lum_hit)
          else
+            if(timing_sampled)call timing_enter(timing_pdf)
             xlum=dlum()
+            if(timing_sampled)call timing_leave(timing_pdf)
             if(lum_cache_allowed)then
                lum_next=mod(lum_next,lum_cache_size)+1
                lum_count=min(lum_count+1,lum_cache_size)
@@ -2508,8 +2493,6 @@ c and not be part of the plots nor computation of the cross section.
             enddo
          endif
       enddo
-      call cpu_time(tAfter)
-      t_as=t_as+(tAfter-tBefore)
       return
       end
 
@@ -2907,8 +2890,8 @@ c wgts() array to include the weights.
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
       parameter (conv=389379660d0) ! conversion to picobarns
-      call cpu_time(tBefore)
-      if (icontr.eq.0) return
+      if(timing_sampled)call timing_enter(timing_reweight)
+      if (icontr.eq.0) goto 9909
 c currently we have 'iwgt' weights in the wgts() array.
       iwgt_save=iwgt
 c loop over all the contributions in the weight lines module
@@ -2935,7 +2918,9 @@ c factorisation scale variation (require recomputation of the PDFs)
                mu2_f(kf)=c_mu2_f*scalevarF(kf)**2
                q2fact(1)=mu2_f(kf)
                q2fact(2)=mu2_f(kf)
+               if(timing_sampled)call timing_enter(timing_pdf)
                xlum(kf) = dlum()
+               if(timing_sampled)call timing_leave(timing_pdf)
                if (separate_flavour_configs .and. ipr(i).ne.0) then
                   if (nincoming.eq.2) then
                      xlum(kf)=pd(ipr(i))*conv
@@ -2961,8 +2946,8 @@ c add the weights to the array
             enddo
          enddo
       enddo
-      call cpu_time(tAfter)
-      tr_s=tr_s+(tAfter-tBefore)
+ 9909 continue
+      if(timing_sampled)call timing_leave(timing_reweight)
       return
       end
 
@@ -2992,10 +2977,10 @@ c computations (ickkw.eq.-1).
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
       parameter (conv=389379660d0) ! conversion to picobarns
-      call cpu_time(tBefore)
+      if(timing_sampled)call timing_enter(timing_reweight)
       write(*,*) 'FIX NLLL'
       stop 1
-      if (icontr.eq.0) return
+      if (icontr.eq.0) goto 9909
       if (dyn_scale(0).gt.1) then
          write (*,*) "When doing NNLL+NLO veto, "/
      $        /"can only do one dynamical_scale_choice",dyn_scale(0)
@@ -3038,7 +3023,9 @@ c soft scale variation
                mu2_f(ks)=scales2(2,i)*scalevarR(ks)**2
                q2fact(1)=mu2_f(ks)
                q2fact(2)=mu2_f(ks)
+               if(timing_sampled)call timing_enter(timing_pdf)
                xlum(ks) = dlum()
+               if(timing_sampled)call timing_leave(timing_pdf)
                if (separate_flavour_configs .and. ipr(i).ne.0) then
                   if (nincoming.eq.2) then
                      xlum=pd(ipr(i))*conv
@@ -3069,8 +3056,8 @@ c special for the itype=7 (i.e, the veto-compensating factor)
             enddo
          enddo
       enddo
-      call cpu_time(tAfter)
-      tr_s=tr_s+(tAfter-tBefore)
+ 9909 continue
+      if(timing_sampled)call timing_leave(timing_reweight)
       return
       end
 
@@ -3098,8 +3085,8 @@ c wgts() array to include the weights.
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
       parameter (conv=389379660d0) ! conversion to picobarns
-      call cpu_time(tBefore)
-      if (icontr.eq.0) return
+      if(timing_sampled)call timing_enter(timing_reweight)
+      if (icontr.eq.0) goto 9909
       do nn=1,lhaPDFid(0)
 c Use as external loop the one over the PDF sets and as internal the one
 c over the icontr. This reduces the number of calls to InitPDF and
@@ -3120,7 +3107,9 @@ c allows for better caching of the PDFs
                q2fact(1)=mu2_f
                q2fact(2)=mu2_f
 c Compute the luminosity
+               if(timing_sampled)call timing_enter(timing_pdf)
                xlum = dlum()
+               if(timing_sampled)call timing_leave(timing_pdf)
                if (separate_flavour_configs .and. ipr(i).ne.0) then
                   if (nincoming.eq.2) then
                      xlum=pd(ipr(i))*conv
@@ -3139,8 +3128,8 @@ c add the weights to the array
          enddo
       enddo
       call InitPDFm(1,0)
-      call cpu_time(tAfter)
-      tr_pdf=tr_pdf+(tAfter-tBefore)
+ 9909 continue
+      if(timing_sampled)call timing_leave(timing_reweight)
       return
       end
 
@@ -3327,8 +3316,8 @@ c to greatly reduce the calls to the analysis routines.
       integer amp_pos_plot
       common /campposplot/ amp_pos_plot
       save max_weight
-      call cpu_time(tBefore)
-      if (icontr.eq.0) return
+      if(timing_sampled)call timing_enter(timing_analysis)
+      if (icontr.eq.0) goto 9909
 c fill the plots_wgts. Check if we can sum weights together before
 c calling the analysis routines. This is the case if the PDG codes and
 c the momenta are identical.
@@ -3407,8 +3396,8 @@ c call the analysis/histogramming routines
             call outfun(momenta(0,1,i),y_bst(i),www,pdg(1,i),plot_id(i))
          endif
       enddo
-      call cpu_time(tAfter)
-      t_plot=t_plot+(tAfter-tBefore)
+ 9909 continue
+      if(timing_sampled)call timing_leave(timing_analysis)
       return
       end
 
@@ -3560,7 +3549,6 @@ c various FKS configurations can be summed together.
       include 'genps.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
-      include 'timing_variables.inc'
       integer i,j,ii,jj,i_soft,nfolds,ifold_sample
       logical momenta_equal,pdg_equal,equal,found_S,colour_con_equal
       logical collect_born_spread
@@ -3568,7 +3556,6 @@ c various FKS configurations can be summed together.
       integer iproc_save(fks_configs),eto(maxproc,fks_configs),
      &     etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
-      call cpu_time(tBefore)
       collect_born_spread=(born_spread_phase.eq.1.or.
      $                     born_spread_phase.eq.2)
       if (collect_born_spread) then
@@ -3678,8 +3665,6 @@ c in the spreading factor and must not cancel the fitted nonvirtual row.
          endif
       enddo
       call pack_contribution_groups
-      call cpu_time(tAfter)
-      t_isum=t_isum+(tAfter-tBefore)
       return
       end
 
@@ -4015,7 +4000,6 @@ c PS point that should be written in the event file.
       include 'genps.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
-      include 'timing_variables.inc'
       integer i,j,k,l,iFKS_picked,ict,ifold_picked,jj,ii
       double precision tot_sum,rnd,ran2,current,target
       external ran2
@@ -4040,7 +4024,6 @@ c PS point that should be written in the event file.
       integer need_matching(nexternal)
       common /c_need_matching_to_write/ need_matching
 
-      call cpu_time(tBefore)
       if (icontr.eq.0) return
       tot_sum=0d0
       do i=1,icontr
@@ -4134,8 +4117,6 @@ c soft singularity with the FKS configuration randomly chosen.
       endif
       evtsgn=sign(1d0,unwgt(iproc_picked,icontr_picked))
       need_matching(1:nexternal)=need_match(1:nexternal,icontr_picked)
-      call cpu_time(tAfter)
-      t_p_unw=t_p_unw+(tAfter-tBefore)
       return
       end
 
@@ -4575,6 +4556,7 @@ c squared reduced by the FKS damping factor xi**2*(1-y).
 c Close to the soft or collinear limits it calls the corresponding
 c Born and multiplies with the AP splitting function or eikonal factors.
       implicit none
+      include 'timing_variables.inc'
       include "nexternal.inc"
       include "coupl.inc"
       include "fks_info.inc"
@@ -4647,7 +4629,9 @@ c has soft singularities
             amp_split(1:amp_split_size) = 0d0
          endif
       else
+         if(timing_sampled)call timing_enter(timing_real)
          call smatrix_real(pp,wgt)
+         if(timing_sampled)call timing_leave(timing_real)
          wgt=wgt*xi_i_fks**2*(1d0-y_ij_fks)
          amp_split(1:amp_split_size) = amp_split(1:amp_split_size)*xi_i_fks**2*(1d0-y_ij_fks)
       endif
@@ -7041,8 +7025,9 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
          if (born_spread_phase.ne.1.and.born_spread_phase.ne.2) then
           if ((ran2().le.virtual_fraction(ichan) .and.
      $         abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
-            call cpu_time(tBefore)
+            if(timing_sampled)call timing_enter(timing_virtual)
             Call BinothLHA(p_born,born_wgt,virt_wgt)
+            if(timing_sampled)call timing_leave(timing_virtual)
             do iamp=1,amp_split_size
                amp_split_virt(iamp)=amp_split_finite_ML(iamp)
             enddo
@@ -7070,8 +7055,6 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
      &                 /virtual_fraction(ichan)
                enddo
             endif
-            call cpu_time(tAfter)
-            tOLP=tOLP+(tAfter-tBefore)
           endif
          endif
          virt_wgt_save=virt_wgt

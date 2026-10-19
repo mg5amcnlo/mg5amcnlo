@@ -1487,6 +1487,8 @@ contains
     double precision, dimension(nintegrals) :: f1
     double precision, dimension(ndimmax) :: x
     double precision, external :: fun
+    ! Select once per complete point; never consume physics random numbers.
+    call timing_begin_point()
     ! contribution to integral
     ifirst=0
     if(imode.eq.0) then
@@ -1510,6 +1512,7 @@ contains
        dummy=fun(x,vol,ifirst,f1)
        f(1:nintegrals)=f1(1:nintegrals)
     endif
+    call timing_end_point()
   end subroutine compute_integrand
 
   subroutine get_mint_wgt(x,vol)

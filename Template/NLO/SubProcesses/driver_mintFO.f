@@ -65,8 +65,7 @@ c statistics for MadLoop
       include 'orders.inc'
 
 c timing statistics
-      include "timing_variables.inc"
-      real*4 tOther, tTot
+      double precision job_started,job_finished,tTot
 
 c PineAPPL
       logical pineappl
@@ -86,7 +85,8 @@ c Write the process PID in the log.txt files (i.e., to the screen)
 c
 c     Setup the timing variable
 c
-      call cpu_time(tBefore)
+      call timing_reset()
+      call cpu_time(job_started)
       fixed_order=.true.
       nlo_ps=.false.
 
@@ -253,33 +253,9 @@ c
          enddo
       endif
 
-      call cpu_time(tAfter)
-      tTot = tAfter-tBefore
-      tOther = tTot - (tBorn+tGenPS+tReal+tCount+tIS+tFxFx+tf_nb+tf_all
-     &     +t_as+tr_s+tr_pdf+t_plot+t_cuts+t_MC_subt+t_isum+t_p_unw
-     $     +t_write+t_ewsud+t_coupl)
-      write(*,*) 'Time spent in Born : ',tBorn
-      write(*,*) 'Time spent in PS_Generation : ',tGenPS
-      write(*,*) 'Time spent in Reals_evaluation: ',tReal
-      write(*,*) 'Time spent in MCsubtraction : ',t_MC_subt
-      write(*,*) 'Time spent in Counter_terms : ',tCount
-      write(*,*) 'Time spent in Integrated_CT : ',tIS-tOLP
-      write(*,*) 'Time spent in Virtuals : ',tOLP      
-      write(*,*) 'Time spent in FxFx_cluster : ',tFxFx
-      write(*,*) 'Time spent in Nbody_prefactor : ',tf_nb
-      write(*,*) 'Time spent in N1body_prefactor : ',tf_all
-      write(*,*) 'Time spent in Adding_alphas_pdf : ',t_as
-      write(*,*) 'Time spent in Reweight_scale : ',tr_s
-      write(*,*) 'Time spent in Reweight_pdf : ',tr_pdf
-      write(*,*) 'Time spent in Filling_plots : ',t_plot
-      write(*,*) 'Time spent in Applying_cuts : ',t_cuts
-      write(*,*) 'Time spent in Sum_ident_contr : ',t_isum
-      write(*,*) 'Time spent in Pick_unwgt : ',t_p_unw
-      write(*,*) 'Time spent in Write_events : ',t_write
-      write(*,*) 'Time spent in EW_sudakov : ',t_ewsud
-      write(*,*) 'Time spent in AlphaS_dependencies : ',t_coupl
-      write(*,*) 'Time spent in Other_tasks : ',tOther
-      write(*,*) 'Time spent in Total : ',tTot
+      call cpu_time(job_finished)
+      tTot=job_finished-job_started
+      call timing_report(tTot)
 
       open (unit=12, file='res.dat',status='unknown')
       do kchan=0,nchans
@@ -298,31 +274,6 @@ c
       end
 
 
-      block data timing
-c timing statistics
-      include "timing_variables.inc"
-      data tOLP/0.0/
-      data tGenPS/0.0/
-      data tBorn/0.0/
-      data tIS/0.0/
-      data tReal/0.0/
-      data tCount/0.0/
-      data tFxFx/0.0/
-      data tf_nb/0.0/
-      data tf_all/0.0/
-      data t_as/0.0/
-      data tr_s/0.0/
-      data tr_pdf/0.0/
-      data t_plot/0.0/
-      data t_cuts/0.0/
-      data t_MC_subt/0.0/
-      data t_isum/0.0/
-      data t_p_unw/0.0/
-      data t_write/0.0/
-      data t_coupl/0.0/
-      end
-
-      
       double precision function sigint(xx,vegas_wgt,ifl,f)
       use fks_phase_space_data, only: p1_cnt,jac_cnt,p_born
       use fks_phase_space, only: fks_phase_space_point,

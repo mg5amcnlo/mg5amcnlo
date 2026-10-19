@@ -10,11 +10,9 @@ c        argument
 
 c timing statistics
          include "timing_variables.inc"
-
-         call cpu_time(tbefore)
+         if(timing_sampled)call timing_enter(timing_pdf)
          pdg2pdf_timed = pdg2pdf(ih,ipdg,x,xmu)
-         call cpu_time(tAfter)
-         tPDF = tPDF + (tAfter-tBefore)
+         if(timing_sampled)call timing_leave(timing_pdf)
          return
 
       end

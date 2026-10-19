@@ -31,6 +31,7 @@ class TestClusterOptimization(unittest.TestCase):
         for name, source in includes.items():
             (work / name).write_text(''.join('      ' + line + '\n'
                                            for line in source.splitlines()))
+        shutil.copyfile(TEMPLATE / 'timing_variables.inc', work / 'timing_variables.inc')
         (work / 'state.f90').write_text(
             'module fks_phase_space_data\n'
             'double precision :: p_born(0:3,5),p_ev(0:3,6)\nend module\n'
@@ -60,7 +61,7 @@ class TestClusterOptimization(unittest.TestCase):
         (work / 'clustering.f').write_text('\n'.join(routines))
         cls.executable = work / 'check_cluster_optimization'
         result = subprocess.run([
-            shutil.which('gfortran'), '-O2', '-g', '-std=legacy', '-fno-automatic',
+            shutil.which('gfortran'), str(TEMPLATE.parent / 'Source/timing.f'), '-O2', '-g', '-std=legacy', '-fno-automatic',
             '-ffixed-line-length-132', '-fcheck=all', '-fbacktrace',
             '-finit-integer=-777', '-finit-real=snan', '-ffpe-trap=invalid,zero,overflow',
             '-I', str(work), str(work / 'state.f90'), str(work / 'cached.f'),
