@@ -229,6 +229,8 @@ driver_mintFO.o driver_mintMC.o write_event.o add_write_info.o \
 driver_mintFO.o: process_module.o
 mint_module.o : FKSParams.o virtual_pooled.o
 virtual_pooled.o : virtual_envelope_carrier.o
+fks_singular.o genps_fks.o setscales.o cuts.o fastjet_wrapper.o \
+    cluster.o mc_native_runtime.o born_support.o: timing_variables.inc
 BinothLHA_OLP.o: FKSParams.o
 BinothLHA.o: FKSParams.o virtual_pooled.o
 reweight_xsec_events.o: weight_lines.o

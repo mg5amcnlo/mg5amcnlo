@@ -28,11 +28,11 @@ class TestDeferredVirtual(unittest.TestCase):
             'coupl.inc': 'double precision g\ncommon/test_g/g',
             'run.inc': 'double precision scale\ncommon/test_scale/scale',
             'q_es.inc': 'double precision QES2\ncommon/coupl_es/QES2',
-            'timing_variables.inc': 'double precision tOLP\ncommon/test_timing/tOLP',
         }
         for name, contents in includes.items():
             (work / name).write_text(''.join('      '+line+'\n'
                                            for line in contents.splitlines()))
+        shutil.copyfile(TEMPLATE / 'timing_variables.inc', work / 'timing_variables.inc')
         # Extract the actual implementation rather than duplicating its
         # conversion logic in a test-only helper.
         routine = fortran_routine(TEMPLATE / 'fks_singular.f',
@@ -42,6 +42,7 @@ class TestDeferredVirtual(unittest.TestCase):
         result = subprocess.run([
             shutil.which('gfortran'), '-O2', '-fcheck=all', '-fno-automatic',
             '-std=legacy', '-ffixed-line-length-none', '-I', str(work),
+            str(TEMPLATE.parent / 'Source/timing.f'),
             str(TEMPLATE / 'weight_lines.f'),
             str(ROOT / 'tests/input_files/check_deferred_virtual.f90'),
             str(work / 'callback.f'), '-o', str(cls.executable)],

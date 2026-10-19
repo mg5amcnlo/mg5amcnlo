@@ -10,7 +10,6 @@
       include "genps.inc"
       include "unlops.inc"
       include "run.inc"
-      include 'timing_variables.inc'
       logical Hevents
       common/SHevents/Hevents
       integer i,j,lunlhe,p_label
@@ -28,7 +27,6 @@
       double precision shower_scale_a(-nexternal+3:2
      $     *nexternal-3,-nexternal+3:2*nexternal-3)
       type(fks_phase_space_point) phase_space
-      call cpu_time(tBefore)
 
       do i=1,99
         if(i.le.ndim)then
@@ -97,8 +95,6 @@ c Write-out the events
       call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe
      $     ,ickkw,shower_scale_a,p_label)
       
-      call cpu_time(tAfter)
-      t_write=t_write+(tAfter-tBefore)
       return
       end
 

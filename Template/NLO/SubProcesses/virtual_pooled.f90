@@ -2,7 +2,6 @@
 ! only the controller fits a model, at the end-of-first-step synchronization.
 ! No matrix elements or random numbers are evaluated here.
 module virtual_pooled
-  use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
   use virtual_envelope_carrier, only: virtual_envelope_carrier_factor
   implicit none
   private
@@ -175,6 +174,7 @@ contains
   end subroutine
 
   subroutine pooled_virtual_prepare(p,mass,incoming,pdg,mur2,ratio,qes2,conditional,context_valid,coupling,colours)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     real(dp), intent(in) :: p(0:,:),mass(:),mur2
     logical, intent(in) :: incoming(:)
     integer, intent(in) :: pdg(:)
@@ -271,6 +271,7 @@ contains
   end subroutine
 
   subroutine predict_common()
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     real(dp) :: value,xa,xb,xc
     integer :: k,r
     pooled_virtual_ratio=raw_ratio
@@ -318,6 +319,7 @@ contains
   end function
 
   subroutine pooled_virtual_mark_sampled(probability)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     real(dp), intent(in) :: probability
     if(.not.pooled_virtual_enabled) return
     if(.not.ieee_is_finite(probability)) call fail('nonfinite virtual probability')
@@ -328,6 +330,7 @@ contains
   end subroutine
 
   subroutine pooled_virtual_observe(born,residual,channel,iteration,x,bins)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     real(dp), intent(in) :: born(:),residual(:)
     integer, intent(in) :: channel,iteration
     real(dp), intent(in) :: x(:)
@@ -403,6 +406,7 @@ contains
   end function
 
   pure recursive subroutine pooled_virtual_probabilities(weights,multiplicity,q,valid)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     real(dp),intent(in) :: weights(:,:)
     integer,intent(in) :: multiplicity(:)
     real(dp),intent(out) :: q(size(multiplicity))
@@ -473,6 +477,7 @@ contains
   end subroutine
 
   subroutine pooled_virtual_set_selection(is_full,actual_id,probability)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     logical,intent(in) :: is_full
     integer,intent(in) :: actual_id
     real(dp),intent(in) :: probability
@@ -636,6 +641,7 @@ contains
   end subroutine
 
   subroutine read_model()
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     integer :: unit,ios,version_orders,k,order,r,nt,degree,model_nx,nm,version,nscalar,nmassive
     real(dp) :: unique(maxlegs)
     integer, allocatable :: incoming_int(:)
@@ -742,6 +748,7 @@ contains
   end subroutine
 
   recursive subroutine read_neural_model()
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     integer :: unit,ios,cat,nfeat,nord,nleg,ncoord,nh,k,r,h,i,j,enabled,order,w1,w2,ident,mult,version,nsym
     integer,allocatable :: pdg(:),flags(:),labels(:),colours(:)
     logical,allocatable :: unrepresented(:)
@@ -1150,6 +1157,7 @@ contains
   end subroutine
 
   recursive subroutine neural_correction(model,z,delta)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     type(neural_model),intent(in) :: model
     real(dp),intent(in) :: z(:)
     real(dp),intent(out) :: delta(:)
@@ -1172,6 +1180,7 @@ contains
   end subroutine
 
   recursive subroutine canonical_coordinates(p,incoming,coordinates,valid)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     real(dp),intent(in) :: p(0:,:)
     logical,intent(in) :: incoming(:)
     real(dp),intent(out) :: coordinates(0:3,size(incoming))
@@ -1262,6 +1271,7 @@ contains
   end function
 
   subroutine pooled_virtual_antenna_remainder(p,incoming,i,j,k,value,valid)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     real(dp),intent(in) :: p(0:,:)
     logical,intent(in) :: incoming(:)
     integer,intent(in) :: i,j,k
@@ -1289,6 +1299,7 @@ contains
   end subroutine
 
   subroutine pooled_virtual_dipole_inputs(p,mass,incoming,qes2,correlation,x,valid)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     ! Colour-space one-loop logarithms and the massive cusp/Coulomb shapes.
     ! Correlations retain the Born provider's normalization and sign. Their
     ! coefficients are fitted, not assumed universal for finite remainders.
@@ -1336,6 +1347,7 @@ contains
   end subroutine
 
   subroutine pooled_virtual_invariants(p,mass,incoming,pdg,mur2,cat,x,valid,qes2,orientation,thresholds,physics)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     real(dp),intent(in) :: p(0:,:),mass(:),mur2
     logical,intent(in) :: incoming(:)
     integer,intent(in) :: pdg(:)

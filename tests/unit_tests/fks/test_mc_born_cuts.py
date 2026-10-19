@@ -40,7 +40,7 @@ class TestMCBornCuts(unittest.TestCase):
                 ['g++', '-O1', '-std=c++11', '-c',
                  str(TEMPLATE / 'fastjetfortran_madfks_core.cc'),
                  str(TEMPLATE / 'fjcore.cc')],
-                ['gfortran', '-O2', '-fcheck=all', '-fbacktrace',
+                ['gfortran', str(TEMPLATE.parent / 'Source/timing.f'), '-O2', '-fcheck=all', '-fbacktrace',
                  '-ffunction-sections', '-fdata-sections',
                  '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',
                  '-ffixed-line-length-none', '-I', str(work), '-I', str(TEMPLATE),

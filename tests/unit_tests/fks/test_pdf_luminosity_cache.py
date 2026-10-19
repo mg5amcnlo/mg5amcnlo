@@ -41,7 +41,7 @@ class TestPDFLuminosityCache(unittest.TestCase):
                              'find_virtual_mint_carrier')))
             executable = work / 'check_pdf_cache'
             result = subprocess.run([
-                shutil.which('gfortran'), '-O2', '-std=legacy', '-fcheck=all',
+                shutil.which('gfortran'), str(TEMPLATE.parent / 'Source/timing.f'), '-O2', '-std=legacy', '-fcheck=all',
                 '-ffixed-line-length-none', '-I', str(work),
                 str(work / 'modules.f90'), str(TEMPLATE / 'weight_lines.f'),
                 str(ROOT / 'Template/NLO/Source/extra_weights.f'),

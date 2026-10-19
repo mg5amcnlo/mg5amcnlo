@@ -215,7 +215,7 @@ class TestPythia8Matching(unittest.TestCase):
         }
         for variant, flags in variants.items():
             executable = work / ('check_' + variant)
-            command = [shutil.which('gfortran'), *flags, '-std=legacy',
+            command = [shutil.which('gfortran'), str(TEMPLATE.parent / 'Source/timing.f'), *flags, '-std=legacy',
                        '-ffixed-line-length-none', '-fno-automatic',
                        '-ffunction-sections', '-fdata-sections',
                        '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',

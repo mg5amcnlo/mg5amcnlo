@@ -73,8 +73,8 @@ c put momenta in common block for couplings.f
       logical firsttime
       data firsttime/.true./
 
-      call cpu_time(tBefore)
 c
+      if(timing_sampled)call timing_enter(timing_scales)
       if (firsttime) then
         firsttime=.false.
 c Set scales and check that everything is all right
@@ -151,11 +151,10 @@ c Pass momenta to couplings.f
 cc         call setpara('param_card.dat')
       endif
 
-      call cpu_time(tAfter)
-      t_coupl=t_coupl+(tAfter-tBefore)
       
  200  format(1x,a,2(1x,d12.6),2x,f4.2)
 
+      if(timing_sampled)call timing_leave(timing_scales)
       return
       end
 

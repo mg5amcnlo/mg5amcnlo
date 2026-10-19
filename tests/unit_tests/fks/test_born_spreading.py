@@ -38,7 +38,7 @@ def mint_support(work, real_weight_lines=False, real_fks_params=False):
         (work / 'orders.inc').write_text(
             '      integer nsplitorders\n      parameter(nsplitorders=1)\n')
         support.append(str(TEMPLATE / 'FKSParams.f90'))
-    return support + [str(work / 'params.f90'),
+    return support + [str(TEMPLATE.parent / 'Source/timing.f'), str(work / 'params.f90'),
             str(TEMPLATE / 'virtual_envelope_carrier.f90'),
             str(TEMPLATE / 'virtual_pooled.f90'),
             str(TEMPLATE / 'mint_module.f90'),

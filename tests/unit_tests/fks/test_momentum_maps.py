@@ -148,7 +148,7 @@ class TestMomentumMaps(unittest.TestCase):
                 ROOT / "Template/NLO/Source/kin_functions.f", name))
         (work / "maps.f").write_text("\n".join(routines))
         cls.executable = work / "check_maps"
-        command = [shutil.which("gfortran"), "-O2", "-std=legacy",
+        command = [shutil.which("gfortran"), str(TEMPLATE.parent / 'Source/timing.f'), "-O2", "-std=legacy",
                    "-ffixed-line-length-none", "-ffunction-sections",
                    "-fdata-sections", "-fcheck=all", "-fno-automatic",
                    "-Wl,-dead_strip" if sys.platform == "darwin" else "-Wl,--gc-sections",

@@ -50,7 +50,7 @@ class TestFxFxFixedOrder(unittest.TestCase):
                 'subroutine ' + name + '\nend subroutine' for name in noops))
             executable = work / 'check_fixed_order'
             result = subprocess.run([
-                shutil.which('gfortran'), '-O2', '-std=legacy', '-fcheck=all',
+                shutil.which('gfortran'), str(TEMPLATE.parent / 'Source/timing.f'), '-O2', '-std=legacy', '-fcheck=all',
                 '-ffixed-line-length-none', '-I', str(work),
                 str(ROOT / 'tests/input_files/check_fxfx_fixed_order.f90'),
                 str(work / 'driver.f'), str(work / 'fxfx.f'),

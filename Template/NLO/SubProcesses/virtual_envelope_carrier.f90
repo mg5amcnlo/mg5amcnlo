@@ -1,13 +1,13 @@
 ! Kinematic carrier for a residual envelope near massive-pair thresholds.
 ! This module evaluates no matrix elements and consumes no random numbers.
 module virtual_envelope_carrier
-  use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
   implicit none
   private
   integer, parameter :: dp=kind(1d0)
   public :: virtual_envelope_carrier_factor
 contains
   pure recursive subroutine virtual_envelope_carrier_factor(p,mass,incoming,factor,valid)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     real(dp), intent(in) :: p(0:,:),mass(:)
     logical, intent(in) :: incoming(:)
     real(dp), intent(out) :: factor

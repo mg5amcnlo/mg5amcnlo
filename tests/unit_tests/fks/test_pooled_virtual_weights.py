@@ -57,6 +57,7 @@ class TestPooledVirtualWeights(unittest.TestCase):
         result = subprocess.run([
             shutil.which('gfortran'), '-O2', '-fcheck=all', '-fno-automatic',
             '-std=legacy', '-ffixed-line-length-none', '-I', str(work),
+            str(TEMPLATE.parent / 'Source/timing.f'),
             str(TEMPLATE / 'weight_lines.f'),
             str(ROOT / 'Template/NLO/Source/extra_weights.f'),
             str(ROOT / 'tests/input_files/pooled_virtual_weight_context.f90'),

@@ -783,7 +783,7 @@ class TestBornLibrary(unittest.TestCase):
                          'native_helpers.f','native_flows.f','check_native.f']
                 self.run_command(['gfortran','-O0','-g','-fcheck=all',
                     '-ffixed-line-length-none','-ffree-line-length-none','-ffunction-sections',
-                    '-I'+str(output/'lib'),*paths,
+                    '-I'+str(output/'lib'),str(output/'Source/timing.f'),*paths,
                     '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',
                     '-L'+str(output/'lib'),'-lmc_born_support','-Wl,-rpath,'+self.origin+'/../../lib',
                     '-o','check_native'],directory)

@@ -10,7 +10,7 @@ STDHEPDIR= ./StdHEP/
 
 GENERIC = $(alfas_functions).o rw_routines.o kin_functions.o		\
 	  run_printout.o dgauss.o ranmar.o setrun.o derivative.o	\
-	  zerox64_cernlib.o
+	  zerox64_cernlib.o timing.o
 
 ifneq ("$(wildcard ./RUNNING)","")
 	LINKLIBS += -lrunning
@@ -49,6 +49,8 @@ $(LIBDIR)libgeneric.a: $(GENERIC)
 
 setrun.o: run_card.inc extra_weights.o
 	$(FC) $(FFLAGS) -c -o setrun.o setrun.f
+
+timing.o: timing_variables.inc
 
 $(LIBDIR)libpdf.a: PDF
 	rm -f $(LIBDIR)libpdf.a

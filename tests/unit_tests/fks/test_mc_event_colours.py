@@ -17,7 +17,7 @@ class TestMCEventColours(unittest.TestCase):
             work = Path(tmp)
             executable = work / 'check_weight_lines'
             result = subprocess.run([
-                shutil.which('gfortran'), '-O2', '-std=legacy', '-fcheck=all',
+                shutil.which('gfortran'), str(TEMPLATE.parent / 'Source/timing.f'), '-O2', '-std=legacy', '-fcheck=all',
                 '-ffixed-line-length-none', str(TEMPLATE / 'weight_lines.f'),
                 str(ROOT / 'tests/input_files/check_weight_lines.f90'),
                 '-o', str(executable)], cwd=work, capture_output=True, text=True)
@@ -63,7 +63,7 @@ class TestMCEventColours(unittest.TestCase):
                 fortran_routine(TEMPLATE / filename, name) for filename, name in routines))
             executable = work / 'check_colours'
             result = subprocess.run([
-                shutil.which('gfortran'), '-O2', '-std=legacy', '-fcheck=all',
+                shutil.which('gfortran'), str(TEMPLATE.parent / 'Source/timing.f'), '-O2', '-std=legacy', '-fcheck=all',
                 '-ffixed-line-length-none', '-ffunction-sections', '-fdata-sections',
                 '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',
                 '-I', str(work), str(work / 'contexts.f90'),

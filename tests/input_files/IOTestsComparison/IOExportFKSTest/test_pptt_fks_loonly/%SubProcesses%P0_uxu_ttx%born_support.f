@@ -4,6 +4,7 @@
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
+      include 'timing_variables.inc'
       double precision p(0:3,nexternal-1)
       type(BornRequest) request
       type(BornResult) result
@@ -16,6 +17,7 @@
       COMMON/PARAMS_R/ MDL_SQRT__AS,MDL_G__EXP__2,MDL_CONJG__CKM3X3  ,MDL_CONJG__CKM1X1,MDL_CKM3X3,MDL_MZ__EXP__2,MDL_MZ__EXP__4  ,MDL_SQRT__2,MDL_MH__EXP__2,MDL_AEW,MDL_SQRT__AEW,MDL_EE  ,MDL_MW__EXP__2,MDL_SW2,MDL_CW,MDL_SQRT__SW2,MDL_SW,MDL_G1  ,MDL_GW,MDL_VEV,MDL_VEV__EXP__2,MDL_LAM,MDL_YB,MDL_YT,MDL_YTAU  ,MDL_MUH,MDL_EE__EXP__2,MDL_SW__EXP__2,MDL_CW__EXP__2,AEWM1  ,MDL_GF,AS,MDL_YMB,MDL_YMT,MDL_YMTAU
       DOUBLE COMPLEX MDL_COMPLEXI,MDL_I1X33,MDL_I2X33,MDL_I3X33  ,MDL_I4X33
       COMMON/PARAMS_C/ MDL_COMPLEXI,MDL_I1X33,MDL_I2X33,MDL_I3X33  ,MDL_I4X33
+      if(timing_sampled)call timing_enter(timing_born)
       call born_model_dimensions(nr,nc)
       call born_resize_model_state(state,nr,nc)
       state%%real_values(1)=g
@@ -82,6 +84,7 @@
       write(*,*)'Born support evaluation failed',status
       stop 1
       endif
+      if(timing_sampled)call timing_leave(timing_born)
       end
       subroutine mc_capture_model_state(state)
       use mc_born_support

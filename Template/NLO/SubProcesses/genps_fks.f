@@ -118,12 +118,12 @@ c cnbody is true, so this entry must not mean "Born momenta only".
       include 'timing_variables.inc'
       integer ndim,iconfig
       double precision wgt,x(99),p(0:3,nexternal),
-     $     p_lab(0:3,nexternal),p_cms(0:3,nexternal),started,finished
+     $     p_lab(0:3,nexternal),p_cms(0:3,nexternal)
       logical nbody
       common/cnbody/nbody
       type(fks_phase_space_point) point
 
-      call cpu_time(started)
+      if(timing_sampled)call timing_enter(timing_phase_space)
       point=fks_phase_space_point()
       call initialize_fks_phase_space(iconfig)
       call generate_prepared_fks_point(ndim,x,nbody,wgt,
@@ -131,8 +131,8 @@ c cnbody is true, so this entry must not mean "Born momenta only".
       p=point%p
       p_lab=point%p_lab
       p_cms=point%p_cms
-      call cpu_time(finished)
-      tGenPS=tGenPS+finished-started
+      if(timing_sampled)call timing_leave(timing_phase_space)
+      return
       end subroutine generate_momenta
 
 
@@ -144,16 +144,16 @@ c sampling a plain Born point, whose measure contains no radiation.
       implicit none
       include 'timing_variables.inc'
       integer ndim,iconfig
-      double precision wgt,x(99),started,finished
+      double precision wgt,x(99)
       type(fks_phase_space_point),intent(out) :: point
 
-      call cpu_time(started)
+      if(timing_sampled)call timing_enter(timing_phase_space)
       point=fks_phase_space_point()
       call initialize_fks_phase_space(iconfig)
       call generate_prepared_fks_point(ndim,x,.true.,wgt,
      $     point)
-      call cpu_time(finished)
-      tGenPS=tGenPS+finished-started
+      if(timing_sampled)call timing_leave(timing_phase_space)
+      return
       end subroutine generate_born_contribution
 
 
@@ -172,13 +172,13 @@ c must use generate_born_contribution instead.
       double precision wgt,x(99),p(0:3,nexternal),
      $     p_lab(0:3,nexternal),p_cms(0:3,nexternal),
      $     xp(0:3,nexternal),p_i_fks(0:3),jac,xpswgt,dummy,
-     $     started,finished,ycm,zero
+     $     ycm,zero
       parameter(zero=0d0)
       type(fks_born_point) born
       type(fks_phase_space_point),intent(out) :: point
       logical pass
 
-      call cpu_time(started)
+      if(timing_sampled)call timing_enter(timing_phase_space)
       call initialize_fks_phase_space(iconfig)
       call sample_fks_born_point(ndim,x,born,pass)
       if(.not.pass)then
@@ -211,8 +211,8 @@ c must use generate_born_contribution instead.
  900  continue
       call record_fks_phase_space(point,born,wgt,p,p_lab,p_cms)
       point%nbody_only=.true.
-      call cpu_time(finished)
-      tGenPS=tGenPS+finished-started
+      if(timing_sampled)call timing_leave(timing_phase_space)
+      return
       end subroutine generate_born_event
 
 
@@ -223,15 +223,15 @@ c agrees. Otherwise sample a new one, including the coupled lepton map.
       implicit none
       include 'timing_variables.inc'
       integer ndim,iconfig
-      double precision wgt,x(99),started,finished
+      double precision wgt,x(99)
       type(fks_phase_space_point),intent(inout) :: point
 
-      call cpu_time(started)
+      if(timing_sampled)call timing_enter(timing_phase_space)
       call initialize_fks_phase_space(iconfig)
       call generate_prepared_fks_point(ndim,x,.false.,wgt,
      $     point)
-      call cpu_time(finished)
-      tGenPS=tGenPS+finished-started
+      if(timing_sampled)call timing_leave(timing_phase_space)
+      return
       end subroutine generate_real_phase_space
 
 
@@ -303,15 +303,20 @@ c Sample only a Born point in the initialized channel. For lepton maps
 c without event projection this is the soft Born point; it cannot be
 c reused for their radiation-dependent reduced Born systems.
       implicit none
+      include 'timing_variables.inc'
       integer ndim
       double precision x(99),m(-max_branch:max_particles),
      $     s(-max_branch:max_particles),totmass
       type(fks_born_point) born
       logical pass
 
+      if(timing_sampled)call timing_enter(timing_phase_space)
       call prepare_fks_beam_point(ndim,x,born,m,s,totmass,pass)
-      if(.not.pass)return
+      if(.not.pass)goto 9909
       call sample_prepared_fks_born(x,born,m,s,totmass,pass)
+ 9909 continue
+      if(timing_sampled)call timing_leave(timing_phase_space)
+      return
       end subroutine sample_fks_born_point
 
 
@@ -322,6 +327,7 @@ c Prepare current masses and sample incoming fractions. No mass sums
 c are cached: event output may temporarily replace the external masses.
       use mc_native_context, only: native_epoch,native_mapping
       implicit none
+      include 'timing_variables.inc'
       include 'run.inc'
       integer ndim,i,i_fks,j_fks,this_config,nFKSprocess
       double precision x(99),m(-max_branch:max_particles),
@@ -338,6 +344,7 @@ c are cached: event output may temporarily replace the external masses.
       common/c_qmass_qwidth/qmass,qwidth
       common/to_ee_omx1/omx
 
+      if(timing_sampled)call timing_enter(timing_phase_space)
       born=fks_born_point()
       pass=.false.
       if(ndim.lt.3.or.ndim.gt.size(x))then
@@ -374,7 +381,7 @@ c with no preceding tau coordinate; never form the unused x(0:1) slice.
       call generate_tau_y_wrapper(qmass,qwidth,totmass,born%stot,
      $     beam_coordinates,born%tau,born%ycm,born%ycmhat,
      $     born%xjac)
-      if(born%xjac.lt.0d0)return
+      if(born%xjac.lt.0d0)goto 9909
       born%xbjrk(1)=sqrt(born%tau)*exp(born%ycm)
       born%xbjrk(2)=sqrt(born%tau)*exp(-born%ycm)
 c The old local one_body was uninitialized. Match the multiplicity
@@ -410,6 +417,9 @@ c condition in initialize_born_chart and avoid threshold roundoff.
       born%beams=lpp
       born%limit_tests=[softtest,colltest]
       pass=.true.
+ 9909 continue
+      if(timing_sampled)call timing_leave(timing_phase_space)
+      return
       end subroutine prepare_fks_beam_point
 
 
@@ -540,6 +550,7 @@ c must already be installed. The immutable Born measures never include
 c the caller weight: apply it once to real and counterevent Jacobians.
       use fks_phase_space_helpers, only: boost_n1_to_its_cms,boost_n1_to_lab
       implicit none
+      include 'timing_variables.inc'
       type(fks_born_point),intent(in) :: born
       type(fks_phase_space_point),intent(out) :: point
       logical,intent(in) :: nbody_only
@@ -552,6 +563,7 @@ c the caller weight: apply it once to real and counterevent Jacobians.
       common/to_ee_omx1/omx
       common/to_use_evpr/use_evpr
 
+      if(timing_sampled)call timing_enter(timing_phase_space)
       pass=.false.
       p=0d0
       p(0,1)=-99d0
@@ -589,6 +601,8 @@ c the caller weight: apply it once to real and counterevent Jacobians.
       point%radiation_coordinates=rad
       point%has_radiation=.true.
       point%nbody_only=nbody_only
+      if(timing_sampled)call timing_leave(timing_phase_space)
+      return
       end subroutine generate_fks_radiation
 
 
@@ -1301,6 +1315,7 @@ c run_card). This fix is needed for set_cms_stuff to work properly.
       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       use mc_native_context, only: native_mapping
       implicit none
+      include 'timing_variables.inc'
       include 'run.inc'
       double precision p_input(0:3,nexternal),p(0:3,nexternal),
      $     p_lab(0:3,nexternal),p_cms(0:3,nexternal),jac
@@ -1326,6 +1341,7 @@ c run_card). This fix is needed for set_cms_stuff to work properly.
       type(fks_phase_space_point),optional,intent(out) :: point
       integer i
 
+      if(timing_sampled)call timing_enter(timing_phase_space)
       pass=.false.
       born=fks_born_point()
       x=0d0
@@ -1448,6 +1464,8 @@ c native generation inputs remain separately in generated%born.
       generated%bounds=bounds_save
       generated%omx=omx_save
       if(present(point))point=generated
+      if(timing_sampled)call timing_leave(timing_phase_space)
+      return
       end subroutine generate_native_momenta
 
 
@@ -1555,6 +1573,7 @@ c returned momenta and weighted measure. Capture endpoint metadata even
 c when an endpoint is invalid: in particular ycm_cnt(0) defines the
 c generation frame also for massive solutions with no counterevents.
       implicit none
+      include 'timing_variables.inc'
       integer slot,i_fks,j_fks,nFKSprocess,this_config
       common/fks_indices/i_fks,j_fks
       common/c_nFKSprocess/nFKSprocess
@@ -1565,6 +1584,7 @@ c generation frame also for massive solutions with no counterevents.
       common/to_ee_omx1/omx
       type(fks_phase_space_point),intent(inout) :: point
 
+      if(timing_sampled)call timing_enter(timing_phase_space)
       point%event%p=p_ev
       point%event%jacobian=point%weight
       if(p_ev(0,1).le.0d0.and.point%weight.gt.0d0)
@@ -1633,6 +1653,8 @@ c generation frame also for massive solutions with no counterevents.
       point%i_fks=i_fks
       point%j_fks=j_fks
       point%config=this_config
+      if(timing_sampled)call timing_leave(timing_phase_space)
+      return
       end subroutine capture_fks_phase_space
 
 
@@ -1650,6 +1672,7 @@ c Restore generated kinematics after another history used the module.
 c The caller must first reactivate the point's sector and channel; this
 c routine does not change process, shower, colour, PDF or coupling state.
       implicit none
+      include 'timing_variables.inc'
       integer slot,i_fks,j_fks,nFKSprocess,this_config
       common/fks_indices/i_fks,j_fks
       common/c_nFKSprocess/nFKSprocess
@@ -1660,6 +1683,7 @@ c routine does not change process, shower, colour, PDF or coupling state.
       common/to_ee_omx1/omx
       type(fks_phase_space_point),intent(in) :: point
 
+      if(timing_sampled)call timing_enter(timing_phase_space)
       if(point%sector.ne.nFKSprocess.or.point%i_fks.ne.i_fks.or.
      $     point%j_fks.ne.j_fks.or.point%config.ne.this_config)then
          write(*,*) 'FKS phase-space restore has a different context',
@@ -1719,6 +1743,8 @@ c routine does not change process, shower, colour, PDF or coupling state.
       initial_recoil_leg=point%initial_recoil_leg
       p_born_coll=point%p_born_coll
       p_born_norad=point%p_born_norad
+      if(timing_sampled)call timing_leave(timing_phase_space)
+      return
       end subroutine restore_fks_phase_space
 
 
@@ -1726,10 +1752,12 @@ c routine does not change process, shower, colour, PDF or coupling state.
 c Keep the reusable Born input separate from the complete generated
 c result. All caller weights have already been applied to Jacobians.
       implicit none
+      include 'timing_variables.inc'
       type(fks_phase_space_point),intent(out) :: point
       type(fks_born_point),intent(in) :: born
       double precision,intent(in) :: wgt,p(0:3,nexternal),
      $     p_lab(0:3,nexternal),p_cms(0:3,nexternal)
+      if(timing_sampled)call timing_enter(timing_phase_space)
       point=fks_phase_space_point()
       point%born=born
       point%p=p
@@ -1737,5 +1765,7 @@ c result. All caller weights have already been applied to Jacobians.
       point%p_cms=p_cms
       point%weight=wgt
       call capture_fks_phase_space(point)
+      if(timing_sampled)call timing_leave(timing_phase_space)
+      return
       end subroutine record_fks_phase_space
       end module fks_phase_space

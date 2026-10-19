@@ -54,7 +54,7 @@ module deferred_fixture
   use mint_module
   use weight_lines
   implicit none
-  double precision g,scale,qes2,mu_r,tOLP,virtual_over_born
+  double precision g,scale,qes2,mu_r,virtual_over_born
   double precision amp_split_virt(3),amp_split_born_for_virt(3),amp_split_avv(3)
   double precision amp_split_finite_ML(3)
   integer nFKSprocess
@@ -63,7 +63,6 @@ module deferred_fixture
   common/test_scale/scale
   common/coupl_es/qes2
   common/test_mu_r/mu_r
-  common/test_timing/tOLP
   common/c_vob/virtual_over_born
   common/c_nFKSprocess/nFKSprocess
   common/to_amp_split_virt/amp_split_virt,amp_split_born_for_virt,amp_split_avv
@@ -111,7 +110,7 @@ contains
     mu_r=5d0
     nFKSprocess=7
     active_history=3
-    tOLP=0d0
+    call timing_reset()
     virtual_over_born=1234d0
     updateloop=.false.
     call deferred_virtual_context(0,expected_born)

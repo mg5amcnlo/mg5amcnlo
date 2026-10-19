@@ -65,7 +65,8 @@
 !
 
 module mint_module
-  use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+  ! Keep IEEE imports local to the procedures using them. Module-level
+  ! imports make gfortran save/restore FPU state in unrelated module users.
   use FKSParams ! contains use_poly_virtual
   use virtual_pooled, only: pooled_virtual_init, pooled_virtual_begin_point, &
        pooled_virtual_prepare, pooled_virtual_ratio, pooled_virtual_actual_ratio, pooled_virtual_sampled, &
@@ -742,6 +743,7 @@ contains
   end function born_spread_get_factor
 
   subroutine born_spread_observe_sample(bvals,cvals,nvals,point_complete)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     implicit none
     integer, intent(in) :: nvals
     double precision, intent(in) :: bvals(*),cvals(*)
@@ -848,6 +850,7 @@ contains
   end subroutine born_spread_append
 
   subroutine born_spread_load_table
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     implicit none
     integer :: ios,version,nxi,ny,nexternal,nincoming,nfks,ndim_in
     integer :: i,j,isector
@@ -1498,6 +1501,7 @@ contains
   end subroutine add_point_to_bounding_envelope
      
   subroutine accumulate_the_point(x)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     implicit none
     integer :: i
     double precision, dimension(ndimmax) :: x
@@ -1542,6 +1546,8 @@ contains
     ! Also reached by event generation, whose cell selectors bypass
     ! get_random_x. Clear sampling state once, before all folds.
     if (use_pooled_virtual) call pooled_virtual_begin_point
+    ! Select once per complete point; never consume physics random numbers.
+    call timing_begin_point()
     ! contribution to integral
     ifirst=0
     if(imode.eq.0) then
@@ -1565,6 +1571,7 @@ contains
        dummy=fun(x,vol,ifirst,f1)
        f(1:nintegrals)=f1(1:nintegrals)
     endif
+    call timing_end_point()
   end subroutine compute_integrand
 
   subroutine get_mint_wgt(x,vol)
@@ -1921,6 +1928,7 @@ contains
   end subroutine write_grids_to_file
   
   subroutine read_grids_from_file
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
 ! Read the MINT integration grids from file
     implicit none
     integer :: i,j,k,kchan,idum,ios,envelope_version
@@ -2586,6 +2594,7 @@ contains
   end subroutine update_residual_envelope
 
   subroutine prepare_residual_envelope
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     implicit none
     integer :: kchan,kdim,kint,nintcurr
     double precision :: norm,total,largest,log_norm
@@ -2664,6 +2673,7 @@ contains
   end subroutine get_virtual_candidate
 
   subroutine observe_virtual_ratio(virtual,born)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     ! Step 1 uses the approximation frozen at the controller barrier. Observe
     ! existing exact evaluations only, before their Bernoulli reweighting.
     implicit none
@@ -2688,6 +2698,7 @@ contains
   end subroutine observe_virtual_ratio
 
   subroutine screen_virtual_carrier(carrier,other,accepted)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     ! A native cheap pass has already included all folds, PDFs, coupling and
     ! bias factors. Its positive carrier bounds each signed split order.
     implicit none

@@ -9,6 +9,20 @@ import unittest
 from tests.unit_tests.fks.test_momentum_maps import ROOT, TEMPLATE, fortran_routine
 
 
+CLUSTER_ROUTINES = (
+    'cluster_and_reweight', 'iforest_to_list',
+    'cluster', 'Reweighting', 'set_particle_type', 'reset_valid_confs',
+    'limit_cluster_iconfig', 'IsBreitWigner', 'remove_confs_BW',
+    'cluster_one_step', 'update_valid_confs', 'update_momenta',
+    'make_cluster_config_masks',
+    'update_imap', 'set_cluster_conf', 'link_clustering_to_iforest',
+    'set_cluster_pdg_2_1_process', 'update_cluster_scales',
+    'cluster_scale', 'get_clustering_type', 'qcd_vertex_mask',
+    'startQCDvertex', 'IR_cluster',
+    'matching_particles', 'fill_type', 'get_type', 'update_type',
+    'djb_clus', 'dj_clus', 'crossp', 'rotate', 'constr')
+
+
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
 class TestFxFxClustering(unittest.TestCase):
     @classmethod
@@ -36,34 +50,25 @@ class TestFxFxClustering(unittest.TestCase):
         }
         for filename, contents in includes.items():
             (work / filename).write_text(contents)
+        shutil.copyfile(TEMPLATE / 'timing_variables.inc', work / 'timing_variables.inc')
         # Exported topology and model data are supplied by the fixture. Retain
         # the production wrapper, clustering, reweighting and kinematic code.
         (work / 'state.f90').write_text(
             'module fks_phase_space_data\n'
             'double precision :: p_born(0:3,3),p_ev(0:3,4)\nend module\n'
             'module mc_native_context\n'
-            'integer :: native_epoch=0\nend module\n'
+            'integer :: native_epoch=0,active_context=1\n'
+            'integer,parameter :: context_providers(3)=[1,2,3]\nend module\n'
             'module weight_lines\n'
             'integer :: pdg_uborn(4,0:0),pdg(4,0:0)\nend module\n')
-        names = (
-            'cluster_and_reweight', 'set_array_indices', 'iforest_to_list',
-            'cluster', 'Reweighting', 'set_particle_type', 'reset_valid_confs',
-            'limit_cluster_iconfig', 'IsBreitWigner', 'remove_confs_BW',
-            'cluster_one_step', 'update_valid_confs', 'update_momenta',
-            'update_imap', 'set_cluster_conf', 'link_clustering_to_iforest',
-            'set_cluster_pdg_2_1_process', 'update_cluster_scales', 'in_list',
-            'cluster_scale', 'get_clustering_type', 'QCDchangeline',
-            'QCDvertex', 'numberQCDcharged', 'startQCDvertex', 'IR_cluster',
-            'matching_particles', 'fill_type', 'get_type', 'update_type',
-            'djb_clus', 'dj_clus', 'crossp', 'rotate', 'constr')
         routines = [fortran_routine(TEMPLATE / 'cluster.f', name)
-                    for name in names]
+                    for name in CLUSTER_ROUTINES]
         routines += [fortran_routine(ROOT / 'Template/NLO/Source/kin_functions.f', name)
                      for name in ('dot', 'SumDot')]
         (work / 'clustering.f').write_text('\n'.join(routines))
         cls.executable = work / 'check_clustering'
         result = subprocess.run([
-            shutil.which('gfortran'), '-O0', '-g', '-std=legacy',
+            shutil.which('gfortran'), str(TEMPLATE.parent / 'Source/timing.f'), '-O0', '-g', '-std=legacy',
             '-ffixed-line-length-none', '-fcheck=all',
             '-finit-integer=-777', '-finit-real=snan',
             '-ffpe-trap=invalid,zero,overflow', '-I', str(work),

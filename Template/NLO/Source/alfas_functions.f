@@ -74,13 +74,6 @@ ccc
       DOUBLE PRECISION Q,ALPHAS_from_grids,alphas_not_timed
       external ALPHAS_from_grids,alphas_not_timed
 
-c     timing statistics
-      include "timing_variables.inc"
-
-c     This function takes roughly 0.6 micro-seconds and the function
-c     cpu_time takes 0.3 so it does not make much sense to always leave
-c     the timing profile. But it can be uncommented for dedicated study.
-c     call cpu_time(tbefore)
 !     interpolate grids
       ALPHAS=ALPHAS_FROM_GRIDS(Q)
 c$$$      ALPHAS=alphas_not_timed(Q)
@@ -88,9 +81,6 @@ c$$$      if (abs(ALPHAS/alphas_not_timed(Q)-1d0).gt.1d-4) then
 c$$$         write (*,*) Q,ALPHAS,alphas_not_timed(Q),ALPHAS/alphas_not_timed(Q)-1d0
 c$$$      endif
       
-c     call cpu_time(tAfter)
-      
-c      tPDF = tPDF + (tAfter-tBefore)
       RETURN
       end
 

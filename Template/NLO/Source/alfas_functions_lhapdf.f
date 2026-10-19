@@ -80,16 +80,9 @@ c
       REAL*8 Q,alphasPDF
       external alphasPDF
 
-c timing statistics
-      include "timing_variables.inc"
 
-c     This function takes 20 micro seconds to run, so it is ok to profile
-c     it with the 0.3 ms function cpu_time.
-c$$$      call cpu_time(tbefore)
       ALPHAS=alphasPDF(Q)
-c$$$      call cpu_time(tAfter)
       
-c$$$      tPDF = tPDF + (tAfter-tBefore)
 
       RETURN
       END

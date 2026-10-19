@@ -92,7 +92,10 @@ module pooled_weight_fixture
   double precision :: selected_ratio(3)=0d0
   logical :: conditional_selection=.false.
   double precision :: wgt1=0d0,born_wgt=0d0,virt_wgt=0d0,avv_wgt=0d0
-  double precision :: virtual_over_born=0d0,tBefore,tAfter,tOLP=0d0,virtual_prob=0d0
+  double precision :: virtual_over_born=0d0,virtual_prob=0d0
+  integer,parameter :: timing_virtual=4
+  logical timing_sampled
+  common/timing_sample_active/timing_sampled
   double precision :: f_nb=2d0,f_b=3d0,g=2d0
   character*4 :: abrv='all'
   double precision,external :: ran2

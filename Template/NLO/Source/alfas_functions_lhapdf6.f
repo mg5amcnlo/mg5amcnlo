@@ -84,14 +84,11 @@ c
 c timing statistics
       include "timing_variables.inc"
 
-c     This function takes 20 micro seconds to run, so it is ok to profile
-c     it with the 0.3 ms function cpu_time.
-      call cpu_time(tbefore)
+      if(timing_sampled)call timing_enter(timing_scales)
       call getnset(iset)
       ALPHAS=alphasPDFm(iset,Q)
-      call cpu_time(tAfter)
+      if(timing_sampled)call timing_leave(timing_scales)
       
-c      tPDF = tPDF + (tAfter-tBefore)
 
       RETURN
       END

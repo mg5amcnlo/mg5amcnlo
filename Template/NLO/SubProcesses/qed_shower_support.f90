@@ -8,7 +8,7 @@
 ! its invariant mass for TimeShower:limitPTmaxGlobal. This module does not
 ! decide whether a particular event is eligible for global recoil.
 module qed_shower_support
-  use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+  ! A module-level IEEE import adds FPU state handling to unrelated users.
   implicit none
   private
   public :: build_pythia8_qed_dipoles
@@ -35,6 +35,7 @@ contains
 
   pure recursive subroutine build_pythia8_qed_dipoles(p,pdg,charge,mass,nincoming, &
        dipoles,ierr,allow_beam_recoil)
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
     double precision, intent(in) :: p(0:,:),charge(:),mass(:)
     integer, intent(in) :: pdg(:),nincoming
     logical, intent(out) :: dipoles(:,:)
