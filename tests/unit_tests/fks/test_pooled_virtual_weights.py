@@ -76,6 +76,9 @@ class TestPooledVirtualWeights(unittest.TestCase):
     def test_pooled_exact_cancellation_and_frozen_fold_ratio(self):
         self.check_mode('pooled_cancellation')
 
+    def test_born_spreading_calibration_skips_unused_virtual_preparation(self):
+        self.check_mode('born_spread_calibration')
+
     def test_conditional_mean_and_selected_subtraction_reconstruct_sample(self):
         self.check_mode('conditional_actual_subtraction')
 

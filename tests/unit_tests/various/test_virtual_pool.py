@@ -73,6 +73,26 @@ class VirtualPoolTests(unittest.TestCase):
         self.assertEqual(rows[0]['weight'], 1. / 400. / .5)
         self.assertEqual(reports[1]['status'], 'empty_samples')
 
+    def test_stratified_warmup_uses_each_channels_attempted_points(self):
+        job = self.write_job('stratified', [
+            (1, 7, 1, 1, .5, 3., 9., 6., .1, .2),
+            (2, 8, 1, 1, .25, 2., 4., 0., .2, .4),
+            (3, 7, 2, 1, 1., 6., 18., 12., .3, .4)],
+            ledger='1 1 100\nCHANNEL 1 7 20\nCHANNEL 1 8 80\n2 1 300\n')
+        _, rows, reports = pool.collect_samples([job])
+        self.assertEqual(reports[0]['accepted_attempts'], 400)
+        self.assertEqual([r['weight'] for r in rows], [5/400/.5, 1.25/400/.25, 1/400])
+        self.assertEqual([r['born'] for r in rows], [3., 2., 6.])
+        self.assertEqual(pool._read_iterations(job), {1: (1, 100), 2: (1, 300)})
+        for ledger in ('1 1 100\nCHANNEL 1 7 20\n',
+                       '1 1 100\nCHANNEL 1 7 100\nCHANNEL 1 7 0\n',
+                       '1 1 100\nCHANNEL 2 7 100\n',
+                       '1 1 100\nCHANNEL 1 7 100\n'):
+            with self.subTest(ledger=ledger):
+                (job/pool.ITERATIONS).write_text(ledger)
+                with self.assertRaisesRegex(ValueError, 'stratified'):
+                    pool.collect_samples([job])
+
     def test_canonical_capture_objective_is_invariant_under_job_splitting(self):
         rows = [(i + 1, 7, 1, 1, .25 if i % 2 else .5,
                  float(i + 1), float(3 * i - 2), float(i + 2), i / 8., .3)

@@ -112,7 +112,8 @@ class TestBornSpreading(unittest.TestCase):
                     self.assertIn('rerun integration step 0', result.stdout)
 
     def test_restart_preserves_integral_normalization(self):
-        """The first restarted iteration must average its sampled weights."""
+        """Restart averages weights and retains committed virtual observations."""
+        from madgraph.various import virtual_pool as pool
         with tempfile.TemporaryDirectory(prefix='mg5_born_spread_') as tmp:
             work = Path(tmp)
             executable = work / 'check_restart'
@@ -122,14 +123,31 @@ class TestBornSpreading(unittest.TestCase):
                 str(ROOT / 'tests/input_files/check_born_spreading_restart.f90'),
                 '-o', str(executable)], cwd=work, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            for channels, enabled in ((1, 0), (1, 1), (2, 1)):
-                with self.subTest(channels=channels, enabled=enabled):
-                    result = subprocess.run(
-                        [str(executable), str(channels), str(enabled)],
-                        cwd=work, capture_output=True, text=True, timeout=30)
-                    self.assertEqual(result.returncode, 0,
-                                     result.stdout + result.stderr)
-                    self.assertIn('PASS MINT restart normalization', result.stdout)
+            for pooled in (0, 1):
+                for channels, enabled in ((1, 0), (1, 1), (2, 1)):
+                    with self.subTest(channels=channels, enabled=enabled, pooled=pooled):
+                        result = subprocess.run(
+                            [str(executable), str(channels), str(enabled), str(pooled)],
+                            cwd=work, capture_output=True, text=True, timeout=30)
+                        self.assertEqual(result.returncode, 0,
+                                         result.stdout + result.stderr)
+                        self.assertIn('PASS MINT restart normalization', result.stdout)
+                        if not pooled:
+                            continue
+                        ledger = pool._read_iterations(work)
+                        self.assertEqual(len(ledger), 2 if enabled else 1)
+                        self.assertTrue(all(accepted for accepted, _ in ledger.values()))
+                        _, rows, reports = pool.collect_samples([work])
+                        self.assertEqual(len(rows), reports[0]['accepted_attempts'])
+                        self.assertEqual({r['iteration'] for r in rows}, set(ledger))
+                        self.assertEqual([r['sample'] for r in rows], list(range(1, len(rows)+1)))
+                        self.assertEqual(reports[0]['discarded_rows'], 0)
+                        for row in rows:
+                            self.assertAlmostEqual(row['virtual'], 3*row['born'], places=10)
+                        # Both batches contribute once; the million calibration
+                        # points supply neither labels nor attempted-point mass.
+                        estimate = sum(r['weight']*r['virtual'] for r in rows)
+                        self.assertAlmostEqual(estimate, 4.5*channels, delta=.45*channels)
 
     def test_born_radiation_measure(self):
         """A fitted factor must preserve ISR and massless/massive FSR Born weights."""

@@ -604,15 +604,31 @@ contains
     if(allocated(context%coupling)) point_coupling=context%coupling
   end subroutine
 
-  subroutine pooled_virtual_iteration(iteration,accepted,attempts)
+  subroutine pooled_virtual_iteration(iteration,accepted,attempts,channels,channel_attempts)
     integer, intent(in) :: iteration,attempts
     logical, intent(in) :: accepted
+    integer, intent(in), optional :: channels(:),channel_attempts(:)
+    integer :: k
     if(.not.pooled_virtual_collecting) return
     if(iteration<0.or.(iteration==0.and.accepted).or.attempts<0) call fail('invalid iteration accounting')
+    if(present(channels).neqv.present(channel_attempts)) call fail('incomplete stratified accounting')
+    if(present(channels)) then
+       if(size(channels)/=size(channel_attempts)) call fail('invalid stratified dimensions')
+       if(any(channels<1).or.any(channel_attempts<0).or.sum(channel_attempts)/=attempts) &
+            call fail('invalid stratified attempt counts')
+       do k=1,size(channels)
+          if(any(channels(:k-1)==channels(k))) call fail('duplicate stratified channel')
+       enddo
+    endif
     ! MINT can restart its iteration counter after a rejected grid iteration.
     ! The reset happens before this callback, so that rejection arrives as 0.
     ! The file uses a monotonic ordinal to keep those sample sets distinct.
     write(iteration_unit,'(3(I0,1X))') iteration_serial,merge(1,0,accepted),attempts
+    if(present(channels)) then
+       do k=1,size(channels)
+          write(iteration_unit,'(A,3(I0,1X))') 'CHANNEL ',iteration_serial,channels(k),channel_attempts(k)
+       enddo
+    endif
     flush(iteration_unit)
     flush(sample_unit)
     iteration_serial=iteration_serial+1

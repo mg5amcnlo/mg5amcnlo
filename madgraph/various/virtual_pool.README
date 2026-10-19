@@ -38,12 +38,23 @@ applied. All orders of a phase-space observation share its sample ID and fold.
 Neither V nor B is divided by the per-point Born or by the loop probability
 in the file. A training row has statistical weight
 
-  1 / (accepted attempted points in its integration group * loop probability).
+  attempt_correction /
+      (accepted attempted points in its integration group * loop probability).
+
+Normally attempt_correction is one. MINT's first stratified warm-up visits
+channels separately with unit channel weight. Optional CHANNEL records in the
+iteration ledger retain each channel's attempted points; these rows use the
+iteration's total attempts divided by that channel's attempts. This combines
+channel means correctly even when their cut efficiencies differ. Captured
+Born/virtual values and the MINT replay remain unchanged.
 
 Failed cuts and unevaluated virtuals remain in the attempted-point denominator.
 Rejected and uncommitted iterations are discarded. A monotonically increasing
 iteration ordinal remains unique even when native MINT restarts its counter.
-Born-spreading calibration restarts discard pre-calibration observations.
+Born-spreading calibration uses the current MINT mean without preparing unused
+virtual features or colour/helicity inputs. Its restart retains committed
+pre-calibration observations: their Born/virtual targets are unchanged, as are
+the MINT marginals, and capture IDs remain monotonic across the restart.
 
 Physics carrier and inputs
 --------------------------
@@ -400,6 +411,11 @@ is in (0,1]. Metadata and native Born ordering must match across workers.
 virtual_pool_iterations.dat uses the iteration ledger format:
   iteration accepted attemptedpoints
 where accepted is 0 or 1. Missing ledgers contribute no uncommitted rows.
+
+Stratified warm-up iterations additionally record each channel's exposure:
+  CHANNEL iteration channel attemptedpoints
+These channel counts sum to the iteration's total attempted points. Ordinary
+mixed-channel iterations keep the three-integer record alone.
 
 virtual_pool_model.dat has the same header layout, beginning with
 VIRTUAL_POOL_MODEL 2. For each coupling order it then stores:

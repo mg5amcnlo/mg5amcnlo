@@ -83,6 +83,12 @@ Step 0 first adapts the ordinary MINT grid, then uses 800,000 MINT points to
 fit the factors and 200,000 separate points to validate them. These extra
 points skip the exact one-loop residual virtual calculation. The Born-based
 average virtual remains in the nonvirtual S weights used by the fit.
+While collecting a pooled virtual model, calibration also skips virtual
+features and colour/helicity queries and uses the current MINT mean directly.
+If a frozen model is already loaded, its prediction is retained. Committed
+virtual observations from before calibration survive the integration restart:
+spreading changes neither their targets nor the retained MINT marginals, and
+their capture IDs stay monotonic even when MINT's iteration counter restarts.
 Contributions from every fold retain their own radiation bin; the validation
 uncertainty is computed across each complete folded MINT point. For larger
 folding factors, fitting and validation use the unfolded negative mass as a

@@ -12,8 +12,9 @@ module mint_module
   implicit none
   logical :: virtual_defer_requested=.false.,virtual_deferred_ready=.false.
   logical :: pooled_virtual_sampled=.false.
+  logical :: pooled_virtual_applying=.false.
   logical :: pooled_exact_tail=.false.
-  integer :: pooled_prepare_calls=0
+  integer :: pooled_prepare_calls=0,pooled_helicity_calls=0
   double precision :: pooled_virtual_ratio(3)=0d0,pooled_probability=0d0
   double precision :: pooled_virtual_actual_ratio(3)=0d0
   integer :: ichan=1,born_spread_phase=0
@@ -57,9 +58,11 @@ contains
 end module
 
 subroutine prepare_pooled_helicities(p,colours)
+  use mint_module, only: pooled_helicity_calls
   double precision p(0:3,4)
   integer colours(4)
   if(any(colours.ne.[8,8,3,-3]))error stop 'pooled helicity colour ordering'
+  pooled_helicity_calls=pooled_helicity_calls+1
 end subroutine
 
 subroutine deferred_virtual_context(action,born)
@@ -108,6 +111,8 @@ contains
     exact_virtual=virtual
     proposal_ratio=ratio
     use_pooled_virtual=.true.
+    pooled_virtual_applying=.false.
+    born_spread_phase=0
     pooled_virtual_sampled=.false.
     pooled_exact_tail=.false.
     conditional_selection=.false.

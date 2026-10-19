@@ -167,6 +167,8 @@ module mint_module
 
 
   integer, private :: nit,nit_included,kpoint_iter,nint_used,nint_used_virt,min_it,ncalls,pass_cuts_point,ng,npg,k
+  integer, private :: pooled_attempts=0,pooled_channel_attempts(maxchannels)=0
+  logical, private :: pooled_stratified=.false.
   integer, dimension(ndimmax), private :: icell,ncell
   integer, dimension(nintegrals), private :: non_zero_point,ntotcalls
   integer, dimension(nintervals,ndimmax,maxchannels), private :: nhits
@@ -259,6 +261,11 @@ contains
           new_point=.true.
           call get_random_x(x,vol,kfold)
           call compute_integrand(fun,x,vol)
+          if (use_pooled_virtual.and.pooled_virtual_collecting) then
+             pooled_attempts=pooled_attempts+1
+             if (pooled_stratified) &
+                  pooled_channel_attempts(ichan)=pooled_channel_attempts(ichan)+1
+          endif
           call accumulate_the_point(x)
        enddo
        call get_amount_of_points(enough_points)
@@ -286,9 +293,9 @@ contains
             80*ndim*(nchans/3+1)
        ncalls0=born_spread_restart_ncalls
        call setup_common
-       ! Discard pre-calibration training when the Born-spreading restart
-       ! changes the integrand and starts iteration numbering again.
-       if (use_pooled_virtual) call pooled_virtual_init(n_ord_virt,ndim-3)
+       ! Spreading changes only the Born contribution, not the recorded
+       ! Born/virtual targets or the retained MINT marginals. Keep committed
+       ! observations and their monotonic capture IDs across this restart.
        call reset_MC_grid
        call reset_accumulated_grids_for_updating
        if (even_rn) call initialize_even_random_numbers
@@ -992,7 +999,14 @@ contains
     call compute_fractional_uncertainty(efrac)
     call print_results_current_iteration(efrac)
     call check_fractional_uncertainty(efrac)
-    if (use_pooled_virtual) call pooled_virtual_iteration(nit,.not.reset,ncalls*kpoint_iter)
+    if (use_pooled_virtual) then
+       if (pooled_stratified) then
+          call pooled_virtual_iteration(nit,.not.reset,pooled_attempts, &
+               iconfigs(1:nchans),pooled_channel_attempts(1:nchans))
+       else
+          call pooled_virtual_iteration(nit,.not.reset,pooled_attempts)
+       endif
+    endif
     if (reset) return ! iteration was not accurate enough: do not include it
     call combine_iterations
     call combine_final_three_iterations
@@ -1644,6 +1658,10 @@ contains
     implicit none
     call write_channel_info
     nit=nit+1
+    pooled_attempts=0
+    pooled_channel_attempts=0
+    pooled_stratified=imode.eq.0.and.nit.eq.1.and.double_events.and. &
+         .not.born_spread_ready.and.nchans.gt.1
     write (*,*) '------- iteration',nit
     call check_evenly_random_numbers
     if (imode.eq.0) then

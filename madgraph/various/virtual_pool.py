@@ -154,22 +154,38 @@ def _header(stream, magic):
 
 
 def _read_iterations(directory):
+    return _read_iteration_history(directory)[0]
+
+
+def _read_iteration_history(directory):
     ledger = os.path.join(directory, ITERATIONS)
     if not os.path.isfile(ledger):
-        return None
-    iterations = {}
+        return None, {}
+    iterations, channels = {}, {}
     with open(ledger) as stream:
         for number, line in enumerate(stream, 1):
             if not line.strip():
                 continue
             fields = line.split()
+            if fields[0] == 'CHANNEL':
+                if len(fields) != 4:
+                    raise ValueError('%s:%s: invalid stratified iteration' % (ledger, number))
+                iteration, channel, attempted = (int(x) for x in fields[1:])
+                counts = channels.setdefault(iteration, {})
+                if iteration < 1 or channel < 1 or attempted < 0 or channel in counts:
+                    raise ValueError('%s:%s: invalid/duplicate stratified channel' % (ledger, number))
+                counts[channel] = attempted
+                continue
             if len(fields) != 3:
                 raise ValueError('%s:%s: invalid iteration ledger' % (ledger, number))
             iteration, accepted, attempted = (int(x) for x in fields)
             if iteration < 1 or accepted not in (0, 1) or attempted < 0 or iteration in iterations:
                 raise ValueError('%s:%s: invalid/duplicate iteration' % (ledger, number))
             iterations[iteration] = (accepted, attempted)
-    return iterations
+    for iteration, counts in channels.items():
+        if iteration not in iterations or sum(counts.values()) != iterations[iteration][1]:
+            raise ValueError('%s: inconsistent stratified attempt counts' % ledger)
+    return iterations, channels
 
 
 def _native_selection(fields, metadata):
@@ -195,7 +211,7 @@ def _native_selection(fields, metadata):
 
 def _read_job(directory):
     path = os.path.join(directory, SAMPLES)
-    iterations = _read_iterations(directory)
+    iterations, channel_attempts = _read_iteration_history(directory)
     if not os.path.isfile(path) or os.path.getsize(path) == 0:
         attempts = sum(points for accepted, points in (iterations or {}).values() if accepted)
         return None, [], attempts, dict(
@@ -251,6 +267,16 @@ def _read_job(directory):
         return metadata, [], 0, dict(directory=directory, status='missing_iterations',
                                      discarded_rows=len(rows))
     accepted_rows = [row for row in rows if iterations.get(row['iteration'], (0, 0))[0]]
+    for row in accepted_rows:
+        counts = channel_attempts.get(row['iteration'])
+        if counts is not None:
+            attempted = counts.get(row['channel'], 0)
+            if not attempted:
+                raise ValueError('%s: sample without stratified channel attempts' % ledger)
+            # Warm-up visits channels separately with unit channel weight.
+            # Combine their means using the same overall attempted-point
+            # denominator as subsequent mixed-channel iterations.
+            row['attempt_correction'] = iterations[row['iteration']][1]/attempted
     attempts = sum(points for accepted, points in iterations.values() if accepted)
     if accepted_rows and attempts == 0:
         raise ValueError('%s: accepted samples but no attempted points' % ledger)
@@ -270,6 +296,8 @@ def collect_samples(job_dirs, job_groups=None):
     The rows already include their integration factors: never multiply a
     Jacobian, luminosity or helicity weight into them a second time. The
     bookkeeping-only fixed-order wgt_mult must be removed before capture.
+    Stratified warm-up rows additionally use their channel's recorded
+    attempted-point exposure, without changing their Born/virtual targets.
     """
     directories = sorted(set(os.path.abspath(os.fspath(p)) for p in job_dirs))
     groups = {os.path.abspath(os.fspath(k)): str(v) for k, v in (job_groups or {}).items()}
@@ -292,7 +320,7 @@ def collect_samples(job_dirs, job_groups=None):
             row['group'] = group
         rows.extend(accepted)
     for row in rows:
-        row['weight'] = 1. / denominators[row['group']] / row['probability']
+        row['weight'] = row.get('attempt_correction', 1.) / denominators[row['group']] / row['probability']
         if not math.isfinite(row['weight']):
             raise ValueError('virtual-pool statistical weight overflow')
     return metadata, rows, reports

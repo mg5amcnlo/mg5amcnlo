@@ -7074,31 +7074,41 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
       if (fold.eq.0) then
          if (use_pooled_virtual.and.ickkw.ne.-1) then
-            do i=1,nexternal-1
-               if (i.lt.i_fks) then
-                  feature_mass(i)=pmass(i)
-                  feature_colour(i)=particle_type(i)
-               else
-                  feature_mass(i)=pmass(i+1)
-                  feature_colour(i)=particle_type(i+1)
-               endif
-               feature_incoming(i)=i.le.nincoming
-            enddo
-            feature_pdg=native_metadata%born_ids(:,1)
-            feature_coupling=1d0
-            do iamp=1,amp_split_size
-               if(dble(amp_split_cnt(iamp,1,qcd_pos)).ne.0d0)then
-                  feature_coupling(iamp)=g**2/(8d0*pi**2)
-               elseif(dble(amp_split_cnt(iamp,1,qed_pos)).ne.0d0)then
-                  feature_coupling(iamp)=dble(gal(1))**2/(8d0*pi**2)
-               endif
-            enddo
-            call pooled_virtual_prepare(p_born,feature_mass,
-     $           feature_incoming,feature_pdg,scale**2,
-     $           average_virtual(1:amp_split_size,ichan),QES2,.true.,
-     $           active_context.eq.local_context,
-     $           feature_coupling,feature_colour)
-            call prepare_pooled_helicities(p_born,feature_colour)
+            if ((born_spread_phase.eq.1.or.born_spread_phase.eq.2)
+     $           .and..not.pooled_virtual_applying) then
+c Collection uses MINT here, without virtual labels. Skip the unused
+c geometry, helicity queries and colour contractions during calibration.
+               pooled_virtual_ratio=
+     $              average_virtual(1:amp_split_size,ichan)
+               pooled_virtual_actual_ratio=pooled_virtual_ratio
+            else
+               do i=1,nexternal-1
+                  if (i.lt.i_fks) then
+                     feature_mass(i)=pmass(i)
+                     feature_colour(i)=particle_type(i)
+                  else
+                     feature_mass(i)=pmass(i+1)
+                     feature_colour(i)=particle_type(i+1)
+                  endif
+                  feature_incoming(i)=i.le.nincoming
+               enddo
+               feature_pdg=native_metadata%born_ids(:,1)
+               feature_coupling=1d0
+               do iamp=1,amp_split_size
+                  if(dble(amp_split_cnt(iamp,1,qcd_pos)).ne.0d0)then
+                     feature_coupling(iamp)=g**2/(8d0*pi**2)
+                  elseif(dble(amp_split_cnt(iamp,1,qed_pos)).ne.0d0)then
+                     feature_coupling(iamp)=
+     $                    dble(gal(1))**2/(8d0*pi**2)
+                  endif
+               enddo
+               call pooled_virtual_prepare(p_born,feature_mass,
+     $              feature_incoming,feature_pdg,scale**2,
+     $              average_virtual(1:amp_split_size,ichan),QES2,.true.,
+     $              active_context.eq.local_context,
+     $              feature_coupling,feature_colour)
+               call prepare_pooled_helicities(p_born,feature_colour)
+            endif
          endif
          ! Training and validation keep the Born-based approximate
          ! virtual below, but exclude the one-loop residual from the fit.

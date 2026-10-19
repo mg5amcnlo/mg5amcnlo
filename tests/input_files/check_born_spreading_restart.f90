@@ -2,7 +2,7 @@ program check_restart
   use mint_module
   implicit none
   character(len=16) :: arg
-  integer :: enabled,i
+  integer :: enabled,pooled,i,unit
   double precision, external :: integrand
   double precision :: expected
 
@@ -10,12 +10,23 @@ program check_restart
   read(arg,*) nchans
   call get_command_argument(2,arg)
   read(arg,*) enabled
+  pooled=0
+  if(command_argument_count().gt.2)then
+     call get_command_argument(3,arg)
+     read(arg,*) pooled
+  endif
+  use_pooled_virtual=pooled.eq.1
+  if(use_pooled_virtual)then
+     open(newunit=unit,file='virtual_pool_mode.dat',status='replace')
+     write(unit,*) 1
+     close(unit)
+  endif
   ndim=4
   ncalls0=-1
   ! End after one iteration so that later iterations cannot hide a bad restart.
   itmax=1
   imode=0
-  n_ord_virt=0
+  n_ord_virt=pooled
   ifold=1
   do i=1,nchans
      iconfigs(i)=i
@@ -38,13 +49,33 @@ program check_restart
 end program check_restart
 
 double precision function integrand(x,vol,ifl,weights)
-  use mint_module, only: ndimmax,nintegrals,pass_cuts_check
+  use mint_module, only: ndimmax,nintegrals,pass_cuts_check,use_pooled_virtual, &
+       born_spread_phase,average_virtual,ichan,pooled_virtual_prepare, &
+       pooled_virtual_mark_sampled,pooled_virtual_ratio
   implicit none
   double precision :: x(ndimmax),vol,weights(nintegrals)
+  double precision :: p(0:3,4),ratio(1)
   integer :: ifl
   weights=0d0
   weights(1)=(2d0+x(1))*vol
   weights(2)=weights(1)
+  if(use_pooled_virtual.and.born_spread_phase.ne.1.and.born_spread_phase.ne.2)then
+     if(ifl.eq.0)then
+        p(:,1)=[250d0,0d0,0d0,250d0]
+        p(:,2)=[250d0,0d0,0d0,-250d0]
+        p(:,3)=[250d0,250d0,0d0,0d0]
+        p(:,4)=[250d0,-250d0,0d0,0d0]
+        ratio=average_virtual(1:1,ichan)
+        call pooled_virtual_prepare(p,[0d0,0d0,0d0,0d0],[.true.,.true.,.false.,.false.], &
+             [21,21,21,21],10000d0,ratio)
+        call pooled_virtual_mark_sampled(1d0)
+     endif
+     weights(8)=(1d0+x(1))*vol
+     weights(7)=(3d0-pooled_virtual_ratio(1))*weights(8)
+     weights(3)=weights(7)
+     weights(5)=abs(weights(3))
+     weights(6)=weights(8)
+  endif
   pass_cuts_check=.true.
   integrand=weights(1)
 end function integrand

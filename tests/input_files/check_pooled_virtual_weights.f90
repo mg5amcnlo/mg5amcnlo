@@ -7,7 +7,7 @@ program check_pooled_virtual_weights
   character*7 event_norm
   common/event_normalisation/event_norm
   double precision :: b(3),v(3),k(3),residual(3),approximation(3),expected(3)
-  integer :: nloops,nprepares,j,carrier_type
+  integer :: nloops,nprepares,nhelicities,j,carrier_type
   integer,external :: find_virtual_mint_carrier
   logical fixed_order,nlo_ps
   common/c_fnlo_nlops/fixed_order,nlo_ps
@@ -16,6 +16,35 @@ program check_pooled_virtual_weights
   icontr=0
 
   select case(trim(mode))
+  case('born_spread_calibration')
+     b=[2d0,-1d0,3d0];v=[7d0,-4d0,1d0];k=[.5d0,-2d0,1d0]
+     do j=1,2
+        call set_point(b,v,k)
+        born_spread_phase=j
+        ! Distinguish the MINT mean from stale pooled point state.
+        average_virtual(1:3,1)=k
+        pooled_virtual_ratio=999d0
+        proposal_ratio=-777d0
+        nloops=loop_calls
+        nprepares=pooled_prepare_calls
+        nhelicities=pooled_helicity_calls
+        call exercise_virtual_stage()
+        if(loop_calls.ne.nloops)error stop 'calibration evaluated a loop'
+        if(pooled_prepare_calls.ne.nprepares.or.pooled_helicity_calls.ne.nhelicities) &
+             error stop 'unused calibration virtual features prepared'
+        if(pooled_virtual_sampled)error stop 'calibration marked a virtual observation'
+        call close_vector(amp_split_avv,b*k,'calibration retains the current MINT mean')
+        call close_vector(pooled_virtual_actual_ratio,k,'calibration actual follows MINT')
+        call close_vector(amp_split_virt,[0d0,0d0,0d0],'calibration has no residual')
+        ! An already loaded model must still predict when one is available.
+        pooled_virtual_applying=.true.
+        proposal_ratio=2d0*k
+        call exercise_virtual_stage()
+        if(loop_calls.ne.nloops)error stop 'model calibration evaluated a loop'
+        if(pooled_prepare_calls.ne.nprepares+1.or.pooled_helicity_calls.ne.nhelicities+1) &
+             error stop 'calibration skipped the loaded model'
+        call close_vector(amp_split_avv,2d0*b*k,'calibration keeps a loaded prediction')
+     enddo
   case('conditional_actual_subtraction')
      b=[2d0,-1d0,3d0];v=[7d0,-4d0,1d0];k=[.5d0,-2d0,1d0]
      call set_point(b,v,k)
