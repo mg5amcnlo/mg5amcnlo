@@ -678,6 +678,20 @@ jobs:
             ./tests/test_manager.py test_CF_simple test_cf_computation test_generate_ewsud_ttbar test_generate_ewsud_ww test_generate_ewsud_zz testIO_test_pptt_ewsudakovSA testIO_test_ppzz_ewsudakov testIO_test_ppw_fksall testIO_Loop_sqso_uux_ddx test_check_import_model test_schedular test_dummy_fcts test_UFO_Python_helas_call_writer_fd test_get_symmetric_color test_get_symmetric_lorentz test_remove_interactions2 test_remove_interactions3 test_fd_python_value_matches_unitary_fixed_point test_shower_card_write -t0
 
 
+  unittest_real_channels:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: test fixed-order real channels and channel sampling
+        run: |
+            cd $GITHUB_WORKSPACE
+            gfortran --version
+            ./tests/test_manager.py TestRealChannelExport test_amcatnlo_real_channels test_real_channels_weights test_real_channels_phase_space test_mint_channels -t0
+
+
   unittest_write_model:
     # runs alone: excluded from the shared unittest jobs due to side effects
     runs-on: ubuntu-latest

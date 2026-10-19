@@ -168,54 +168,58 @@ C
       DATA GOODHEL/NCOMB*.FALSE./
       INTEGER NTRY
       DATA NTRY/0/
+      INCLUDE 'real_matrix_weights.inc'
       DATA IDEN/96/
 C     ----------
 C     BEGIN CODE
 C     ----------
       NTRY=NTRY+1
+      IF (GET_REAL_DIAGRAM_WEIGHTS) REAL_AMP2(:)=0D0
       DO I=0,NSQAMPSO
         ANS(I) = 0D0
       ENDDO
       DO IHEL=1,NCOMB
-        IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-          IF (NTRY.LT.2) THEN
-C           for the first ps-point, check for helicities that give
-C           identical matrix elements
-            CALL MATRIX_6(P ,NHEL(1,IHEL),T)
-            DO I=0,NSQAMPSO
-              T_SAVE(IHEL,I)=T(I)
-            ENDDO
-            T_IDENT(IHEL)=-1
-            DO I=1,IHEL-1
-              IF (T(0).EQ.0D0) EXIT
-              IF (T_SAVE(I,0).EQ.0D0) CYCLE
-              DO J = 0, NSQAMPSO
-                IF (ABS(T(J)/T_SAVE(I,J)-1D0) .GT. 1D-12) GOTO 444
-              ENDDO
-              T_IDENT(IHEL) = I
- 444          CONTINUE
-            ENDDO
-          ELSE
-            IF (T_IDENT(IHEL).GT.0) THEN
-C             if two helicity states are identical, dont recompute
-              DO I=0,NSQAMPSO
-                T(I)=T_SAVE(T_IDENT(IHEL),I)
-                T_SAVE(IHEL,I)=T(I)
-              ENDDO
-            ELSE
-              CALL MATRIX_6(P ,NHEL(1,IHEL),T)
-              DO I=0,NSQAMPSO
-                T_SAVE(IHEL,I)=T(I)
-              ENDDO
-            ENDIF
-          ENDIF
-C         add to the sum of helicities
-          DO I=1,NSQAMPSO  !keep loop from 1!!
-            ANS(I)=ANS(I)+T(I)
+        IF (GOODHEL(IHEL) .OR. NTRY .LT. 2 .OR.
+     &      get_real_diagram_weights) THEN
+        IF (NTRY.LT.2) THEN
+C         for the first ps-point, check for helicities that give
+C         identical matrix elements
+          CALL MATRIX_6(P ,NHEL(1,IHEL),T)
+          DO I=0,NSQAMPSO
+            T_SAVE(IHEL,I)=T(I)
           ENDDO
-          IF (T(0) .NE. 0D0 .AND. .NOT. GOODHEL(IHEL)) THEN
-            GOODHEL(IHEL)=.TRUE.
-          ENDIF
+          T_IDENT(IHEL)=-1
+          DO I=1,IHEL-1
+            IF (T(0).EQ.0D0) EXIT
+            IF (T_SAVE(I,0).EQ.0D0) CYCLE
+            DO J = 0, NSQAMPSO
+              IF (ABS(T(J)/T_SAVE(I,J)-1D0) .GT. 1D-12) GOTO 444
+            ENDDO
+            T_IDENT(IHEL) = I
+ 444        CONTINUE
+          ENDDO
+        ELSE
+          IF (T_IDENT(IHEL).GT.0 .AND.
+     &          .NOT.get_real_diagram_weights) THEN
+C         if two helicity states are identical, dont recompute
+          DO I=0,NSQAMPSO
+            T(I)=T_SAVE(T_IDENT(IHEL),I)
+            T_SAVE(IHEL,I)=T(I)
+          ENDDO
+        ELSE
+          CALL MATRIX_6(P ,NHEL(1,IHEL),T)
+          DO I=0,NSQAMPSO
+            T_SAVE(IHEL,I)=T(I)
+          ENDDO
+        ENDIF
+        ENDIF
+C       add to the sum of helicities
+        DO I=1,NSQAMPSO  !keep loop from 1!!
+          ANS(I)=ANS(I)+T(I)
+        ENDDO
+        IF (T(0) .NE. 0D0 .AND. .NOT. GOODHEL(IHEL)) THEN
+          GOODHEL(IHEL)=.TRUE.
+        ENDIF
         ENDIF
       ENDDO
       DO I=1,NSQAMPSO
@@ -270,6 +274,7 @@ C
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(8
      $ ,NWAVEFUNCS)
       COMPLEX*16 TMP_JAMP(0)
+      INCLUDE 'real_matrix_weights.inc'
 C     
 C     FUNCTION
 C     
@@ -331,6 +336,21 @@ C     Amplitude(s) for diagram number 12
       CALL FFV1_0(W(1,11),W(1,1),W(1,8),GC_11,AMP(12))
 C     Amplitude(s) for diagram number 13
       CALL FFV2_3_0(W(1,11),W(1,1),W(1,9),GC_50,GC_58,AMP(13))
+      IF (GET_REAL_DIAGRAM_WEIGHTS) THEN
+        REAL_AMP2(1)=REAL_AMP2(1)+AMP(1)*DCONJG(AMP(1))
+        REAL_AMP2(2)=REAL_AMP2(2)+AMP(2)*DCONJG(AMP(2))
+        REAL_AMP2(3)=REAL_AMP2(3)+AMP(3)*DCONJG(AMP(3))
+        REAL_AMP2(4)=REAL_AMP2(4)+AMP(4)*DCONJG(AMP(4))
+        REAL_AMP2(5)=REAL_AMP2(5)+AMP(5)*DCONJG(AMP(5))
+        REAL_AMP2(6)=REAL_AMP2(6)+AMP(6)*DCONJG(AMP(6))
+        REAL_AMP2(7)=REAL_AMP2(7)+AMP(7)*DCONJG(AMP(7))
+        REAL_AMP2(8)=REAL_AMP2(8)+AMP(8)*DCONJG(AMP(8))
+        REAL_AMP2(9)=REAL_AMP2(9)+AMP(9)*DCONJG(AMP(9))
+        REAL_AMP2(10)=REAL_AMP2(10)+AMP(10)*DCONJG(AMP(10))
+        REAL_AMP2(11)=REAL_AMP2(11)+AMP(11)*DCONJG(AMP(11))
+        REAL_AMP2(12)=REAL_AMP2(12)+AMP(12)*DCONJG(AMP(12))
+        REAL_AMP2(13)=REAL_AMP2(13)+AMP(13)*DCONJG(AMP(13))
+      ENDIF
 C     JAMPs contributing to orders QCD=3 QED=0
       JAMP(1,1) = (5.000000000000000D-01)*AMP(5)+((0.000000000000000D
      $ +00,5.000000000000000D-01))*AMP(10)+(5.000000000000000D-01)
