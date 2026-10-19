@@ -313,3 +313,42 @@ class TestRealChannelJobs(unittest.TestCase):
             self.command.combine_split_order_grids(jobs)
         with self.assertRaisesRegex(amcatnlo.aMCatNLOError, 'Cannot combine'):
             self.command.combine_split_order_jobs(jobs)
+
+    def test_split_grids_pool_sampling_moments_without_split_normalization(self):
+        for legacy, unvisited in ((False, False), (True, False), (False, True)):
+            with self.subTest(legacy=legacy, unvisited=unvisited):
+                jobs = []
+                for split, moment, calls in ((1, 4., 100), (2, 16., 300)):
+                    if unvisited:
+                        calls = 0
+                    directory = os.path.join(self.subprocess, 'all_G1_%s' % split)
+                    os.makedirs(directory, exist_ok=True)
+                    fields = '1000 4 500'
+                    if not (legacy and split == 1):
+                        fields += ' %s %s' % (moment, calls)
+                    with open(os.path.join(directory, 'mint_grids'), 'w') as stream:
+                        stream.write('SUM 0.5\nQSM 0.1\nSPE %s\n' % fields)
+                    with open(os.path.join(directory, 'grid.MC_integer'), 'w') as stream:
+                        stream.write('AVE 1.0\n')
+                    jobs.append(dict(p_dir='P0_test', channel='1', configs='1 2',
+                                     channel_type=1, real_channels_x0=.1,
+                                     dirname=directory, wgt_mult=.5))
+                os.makedirs(os.path.join(self.subprocess, 'all_G1'), exist_ok=True)
+                self.command.combine_split_order_grids(jobs)
+                with open(os.path.join(self.subprocess, 'all_G1', 'mint_grids')) as stream:
+                    rows = [line.split() for line in stream]
+                self.assertEqual(float(rows[0][1]), 1.)
+                self.assertEqual(list(map(int, rows[2][1:4])), [1000, 8, 500])
+                if legacy:
+                    self.assertEqual(len(rows[2]), 4)
+                else:
+                    self.assertEqual(float(rows[2][4]), 10. if unvisited else 13.)
+                    self.assertEqual(int(rows[2][5]), 0 if unvisited else 400)
+
+    def test_tiny_imprecise_job_does_not_require_relative_accuracy(self):
+        self.command.cross_sect_dict = dict(xsect=1000., xseca=1000.,
+                                            errt=10., erra=10.)
+        tiny = dict(resultABS=1.e-6, errorABS=1.e-6)
+        # The total requires more precision, but this 100%-uncertain job's
+        # absolute error is negligible in the existing global error budget.
+        self.assertEqual(self.command.update_jobs_to_run(.001, 1, [tiny]), [])

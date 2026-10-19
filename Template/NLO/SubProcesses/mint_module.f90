@@ -78,6 +78,8 @@ module mint_module
   integer, parameter, public :: max_fold=512     ! 8*8*8 is max folding for the three variables
   integer, parameter, private :: max_points=100000! maximum number of points to trow per iteration if not enough non-zero points can be found.
   integer, parameter, public  :: maxchannels=20 ! set as least as large as in amcatnlo_run_interface
+  ! Total exploration share, divided equally over all integration channels.
+  double precision, parameter, private :: channel_exploration=0.05d0
   ! Note that the number of intervals in the integration grids, 'nintervals', cannot be arbitrarily large.
   ! It should be equal to
   !     nintervals = min_inter * 2^n,
@@ -143,6 +145,8 @@ module mint_module
   double precision, dimension(nintegrals,3), private :: ans3,unc3
   double precision, dimension(nintegrals), private :: ans_l3,unc_l3,chi2_l3,f
   double precision, dimension(0:maxchannels), private :: ymax_virt,ans_chan
+  double precision, dimension(maxchannels), private :: channel_moment,channel_squares,channel_probability
+  integer(kind=8), dimension(maxchannels), private :: channel_moment_calls,channel_calls
   double precision, dimension(2), private :: HwU_values
   double precision, dimension(nintervals_virt,ndimmax,0:n_ave_virt,maxchannels), private :: ave_virt,ave_virt_acc,ave_born_acc
   double precision, private :: upper_bound,vol_chan
@@ -178,7 +182,7 @@ module mint_module
        &,reset_mint_grids,setup_common,write_grids_to_file &
        &,double_grid,regrid,smooth_xacc,nextlexi ,init_ave_virt&
        &,get_ave_virt,fill_ave_virt,regrid_ave_virt ,double_ave_virt&
-       &,get_channel,close_run_zero_res,ran3 &
+       &,get_channel,update_channel_sampling,set_channel_probabilities,close_run_zero_res,ran3 &
        &,initialize_even_random_numbers,get_ran &
        &,increase_gen_counters_middle,increase_gen_counters_before &
        &,increase_gen_counters_end,check_upper_bound &
@@ -220,6 +224,8 @@ contains
 
   subroutine initialise_mint
     implicit none
+    channel_moment=0d0
+    channel_moment_calls=0
     if (imode.ne.0) call read_grids_from_file
     call setup_basic_mint
     if (imode.eq.0) then
@@ -229,6 +235,7 @@ contains
     elseif (imode.eq.1) then
        call setup_imode_1
     endif
+    call set_channel_probabilities
     cross_section=ans_chan(0) * wgt_mult
     call setup_common
   end subroutine initialise_mint
@@ -264,6 +271,9 @@ contains
     logical :: iterations_done
     call compute_fractional_uncertainty(efrac)
     call print_results_current_iteration(efrac)
+! Keep sampling information even from an iteration rejected for a large
+! fluctuation: these observations identify channels needing more points.
+    call update_channel_sampling
     call check_fractional_uncertainty(efrac)
     if (reset) return ! iteration was not accurate enough: do not include it
     call combine_iterations
@@ -761,7 +771,16 @@ contains
   subroutine accumulate_the_point(x)
     implicit none
     integer :: i
+    double precision :: channel_weight
     double precision, dimension(ndimmax) :: x
+    if (fixed_order.and.nchans.gt.1) then
+! Remove the channel-selection compensation and split-job normalization.
+! The second moment of this conditional weight determines the optimal
+! random-channel probabilities. Count rejected/zero points as well.
+       channel_weight=f(1)*vol_chan/wgt_mult
+       channel_squares(ichan)=channel_squares(ichan)+channel_weight**2
+       channel_calls(ichan)=channel_calls(ichan)+1
+    endif
     if(imode.eq.0) then
        call add_point_to_grids(x)
     else
@@ -867,6 +886,8 @@ contains
     kpoint_iter=0
     non_zero_point(1:nintegrals)=0
     pass_cuts_point=0
+    channel_squares=0d0
+    channel_calls=0
   end subroutine start_iteration
 
   subroutine reset_accumulated_grids_for_updating
@@ -983,6 +1004,8 @@ contains
             ,regridded(kchan),np,nhits_in_grids(kchan)   &
             ,ans_chan(kchan),ans(2,kchan),virtual_fraction(kchan)
     enddo
+    if (fixed_order.and.nchans.gt.1) &
+         write (*,*) 'Channel sampling probabilities:',channel_probability(1:nchans)
     call flush(6)
     return
 250 format(a7,i5,1x,a1,1x,i5,1x,l,1x,i8,1x,i8,2x,e10.4,2x,e10.4,2x,e10.4)
@@ -1097,7 +1120,14 @@ contains
        endif
        write (12,*) 'SUM',(ans(i,kchan),i=1,nintegrals)
        write (12,*) 'QSM',(unc(i,kchan),i=1,nintegrals)
-       write (12,*) 'SPE',ncalls0,itmax,nhits_in_grids(kchan)
+       if (fixed_order.and.nchans.gt.1) then
+! Optional trailing fields are ignored by older readers. The moment is
+! independent of wgt_mult, so split jobs can pool it using the call count.
+          write (12,*) 'SPE',ncalls0,itmax,nhits_in_grids(kchan), &
+               channel_moment(kchan),channel_moment_calls(kchan)
+       else
+          write (12,*) 'SPE',ncalls0,itmax,nhits_in_grids(kchan)
+       endif
        write (12,*) 'AVE',virtual_fraction(kchan),average_virtual(0,kchan)
     enddo
     if (use_poly_virtual) call save_polyfit(12)
@@ -1107,9 +1137,12 @@ contains
   subroutine read_grids_from_file
 ! Read the MINT integration grids from file
     implicit none
-    integer :: i,j,k,kchan,idum
+    integer :: i,j,k,kchan,idum,ios
     integer,dimension(maxchannels) :: points
+    integer(kind=8) :: saved_calls
+    double precision :: saved_moment
     character(len=3) :: dummy
+    character(len=512) :: channel_info
     open (unit=12, file='mint_grids',status='old')
     ans(1,0)=0d0
     unc(1,0)=0d0
@@ -1134,7 +1167,17 @@ contains
        endif
        read (12,*) dummy,(ans(i,kchan),i=1,nintegrals)
        read (12,*) dummy,(unc(i,kchan),i=1,nintegrals)
-       read (12,*) dummy,idum,idum,nhits_in_grids(kchan)
+       read (12,'(a)') channel_info
+       read (channel_info,*) dummy,idum,idum,nhits_in_grids(kchan)
+! Legacy grids have no second moment. Their ABS integral supplies the
+! initial relative importance; exploration also covers zero estimates.
+       channel_moment(kchan)=ans(1,kchan)**2
+       channel_moment_calls(kchan)=0
+       read (channel_info,*,iostat=ios) dummy,idum,idum,idum,saved_moment,saved_calls
+       if (ios.eq.0) then
+          channel_moment(kchan)=max(0d0,saved_moment)
+          channel_moment_calls(kchan)=max(0_8,saved_calls)
+       endif
        read (12,*) dummy,virtual_fraction(kchan),average_virtual(0,kchan)
        ans(1,0)=ans(1,0)+ans(1,kchan)
        unc(1,0)=unc(1,0)+unc(1,kchan)**2
@@ -1428,6 +1471,40 @@ contains
   end subroutine double_ave_virt
 
 
+  subroutine update_channel_sampling
+    implicit none
+    integer :: kchan
+    if (.not.fixed_order.or.nchans.le.1) return
+    do kchan=1,nchans
+! An unvisited channel has no new estimate; do not replace its history
+! with a spurious zero integral and zero error.
+       if (channel_calls(kchan).eq.0) cycle
+       channel_moment(kchan)=channel_squares(kchan)/dble(channel_calls(kchan))
+       channel_moment_calls(kchan)=channel_calls(kchan)
+    enddo
+    call set_channel_probabilities
+  end subroutine update_channel_sampling
+
+  subroutine set_channel_probabilities
+    implicit none
+    double precision :: scores(maxchannels),largest
+! For random channel choice, variance is minimized by p_i proportional
+! to sqrt(<w_i**2>). The same moment can be estimated from the current
+! iteration as p_i*(A_i**2+N*error_i**2), not the relative error alone.
+    scores(1:nchans)=sqrt(max(0d0,channel_moment(1:nchans)))
+    largest=maxval(scores(1:nchans))
+    if (largest.gt.0d0) then
+       scores(1:nchans)=scores(1:nchans)/largest
+       channel_probability(1:nchans)=(1d0-channel_exploration)* &
+            scores(1:nchans)/sum(scores(1:nchans))+channel_exploration/dble(nchans)
+    else
+       channel_probability(1:nchans)=1d0/dble(nchans)
+    endif
+! Only the existing total-error criterion determines convergence. Tiny
+! channels do not need small relative errors; their exploration share
+! is bounded by channel_exploration for the entire job.
+  end subroutine set_channel_probabilities
+
   subroutine get_channel
 ! Picks one random 'ichan' among the 'nchans' integration channels and
 ! fills the channels common block in mint.inc.
@@ -1438,6 +1515,20 @@ contains
        iconfig=iconfigs(ichan)
        vol_chan=1d0
     elseif (nchans.gt.1) then
+       if (fixed_order.and..not.(imode.eq.0.and.nit.eq.1.and.double_events)) then
+! Preserve the forced per-channel pilot loop in the first automatic
+! iteration. All later selections use the RMS weights plus exploration.
+          trgt=ran3(.false.)
+          ichan=1
+          total=channel_probability(ichan)
+          do while (total.lt.trgt.and.ichan.lt.nchans)
+             ichan=ichan+1
+             total=total+channel_probability(ichan)
+          enddo
+          iconfig=iconfigs(ichan)
+          vol_chan=channel_probability(ichan)
+          return
+       endif
        if (ans_chan(0).le.0d0) then
 !     pick one at random (flat)
           ichan=int(ran3(.false.)*nchans)+1

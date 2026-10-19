@@ -2602,15 +2602,24 @@ RESTART = %(mint_mode)s
                     # they should all be identical (INTEGERS)
                     write_string = [int(round(floatgrp[0])) for floatgrp in floatgrps]
                 elif 'SPE' in action:
-                    # special: average first; sum second; average third (ALL INTEGERS)
+                    # Average points/iteration and grid hits; sum iterations.
                     write_string=[]
-                    for i,floatgrp in enumerate(floatgrps):
+                    for i,floatgrp in enumerate(floatgrps[:3]):
                         if i==0: # average number of PS points per iterations
                             write_string.append(int(sum(floatgrp)/len(floatgrp)))
-                        elif i==1: # sum te number of iterations
+                        elif i==1: # sum the number of iterations
                             write_string.append(int(sum(floatgrp)))
                         elif i==2: # average the nhits_in_grids
                             write_string.append(int(sum(floatgrp)/len(floatgrp)))
+                    if len(floatgrps) >= 5:
+                        # New MINT grids also store the conditional second
+                        # moment and its sample count. These weights exclude
+                        # wgt_mult: pool samples rather than summing moments
+                        # as for the split contributions to the integral.
+                        moment_calls = sum(floatgrps[4])
+                        moment = (sum(row[3]*row[4] for row in floatsbyfile)/moment_calls
+                                  if moment_calls else sum(floatgrps[3])/len(floatgrps[3]))
+                        write_string.extend([moment, int(moment_calls)])
                 else:
                     raise aMCatNLOError('Unknown action for combining grids: %s' % action[0])
                 to_write.append(action[0] + " " + (" ".join(str(ws) for ws in write_string)) + "\n")
