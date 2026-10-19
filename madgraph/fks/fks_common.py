@@ -611,6 +611,39 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
             'soft_particles': sorted(set(soft_parts))}    
 
 
+def born_color_insertion(col_basis, link, Nc=3):
+    """Contract a colour insertion directly between the Born basis vectors.
+
+    Keep the exact real and imaginary fractions, as in ColorMatrix. Dummy
+    indices of the conjugate must be renamed *after* inserting the link, which
+    introduces its own summed indices. No diagram amplitudes enter this matrix.
+    """
+    basis = sorted(col_basis)
+    matrix = {}
+    replacements = dict(link['replacements'])
+    for j, structure in enumerate(basis):
+        linked = color_algebra.ColorString()
+        linked.from_immutable(structure)
+        for tensor in linked:
+            for position, index in enumerate(tensor):
+                tensor[position] = replacements.get(index, index)
+        linked.product(link['string'].create_copy())
+        for i in range(j+1):
+            original = color_algebra.ColorString()
+            original.from_immutable(color_amp.ColorMatrix.fix_summed_indices(
+                linked.to_immutable(), basis[i]))
+            # Conjugate the Born vector, whose tensors are already reduced.
+            # Conjugating an unreduced f tensor would reverse its indices in
+            # ColorObject.complex_conjugate and introduce a spurious sign.
+            product = linked.create_copy()
+            product.product(original.complex_conjugate())
+            real, imaginary = color_algebra.ColorFactor([product]).full_simplify().set_Nc(Nc)
+            value = (real, -imaginary)
+            matrix[i, j] = value
+            matrix[j, i] = (value[0], -value[1])
+    return matrix
+
+
 def insert_color_links(col_basis, col_obj, links): #test written
     """insert the color links in col_obj: returns a list of dictionaries
     (one for each link) with the following entries:

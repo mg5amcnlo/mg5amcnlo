@@ -1,0 +1,48 @@
+{
+  "provenance": {
+    "shipped_Delta": {
+      "source": "vendor/SudGen/sudakov.f",
+      "sha256_uncompressed": "dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9"
+    },
+    "archive_pdfmode0": {
+      "source": "vendor/SudGen/sudakov_r515_PDFmode0.f.gz",
+      "sha256_uncompressed": "327fc37e60ef9d4e40e03d544ae6a981b08acffeea339606e4e10a7044cf1a9b"
+    },
+    "archive_pdfmode1": {
+      "source": "vendor/SudGen/sudakov_r515_PDFmode1.f.gz",
+      "sha256_uncompressed": "16e07784f53f347f64b3fb5168100c2b6ca0747c8dd2dd0f97370f0d27b5e435"
+    },
+    "archive_pdfmode2": {
+      "source": "vendor/SudGen/sudakov_r515_PDFmode2.f.gz",
+      "sha256_uncompressed": "84c4fef64348eb3ba10985f3921f88cabe8889a3ec0238bda520034bcaea9208"
+    }
+  },
+  "fxfx_coupling": {
+    "asmz": 0.119,
+    "nloop": 2
+  },
+  "alpha_control": {
+    "asmz": 0.13,
+    "nloop": 1
+  },
+  "delta_normalization": "Table(stop,mass)/table(start,mass), one factor per live colour line.",
+  "notes": [
+    "PDF ratios and matching compensations are excluded.",
+    "The shipped table generation settings are not encoded in the table source.",
+    "Alpha control changes only the analytic factor; it does not identify the table coupling.",
+    "Two identical colour connections are assumed for each gluon leg.",
+    "Gluons use the symmetric-connection limit (product of the two line ratios), not a complete event Delta evaluation.",
+    "Raw table ratios are retained; per-leg probabilities are bounded at one.",
+    "The active Delta caller uses type II for all incoming emitters, including IF."
+  ],
+  "generated_process_tables": {
+    "w0j": "dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9",
+    "w1j": "dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9",
+    "w0j_new": "dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9",
+    "w1j_new": "dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9"
+  },
+  "raw_interpolation_overshoots": {
+    "count": 2,
+    "max_ratio": 1.0016467458176261
+  }
+}

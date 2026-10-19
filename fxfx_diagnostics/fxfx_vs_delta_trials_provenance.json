@@ -1,0 +1,62 @@
+{
+  "pythia_path": "/export/tmp/rikkert/Pythia/pythia8318",
+  "build_command": [
+    "g++",
+    "-O2",
+    "-std=c++17",
+    "-I/export/tmp/rikkert/Pythia/pythia8318/include",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/fxfx_diagnostics/delta_trial_probe.cc",
+    "-L/export/tmp/rikkert/Pythia/pythia8318/lib",
+    "-Wl,-rpath,/export/tmp/rikkert/Pythia/pythia8318/lib",
+    "-lpythia8",
+    "-ldl",
+    "-o",
+    "/tmp/fxfx_delta_trials_gdjjs2pw/delta_trial_probe"
+  ],
+  "reused_trial_logs": true,
+  "probe_source_sha256": "754847bbe4d13b49a00874e5af4e50b7c859bef9a5189e576bf807dd68a05c9b",
+  "trial_log_sha256": {
+    "fixed_pdf1": "69ea89c5950c6d07f9bc1426ffb54ac6728884b07ee278fd5c4f9f53b997e64c",
+    "fixed_pdf2": "ff36c466597641e3a7e88c36d41ee3aca1d8ef6e6db8ca5b1f881068b639e1e8",
+    "msbar_pdf1": "e1e73d02ffe059cb6f692749283015c396678d0e6edc30b9b093b761064ee793",
+    "cmw_pdf1": "9c2e6d6263ff070f29236916fc1081187d7cc1e1f023cf9485d01b514efc8e8f",
+    "cmw_pdf2": "886f56defb60e905eaa82924f320b4c3150b04b05f15503d532eda969c09a1d5",
+    "sudgen_settings_pdf2": "9497a25795815659fe8863890b881936c0ac3828476052c936e6487b4d57ffb3"
+  },
+  "pythia_sha256": {
+    "src/SimpleSpaceShower.cc": "79b9f2334af443005b7c4722dc629ca4facdce6663b73815c1fa0278aacfa789",
+    "src/SimpleTimeShower.cc": "f20a26c9d6a52ea2330288b9558140cc70abb88cd5158c249c9221417120e49b",
+    "src/Merging.cc": "56fe7127e5bf0c2a9ededaa756ae9928db8b8f2b83aa1cbfaf830960934504da",
+    "src/StandardModel.cc": "bdc3208d9efbfdddddcc657080e4b39816cf5baacb58d7c42f54ff9f851bd512",
+    "lib/libpythia8.so": "fca3546ceeb877d29698ddcab031fc202a6f9a69881bb09cc35c33317ebe1954",
+    "share/Pythia8/xmldoc/SpacelikeShowers.xml": "0d4d3c6b54e7dc8f1dfb89088a96c9354a07ec447cb1b5a96b81baba00d09d2e",
+    "share/Pythia8/xmldoc/TimelikeShowers.xml": "5cb214f66e3d06b1fa6e53f313ad4ba97ed95dd7346e43b4a3e30ac130cf37ad",
+    "share/Pythia8/xmldoc/MergingVariations.xml": "1af5e7c83f936e402e426af6a190c950362ba5f837b0d6ebfcf05319454d13b9",
+    "share/Pythia8/xmldoc/Variations.xml": "3eca13d362e3e55326961008869e4454fcc50f7c99f9cbf73616979b0170317a"
+  },
+  "notes": [
+    "These fresh trials are not a regeneration of the shipped Delta tables.",
+    "All tested dipoles are II; the API evolves only side A.",
+    "PDF factors, matrix-element corrections and merging variations are disabled.",
+    "SudGen uses HardQCD preparation, pT0Ref=0 and the default pTdampMatch=3; the result agrees with the independent undamped integral.",
+    "The five light quark masses are zero; five flavours are used in the running coupling.",
+    "The gluon API probability already includes a full gluon branching kernel: do not square it.",
+    "All numerical errors quoted for fresh trials are binomial errors of the Pythia API estimate.",
+    "The fixed-alpha FxFx control uses alpha times the actual expanded exponent without A2.",
+    "The production FxFx columns always use running alpha_s and A2, including fixed-alpha rows.",
+    "The independent analytic integral uses the exact Pythia AlphaStrong coupling and no extra A2.",
+    "For geometry scans, production FxFx has no independent dipole mass argument."
+  ],
+  "trial_record_files": {
+    "fixed_pdf1": "delta_trial_records/fixed_pdf1.txt",
+    "fixed_pdf2": "delta_trial_records/fixed_pdf2.txt",
+    "msbar_pdf1": "delta_trial_records/msbar_pdf1.txt",
+    "cmw_pdf1": "delta_trial_records/cmw_pdf1.txt",
+    "cmw_pdf2": "delta_trial_records/cmw_pdf2.txt",
+    "sudgen_settings_pdf2": "delta_trial_records/sudgen_settings_pdf2.txt"
+  },
+  "fxfx_source_sha256": {
+    "Template/NLO/SubProcesses/cluster.f": "f9c471697321893c862c5b3ac5abc1785e1b7d6a90eb0aad1a33c3b9beab279e",
+    "Template/NLO/SubProcesses/FKSParams.f90": "3d6faec68e2ae58a8ac4198f84568101e9bd979166526f8819c4fcbc976ab4ae"
+  }
+}

@@ -1,0 +1,142 @@
+[
+  {
+    "scheme": "legacy_NLL",
+    "q_GeV": 8.0,
+    "Q_GeV": 80.41900244575616,
+    "delta_raw": 0.701349989468439,
+    "delta_applied": 0.701349989468439,
+    "expanded_coefficient": -1.5824404558333307,
+    "expanded_applied": -0.30104762218960057,
+    "born_plus_compensation": 0.9124897361206139
+  },
+  {
+    "scheme": "Pythia8_finite",
+    "q_GeV": 8.0,
+    "Q_GeV": 80.41900244575616,
+    "delta_raw": 0.515215583394746,
+    "delta_applied": 0.515215583394746,
+    "expanded_coefficient": -3.766014036412326,
+    "expanded_applied": -0.716456386472719,
+    "born_plus_compensation": 0.8843450785281797
+  },
+  {
+    "scheme": "legacy_NLL",
+    "q_GeV": 10.0,
+    "Q_GeV": 80.41900244575616,
+    "delta_raw": 0.7885521634574418,
+    "delta_applied": 0.7885521634574418,
+    "expanded_coefficient": -1.034576513912858,
+    "expanded_applied": -0.1864447554753844,
+    "born_plus_compensation": 0.9355735787528499
+  },
+  {
+    "scheme": "Pythia8_finite",
+    "q_GeV": 10.0,
+    "Q_GeV": 80.41900244575616,
+    "delta_raw": 0.5876729883238208,
+    "delta_applied": 0.5876729883238208,
+    "expanded_coefficient": -3.1403324229142484,
+    "expanded_applied": -0.5659306033221867,
+    "born_plus_compensation": 0.920255117162073
+  },
+  {
+    "scheme": "legacy_NLL",
+    "q_GeV": 15.0,
+    "Q_GeV": 80.41900244575616,
+    "delta_raw": 0.921366615928682,
+    "delta_applied": 0.921366615928682,
+    "expanded_coefficient": -0.2554230487426283,
+    "expanded_applied": -0.042024857706522825,
+    "born_plus_compensation": 0.9600869168586252
+  },
+  {
+    "scheme": "Pythia8_finite",
+    "q_GeV": 15.0,
+    "Q_GeV": 80.41900244575616,
+    "delta_raw": 0.7092608838247242,
+    "delta_applied": 0.7092608838247242,
+    "expanded_coefficient": -2.172467704597667,
+    "expanded_applied": -0.35743699171693544,
+    "born_plus_compensation": 0.9627769604815285
+  },
+  {
+    "scheme": "legacy_NLL",
+    "q_GeV": 20.0,
+    "Q_GeV": 80.41900244575616,
+    "delta_raw": 0.9900382786920017,
+    "delta_applied": 0.9900382786920017,
+    "expanded_coefficient": 0.1281340479351099,
+    "expanded_applied": 0.0,
+    "born_plus_compensation": 0.9900382786920017
+  },
+  {
+    "scheme": "Pythia8_finite",
+    "q_GeV": 20.0,
+    "Q_GeV": 80.41900244575616,
+    "delta_raw": 0.7844263373024932,
+    "delta_applied": 0.7844263373024932,
+    "expanded_coefficient": -1.608045527939092,
+    "expanded_applied": -0.24925157439847068,
+    "born_plus_compensation": 0.9799458368747654
+  },
+  {
+    "scheme": "legacy_NLL",
+    "q_GeV": 21.5,
+    "Q_GeV": 80.41900244575616,
+    "delta_raw": 1.003600673068832,
+    "delta_applied": 1,
+    "expanded_coefficient": 0.2024570861696067,
+    "expanded_applied": 0.0,
+    "born_plus_compensation": 1.0
+  },
+  {
+    "scheme": "Pythia8_finite",
+    "q_GeV": 21.5,
+    "Q_GeV": 80.41900244575616,
+    "delta_raw": 0.8016605201822264,
+    "delta_applied": 0.8016605201822264,
+    "expanded_coefficient": -1.4809068494497017,
+    "expanded_applied": -0.22625919707372374,
+    "born_plus_compensation": 0.9830435858043607
+  },
+  {
+    "scheme": "legacy_NLL",
+    "q_GeV": 23.0,
+    "Q_GeV": 80.41900244575616,
+    "delta_raw": 1.0148739321247608,
+    "delta_applied": 1,
+    "expanded_coefficient": 0.26376484251393784,
+    "expanded_applied": 0.0,
+    "born_plus_compensation": 1.0
+  },
+  {
+    "scheme": "Pythia8_finite",
+    "q_GeV": 23.0,
+    "Q_GeV": 80.41900244575616,
+    "delta_raw": 0.8171104937661311,
+    "delta_applied": 0.8171104937661311,
+    "expanded_coefficient": -1.3674236393182018,
+    "expanded_applied": -0.20617252955764812,
+    "born_plus_compensation": 0.9855762311939933
+  },
+  {
+    "scheme": "legacy_NLL",
+    "q_GeV": 30.0,
+    "Q_GeV": 80.41900244575616,
+    "delta_raw": 1.0463504874443408,
+    "delta_applied": 1,
+    "expanded_coefficient": 0.43016731327384855,
+    "expanded_applied": 0.0,
+    "born_plus_compensation": 1.0
+  },
+  {
+    "scheme": "Pythia8_finite",
+    "q_GeV": 30.0,
+    "Q_GeV": 80.41900244575616,
+    "delta_raw": 0.8720922290777273,
+    "delta_applied": 0.8720922290777273,
+    "expanded_coefficient": -0.9655928351512191,
+    "expanded_applied": -0.13842117289683345,
+    "born_plus_compensation": 0.9928082583008803
+  }
+]

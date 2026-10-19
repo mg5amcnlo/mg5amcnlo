@@ -301,6 +301,8 @@ class TestBornLibrary(unittest.TestCase):
                 ('ttbar','p p > t t~ QED^2=0 QCD^2=4 [real=QCD]'),
                 ('wjet','p p > w+ j QED^2=2 QCD^2=2 [real=QCD]'),
                 ('extra','u u~ > jj jj QED^2=4 QCD^2=4 [real=QCD]'),
+                ('mixed','u u~ > d d~ QED^2=4 QCD^2=4 [real=QCD]'),
+                ('gluons','g g > g g QED^2=0 QCD^2=4 [real=QCD]'),
                 ('qed','e+ e- > mu+ mu- QED^2=4 QCD^2=0 [real=QED]'),
                 ('loonly','u d~ > w+ g QED^2=2 QCD^2=2 [LOonly=QCD]'),
                 ('shared',('u u~ > e+ e- QED^2=4 QCD^2=0 [real=QCD] @1',
@@ -324,17 +326,21 @@ class TestBornLibrary(unittest.TestCase):
         providers = sorted(directory.glob('p[0-9]*/matrix.f'))
         types = directory/'mc_born_types.f90'
         types.write_text(types.read_text().replace('  implicit none',
-            '  implicit none\n  integer(8),save :: born_test_helas_calls(%d)=0' % len(providers), 1))
+            '  implicit none\n  integer(8),save :: born_test_helas_calls(%d)=0\n'
+            '  integer(8),save :: born_test_contractions(%d)=0' % (len(providers),len(providers)), 1))
         for path in providers:
             provider = int(path.parent.name[1:])
             lines = []
             for line in support.statements(path.read_text()):
+                if re.match(r'(?i)\s*call\s+mcb\d+_sborn_splitorders\(', line):
+                    lines.append('born_test_contractions(%d)=born_test_contractions(%d)+1' %
+                                 (provider,provider))
                 if re.match(r'(?i)\s*call\s+(?!mcb\d+_)\w+\s*\(', line):
                     lines.append('born_test_helas_calls(%d)=born_test_helas_calls(%d)+1' %
                                  (provider,provider))
                 lines.append(line)
                 if re.match(r'(?i)\s*(?:[\w*]+\s+)*?(?:subroutine|function)\s+\w+', line):
-                    lines.append('use mc_born_types,only:born_test_helas_calls')
+                    lines.append('use mc_born_types,only:born_test_helas_calls,born_test_contractions')
             support.write_fortran(path,lines)
 
     @staticmethod
@@ -402,7 +408,7 @@ class TestBornLibrary(unittest.TestCase):
             'type(BornModelState) state,alternate', 'type(BornRequest) request',
             'type(BornResult) result,other', 'type(BornMetadata) metadata',
             'integer nfksprocess,status,sector,iteration,i,j,k,ihel',
-            'integer(8) calls_before,calls_first,calls_pruned',
+            'integer(8) calls_before,calls_first,calls_pruned,contractions_before',
             'integer nhel(%d,%d)' % (n,nh),
             *helicity_data, 'common/c_nfksprocess/nfksprocess',
             'complex(8) ewsud(amp_split_size),ewsud_lo2(amp_split_size)',
@@ -455,9 +461,11 @@ class TestBornLibrary(unittest.TestCase):
             'call born_evaluate(%d,%d,p,state,request,result,status)' % (r['provider'],r['context']),
             'if(status.ne.0)stop 11',
             'calls_before=born_test_helas_calls(%d)' % r['provider'],
+            'contractions_before=born_test_contractions(%d)' % r['provider'],
             'call born_evaluate(%d,%d,p,state,request,other,status)' % (r['provider'],r['context']),
             'if(status.ne.0)stop 29',
             'if(born_test_helas_calls(%d).ne.calls_before)stop 30' % r['provider'],
+            'if(born_test_contractions(%d).ne.contractions_before)stop 47' % r['provider'],
             'call close_real(result%born,other%born)',
             'call close_real(ans,result%born)',
             'do i=1,amp_split_size', 'call close_real(amp_split(i),result%amplitudes(i))','enddo',
@@ -489,7 +497,9 @@ class TestBornLibrary(unittest.TestCase):
                 'call born_evaluate(%d,%d,pother,state,request,other,status)' % (other['provider'],other['context']),
                 'if(status.ne.0)stop 12']
         lines += ['request%sector=sector',
+            'calls_before=born_test_helas_calls(%d)' % r['provider'],
             'call born_evaluate(%d,%d,p,state,request,other,status)' % (r['provider'],r['context']),
+            'if(born_test_helas_calls(%d).ne.calls_before)stop 48' % r['provider'],
             'call close_real(result%born,other%born)']
         for m,n_ in r['links'] if r['sectors'] else []:
             lines += ['calculatedBorn=.false.', 'call sborn(p,ans)',
@@ -593,12 +603,15 @@ class TestBornLibrary(unittest.TestCase):
                     'if(born_model_state_equal(state,alternate))stop 47',
                     'if(.not.born_amplitude_state_equal(state,alternate))stop 48',
                     'calls_before=born_test_helas_calls(%d)' % r['provider'],
+                    'contractions_before=born_test_contractions(%d)' % r['provider'],
                     'call born_evaluate(%d,%d,p,alternate,request,other,status)' % (r['provider'],r['context']),
                     'if(status.ne.0)stop 49', 'call close_real(result%born,other%born)',
                     'if(born_test_helas_calls(%d).ne.calls_before)stop 50' % r['provider'],
+                    'if(born_test_contractions(%d).ne.contractions_before)stop 53' % r['provider'],
                     'call born_evaluate(%d,%d,p,state,request,other,status)' % (r['provider'],r['context']),
                     'if(status.ne.0)stop 51', 'call close_real(result%born,other%born)',
-                    'if(born_test_helas_calls(%d).ne.calls_before)stop 52' % r['provider']]
+                    'if(born_test_helas_calls(%d).ne.calls_before)stop 52' % r['provider'],
+                    'if(born_test_contractions(%d).ne.contractions_before)stop 54' % r['provider']]
             lines += ['alternate=state',
                 'state%%real_values(%d)=2d0*state%%real_values(%d)' % (signature['g'],signature['g'])]
             for kind, index, degree in signature['couplings']:
@@ -609,17 +622,34 @@ class TestBornLibrary(unittest.TestCase):
                 'calls_before=born_test_helas_calls(%d)' % r['provider'],
                 'call born_evaluate(%d,%d,pother,state,request,other,status)' % (r['provider'],r['context']),
                 'if(status.ne.0)stop 45',
-                'if(born_test_helas_calls(%d)-calls_before.ne.calls_pruned)stop 46' % r['provider']]
+                'if(born_test_helas_calls(%d).ne.calls_before)stop 46' % r['provider']]
             lines += ['%s=state%%%s_values(%s)' % v for v in members]
             lines += ['calculatedBorn=.false.', 'nfksprocess=1', 'call sborn(pother,ans)',
-                      'call close_real(ans,other%born)']
+                'call close_real(ans,other%born)',
+                'do i=1,amp_split_size', 'call close_real(amp_split(i),other%amplitudes(i))',
+                'do j=1,nsplitorders', 'do k=1,2',
+                'call close_complex(amp_split_cnt(i,k,j),other%split_counterterms(i,k,j))',
+                'enddo', 'enddo', 'enddo',
+                'do j=1,nsplitorders', 'do k=1,2',
+                'call close_complex(ans_cnt(k,j),other%counterterms(k,j))', 'enddo', 'enddo',
+                'do i=1,%d' % ng, 'call close_real(amp2(i),other%diagrams(i))', 'enddo',
+                'do i=1,%d' % nc, 'call close_real(jamp2(i),other%flows(i))',
+                'do j=1,%d' % r['namps'],
+                'call close_real(jamp2b(i,j),other%flow_orders(i,j))', 'enddo', 'enddo',
+                # Return to the original coupling and momentum, as happens
+                # between folds. Its saved point must still be available.
+                'state=alternate',
+                'calls_before=born_test_helas_calls(%d)' % r['provider'],
+                'call born_evaluate(%d,%d,p,state,request,other,status)' % (r['provider'],r['context']),
+                'if(status.ne.0)stop 49', 'call close_real(result%born,other%born)',
+                'if(born_test_helas_calls(%d).ne.calls_before)stop 50' % r['provider']]
         lines += ["write(*,*)'PASS Born provider; HELAS discovery/pruned',calls_first,calls_pruned",'end',
             'subroutine close_complex(a,b)','implicit none','complex(8) a,b',
             'call close_real(real(a,8),real(b,8))','call close_real(aimag(a),aimag(b))','end',
             'subroutine close_real(a,b)','use, intrinsic :: ieee_arithmetic','implicit none','real(8) a,b',
             'if(.not.ieee_is_finite(a).or..not.ieee_is_finite(b))stop 21',
             'if(abs(a-b).gt.1d-12*max(1d-50,abs(a),abs(b)))then',
-            "write(*,*)'Mismatch',a,b",'stop 22','endif','end',
+            "write(*,*)'Mismatch',a,b",'error stop 22','endif','end',
             'double precision function ran2()', 'stop 23', 'end']
         return lines
 
@@ -641,6 +671,12 @@ class TestBornLibrary(unittest.TestCase):
 
     def test_extra_born(self):
         self.compare(self.outputs['extra'])
+
+    def test_mixed_orders(self):
+        self.compare(self.outputs['mixed'])
+
+    def test_gluon_colour_density(self):
+        self.compare(self.outputs['gluons'])
 
     def test_qed_charge_correlations(self):
         self.compare(self.outputs['qed'])

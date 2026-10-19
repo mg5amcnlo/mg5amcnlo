@@ -1,0 +1,10 @@
+
+ *------------------ MEPS Merging Initialization  ------------------*
+ |                                                                  |
+ | CKKW-L merge                                                     |
+ |                             pp>jj  with up to1000 additional jets |
+ | Merging scale is defined by Lund pT, with value tMS =   -1.0 GeV |
+ |                                                                  |
+ *-------------- END MEPS Merging Initialization  ------------------*
+
+RESULT 20.000000000000 80.419002445756 40.209501222878 2 1 1357407 0.952742000000 500000 9.819322383000 0.952794974199 0.170773783220 0.130481797128

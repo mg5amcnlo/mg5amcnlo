@@ -2617,6 +2617,44 @@ class TestFKSCommon(unittest.TestCase):
         self.assertEqual(matrix_qed, dicts_qed[1]['link_matrix'])
         
 
+    def test_colour_density_insertions(self):
+        """Exact insertions agree with the independent linked-basis expansion.
+
+        Include gluon insertions, crossed quarks, and massive self links (with
+        their factor of one half), using a basis with off-diagonal entries.
+        """
+        for ids in ((2, -2, 21, 21), (21, 21, 2, -2)):
+            legs = MG.LegList([MG.Leg(dict(id=pdg, number=i, state=i > 2))
+                               for i, pdg in enumerate(ids, 1)])
+            process = MG.Process(dict(legs=legs, model=self.model,
+                                      orders={'QCD': 2, 'QED': 0}))
+            born = helas_objects.HelasMatrixElement(diagram_generation.Amplitude(process))
+            basis = born['color_basis']
+            fkslegs = fks_common.to_fks_legs(legs, self.model)
+            if ids[0] == 21:
+                for leg in fkslegs[2:]:
+                    leg['massless'] = False
+            insertions = fks_common.find_color_links(fkslegs, symm=True)
+            unit_diagrams = []
+            for structure in sorted(basis):
+                string = color.ColorString()
+                string.from_immutable(structure)
+                unit_diagrams.append({(): string})
+            expanded = fks_common.insert_color_links(basis, unit_diagrams, insertions)
+            for insertion, legacy in zip(insertions, expanded):
+                with self.subTest(ids=ids, legs=legacy['link']):
+                    matrix = fks_common.born_color_insertion(basis, insertion)
+                    expected = {(i, j): [fractions.Fraction(0), fractions.Fraction(0)]
+                                for i in range(len(basis)) for j in range(len(basis))}
+                    for k, structure in enumerate(sorted(legacy['link_basis'])):
+                        for j, _, coefficient, imaginary, power, _ in legacy['link_basis'][structure]:
+                            coefficient *= fractions.Fraction(3)**power
+                            for i in range(len(basis)):
+                                real, imag = legacy['link_matrix'].col_matrix_fixed_Nc[i, k]
+                                expected[i, j][0] += coefficient*(imag if imaginary else real)
+                                expected[i, j][1] += coefficient*(-real if imaginary else imag)
+                    self.assertEqual(matrix, {key: tuple(value) for key, value in expected.items()})
+
     def test_legs_to_color_link_string(self):
         """tests if, given two fks legs, the color link between them is correctly 
         computed, i.e. if string and replacements are what they are expected to be"""

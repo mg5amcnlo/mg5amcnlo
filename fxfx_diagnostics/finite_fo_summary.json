@@ -1,0 +1,39 @@
+{
+  "rates_pb": {
+    "finite_legacy_NLO": [
+      6426.4611,
+      50.847556327375266
+    ],
+    "finite_legacy_LO": [
+      4723.833799999999,
+      9.723103701642957
+    ],
+    "finite_pythia_NLO": [
+      6139.6307,
+      40.396524045848224
+    ],
+    "finite_pythia_LO": [
+      3821.2185,
+      7.855267351601281
+    ]
+  },
+  "djr_19p95_25p12_pb": {
+    "finite_legacy_NLO": [
+      788.51593,
+      31.12177593360201
+    ],
+    "finite_legacy_LO": [
+      538.38912,
+      3.1317411045817405
+    ],
+    "finite_pythia_NLO": [
+      687.46686,
+      23.90815168603596
+    ],
+    "finite_pythia_LO": [
+      433.3674,
+      2.5665963822084223
+    ]
+  },
+  "note": "Six subprocesses, 2 x 65536 points each, corrected Born-scale restoration. Schemes share initial grids and random seeds; their integration errors are correlated. These are fixed-order FxFx-weighted results before showering. LO curves have no NLO compensation; NLO curves include it."
+}

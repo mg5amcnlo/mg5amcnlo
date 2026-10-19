@@ -14,7 +14,9 @@ program check_pythia8_s_scales
   implicit none
   character(len=32) :: mode
   double precision :: p(0:3,4),saved(4,4),saved_hard,q,expected,observed,ff_cap,fi_cap
-  integer :: i,nabove,selected_fold
+  double precision :: thresholds(5)=[19d0,20d0,21.5d0,23d0,24d0]
+  double precision :: damping_weights(5)=[1d0,1d0,0.5d0,0d0,0d0]
+  integer :: i,j,nabove,selected_fold,calls_before
   logical :: delta,herwig
 
   call get_command_argument(1,mode)
@@ -159,8 +161,60 @@ program check_pythia8_s_scales
   ! FxFx continues to use its own undamped clustering prescription.
   hard_reference=1000d0
   ickkw_mod=3
+  calls_before=random_calls
   call compute_shower_scale_nbody(p,-3,mc_shower_scale_mass())
   call require(all(shower_scale_nbody.eq.2000d0),'FxFx scale prescription')
+  call close(shower_scale_hard,2000d0,'FxFx undamped hard scale')
+  call require(all(shower_scale_nbody_min.eq.2000d0),'FxFx narrow lower bounds')
+  call require(all(shower_scale_nbody_max.eq.2003d0),'FxFx narrow upper bounds')
+  call require(random_calls.eq.calls_before,'FxFx scale setting needs no damping draw')
+
+  ! At the merging boundary, the scale stays at Q for every RNG value.
+  ! The subtraction retains its old three-GeV transition above Q.
+  call init_scale_module(5,1d0,2,2)
+  hard_reference=20d0
+  do i=1,3
+    random_value=dble(i)/4d0
+    calls_before=random_calls
+    call compute_shower_scale_nbody(p,-3,mc_shower_scale_mass())
+    call close(shower_scale_hard,20d0,'FxFx scale at the merging boundary')
+    call require(all(shower_scale_nbody.eq.20d0),'FxFx scalar matrix at boundary')
+    call require(random_calls.eq.calls_before,'FxFx scale is independent of RNG')
+  enddo
+  do j=1,size(thresholds)
+    q=thresholds(j)
+    ileg=1
+    shat_n1=4000d0**2
+    xtk=-2000d0*q
+    observed=compute_damping_weight(4,q/2000d0,0d0)
+    call close(observed,damping_weights(j),'FxFx narrow subtraction transition')
+  enddo
+
+  call save_shower_scale_nbody(1,1,fksfather)
+  call save_shower_scale_nbody(2,2,fksfather,4)
+  saved=shower_scale_nbody
+  saved_hard=shower_scale_hard
+  shower_scale_n1body=222d0
+  emsca_H=333d0
+  calls_before=random_calls
+  call set_FxFx_shower_scale_nbody(100d0)
+  call close(shower_scale_hard,100d0,'native FxFx undamped clustering reference')
+  call require(all(shower_scale_nbody_min.eq.100d0),'native FxFx lower bounds')
+  call require(all(shower_scale_nbody_max.eq.103d0),'native FxFx upper bounds')
+  call require(random_calls.eq.calls_before,'native FxFx scale needs no damping draw')
+  call require(all(shower_scale_n1body.eq.222d0).and.all(emsca_H.eq.333d0), &
+       'native FxFx scale leaves H-event matrices intact')
+  itype=5
+  nFKS=2
+  ifold_cnt=2
+  call update_shower_scale_Sevents_v2(2,selected_fold)
+  call require(selected_fold.eq.2,'FxFx selected S-event fold')
+  call close(showerscaleS_hard,saved_hard,'saved FxFx hard scale survives native histories')
+  if (delta) then
+    call require(all(showerscaleS.eq.saved),'saved FxFx Delta matrix survives native histories')
+  else
+    call close(showerscaleS(1,1),saved_hard,'saved FxFx scalar survives native histories')
+  endif
   print *, 'PASS '//trim(mode)
 contains
   subroutine require(condition,label)

@@ -1,0 +1,26 @@
+{
+  "P0_udx_veepg": {
+    "evaluations": 1620,
+    "raw_delta_quantiles_0_10_50_90_100": [
+      0.9194740292544964,
+      0.970954962876943,
+      0.9867861180372306,
+      1.001680401223162,
+      1.0630219044382048
+    ],
+    "fraction_capped": 0.1308641975308642,
+    "note": "Importance-sampled integration evaluations, with repeated clustering calls; these are not cross-section-weighted statistics."
+  },
+  "P0_ug_vedep": {
+    "evaluations": 1562,
+    "raw_delta_quantiles_0_10_50_90_100": [
+      0.7419236958325383,
+      0.9489671677146791,
+      0.9857169022770362,
+      1.0025692103049213,
+      1.0572730939985941
+    ],
+    "fraction_capped": 0.14596670934699105,
+    "note": "Importance-sampled integration evaluations, with repeated clustering calls; these are not cross-section-weighted statistics."
+  }
+}

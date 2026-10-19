@@ -23,8 +23,11 @@ import madgraph.interface.master_interface as master_cmd
 import madgraph.interface.madgraph_interface  as mg_cmd
 import madgraph.interface.extended_cmd as ext_cmd
 import madgraph.interface.amcatnlo_interface as mecmd
+import madgraph.interface.amcatnlo_run_interface as run_interface
 import madgraph.various.misc as misc
 import os
+import tempfile
+from pathlib import Path
 from io import StringIO
 import logging
 
@@ -34,6 +37,71 @@ root_path = os.path.dirname(root_path)
 pjoin = os.path.join
 
 class MGerror(Exception): pass
+
+class TestPythia8FxFxPlugin(unittest.TestCase):
+
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name)
+        self.plugins = self.root / 'include' / 'Pythia8Plugins'
+        self.plugins.mkdir(parents=True)
+        self.reference = self.root / 'MG5JetMatching.h'
+        self.reference.write_text('MG5 legacy matching plugin\n')
+
+    def check_plugin(self):
+        run_interface.check_pythia8_fxfx_plugin(str(self.root),
+                                               str(self.reference))
+
+    def native_plugin(self):
+        (self.plugins / 'CombineMatchingInput.h').write_text(
+            '#include "Pythia8Plugins/JetMatchingHooks.h"\n')
+        (self.plugins / 'JetMatchingHooks.h').write_text(
+            'class JetMatchingMadgraph {};\n'
+            'bool doFxFx = flag("JetMatching:doFxFx");\n')
+
+    def test_native_fxfx_without_legacy_header(self):
+        self.native_plugin()
+        self.check_plugin()
+
+    def test_native_header_must_support_fxfx(self):
+        self.native_plugin()
+        (self.plugins / 'JetMatchingHooks.h').write_text(
+            'class JetMatchingMadgraph {};\n')
+        with self.assertRaisesRegex(run_interface.aMCatNLOError,
+                                    'does not provide'):
+            self.check_plugin()
+
+    def test_native_header_must_exist(self):
+        self.native_plugin()
+        (self.plugins / 'JetMatchingHooks.h').unlink()
+        with self.assertRaisesRegex(run_interface.aMCatNLOError, 'missing'):
+            self.check_plugin()
+
+    def test_legacy_plugin_matches_reference(self):
+        (self.plugins / 'JetMatching.h').write_text(self.reference.read_text())
+        self.check_plugin()
+
+    def test_legacy_plugin_mismatch_is_rejected(self):
+        (self.plugins / 'JetMatching.h').write_text('Different matching plugin\n')
+        with self.assertRaisesRegex(run_interface.aMCatNLOError,
+                                    'Incorrect plugin detected'):
+            self.check_plugin()
+
+    def test_missing_legacy_plugin_is_rejected(self):
+        with self.assertRaisesRegex(run_interface.aMCatNLOError,
+                                    'dedicated plugin'):
+            self.check_plugin()
+
+    def test_unused_native_header_does_not_bypass_legacy_check(self):
+        self.native_plugin()
+        (self.plugins / 'CombineMatchingInput.h').write_text(
+            '#include "Pythia8Plugins/JetMatching.h"\n')
+        (self.plugins / 'JetMatching.h').write_text('Different matching plugin\n')
+        with self.assertRaisesRegex(run_interface.aMCatNLOError,
+                                    'Incorrect plugin detected'):
+            self.check_plugin()
+
 
 class TestMadEventCmd(unittest.TestCase):
     """ check if the ValidCmd works correctly """

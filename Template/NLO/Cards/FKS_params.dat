@@ -279,5 +279,22 @@
 ! Default :: .false.
 !
 ! ==========================================================================
+! FxFx analytic Sudakov finite terms (ickkw=3 only).
+! Always enabled for FxFx with PYTHIA8 matching, regardless of this flag.
+! Other modes default to .false.; fixed-order runs do not enable them
+! automatically, even when parton_shower=PYTHIA8 in the run card.
+! .false.: the standard logarithmic NLL kernels, unless enabled above.
+! .true.: massless forward splitting kernels integrated with Pythia8's
+! momentum tagging and global ISR z bound, identifying the upper FxFx
+! scale with the dipole mass. Retains A1, B1, A2 and the existing massive
+! terms. Includes the same finite terms in the NLO expansion subtraction.
+! This universal prescription omits event-dependent PDFs, dipole recoil
+! and matrix-element corrections; it is not a Pythia no-emission weight.
+! Rerun integration/grid setup and event generation after changing it.
+#FxFxPythia8FiniteTerms
+.false.
+! Default :: .false.
+!
+! ==========================================================================
 ! End of FKS_params.dat file
 ! ==========================================================================

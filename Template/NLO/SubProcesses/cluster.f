@@ -1838,6 +1838,7 @@ c Wrapper code for computation of the exponent of the Sudakov Form
 c Factor numerically using Gaussian integration. It also saves the last
 c 'nc' computed values, which is helpful when dealing, e.g., with many
 c real-emission processes for which many Sudakovs might be identical.
+      use FKSParams, only: use_fxfx_finite_terms
       implicit none
 c Arguments
       integer itype
@@ -1857,7 +1858,10 @@ c Cache (adapted from the pdg2pdf() functions)
       parameter (nc=64) ! number of calls to put in cache
       integer i,ireuse,ii,i_replace,itypelast(nc)
       double precision sudlast(nc),imasslast(nc),q0last(nc),Q11last(nc)
+      logical finite_last(nc),finite_terms
       save sudlast,i_replace,itypelast,imasslast,q0last,Q11last
+      save finite_last
+      data finite_last/nc*.false./
       data sudlast/nc*-99d9/
       data itypelast/nc*-99/
       data imasslast/nc*-99d9/
@@ -1865,10 +1869,12 @@ c Cache (adapted from the pdg2pdf() functions)
       data Q11last/nc*-99d9/
       data i_replace/nc/
 c Check if we can re-use any of the last 'nc' calls
+      finite_terms=use_fxfx_finite_terms()
       ireuse=0
       ii=i_replace
       do i=1,nc
-         if (itype.eq.itypelast(ii)) then
+         if (itype.eq.itypelast(ii).and.
+     $       (finite_last(ii).eqv.finite_terms)) then
             if (Q11.eq.Q11last(ii)) then
                if (imass.eq.imasslast(ii)) then
                   if (q0.eq.q0last(ii)) then
@@ -1899,6 +1905,7 @@ c ago with the newly computed one
       imasslast(i_replace)=imass
       q0last(i_replace)=q0
       Q11last(i_replace)=Q11
+      finite_last(i_replace)=finite_terms
       sudlast(i_replace)=sudakov_exp
       return
       end
@@ -1910,6 +1917,7 @@ c Form Factor numerically using Gaussian integration. It also saves the
 c last 'nc' computed values, which is helpful when dealing, e.g., with
 c many real-emission processes for which many Sudakovs might be
 c identical.
+      use FKSParams, only: use_fxfx_finite_terms
       implicit none
 c Arguments
       integer itype
@@ -1929,7 +1937,10 @@ c Cache (adapted from the pdg2pdf() functions)
       parameter (nc=64)         ! number of calls to put in cache
       integer i,ireuse,ii,i_replace,itypelast(nc)
       double precision sudlast(nc),imasslast(nc),q0last(nc),Q11last(nc)
+      logical finite_last(nc),finite_terms
       save sudlast,i_replace,itypelast,imasslast,q0last,Q11last
+      save finite_last
+      data finite_last/nc*.false./
       data sudlast/nc*-99d9/
       data itypelast/nc*-99/
       data imasslast/nc*-99d9/
@@ -1937,10 +1948,12 @@ c Cache (adapted from the pdg2pdf() functions)
       data Q11last/nc*-99d9/
       data i_replace/nc/
 c Check if we can re-use any of the last 'nc' calls
+      finite_terms=use_fxfx_finite_terms()
       ireuse=0
       ii=i_replace
       do i=1,nc
-         if (itype.eq.itypelast(ii)) then
+         if (itype.eq.itypelast(ii).and.
+     $       (finite_last(ii).eqv.finite_terms)) then
             if (Q11.eq.Q11last(ii)) then
                if (imass.eq.imasslast(ii)) then
                   if (q0.eq.q0last(ii)) then
@@ -1971,6 +1984,7 @@ c ago with the newly computed one
       imasslast(i_replace)=imass
       q0last(i_replace)=q0
       Q11last(i_replace)=Q11
+      finite_last(i_replace)=finite_terms
       sudlast(i_replace)=expanded_sudakov_exp
       return
       end
@@ -1984,19 +1998,23 @@ c   o. For mode=2: take terms logarithmic in log(Q/q0) and constants
 c      into account (up to NLL).
 c   o. For mode=1: take the strict O(alphaS) expansion, with the alphaS
 c      stripped off.
+c FxFx finite terms retain the finite-z integrals of the massless
+c forward kernels with Pythia8's momentum tagging and global ISR bound.
+c Both modes use the same finite terms; the existing A2 term is retained.
 c Types are
 c   1 : massless fermion, colour triplet
 c   2 : massive fermion, colour triplet
 c   3 : massless vector, colour octet
 c   4 : massive particle, colour triplet (treated in inf. mass limit)
 c   5 : massive particle, colour octet   (treated in inf. mass limit)
+      use FKSParams, only: use_fxfx_finite_terms
       implicit none
       include 'cuts.inc'        ! includes maxjetflavor
       integer i
       double precision q0,alphasq0,mu,qom,moq2,alphas,qmass(6)
-     $     ,get_mass_from_id,colfac
+     $     ,get_mass_from_id,colfac,r,zcut,zmax,softlog,pairshape
       external alphas,get_mass_from_id
-      logical firsttime
+      logical firsttime,finite_terms
       save qmass,firsttime
       data firsttime/.true./
 c Constants
@@ -2009,6 +2027,7 @@ c Sudakov type and related
       integer type,mode
       double precision Q1,mass
       common /to_sud_exp/Q1,mass,type,mode
+      finite_terms=use_fxfx_finite_terms()
       if (firsttime) then
 c Quark masses in g->qqbar splittings (assumes that all other X in g->XX are
 c infinitely heavy).
@@ -2033,10 +2052,28 @@ c GeV
          stop
       endif
 
+c In the massless global-recoil ISR bound, z < 1-eps with
+c eps = (r/2)*(sqrt(4+r**2)-r), r=k/Q. Use the stable expression below.
+c Identify the analytic upper scale Q with the dipole mass. This is a
+c universal finite-term prescription, not an event-dependent shower
+c no-emission probability (there are no PDF ratios or recoil momenta).
+      if (finite_terms) then
+         r=q0/Q1
+         zcut=2d0*r/(sqrt(4d0+r*r)+r)
+         zmax=1d0-zcut
+         softlog=log(1d0/zcut)
+c Normalized integral of 2*z*T_R*(z**2+(1-z)**2), T_R=1/2.
+         pairshape=1.5d0*zmax**2-2d0*zmax**3+1.5d0*zmax**4
+      endif
+
       if(type.eq.1 .or. type.eq.2) then
 c Quark Sudakov
 c     q->q+g
          Gamma=CF*alphasq0*(log(Q1/q0)-3d0/4d0)/pi ! A1+B1
+         if (finite_terms.and.type.eq.1) then
+c Integral of z*(P_qq+P_gq) over 0 < z < zmax, divided by 2*C_F.
+            Gamma=CF*alphasq0*(softlog-0.75d0*zmax**2)/pi
+         endif
          if (type.eq.2) then ! include mass effects
             qom=q0/mass
             Gamma=Gamma+CF*alphasq0/pi/2d0*( 0.5d0 - qom*atan(1d0/qom) -
@@ -2050,10 +2087,19 @@ c$$$            Gamma=Gamma*(1d0+alphasq0*kappa/(2d0*pi)) ! A2
 c Gluon sudakov         
 c     g->g+g contribution
          Gamma=CA*alphasq0*(log(Q1/q0)-11d0/12d0)/pi ! A1+B1
+         if (finite_terms) then
+c Integral of z*P_gg over 0 < z < zmax, divided by 2*C_A.
+            Gamma=CA*alphasq0*(softlog-zmax**2+zmax**3/3d0
+     $           -zmax**4/4d0)/pi
+         endif
 c     g->q+qbar contribution
          do i=1,6 ! assume 6 quark flavours
             if (i.le.maxjetflavor) then   ! massless splitting
-               Gamma=Gamma+alphasq0/(6d0*pi)   ! B1
+               if (finite_terms) then
+                  Gamma=Gamma+alphasq0/(6d0*pi)*pairshape
+               else
+                  Gamma=Gamma+alphasq0/(6d0*pi) ! B1
+               endif
             else                          ! massive splitting
                moq2=(qmass(i)/q0)**2
                Gamma=Gamma+alphasq0/(4d0*pi)/(1d0+moq2)*

@@ -1,0 +1,104 @@
+Numerical comparison of the FxFx finite terms and MC@NLO-Delta Sudakovs
+===================================================================
+
+The finite terms agree closely with fresh momentum-tagged Pythia trials
+(pdfMode=1) when running coupling and CMW/A2 are treated consistently.
+They do not reproduce the current shipped Delta table or pdfMode=2.
+
+Setup and interpretation
+------------------------
+FxFx: actual cluster.f routines, actual FKSParams module, finite flag true;
+alpha_s(mZ)=0.119, two-loop running, original A2 logarithm retained.
+The main comparison uses start = dipole mass = mW = 80.419002445756 GeV.
+Pythia 8.318: same generateSingleSudakov API called by vendor/SudGen;
+500,000 trial showers per point. Five massless light flavours and nf=5
+running are specified. HardQCD preparation, pT0Ref=0, MECs disabled.
+Merging:muRfactors={} and UncertaintyBands:doVariations=off are necessary:
+default merging variations otherwise postpone vetoes and spoil this API.
+PDF ratios and both matching prescriptions' compensation terms are excluded.
+Fresh-trial quark pairs use the square of one massless QCD quark factor.
+Its error is 2*Delta_q*sigma(Delta_q); it reuses a single-factor estimate.
+For stored tables, u*dbar is used, since the shipped table depends on flavour.
+
+Stored Delta tables are evaluated through their actual Fortran pysudakov
+function, with table(stop,mDip)/table(start,mDip) for each colour line.
+The shipped table is identical in w0j, w1j, w0j_new and w1j_new.
+Its generation settings are not recorded. It differs from all three
+pdfMode archives; the current generator's settings cannot identify it.
+Archive names below specify their file names, not a coupling retuning.
+The active Delta caller uses type II for every incoming emitter, also IF.
+
+Incoming u dbar quark pair, raw factors
+-------------------------------
+ q [GeV]  FxFx finite  Pythia CMW/pdf1 +/- stat  Pythia CMW/pdf2  Delta shipped
+    20.0     0.784426  0.784089 +/- 0.000798       0.887470          0.967396
+    21.5     0.801661  0.799408 +/- 0.000778       0.902401          0.987531
+    23.0     0.817110  0.816442 +/- 0.000754       0.915646          0.985352
+
+ q [GeV]  FxFx legacy  Delta archive pdf1  Delta archive pdf2  Pythia no-CMW/pdf1
+    20.0  0.990038     0.772424            0.880125            0.799751
+    21.5  1.000000     0.790574            0.896257            0.814232
+    23.0  1.000000     0.806977            0.910128            0.829710
+
+The production FxFx / fresh CMW-pdf1 pair ratio differs from one by
+0.04%, 0.28%, 0.08% at 20, 21.5, 23 GeV respectively (MC error ~0.1%).
+The same pair factor is 10.8-11.6% lower than fresh CMW-pdf2, and
+17.1-18.9% lower than the currently shipped Delta table.
+It is 1.3-1.6% higher than the pdfMode1 archive, whose coupling is not retuned.
+These comparisons establish a finite-scale completion, not a unique NLL
+prediction: different finite prescriptions can share the NLL logarithms.
+
+Gluon factor at mW
+-------------------
+The current Pythia API already includes the full incoming-gluon kernel;
+its result must not be squared. Delta instead multiplies its stored line
+ratios. We show the symmetric limit of two identical live connections.
+This is not a full event Delta evaluation or a PDF-weighted probability.
+ q [GeV]  FxFx finite  Pythia CMW/pdf1 +/- stat  Delta shipped (two lines)
+    20.0  0.749649     0.748750 +/- 0.000613       0.485590
+    23.0  0.786695     0.785530 +/- 0.000580       0.651451
+
+Higher upper scales, quark pair at q=20 GeV and mDip=start
+----------------------------------------------------------
+ start [GeV]  FxFx finite  Pythia CMW/pdf1  FxFx/Pythia
+       200.0  0.579384     0.581141         0.996977
+       500.0  0.371848     0.374664         0.992485
+
+Independent dipole-mass scan, one incoming quark, start=mW, stop=20 GeV
+--------------------------------------------------------------------
+ mDip [GeV]  FxFx finite  Pythia CMW/pdf1
+    40.2095  0.885678     0.952742
+    80.4190  0.885678     0.885488
+   160.8380  0.885678     0.825034
+   321.6760  0.885678     0.755914
+FxFx has no independent dipole-mass argument and identifies it with its
+upper scale. Thus agreement at mDip=start is not universal. For mDip<start
+the dummy Pythia radiator also has its starting scale capped at mDip.
+The independent integration implements this cap; a repeated MC call
+confirmed the same probability after correcting that integration bound.
+
+Validation and reproducibility
+------------------------------
+49 points, 24,500,000 trial showers, plus one repeated geometry check.
+An independent integral uses the exact Pythia AlphaStrong coupling and
+massless forward kernels. It includes CMW through the coupling, without
+adding the FxFx A2 logarithm a second time.
+Largest integral-minus-trial residual: 2.331 statistical sigma.
+At fixed alpha=0.12, the actual expanded FxFx quark exponent agrees with
+the independent finite-kernel integral to better than 1e-9 in the factor.
+All 49 independent-integral comparisons pass a five-sigma bound.
+Raw interpolation overshoots are preserved in fxfx_vs_delta_tables.csv;
+diagnostic leg probabilities are capped at one. This matters near the
+table endpoint, not for the II quark comparisons quoted above.
+
+Reproduce tables: python3 fxfx_diagnostics/compare_delta_sudakov.py
+Reproduce trials: python3 fxfx_diagnostics/compare_delta_trials.py --pythia <Pythia-install>
+Replay stored trials without Pythia: python3 fxfx_diagnostics/compare_delta_trials.py --reuse-trials
+Fresh trials also accept FXFX_TEST_PYTHIA or PYTHIA8 for the installation path.
+Original MC outputs are saved in delta_trial_records/*.txt and checked by SHA256.
+Absolute Pythia paths in the provenance JSON describe the original run only.
+Source/library/table hashes and settings are in the provenance JSON files.
+Main figures: fxfx_vs_delta_trials.pdf and fxfx_vs_delta_quark_pair.pdf.
+
+No production physics code or card defaults were changed for this study.
+These are raw-factor tests, not a new showered DJR or merging-scale scan.

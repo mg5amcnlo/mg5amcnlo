@@ -121,6 +121,11 @@ program check_mc_born_cuts
     if(k.eq.2)native_scales(0)=12d0
     if(k.eq.3)native_scales(2)=20d0
     call compute_shower_scale_nbody(p(:,1:6),1,0d0)
+    if(shower_scale_hard.ne.scale_factors(k)*minval(native_scales)) &
+         error stop 'FxFx Born shower scale was damped'
+    if(any(shower_scale_nbody_min.ne.shower_scale_hard).or. &
+         any(shower_scale_nbody_max.ne.shower_scale_hard+3d0)) &
+         error stop 'FxFx Born subtraction uses a broad damping interval'
     expected_hard=shower_scale_hard
     expected_scales(:,:,1)=shower_scale_nbody
     expected_scales(:,:,2)=shower_scale_nbody_min

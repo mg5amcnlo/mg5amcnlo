@@ -1,0 +1,78 @@
+Reproducing the FxFx / MC@NLO-Delta comparison
+============================================
+
+Use a source checkout with Python 3, NumPy, SciPy, Matplotlib and gfortran.
+Run the commands below from the repository root.
+
+Stored-table comparison and analytic FxFx factors
+------------------------------------------------
+  python3 fxfx_diagnostics/compare_delta_sudakov.py
+
+This compiles the actual Fortran Sudakov functions and the four stored Delta
+grids. The CSV files contain raw line ratios as well as bounded leg factors.
+The quark-pair plot uses the u*dbar product, including the shipped table's
+flavour dependence. Gluon plots use two identical live colour connections.
+
+Replay the recorded Pythia trial showers
+---------------------------------------
+  python3 fxfx_diagnostics/compare_delta_trials.py --reuse-trials
+
+This needs no Pythia installation. It checks the saved probe and record hashes,
+recomputes the FxFx factors from the current Fortran implementation, and writes
+the comparison data, plots and numerical notes. The six record sets under
+delta_trial_records/ contain the 49 original 500,000-trial evaluations. The
+additional geometry_control.txt preserves the repeated geometry check.
+
+The provenance JSON records the Pythia source/library hashes and settings from
+the original Pythia 8.318 run. Absolute installation and temporary build paths
+in that JSON describe the historical run; they are not used for replay.
+
+Generate new Pythia trials
+-------------------------
+  python3 fxfx_diagnostics/compare_delta_trials.py --pythia /path/to/pythia8318
+
+g++ and the Pythia headers, library and XML documentation are required. The
+installation can also be supplied through FXFX_TEST_PYTHIA or PYTHIA8. Fresh
+trials replace the six saved record sets and their provenance. The diagnostic
+probe uses Pythia 8.318's hard-coded ISR trial count of 500,000; use that version
+for direct reproduction of the quoted statistical errors.
+
+These are controlled raw-factor comparisons: PDFs, matrix-element corrections
+and merging variations are disabled. The new finite FxFx option is enabled
+explicitly. Physical PDFs, matching compensation and event-specific dipole
+geometry must be included when interpreting a complete merged prediction.
+
+W+jets analysis examples
+-----------------------
+The two templates used for the W study are:
+  Template/NLO/FixedOrderAnalysis/analysis_HwU_pp_wp_jets.f
+  Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_wp_jets.f
+
+For p p > e+ ve + jets [QCD], select the fixed-order example in
+Cards/FO_analyse_card.dat with:
+  FO_ANALYSIS_FORMAT = HwU
+  FO_ANALYSE = analysis_HwU_pp_wp_jets.o
+
+Select the Pythia example in Cards/shower_card.dat with:
+  hadronize = F
+  ue_enabled = F
+  ANALYSE = HwU.o py8an_HwU_pp_wp_jets.o myfastjetfortran.o
+  EXTRALIBS = fastjet stdc++ HepMC HepMCfio
+
+The shower interface selects full FastJet or the bundled fjcore and handles
+its include paths. Preserve any library paths required by the local HepMC
+installation. Processes generated before these templates were added need the
+chosen analysis copied into their corresponding analysis directory.
+
+Both examples use anti-kt jets with R=0.4, pT>20 GeV and |eta|<4.5. DJRs use
+kt, R=1 and all final-state light QCD partons without pT or eta cuts. Four jet
+ranks and transitions are booked. Missing transitions enter the zero bin of
+the linear spectrum; logarithmic spectra exclude zero. The fixed-order LO
+histograms include only Born terms (ibody=3). The shower analysis requires
+parton-level events and uses the last W+ copy, or final e+ + ve if absent.
+
+The fixed-order FastJet wrapper takes E,px,py,pz, while the shower wrapper and
+HEPEVT use px,py,pz,E. These conventions are handled in the two examples.
+The examples were validated with the actual bundled fjcore wrappers using
+known one- and two-jet configurations, an unresolved configuration, the eta
+cut, signed NLO contributions and shower weight variations.
