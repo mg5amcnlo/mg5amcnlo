@@ -45,6 +45,9 @@ import madgraph.various.cluster as cluster
 import madgraph.fks.fks_common as fks_common
 import madgraph.core.diagram_generation as diagram_generation
 
+from madgraph.various import fxfx_ewsudakov
+from madgraph.various.fxfx_ewsudakov import FxFxEWSudakovMixin
+
 import models.import_ufo as import_ufo
 import models.check_param_card as check_param_card 
 #import MadSpin.decay as madspin
@@ -62,7 +65,22 @@ nb_f2py_module = 0 # each time the process/model is changed this number is modif
 #lhapdf = None
 
 
-class ReweightInterface(extended_cmd.Cmd):
+def first_add_process_to_generate(commands):
+    """Turn the first 'add process' of the command sequence into 'generate'.
+
+    A command may start with definitions ('define pert_QCD = ...; add process
+    ...'), so the first occurrence is searched inside each command, as for a
+    single concatenated command line.
+    """
+    commands = list(commands)
+    for idx, cmd in enumerate(commands):
+        if 'add process' in cmd:
+            commands[idx] = cmd.replace('add process', 'generate', 1)
+            break
+    return commands
+
+
+class ReweightInterface(FxFxEWSudakovMixin, extended_cmd.Cmd):
     """Basic interface for reweighting operation"""
 
     prompt = 'Reweight>'
@@ -117,22 +135,41 @@ class ReweightInterface(extended_cmd.Cmd):
         self.keep_ordering = False
         self.use_eventid = False
         self.inc_sudakov = False
+        # 'sudakov_xi' card values (ickkw=3 only): clustering threshold xi*M_W^2
+        # on s_ij, one set of Sudakov variants per xi.
+        # None -> [mW2_cluster_scale] (1.5).
+        self.sudakov_xi_scan = None
+        self._sudakov_xi_list = None      # xi values of the output weight layout
+        self._current_xi_idx = 0          # index of the xi being evaluated
         self.event_path = event_path
-        self.path2prefix = {} # store the f2pyprefix associated to a library 
-        if event_path:
-            logger.info("Extracting the banner ...")
-            self.do_import(event_path, allow_madspin=allow_madspin)
-            
+        self.path2prefix = {} # store the f2pyprefix associated to a library
+        self.fxfx_clustered_final_states = set()
+        self.fxfx_clustered_decay_processes = set()
+        self._fxfx_cluster_catalog_ready = False
+        self.fxfx_catalogue_source = None
+        self.fxfx_ignore_invariant_checks = True
+        self.density_prod_dirname = 'rw_me_density_prod'
+        self.density_decay_dirname = 'rw_me_density_decay'
+        self.density_prod_id_to_path = {}
+        self.density_decay_id_to_path = {}
+        self.density_prod_f2pylib = {}
+        self.density_decay_f2pylib = {}
+
         # dictionary to fortan evaluator
         self.calculator = {}
         self.calculator_nbcall = {}
-        
+
         #all the cross-section for convenience
         self.all_cross_section = {}
 
         #If we are using the DensityInterface
         self.flag_density_matrix = False
-            
+
+        # Last: if do_import raises, __del__ -> do_quit still uses the attributes above.
+        if event_path:
+            logger.info("Extracting the banner ...")
+            self.do_import(event_path, allow_madspin=allow_madspin)
+
     def do_import(self, inputfile, allow_madspin=False):
         """import the event file"""
 
@@ -450,6 +487,16 @@ class ReweightInterface(extended_cmd.Cmd):
             if args[1] == 'True':
                 self.inc_sudakov = True
                 self.rwgt_mode = 'LO'
+        elif args[0] == 'sudakov_xi':
+            try:
+                xi_values = [float(x) for x in args[1:]]
+            except ValueError:
+                logger.critical("sudakov_xi expects positive floats. Discard line.")
+                return
+            if not xi_values or any(x <= 0 for x in xi_values):
+                logger.critical("sudakov_xi values must all be positive. Discard line.")
+                return
+            self.sudakov_xi_scan = xi_values
         else:
             logger.critical("unknown option! %s.  Discard line." % args[0])
         
@@ -509,34 +556,20 @@ class ReweightInterface(extended_cmd.Cmd):
             self.options['rwgt_info'] = opts['rwgt_info']
         model_line = self.banner.get('proc_card', 'full_model_line')
 
+        # combine_ij (event clustering) needs the model.
+        if self.inc_sudakov:
+            model = self.banner.get('proc_card', 'model')
+            self.load_model(model, True, False)
 
-        if not self.has_standalone_dir:                           
-            if self.rwgt_dir and os.path.exists(pjoin(self.rwgt_dir,'rw_me','rwgt.pkl')):
-                self.load_from_pickle()
-                if opts['rwgt_name']:
-                    self.options['rwgt_name'] = opts['rwgt_name']
-                if not self.rwgt_dir:
-                    self.me_dir = self.rwgt_dir
-                self.load_module()       # load the fortran information from the f2py module
-            elif self.multicore == 'wait':
-                i=0
-                while not os.path.exists(pjoin(self.me_dir,'rw_me','rwgt.pkl')):
-                    time.sleep(10+i)
-                    i+=5
-                if not self.rwgt_dir:
-                    self.rwgt_dir = self.me_dir
-                self.load_from_pickle(keep_name=True)
-                self.load_module()
-            else:
-                self.create_standalone_directory() 
-                self.compile()
-                self.load_module()  
-                if self.multicore == 'create':
-                    self.load_module()
-                    if not self.rwgt_dir:
-                        self.rwgt_dir = self.me_dir
-                    self.save_to_pickle()      
-        
+        self._ensure_fxfx_cluster_catalogue()
+        if self.inc_sudakov:
+            self._collect_sudakov_weight_sources()
+
+        if not self.has_standalone_dir:
+            out = self.setup_f2py_interface(opts)
+            if out:
+                return
+
         # get the mode of reweighting #LO/NLO/NLO_tree/...
         type_rwgt = self.get_weight_names() 
 
@@ -545,21 +578,9 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             path_me = self.me_dir 
         
-        scale_rwgt_info=[]
-        if 'initrwgt' in self.banner and self.output_type == 'default': 
-            for i in self.banner['initrwgt'].split('\n'):
-                if "weight id" in i:
-                    start = i.find('weight')
-                    scale_rwgt_info.append(i[start+11:start+15])
-                    
         if self.inc_sudakov:
-            type_rwgt=[]
-            for tag in scale_rwgt_info:
-                tag_strip=tag[1:]
-                type_rwgt.append('2'+tag_strip)
+            type_rwgt = self._prepare_sudakov_weight_ids()
 
-
-            
         # get iterator over param_card and the name associated to the current reweighting.
         param_card_iterator, tag_name = self.handle_param_card(model_line, args, type_rwgt)
 
@@ -587,9 +608,10 @@ class ReweightInterface(extended_cmd.Cmd):
                 sys.path.insert(0, path_me)
                 sud_mod = importlib.import_module('%s.bin.internal.ewsud_pydispatcher' % onedir)
             logger.info('EW Sudakov reweight module imported')
+            self._validate_fxfx_sudakov_catalogue(sud_mod)
 
-        if type_rwgt==[]:
-            type_rwgt=['2001']
+        if not type_rwgt:
+            type_rwgt = self._prepare_sudakov_weight_ids() if self.inc_sudakov else ['2001']
 
         if self.second_model or self.second_process or self.dedicated_path:
             rw_dir = pjoin(path_me, 'rw_me_%s' % self.nb_library)
@@ -625,10 +647,15 @@ class ReweightInterface(extended_cmd.Cmd):
 
 
         self.lhe_input.seek(0)
-        count_errors = 0
+        # FKS accounting is module-level (it would accumulate over param scans and
+        # repeated launches), so reset it here. CURRENT_EVENT_ID is 1-based in the
+        # event loop; 0 (catalogue prescan) is not counted.
+        fxfx_ewsudakov.CURRENT_EVENT_ID = 0
+        fxfx_ewsudakov.fks_reset_accounting()
         for event_nb,event in enumerate(self.lhe_input):
+            fxfx_ewsudakov.CURRENT_EVENT_ID = event_nb + 1
             #control logger
-            if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),10)==0): 
+            if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),10)==0):
                     running_time = misc.format_timer(time.time()-start)
                     logger.info('Event nb %s %s' % (event_nb, running_time))
             if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
@@ -643,22 +670,24 @@ class ReweightInterface(extended_cmd.Cmd):
                 weight = {'':weight}
 
             for name in weight:
+                if name not in cross:
+                    cross[name], error[name] = 0., 0.
+                    ratio[name], ratio_square[name] = 0., 0.
                 cross[name] += weight[name]
                 ratio[name] += weight[name]/event.wgt
                 ratio_square[name] += (weight[name]/event.wgt)**2
 
-            # ensure to have a consistent order of the weights. new one are put 
-            # at the back, remove old position if already defines
-            for tag in type_rwgt:
-                if tag in event.reweight_order:
-                    logger.critical('This is a reweighted event file! Do not reweight with ewsudakov twice')
-                    return
-                try:
-                    event.reweight_order.remove('%s%s'  % (tag_name,tag))
-                except ValueError:
-                    continue
-
-            event.reweight_order += ['%s%s' % (tag_name,name) for name in type_rwgt]  
+            if self.inc_sudakov:
+                event.reweight_order = [key for key in event.reweight_order
+                                       if key not in self._sudakov_weight_metadata]
+                event.reweight_order.extend(key for key in type_rwgt if key in weight)
+            else:
+                for tag in type_rwgt:
+                    try:
+                        event.reweight_order.remove('%s%s' % (tag_name, tag))
+                    except ValueError:
+                        continue
+                event.reweight_order += ['%s%s' % (tag_name, name) for name in type_rwgt]
             if self.output_type == "default":
                 for name in weight:
                     if 'orig' in name:
@@ -685,9 +714,12 @@ class ReweightInterface(extended_cmd.Cmd):
                     cross[key] = value / (event_nb+1)
                 
         running_time = misc.format_timer(time.time()-start)
-        logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))     
+        logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))
         if self.inc_sudakov:
-            logger.info('Number of events thrown away due to large Sudakov: %s' % str(count_errors))   
+            # FKS-mapping/clustering summary. Events are never dropped; fallback
+            # handling is set by fxfx_ewsudakov.FKS_FALLBACK_POLICY.
+            for line in fxfx_ewsudakov.fks_accounting_summary().splitlines():
+                logger.info(line)
         
         if self.output_type == "default":
             output.write('</LesHouchesEvents>\n')
@@ -787,7 +819,7 @@ class ReweightInterface(extended_cmd.Cmd):
         
         self.options['rwgt_name'] = None
 
-    def setup_f2py_interface(self):
+    def setup_f2py_interface(self, opts=None):
         """ ensure that all f2py interface are ready/loaded/compiled
             if this function does not return None then nothing is executed after this
             usefull for some plugin
@@ -795,11 +827,13 @@ class ReweightInterface(extended_cmd.Cmd):
 
         if self.rwgt_dir and os.path.exists(pjoin(self.rwgt_dir,'rw_me','rwgt.pkl')):
             self.load_from_pickle()
-            if opts['rwgt_name']:
+            if opts and opts.get('rwgt_name'):
                 self.options['rwgt_name'] = opts['rwgt_name']
             if not self.rwgt_dir:
                 self.me_dir = self.rwgt_dir
             self.load_module()       # load the fortran information from the f2py module
+            if self.inc_sudakov:
+                self.load_density_modules()
         elif self.multicore == 'wait':
             i=0
             while not os.path.exists(pjoin(self.me_dir,'rw_me','rwgt.pkl')):
@@ -809,10 +843,14 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.rwgt_dir = self.me_dir
             self.load_from_pickle(keep_name=True)
             self.load_module()
+            if self.inc_sudakov:
+                self.load_density_modules()
         else:
             self.create_standalone_directory()
             self.compile()
-            self.load_module()  
+            self.load_module()
+            if self.inc_sudakov:
+                self.load_density_modules()
             if self.multicore == 'create':
                 self.load_module()
                 if not self.rwgt_dir:
@@ -889,7 +927,11 @@ class ReweightInterface(extended_cmd.Cmd):
             new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
 
         # Find new tag in the banner and add information if needed
-        if 'initrwgt' in self.banner and self.output_type == 'default':
+        if self.inc_sudakov:
+            header_rwgt_other = self.banner['initrwgt'] if 'initrwgt' in self.banner else ''
+            mg_rwgt_info = []
+            rewgtid = 1
+        elif 'initrwgt' in self.banner and self.output_type == 'default':
             if 'name=\'mg_reweighting\'' in self.banner['initrwgt']:
                 blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*weight_name_strategy=\'includeIdInWeightName\'>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
@@ -979,31 +1021,24 @@ class ReweightInterface(extended_cmd.Cmd):
             for name in type_rwgt:
                 mg_rwgt_info.append((tag, name, str_info))
 
-        # re-create the banner.
-        self.banner['initrwgt'] = header_rwgt_other
-        if self.output_type == 'default':
-            self.banner['initrwgt'] += '\n<weightgroup name=\'mg_reweighting\' weight_name_strategy=\'includeIdInWeightName\'>\n'
+        if self.inc_sudakov:
+            self.banner['initrwgt'] = self._sudakov_weight_header()
         else:
-            self.banner['initrwgt'] += '\n<weightgroup name=\'main\'>\n'
-        for tag, rwgttype, diff in mg_rwgt_info:
-            if self.inc_sudakov:
-                try:
-                    sud_order = int(rwgttype[-1]) -1
-                    sud_order = '10' +rwgttype[-2:]
-                    self.banner['initrwgt'] += '<weight id=\'%s\'>%sscale_%s_sud</weight>\n' % \
-                            (rwgttype, diff, sud_order)
-                except IndexError:
-                    logger.critical('This is a reweighted event file! Do not reweight with ewsudakov twice')
-                    sys.exit(1)
+            # re-create the banner.
+            self.banner['initrwgt'] = header_rwgt_other
+            if self.output_type == 'default':
+                self.banner['initrwgt'] += '\n<weightgroup name=\'mg_reweighting\' weight_name_strategy=\'includeIdInWeightName\'>\n'
             else:
+                self.banner['initrwgt'] += '\n<weightgroup name=\'main\'>\n'
+            for tag, rwgttype, diff in mg_rwgt_info:
                 if tag.isdigit():
                     self.banner['initrwgt'] += '<weight id=\'rwgt_%s%s\'>%s</weight>\n' % \
-                                    (tag, rwgttype, diff)
+                                        (tag, rwgttype, diff)
                 else:
                     self.banner['initrwgt'] += '<weight id=\'%s%s\'>%s</weight>\n' % \
-                                    (tag, rwgttype, diff)
-        self.banner['initrwgt'] += '\n</weightgroup>\n'
-        self.banner['initrwgt'] = self.banner['initrwgt'].replace('\n\n', '\n')
+                                        (tag, rwgttype, diff)
+            self.banner['initrwgt'] += '\n</weightgroup>\n'
+            self.banner['initrwgt'] = self.banner['initrwgt'].replace('\n\n', '\n')
 
         if self.flag_density_matrix:
             logger.info('starts to compute density matrices for events with the inputs from the reweight_card:')
@@ -1208,198 +1243,213 @@ class ReweightInterface(extended_cmd.Cmd):
 
             return {'orig': orig_wgt, '': w_new/w_orig*orig_wgt*jac}
         else:
-            buff_event=copy.deepcopy(event)
-            orig_wgt = event.wgt
-            w_orig= event.wgt
-            pi=3.141592653589
-            mW = 80.3
+            ickkw = getattr(self, '_sudakov_ickkw', None)
+            if ickkw is None:
+                try:
+                    ickkw = int(self.banner.get('run_card', 'ickkw'))
+                except Exception:
+                    ickkw = 0
 
-            mgcmd = self.mg5cmd
-            import importlib
-            import numpy as np
+            if ickkw == 0:
+                # Clustering cut fixed at M_W^2 (sud_cut): no xi loop.
+                self._current_xi_idx = 0
+                return self._compute_ewsudakov_reweight(event, sud_mod)
+            elif ickkw == 3:
+                xi_list = (self._sudakov_xi_list or self.sudakov_xi_scan
+                           or [getattr(self, 'mW2_cluster_scale', 1.5)])
+                merged = {}
+                for k, xi in enumerate(xi_list):
+                    self.mW2_cluster_scale = xi
+                    self._current_xi_idx = k
+                    sub = self._compute_density_ewsudakov_reweight(event, sud_mod)
+                    merged.update((key, value) for key, value in sub.items()
+                                  if key != 'orig' or k == 0)
+                return merged
+            else:
+                raise Exception("EW Sudakov reweighting not supported for run_card ickkw=%s" % ickkw)
 
-            # identify the process
-            try:
-                process = self.banner.get_detail('proc_card', 'generate')
-            except KeyError:
-                process = self.banner.get_detail('proc_card', 'add process')
-            process, opts = mg_interface.MadGraphCmd.split_process_line(process)
-            nexternal = len([p for p in process.split() if p != '>'])
+    def _compute_ewsudakov_reweight(self, event, sud_mod):
+        """EW Sudakov weights for one event with the ickkw=0 clustering."""
+        import numpy as np
 
-            # Remove all propagator particles from the event to be passed to Sud module
-            for ip,part in enumerate(list(buff_event)):
-                if (abs(part.status) != 1):
-                    buff_event.pop(ip)
+        buff_event = copy.deepcopy(event)
+        orig_wgt = event.wgt
+        pi = 3.141592653589
+        mW = 80.3
 
-            x = 1.0
-            sud_cut= x*(mW**2)
-            min_inv=1000000000.0   # dummy variable, used to start the loop of min_inv finding
-            inv_dict={}
+        # 2->1 events (e.g. q qbar -> Z) get unit factors, as in the FxFx paths:
+        # no Sudakov logs at s = M^2, and the kernel returns res[2] = -res[0]
+        # (a zero central factor) there.
+        n_init  = sum(1 for p in buff_event if p.status == -1)
+        n_final = sum(1 for p in buff_event if p.status ==  1)
+        if n_init == 2 and n_final == 1:
+            names = getattr(self, '_sudakov_variant_names', self.SUDAKOV_LO_VARIANT_NAMES)
+            return self._build_sudakov_rwgt_dict(event, [1.0] * len(names), names)
 
-            if (len(buff_event) == nexternal +1): # is an H-event
-                for ievt,evt in enumerate(buff_event):
-                    # Find the smallest abs(inv) and the corresponding pair
-                    if (ievt <= 1):
-                        sign1 = 1.0
+        mgcmd = self.mg5cmd
+
+        # identify the process
+        try:
+            process = self.banner.get_detail('proc_card', 'generate')
+        except KeyError:
+            process = self.banner.get_detail('proc_card', 'add process')
+        process, opts = mg_interface.MadGraphCmd.split_process_line(process)
+        nexternal = len([p for p in process.split() if p != '>'])
+
+        # Remove all propagator particles from the event to be passed to Sud module
+        for ip, part in enumerate(list(buff_event)):
+            if (abs(part.status) != 1):
+                buff_event.pop(ip)
+
+        x = 1.0
+        sud_cut = x * (mW ** 2)
+        min_inv = 1000000000.0
+        inv_dict = {}
+
+        if (len(buff_event) == nexternal + 1):  # is an H-event
+            for ievt, evt in enumerate(buff_event):
+                if (ievt <= 1):
+                    sign1 = 1.0
+                else:
+                    sign1 = -1.0
+                for ievt2, evt2 in enumerate(buff_event):
+                    if (ievt2 <= 1):
+                        sign2 = 1.0
                     else:
-                        sign1 = -1.0
-                    for ievt2,evt2 in enumerate(buff_event):
-                        if (ievt2 <= 1):
-                            sign2 = 1.0
-                        else:
-                            sign2 = -1.0
-                        if (ievt2 > ievt):
-                            inv = (sign1*evt.E+sign2*evt2.E)**2-(sign1*evt.px+sign2*evt2.px)**2\
-                                            - (sign1*evt.py+sign2*evt2.py)**2-(sign1*evt.pz+sign2*evt2.pz)**2
-                            inv_dict[(ievt,ievt2)] = abs(inv)
-                            if (abs(inv) < min_inv):
-                                min_inv=abs(inv)
-                                min_i=ievt
-                                min_j=ievt2
-                            
-                # Below finds the current process tag and tries to recombine the min_i and min_j
-                tag, order = buff_event.get_tag_and_order()
-                matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
+                        sign2 = -1.0
+                    if (ievt2 > ievt):
+                        inv = (sign1 * evt.E + sign2 * evt2.E) ** 2 - (sign1 * evt.px + sign2 * evt2.px) ** 2 \
+                              - (sign1 * evt.py + sign2 * evt2.py) ** 2 - (sign1 * evt.pz + sign2 * evt2.pz) ** 2
+                        inv_dict[(ievt, ievt2)] = abs(inv)
+                        if (abs(inv) < min_inv):
+                            min_inv = abs(inv)
+                            min_i = ievt
+                            min_j = ievt2
 
-                ij_comb= []
-                if min_i <= 1:
-                    state = False
-                else:
-                    state = True
-                comb_i = fks_common.FKSLeg({'id': buff_event[min_i].pid,'number': min_i+1,'state': state})
-                if min_j<= 1:
-                    state = False
-                else:
-                    state = True
-                comb_j = fks_common.FKSLeg({'id': buff_event[min_j].pid,'number': min_j+1,'state': state})
-                ij_comb =fks_common.combine_ij(comb_i,comb_j, self.model, dict={},pert='QCD')
+            tag, order = buff_event.get_tag_and_order()
+            matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
+
+            ij_comb = []
+            if min_i <= 1:
+                state = False
+            else:
+                state = True
+            comb_i = fks_common.FKSLeg({'id': buff_event[min_i].pid, 'number': min_i + 1, 'state': state})
+            if min_j <= 1:
+                state = False
+            else:
+                state = True
+            comb_j = fks_common.FKSLeg({'id': buff_event[min_j].pid, 'number': min_j + 1, 'state': state})
+            ij_comb = fks_common.combine_ij(comb_i, comb_j, self.model, dict={}, pert='QCD')
+            if ij_comb == []:
+                ij_comb = fks_common.combine_ij(comb_j, comb_i, self.model, dict={}, pert='QCD')
+
+            if min_inv > sud_cut:
+                event_to_sud = buff_event
+                n_part = nexternal + 1
+                mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+                type = 1
+            else:
                 if ij_comb == []:
-                    ij_comb =fks_common.combine_ij(comb_j,comb_i, self.model, dict={},pert='QCD')
-        
-                # For n+1-body reweighting
-                if min_inv > sud_cut:
                     event_to_sud = buff_event
-                    n_part = nexternal+1
+                    n_part = nexternal + 1
                     mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
-                    type = 1  #### H1 type
-
-                # For n-body reweighting
+                    type = 1
                 else:
-                    # If no reasonable recbination found, still use the n+1-body kinematics for sudakov
-                    if ij_comb == []:
+                    buff_event.merge_particles_kinematics(min_i, min_j, ij_comb)
+                    event_to_sud = buff_event
+                    n_part = nexternal
+                    mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+                    if mapped_tag not in sud_mod.pdg2ewsud_dict.keys():
                         event_to_sud = buff_event
-                        n_part = nexternal+1
+                        n_part = nexternal + 1
                         mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
-                        #### H1 type
                         type = 1
                     else:
-                        buff_event.merge_particles_kinematics(min_i,min_j,ij_comb)
-                        event_to_sud = buff_event
-                        n_part = nexternal 
-                        mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
-                        # map to n+1 body if recoil does not exist at Born level among processes
-                        if mapped_tag not in sud_mod.pdg2ewsud_dict.keys():
-                            event_to_sud = buff_event
-                            n_part = nexternal+1
-                            mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
-                            type = 1   #### H1 type
-                        else:
-                            type = 2    #### H2 type                 
-            elif (len(buff_event) == nexternal): # is an S-event
-                    event_to_sud = buff_event
-                    n_part = nexternal 
-                    mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
-                    type = 0   ### S type
+                        type = 2
+        elif (len(buff_event) == nexternal):  # is an S-event
+            event_to_sud = buff_event
+            n_part = nexternal
+            mapped_tag, mapped_order = event_to_sud.get_tag_and_order()
+            type = 0
+        else:
+            logger.critical('ERROR: neither H nor S event!')
+            logger.critical(buff_event)
+            sys.exit(2)
+
+        # Boost to partonic CM frame if not already in one for the momentum reshuffling
+        p = lhe_parser.FourMomentum()
+        for i,particle in enumerate(event_to_sud):
+            if particle.status == -1:
+                p += particle
+        in_part_mom = p
+        if not ((abs(p.px) < 1e-6 * p.E) and (abs(p.py) < 1e-6 * p.E) and (abs(p.pz) < 1e-6 * p.E)):
+            event_to_sud.boost(in_part_mom)
+
+        # Rotate system to a partonic CM along z-axis
+        initial = copy.deepcopy(event_to_sud[0])
+        if not ((abs(initial.px) < 1e-6 * initial.E) and (abs(initial.py) < 1e-6 * initial.E)):
+            for p in event_to_sud:
+                p.set_momentum(lhe_parser.FourMomentum(p).rotate_to_z(prot=lhe_parser.FourMomentum(initial)))
+
+        # After boost + rotation the incoming pair is (E/2, 0, 0, +-p) up to
+        # ~1e-7 E round-off from rotate_to_z; set it exactly, as
+        # set_initial_mass_to_zero requires.
+        p0, p1 = event_to_sud[0], event_to_sud[1]
+        E_in   = abs(p0.E) + abs(p1.E)
+        pz_abs = (abs(p0.pz) + abs(p1.pz)) / 2.0
+        sign0  = +1.0 if p0.pz >= 0 else -1.0
+        p0.set_momentum(lhe_parser.FourMomentum([E_in/2.0, 0.0, 0.0,  sign0 * pz_abs]))
+        p1.set_momentum(lhe_parser.FourMomentum([E_in/2.0, 0.0, 0.0, -sign0 * pz_abs]))
+
+        # Set all light quarks and lepton masses to zero in event file
+        #self.set_final_jet_mass_to_zero(event_to_sud)
+        event_to_sud.set_final_jet_mass_to_zero()
+        # Set finally all initial masses to zero rather than the masses in the event files
+        event_to_sud.set_initial_mass_to_zero()
+        event_to_sud.check_kinematics_only()
+
+        gstr=math.sqrt(4.*pi*event.aqcd)  # G = sqrt(4*pi*alpha_s)
+        sorted_tag = (tuple(mapped_order[0]),tuple(sorted(mapped_order[1])))
+
+        # Read in the event momenta into np array in the order which is defined in the process directory
+        perm = []
+        i = 1
+        for r in mapped_order[1]:
+            if not list(sud_mod.original_pdg_list_dict[sorted_tag][1]).index(r) in perm:
+                perm.append(list(sud_mod.original_pdg_list_dict[sorted_tag][1]).index(r))
             else:
-                logger.critical('ERROR: neither H nor S event!')
-                logger.critical(buff_event)
-                sys.exit(2)
-                
-            # Boost to partonic CM frame if not already in one for the momentum reshuffling 
-            p = lhe_parser.FourMomentum()
-            for i,particle in enumerate(event_to_sud):
-                    if particle.status == -1:
-                        p += particle
-            in_part_mom = p
-            if not ((abs(p.px) < 1e-6 * p.E) and (abs(p.py) < 1e-6 * p.E) and (abs(p.pz) < 1e-6 * p.E)):
-                event_to_sud.boost(in_part_mom)
+                perm.append(list(sud_mod.original_pdg_list_dict[sorted_tag][1]).index(r)+i)
+                i += 1
+        order = dict((i,j) for i,j in enumerate(perm))
+        event_to_sud_order = copy.deepcopy(event_to_sud)
+        event_to_sud_order[:len(mapped_tag[0])] = event_to_sud[:len(mapped_tag[0])]
+        for r in order.keys():
+            event_to_sud_order[r+len(mapped_tag[0])] = event_to_sud[order[r]+len(mapped_tag[0])]
+        p_in = np.zeros(shape=(n_part, 4))
+        for i,el in enumerate(event_to_sud_order):
+            p_in[i] = [float(el.E),float(el.px),float(el.py),float(el.pz)]
+        mapped_tag, mapped_order = event_to_sud_order.get_tag_and_order()
+        if list(sud_mod.original_pdg_list_dict[sorted_tag][1]) != mapped_order[1]:
+            logger.critical('ERROR: order in particle momenta does not match MG convention!')
+            sys.exit(3)
 
-            # Rotate system to a partonic CM along z-axis
-            initial = copy.deepcopy(event_to_sud[0])
-            if not ((abs(initial.px) < 1e-6 * initial.E) and (abs(initial.py) < 1e-6 * initial.E)):
-                for p in event_to_sud:
-                    p.set_momentum(lhe_parser.FourMomentum(p).rotate_to_z(prot=lhe_parser.FourMomentum(initial)))
-            
-            # Set all light quarks and lepton masses to zero in event file
-            #self.set_final_jet_mass_to_zero(event_to_sud)
-            event_to_sud.set_final_jet_mass_to_zero()
-            # Set finally all initial masses to zero rather than the masses in the event files
-            event_to_sud.set_initial_mass_to_zero()
-            event_to_sud.check_kinematics_only()
+        # compute the actual Sudakov weight
+        res = sud_mod.ewsudakov(sorted_tag, p_in, gstr)
 
-            gstr = math.sqrt(4*pi*event.aqcd)
-            sorted_tag = (tuple(mapped_order[0]),tuple(sorted(mapped_order[1])))
+        # Do the reewightings
+        sudrat0 = 1. + res[1]/res[0] # SUD0            s_to_rij ON  rij_ge_mw ON
+        sudrat1 = 1. + res[2]/res[0] # SUD1 (SKD_weak) s_to_rij ON  rij_ge_mw ON
+        sudrat2 = 1. + res[3]/res[0] # SUD1 (SKD_weak) s_to_rij OFF  rij_ge_mw ON
+        sudrat3 = 1. + res[4]/res[0] # SUD1 (SKD_weak) s_to_rij OFF  rij_ge_mw OFF
+        sudrat4 = 1. + res[5]/res[0] # SUD1 (SKD_weak) s_to_rij ON  rij_ge_mw OFF
 
-            # Read in the event momenta into np array in the order which is defined in the process directory
-            perm = []
-            i = 1
-            for r in mapped_order[1]:
-                if not list(sud_mod.original_pdg_list_dict[sorted_tag][1]).index(r) in perm:
-                    perm.append(list(sud_mod.original_pdg_list_dict[sorted_tag][1]).index(r))
-                else:
-                    perm.append(list(sud_mod.original_pdg_list_dict[sorted_tag][1]).index(r)+i)
-                    i += 1
-            order = dict((i,j) for i,j in enumerate(perm))
-            event_to_sud_order = copy.deepcopy(event_to_sud)
-            event_to_sud_order[:len(mapped_tag[0])] =  event_to_sud[:len(mapped_tag[0])]
-            for r in order.keys():
-                event_to_sud_order[r+len(mapped_tag[0])] = event_to_sud[order[r]+len(mapped_tag[0])]
-            p_in = np.zeros(shape=(n_part, 4))
-            for i,el in enumerate(event_to_sud_order):
-                p_in[i] = [float(el.E),float(el.px),float(el.py),float(el.pz)]
-            mapped_tag, mapped_order = event_to_sud_order.get_tag_and_order()
-            if list(sud_mod.original_pdg_list_dict[sorted_tag][1]) != mapped_order[1]:
-                logger.critical('ERROR: order in particle momenta does not match MG convention!')
-                sys.exit(3)
+        factors = fxfx_ewsudakov.limit_sudakov_factors(
+            [sudrat1, sudrat2, sudrat0, sudrat3, sudrat4])
+        event.rescale_weights(1.)
+        names = getattr(self, '_sudakov_variant_names', self.SUDAKOV_LO_VARIANT_NAMES)
+        return self._build_sudakov_rwgt_dict(event, factors, names)
 
-            # compute the actual Sudakov weight
-            res = sud_mod.ewsudakov(sorted_tag, p_in, gstr)
-
-            # Do the reewightings
-            sudrat0 = 1. + res[1]/res[0] # SUD0            s_to_rij ON  rij_ge_mw ON
-            sudrat1 = 1. + res[2]/res[0] # SUD1 (SKD_weak) s_to_rij ON  rij_ge_mw ON
-            sudrat2 = 1. + res[3]/res[0] # SUD1 (SKD_weak) s_to_rij OFF  rij_ge_mw ON
-            sudrat3 = 1. + res[4]/res[0] # SUD1 (SKD_weak) s_to_rij OFF  rij_ge_mw OFF
-            sudrat4 = 1. + res[5]/res[0] # SUD1 (SKD_weak) s_to_rij ON  rij_ge_mw OFF
-
-            # Damp when the Sudakov weights are too large (in abs value)
-            large_sud_error=False
-            if abs(sudrat1) > 200:
-                logger.info('ERROR: event will not be reweighted because Sudakov ratio is too large: %s ' %sudrat1)
-                logger.info(buff_event)
-                sudrat0 = 1. 
-                sudrat1 = 1.
-                sudrat2 = 1.
-                sudrat3 = 1. 
-                sudrat4 = 1.
-                large_sud_error = True
-
-            # Dummy step: needed to read in the parse_reweight function
-            event.rescale_weights(1.)
-
-            rwgt_dict = copy.deepcopy(event.parse_reweight())
-            if rwgt_dict=={}:
-                rwgt_dict['1001'] =  orig_wgt
-            rwgt_dict_new = {}
-            rwgt_dict_new['orig'] = orig_wgt
-
-            for el in rwgt_dict:
-                ending = el[-2:]
-                tag = '20' + ending
-                rwgt_dict_new[tag] = rwgt_dict[el]*sudrat1  # use SDK_weak! 
-            
-            return rwgt_dict_new
-    
     def get_pdg_tuple(self, pdgs, nincoming):
         """write a tuple of 2 tuple, with the incoming particles unsorted
         and the outgoing ones sorted
@@ -1866,11 +1916,14 @@ class ReweightInterface(extended_cmd.Cmd):
     @misc.mute_logger()
     def create_standalone_tree_directory(self, data ,second=False):
         """generate the various directory for the weight evaluation"""
-        
-        mgcmd = self.mg5cmd         
-        path_me = data['path'] 
+
+        mgcmd = self.mg5cmd
+        path_me = data['path']
+        fxfx_mode = data.get('fxfx_mode', False)
+        fxfx_extra_set = data.get('fxfx_extra_set', set())
+        fxfx_clean = lambda expression: re.sub(r'\[[^\]]*\]', '', expression).strip()
         # 2. compute the production matrix element -----------------------------
-        has_nlo = False  
+        has_nlo = False
         mgcmd.exec_cmd("set group_subprocesses False")
 
         if not second:
@@ -1878,27 +1931,56 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             logger.info('generating the square matrix element for reweighting (second model and/or processes)')
         start = time.time()
-        commandline=''
+        command_list = []
         for i,proc in enumerate(data['processes']):
+            if fxfx_mode:
+                clean_proc = fxfx_clean(proc)
+                if clean_proc not in fxfx_extra_set:
+                    continue
+                ordered_proc = f"{clean_proc}"
+                single_cmd = "add process %s [LOonly=QCD] --ewsudakov;" % ordered_proc
+                logger.info("FxFx Sudakov process: %s", single_cmd.strip(';'))
+                command_list.append(single_cmd)
+                continue
             if '[' not in proc:
-                commandline += "add process %s ;" % proc
+                single_cmd = "add process %s ;" % proc
+                logger.info("Process: %s", single_cmd.strip(';'))
+                command_list.append(single_cmd)
             else:
                 has_nlo = True
                 if self.banner.get('run_card','ickkw') == 3:
                     if len(proc) == min([len(p.strip()) for p in data['processes']]):
-                        commandline += self.get_LO_definition_from_NLO(proc, self.model, ewsudakov=self.inc_sudakov)
+                        single_cmd = self.get_LO_definition_from_NLO(proc, self.model, ewsudakov=self.inc_sudakov)
                     else:
-                        commandline += self.get_LO_definition_from_NLO(proc,
+                        single_cmd = self.get_LO_definition_from_NLO(proc,
                                                     self.model, real_only=True, ewsudakov=self.inc_sudakov)
                 else:
-                    commandline += self.get_LO_definition_from_NLO(proc, self.model, ewsudakov=self.inc_sudakov)
-        
-        commandline = commandline.replace('add process', 'generate',1)
-        logger.info(commandline)
+                    single_cmd = self.get_LO_definition_from_NLO(proc, self.model, ewsudakov=self.inc_sudakov)
+                logger.info("Process: %s", single_cmd.strip(';'))
+                command_list.append(single_cmd)
+
+        if not command_list:
+            raise Exception("No processes defined for reweighting generation.")
+
+        command_list = first_add_process_to_generate(command_list)
+
+        def exec_command_sequence(cmds, log_fxfx_failure=False):
+            for idx, cmd in enumerate(cmds):
+                try:
+                    mgcmd.exec_cmd(cmd, precmd=True, errorhandling=False)
+                except diagram_generation.NoDiagramException:
+                    raise
+                except Exception:
+                    if log_fxfx_failure and fxfx_mode:
+                        logger.error("FxFx Sudakov command %02d failed: %s", idx+1, cmd.strip())
+                    raise
+
         try:
-            mgcmd.exec_cmd(commandline, precmd=True, errorhandling=False)
+            exec_command_sequence(command_list, log_fxfx_failure=True)
         except diagram_generation.NoDiagramException:
-            commandline=''
+            if fxfx_mode:
+                raise
+            fallback_commands = []
             for proc in data['processes']:
                 if '[' not in proc:
                     raise
@@ -1909,16 +1991,18 @@ class ReweightInterface(extended_cmd.Cmd):
                     nlo_order = 'virt=%s' % nlo_order
                 elif 'noborn' in nlo_order:
                     nlo_order = nlo_order.replace('noborn', 'virt')
-                commandline += "add process %s [%s] %s;" % (base,nlo_order,post)
-            commandline = commandline.replace('add process', 'generate',1)
-            if commandline:
-                logger.info("RETRY with %s", commandline)
-                mgcmd.exec_cmd(commandline, precmd=True)
+                fallback_commands.append("add process %s [%s] %s;" % (base,nlo_order,post))
+            fallback_commands = first_add_process_to_generate(fallback_commands)
+            if fallback_commands:
+                logger.info("RETRY with fallback virtual commands.")
+                exec_command_sequence(fallback_commands)
                 has_nlo = False
         except Exception as error:
+            if fxfx_mode:
+                logger.error("FxFx Sudakov generation aborted due to: %s", str(error))
             misc.sprint(type(error))
             raise
-        
+
         commandline = 'output %s %s --prefix=int --prefixf2py=%s' % (self.sa_class, pjoin(path_me,data['paths'][0]), self.nb_rw)
         self.path2prefix[pjoin(path_me,data['paths'][0])] = self.nb_rw
         self.nb_rw += 1
@@ -2080,6 +2164,43 @@ class ReweightInterface(extended_cmd.Cmd):
 
                     data['id2path'][(tag,'V')] = [order, Pdir, hel_dict]
 
+    def create_density_tree_directory(self, data, processes, out_dirname, label):
+        """Generate a standalone directory for density matrix evaluation."""
+        if not processes:
+            return False
+
+        mgcmd = self.mg5cmd
+        path_me = data['path']
+        out_path = pjoin(path_me, out_dirname)
+        if os.path.exists(out_path):
+            try:
+                shutil.rmtree(out_path)
+            except Exception as error:
+                misc.sprint('fail to rm density dir:', error)
+                pass
+
+        density_clean = lambda expression: re.sub(r'\[[^\]]*\]', '', expression).strip()
+        mgcmd.exec_cmd("set group_subprocesses False")
+        command_list = []
+        for proc in processes:
+            clean_proc = density_clean(proc)
+            if not clean_proc:
+                continue
+            command_list.append("add process %s ;" % clean_proc)
+
+        if not command_list:
+            return False
+
+        command_list = first_add_process_to_generate(command_list)
+
+        for cmd in command_list:
+            mgcmd.exec_cmd(cmd, precmd=True, errorhandling=False)
+
+        commandline = 'output %s %s --prefix=int' % (self.sa_class, out_path)
+        mgcmd.exec_cmd(commandline, precmd=True)
+        logger.info('Density output (%s) written to %s', label, out_path)
+        return True
+
     def load_interface_model(self, second=False):
         data={}
         if not second:
@@ -2130,9 +2251,42 @@ class ReweightInterface(extended_cmd.Cmd):
                                         for line in self.banner.proc_card
                                         if re.search(r'^\s*add\s+process', line)]
             #object_collector
-            #self.id_to_path_second = {}   
-            #data['id2path'] = self.id_to_path_second 
-        
+            #self.id_to_path_second = {}
+            #data['id2path'] = self.id_to_path_second
+
+        # FxFx EW Sudakov: add the clustered final states catalogued from the events.
+        fxfx_clean = lambda expression: re.sub(r'\[[^\]]*\]', '', expression).strip()
+        extra_processes = []
+        fxfx_extra_set = set()
+        fxfx_mode = (not second) and self.inc_sudakov and self._needs_fxfx_cluster_catalogue()
+        if fxfx_mode:
+            extra_processes = self._get_fxfx_extra_processes()
+            if extra_processes:
+                existing = set(data['processes'])
+                for proc in extra_processes:
+                    if proc in existing:
+                        continue
+                    data['processes'].append(proc)
+                    existing.add(proc)
+                logger.info('Added %d FxFx clustered final-state processes for Sudakov reweighting',
+                            len(extra_processes))
+                fxfx_extra_set = set(fxfx_clean(proc) for proc in extra_processes)
+
+        data['fxfx_mode'] = fxfx_mode
+        data['fxfx_extra_set'] = fxfx_extra_set
+
+        # Density-matrix production/decay processes, from the same catalogue.
+        density_prod_processes = []
+        density_decay_processes = []
+        if fxfx_mode:
+            density_prod_processes = self._get_fxfx_density_production_processes()
+            density_decay_processes = self._get_fxfx_density_decay_processes()
+            if density_prod_processes or density_decay_processes:
+                logger.info('Added %d density production processes and %d decay processes for density matrices',
+                            len(density_prod_processes), len(density_decay_processes))
+        data['density_prod_processes'] = density_prod_processes
+        data['density_decay_processes'] = density_decay_processes
+
         # 0. clean previous run ------------------------------------------------
         if not self.rwgt_dir:
             path_me = self.me_dir
@@ -2205,6 +2359,17 @@ class ReweightInterface(extended_cmd.Cmd):
                 has_nlo=False
         else:
             has_nlo = self.create_standalone_tree_directory(data, second)
+            if (not second) and self.inc_sudakov:
+                prod_procs = data.get('density_prod_processes', [])
+                decay_procs = data.get('density_decay_processes', [])
+                if prod_procs:
+                    self.create_density_tree_directory(
+                        data, prod_procs, self.density_prod_dirname, label='production'
+                    )
+                if decay_procs:
+                    self.create_density_tree_directory(
+                        data, decay_procs, self.density_decay_dirname, label='decay'
+                    )
 
         if has_nlo and not self.rwgt_mode:
             self.rwgt_mode = ['NLO']
@@ -2292,7 +2457,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     nb_core = int(self.options['nb_core'])
                 except (TypeError, KeyError):
                     nb_core = multiprocessing.cpu_count()
-            except ImportError: 
+            except ImportError:
                 nb_core = 1
 
             compile_options = copy.copy(self.options)
@@ -2313,6 +2478,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 compile_cluster.remove()
                 self.do_quit('')
             logger.info('...done')
+            self._compile_density_subprocesses()
 
         else:
             rwgt_dir_possibility =   ['rw_me','rw_me_%s' % self.nb_library,'rw_mevirt','rw_mevirt_%s' % self.nb_library]
@@ -2323,26 +2489,138 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.compile_SubProcess_dir(pdir)
 
 
-    def compile_SubProcess_dir(self, Sdir):
-        """compile a full Subprocess directory"""
+    def compile_SubProcess_dir(self, Sdir, procname=None):
+        """compile a full Subprocess directory.
+
+        procname: if given, passed to make as 'PROCNAME=<procname>' so the ME
+        library is liball<procname>_<MENUM>me.so.  The makefile's PROCNAME
+        evaluates to empty, so every directory otherwise builds liball_<MENUM>me.so
+        with the same soname, and when both density extensions are loaded
+        (rw_me_density_prod, rw_me_density_decay) the dynamic loader binds the
+        second to the first one's library: decay get_pdg_order() then returns the
+        production process table, no decay density matrix can be built, and the
+        density path falls back to the scalar factor.  A make command-line
+        assignment overrides the makefile's unconditional '=' (an environment
+        variable, as used for MENUM, would not)."""
 
         if self.mother:
             nb_core = self.mother.options['nb_core'] if self.mother.options['run_mode'] !=0 else 1
         else:
             nb_core = 1
+        extra = ['PROCNAME=%s' % procname] if procname else []
         os.environ['MENUM'] = '2'
-        try: 
-            misc.compile(['all_matrix2py.so'], cwd=Sdir, nb_core=nb_core)
+        try:
+            misc.compile(['all_matrix2py.so'] + extra, cwd=Sdir, nb_core=nb_core)
         except Exception as e:
-            misc.compile(['all_matrix2py.so'], cwd=Sdir, nb_core=1)
+            misc.compile(['all_matrix2py.so'] + extra, cwd=Sdir, nb_core=1)
 
         if not (self.second_model or self.second_process or self.dedicated_path):
             os.environ['MENUM'] = '3'
             try:
-                misc.compile(['all_matrix3py.so'], cwd=Sdir, nb_core=nb_core)
+                misc.compile(['all_matrix3py.so'] + extra, cwd=Sdir, nb_core=nb_core)
             except Exception as e:
-                misc.compile(['all_matrix3py.so'], cwd=Sdir, nb_core=1)
-                
+                misc.compile(['all_matrix3py.so'] + extra, cwd=Sdir, nb_core=1)
+
+
+    def _compile_density_subprocesses(self):
+        """Compile density matrix subprocess directories if present."""
+        path_me = self.rwgt_dir if self.rwgt_dir else self.me_dir
+        for dir_name in [self.density_prod_dirname, self.density_decay_dirname]:
+            if not dir_name:
+                continue
+            sub_dir = pjoin(path_me, dir_name, 'SubProcesses')
+            if not os.path.isdir(sub_dir):
+                continue
+            logger.info('Compiling density modules in %s', sub_dir)
+            # Distinct ME-library soname per directory: see compile_SubProcess_dir.
+            self.compile_SubProcess_dir(sub_dir, procname=dir_name)
+
+    def load_density_modules(self):
+        """Load density matrix modules from the dedicated density directories."""
+        if not self.inc_sudakov:
+            return
+        self.density_prod_id_to_path = {}
+        self.density_decay_id_to_path = {}
+        self.density_prod_f2pylib = {}
+        self.density_decay_f2pylib = {}
+        self._load_density_dir(self.density_prod_dirname, nincoming=2,
+                               id_to_path=self.density_prod_id_to_path,
+                               f2pylib=self.density_prod_f2pylib)
+        self._load_density_dir(self.density_decay_dirname, nincoming=1,
+                               id_to_path=self.density_decay_id_to_path,
+                               f2pylib=self.density_decay_f2pylib)
+
+    def _load_density_dir(self, dir_name, nincoming, id_to_path, f2pylib):
+        """Load a standalone density directory and populate mappings."""
+        if not dir_name:
+            return
+        path_me = self.rwgt_dir if self.rwgt_dir else self.me_dir
+        base_dir = pjoin(path_me, dir_name)
+        if not os.path.exists(base_dir):
+            return
+        pdir = pjoin(base_dir, 'SubProcesses')
+        mymod = None
+        for tag in [2, 3]:
+            with misc.TMP_variable(sys, 'path', [pjoin(path_me), pdir] + sys.path):
+                mod_name = '%s.SubProcesses.all_matrix%spy' % (dir_name, tag)
+                if mod_name in list(sys.modules.keys()):
+                    del sys.modules[mod_name]
+                    tmp_mod_name = mod_name
+                    while '.' in tmp_mod_name:
+                        tmp_mod_name = tmp_mod_name.rsplit('.', 1)[0]
+                        del sys.modules[tmp_mod_name]
+                # The native extension all_matrix<tag>py has the same name in every
+                # directory: drop the cached one so this directory's .so is imported.
+                native_mod_name = 'all_matrix%spy' % tag
+                if native_mod_name in sys.modules:
+                    del sys.modules[native_mod_name]
+                try:
+                    import importlib
+                    mymod = importlib.import_module(mod_name)
+                    mymod = importlib.reload(mymod)
+                except Exception:
+                    continue
+            f2pylib[(dir_name, tag)] = mymod
+            if hasattr(mymod, 'set_madloop_path'):
+                mymod.set_madloop_path(pjoin(pdir, 'MadLoop5_resources'))
+
+        if mymod is None:
+            return
+
+        allids, all_pids = mymod.get_pdg_order()
+        all_pdgs = [[pdg for pdg in pdgs if pdg != 0] for pdgs in allids]
+        all_prefix = [bytes(j).decode(errors="ignore").strip().lower() for j in mymod.get_prefix()]
+        prefix_set = set(all_prefix)
+
+        hel_dict = {}
+        for prefix in prefix_set:
+            if hasattr(mymod, '%sprocess_nhel' % prefix):
+                # <prefix>get_nhel_entry() copies the ME helicity table into the
+                # wrapper's common block, exposed by f2py as
+                # <prefix>process_nhel.<prefix>nhel.
+                getattr(mymod, '%sget_nhel_entry' % prefix)()
+                nhel = getattr(getattr(mymod, '%sprocess_nhel' % prefix), '%snhel' % prefix)
+                hel_dict[prefix] = {}
+                for i, onehel in enumerate(zip(*nhel)):
+                    hel_dict[prefix][tuple(onehel)] = i + 1
+            elif hasattr(mymod, 'set_madloop_path') and \
+                 os.path.exists(pjoin(pdir, 'MadLoop5_resources', '%sHelConfigs.dat' % prefix.upper())):
+                hel_dict[prefix] = {}
+                for i, line in enumerate(open(pjoin(pdir, 'MadLoop5_resources', '%sHelConfigs.dat' % prefix.upper()))):
+                    onehel = [int(h) for h in line.split()]
+                    hel_dict[prefix][tuple(onehel)] = i + 1
+
+        for i, (pdg, pid) in enumerate(zip(all_pdgs, all_pids)):
+            incoming = pdg[:nincoming]
+            outgoing = pdg[nincoming:]
+            order = (list(incoming), list(outgoing))
+            if not self.keep_ordering:
+                incoming.sort()
+                outgoing.sort()
+            tag = (tuple(incoming), tuple(outgoing))
+            prefix = all_prefix[i]
+            hel = hel_dict.get(prefix, {})
+            id_to_path[tag] = order, pdir, hel
 
     def load_module(self, metag=1):
         """load the various module and load the associate information"""
@@ -2542,6 +2820,8 @@ class ReweightInterface(extended_cmd.Cmd):
         to_save['allow_missing_finalstate'] = self.options['allow_missing_finalstate']
         to_save['identical_particle_in_prod_and_decay'] = self.options['identical_particle_in_prod_and_decay']
         to_save['nb_library'] = self.nb_library
+        if self.inc_sudakov:
+            to_save['sudakov_source_ids'] = self._sudakov_source_ids
 
         name = pjoin(self.rwgt_dir, 'rw_me', 'rwgt.pkl')
         save_load_object.save_to_file(name, to_save)
@@ -2553,6 +2833,11 @@ class ReweightInterface(extended_cmd.Cmd):
         obj = save_load_object.load_from_file( pjoin(self.rwgt_dir, 'rw_me', 'rwgt.pkl'))
         
         self.has_standalone_dir = True
+        if self.inc_sudakov and self.multicore == 'wait':
+            sources = set(obj['sudakov_source_ids'])
+            if not set(self._sudakov_source_ids).issubset(sources):
+                raise ValueError('Worker source weights are absent from the shared Sudakov layout.')
+            self._sudakov_source_ids = sources
         if 'rwgt_info' in self.options:
             self.options = {'rwgt_info': self.options['rwgt_info']}
         else: 

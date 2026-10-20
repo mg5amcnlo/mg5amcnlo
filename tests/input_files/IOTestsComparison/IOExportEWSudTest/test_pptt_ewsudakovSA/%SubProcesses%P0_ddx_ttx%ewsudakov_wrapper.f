@@ -4,7 +4,7 @@
       INCLUDE 'born_nhel.inc'
       DOUBLE PRECISION P(0:3, NEXTERNAL-1)
 
-      INTEGER I,J
+      INTEGER I
       INTEGER IHEL
       INTEGER     NCOMB
       PARAMETER ( NCOMB=  16 )
@@ -47,6 +47,8 @@
       COMMON /TO_AMP_BORN_ONEHEL/AMP_SPLIT_BORN_ONEHEL
       DOUBLE COMPLEX AMP_SPLIT_EWSUD_PARQCD(AMP_SPLIT_SIZE)
       COMMON /TO_AMP_EWSUD_PARQCD/AMP_SPLIT_EWSUD_PARQCD
+      DOUBLE PRECISION AMP_BORN_SUMHEL
+      COMMON /TO_AMP_BORN_SUMHEL/AMP_BORN_SUMHEL
 
       INTEGER IFLIST(NEXTERNAL-1), PDGLIST(NEXTERNAL-1),
      $  PDGLIST_OTH(NEXTERNAL-1)
@@ -69,6 +71,17 @@
 
       INTEGER EWSUD_HELSELECT
       COMMON/TO_EWSUD_HELSELECT/EWSUD_HELSELECT
+
+C     Resonance-helicity selection: if ewsud_nres > 0, only helicity
+C     configurations whose legs ewsud_res_pos have the helicities
+C     ewsud_res_hel are summed, i.e. the sum runs over the spectators.
+      INTEGER EWSUD_NRES
+      INTEGER EWSUD_RES_POS(10)
+      INTEGER EWSUD_RES_HEL(10)
+      COMMON/TO_EWSUD_RES_SEL/EWSUD_NRES, EWSUD_RES_POS, EWSUD_RES_HEL
+      DATA EWSUD_NRES /0/
+      INTEGER IRES
+      LOGICAL RES_HEL_MATCH
 
       DOUBLE PRECISION COMPENSATE_IDENTICAL_FACTOR
       EXTERNAL COMPENSATE_IDENTICAL_FACTOR
@@ -100,6 +113,7 @@ C     stuff for the MC over helicities
 
       AMP_SPLIT_EWSUD_QCD(:) = DCMPLX(0D0,0D0)
       AMP_SPLIT_EWSUD_PARQCD(:) = DCMPLX(0D0,0D0)
+      AMP_BORN_SUMHEL = 0D0
 
 
       IFLIST = (/-1,-1,1,1/)
@@ -125,11 +139,25 @@ C     Main loop over the helicities
 C       if an helicity is selected, then filter it
         IF (EWSUD_HELSELECT.NE.0.AND.EWSUD_HELSELECT.NE.IHEL) CYCLE
 
+        IF (EWSUD_NRES.GT.0) THEN
+          RES_HEL_MATCH = .TRUE.
+          DO IRES = 1, EWSUD_NRES
+            IF (NHEL(EWSUD_RES_POS(IRES), IHEL) .NE.
+     $        EWSUD_RES_HEL(IRES)) THEN
+              RES_HEL_MATCH = .FALSE.
+              EXIT
+            ENDIF
+          ENDDO
+          IF (.NOT.RES_HEL_MATCH) CYCLE
+        ENDIF
+
         IF (.NOT.GOOD_HEL(IHEL).AND.SUD_FILTER_HEL) CYCLE
 
 C       call the born amplitude and store the result
         CALL SBORN_ONEHEL(P,NHEL(1,IHEL),IHEL,ANS_SUMMED)
         AMP_SPLIT_BORN_ONEHEL(:) = AMP_SPLIT_EWSUD(:)
+        AMP_BORN_SUMHEL = AMP_BORN_SUMHEL +
+     $    DBLE(AMP_SPLIT_BORN_ONEHEL(1))
 
         IF (FIRSTTIME_HEL(IHEL)) THEN
           GOOD_HEL(IHEL) = .FALSE.
@@ -191,6 +219,7 @@ C       the SSC terms (charged)
 
       AMP_SPLIT_EWSUD_QCD(:) = AMP_SPLIT_EWSUD_QCD(:)/VOLH
       AMP_SPLIT_EWSUD_PARQCD(:) = AMP_SPLIT_EWSUD_PAR(:)
+      AMP_BORN_SUMHEL = AMP_BORN_SUMHEL / VOLH
 
       DO IAMP = 1, AMP_SPLIT_SIZE
 
@@ -283,5 +312,4 @@ C
 
       RETURN
       END
-
 

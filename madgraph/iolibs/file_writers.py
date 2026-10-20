@@ -206,7 +206,7 @@ class FortranWriter(FileWriter):
     # Private variables
     __indent = 0
     __keyword_list = []
-    __comment_pattern = re.compile(r"^(\s*#|c\$|c$|(c\s+([^=]|$))|cf2py|c\-\-|c\*\*|\s*!|!\$)", re.IGNORECASE)
+    __comment_pattern = re.compile(r"^(\s*#|c\$|c$|(c\s+([^=]|==+|$))|cf2py|c\-\-|c\*\*|\s*!|!\$)", re.IGNORECASE)
     __continuation_line = re.compile(r"(?:     )[$&]")
 
     def write_line(self, line):

@@ -26,6 +26,9 @@
       double precision invariants(nexternal-1, nexternal-1)
       integer i,j
       double precision sumdot
+      double precision inv_raw
+      integer sign_ij
+      logical clamped
 
       logical rij_ge_mw
       COMMON /rij_ge_mw/ rij_ge_mw
@@ -33,15 +36,19 @@
 
       do i = 1, nexternal-1
         do j = i, nexternal-1
-          invariants(i,j) = sumdot(p(0,i),p(0,j),dble(iflist(i)*iflist(j)))
-          if(rij_ge_mw.and.abs(invariants(i,j)).lt.mdl_mw**2) then
-            invariants(i,j)=dsign(1d0,invariants(i,j))*mdl_mw**2
+          sign_ij = iflist(i) * iflist(j)
+          inv_raw = sumdot(p(0,i),p(0,j),dble(sign_ij))
+          clamped = rij_ge_mw .and. abs(inv_raw).lt.mdl_mw**2
+          if (clamped) then
+            invariants(i,j) = dsign(1d0,inv_raw)*mdl_mw**2
+          else
+            invariants(i,j) = inv_raw
           endif
           invariants(j,i) = invariants(i,j)
         enddo
       enddo
 
-      return 
+      return
       end
 
       subroutine ewsudakov_f77(p_born_in, gstr_in, results)

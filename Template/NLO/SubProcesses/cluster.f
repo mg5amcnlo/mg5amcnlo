@@ -34,15 +34,36 @@ C given by the to_mconfigs common block.
       integer i,j,il_list,il_pdg,next,nbr,ipdg(nexternal,0:fks_configs)
      $     ,cluster_list(2*max_branch*lmaxconfigs*(fks_configs+1))
      $     ,cluster_pdg(3*3*max_branch*lmaxconfigs*(fks_configs+1))
-     $     ,cluster_conf,iconf,cluster_ij(max_branch),iord(0:max_branch)
-     $     ,nqcdrenscale,iconfig,need_matching(nexternal)
+     $     ,cluster_conf,iconf,cluster_ij(max_branch)
+     $     ,cluster_par_i(max_branch),cluster_par_j(max_branch)
+     $     ,iord(0:max_branch),nqcdrenscale,iconfig,need_matching(nexternal)
      $     ,cluster_type(maskr(nexternal),0:fks_configs)
       double precision cluster_scales(0:max_branch),qcd_fac_scale
      $     ,qcd_ren_scale(0:nexternal),sudakov,expanded_sudakov,pcl(0:3
      $     ,nexternal)
-      logical firsttime(0:fks_configs),skip_first
-      data (firsttime(i),i=0,fks_configs) /nfks1*.true./
+      logical firsttime(0:fks_configs),skip_first,skip_first_write
+       CHARACTER*(2000) clusterstring
+       COMMON /c_clusterstring/ clusterstring
+c One <clustering> string per iproc of the current event
+       INTEGER MAXFKSLOC
+       PARAMETER (MAXFKSLOC=512)
+       CHARACTER*(2000) clusterstrings(0:MAXFKSLOC)
+       COMMON /c_clusterstrings/ clusterstrings
+      INTEGER iclus,isave
+      INTEGER mother_pdg
+      CHARACTER*32 float,stepid,integf
+      CHARACTER*32 momstr
+      CHARACTER*32 cidstr
+      CHARACTER*8 role
+      CHARACTER*2000 temp
+      CHARACTER*64 temp0
+      CHARACTER*50 pairstr
+      CHARACTER*6  tmpidx
+      INTEGER cid, cidlocal, bitpos
+      integer get_step_mother_pdg
+       data (firsttime(i),i=0,fks_configs) /nfks1*.true./
       save ipdg,cluster_list,cluster_pdg,cluster_type,firsttime
+      data temp0 /'<clustering'/
       if (iproc.eq.0) then      ! n-body contribution
          next=nexternal-1
          do i=1,next
@@ -95,8 +116,8 @@ c cluster_ij) with scales (in cluster_scales)
      $     ,cluster_list(il_list),cluster_pdg(il_pdg),iforest(1,-(nbr+1)
      $     ,iconfig,iproc),ipdg(1,iproc),pmass(-nbr,iconfig,iproc)
      $     ,pwidth(-nbr,iconfig,iproc),iconfig,sprop(-nbr,iconfig,iproc)
-     $     ,cluster_conf,cluster_scales,cluster_ij,iord,cluster_type(1
-     $     ,iproc))
+     $     ,cluster_conf,cluster_scales,cluster_ij,cluster_par_i
+     $     ,cluster_par_j,iord,cluster_type(1,iproc))
 c Given the most-likely clustering, it returns the corresponding Sudakov
 c form factor and renormalisation and factorisation scales.
       if (iproc.eq.0) then
@@ -104,12 +125,67 @@ c form factor and renormalisation and factorisation scales.
       else
          skip_first=.true. ! for real-emission: skip the first clustering
       endif
+      ! the written clustering history includes the first clustering
+      skip_first_write=.false.
       call set_array_indices(iproc,cluster_conf,il_list,il_pdg)
       need_matching(1:nexternal)=-99
       call reweighting(next,pcl,nbr,skip_first,cluster_ij,ipdg(1,iproc)
      $     ,cluster_pdg(il_pdg),cluster_scales,iord,sudakov
      $     ,expanded_sudakov,nqcdrenscale,qcd_ren_scale,qcd_fac_scale
      $     ,need_matching(1))
+      ! Clustering history for the LHE event record:
+      !  <clustering type="born|real" iproc="n" step_k="legs;scale;mom=pdg"
+      !   ... final_scale="scale"></clustering>
+      ! legs: comma-separated external legs in the bitmask cluster_ij(k),
+      ! scale: cluster_scales(k), pdg: PDG code of the clustered mother.
+      clusterstring=''
+      temp=''
+      if (iproc.eq.0) then
+         role='born'
+      else
+         role='real'
+      endif
+      write(cidstr,'(I0)') iproc
+      temp0='<clustering type="'//trim(adjustl(role))//'" iproc="'//
+     $       trim(adjustl(cidstr))//'"'
+
+      isave = 0
+      do iclus = 1, nbr
+         if (skip_first_write .and. iclus.eq.1) cycle
+
+         isave = isave + 1
+         write(integf,'(I0)') isave
+
+      write(float,'(ES20.10)') cluster_scales(iclus)
+         float = trim(adjustl(float))
+
+         ! external legs in the bitmask cluster_ij(iclus)
+         pairstr=''
+         cid=cluster_ij(iclus)
+         bitpos=1
+         cidlocal=cid
+         do while (cidlocal.gt.0)
+            if (btest(cidlocal,0) .and. bitpos.le.next) then
+               write(tmpidx,'(I0)') bitpos
+               pairstr=trim(pairstr)//','//trim(adjustl(tmpidx))
+            endif
+            cidlocal = ishft(cidlocal,-1)
+            bitpos = bitpos + 1
+         enddo
+         if (len_trim(pairstr).ge.1) pairstr=pairstr(2:)
+
+         mother_pdg = get_step_mother_pdg(iclus, nbr, iord, cluster_pdg(il_pdg))
+         write(momstr,'(I0)') mother_pdg
+         temp = trim(temp)//' step_'//trim(adjustl(integf))//'="'//trim(pairstr)//';'//
+     $         trim(float)//';mom='//trim(adjustl(momstr))//'"'
+      enddo
+
+      write(float,'(ES20.10)') cluster_scales(0)
+      float = trim(adjustl(float))
+      temp = trim(temp)//' final_scale="'//trim(float)//'"'
+
+      clusterstring = trim(adjustl(trim(temp0)//' '//trim(temp)//'></clustering>'))
+      clusterstrings(iproc) = clusterstring
       return
       end
       
@@ -152,7 +228,17 @@ c respectively)
       return
       end
 
-      
+      integer function get_step_mother_pdg(iclus, nbr, iord, cluster_pdg)
+c Returns the PDG code of the mother for clustering step 'iclus'
+      implicit none
+      integer iclus, nbr
+      integer iord(0:nbr)
+      integer cluster_pdg(0:2,0:2*nbr)
+      get_step_mother_pdg = cluster_pdg(0,iord(iclus))
+      return
+      end
+
+
 CCCCCCCCCCCCCCC-- INITIALISATION -- CCCCCCCCCCCCCCCC
 
       subroutine iforest_to_list(next,nincoming,nbr,iforest,sprop
@@ -314,7 +400,8 @@ CCCCCCCCCCCCCCC-- MAIN CLUSTER ROUTINE -- CCCCCCCCCCCCCCCC
 
       subroutine cluster(next,p,nconf,nbr,cluster_list,cluster_pdg,itree
      $     ,ipdg,prmass,prwidth,iconfig,sprop,cluster_conf
-     $     ,cluster_scales,cluster_ij,iord,cluster_type)
+     $     ,cluster_scales,cluster_ij,cluster_par_i,cluster_par_j,iord
+     $     ,cluster_type)
 c Takes a set of momenta and clusters them according to possible diagram
 c configurations (given by cluster_list).  The idea is to perform the
 c clusterings until we have a 2->1 process. Clusterings are only done if
@@ -325,7 +412,8 @@ c clustering scales (cluster_scales).
       implicit none
       integer next,i,j,nleft,imap(next),iwin,jwin,win_id,nconf,nvalid
      $     ,nbr,cluster_list(2*nbr,nconf),cluster_conf,iclus,ipdg(next)
-     $     ,cluster_ij(nbr),cluster_pdg(0:2,0:2*nbr,nconf),iord(0:nbr)
+     $     ,cluster_ij(nbr),cluster_par_i(nbr),cluster_par_j(nbr)
+     $     ,cluster_pdg(0:2,0:2*nbr,nconf),iord(0:nbr)
      $     ,iBWlist(2,0:nbr),itree(2,-(nbr+1):-1),iconf,iconfig,sprop(
      $     -nbr:-1),cluster_type(maskr(next)),get_color,ico
      $     ,particle_type(next)
@@ -379,6 +467,9 @@ c Remove diagrams that do not have the win_id among its clusterings
 c Combine the momenta (and update particle types)
          call update_momenta(nleft,pcl(0,1),iwin,jwin,p_inter(0,0
      $        ,iclus),is_bw,particle_type,cluster_type(win_id))
+         ! Save the two parent masks before updating imap
+         cluster_par_i(iclus)=imap(iwin)
+         cluster_par_j(iclus)=imap(jwin)
 c Update imap (the map that links current particle labels with the
 c binary labeling). Since we combine particles, we need to update the
 c corresponding imap label with the combined particle label.
@@ -475,7 +566,7 @@ c     the renormalisation scale.
 c Determine which particles need clustering and which do not
       call matching_particles(next,nbr,ipdg,cluster_pdg,cluster_ij,iord
      $     ,need_matching)
-      
+
       nqcdrenscale=0       ! number of alpha-s needing reweighting
       nqcdrenscalecentral=0
       hard_qcd_scale=0d0   ! hardest scale in all clusterings so far.

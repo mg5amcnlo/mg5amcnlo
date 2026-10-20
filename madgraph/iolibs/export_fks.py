@@ -2274,6 +2274,12 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         self.write_sudakov_wrapper(writers.FortranWriter(filename),
                                    matrix_element,has_lo,fortran_model)
 
+        # per-helicity Sudakov wrapper for the spin-correlated reweighting
+        if matrix_element.ewsudakov:
+            filename = "density_matrix_wrapper.f"
+            self.write_density_matrix_wrapper(writers.FortranWriter(filename),
+                                              matrix_element, fortran_model)
+
 
 
     def generate_virtuals_from_OLP(self,process_list,export_path, OLP):
@@ -3044,12 +3050,36 @@ Parameters              %(params)s\n\
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/ewsudakov_wrapper.inc')).read()
         file = file % replace_dict
-        
+
         # Write the file
         writer.writelines(file)
-    
-        return 
 
+        return
+
+
+    #===============================================================================
+    # write_density_matrix_wrapper
+    #===============================================================================
+    def write_density_matrix_wrapper(self, writer, matrix_element, fortran_model):
+        """Write density_matrix_wrapper.f for the spin-correlated EW Sudakov.
+
+        For each resonance-helicity combination h the wrapper returns the
+        Born-weighted Sudakov correction (density_delta) and the Born summed over
+        spectator helicities (born_diag); Python takes their ratio as delta_h.
+        The density matrix B[h,h'] is built in Python (DensityHelper, from
+        GET_DENSITY of the rw_me_density_prod modules).
+        """
+        # No substitution variables, but the template is still %-formatted:
+        # a literal '%' in it must be written '%%'.
+        replace_dict = {}
+
+        file = open(os.path.join(_file_path,
+                          'iolibs/template_files/density_matrix_wrapper.inc')).read()
+        file = file % replace_dict
+
+        writer.writelines(file)
+
+        return
 
 
     #===============================================================================
@@ -3227,7 +3257,10 @@ Parameters              %(params)s\n\
 
         # Extract color data lines
         color_data_lines = self.get_color_data_lines(matrix_element)
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+        # get_color_data_lines emits "%(proc_prefix)s" placeholders for a second
+        # pass (as in the other Sudakov-ME writers); left unsubstituted they break
+        # the Fortran DATA statements of ewsudakov_goldstone_me_*.f.
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines) % {'proc_prefix': ''}
 
         # Extract helas calls of the base  matrix element
         helas_calls = fortran_model.get_matrix_element_calls(\
@@ -5077,7 +5110,7 @@ class ProcessExporterEWSudakovSA(ProcessOptimizedExporterFortranFKS):
         replace_dict['path'] = os.path.join(self.dir_path, 'SubProcesses')
         replace_dict['pdir_list'] = ", ".join(["'%s'" % dd[0] for dd in self.dirstopdg])  
         replace_dict['pdg2sud'] = ",\n".join([str(self.get_pdg_tuple(dd[1], dd[2], sortfinal=True)) + \
-                ": import_lib('%s')" % dd[0] for dd in self.dirstopdg])   
+                ": import_lib('%s')" % dd[0] for dd in self.dirstopdg])
 
         replace_dict['pdgsorted'] = ",\n".join(["%s: %s" % (
                         str(self.get_pdg_tuple(dd[1], dd[2], sortfinal=True)),

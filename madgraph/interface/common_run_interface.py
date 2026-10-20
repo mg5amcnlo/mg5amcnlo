@@ -104,6 +104,29 @@ def render_HwU_plot(path, stdout=None, stderr=None):
                                                stderr=stderr)
 
 
+def fxfx_sudakov_reweight_options(run_card, reweight_card_path):
+    """Extra keyword arguments of the reweight interface for its input events.
+
+    FxFx (ickkw=3) EW Sudakov reweighting clusters decayed events back to the
+    hard process, so MadSpin-decayed input is allowed when the reweight card
+    runs 'change include_sudakov True' (the only value that do_change
+    accepts). Comments and ';' are treated as in Cmd.precmd.
+    """
+    try:
+        if int(run_card['ickkw']) != 3:
+            return {}
+    except (KeyError, TypeError, ValueError):
+        return {}
+    if not os.path.exists(reweight_card_path):
+        return {}
+    with open(reweight_card_path) as fsock:
+        for line in fsock:
+            for command in line.split('#')[0].split(';'):
+                if command.split()[:3] == ['change', 'include_sudakov', 'True']:
+                    return {'allow_madspin': True}
+    return {}
+
+
 #===============================================================================
 # HelpToCmd
 #===============================================================================
@@ -2275,6 +2298,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         # load the name of the event file
         args = self.split_arg(line) 
+        fxfx_catalogue_source = None
+        for arg in list(args):
+            if arg.startswith('--fxfx-catalogue-source='):
+                fxfx_catalogue_source = arg.split('=', 1)[1]
+                args.remove(arg)
         if plugin and '--plugin=' not in line:
             args.append('--plugin=%s' % plugin)
         
@@ -2405,6 +2433,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         else:
                             stdout = open(pjoin(self.me_dir,'Events', self.run_name, 'reweight.log'),'w')
                         new_command.append('--multicore=create')
+                        new_command.append('--fxfx-catalogue-source=%s' % os.path.abspath(new_args[0]))
                     else:
                         stdout = devnull
                         stdout = subprocess.DEVNULL
@@ -2459,7 +2488,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                         info="Will use re-weighting from pluging %(plug)s")
                 
 
-        reweight_cmd = rwgt_interface(args[0], mother=self)
+        rwgt_options = fxfx_sudakov_reweight_options(
+            getattr(self, 'run_card', None),
+            pjoin(self.me_dir, 'Cards', 'reweight_card.dat'))
+        reweight_cmd = rwgt_interface(args[0], mother=self, **rwgt_options)
         #reweight_cmd.use_rawinput = False
         #reweight_cmd.mother = self
         wgt_names = reweight_cmd.get_weight_names()
@@ -2474,6 +2506,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         reweight_cmd.raw_input=False # probably useless ...
         reweight_cmd.me_dir = self.me_dir
         reweight_cmd.multicore = multicore #allow the directory creation or not
+        reweight_cmd.fxfx_catalogue_source = fxfx_catalogue_source
         reweight_cmd.import_command_file(path)
         reweight_cmd.do_quit('')
 
@@ -8662,5 +8695,4 @@ def scanparamcardhandling(input_path=lambda obj: pjoin(obj.me_dir, 'Cards', 'par
 
         return new_fct
     return decorator    
-
 

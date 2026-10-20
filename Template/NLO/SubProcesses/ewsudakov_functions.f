@@ -54,6 +54,13 @@ c it does not work if set to true, besides particular cases
        DATA rij_ge_mw / .true. /
        END
 
+       BLOCK DATA sud_helselect_init
+       implicit none
+       integer ewsud_helselect
+       common/to_ewsud_helselect/ewsud_helselect
+       DATA ewsud_helselect / 0 /
+       END
+
 
 
        logical function has_lo2()
@@ -149,6 +156,7 @@ c it does not work if set to true, besides particular cases
 
       integer   deb_settozero
       common /to_deb_settozero/deb_settozero
+      data deb_settozero /0/
 
       double precision lzfordebug
 

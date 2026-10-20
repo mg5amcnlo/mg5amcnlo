@@ -2904,47 +2904,57 @@ class Event(list):
         #3. check mass
 
     def check_kinematics_only(self):
-        """check various property of the events - only kinematics"""
-        
-        # check that relative error is under control
-        threshold = 1e-3
-       
-        #1. Check that the 4-momenta are conserved
-        E, px, py, pz = 0,0,0,0
-        absE, abspx, abspy, abspz = 0,0,0,0
-        for particle in self:
-            coeff = 1
-            if particle.status == -1:
-                coeff = -1
-            elif particle.status != 1:
-                continue
-            E += coeff * particle.E
-            absE += abs(particle.E)
-            px += coeff * particle.px
-            py += coeff * particle.py
-            pz += coeff * particle.pz
-            abspx += abs(particle.px)
-            abspy += abs(particle.py)
-            abspz += abs(particle.pz)
-            # check mass
-            fourmass = FourMomentum(particle).mass
-            
-            if particle.mass and (abs(particle.mass) - fourmass)/ abs(particle.mass) > threshold:
-                logger.critical(self)
-                raise Exception( "Do not have correct mass lhe: %s momentum: %s (error at %s" % (particle.mass, fourmass, (abs(particle.mass) - fourmass)/ abs(particle.mass)))
+        """Check momentum conservation and masses of the status +-1 particles.
 
-        if abs(E/absE) > threshold:
+        Each component of DeltaP = Sum_out p - Sum_in p must satisfy
+        |DeltaP_i| <= max(eps_abs, eps_rel * E_scale), where E_scale is the
+        summed |E| of the incoming particles (of the outgoing ones if that is
+        zero).  Nonzero recorded masses must match the computed ones to 1e-3
+        (relative).
+        """
+        eps_abs = 1.0e-3      # GeV; boost/clustering round-off is ~1e-12 GeV
+        eps_rel = 1.0e-6      # relative to E_scale
+
+        P  = [0.0, 0.0, 0.0, 0.0]   # DeltaP (E, px, py, pz)
+        E_scale = 0.0
+        for p in self:
+            if p.status == -1:
+                coeff = -1.0
+                E_scale += abs(p.E)
+            elif p.status == 1:
+                coeff = +1.0
+            else:
+                continue
+            P[0] += coeff * p.E
+            P[1] += coeff * p.px
+            P[2] += coeff * p.py
+            P[3] += coeff * p.pz
+
+            m2 = p.E*p.E - p.px*p.px - p.py*p.py - p.pz*p.pz
+            m  = math.copysign(math.sqrt(abs(m2)), m2)
+            if abs(p.mass) > 1e-6:
+                if abs(m - p.mass) / abs(p.mass) > 1e-3:
+                    logger.critical(self)
+                    raise Exception(
+                        "Wrong mass: pdg=%s, recorded=%s, computed=%s"
+                        % (p.pid, p.mass, m))
+
+        if E_scale <= 0.0:
+            for p in self:
+                if p.status == 1:
+                    E_scale += abs(p.E)
+        if E_scale <= 0.0:
+            raise Exception("Event has no energy scale - likely empty/corrupt")
+
+        for i, label in enumerate(("E", "Px", "Py", "Pz")):
+            if abs(P[i]) <= eps_abs:
+                continue
+            if abs(P[i]) / E_scale <= eps_rel:
+                continue
             logger.critical(self)
-            raise Exception("Do not conserve Energy %s, %s" % (E/absE, E))
-        if abs(px/abspx) > threshold:
-            logger.critical(self)
-            raise Exception("Do not conserve Px %s, %s" % (px/abspx, px))         
-        if abs(py/abspy) > threshold:
-            logger.critical(self)
-            raise Exception("Do not conserve Py %s, %s" % (py/abspy, py))
-        if abs(pz/abspz) > threshold:
-            logger.critical(self)
-            raise Exception("Do not conserve Pz %s, %s" % (pz/abspz, pz))
+            raise Exception(
+                "%s not conserved: DeltaP = %.6e GeV, DeltaP/E_scale = %.3e, E_scale = %.3f GeV"
+                % (label, P[i], P[i]/E_scale, E_scale))
                  
          
     def assign_scale_line(self, line, convert=True):
@@ -4393,11 +4403,11 @@ class FourMomentum(object):
                             self.px,
                             self.py,
                             gamma*self.pz - gammabeta*self.E])
-        
-        if abs(out.pz) < 1e-6 * out.E:
-            out.pz = 0
+        # Exactly linear, no zeroing of small components: the FKS ISR mapping
+        # boosts every particle of an event, and zeroing |pz| < 1e-6 E would leave
+        # an MeV-scale momentum imbalance at TeV energies.
         return out
-    
+
     def zboost_inv(self, pboost=None, E=0, pz=0):
         """Both momenta should be in the same frame. 
            The boost perform correspond to the boost required to set pboost at 
@@ -4415,9 +4425,7 @@ class FourMomentum(object):
                             self.px,
                             self.py,
                             gamma*self.pz + gammabeta*self.E])
-        
-        if abs(out.pz) < 1e-6 * out.E:
-            out.pz = 0
+        # Exactly linear, as zboost.
         return out
 
 
@@ -4442,11 +4450,7 @@ class FourMomentum(object):
                             -gamma*betax*self.E + (1.0 + (gamma-1.0)*betax**2/(beta**2))*self.px + (gamma-1.0)*betax*betay/(beta**2)*self.py,
                             -gamma*betay*self.E + ((gamma-1.0)*betax*betay/(beta**2))*self.px + (1.0+(gamma-1.0)*(betay**2)/(beta**2))*self.py,
                             self.pz])
-        
-        if abs(out.px) < 1e-6 * out.E:
-            out.px = 0
-        if abs(out.py) < 1e-6 * out.E:
-            out.py = 0
+        # Exactly linear, as zboost (no zeroing of small px, py).
         return out
 
     def boost_beta(self,beta,mom):
