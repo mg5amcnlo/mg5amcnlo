@@ -1114,7 +1114,7 @@ c     We have a qcd line going through the whole event, use single scale
             endif
          endif
       endif
-      if(.not. fixed_fac_scale1.or. fixed_fac_scale2) then
+      if(.not.fixed_fac_scale1.or..not.fixed_fac_scale2) then
          if(.not.fixed_fac_scale1) q2fact(1)=scalefact**2*q2fact(1)
          if(.not.fixed_fac_scale2) q2fact(2)=scalefact**2*q2fact(2)
          if (.not.keepq2bck)then
