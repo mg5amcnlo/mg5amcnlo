@@ -853,7 +853,7 @@ c     endif
 c     set the running scale 
 c     and update the couplings accordingly (but deactivate for discrete sampler(imode=5) and 
       IF (VECSIZE_MEMMAX.LE.1.and.imode.ne.5) THEN ! no-vector (NB not VECSIZE_USED!)
-            call update_scale_coupling(pp, wgt)
+            call update_scale_coupling(p1, wgt)
       endif
 
 
