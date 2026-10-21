@@ -172,11 +172,10 @@
 ! Envelope calibration keeps the collection-stage virtual-call fraction;
 ! later integration adapts to residual errors. Far outside the fitted
 ! domain, exact loops protect against extrapolation.
-! Takes precedence over UsePolyVirtual. Restart the run from
-! grid setup after changing this option.
+! Takes precedence over UsePolyVirtual.
 #UsePooledVirtual
-.True.
-! Default for new run cards :: .True. (old cards retain their previous mode)
+.False.
+! Default :: .False.
 !
 ! ==========================================================================
 ! Combination of matrix elements
@@ -245,8 +244,8 @@
 ! H-event subtraction terms by the outer S_ij function.
 ! Set .false. to use the standard native-sector MC@NLO matching.
 #MCExplicitKLSum
-.true.
-! Default :: .true.
+.false.
+! Default :: .false.
 !
 ! Choose how Born colour flows enter the MC@NLO subtraction in both
 ! H and S events. With .true., evaluate at a sampled Born flow and apply
@@ -275,8 +274,8 @@
 ! UNLOPS (ickkw=4).
 ! Rerun integration/grid setup after changing this setting.
 #FKSExplicitSum
-.false.
-! Default :: .false.
+.true.
+! Default :: .true.
 !
 ! ==========================================================================
 ! FxFx analytic Sudakov finite terms (ickkw=3 only).
