@@ -1,9 +1,9 @@
-"""Optional frozen conditional corrections to pooled virtual polynomials.
+"""Optional native-helicity residual corrections to frozen virtual fits.
 
 Only native sampled/full-branch observations are fitted. Native probabilities
 already include helicity multiplicities and are used exactly once in a mean.
-SciPy is optional for training and supplies the Python antenna reference
-evaluator. Native worker inference is implemented in Fortran.
+Compact linear fits can use NumPy alone. SciPy supplies sparse/nonlinear
+training and the Python antenna reference evaluator. Workers use Fortran.
 """
 import hashlib
 import itertools
@@ -12,7 +12,13 @@ import os
 import time
 from collections import namedtuple
 
-FORMAT_VERSION = 1
+from .data import CAPTURE_FORMAT_VERSION, MODEL_FORMAT_VERSION, FEATURE_CATALOG
+from .validation import (
+    FORWARD_FRACTIONS as FRACTIONS, chronological_mask,
+    residual_metrics as _metrics, validation_cache,
+)
+
+FORMAT_VERSION = 4
 MAX_HEADS = 64
 MAX_INPUTS = 128
 MAX_WIDTH = 64
@@ -23,13 +29,10 @@ MAX_ACTIVATION_ELEMENTS = 12000000
 MAX_CONFIGURATIONS = 4
 MAX_OPTIMIZER_ITERATIONS = 4000
 MIN_HEAD_ROWS = 60
-FRACTIONS = (.5, 2./3., .8)
 DEFAULT_CONFIGURATIONS = (dict(widths=(64,), ridge=.001, alpha=1., iterations=400),)
 LINEAR_CONFIGURATION = dict(family='linear', widths=(1,), ridge=.001, alpha=1., iterations=1000)
 MAX_LINEAR_DESIGN_ELEMENTS = 8000000
 MAX_DENSE_LINEAR_PARAMETERS = 512
-LINEAR_RESIDUAL_L1 = .02
-LINEAR_RESIDUAL_RMS = .05
 PHYSICS_LINEAR_RESIDUAL_L1 = .005
 PHYSICS_LINEAR_RESIDUAL_RMS = .01
 _GROUPED_MIN_HEADS = 32
@@ -144,7 +147,7 @@ def canonical_momenta(momenta, incoming, return_valid=False):
 def input_values(descriptors, features, momenta, q, incoming, return_outside=False):
     """Evaluate typed portable inputs; indices in descriptors are one-based."""
     import numpy as np
-    from .virtual_pool_polynomial import coordinates
+    from .polynomial import coordinates
     x, p, probabilities = (np.asarray(v, dtype=float) for v in (features, momenta, q))
     n = len(x)
     columns = []
@@ -190,12 +193,12 @@ def input_values(descriptors, features, momenta, q, incoming, return_outside=Fal
 
 def descriptors_for(metadata, features, momenta, q, train, heads, bank='scalar'):
     import numpy as np
-    from .virtual_pool import scalar_feature_count, threshold_pairs
+    from .data import scalar_feature_count, threshold_pairs
     if bank not in ('scalar', 'canonical', 'composite', 'compact'):
         raise ValueError('unknown neural input bank')
-    ns = scalar_feature_count(metadata) if metadata['catalog'] in (7, 8, 9) else metadata['nf']
+    ns = scalar_feature_count(metadata)
     lo, hi = features[train].min(axis=0), features[train].max(axis=0)
-    raw = metadata['catalog'] == 9 and bank == 'compact'
+    raw = bank == 'compact'
     descriptors = [(9 if raw else 1, i+1, 0, 0, float(lo[i]), float(hi[i])) for i in range(ns)
                    if hi[i]-lo[i] > 1.e-12]
     descriptors += [(2, i+1, 0, 0, -1., 1.) for i in range(ns, metadata['nf'])]
@@ -250,79 +253,6 @@ def descriptors_for(metadata, features, momenta, q, train, heads, bank='scalar')
     if len(descriptors) > MAX_INPUTS:
         raise ValueError('neural input budget exceeded')
     return descriptors
-
-
-def helicity_permutation(metadata, permutation):
-    """Map original native IDs to IDs after a metadata-preserving leg swap."""
-    n = metadata['nlegs']
-    identity = list(range(1, n+1))
-    if (len(permutation) != n or sorted(permutation) != identity or
-            any(int(i) != i for i in permutation)):
-        raise ValueError('invalid native leg permutation')
-    moved = [i for i, j in enumerate(permutation) if j != i+1]
-    if moved:
-        if len(moved) != 2:
-            raise ValueError('only one outgoing transposition is supported')
-        a, b = moved
-        if (metadata['incoming'][a] or metadata['incoming'][b] or
-                metadata['pdgs'][a] != metadata['pdgs'][b] or
-                metadata['masses'][a] != metadata['masses'][b]):
-            raise ValueError('leg permutation changes external particle metadata')
-    lookup = {tuple(h[2:]): h[0] for h in metadata['helicities']}
-    if len(lookup) != metadata['nhel']:
-        raise ValueError('duplicate native helicity labels')
-    mapping = []
-    for h in metadata['helicities']:
-        transformed = tuple(h[2+i-1] for i in permutation)
-        actual = lookup.get(transformed)
-        if actual is None or metadata['helicities'][actual-1][1] != h[1]:
-            raise ValueError('native helicity map/multiplicity is not permutation-closed')
-        mapping.append(actual)
-    return mapping
-
-
-def permutation_candidate(metadata):
-    """First supported identical-outgoing pair; no particle-specific rules."""
-    identity = list(range(1, metadata['nlegs']+1))
-    for a, b in itertools.combinations(range(metadata['nlegs']), 2):
-        if (metadata['incoming'][a] or metadata['incoming'][b] or
-                metadata['pdgs'][a] != metadata['pdgs'][b] or
-                metadata['masses'][a] != metadata['masses'][b]):
-            continue
-        candidate = identity.copy(); candidate[a], candidate[b] = candidate[b], candidate[a]
-        try:
-            helicity_permutation(metadata, candidate)
-        except ValueError:
-            continue
-        return candidate
-    return None
-
-
-def _check_head_closure(entry, mapping):
-    if not entry.get('enabled', True):
-        return
-    flags = dict(zip(entry['heads'], entry['trained']))
-    if any(mapping[h-1] not in flags or flags[mapping[h-1]] != flag for h, flag in flags.items()):
-        raise ValueError('trained neural heads are not permutation-closed')
-
-
-def permuted_features(metadata, features, momenta, permutation):
-    import numpy as np
-    from .virtual_pool import scalar_feature_count, threshold_features, threshold_pairs
-    x = np.asarray(features).copy()
-    p = np.asarray(momenta)[:, np.asarray(permutation)-1]
-    pairs = list(itertools.combinations(range(metadata['nlegs']), 2))
-    indices = {pair: index+1 for index, pair in enumerate(pairs)}
-    for index, (a, b) in enumerate(pairs, 1):
-        pair = tuple(sorted((permutation[a]-1, permutation[b]-1)))
-        x[:, index] = np.asarray(features)[:, indices[pair]]
-    if metadata['catalog'] in (8, 9):
-        nt = len(threshold_pairs(metadata))
-        index = scalar_feature_count(metadata)-nt-1-(4 if metadata['catalog'] == 9 else 0)
-        x[:, index:index+nt] = threshold_features(metadata, p)
-    if metadata['catalog'] in (7, 8, 9):
-        x[:, scalar_feature_count(metadata):] = orientation_features(p, metadata['incoming'])
-    return x, p
 
 
 def _shapes(ninputs, nheads, widths):
@@ -456,9 +386,7 @@ def fit_linear(inputs, mixing, born, target, weight, heads, trained, configurati
     A zero hidden layer keeps the existing portable inference format.
     """
     import numpy as np
-    from scipy import sparse
-    from scipy.sparse.linalg import lsmr
-    from .virtual_pool_polynomial import _ridge_solve
+    from .polynomial import _ridge_solve
     if (inputs.ndim != 2 or not 1 <= inputs.shape[1] <= MAX_INPUTS or
             not 1 <= len(heads) <= MAX_HEADS or mixing.shape != (len(inputs), len(heads)) or
             len(trained) != len(heads) or not 0 < configuration['ridge'] <= 1 or
@@ -485,22 +413,37 @@ def fit_linear(inputs, mixing, born, target, weight, heads, trained, configurati
     root = np.sqrt(w/noise)
     values = affine[row]*(root[row]*carrier[row]*mixing[row, active[head]])[:, None]
     columns = head[:, None]*ni+np.arange(ni)
-    design = sparse.csr_matrix((values.ravel(),
-                                (np.repeat(row, ni), columns.ravel())),
-                               shape=(len(inputs), ni*nh))
+    try:
+        from scipy import sparse
+        from scipy.sparse.linalg import lsmr
+    except ImportError:
+        sparse = None
+    if sparse is None:
+        if ni*nh > MAX_DENSE_LINEAR_PARAMETERS or len(inputs)*ni*nh > MAX_LINEAR_DESIGN_ELEMENTS:
+            raise ValueError('large conditional linear fit requires SciPy')
+        design = np.zeros((len(inputs), ni*nh))
+        design[np.repeat(row, ni), columns.ravel()] = values.ravel()
+    else:
+        design = sparse.csr_matrix((values.ravel(),
+                                    (np.repeat(row, ni), columns.ravel())),
+                                   shape=(len(inputs), ni*nh))
     response = root*(target/vscale)
-    design.eliminate_zeros()
+    if sparse is not None:
+        design.eliminate_zeros()
     # Zero-Born and absent-head rows contribute a constant to the objective.
     # Keep them in the scales and validation, but remove that constant from
     # the solve's stopping norm; it can otherwise hide an inaccurate solution.
-    response[design.getnnz(axis=1) == 0] = 0.
+    nonzero = np.count_nonzero(design, axis=1) if sparse is None else design.getnnz(axis=1)
+    response[nonzero == 0] = 0.
     column_scale = np.ones(ni*nh)
     if configuration.get('column_scale', False):
-        column_scale = np.sqrt(np.asarray(design.multiply(design).sum(axis=0)).ravel())
+        column_scale = np.sqrt(np.sum(design*design, axis=0) if sparse is None else
+                               np.asarray(design.multiply(design).sum(axis=0)).ravel())
         column_scale[column_scale <= max(float(column_scale.max())*1.e-10, 1.e-20)] = 1.
-        design = design @ sparse.diags(1/column_scale)
+        design = design/column_scale if sparse is None else design @ sparse.diags(1/column_scale)
     if ni*nh <= MAX_DENSE_LINEAR_PARAMETERS:
-        coefficients = _ridge_solve((design.T@design).toarray(), design.T@response,
+        gram = design.T@design
+        coefficients = _ridge_solve(gram if sparse is None else gram.toarray(), design.T@response,
                                     configuration['ridge'])
         iterations, status = 1, 'positive_definite_solve'
     else:
@@ -564,8 +507,7 @@ def fit(inputs, mixing, born, target, weight, heads, trained, configuration):
                 optimizer_iterations=int(result.nit), optimizer_status=str(result.message))
 
 
-def predict_correction(entry, metadata, features, momenta, q, born, selected=None, full=None,
-                       common=None):
+def predict_correction(entry, metadata, features, momenta, q, born, selected=None, full=None):
     """Return selected and native-q-mean corrections in the units of ``born``."""
     import numpy as np
     b = np.asarray(born, dtype=float)
@@ -586,12 +528,6 @@ def predict_correction(entry, metadata, features, momenta, q, born, selected=Non
         x = input_values(entry['descriptors'], np.asarray(features)[known],
                          np.asarray(momenta)[known], probabilities[known], metadata['incoming'])
         outputs[known] = forward(entry, x)*(b[known]*entry['target_scale']/entry['born_scale'])[:, None]
-    if entry.get('replaces_common', False):
-        if common is None or np.asarray(common).shape != b.shape or not np.all(np.isfinite(common)):
-            raise ValueError('absolute heads require the common prediction')
-        outputs[known] -= (np.asarray(common)[known, None]*
-                           np.asarray(entry['trained'], dtype=float)[None, :])
-        outputs *= entry.get('replacement_blend', 1.)
     mean = np.sum(probabilities[:, heads-1]*outputs, axis=1)
     if selected is None:
         return mean.copy(), mean
@@ -607,74 +543,26 @@ def predict_correction(entry, metadata, features, momenta, q, born, selected=Non
     return answer, mean
 
 
-def _complete_prediction(entry, common, metadata, features, momenta, q, born, mint,
-                         selected=None, full=None, permutations=None):
-    import numpy as np
-    from .virtual_pool_polynomial import predict as common_predict
-    identity = list(range(1, metadata['nlegs']+1))
-    permutations = permutations or [identity]
-    selected_total = np.zeros(len(born))
-    mean_total = np.zeros(len(born))
-    identity_common = None
-    for permutation in permutations:
-        permutation = list(permutation)
-        if permutation == identity:
-            x, p, probabilities, actual = features, momenta, q, selected
-        else:
-            mapping = np.asarray(helicity_permutation(metadata, permutation), dtype=int)
-            _check_head_closure(entry, mapping)
-            x, p = permuted_features(metadata, features, momenta, permutation)
-            probabilities = np.asarray(q)[:, np.argsort(mapping)]
-            actual = None if selected is None else np.asarray(selected).copy()
-            if actual is not None:
-                active = actual > 0
-                actual[active] = mapping[actual[active].astype(int)-1]
-        shared = common_predict(common, np.asarray(x), np.asarray(born), np.asarray(mint))
-        if identity_common is None:
-            identity_common = shared
-        if entry.get('replaces_common', False):
-            # Compose absolute heads directly: subtracting a large MINT value
-            # and adding it back can erase a perfectly finite head prediction.
-            absolute = dict(entry, replaces_common=False)
-            selected_value, mean_value = predict_correction(absolute, metadata, x, p, probabilities,
-                                                            born, actual, full)
-            blend = entry.get('replacement_blend', 1.)
-            missing = np.ones(metadata['nhel'], dtype=bool)
-            trained = np.asarray(entry['heads'])[np.asarray(entry['trained'], dtype=bool)]
-            missing[trained-1] = False
-            mean_common = 1-blend+blend*np.asarray(probabilities)[:, missing].sum(axis=1)
-            if actual is None:
-                selected_common = mean_common
-            else:
-                selected_common = np.where(np.isin(actual, trained), 1-blend, 1.)
-                full_rows = np.asarray(actual) == -1 if full is None else np.asarray(full, dtype=bool)
-                selected_common = np.where(full_rows, mean_common, selected_common)
-            selected_total += selected_common*shared+blend*selected_value
-            mean_total += mean_common*shared+blend*mean_value
-        else:
-            selected_delta, mean_delta = predict_correction(entry, metadata, x, p, probabilities,
-                                                            born, actual, full)
-            selected_total += shared+selected_delta
-            mean_total += shared+mean_delta
-    known = np.asarray(q).sum(axis=1) > 0
-    return (np.where(known, selected_total/len(permutations), identity_common),
-            np.where(known, mean_total/len(permutations), identity_common))
-
-
 def predict_model(model, common_model, order, features, momenta, q, born, mint,
-                  selected=None, full=None):
-    """Complete common+conditional prediction, including selected symmetries."""
+                  selected=None, full=None, surrogate=None, channels=None, supported=None):
+    """Add the selected and native-probability-mean helicity residuals."""
+    import numpy as np
+    from .polynomial import predict as common_predict
     if not 1 <= order <= model['metadata']['norders']:
         raise ValueError('invalid conditional model order')
-    return _complete_prediction(model['orders'][order-1], common_model['orders'][order-1],
-        model['metadata'], features, momenta, q, born, mint, selected, full,
-        model.get('permutations'))
+    shared = common_predict(common_model['orders'][order-1], np.asarray(features),
+                            np.asarray(born), np.asarray(mint), surrogate=surrogate,
+                            channels=channels, supported=supported)
+    actual, mean = predict_correction(model['orders'][order-1], model['metadata'],
+                                      features, momenta, q, born, selected, full)
+    return shared+actual, shared+mean
 
 
 def _validate(model):
     import numpy as np
     metadata = model['metadata']
-    if (not 0 <= metadata['nhel'] <= MAX_NATIVE_HELICITIES or
+    if (metadata['catalog'] != FEATURE_CATALOG or
+            not 0 <= metadata['nhel'] <= MAX_NATIVE_HELICITIES or
             len(metadata['helicities']) != metadata['nhel']):
         raise ValueError('invalid neural native map')
     for actual, record in enumerate(metadata['helicities'], 1):
@@ -685,15 +573,6 @@ def _validate(model):
         raise ValueError('invalid base-model SHA256')
     if len(model['orders']) != metadata['norders']:
         raise ValueError('incorrect neural order count')
-    permutations = model.get('permutations')
-    mappings = []
-    if permutations is not None:
-        if (len(permutations) not in (1, 2) or
-                list(permutations[0]) != list(range(1, metadata['nlegs']+1)) or
-                (len(permutations) == 2 and list(permutations[1]) == list(permutations[0]))):
-            raise ValueError('invalid neural permutation table')
-        for permutation in permutations:
-            mappings.append(helicity_permutation(metadata, permutation))
     for number, entry in enumerate(model['orders'], 1):
         if entry['order'] != number:
             raise ValueError('unordered neural coupling order')
@@ -707,10 +586,6 @@ def _validate(model):
                 not math.isfinite(entry['born_scale']) or entry['born_scale'] <= 0 or
                 not math.isfinite(entry['target_scale']) or entry['target_scale'] <= 0):
             raise ValueError('invalid neural order dimensions/scales')
-        if entry.get('replaces_common', False) not in (0, 1):
-            raise ValueError('invalid conditional head interpretation')
-        if entry.get('replaces_common', False) and not 0 <= entry.get('replacement_blend', 1.) <= 1:
-            raise ValueError('invalid absolute-head blend')
         for descriptor in descriptors:
             if len(descriptor) != 6:
                 raise ValueError('invalid neural descriptor width')
@@ -727,10 +602,6 @@ def _validate(model):
         unpack(entry['theta'], len(descriptors), len(heads), entry['widths'])
         if not np.all(np.isfinite(entry['theta'])):
             raise ValueError('nonfinite neural coefficients')
-        # Validate IDs before indexing the native permutation map, so malformed
-        # companions fail with ValueError rather than an accidental IndexError.
-        for mapping in mappings:
-            _check_head_closure(entry, mapping)
 
 
 def model_text(model):
@@ -738,41 +609,27 @@ def model_text(model):
     _validate(model)
     metadata = model['metadata']
     floats = lambda values: ' '.join('%.17e' % v for v in values)
-    kinds = {d[0] for entry in model['orders'] for d in entry.get('descriptors', [])}
-    if any(kind >= 8 for kind in kinds):
-        version = 4
-    elif 7 in kinds or any(entry.get('replaces_common', False) for entry in model['orders']):
-        version = 3
-    elif len(model.get('permutations', [])) > 1:
-        version = 2
-    else:
-        version = 1
+    version = FORMAT_VERSION
     lines = ['VIRTUAL_POOL_NEURAL %d' % version,
              ' '.join(str(metadata[k]) for k in ('catalog', 'nf', 'norders', 'nlegs', 'nx', 'nhel')),
              ' '.join(map(str, metadata['pdgs'])), floats(metadata['masses']),
              ' '.join(map(str, metadata['incoming']))]
-    if metadata['catalog'] == 9:
-        lines.append(' '.join(map(str, metadata['colours'])))
+    lines.append(' '.join(map(str, metadata['colours'])))
     lines.append(model['base_sha256'])
     lines += [' '.join(map(str, h)) for h in metadata['helicities']]
-    if version >= 2:
-        permutations = model.get('permutations', [list(range(1, metadata['nlegs']+1))])
-        lines.append(str(len(permutations)))
-        lines += [' '.join(map(str, p)) for p in permutations]
+    # Reserved identity table in the native format; refinement uses one
+    # process context and never permutes native helicity IDs.
+    lines += ['1', ' '.join(map(str, range(1, metadata['nlegs']+1)))]
     for entry in model['orders']:
         if not entry.get('enabled', False):
-            line = '%d 0 0 0 0 0 1 1' % entry['order']
-            if version >= 3:
-                line += ' -1'
+            line = '%d 0 0 0 0 0 1 1 -1' % entry['order']
             lines.append(line)
             continue
         widths = entry['widths']
         line = '%d 1 %d %d %d %d %.17e %.17e' % (
             entry['order'], len(entry['descriptors']), len(entry['heads']), widths[0],
             widths[1] if len(widths) == 2 else 0, entry['born_scale'], entry['target_scale'])
-        if version >= 3:
-            replacement = entry.get('replacement_blend', 1.) if entry.get('replaces_common', False) else -1.
-            line += ' %.17e' % replacement
+        line += ' -1'
         lines.append(line)
         lines += ['%d %d %d %d %.17e %.17e' % tuple(d) for d in entry['descriptors']]
         lines += ['%d %d' % pair for pair in zip(entry['heads'], entry['trained'])]
@@ -782,20 +639,18 @@ def model_text(model):
 
 
 def load_model(path, base_path=None):
-    from .virtual_pool import _floats, _header
+    from .data import _floats, _header
     import io
     with open(path) as stream:
         header = stream.readline().split()
-        if len(header) != 2 or header[0] != 'VIRTUAL_POOL_NEURAL' or header[1] not in ('1', '2', '3', '4'):
+        if len(header) != 2 or header[0] != 'VIRTUAL_POOL_NEURAL' or header[1] != str(FORMAT_VERSION):
             raise ValueError('unsupported neural companion format')
-        version = int(header[1])
         dims = stream.readline().split()
         if len(dims) != 6:
             raise ValueError('invalid neural dimensions')
         particle_lines = [stream.readline() for _ in range(3)]
-        if int(dims[0]) == 9:
-            particle_lines.append(stream.readline())
-        common_header = 'VIRTUAL_POOL_MODEL 3\n'+' '.join(dims[:5])+'\n'+''.join(particle_lines)
+        particle_lines.append(stream.readline())
+        common_header = 'VIRTUAL_POOL_MODEL %d\n' % MODEL_FORMAT_VERSION+' '.join(dims[:5])+'\n'+''.join(particle_lines)
         metadata = _header(io.StringIO(common_header), 'VIRTUAL_POOL_MODEL')
         metadata['nhel'] = int(dims[5])
         if not 0 <= metadata['nhel'] <= MAX_NATIVE_HELICITIES:
@@ -803,27 +658,24 @@ def load_model(path, base_path=None):
         digest = stream.readline().strip()
         metadata['helicities'] = tuple(tuple(int(v) for v in stream.readline().split())
                                        for _ in range(metadata['nhel']))
-        permutations = None
-        if version >= 2:
-            fields = stream.readline().split()
-            if len(fields) != 1 or int(fields[0]) not in (1, 2):
-                raise ValueError('invalid neural permutation count')
-            permutations = [tuple(int(v) for v in stream.readline().split()) for _ in range(int(fields[0]))]
+        if stream.readline().split() != ['1']:
+            raise ValueError('conditional refinement requires one native context')
+        identity = tuple(int(v) for v in stream.readline().split())
+        if identity != tuple(range(1, metadata['nlegs']+1)):
+            raise ValueError('conditional refinement requires the native leg order')
         orders = []
         for number in range(1, metadata['norders']+1):
             fields = stream.readline().split()
-            if len(fields) != (9 if version >= 3 else 8):
+            if len(fields) != 9:
                 raise ValueError('invalid neural order header')
             order, enabled, ni, nh, w1, w2 = (int(v) for v in fields[:6])
             bs, vs = _floats(' '.join(fields[6:8]))
-            replacement = _floats(fields[8])[0] if version >= 3 else -1.
-            if not (replacement == -1 or 0 <= replacement <= 1) or (not enabled and replacement != -1):
+            replacement, = _floats(fields[8])
+            if replacement != -1:
                 raise ValueError('invalid conditional head interpretation')
             if order != number or enabled not in (0, 1):
                 raise ValueError('invalid neural order number/enabled flag')
             entry = dict(order=order, enabled=bool(enabled), born_scale=bs, target_scale=vs)
-            if replacement >= 0:
-                entry.update(replaces_common=True, replacement_blend=replacement)
             if not enabled:
                 if any((ni, nh, w1, w2)) or bs != 1 or vs != 1:
                     raise ValueError('invalid disabled neural order')
@@ -837,10 +689,6 @@ def load_model(path, base_path=None):
                 if len(fields) != 6:
                     raise ValueError('invalid neural descriptor')
                 descriptor = tuple(int(v) for v in fields[:4])+_floats(' '.join(fields[4:]))
-                if descriptor[0] == 7 and version < 3:
-                    raise ValueError('squared input requires companion format 3')
-                if descriptor[0] >= 8 and version < 4:
-                    raise ValueError('physics input requires companion format 4')
                 descriptors.append(descriptor)
             heads = [tuple(int(v) for v in stream.readline().split()) for _ in range(nh)]
             if any(len(h) != 2 for h in heads):
@@ -858,15 +706,13 @@ def load_model(path, base_path=None):
         if stream.read().strip():
             raise ValueError('unexpected neural trailing data')
     model = dict(metadata=metadata, base_sha256=digest, orders=orders)
-    if permutations is not None:
-        model['permutations'] = permutations
     _validate(model)
     if base_path is not None:
         with open(base_path, 'rb') as stream:
             actual = hashlib.sha256(stream.read()).hexdigest()
         if actual != digest:
             raise ValueError('neural companion/base-model checksum mismatch')
-        from .virtual_pool import load_model as load_base
+        from .data import load_model as load_base
         base = load_base(base_path)['metadata']
         if any(base[key] != metadata[key] for key in
                ('catalog', 'nf', 'norders', 'nlegs', 'nx', 'pdgs', 'masses', 'incoming')):
@@ -874,21 +720,6 @@ def load_model(path, base_path=None):
         if base.get('colours') != metadata.get('colours'):
             raise ValueError('neural companion/base-model colour mismatch')
     return model
-
-
-def chronological_mask(rows, fraction):
-    """Split each worker/channel chronologically without separating a sample."""
-    import numpy as np
-    groups = {}
-    for index, row in enumerate(rows):
-        groups.setdefault((row['directory'], row['channel']), []).append(index)
-    mask = np.zeros(len(rows), dtype=bool)
-    for indices in groups.values():
-        keys = sorted({(rows[i]['iteration'], rows[i]['sample']) for i in indices})
-        early = set(keys[:int(len(keys)*fraction)])
-        for i in indices:
-            mask[i] = (rows[i]['iteration'], rows[i]['sample']) in early
-    return mask
 
 
 def _mixing(rows, heads):
@@ -911,37 +742,21 @@ def _head_mask(rows, heads, train):
 
 
 def _refit_base(rows, metadata, order_entry, diagnostics, train):
-    import numpy as np
-    from . import virtual_pool_polynomial as polynomial
-    from .virtual_pool import _folds
-    mint = polynomial.mint_predictions(rows, train)
-    # Select the common recipe inside this earlier subset as well as refitting
-    # its coefficients. Reusing the full-capture choice would let later labels
-    # influence an outer fold through architecture/blend selection.
+    from . import polynomial, surrogate
+    native = surrogate.native_predictions(rows, train)
     earlier = [row for row, include in zip(rows, train) if include]
-    arguments = dict(strategy='compact') if diagnostics.get('strategy') == 'compact' else {}
-    fitted, report = polynomial.fit_order(earlier, _folds(earlier, 3), metadata,
-                                         order_entry['order'], **arguments)
-    x, b = (np.asarray([r[key] for r in rows]) for key in ('features', 'born'))
-    return polynomial.predict(fitted, x, b, mint), report.get('selected'), fitted['blend'], fitted, mint
-
-
-def _metrics(y, prediction, weight):
-    import numpy as np
-    scale = max(float(np.max(np.abs(y))), float(np.max(np.abs(prediction))), 1.e-100)
-    w = weight/weight.sum()
-    residual = (y-prediction)/scale
-    target = y/scale
-    l1, second = float(w@np.abs(residual)), float(w@(residual*residual))
-    true_l1, true_second = float(w@np.abs(target)), float(w@(target*target))
-    return dict(l1=l1*scale, rms=math.sqrt(second)*scale,
-                maximum=float(np.max(np.abs(residual)))*scale,
-                relative_l1=l1/true_l1 if true_l1 else None,
-                relative_rms=math.sqrt(second/true_second) if true_second else None)
+    if diagnostics.get('joint_disabled'):
+        fitted = polynomial.empty_order(order_entry['order'], metadata['nf'], 'joint_event_guard')
+        report = {}
+    else:
+        fitted, report = surrogate.fit_order(earlier, metadata, order_entry['order'],
+                                             diagnostics.get('fixed_order', False))
+    return (surrogate.prediction(fitted, rows, native), report.get('selected'),
+            fitted['blend'], fitted, native)
 
 
 def _forward_validation(metrics, gains, errors):
-    """Use the same promotion guards for conditional fits and symmetry averages."""
+    """Require consistent residual gains across the three forward fits."""
     import numpy as np
     baseline_l1 = float(np.mean([m['baseline']['l1'] for m in metrics]))
     gain = float(np.mean(gains))
@@ -956,55 +771,18 @@ def _forward_validation(metrics, gains, errors):
     return dict(eligible=bool(accepted), mean_l1_gain=gain, paired_gain_error=error)
 
 
-def _validate_symmetry(rows, metadata, x, p, q, b, y, w, folds, models, blend, permutation):
-    """Compare a complete-prediction average on the existing forward holds."""
-    import numpy as np
-    selected = np.asarray([r['selected_helicity'] for r in rows])
-    full = np.asarray([r['full_branch'] for r in rows])
-    identity = list(range(1, metadata['nlegs']+1))
-    result = dict(permutation=permutation, eligible=False, folds=[])
-    gains, errors = [], []
-    try:
-        mapping = helicity_permutation(metadata, permutation)
-        for fold, fitted in zip(folds, models):
-            entry = dict(fitted, descriptors=fold['descriptors'], enabled=True)
-            if entry.get('replaces_common', False):
-                entry['replacement_blend'] = blend
-            else:
-                entry['target_scale'] *= blend
-            _check_head_closure(entry, mapping)
-            va = fold['valid']
-            args = (entry, fold['common_model'], metadata, x[va], p[va], q[va], b[va],
-                    fold['mint'][va], selected[va], full[va])
-            original, _ = _complete_prediction(*args)
-            averaged, _ = _complete_prediction(*args, permutations=[identity, permutation])
-            metric = _metrics(y[va], averaged, w[va])
-            metric['baseline'] = _metrics(y[va], original, w[va])
-            result['folds'].append(metric)
-            ww = w[va]/w[va].sum()
-            improvement = np.abs(y[va]-original)-np.abs(y[va]-averaged)
-            gains.append(float(ww@improvement))
-            errors.append(float(np.linalg.norm(ww*improvement)))
-    except (ValueError, FloatingPointError):
-        result['reason'] = 'unsupported_permutation_or_prediction'
-        return result
-    result.update(_forward_validation(result['folds'], gains, errors))
-    result['reason'] = ('selected_by_three_forward_folds' if result['eligible']
-                        else 'forward_validation_rejected')
-    return result
-
-
-def train_order(rows, metadata, order_entry, diagnostics, configurations=None, bank='scalar', permutation=None):
+def train_order(rows, metadata, order_entry, diagnostics, configurations=None, bank='scalar',
+                validation=None):
     """Three forward fits select a correction; coefficients never see later rows.
 
-    The common polynomial recipe is selected within each earlier subset by its
-    own guarded CV, with a fixed compact ridge recipe in production. Every
+    The common surrogate/residual recipe is selected within each earlier
+    subset. Every
     coefficient, input bound and head eligibility uses only the earlier part
     of each neural fold. No diagnostic fullsum labels are generated or inferred.
     Full native branches use the q-mean in the loss.
     """
     import numpy as np
-    from . import virtual_pool_polynomial as polynomial
+    from . import polynomial
     all_order_rows = [r for r in rows if r['order'] == order_entry['order']]
     known = np.asarray([bool(r.get('q')) and sum(r['q']) > 0 for r in all_order_rows])
     subset = [r for r, keep in zip(all_order_rows, known) if keep]
@@ -1012,8 +790,6 @@ def train_order(rows, metadata, order_entry, diagnostics, configurations=None, b
                   skipped_unknown_native_probabilities=len(all_order_rows)-len(subset),
                   additional_loop_calls=0, validation_fractions=list(FRACTIONS))
     disabled = dict(order=order_entry['order'], enabled=False, born_scale=1., target_scale=1.)
-    if metadata['catalog'] == 9 and polynomial.physics_sufficient(diagnostics.get('selected')):
-        return disabled, dict(report, reason='coupling_carried_common_residual_small')
     if len(subset) < 4*MIN_HEAD_ROWS or not all('q' in r for r in subset):
         return disabled, dict(report, reason='insufficient_conditional_samples')
     if (len(subset)*metadata['nhel'] > MAX_PROBABILITY_ELEMENTS or
@@ -1032,7 +808,6 @@ def train_order(rows, metadata, order_entry, diagnostics, configurations=None, b
     if not heads or not np.any(trained_heads):
         return disabled, dict(report, reason='insufficient_native_head_samples')
     mixing = _mixing(subset, heads)
-    represented = mixing@trained_heads.astype(float)
     folds = []
     try:
         for fraction in FRACTIONS:
@@ -1045,6 +820,7 @@ def train_order(rows, metadata, order_entry, diagnostics, configurations=None, b
                 all_order_rows, metadata, order_entry, diagnostics, train_all)
             baseline = baseline_all[known]
             folds.append(dict(train=train, valid=valid, baseline=baseline,
+                              native=mint_all[known],
                               trained=trained_heads,
                               common_model=common_model, mint=mint_all[known],
                               common_recipe=common_recipe, common_blend=common_blend,
@@ -1052,16 +828,15 @@ def train_order(rows, metadata, order_entry, diagnostics, configurations=None, b
     except (ValueError, np.linalg.LinAlgError, FloatingPointError) as error:
         return disabled, dict(report, reason='forward_base_or_input_failed', detail=str(error))
     eligible = []
-    candidate_models = {}
     candidate_predictions = {}
+    candidate_means = {}
     automatic = configurations is None
-    stop_l1, stop_rms = ((PHYSICS_LINEAR_RESIDUAL_L1, PHYSICS_LINEAR_RESIDUAL_RMS)
-                         if metadata['catalog'] == 9 else (LINEAR_RESIDUAL_L1, LINEAR_RESIDUAL_RMS))
+    stop_l1, stop_rms = PHYSICS_LINEAR_RESIDUAL_L1, PHYSICS_LINEAR_RESIDUAL_RMS
     configurations = (LINEAR_CONFIGURATION,)+DEFAULT_CONFIGURATIONS if automatic else configurations
     if not 1 <= len(configurations) <= MAX_CONFIGURATIONS:
         return disabled, dict(report, reason='neural_recipe_budget_exceeded')
     for configuration in configurations:
-        if metadata['catalog'] == 9 and configuration.get('family') == 'linear':
+        if configuration.get('family') == 'linear':
             configuration = dict(configuration, column_scale=True, ridge=1.e-4)
         if automatic and configuration.get('family') != 'linear' and eligible:
             linear = min(eligible, key=lambda c: c['mean_l1'])
@@ -1072,7 +847,7 @@ def train_order(rows, metadata, order_entry, diagnostics, configurations=None, b
                 break
             report['neural_screen'] = 'remaining_forward_residual'
         predictions = []
-        models = []
+        means = []
         input_bank = 'compact' if configuration.get('family') == 'linear' else bank
         try:
             for fold in folds:
@@ -1081,19 +856,16 @@ def train_order(rows, metadata, order_entry, diagnostics, configurations=None, b
                 inputs = input_values(descriptors, x, p, q, metadata['incoming'])
                 if not inputs.shape[1]:
                     raise ValueError('no conditional inputs')
-                absolute = configuration.get('family') == 'linear'
-                target = (y-fold['baseline']*(1-represented) if absolute else y-fold['baseline'])
+                target = y-fold['baseline']
                 model = fit(inputs[tr], mixing[tr], b[tr], target[tr], w[tr],
                             heads, fold['trained'], configuration)
-                if absolute:
-                    model['replaces_common'] = True
                 model['descriptors'] = descriptors
-                correction = (b*model['target_scale']/model['born_scale'])*np.sum(
-                    mixing*forward(model, inputs), axis=1)
-                if absolute:
-                    correction -= fold['baseline']*represented
+                output = forward(model, inputs)
+                carrier = b*model['target_scale']/model['born_scale']
+                correction = carrier*np.sum(mixing*output, axis=1)
+                mean = carrier*np.sum(q[:, np.asarray(heads)-1]*output, axis=1)
                 predictions.append(correction)
-                models.append(model)
+                means.append(mean)
         except (ValueError, np.linalg.LinAlgError, FloatingPointError) as error:
             report['candidates'].append(dict(configuration=configuration, eligible=False,
                                             reason='fit_failed', detail=str(error)))
@@ -1118,8 +890,8 @@ def train_order(rows, metadata, order_entry, diagnostics, configurations=None, b
             report['candidates'].append(candidate)
             if candidate['eligible']:
                 eligible.append(candidate)
-                candidate_models[id(candidate)] = models
                 candidate_predictions[id(candidate)] = predictions
+                candidate_means[id(candidate)] = means
     if not eligible:
         return disabled, dict(report, reason='forward_validation_prefers_common_model')
     if automatic:
@@ -1154,14 +926,10 @@ def train_order(rows, metadata, order_entry, diagnostics, configurations=None, b
                    all(a['rms'] <= 1.05*b['rms'] for a, b in zip(c['folds'], selected['folds']))]
         if simpler:
             selected = min(simpler, key=lambda c: c['mean_l1'])
-    for fold, fitted in zip(folds, candidate_models[id(selected)]):
-        fold['descriptors'] = fitted['descriptors']
-    if permutation is not None:
-        report['symmetry'] = _validate_symmetry(subset, metadata, x, p, q, b, y, w,
-            folds, candidate_models[id(selected)], selected['blend'], permutation)
     allrows = np.ones(len(subset), dtype=bool)
-    mint = polynomial.mint_predictions(all_order_rows, np.ones(len(all_order_rows), dtype=bool))[known]
-    baseline = polynomial.predict(order_entry, x, b, mint)
+    from . import surrogate
+    native = surrogate.native_predictions(all_order_rows, np.ones(len(all_order_rows), dtype=bool))
+    baseline = surrogate.prediction(order_entry, all_order_rows, native)[known]
     try:
         selected_bank = 'compact' if selected['configuration'].get('family') == 'linear' else bank
         descriptors = descriptors_for(metadata, x, p, q, allrows, heads, selected_bank)
@@ -1169,30 +937,31 @@ def train_order(rows, metadata, order_entry, diagnostics, configurations=None, b
         # Keep the validated architecture fixed. Extra all-data observations
         # must not activate a rare head absent from the earliest fitting fold.
         trained = trained_heads
-        absolute = selected['configuration'].get('family') == 'linear'
-        target = y-baseline*(1-represented) if absolute else y-baseline
+        target = y-baseline
         result = fit(inputs, mixing, b, target, w, heads, trained, selected['configuration'])
-        if absolute:
-            result['replaces_common'] = True
     except (ValueError, np.linalg.LinAlgError, FloatingPointError) as error:
         return disabled, dict(report, reason='final_fit_failed', detail=str(error))
     result.update(order=order_entry['order'], enabled=True, descriptors=descriptors)
-    if result.get('replaces_common', False):
-        result['replacement_blend'] = selected['blend']
-    else:
-        result['target_scale'] *= selected['blend']
+    result['target_scale'] *= selected['blend']
     trained_native_heads = [h for h, flag in zip(heads, trained) if flag]
     report.update(reason='selected_by_three_forward_folds', selected=selected,
                   trained_heads=trained_native_heads,
                   untrained_native_heads=[h[0] for h in metadata['helicities'] if h[1] and
                                           h[0] not in trained_native_heads],
                   parameters=len(result['theta']))
+    if validation is not None:
+        actual = [f['baseline']+selected['blend']*p for f, p in
+                  zip(folds, candidate_predictions[id(selected)])]
+        mean = [f['baseline']+selected['blend']*p for f, p in
+                zip(folds, candidate_means[id(selected)])]
+        validation[order_entry['order']] = validation_cache(subset, folds, actual, mean)
     return result, report
 
 
-def train(rows, metadata, orders, diagnostics, base_path, output_path, configurations=None, bank='scalar', symmetry=True):
+def train(rows, metadata, orders, diagnostics, base_path, output_path, configurations=None, bank='scalar',
+          validation=None):
     """Write an optional companion only if at least one order passes validation."""
-    from .virtual_pool import _atomic_write
+    from .data import _atomic_write
     started = time.monotonic()
     cpu_started = time.process_time()
     report = dict(model_written=False, enabled=False, format_version=FORMAT_VERSION,
@@ -1205,32 +974,31 @@ def train(rows, metadata, orders, diagnostics, base_path, output_path, configura
         return report
     if os.path.exists(output_path):
         os.unlink(output_path)
-    if metadata.get('version') not in (3, 4) or not metadata.get('nhel'):
+    if metadata.get('version') != CAPTURE_FORMAT_VERSION or not metadata.get('nhel'):
         return finished('native_helicity_metadata_unavailable')
     try:
         import numpy
+    except ImportError:
+        return finished('numpy_unavailable')
+    try:
         import scipy.optimize
     except ImportError:
-        return finished('numpy_or_scipy_unavailable')
+        if configurations is None:
+            configurations = (LINEAR_CONFIGURATION,)
+        else:
+            configurations = tuple(c for c in configurations if c.get('family') == 'linear')
+        if not configurations:
+            return finished('nonlinear_training_requires_scipy')
+        report['nonlinear_screen'] = 'scipy_unavailable; compact linear heads remain available'
     fitted = []
-    permutation = permutation_candidate(metadata) if symmetry else None
     for order, diagnostic in zip(orders, diagnostics):
-        model, detail = train_order(rows, metadata, order, diagnostic, configurations, bank, permutation)
+        model, detail = train_order(rows, metadata, order, diagnostic, configurations, bank, validation)
         fitted.append(model)
         report['orders'].append(detail)
     if any(entry['enabled'] for entry in fitted):
         with open(base_path, 'rb') as stream:
             digest = hashlib.sha256(stream.read()).hexdigest()
         model = dict(metadata=metadata, base_sha256=digest, orders=fitted)
-        if permutation is not None:
-            active = {r['order'] for r in rows if r['virtual'] != 0.}
-            chosen = bool(active) and all(detail.get('symmetry', {}).get('eligible', False)
-                for detail in report['orders'] if detail['order'] in active)
-            report['symmetry'] = dict(permutation=permutation, selected=chosen,
-                reason='all_active_orders_passed' if chosen else 'active_order_validation_rejected')
-            if chosen:
-                model['permutations'] = [list(range(1, metadata['nlegs']+1)), permutation]
-                report['format_version'] = 2
         payload = model_text(model)
         report['format_version'] = int(payload.splitlines()[0].split()[1])
         _atomic_write(output_path, payload)

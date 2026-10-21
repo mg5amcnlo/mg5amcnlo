@@ -68,12 +68,15 @@ module mint_module
   ! Keep IEEE imports local to the procedures using them. Module-level
   ! imports make gfortran save/restore FPU state in unrelated module users.
   use FKSParams ! contains use_poly_virtual
+  use virt_surrogate, only: vs_begin_point,vs_vcomp,vs_ratio_set,vs_ratio, &
+       vs_reset,vs_solve,vs_write_grids,vs_read_grids
   use virtual_pooled, only: pooled_virtual_init, pooled_virtual_begin_point, &
        pooled_virtual_prepare, pooled_virtual_ratio, pooled_virtual_actual_ratio, pooled_virtual_sampled, &
        pooled_virtual_mark_sampled, pooled_virtual_observe, pooled_virtual_iteration, &
        pooled_virtual_collecting, pooled_virtual_applying, pooled_virtual_probability, &
        pooled_virtual_call_probability, pooled_virtual_velocity_factor, pooled_virtual_velocity_valid, &
-       pooled_virtual_context, pooled_virtual_save_context, pooled_virtual_restore_context
+       pooled_virtual_context, pooled_virtual_save_context, pooled_virtual_restore_context, &
+       pooled_virtual_reconstruct
   implicit none
   integer, parameter, private :: nintervals=32    ! max number of intervals in the integration grids
   integer, parameter, public  :: ndimmax=60       ! max number of dimensions of the integral
@@ -1080,6 +1083,11 @@ contains
           call regrid_ave_virt(k_ord_virt)
        enddo
     endif
+    if (VirtTrickSurrogate.ge.1.and.(.not.use_pooled_virtual.or..not.pooled_virtual_applying)) then
+       do kchan=1,nchans
+          call vs_solve(kchan,.not.fixed_order)
+       enddo
+    endif
 ! Regrid the MC over integers (used for the MC over FKS dirs)
     call regrid_MC_integer
   end subroutine update_integration_grids
@@ -1414,9 +1422,9 @@ contains
 
   subroutine add_point_to_grids(x)
     implicit none
-    integer :: kdim,k_ord_virt,ithree,isix,j_ord_virt
+    integer :: kdim,k_ord_virt,ithree,isix
     double precision, dimension(ndimmax) :: x
-    double precision :: virtual,born
+    double precision :: virtual,born,ratio,exact_virtual(n_ord_virt)
 ! accumulate the function in xacc(icell(kdim),kdim) to adjust the grid later
     do kdim=1,ndim
        xacc(icell(kdim),kdim,ichan) = xacc(icell(kdim),kdim,ichan) + f(1)
@@ -1424,6 +1432,8 @@ contains
 ! Set the Born contribution (to compute the average_virtual) to zero if
 ! the virtual was not computed for this phase-space point. Compensate by
 ! including the virtual_fraction.
+    if (use_pooled_virtual) exact_virtual=pooled_virtual_reconstruct( &
+         f(8:6+2*n_ord_virt:2),f(7:5+2*n_ord_virt:2))
     do k_ord_virt=0,n_ord_virt
        if (k_ord_virt.eq.0) then
           ithree=3
@@ -1432,29 +1442,34 @@ contains
           ithree=2*k_ord_virt+5
           isix=2*k_ord_virt+6
        endif
-       if (f(ithree).ne.0d0.or.(use_pooled_virtual.and.pooled_virtual_sampled)) then
+       if (f(ithree).ne.0d0.or.(use_pooled_virtual.and.pooled_virtual_sampled).or. &
+            (vs_vcomp.and.f(isix).ne.0d0)) then
           born=f(isix)
           ! virt_wgt_mint=(virtual-average_virtual*born)/virtual_fraction. Compensate:
           if (use_pooled_virtual) then
              if (k_ord_virt==0) then
-                virtual=0d0
-                do j_ord_virt=1,n_ord_virt
-                   virtual=virtual+pooled_virtual_probability*f(2*j_ord_virt+5) &
-                        +pooled_virtual_actual_ratio(j_ord_virt)*f(2*j_ord_virt+6)
-                enddo
+                virtual=sum(exact_virtual)
              else
-                virtual=f(ithree)*pooled_virtual_probability+pooled_virtual_actual_ratio(k_ord_virt)*born
+                virtual=exact_virtual(k_ord_virt)
              endif
              call fill_ave_virt(x,k_ord_virt,virtual,born)
-          elseif (use_poly_virtual) then
-             virtual=f(ithree)*virtual_fraction(ichan)+ &
-                  polyfit(k_ord_virt)*f(isix)
-             call add_point_polyfit(ichan,k_ord_virt,x(1:ndim-3), &
-                  virtual/born,born/wgt_mult)
           else
-             virtual=f(ithree)*virtual_fraction(ichan)+ &
-                  average_virtual(k_ord_virt,ichan)*f(isix)
-             call fill_ave_virt(x,k_ord_virt,virtual,born)
+             ! Undo the actual surrogate used for this point, so the
+             ! fallback continues learning the exact virtual alongside it.
+             if (vs_ratio_set) then
+                ratio=vs_ratio
+             elseif (use_poly_virtual) then
+                ratio=polyfit(k_ord_virt)
+             else
+                ratio=average_virtual(k_ord_virt,ichan)
+             endif
+             virtual=f(ithree)*virtual_fraction(ichan)+ratio*born
+             if (use_poly_virtual) then
+                call add_point_polyfit(ichan,k_ord_virt,x(1:ndim-3), &
+                     virtual/born,born/wgt_mult)
+             else
+                call fill_ave_virt(x,k_ord_virt,virtual,born)
+             endif
           endif
        else
           f(isix)=0d0
@@ -1845,6 +1860,7 @@ contains
   subroutine reset_mint_grids
     implicit none
     integer :: kint
+    call vs_reset
     do kint=0,nint_used
        xgrid(kint,1:ndim,1:nchans)=dble(kint)/nint_used
     enddo
@@ -1919,6 +1935,7 @@ contains
        write (12,*) 'AVE',virtual_fraction(kchan),average_virtual(0,kchan)
     enddo
     if (use_poly_virtual) call save_polyfit(12)
+    if (VirtTrickSurrogate.ge.1) call vs_write_grids(12,nchans)
     if (imode.ge.1.and.residual_envelope_available) then
        do kchan=1,nchans
           do j=1,nintervals
@@ -1944,11 +1961,13 @@ contains
     integer,dimension(maxchannels) :: points
     character(len=3) :: dummy
     character(len=4096) :: marker
-    logical :: saved_pooled,saved_envelope
+    logical :: saved_pooled,saved_envelope,saved_surrogate
     open (unit=12, file='mint_grids',status='old')
     ! Check the approximation mode before parsing its different grid layout.
     saved_pooled=.false.
     saved_envelope=.false.
+    saved_surrogate=.false.
+    call vs_reset
     envelope_version=0
     residual_kappa=0d0
     residual_velocity_kappa=0d0
@@ -1956,6 +1975,7 @@ contains
     residual_max=0d0
     do
        read(12,'(a)',iostat=ios) marker
+       marker=adjustl(marker)
        dummy=marker(1:3)
        if (ios.lt.0) exit
        if (ios.ne.0) then
@@ -1963,6 +1983,7 @@ contains
           stop 1
        endif
        if (dummy.eq.'PVP') saved_pooled=.true.
+       if (dummy.eq.'VSU') saved_surrogate=.true.
        if (dummy.eq.'VEP') then
           envelope_version=0
           read(marker,*,iostat=ios) dummy,envelope_version
@@ -2019,6 +2040,9 @@ contains
        call restore_polyfit(12)
        call do_polyfit()
     endif
+    ! Older grids have no VSU rows and continue with the grid surrogate.
+    ! Consume saved rows even when the fitted surrogate has been disabled.
+    if (saved_surrogate) call vs_read_grids(12,nchans,VirtTrickSurrogate.ge.1)
     if (saved_envelope) then
        if (imode.lt.2.or..not.saved_pooled) then
           write(*,*) 'ERROR: virtual envelope in incompatible mint_grids.'

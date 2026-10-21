@@ -52,9 +52,10 @@ double precision function integrand(x,vol,ifl,weights)
   use mint_module, only: ndimmax,nintegrals,pass_cuts_check,use_pooled_virtual, &
        born_spread_phase,average_virtual,ichan,pooled_virtual_prepare, &
        pooled_virtual_mark_sampled,pooled_virtual_ratio
+  use virtual_pooled, only: pooled_virtual_set_helicity_weights
   implicit none
   double precision :: x(ndimmax),vol,weights(nintegrals)
-  double precision :: p(0:3,4),ratio(1)
+  double precision :: p(0:3,4),ratio(1),dipoles(4,4),helicity_weights(1,1)
   integer :: ifl
   weights=0d0
   weights(1)=(2d0+x(1))*vol
@@ -67,7 +68,10 @@ double precision function integrand(x,vol,ifl,weights)
         p(:,4)=[250d0,-250d0,0d0,0d0]
         ratio=average_virtual(1:1,ichan)
         call pooled_virtual_prepare(p,[0d0,0d0,0d0,0d0],[.true.,.true.,.false.,.false.], &
-             [21,21,21,21],10000d0,ratio)
+             [21,21,21,21],10000d0,ratio,10000d0,.true.,[1d0],[8,8,8,8], &
+             surrogate=[1d0,0d0,0d0,0d0],supported=.true.,channel=ichan)
+        dipoles=0d0;helicity_weights=1d0
+        call pooled_virtual_set_helicity_weights(helicity_weights,dipoles)
         call pooled_virtual_mark_sampled(1d0)
      endif
      weights(8)=(1d0+x(1))*vol

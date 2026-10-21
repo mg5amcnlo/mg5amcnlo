@@ -1,0 +1,145 @@
+Surrogate-based pooled virtual refinement
+=========================================
+
+Enable #UsePooledVirtual in Cards/FKS_params.dat to collect and refine the
+iteration-local VirtTrickSurrogate. Pooling is optional and defaults to false.
+Mode 1 or 2 of VirtTrickSurrogate supplies the baseline; requesting mode 0 with
+pooling selects mode 2. Pooling disables the older UsePolyVirtual option.
+
+Collection and freeze
+---------------------
+The native surrogate keeps learning after each grid iteration, using the
+Born, cached colour links and Born-pair logarithms. MINT continues learning
+its fallback alongside it. Workers save only virtuals already evaluated by
+the native loop sampler. MC@NLO collects in step 0 and fixed order in step 1.
+No worker communicates during a stage and no extra loop labels are requested.
+
+Each record contains the exact reconstructed sampled virtual, its native
+Born carrier, loop-call probability, current subtraction, physical surrogate
+inputs, invariant inputs, actual coupling factors, integration coordinates,
+iteration and channel, native helicity map, selected helicity/probability,
+complete Born proposal and momenta. MC records also retain fully folded
+S-event flavour weights with both virtual pieces removed. Native checks
+verify the flavour distribution against the approximation and residual
+records before marking those event groups as supported.
+
+All PDF, bias, integration and native helicity factors remain in the targets.
+Only the fixed-order split-replica bookkeeping factor WGT_MULT is stripped.
+Training weights undo selective loop calls and normalize each integration
+batch by its committed attempted-point exposure, including failed cuts.
+Rejected iterations never supply labels. Targets are absolute weighted
+virtuals; neither V/B nor an additional helicity reweighting is fitted.
+The stored causal subtraction reconstructs V and is not a residual label.
+
+At the existing global barrier the controller trains, in this order:
+
+  1. The same physical surrogate basis, with process-shared coefficients and
+     ridge-regularized channel deviations. The fit carries the runtime extra
+     QCD/QED loop coupling. Colour-link inputs have their extra g**2 removed.
+  2. A linear, then compact quadratic fit to the remaining residual. Known
+     cusp/Coulomb/velocity inputs stay linear. Simpler fits are retained
+     when they are comparably accurate.
+  3. Small native-helicity outputs trained on the remaining residual. A shared
+     model uses Born helicity fractions as inputs; rare helicities retain the
+     common prediction. A nonlinear candidate is considered only if useful.
+
+Recipes, blends, input bounds, coefficients and head eligibility are fitted
+without later validation labels. Three chronological splits keep whole
+iterations and all orders of a point together. Four committed iterations are
+needed in a contributing worker/channel history; shorter histories supply
+training observations. The local physical surrogate and MINT comparator are
+refitted using the same earlier labels. The baseline and residual are both
+refitted inside conditional validation. Chosen coefficients are then refitted
+on all committed observations, with the validated head eligibility frozen.
+
+Fixed-order promotion prioritizes residual second moments. MC promotion uses
+physical residual L1 with RMS guards to reduce residual sampling work, then
+checks the combined negative weight of the fully folded S flavours and the
+separate virtual remainder. Coupling orders are summed before taking signs.
+Conditional checks use the probability-weighted prediction for S events and
+the actual selected prediction for the residual. H-event weights are
+unchanged and cancel in this paired comparison. Unsupported changed event
+groups reject promotion. This is a capture-based promotion guard, not an
+independent measurement of production efficiency or CPU per effective event.
+
+All selected coefficients, channel choices and helicity corrections are frozen
+before envelope calibration, including deferred-loop proposals. Exact
+residuals are retained everywhere. Out-of-domain points request exact loops.
+Failed fits or rejected refinements retain the saved native surrogate and
+its grid fallback. Without NumPy no pooled model is installed; native
+iteration adaptation continues. Compact conditional linear solves can use
+NumPy alone; large sparse and nonlinear fits require optional SciPy.
+
+Native helicity sampling
+------------------------
+PickHelicityMC still makes the only native helicity draw using Born weights,
+including representative multiplicities and the mixture of Born squared
+orders at the Ellis-Sexton scale. If Y_h is the already reweighted native
+virtual estimator and A_h is its prediction, then
+
+  A_mean = sum_h q_h A_h
+  corrected = A_mean + I/p * (Y_h - A_h).
+
+A full-sum branch subtracts A_mean. Collection, MINT adaptation and deferred
+loops reconstruct the exact virtual using the actual selected subtraction.
+Inference evaluates cheap model outputs for the mean without additional
+helicity draws, loop calls or random numbers. Both selected and mean
+predictions remain available in the saved deferred context.
+
+Files and compatibility
+-----------------------
+New native captures use VIRTUAL_POOL_SAMPLES 5, catalog 9. After the ordinary
+particle/colour metadata the header stores the surrogate feature count, then
+the complete native helicity table. Each row extends the version-4 prefix
+with g**2, a surrogate-valid flag and the dimensionless physical basis. Its
+conditional suffix is followed by the S-flavour count, nonvirtual S weights
+and the corresponding normalized flavour fractions. Zero groups mean that
+no supported MC event replay is available (including fixed-order captures).
+
+New models use VIRTUAL_POOL_MODEL 4. Each order retains its polynomial
+residual records followed by SURROGATE nfeatures nchannels, the shared basis
+coefficients, then channel ID, activation blend and deviation coefficients.
+A zero-size basis is an explicit native fallback. These records are part of
+the same model file/checksum; there is no separately transferable baseline.
+Optional virtual_pool_neural.dat uses companion format 4, with additive
+helicity residuals. The reserved context table contains the identity only;
+the reserved head-interpretation field is -1.
+
+VSU rows persist the local iteration fit in mint_grids even with pooling.
+Model and companion checksums, generated amplitudes, Born/helicity resources,
+physics cards and runtime sources are bound by manifest version 3 for resumes.
+Changing the approximation or its physics inputs requires fresh grid setup
+and envelope calibration. Generation-only changes to event counts and seeds
+remain supported. Controller and worker transfers use the existing model,
+companion and mode files.
+
+Python inference accepts the same surrogate inputs via the optional
+surrogate, channels and supported arguments of virtual_pool.predict and
+virtual_pool.helicity.predict_model. As for catalog 9 previously, born is the
+coupling-dressed weighted carrier and mint is the native weighted baseline.
+The surrogate argument is the dimensionless basis with g**2 removed from its
+three dipole entries; channels contains the native integration-channel IDs.
+
+Implementation:
+  virtual_surrogate.f90       native iteration-local basis and fits
+  virtual_features.f90        invariant, colour and helicity input kernels
+  virtual_approximation.f     weighted observations and deferred native loops
+  virtual_pooled.f90          capture, frozen inference and helicity bookkeeping
+  virtual_pool/__init__.py   controller training and public entry points
+  virtual_pool/data.py       versions, strict codecs and sample normalization
+  virtual_pool/validation.py point grouping, splits and residual diagnostics
+  virtual_pool/surrogate.py  shared/channel fits and joint event promotion
+  virtual_pool/polynomial.py compact residual regression and MINT replay
+  virtual_pool/helicity.py   conditional residual fits and portable inference
+
+The Python package lives in madgraph/various and is copied intact into
+bin/internal in generated processes. Imports of virtual_pool.train_pool,
+virtual_pool.load_model and virtual_pool.predict retain their existing API.
+The virtual_pool_neural.dat companion filename is unchanged.
+
+Supported formats
+-----------------
+The pooled implementation accepts capture version 5, common-model version 4
+and additive companion version 4. Older pooled artifacts require fresh grid
+setup and training. The standalone UsePolyVirtual/polfit option remains
+available independently of pooling.

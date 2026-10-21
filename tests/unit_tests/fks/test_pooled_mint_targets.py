@@ -19,7 +19,11 @@ class TestPooledMintTargets(unittest.TestCase):
             routine = re.search(
                 r'^  subroutine add_point_to_grids\(x\).*?^  end subroutine add_point_to_grids',
                 production, re.M | re.S).group(0)
-            (work / 'pooled_mint_routine.inc').write_text(routine+'\n')
+            pooled = (TEMPLATE / 'virtual_pooled.f90').read_text()
+            reconstruction = re.search(
+                r'^  function pooled_virtual_reconstruct\b.*?^  end function',
+                pooled, re.M | re.S).group(0)
+            (work / 'pooled_mint_routine.inc').write_text(routine+'\n'+reconstruction+'\n')
             executable = work / 'check_pooled_mint'
             result = subprocess.run([
                 shutil.which('gfortran'), '-O2', '-fno-automatic', '-fcheck=all',

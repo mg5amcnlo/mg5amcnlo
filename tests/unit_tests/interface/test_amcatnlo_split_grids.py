@@ -59,6 +59,15 @@ class TestSplitOrderGrids(unittest.TestCase):
         self.assertEqual(content.count(b'PVP'), 1)
         self.assert_combined_numbers(content[:-len(marker)])
 
+    def test_keeps_one_surrogate_after_the_combined_polynomial_fallback(self):
+        first = b'VSU 1 1 4 .25 -2 3 4\nVSU 0 1 4 5 6 7 8\n'
+        second = b'VSU 0 1 4 20 30 40 50\nVSU 1 1 4 -1 -2 -3 -4\n'
+        self.write_split_grids([first, second])
+        self.combine()
+        content = (self.base / 'mint_grids').read_bytes()
+        self.assertTrue(content.endswith(first))
+        self.assert_combined_numbers(content[:-len(first)])
+
     def test_pooled_mode_mismatch_preserves_existing_outputs(self):
         for blocks in ([b'PVP 1\n', b''], [b'', b'PVP 1\n'],
                        [b'PVP 1\n', b'PVP 0\n']):

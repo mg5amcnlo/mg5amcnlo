@@ -33,6 +33,7 @@ class TestPDFLuminosityCache(unittest.TestCase):
                 'module mint_module\n'
                 'double precision :: virt_wgt_mint(0:1)=0d0,born_wgt_mint(0:1)=0d0\n'
                 'logical :: use_pooled_virtual=.false.,pooled_virtual_sampled=.false.\n'
+                'logical :: vs_vcomp=.false.\n'
                 'end module\n'
                 'module FKSParams\nlogical :: separate_flavour_configs=.false.\nend module\n')
             (work / 'weights.f').write_text('\n'.join(

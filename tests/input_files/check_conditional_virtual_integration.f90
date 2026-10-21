@@ -38,11 +38,8 @@ program check_conditional_virtual_integration
      read(u,*) mur2,qes2,p,weights,mint,born,target
      call pooled_virtual_begin_point()
      context_valid=trim(mode)/='foreign'
-     if(physics)then
-        call pooled_virtual_prepare(p,mass,incoming,pdg,mur2,mint,qes2,.true.,context_valid,coupling,colours)
-     else
-        call pooled_virtual_prepare(p,mass,incoming,pdg,mur2,mint,qes2,.true.,context_valid)
-     endif
+     call pooled_virtual_prepare(p,mass,incoming,pdg,mur2,mint,qes2,context_valid,coupling,colours, &
+          surrogate=[1d0,0d0,0d0,0d0],supported=.true.,channel=1)
      call pooled_virtual_probabilities(weights,mult,q,valid)
      if(.not.valid.and.trim(mode)/='zero_weights'.and.trim(mode)/='invalid_weights') error stop 'invalid probabilities'
      if(physics)then
@@ -82,7 +79,8 @@ program check_conditional_virtual_integration
      velocity=pooled_virtual_velocity_factor
      ! Mimic a later fold/context overwriting all predictions and q. The
      ! frozen first-fold table must still determine the late selected head.
-     call pooled_virtual_prepare(p,mass,incoming,pdg,2d0*mur2,10d0*mint,qes2,.true.)
+     call pooled_virtual_prepare(p,mass,incoming,pdg,2d0*mur2,10d0*mint,qes2,.true.,coupling,colours, &
+          surrogate=[1d0,0d0,0d0,0d0],supported=.true.,channel=1)
      call pooled_virtual_set_helicity_weights(2d0*weights(:,nhel:1:-1))
      call pooled_virtual_restore_context(frozen)
      if(any(pooled_virtual_ratio/=mean))error stop 'mean lost across deferred context'
@@ -99,7 +97,7 @@ program check_conditional_virtual_integration
      call pooled_virtual_set_selection(.true.,-1,1d0)
      if(any(pooled_virtual_actual_ratio/=mean))error stop 'full branch differs from mean'
      if(context_valid)then
-        call pooled_virtual_invariants(p,mass,incoming,pdg,mur2,cat,coordinate,valid,qes2,.true.)
+        call pooled_virtual_invariants(p,mass,incoming,pdg,mur2,cat,coordinate,valid,qes2)
         if(.not.valid)error stop 'invalid coordinates'
      endif
   enddo

@@ -2312,7 +2312,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         try:
             with open(manifest) as stream:
                 state = json.load(stream)
-            if (state['version'] not in (1, 2) or
+            if (state['version'] != 3 or
                     state['fixed_order'] != self._virtual_pool_fixed_order or
                     state['status'] not in ('trained', 'fallback')):
                 raise ValueError('incompatible manifest')
@@ -2330,8 +2330,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     digest = hashlib.sha256(stream.read()).hexdigest()
                 if digest != state['neural_sha256']:
                     raise ValueError('neural checksum differs from frozen manifest')
-                if state.get('source_identity') != self.virtual_pool_source_identity(p_dir):
-                    raise ValueError('amplitude, helicity filter or parameters differ from frozen manifest')
+            if state.get('source_identity') != self.virtual_pool_source_identity(p_dir):
+                raise ValueError('amplitude, helicity filter or parameters differ from frozen manifest')
         except (IOError, ValueError, KeyError, TypeError) as error:
             raise aMCatNLOError('Cannot resume pooled virtuals for %s: %s. '
                                 'Restart the integration to collect a new fit.' %
@@ -2398,7 +2398,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             try:
                 result = train_pool(sorted(job_groups), model, report,
                                     job_groups=job_groups, neural=True,
-                                    output_neural=neural)
+                                    output_neural=neural, fixed_order=fixed_order)
                 digest = None
                 neural_digest = None
                 if result['model_written']:
@@ -2414,12 +2414,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             except (IOError, ValueError, KeyError) as error:
                 raise aMCatNLOError('Cannot fit pooled virtuals for %s: %s' %
                                     (p_dir, error))
-            state = dict(version=2, fixed_order=fixed_order,
+            state = dict(version=3, fixed_order=fixed_order,
+                         family='surrogate_pooled_residual',
                          collection_step=integration_step,
                          status='trained' if digest and result['status']=='trained' else 'fallback',
                          model_sha256=digest, neural_sha256=neural_digest,
-                         source_identity=self.virtual_pool_source_identity(p_dir)
-                                         if neural_digest else None)
+                         source_identity=self.virtual_pool_source_identity(p_dir))
             manifest = pjoin(directory, 'virtual_pool_manifest.json')
             with open(manifest + '.tmp', 'w') as stream:
                 json.dump(state, stream, sort_keys=True, indent=2)
@@ -2752,6 +2752,7 @@ RESTART = %(mint_mode)s
             if any(len(rows) != len(linesoffiles[0]) for rows in linesoffiles[1:]):
                 raise aMCatNLOError('Split grid files have different numbers of rows.')
             to_write=[]
+            surrogate_rows=[]
             for rowgrp in zip(*linesoffiles):
                 action=misc.make_unique([row.strip().split()[0] for row in rowgrp]) 
                 floatsbyfile = [[float(a) for a in row.strip().split()[1:]] for row in rowgrp]
@@ -2776,6 +2777,10 @@ RESTART = %(mint_mode)s
                 elif 'IDE' in action:
                     # they should all be identical (INTEGERS)
                     write_string = [int(round(floatgrp[0])) for floatgrp in floatgrps]
+                elif 'VSU' in action:
+                    # A surrogate's choice and coefficients are not additive.
+                    # Any fixed surrogate is exact; keep the first job's fit.
+                    write_string = rowgrp[0].strip().split()[1:]
                 elif 'SPE' in action:
                     # special: average first; sum second; average third (ALL INTEGERS)
                     write_string=[]
@@ -2788,7 +2793,11 @@ RESTART = %(mint_mode)s
                             write_string.append(int(sum(floatgrp)/len(floatgrp)))
                 else:
                     raise aMCatNLOError('Unknown action for combining grids: %s' % action[0])
-                to_write.append(action[0] + " " + (" ".join(str(ws) for ws in write_string)) + "\n")
+                combined_row = action[0] + " " + (" ".join(str(ws) for ws in write_string)) + "\n"
+                if action[0] == 'VSU':
+                    surrogate_rows.append(combined_row)
+                else:
+                    to_write.append(combined_row)
 
             if polyfit_data:
                 # special for data regarding virtuals. Need to simply append
@@ -2813,6 +2822,8 @@ RESTART = %(mint_mode)s
                     for dat in ch:
                         to_write.append(dat)
 
+            # The reader restores the polynomial fallback before the fit.
+            to_write.extend(surrogate_rows)
             if pooled_data:
                 to_write.extend(pooled_data[0])
             if envelope_data:

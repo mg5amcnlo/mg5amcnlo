@@ -165,6 +165,7 @@ end function
 ''')
             self.compile_and_run(work, work / 'params.f90',
                                  TEMPLATE / 'virtual_envelope_carrier.f90',
+                                 TEMPLATE / 'virtual_features.f90',
                                  TEMPLATE / 'virtual_pooled.f90', work / 'virtual.f',
                                  work / 'driver.f90')
 

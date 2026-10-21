@@ -24,7 +24,9 @@ def fortran_routine(path, name):
     paths = ([path.parent / source for source in (
                   "genps_fks.f", "genps_fks_sampling.f",
                   "genps_fks_radiation.f", "genps_fks_helpers.f")]
-             if path.name == "genps_fks.f" else [path])
+             if path.name == "genps_fks.f" else
+             [path, path.parent / "virtual_approximation.f"]
+             if path.name == "fks_singular.f" else [path])
     pattern = re.compile(
         r"^      (?:subroutine|(?:(?:double precision|double complex|logical|integer) )?function) "
         + re.escape(name) + r"\b", re.MULTILINE | re.IGNORECASE)

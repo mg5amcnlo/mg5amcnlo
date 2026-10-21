@@ -514,9 +514,9 @@ c and not be part of the plots nor computation of the cross section.
       virt_wgt_mint(0)=virt_wgt_mint(0)+virt_wgt*f_nb
       born_wgt_mint(0)=born_wgt_mint(0)+born_wgt*f_b
       do iamp=1, amp_split_size
-        if (use_pooled_virtual.and.pooled_virtual_sampled) then
+        if ((use_pooled_virtual.and.pooled_virtual_sampled).or.vs_vcomp) then
 c Keep zero residual observations: a perfect approximation still
-c supplies a Born weight to the pooled fit.
+c supplies a normalized Born weight to the virtual fits.
            born_wgt_mint(iamp)=born_wgt_mint(iamp)
      $          +amp_split_born_for_virt(iamp)*f_nb
         endif
@@ -530,7 +530,8 @@ c supplies a Born weight to the pooled fit.
         wgt1=amp_split_virt(iamp)*f_nb
         virt_wgt_mint(iamp)=virt_wgt_mint(iamp)
      $       +wgt1
-        if (.not.(use_pooled_virtual.and.pooled_virtual_sampled)) then
+        if (.not.((use_pooled_virtual.and.pooled_virtual_sampled).or.
+     $       vs_vcomp)) then
            born_wgt_mint(iamp)=born_wgt_mint(iamp)
      $          +amp_split_born_for_virt(iamp)*f_nb
         endif
@@ -2341,12 +2342,13 @@ c or to fill histograms.
       save lum_fks,lum_history,lum_iproc,lum_x,lum_q2,lum_value,lum_pd
       parameter (conv=389379660d0) ! conversion to picobarns
       mint_carrier=0
-      if (use_pooled_virtual.and.pooled_virtual_sampled) then
+      if ((use_pooled_virtual.and.pooled_virtual_sampled).or.vs_vcomp) then
          mint_carrier=find_virtual_mint_carrier()
 c With no n-body contribution there is no PDF/bias carrier for this
 c fit observation. Do not train on its unnormalised Born weight.
          if (mint_carrier.eq.0) then
             pooled_virtual_sampled=.false.
+            vs_vcomp=.false.
          endif
       endif
       if (icontr.eq.0) return
@@ -2587,7 +2589,7 @@ c Set the bias_wgt to 1 in case we do not have to do any biassing
       endif
       virt_found=.false.
       mint_carrier=0
-      if (use_pooled_virtual.and.pooled_virtual_sampled)
+      if ((use_pooled_virtual.and.pooled_virtual_sampled).or.vs_vcomp)
      $     mint_carrier=find_virtual_mint_carrier()
 c loop over all contributions
       do i=1,icontr
@@ -3608,8 +3610,11 @@ c in the spreading factor and must not cancel the fitted nonvirtual row.
          endif
       enddo
       call pack_contribution_groups
+      if(use_pooled_virtual.and.pooled_virtual_collecting)
+     $     call capture_pooled_event_weights(i_soft)
       return
       end
+
 
 
       subroutine set_born_spread_point(xxi,xy,ifl)
@@ -6551,6 +6556,8 @@ c
      $ local_context
       use extra_weights
       use mint_module
+      use virt_surrogate, only: vs_clear_links,vs_add_link,vs_features,
+     $     vs_select,vs_born,vs_fvirt,vs_virt,vs_basis,vs_nfeat,vs_maxfeat
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
@@ -6676,10 +6683,15 @@ C to keep track of the various split orders
       double precision coupl_wgtwnstmpmuf
 
       double precision feature_mass(nexternal-1)
+      double precision feature_surrogate(vs_maxfeat)
+      logical feature_surrogate_valid
       double precision feature_coupling(amp_split_size)
       logical feature_incoming(nexternal-1)
       integer feature_pdg(nexternal-1)
       integer feature_colour(nexternal-1)
+      logical collect_surrogate,use_surrogate
+c Surrogate/Born ratios fixed for all folds of this point.
+      double precision ave_ratio(0:amp_split_size)
 
       include "pmass.inc"
       
@@ -6846,11 +6858,18 @@ C end of the external particle loop
 c     If doing MC over helicities, must sum over the two
 c     helicity contributions for the Q-terms of collinear limit.
  547  continue
-      if (abrv.eq.'virt') goto 548
+      collect_surrogate=VirtTrickSurrogate.ge.1.and.
+     $     ickkw.ne.-1.and.fold.eq.0
+     $     .and.born_spread_phase.ne.1.and.born_spread_phase.ne.2
+      if (fold.eq.0) call vs_clear_links
+c Separate virtual events need only the colour links from this loop.
+      if (abrv.eq.'virt'.and.(.not.collect_surrogate.or.
+     $     .not.need_color_links_used)) goto 548
 c
 c I(reg) terms, eq 5.5 of FKS
       nFKSprocess_save = nFKSprocess
       do iord = 1, nsplitorders
+         if (abrv.eq.'virt'.and.iord.ne.qcd_pos) cycle
          if (iord.eq.qcd_pos) then
             if (.not. need_color_links_used) cycle
             need_color_links=need_color_links_used
@@ -6881,6 +6900,9 @@ c because there is a call above in this subroutine
 C wgt includes the gs/w^2 
                   call sborn_sf_native(p_born,m,n,wgt)
                   if (wgt.ne.0d0) then
+                     if (collect_surrogate.and.iord.eq.qcd_pos)
+     $                    call vs_add_link(p_born,QES2,i_fks,m,n,wgt)
+                     if (abrv.eq.'virt') cycle
                      call eikonal_Ireg(p,m,n,xicut_used,eikIreg)
                      contr=contr+wgt*eikIreg
                      do k=1,amp_split_size
@@ -6906,6 +6928,8 @@ C set back the fks i/j info as prior to enter this function
       call fks_inc_chooser()
 
  548  continue
+      use_surrogate=VirtTrickSurrogate.ge.1.and.
+     $     ickkw.ne.-1
 c Finite part of one-loop corrections
 c convert to Binoth Les Houches Accord standards
       virt_wgt=0d0
@@ -6930,7 +6954,29 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
          endif
       enddo
 
+c Choose the fitted surrogate at the first fold, retaining the grid or
+c polynomial when the channel's fit has not been selected. Pooled virtuals
+c collect on top of this same iteration-local approximation.
       if (fold.eq.0) then
+         vs_ratio_set=.false.
+         if (use_surrogate) then
+            call vs_features(p_born,born_wgt,QES2,VirtTrickSurrogate)
+            call vs_select(ichan,born_wgt)
+         endif
+      endif
+      if (vs_ratio_set) then
+         ave_ratio=vs_ratio
+      elseif (use_poly_virtual) then
+         ave_ratio=polyfit(0:amp_split_size)
+      else
+         ave_ratio=average_virtual(0:amp_split_size,ichan)
+      endif
+
+      if (fold.eq.0) then
+         vs_vcomp=.false.
+         vs_born=born_wgt
+         vs_fvirt=virtual_fraction(ichan)
+         if (abrv.eq.'virt') vs_fvirt=1d0
          if (use_pooled_virtual.and.ickkw.ne.-1) then
             if ((born_spread_phase.eq.1.or.born_spread_phase.eq.2)
      $           .and..not.pooled_virtual_applying) then
@@ -6960,11 +7006,17 @@ c geometry, helicity queries and colour contractions during calibration.
      $                    dble(gal(1))**2/(8d0*pi**2)
                   endif
                enddo
+               call vs_basis(born_wgt,
+     $              feature_surrogate(1:vs_nfeat),
+     $              feature_surrogate_valid,g**2)
                call pooled_virtual_prepare(p_born,feature_mass,
      $              feature_incoming,feature_pdg,scale**2,
-     $              average_virtual(1:amp_split_size,ichan),QES2,.true.,
+     $              ave_ratio(1:amp_split_size),QES2,
      $              active_context.eq.local_context,
-     $              feature_coupling,feature_colour)
+     $              feature_coupling,feature_colour,
+     $              surrogate=feature_surrogate(1:vs_nfeat),
+     $              supported=feature_surrogate_valid,
+     $              channel=iconfigs(ichan),surrogate_gs2=g**2)
                call prepare_pooled_helicities(p_born,feature_colour)
             endif
          endif
@@ -7004,7 +7056,12 @@ c The exact loop is delayed until the fully weighted Born veto passes.
             do iamp=1,amp_split_size
                amp_split_virt(iamp)=amp_split_finite_ML(iamp)
             enddo
-            if (use_pooled_virtual) then
+            if (use_surrogate) then
+               vs_vcomp=.true.
+               vs_virt=virt_wgt
+               if(use_pooled_virtual)vs_fvirt=pooled_virtual_probability
+            endif
+            if (use_pooled_virtual.or.VirtTrickSurrogate.ge.1) then
                virtual_over_born=0d0
                if (born_wgt.ne.0d0)
      $              virtual_over_born=virt_wgt/born_wgt
@@ -7014,20 +7071,15 @@ c The exact loop is delayed until the fully weighted Born veto passes.
             if (ickkw.ne.-1) then
                virt_wgt = 0d0
                do iamp=1,amp_split_size
-                  if (.not.use_pooled_virtual.and.
+                  if (.not.use_pooled_virtual.and..not.vs_ratio_set.and.
      $                 amp_split_virt(iamp).eq.0d0) cycle
                   if (use_pooled_virtual) then
                      amp_split_virt(iamp)=amp_split_virt(iamp)-
      $                    pooled_virtual_actual_ratio(iamp)
      $                    *amp_split_born_for_virt(iamp)
-                  elseif (use_poly_virtual) then
-                     amp_split_virt(iamp)=amp_split_virt(iamp)-
-     $                    polyfit(iamp)
-     $                    *amp_split_born_for_virt(iamp)
                   else
                      amp_split_virt(iamp)=amp_split_virt(iamp)-
-     $                    average_virtual(iamp,ichan)
-     $                     *amp_split_born_for_virt(iamp)
+     $                    ave_ratio(iamp)*amp_split_born_for_virt(iamp)
                   endif
                   virt_wgt = virt_wgt + amp_split_virt(iamp)
                enddo
@@ -7057,18 +7109,11 @@ c The exact loop is delayed until the fully weighted Born veto passes.
             amp_split_avv=pooled_virtual_ratio
      $           *amp_split_born_for_virt
             avv_wgt=sum(amp_split_avv)
-         elseif (use_poly_virtual) then
-            avv_wgt=polyfit(0)*born_wgt
-            do iamp=1, amp_split_size
-               if (amp_split_born_for_virt(iamp).eq.0d0) cycle
-               amp_split_avv(iamp)= polyfit(iamp)
-     $              *amp_split_born_for_virt(iamp)
-            enddo
          else
-            avv_wgt=average_virtual(0,ichan)*born_wgt
+            avv_wgt=ave_ratio(0)*born_wgt
             do iamp=1, amp_split_size
                if (amp_split_born_for_virt(iamp).eq.0d0) cycle
-               amp_split_avv(iamp)= average_virtual(iamp,ichan)
+               amp_split_avv(iamp)=ave_ratio(iamp)
      $              *amp_split_born_for_virt(iamp)
             enddo
          endif
@@ -8438,192 +8483,4 @@ c     reset the default dynamical_scale_choice
       call get_mother_col_charge(i_fks,j_fks,i_type,ch_i,j_type,ch_j
      $     ,m_type,ch_m)
       j_pdg=pdg_type_d(iFKS,j_fks)
-      end
-
-
-      subroutine prepare_pooled_helicities(p,colours)
-c Compute precisely the native mixture of nonzero Born squared orders,
-c without drawing a helicity or evaluating a virtual matrix element.
-      use mc_born_types
-      use virtual_pooled, only: pooled_virtual_needs_helicities,
-     $ pooled_virtual_set_helicity_weights,pooled_virtual_uses_physics
-      implicit none
-      include 'nexternal.inc'
-      include 'coupl.inc'
-      include 'q_es.inc'
-      include 'orders.inc'
-      include '../../Source/MODEL/input.inc'
-      double precision p(0:3,nexternal-1),saved_mu_r
-      integer colours(nexternal-1),i,j
-      double precision dipoles(nexternal-1,nexternal-1),norm
-      double precision,allocatable,save :: weights(:,:)
-      logical updateloop,saved_updateloop
-      common/to_updateloop/updateloop
-      type(BornRequest) request
-      type(BornResult),save :: result
-      if(.not.pooled_virtual_needs_helicities())return
-c Binoth's sampler sees couplings at the Ellis-Sexton scale. Restore all
-c model parameters after this cheap prediction pass for subsequent terms.
-      saved_mu_r=mu_r
-      saved_updateloop=updateloop
-      mu_r=sqrt(QES2)
-      updateloop=.true.
-      call update_as_param()
-      updateloop=.false.
-c Retain reusable output buffers explicitly. Reset the request before
-c obtaining the uncorrelated Born used to normalize the colour contractions.
-      request=BornRequest()
-      request%helicities=.true.
-      call mc_born_local(p,request,result)
-      weights=result%helicity_orders
-      if(pooled_virtual_uses_physics())then
-c The cached tree amplitudes have already been built for the soft terms.
-c Contract their colour links without extra helicity draws or loop calls.
-         dipoles=0d0
-         norm=sum(abs(result%split_counterterms(:,1,qcd_pos)))*g**2
-         if(norm.gt.0d0)then
-            request%helicities=.false.
-            request%colour=.true.
-            do i=1,nexternal-2
-               if(abs(colours(i)).eq.1)cycle
-               do j=i+1,nexternal-1
-                  if(abs(colours(j)).eq.1)cycle
-                  request%m=i
-                  request%n=j
-                  call mc_born_local(p,request,result)
-                  dipoles(i,j)=sum(result%soft)/norm
-               enddo
-            enddo
-         endif
-         call pooled_virtual_set_helicity_weights(weights,dipoles)
-      else
-         call pooled_virtual_set_helicity_weights(weights)
-      endif
-      mu_r=saved_mu_r
-      updateloop=.true.
-      call update_as_param()
-      updateloop=saved_updateloop
-      end
-
-      subroutine deferred_virtual_context(action,born_wgt)
-      use fks_phase_space_data, only: p_born
-      use mc_native_context, only: active_history
-      use weight_lines
-      use mint_module
-      implicit none
-      include 'nexternal.inc'
-      include 'orders.inc'
-      include 'coupl.inc'
-      include 'q_es.inc'
-      include 'run.inc'
-      include '../../Source/MODEL/input.inc'
-      include 'timing_variables.inc'
-      integer action,i,k,saved_fks,saved_history
-      integer nFKSprocess,current_fks,current_history
-      common/c_nFKSprocess/nFKSprocess
-      double precision born_wgt,saved_p(0:3,nexternal-1),saved_born
-      double precision saved_amp_born(amp_split_size)
-      double precision carrier_raw
-      type(pooled_virtual_context),save :: saved_pool_context
-      double precision saved_g,saved_scale,saved_qes,virt_wgt
-      double precision saved_mu_r
-      double precision current_g,current_scale,current_qes,current_mu_r
-      double precision carrier,other,ratio(amp_split_size)
-      double precision amp_split_virt(amp_split_size),
-     $ amp_split_born_for_virt(amp_split_size),
-     $ amp_split_avv(amp_split_size)
-      common/to_amp_split_virt/amp_split_virt,
-     $ amp_split_born_for_virt,amp_split_avv
-      double precision amp_split_finite_ML(amp_split_size)
-      common/to_amp_split_finite/amp_split_finite_ML
-      double precision virtual_over_born
-      common/c_vob/virtual_over_born
-      logical accepted,updateloop
-      common/to_updateloop/updateloop
-      save saved_p,saved_born,saved_amp_born,carrier_raw,
-     $ saved_g,saved_scale,saved_qes,saved_fks,saved_history,saved_mu_r
-      if(action.eq.0)then
-         saved_p=p_born
-         saved_born=born_wgt
-         saved_amp_born=amp_split_born_for_virt
-         call pooled_virtual_save_context(saved_pool_context)
-         carrier_raw=sum(abs(saved_amp_born))
-         saved_g=g
-         saved_scale=scale
-         saved_qes=QES2
-         saved_mu_r=mu_r
-         saved_fks=nFKSprocess
-         saved_history=active_history
-c Match Binoth's cheap model-parameter update before subsequent Born
-c and scheme-counterterm evaluations, including running BSM couplings.
-         mu_r=sqrt(QES2)
-         updateloop=.true.
-         call update_as_param()
-         updateloop=.false.
-         return
-      endif
-      if(.not.virtual_deferred_ready)return
-      carrier=0d0
-      other=0d0
-      do i=1,icontr
-         if(itype(i).eq.14)then
-            carrier=carrier+sum(abs(parton_iproc(1:niproc(i),i)))
-         else
-            other=other+sum(abs(parton_iproc(1:niproc(i),i)))
-         endif
-      enddo
-      call screen_virtual_carrier(carrier,other,accepted)
-      if(.not.accepted)then
-         icontr=0
-         virt_wgt_mint=0d0
-         born_wgt_mint=0d0
-         pooled_virtual_sampled=.false.
-         virtual_deferred_ready=.false.
-         return
-      endif
-c Evaluate at exactly the first fold's saved native Born context, then
-c restore the final fold's context. Floating-point scale recomputation
-c alone can change QES2 by an ulp across folds.
-      current_g=g
-      current_scale=scale
-      current_qes=QES2
-      current_mu_r=mu_r
-      current_fks=nFKSprocess
-      current_history=active_history
-      call update_fks_dir(saved_fks)
-      call mc_set_history(saved_history)
-      g=saved_g
-      scale=saved_scale
-      QES2=saved_qes
-      mu_r=saved_mu_r
-      call pooled_virtual_restore_context(saved_pool_context)
-      if(timing_sampled)call timing_enter(timing_virtual)
-      call BinothLHA(saved_p,saved_born,virt_wgt)
-      if(timing_sampled)call timing_leave(timing_virtual)
-      g=current_g
-      scale=current_scale
-      QES2=current_qes
-      mu_r=current_mu_r
-      call update_as_param()
-      call update_fks_dir(current_fks)
-      call mc_set_history(current_history)
-      ratio=(amp_split_finite_ML-pooled_virtual_actual_ratio
-     $     *saved_amp_born)
-     $     /carrier_raw
-      virtual_over_born=0d0
-      if(saved_born.ne.0d0)virtual_over_born=virt_wgt/saved_born
-      do i=1,icontr
-         if(itype(i).ne.14)cycle
-         k=amppos(i)
-         if(k.lt.1.or.k.gt.amp_split_size)stop 'bad deferred order'
-         wgt(1:3,i)=wgt(1:3,i)*ratio(k)
-         wgts(1,i)=wgts(1,i)*ratio(k)
-         parton_iproc(1:niproc(i),i)=
-     $        parton_iproc(1:niproc(i),i)*ratio(k)
-      enddo
-      virt_wgt_mint(1:amp_split_size)=
-     $     virt_wgt_mint(1:amp_split_size)*ratio
-      virt_wgt_mint(0)=sum(virt_wgt_mint(1:amp_split_size))
-      call pooled_virtual_mark_sampled(1d0)
-      virtual_deferred_ready=.false.
       end

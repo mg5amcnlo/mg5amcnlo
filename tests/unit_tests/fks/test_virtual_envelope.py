@@ -27,6 +27,7 @@ class TestVirtualEnvelope(unittest.TestCase):
             compiled = subprocess.run([
                 shutil.which('gfortran'), '-O2', '-fcheck=all',
                 '-ffpe-trap=invalid,zero,overflow', '-I', str(work),
+                str(ROOT / 'Template/NLO/SubProcesses/virtual_surrogate.f90'),
                 str(work / 'driver.f90'), '-o', str(work / 'check')],
                 cwd=work, capture_output=True, text=True, timeout=60)
             self.assertEqual(compiled.returncode, 0, compiled.stdout + compiled.stderr)
@@ -224,7 +225,9 @@ end program
         output = self.run_fixture(['write_grids_to_file', 'read_grids_from_file'], r'''
 module fixture
  use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+ use virt_surrogate
  implicit none
+ integer :: VirtTrickSurrogate=0
  integer,parameter :: nintervals=4,nintervals_virt=2,ndim=4,n_ord_virt=2,maxchannels=2,nintegrals=10
  integer :: nchans=2,imode=1,ncalls0=100,itmax=7,nhits_in_grids(2)=[20,30]
  real(8) :: xgrid(0:4,4,2),ymax(4,4,2),ave_virt(2,1,0:2,2)
@@ -306,6 +309,39 @@ program check
  close(15)
  call read_grids_from_file
  if(any(residual_kappa/=0d0).or.any(residual_max/=saved))error stop 'version-2 fallback changed'
+ ! Nonpooled grids store the per-channel fit after their fallback grids.
+ use_pooled_virtual=.false.;VirtTrickSurrogate=2;imode=0
+ residual_envelope_available=.false.
+ open(unit=15,status='scratch',form='formatted')
+ write(15,*)'VSU',1,1,16,[(dble(i)/3d0,i=1,16)]
+ write(15,*)'VSU',0,1,16,[(-dble(i)/3d0,i=1,16)]
+ rewind(15);call vs_read_grids(15,2,.true.);close(15)
+ call write_grids_to_file
+ call vs_reset
+ imode=1
+ call read_grids_from_file
+ if(vs_nfeat/=16)error stop 'lost fitted feature count'
+ vs_featok=.true.;vs_feat=0d0;vs_feat(1)=1d0
+ call vs_select(1,1d0)
+ if(.not.vs_ratio_set)error stop 'lost active surrogate'
+ call vs_select(2,1d0)
+ if(vs_ratio_set)error stop 'lost fallback selection'
+ do i=1,16
+  vs_feat=0d0;vs_feat(i)=1d0
+  if(abs(vs_value(1)-dble(i)/3d0)>1d-14.or. &
+       abs(vs_value(2)+dble(i)/3d0)>1d-14)error stop 'lost fitted coefficients'
+ enddo
+ ! An explicit mode 0 consumes saved fit rows but uses the fallback.
+ VirtTrickSurrogate=0
+ call read_grids_from_file
+ vs_featok=.true.;call vs_select(1,1d0)
+ if(vs_ratio_set)error stop 'disabled surrogate restored active fit'
+ imode=0;call write_grids_to_file
+ ! Old files without VSU rows remain readable with the new default.
+ VirtTrickSurrogate=2;imode=1
+ call read_grids_from_file
+ vs_featok=.true.;vs_feat(1)=1d0;call vs_select(1,1d0)
+ if(vs_ratio_set.or.vs_value(1)/=0d0)error stop 'old grid acquired a fitted surrogate'
  print *,'PASS residual grid roundtrip and legacy fallback'
 end program
 subroutine init_polyfit(a,b,c,d)

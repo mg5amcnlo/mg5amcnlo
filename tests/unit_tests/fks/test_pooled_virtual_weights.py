@@ -49,7 +49,8 @@ class TestPooledVirtualWeights(unittest.TestCase):
             '      use extra_weights\n'
             '      implicit none\n' + tracking + '      end\n')
         routines = ''.join(fortran_routine(TEMPLATE / 'fks_singular.f', name)
-                           for name in ('find_virtual_mint_carrier',
+                           for name in ('virt_surrogate_fit_point',
+                                        'find_virtual_mint_carrier',
                                         'include_PDF_and_alphas', 'include_bias_wgt',
                                         'recompute_xlum_for_wgt_mint'))
         (work / 'routines.f').write_text(wrappers + routines)
@@ -62,6 +63,7 @@ class TestPooledVirtualWeights(unittest.TestCase):
             str(TEMPLATE.parent / 'Source/timing.f'),
             str(TEMPLATE / 'weight_lines.f'),
             str(ROOT / 'Template/NLO/Source/extra_weights.f'),
+            str(TEMPLATE / 'virtual_surrogate.f90'),
             str(ROOT / 'tests/input_files/pooled_virtual_weight_context.f90'),
             str(work / 'routines.f'),
             str(ROOT / 'tests/input_files/check_pooled_virtual_weights.f90'),
@@ -98,3 +100,21 @@ class TestPooledVirtualWeights(unittest.TestCase):
 
     def test_deferred_veto_xsec_retains_immediate_virtual(self):
         self.check_mode('deferred_veto_xsec')
+
+    def test_fitted_surrogate_cancels_zero_virtuals_and_keeps_fold_ratio(self):
+        self.check_mode('surrogate_cancellation')
+
+    def test_fitted_surrogate_subsampling_and_born_spreading_calibration(self):
+        self.check_mode('surrogate_sampling')
+
+    def test_fitted_surrogate_zero_residual_keeps_pdf_and_bias_normalization(self):
+        self.check_mode('surrogate_normalization')
+
+    def test_fit_uses_squared_integrand_weights_only_during_grid_setup(self):
+        self.check_mode('surrogate_fit_weights')
+
+    def test_fit_freezes_coefficients_and_selects_by_run_mode(self):
+        self.check_mode('surrogate_fitting')
+
+    def test_features_use_native_born_momenta_and_real_to_born_link_indices(self):
+        self.check_mode('surrogate_features')

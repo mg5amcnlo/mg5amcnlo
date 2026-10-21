@@ -311,9 +311,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
           pjoin('interface','common_run_interface.py'),
           pjoin('interface','coloring_logging.py'),
           pjoin('various','misc.py'),
-          pjoin('various','virtual_pool.py'),
-          pjoin('various','virtual_pool_polynomial.py'),
-          pjoin('various','virtual_pool_neural.py'),
           pjoin('various','shower_card.py'),
           pjoin('various','FO_analyse_card.py'),
           pjoin('various','histograms.py'),      
@@ -336,6 +333,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         for cp_file in files_to_copy:
             cp(pjoin(_file_path,cp_file),
                 pjoin(self.dir_path,'bin','internal',os.path.basename(cp_file)))
+
+        misc.copytree(pjoin(_file_path, 'various', 'virtual_pool'),
+                      pjoin(self.dir_path, 'bin', 'internal', 'virtual_pool'),
+                      ignore=shutil.ignore_patterns('__pycache__', '*.py[co]', '*~'))
 
     def convert_model(self, model, wanted_lorentz = [], 
                                             wanted_couplings = [], **opts):
@@ -743,6 +744,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'analysis_dummy.f',
                      'analysis_lhe.f',
                      'mint_module.f90',
+                     'virtual_surrogate.f90',
+                     'virtual_features.f90',
+                     'virtual_approximation.f',
                      'virtual_pooled.f90',
                      'virtual_envelope_carrier.f90',
                      'MC_integer.f',

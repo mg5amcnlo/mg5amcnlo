@@ -1,6 +1,6 @@
 module pooled_mint_fixture
   implicit none
-  integer, parameter :: ndimmax=4,n_ord_virt=2
+  integer, parameter :: ndimmax=4,n_ord_virt=2,norders=n_ord_virt
   integer :: ndim=4,ichan=1,icell(4)=1
   double precision :: xacc(1,4,1)=0d0,f(10)=0d0,virtual_fraction(1)=.25d0
   double precision :: average_virtual(0:2,1),polyfit(0:2)=0d0,wgt_mult=1d0
@@ -8,10 +8,17 @@ module pooled_mint_fixture
   integer :: recorded_calls(0:2)=0
   logical :: use_poly_virtual=.false.
   logical :: use_pooled_virtual=.false.,pooled_virtual_sampled=.false.
+  logical :: vs_vcomp=.false.,vs_ratio_set=.false.
+  double precision :: vs_ratio=0d0
   double precision :: pooled_virtual_ratio(2)=0d0,pooled_virtual_probability=.25d0
   double precision :: pooled_virtual_actual_ratio(2)=0d0
 contains
   include 'pooled_mint_routine.inc'
+  subroutine fail(message)
+    character(len=*), intent(in) :: message
+    write(*,*) message
+    stop 1
+  end subroutine
   subroutine fill_ave_virt(x,order,virtual,born)
     double precision, intent(in) :: x(:),virtual,born
     integer, intent(in) :: order
@@ -58,6 +65,17 @@ program check_pooled_mint
   f([3,7,9])=0d0
   call add_point_to_grids(x)
   if(any(f([6,8,10])/=0d0)) error stop 'unsampled Born stream retained'
+  ! A per-channel fit must undo its own ratio when training the fallback.
+  use_pooled_virtual=.false.;vs_ratio_set=.true.;vs_vcomp=.true.;vs_ratio=2d0
+  f([8,10])=[6d0,-10d0];f([7,9])=[32d0,200d0]
+  f(3)=sum(f([7,9]));f(6)=sum(f([8,10]))
+  call add_point_to_grids(x)
+  if(any(abs(recorded_virtual-[50d0,20d0,30d0])>1d-12))error stop 'fitted surrogate grid target'
+  ! A perfect fit in one order still supplies its weighted Born target.
+  f(7)=0d0;f(3)=f(9)
+  call add_point_to_grids(x)
+  if(any(recorded_virtual/=[42d0,12d0,30d0]))error stop 'fitted zero residual target'
+  if(any(f([6,8,10])/=[-4d0,6d0,-10d0]))error stop 'fitted zero residual lost Born'
   print *, 'PASS pooled MINT original targets and zero residuals'
 end program
 

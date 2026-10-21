@@ -18,6 +18,7 @@ def mint_support(work, real_weight_lines=False, real_fks_params=False):
         ('' if real_fks_params else 'module FKSParams\n'
         'logical :: use_poly_virtual=.false.\n'
         'logical :: use_pooled_virtual=.false.\n'
+        'integer :: VirtTrickSurrogate=0\n'
         'double precision :: virt_fraction=1d0,min_virt_fraction=0.01d0\n'
         'end module\n') +
         'module mc_native_context\n'
@@ -40,7 +41,9 @@ def mint_support(work, real_weight_lines=False, real_fks_params=False):
         support.append(str(TEMPLATE / 'FKSParams.f90'))
     return support + [str(TEMPLATE.parent / 'Source/timing.f'), str(work / 'params.f90'),
             str(TEMPLATE / 'virtual_envelope_carrier.f90'),
+            str(TEMPLATE / 'virtual_features.f90'),
             str(TEMPLATE / 'virtual_pooled.f90'),
+            str(TEMPLATE / 'virtual_surrogate.f90'),
             str(TEMPLATE / 'mint_module.f90'),
             str(work / 'stubs.f90')]
 

@@ -762,6 +762,7 @@ c "npNLO".
             virt_wgt_mint(0:amp_split_size)=0d0
             born_wgt_mint(0:amp_split_size)=0d0
             virtual_over_born=0d0
+            call vs_begin_point
             born_flow_picked=0
          endif
          MCcntcalled=0
@@ -1090,6 +1091,8 @@ c Sum the contributions that can be summed before taking the ABS value
          call fill_mint_function_NLOPS(f,n1body_wgt)
          if(nonfinite_contribution)goto 900
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
+c Use the final, finite PDF/bias weights of the complete point for the fit.
+         call virt_surrogate_fit_point
       endif
 
       return
@@ -1111,6 +1114,8 @@ c Sum the contributions that can be summed before taking the ABS value
          endif
       endif
       rejected_point=.true.
+      if(use_pooled_virtual)call pooled_virtual_begin_point
+      call vs_begin_point
       call mc_set_history(0)
       icontr=0
       born_flow_picked=0

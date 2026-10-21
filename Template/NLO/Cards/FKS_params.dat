@@ -159,20 +159,39 @@
 .False.
 ! Default :: .True.
 !
+! Surrogate of the virtual used by the virt-trick, which computes the
+! virtual only at a fraction of the points and reweights the difference.
+! 0 = the grid (or the polynomial fit above) in the Born phase space.
+! 1 = colour-dipole surrogate fitted per integration channel during the
+!     grid setup: A = t1 B + t2 sum B_kl L_kl + t3 sum B_kl L_kl^2
+!     + t4 sum B_kk, with B_kl the colour-linked Borns and
+!     L_kl = log(|2 p_k.p_l|/Q_ES^2).
+! 2 = 1 plus B L_kl and B L_kl^2 for every pair of Born particles,
+!     coloured or not.
+! For 1 and 2 a channel keeps the grid when the fit does worse: in event
+! generation the fit is kept if its residual makes fewer negative virtual
+! events, in fixed order if its residual variance is smaller. Exact for
+! any choice. UsePooledVirtual refines this fit at the first-stage barrier.
+#VirtTrickSurrogate
+2
+! Default :: 2
+!
 ! Pool sampled-helicity virtual observations across integration channels
 ! once all first-stage jobs have returned: MC@NLO step 0, fNLO step 1.
-! Subsequent jobs start with coupling-dressed Born times scale/mass logs,
-! colour-linked cusp/Coulomb inputs and massive-pair velocity functions,
-! followed by linear native-helicity heads.
-! Chronological validation screens richer polynomial/neural fits when useful
-! and selects the fit or retains MINT. Training needs NumPy on the controller;
-! without it the run uses ordinary adaptive MINT. Conditional training also
-! needs SciPy.
+! The surrogate above keeps adapting iteration by iteration during collection.
+! Pooled training refits its physical basis with shared coefficients and
+! regularized channel deviations, then fits a small residual correction and
+! native-helicity corrections when useful. Whole later iterations validate
+! both the baseline and correction. MC promotion also checks the summed
+! folded S-event and separate-virtual negative weights.
+! Training needs NumPy on the controller. Compact helicity fits can use NumPy;
+! large sparse or nonlinear fits need SciPy. Without NumPy the native
+! surrogate and its grid fallback remain active.
 ! Native helicity sampling and exact residual corrections are retained.
 ! Envelope calibration keeps the collection-stage virtual-call fraction;
 ! later integration adapts to residual errors. Far outside the fitted
 ! domain, exact loops protect against extrapolation.
-! Takes precedence over UsePolyVirtual.
+! Disables UsePolyVirtual. VirtTrickSurrogate=0 selects mode 2 when pooling.
 #UsePooledVirtual
 .False.
 ! Default :: .False.

@@ -25,6 +25,7 @@ class TestVirtualPooled(unittest.TestCase):
             shutil.which('gfortran'), '-O2', '-frecursive', '-fcheck=all',
             '-ffpe-trap=invalid,zero,overflow',
             str(TEMPLATE / 'virtual_envelope_carrier.f90'),
+            str(TEMPLATE / 'virtual_features.f90'),
             str(TEMPLATE / 'virtual_pooled.f90'),
             str(ROOT / 'tests/input_files/check_virtual_pooled.f90'),
             '-o', str(cls.executable)], cwd=cls.build.name,
@@ -57,9 +58,13 @@ class TestVirtualPooled(unittest.TestCase):
 
     def model(self, blend=.25):
         # ratio = (6/2)*(4+2*z_1), with z_1 = log(shat/mur2)/10.
-        content = ('VIRTUAL_POOL_MODEL 2\n5 8 2 4 2\n21 21 6 -6\n0 0 172.5 172.5\n1 1 0 0\n'
-                   f'1 {blend} 2 6 2 1\n' + '-10 '*8 + '\n' + '10 '*8 + '\n'
-                   '0 0 4\n1 0 2\n2 0 1 1 0 0\n' + '-10 '*8 + '\n' + '10 '*8 + '\n')
+        bounds = [' '.join(map(str, [-10.]*15+[-1.])),
+                  ' '.join(map(str, [10.]*15+[1.]))]
+        content = '\n'.join([
+            'VIRTUAL_POOL_MODEL 4', '9 16 2 4 2', '21 21 6 -6',
+            '0 0 172.5 172.5', '1 1 0 0', '8 8 3 -3',
+            f'1 {blend} 2 6 2 1', *bounds, '0 0 0 4', '1 0 0 2', 'SURROGATE 0 0',
+            '2 0 1 1 0 0', *bounds, 'SURROGATE 0 0', ''])
         (self.path / 'virtual_pool_model.dat').write_text(content)
         self.mode(2)
         return content
@@ -83,7 +88,7 @@ class TestVirtualPooled(unittest.TestCase):
         (work/'q_es.inc').write_text('      real(8) qes2\n      common/test_qes/qes2\n')
         (model/'input.inc').write_text('      real(8) mu_r\n      common/test_mu/mu_r\n')
         # Compile the production subroutine, rather than a copy in the fixture.
-        source = (TEMPLATE/'fks_singular.f').read_text()
+        source = (TEMPLATE/'virtual_approximation.f').read_text()
         helper = source[source.index('      subroutine prepare_pooled_helicities('):]
         helper = helper[:helper.index('      subroutine deferred_virtual_context(')]
         (work/'prepare.f').write_text(helper)
@@ -104,11 +109,11 @@ class TestVirtualPooled(unittest.TestCase):
     @unittest.skipUnless(np is not None, 'requires numpy')
     def test_physics_capture_dresses_the_fit_without_changing_mint(self):
         from madgraph.various import virtual_pool as pool
-        from madgraph.various.virtual_pool_polynomial import Marginals
+        from madgraph.various.virtual_pool.polynomial import Marginals
         self.mode(1)
         inputs = np.fromstring(self.run_case('collect_physics'), sep=' ')
         metadata, rows, _ = pool.collect_samples([self.path])
-        self.assertEqual((metadata['version'], metadata['catalog'], metadata['nf']), (4, 9, 16))
+        self.assertEqual((metadata['version'], metadata['catalog'], metadata['nf']), (5, 9, 16))
         self.assertEqual(metadata['colours'], (8, 8, 3, -3))
         np.testing.assert_allclose([r['born'] for r in rows], [2., -3.])
         np.testing.assert_allclose([r['coupling_factor'] for r in rows], [.02, .03])
@@ -130,7 +135,7 @@ class TestVirtualPooled(unittest.TestCase):
         except ImportError:
             self.skipTest('optional scipy unavailable')
         import itertools
-        from madgraph.various.virtual_pool_neural import antenna_remainder
+        from madgraph.various.virtual_pool.helicity import antenna_remainder
         p = np.zeros((5, 4))
         p[:2] = [[300., 0., 0., 300.], [300., 0., 0., -300.]]
         angle = np.arange(3)*2*np.pi/3
@@ -176,10 +181,10 @@ class TestVirtualPooled(unittest.TestCase):
         self.mode(1)
         self.run_case('collect')
         lines = (self.path / 'virtual_pool_samples.dat').read_text().splitlines()
-        self.assertEqual(lines[0], 'VIRTUAL_POOL_SAMPLES 2')
-        self.assertEqual(list(map(int, lines[1].split())), [5, 8, 2, 4, 2])
-        data = np.array([list(map(float, line.split())) for line in lines[5:]])
-        self.assertEqual(data.shape, (4, 19))
+        self.assertEqual(lines[0], 'VIRTUAL_POOL_SAMPLES 5')
+        self.assertEqual(list(map(int, lines[1].split())), [9, 16, 2, 4, 2])
+        data = np.array([list(map(float, line.split())) for line in lines[8:]])
+        self.assertEqual(data.shape, (4, 54))
         np.testing.assert_array_equal(data[:, :4], [[1, 7, 1, 1], [1, 7, 1, 2],
                                                    [2, 8, 2, 1], [2, 8, 2, 2]])
         np.testing.assert_allclose(data[:, 5], .25)
@@ -231,15 +236,15 @@ class TestVirtualPooled(unittest.TestCase):
 
     def test_malformed_models_fail_closed(self):
         original = self.model()
-        bad = [original.replace('5 8 2 4 2', '5 6 2 4 2'),
-               original.replace('5 8 2 4 2', '5 8 2 4 3'),
-               original.replace('VIRTUAL_POOL_MODEL 2', 'VIRTUAL_POOL_MODEL 1'),
+        bad = [original.replace('9 16 2 4 2', '9 15 2 4 2'),
+               original.replace('9 16 2 4 2', '9 16 2 4 3'),
+               original.replace('VIRTUAL_POOL_MODEL 4', 'VIRTUAL_POOL_MODEL 3'),
                original.replace('1 0.25 2 6 2 1', '1 1.25 2 6 2 1'),
                original.replace('1 0.25 2 6 2 1', '1 0.25 0 6 2 1'),
-               original.replace('1 0 2', '9 0 2'),
-               original.replace('0 0 4', '0 1 4'),
-               original.replace('0 0 4', '0 0 NaN'),
-               original.replace('0 0 4', '0 0 4 5'),
+               original.replace('1 0 0 2', '17 0 0 2'),
+               original.replace('0 0 0 4', '0 1 0 4'),
+               original.replace('0 0 0 4', '0 0 0 NaN'),
+               original.replace('0 0 0 4', '0 0 0 4 5'),
                original.rsplit('\n', 2)[0] + '\n', original + 'junk\n']
         for content in bad:
             with self.subTest(content=content):
@@ -248,6 +253,8 @@ class TestVirtualPooled(unittest.TestCase):
 
     @unittest.skipUnless(np is not None, 'requires numpy')
     def test_invariants_are_process_independent_and_lorentz_invariant(self):
+        from madgraph.various import virtual_pool as pool
+        from madgraph.various.virtual_pool import helicity
         cases = [
             ([6, -6], [172.5, 172.5], [[100, 50, 90], [-100, -50, -90]]),
             ([-11, 12, 21], [0, 0, 0], [[30, 15, 20], [-10, 20, -15], [-20, -35, -5]]),
@@ -266,6 +273,10 @@ class TestVirtualPooled(unittest.TestCase):
                 np.log(max(abs(2*(p[i, 0]*p[j, 0]-p[i, 1:]@p[j, 1:]))/shat, 1e-15))
                 for i in range(len(p)) for j in range(i+1, len(p))] + [
                 np.log(shat/m**2) for m in sorted(set(masses)) if m > 0]
+            meta = dict(nlegs=len(p), masses=masses, incoming=[1, 1]+[0]*len(final_mass))
+            threshold = pool.threshold_features(meta, p[None])[0].tolist()
+            orientation = helicity.orientation_features(p[None], meta['incoming'])[0].tolist()
+            expected += [np.log(shat/mur2)]+threshold+[0.]*4+[np.log(shat)]+orientation
             for beta in (np.zeros(3), np.array([.12, -.17, .28])):
                 b2 = beta@beta
                 gamma = 1/np.sqrt(1-b2)
@@ -273,15 +284,15 @@ class TestVirtualPooled(unittest.TestCase):
                 boosted = p.copy()
                 boosted[:, 0] = gamma*(p[:, 0]-bp)
                 boosted[:, 1:] += (((gamma-1)/b2*bp if b2 else bp)-gamma*p[:, 0])[:, None]*beta
-                lines = ['%d %.17e' % (len(p), mur2)]
+                lines = ['%d %.17e %.17e' % (len(p), mur2, mur2)]
                 lines += [' '.join(map(str, [pdg[i], masses[i], int(i < 2), *leg]))
                           for i, leg in enumerate(boosted)]
                 (self.path / 'coordinates_input.dat').write_text('\n'.join(lines)+'\n')
                 fields = self.run_case('invariants').split()
-                self.assertEqual(list(map(int, fields[:2])), [5, len(expected)])
+                self.assertEqual(list(map(int, fields[:2])), [9, len(expected)])
                 np.testing.assert_allclose(list(map(float, fields[2:])), expected, rtol=2e-13, atol=2e-14)
 
-    def test_catalog6_distinguishes_loop_scale_and_absolute_energy(self):
+    def test_invariants_distinguish_loop_scale_and_absolute_energy(self):
         p=np.array([[250.,0,0,250.],[250.,0,0,-250.],
                     [250.,150.,0.,200.],[250.,-150.,0.,-200.]])
         def coordinates(scale,qes):
@@ -289,13 +300,15 @@ class TestVirtualPooled(unittest.TestCase):
             lines += [' '.join(map(str,[21,0.,int(i<2),*(leg*scale)]))
                       for i,leg in enumerate(p)]
             (self.path/'coordinates_input.dat').write_text('\n'.join(lines)+'\n')
-            fields=self.run_case('invariants6').split()
-            self.assertEqual(list(map(int,fields[:2])),[6,9])
+            fields=self.run_case('invariants').split()
+            self.assertEqual(list(map(int,fields[:2])),[9,14])
             return np.asarray(list(map(float,fields[2:])))
         first=coordinates(1.,40000.)
         changed_loop=coordinates(1.,90000.)
-        np.testing.assert_allclose(first[:-2],changed_loop[:-2])
-        self.assertAlmostEqual(changed_loop[-2]-first[-2],np.log(40000./90000.))
+        np.testing.assert_allclose(first[:7],changed_loop[:7])
+        np.testing.assert_allclose(first[8:],changed_loop[8:])
+        self.assertAlmostEqual(changed_loop[7]-first[7],np.log(40000./90000.))
         scaled=coordinates(2.,160000.)
-        np.testing.assert_allclose(first[:-1],scaled[:-1],atol=1e-14)
-        self.assertAlmostEqual(scaled[-1]-first[-1],np.log(4.))
+        np.testing.assert_allclose(first[:12],scaled[:12],atol=1e-14)
+        np.testing.assert_allclose(first[13:],scaled[13:],atol=1e-14)
+        self.assertAlmostEqual(scaled[12]-first[12],np.log(4.))

@@ -139,7 +139,17 @@ def summarize(root, name):
             maxima = maxima[:-len(sums)]
         split_replica = bool(re.search(r'_\d+$', f.parent.name))
         result['native_channel_grids']['SubProcesses/' + str(f.parent.relative_to(native))] = {'virtual_maxima': maxima, 'virtual_envelope_version': envelope_version, 'virtual_born_carrier_bounds': carrier_bounds, 'virtual_velocity_carrier_bounds': velocity_bounds, 'integrals': sums, 'errors': errors, 'split_replica': split_replica}
-    tracked = ['SubProcesses/mint_module.f90', 'SubProcesses/driver_mintMC.f', 'SubProcesses/virtual_pooled.f90', 'SubProcesses/virtual_envelope_carrier.f90', 'SubProcesses/fks_singular.f', 'SubProcesses/BinothLHA.f', 'bin/internal/virtual_pool_polynomial.py', 'bin/internal/virtual_pool_neural.py', 'bin/internal/virtual_pool.py', 'bin/internal/amcatnlo_run_interface.py']
+    tracked = [
+        'SubProcesses/mint_module.f90', 'SubProcesses/driver_mintMC.f',
+        'SubProcesses/driver_mintFO.f', 'SubProcesses/virtual_pooled.f90',
+        'SubProcesses/virtual_surrogate.f90', 'SubProcesses/virtual_features.f90',
+        'SubProcesses/virtual_approximation.f', 'SubProcesses/virtual_envelope_carrier.f90',
+        'SubProcesses/fks_singular.f', 'SubProcesses/BinothLHA.f',
+        'bin/internal/virtual_pool/__init__.py', 'bin/internal/virtual_pool/data.py',
+        'bin/internal/virtual_pool/validation.py', 'bin/internal/virtual_pool/surrogate.py',
+        'bin/internal/virtual_pool/polynomial.py', 'bin/internal/virtual_pool/helicity.py',
+        'bin/internal/amcatnlo_run_interface.py',
+    ]
     result['source_sha256'] = {f: hashlib.sha256((root / f).read_bytes()).hexdigest() for f in tracked if (root / f).exists()}
     archived_hashes = eventdir / 'native_snapshot' / 'source_sha256.json'
     if archived_hashes.is_file():
@@ -316,16 +326,19 @@ def export_process(repo, root, process, cores, commands=()):
 
 
 def freeze_virtual_sources(repo, root, ref):
-    """Freeze just the four compared virtual sources before compilation/runs."""
+    """Freeze the pooled worker and its Python package before compilation/runs."""
     revision = subprocess.check_output(['git', 'rev-parse', '--verify', ref+'^{commit}'],
                                        cwd=repo, text=True).strip()
     mapping = {'SubProcesses/virtual_pooled.f90': 'Template/NLO/SubProcesses/virtual_pooled.f90'}
-    mapping.update(('bin/internal/'+name+'.py', 'madgraph/various/'+name+'.py')
-                   for name in ('virtual_pool', 'virtual_pool_polynomial', 'virtual_pool_neural'))
+    mapping.update(('bin/internal/virtual_pool/'+name+'.py',
+                    'madgraph/various/virtual_pool/'+name+'.py')
+                   for name in ('__init__', 'data', 'validation', 'surrogate', 'polynomial', 'helicity'))
+    payloads = {destination: subprocess.check_output(['git', 'show', revision+':'+source], cwd=repo)
+                for destination, source in mapping.items()}
     hashes = {}
-    for destination, source in mapping.items():
-        payload = subprocess.check_output(['git', 'show', revision+':'+source], cwd=repo)
+    for destination, payload in payloads.items():
         path = root/destination
+        path.parent.mkdir(parents=True, exist_ok=True)
         if path.is_symlink():
             path.unlink()
         path.write_bytes(payload)
@@ -461,7 +474,7 @@ def main():
     run = commands.add_parser('run', help='Export and run a native comparison suite')
     run.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[2])
     run.add_argument('--baseline-repo', type=Path)
-    run.add_argument('--virtual-ref', help='freeze the four virtual sources from this git revision in new exports')
+    run.add_argument('--virtual-ref', help='freeze the pooled worker and Python package from this git revision in new exports')
     run.add_argument('--workdir', type=Path, required=True)
     run.add_argument('--processes', choices=sorted(PRESETS), nargs='+', default=['ttbar', 'eeqq', 'eeqqg'])
     run.add_argument('--modes', choices=['mint', 'pool'], nargs='+', default=['mint', 'pool'])

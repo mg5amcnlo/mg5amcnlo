@@ -237,7 +237,7 @@ class TestVirtualPoolController(unittest.TestCase):
         with self.assertRaisesRegex(aMCatNLOError, 'parameters differ'):
             self.command.stage_virtual_pool(job, 2, False)
 
-    def test_old_manifest_and_rejected_fit_remove_stale_neural_companion(self):
+    def test_rejected_fit_removes_stale_companion_and_old_manifest_is_rejected(self):
         self.configure()
         job = self.job()
         parent = Path(job['dirname']).parent
@@ -254,8 +254,8 @@ class TestVirtualPoolController(unittest.TestCase):
         stale = Path(job['dirname']) / 'virtual_pool_neural.dat'
         stale.write_text('unbound heads\n')
         self.configure(resume=True)
-        self.command.stage_virtual_pool(job, 2, False)
-        self.assertFalse(stale.exists())
+        with self.assertRaisesRegex(aMCatNLOError, 'incompatible manifest'):
+            self.command.stage_virtual_pool(job, 2, False)
 
     def test_neural_resume_checks_run_physics_but_allows_new_event_count(self):
         card = self.root / 'Cards' / 'run_card.dat'
@@ -350,9 +350,11 @@ class TestVirtualPoolController(unittest.TestCase):
                 directory = Path(job['dirname'])
                 parent = directory.parent
                 self.command.stage_virtual_pool(job, stage, fixed)
-                header = ('VIRTUAL_POOL_SAMPLES 2\n5 8 1 4 2\n'
-                          '21 21 6 -6\n0 0 173 173\n1 1 0 0\n')
-                rows = ['%d 1 1 1 8 .5 1 2 1 0 0 0 0 0 0 0 0 .3 .7\n' % i
+                header = ('VIRTUAL_POOL_SAMPLES 5\n9 16 1 4 2\n'
+                          '21 21 6 -6\n0 0 173 173\n1 1 0 0\n8 8 3 -3\n4\n0\n')
+                rows = [' '.join(map(str, [i, 1, 1, 1, 8, .5, 1., 2., 1.,
+                                         1., 1., 1., 1., 0., 0., 0., *([0.]*16),
+                                         .3, .7, 1, -1, 1., *([0.]*16), 0]))+'\n'
                         for i in range(1, 61)]
                 (directory / 'virtual_pool_samples.dat').write_text(header + ''.join(rows))
                 (directory / 'virtual_pool_iterations.dat').write_text('1 1 100\n')

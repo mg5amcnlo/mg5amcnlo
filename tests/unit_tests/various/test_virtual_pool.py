@@ -21,9 +21,14 @@ class VirtualPoolTests(unittest.TestCase):
     def write_job(self, name, rows, ledger='1 1 100\n', orders=1, pdgs='21 21 6 -6'):
         directory = self.root / name
         directory.mkdir()
-        header = 'VIRTUAL_POOL_SAMPLES 2\n5 8 %s 4 2\n%s\n0 0 173 173\n1 1 0 0\n' % (orders, pdgs)
-        (directory / pool.SAMPLES).write_text(header + ''.join(
-            ' '.join(str(x) for x in (*row[:4], 8, *row[4:], *([0.]*6), .3, .7)) + '\n' for row in rows))
+        header = ('VIRTUAL_POOL_SAMPLES 5\n9 16 %s 4 2\n%s\n0 0 173 173\n'
+                  '1 1 0 0\n8 8 3 -3\n4\n0\n') % (orders, pdgs)
+        records = []
+        for row in rows:
+            values = [*row[:4], 8, *row[4:8], 1., 1., 1., 1., 0., 0., 0.,
+                      *row[8:], *([0.]*14), .3, .7, 1, -1, 1., *([0.]*16), 0]
+            records.append(' '.join(map(str, values))+'\n')
+        (directory / pool.SAMPLES).write_text(header+''.join(records))
         if ledger is not None:
             (directory / pool.ITERATIONS).write_text(ledger)
         return directory
@@ -40,7 +45,7 @@ class VirtualPoolTests(unittest.TestCase):
                                ledger='1 1 40\n')
         metadata, rows, reports = pool.collect_samples([first, second, third],
                     {first: '7', second: '7', third: '8'})
-        self.assertEqual(metadata['nf'], 8)
+        self.assertEqual(metadata['nf'], 16)
         self.assertEqual(len(rows), 3)
         self.assertEqual([r['born'] for r in rows], [3., 5., 2.])
         self.assertEqual([r['weight'] for r in rows], [.002, .004, .025])
@@ -141,19 +146,6 @@ class VirtualPoolTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'every supplied'):
             pool.collect_samples([iteration], {})
 
-    def test_folds_are_stratified_and_sample_orders_stay_together(self):
-        rows = [dict(directory='job', channel=channel, iteration=iteration,
-                     sample=sample, order=order) for channel in (1, 2)
-                for iteration in (1, 2) for sample in range(1, 14) for order in (1, 2)]
-        folds = pool._folds(rows, 3)
-        assignments = {}
-        counts = {}
-        for row, fold in zip(rows, folds):
-            key = (row['channel'], row['iteration'], row['sample'])
-            self.assertEqual(assignments.setdefault(key, fold), fold)
-            counts.setdefault(key[:2], [0, 0, 0])[fold] += row['order'] == 1
-        for count in counts.values():
-            self.assertLessEqual(max(count) - min(count), 1)
 
     def test_import_does_not_load_optional_numpy(self):
         code = "import sys; import madgraph.various.virtual_pool; assert 'numpy' not in sys.modules"
@@ -184,7 +176,7 @@ class VirtualPoolTests(unittest.TestCase):
                 self.assertFalse(report['model_written'])
                 self.assertFalse(report['enabled'])
                 self.assertEqual(report['reason'], 'numpy_unavailable')
-                self.assertEqual(report['call_probability'], 'adaptive MINT')
+                self.assertEqual(report['call_probability'], 'adaptive native surrogate/grid residual')
                 self.assertEqual(report['neural']['reason'], 'numpy_unavailable')
                 self.assertFalse(output.exists())
                 self.assertFalse(companion.exists())
@@ -192,7 +184,7 @@ class VirtualPoolTests(unittest.TestCase):
     def test_retired_capture_format_requires_new_integration(self):
         job = self.write_job('obsolete', [])
         path = job / pool.SAMPLES
-        path.write_text(path.read_text().replace('VIRTUAL_POOL_SAMPLES 2', 'VIRTUAL_POOL_SAMPLES 1'))
+        path.write_text(path.read_text().replace('VIRTUAL_POOL_SAMPLES 5', 'VIRTUAL_POOL_SAMPLES 4'))
         with self.assertRaisesRegex(ValueError, 'restart integration'):
             pool.collect_samples([job])
 

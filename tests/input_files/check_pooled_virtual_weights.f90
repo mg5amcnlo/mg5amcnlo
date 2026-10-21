@@ -7,6 +7,7 @@ program check_pooled_virtual_weights
   character*7 event_norm
   common/event_normalisation/event_norm
   double precision :: b(3),v(3),k(3),residual(3),approximation(3),expected(3)
+  double precision :: z,truth(4),frozen(4),prediction,lkl
   integer :: nloops,nprepares,nhelicities,j,carrier_type
   integer,external :: find_virtual_mint_carrier
   logical fixed_order,nlo_ps
@@ -16,6 +17,128 @@ program check_pooled_virtual_weights
   icontr=0
 
   select case(trim(mode))
+  case('surrogate_cancellation')
+     b=[2d0,0d0,-3d0];v=[0d0,7d0,-.5d0];k=2d0
+     call set_point(b,v,k)
+     call enable_surrogate(2d0)
+     call exercise_virtual_stage()
+     if(.not.vs_ratio_set.or..not.vs_vcomp)error stop 'fitted surrogate not selected'
+     call close_vector(amp_split_avv,2d0*b,'fitted approximation')
+     call close_vector(amp_split_avv+amp_split_virt,v,'fitted cancellation at zero virtual')
+     residual=amp_split_virt
+     approximation=amp_split_avv
+     nloops=loop_calls
+     fold=1;average_virtual=-777d0;exact_virtual=999d0
+     call exercise_virtual_stage()
+     if(loop_calls/=nloops)error stop 'fold repeated fitted virtual work'
+     call close_vector(amp_split_virt,residual,'fitted fold residual')
+     call close_vector(amp_split_avv,approximation,'fitted fold approximation')
+  case('surrogate_sampling')
+     b=[2d0,1d0,-1d0];v=[7d0,-4d0,1d0];k=2d0
+     call set_point(b,v,k)
+     call enable_surrogate(2d0)
+     virtual_fraction=.25d0
+     call exercise_virtual_stage()
+     approximation=amp_split_avv
+     call close_vector(amp_split_avv+.25d0*amp_split_virt,v,'fitted sampling mean')
+     nloops=loop_calls;uniform=.9d0
+     call exercise_virtual_stage()
+     if(loop_calls/=nloops.or.vs_vcomp)error stop 'unsampled point entered the fit'
+     call close_vector(amp_split_virt,[0d0,0d0,0d0],'unsampled fitted residual')
+     call close_vector(amp_split_avv,approximation,'unsampled fitted approximation')
+     abrv='virt';amp_split_avv=0d0
+     call exercise_virtual_stage()
+     call close_vector(amp_split_virt,v-approximation,'separate fitted virtual stream')
+     if(vs_fvirt/=1d0)error stop 'separate stream sampling fraction'
+     abrv='all'
+     do j=1,2
+        born_spread_phase=j;nloops=loop_calls
+        call exercise_virtual_stage()
+        if(loop_calls/=nloops.or.vs_vcomp)error stop 'calibration evaluated fitted residual'
+        call close_vector(amp_split_avv,approximation,'calibration retains fitted average')
+     enddo
+  case('surrogate_fit_weights')
+     call set_point([1d0,0d0,0d0],[2d0,0d0,0d0],[0d0,0d0,0d0])
+     use_pooled_virtual=.false.;VirtTrickSurrogate=2
+     vs_vcomp=.true.;vs_featok=.true.;vs_born=1d0;vs_fvirt=.25d0
+     vs_feat=0d0;vs_feat(1)=1d0;vs_nfeat=4
+     average_virtual(0,1)=1d0
+     icontr=2;itype(1:2)=[14,15]
+     do j=1,30
+        ! Target 2 has integrand factor 3; target 4 has factor 1.
+        ! The fitted constant is (9*2+4)/(9+1) = 2.2.
+        vs_virt=2d0;wgts(1,1:2)=[12d0,3d0]
+        call virt_surrogate_fit_point
+        vs_virt=4d0;wgts(1,1:2)=[12d0,1d0]
+        call virt_surrogate_fit_point
+     enddo
+     vs_virt=1000d0;wgts(1,1:2)=[3996d0,1d0]
+     imode=1;call virt_surrogate_fit_point
+     imode=0;use_pooled_virtual=.true.;call virt_surrogate_fit_point
+     use_pooled_virtual=.false.;VirtTrickSurrogate=0;call virt_surrogate_fit_point
+     VirtTrickSurrogate=2;vs_vcomp=.false.;call virt_surrogate_fit_point
+     call vs_solve(1,.false.)
+     if(abs(vs_value(1)-2.2d0)>1d-8)error stop 'fit weights or grid-setup gating changed'
+  case('surrogate_fitting')
+     call vs_reset
+     truth=[1d0,2d0,-.5d0,.25d0]
+     do j=1,120
+        z=(j-60d0)/30d0
+        vs_feat(1:4)=[1d0,z,z*z,sin(2d0*z)]
+        prediction=dot_product(truth,vs_feat(1:4))
+        call vs_accumulate(1,prediction,0d0,1d0+.1d0*j)
+     enddo
+     vs_featok=.true.
+     call vs_select(1,1d0)
+     if(vs_ratio_set.or.vs_value(1)/=0d0)error stop 'fit changed within iteration'
+     call vs_solve(1,.false.)
+     call vs_select(1,1d0)
+     if(.not.vs_ratio_set)error stop 'fit did not improve the grid'
+     do j=1,4
+        vs_feat=0d0;vs_feat(j)=1d0
+        if(abs(vs_value(1)-truth(j))>1d-6)error stop 'weighted fit lost known correlation'
+     enddo
+     call load_surrogate_model(0d0,2)
+     do j=1,120
+        z=(j-60d0)/30d0
+        vs_feat(1:4)=[1d0,z,z*z,sin(2d0*z)]
+        call vs_accumulate(1,1d0,1.1d0,1d0)
+        call vs_accumulate(2,1d0,1.1d0,1d0)
+     enddo
+     if(vs_value(1)/=0d0)error stop 'validation refitted its own points'
+     call vs_solve(1,.true.)
+     call vs_solve(2,.false.)
+     vs_featok=.true.
+     call vs_select(1,1d0)
+     if(.not.vs_ratio_set)error stop 'sign-aware fallback selection'
+     call vs_select(2,1d0)
+     if(vs_ratio_set)error stop 'variance fallback selection'
+     call vs_reset
+     vs_featok=.true.;vs_feat(1)=1d0
+     call vs_select(1,1d0)
+     if(vs_ratio_set.or.vs_value(1)/=0d0)error stop 'grid reset retained a fit'
+  case('surrogate_features')
+     call set_point([2d0,0d0,0d0],[1d0,0d0,0d0],[0d0,0d0,0d0])
+     VirtTrickSurrogate=2
+     p_born(:,1)=[10d0,0d0,0d0,10d0];p_born(:,2)=[10d0,0d0,0d0,-10d0]
+     p_born(:,3)=[5d0,3d0,0d0,4d0];p_born(:,4)=[5d0,-3d0,0d0,-4d0]
+     QES2=4d0
+     ! The unresolved real leg is 3: real links (1,4) and (5,5)
+     ! refer to native Born links (1,3) and (4,4).
+     call vs_add_link(p_born,QES2,3,1,4,2d0)
+     call vs_add_link(p_born,QES2,3,5,5,3d0)
+     call vs_features(p_born,2d0,QES2,VirtTrickSurrogate)
+     if(.not.vs_featok.or.vs_nfeat/=16)error stop 'missing kinematic features'
+     lkl=log(5d0)
+     if(abs(vs_feat(2)-2d0*lkl)>1d-12.or.abs(vs_feat(3)-2d0*lkl*lkl)>1d-12) &
+          error stop 'real-to-Born colour link mapping'
+     if(vs_feat(1)/=2d0.or.vs_feat(4)/=3d0)error stop 'Born or massive self-link feature'
+     if(abs(vs_feat(5)-2d0*log(100d0))>1d-12)error stop 'all-pair kinematic log'
+     frozen=vs_feat(1:4)
+     VirtTrickSurrogate=1;call vs_features(p_born,2d0,QES2,VirtTrickSurrogate)
+     if(vs_nfeat/=4.or.any(vs_feat(1:4)/=frozen))error stop 'dipole feature mode'
+     QES2=0d0;call vs_features(p_born,2d0,QES2,VirtTrickSurrogate)
+     if(vs_featok)error stop 'invalid reference scale used by fit'
   case('born_spread_calibration')
      b=[2d0,-1d0,3d0];v=[7d0,-4d0,1d0];k=[.5d0,-2d0,1d0]
      do j=1,2
@@ -145,12 +268,15 @@ program check_pooled_virtual_weights
      if(.not.pooled_virtual_sampled.or.pooled_probability/=1d0)error stop 'tail probability'
      call close_vector(amp_split_avv+amp_split_virt,v,'exact tail correction uses actual probability')
      if(virtual_fraction(1)/=.01d0)error stop 'tail changed channel fraction'
-  case('pooled_normalization')
+  case('pooled_normalization','surrogate_normalization')
      fixed_order=.true.; nlo_ps=.false.; flavour_bias=[0,1]; lpp=0
      event_norm='bias'
-     b=[2d0,0d0,-3d0]; k=[0.25d0,99d0,0.5d0]; v=b*k
+     b=[2d0,0d0,-3d0]; k=[0.25d0,99d0,0.5d0]
+     if(mode=='surrogate_normalization')k=2d0
+     v=b*k
      do j=1,4
         call set_point(b,v,k)
+        if(mode=='surrogate_normalization')call enable_surrogate(2d0)
         call exercise_virtual_stage()
         icontr=0
         call exercise_virtual_tracking()
@@ -170,17 +296,18 @@ program check_pooled_virtual_weights
         expected=b*f_nb*5d0*7d0
         call close_vector(born_wgt_mint(1:3),expected,'bias factor missing or repeated')
         call close_vector(virt_wgt_mint(1:3),[0d0,0d0,0d0],'zero residual changed')
-        call close_vector(pooled_virtual_ratio*born_wgt_mint(1:3), &
+        call close_vector(k*born_wgt_mint(1:3), &
              v*f_nb*5d0*7d0,'reconstructed weighted virtual')
      enddo
      ! No valid carrier must omit the observation, not fit an unscaled Born.
      call set_point(b,v,k)
+     if(mode=='surrogate_normalization')call enable_surrogate(2d0)
      call exercise_virtual_stage()
      icontr=0
      call exercise_virtual_tracking()
      call prepare_weight_lines(1)
      call include_PDF_and_alphas()
-     if(pooled_virtual_sampled)error stop 'unscaled Born observation retained'
+     if(pooled_virtual_sampled.or.vs_vcomp)error stop 'unscaled Born observation retained'
   case default
      error stop 'unknown test mode'
   end select
