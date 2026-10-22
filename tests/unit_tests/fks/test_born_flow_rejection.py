@@ -96,6 +96,11 @@ class TestBornFlowRejection(unittest.TestCase):
     def test_outer_rejection_with_native_sector_matching(self):
         self.check_mode('legacy')
 
+    def test_massive_reference_without_soft_endpoint_keeps_shared_flow(self):
+        for mode in ('massive', 'massive_middle', 'massive_uncut'):
+            with self.subTest(mode=mode):
+                self.check_mode(mode)
+
     def test_nonfinite_weights_discard_all_folds_and_recover(self):
         for mode in ('weight_nan', 'weight_inf', 'weight_neginf', 'weight_scaled',
                      'weight_pdf', 'weight_parton', 'weight_sum'):

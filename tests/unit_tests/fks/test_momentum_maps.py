@@ -247,6 +247,9 @@ class TestMomentumMaps(unittest.TestCase):
     def test_massive_soft_counterevents(self):
         self.check_map("soft_counterevent")
 
+    def test_massive_born_measure_and_sector_dependent_branch_support(self):
+        self.check_map("massive_born_measure")
+
     def test_massive_final_inverse_both_solutions(self):
         self.check_map("massive")
 
