@@ -83,6 +83,18 @@ Step 0 first adapts the ordinary MINT grid, then uses 800,000 MINT points to
 fit the factors and 200,000 separate points to validate them. These extra
 points skip the exact one-loop residual virtual calculation. The Born-based
 average virtual remains in the nonvirtual S weights used by the fit.
+
+Training and validation evaluate only S-event contributions: they retain
+the MC subtraction, G replacements and the real-emission S term proportional
+to `1-P`, while omitting H records and the complete inner H-history sum.
+All S contributions still receive their normal cuts, flow weights, PDFs and
+bias factors before grouping and fitting. Invalid S weights reject the whole
+folded sample. H-only projection and colour failures are not evaluated during
+calibration. Ordinary grid adaptation, the restart after fitting, envelope
+integration and event generation retain the complete H/S evaluation.
+Skipping unused H histories changes random-number consumption, so individual
+calibration samples and the fitted tables need not reproduce older runs.
+
 While collecting a pooled virtual model, calibration also skips virtual
 features and colour/helicity queries and uses the current MINT mean directly.
 If a frozen model is already loaded, its prediction is retained. Committed

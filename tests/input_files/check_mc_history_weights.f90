@@ -43,6 +43,7 @@ program check_mc_history_weights
   integer :: j,k,old_icontr
   integer :: imass,ip,igs,igc,icuts,mode,i,cases,baseline_reals
   logical :: cuts_born,cuts_real
+  character(8) :: matching
   call allocate_weight_lines(nexternal)
   probabilities=[0d0,0.37d0,1d0]
   gvalues=[0d0,0.6d0,1d0]
@@ -65,6 +66,8 @@ program check_mc_history_weights
   ifold_counter=1
   abrv='all '
   ickkw=0
+  call get_command_argument(1,matching)
+  if(trim(matching).eq.'fxfx')ickkw=3
   lpp=1
   xbk=0.1d0
   scale=100d0
@@ -142,6 +145,11 @@ program check_mc_history_weights
                   error stop 'zero P evaluated H matrix elements'
                 if (test_gsoft.eq.1d0.and.real_calls.gt.1) &
                   error stop 'zero G evaluated H counterterms'
+              elseif(mode.eq.2.and.cuts_born.and.cuts_real)then
+                if(test_p.lt.1d0.and.maxval(abs(specialized(:,11,:))).eq.0d0) &
+                  error stop 'S-only evaluation lost the real S contribution'
+                if(test_p.eq.1d0.and.real_calls.ge.baseline_reals) &
+                  error stop 'S-only evaluation computed the pure H real term'
               endif
             enddo
             cases=cases+1

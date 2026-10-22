@@ -102,3 +102,6 @@ class TestFxFxClustering(unittest.TestCase):
 
     def test_nonzero_branching_qcd_core_scale(self):
         self.check_clustering('qcd_core')
+
+    def test_electroweak_core_scale_uses_outgoing_coloured_momentum(self):
+        self.check_clustering('ew_core')

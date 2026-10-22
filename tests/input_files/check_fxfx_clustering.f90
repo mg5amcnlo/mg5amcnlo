@@ -20,6 +20,8 @@ program check_fxfx_clustering
      call check_zero(mode.eq.'wrapper')
   case ('qcd_core')
      call check_qcd_core()
+  case ('ew_core')
+     call check_ew_core()
   case default
      error stop 'unknown clustering test'
   end select
@@ -214,6 +216,35 @@ contains
     call close(scales(0),30d0,'QCD core transverse scale')
     call close(scales(1),30d0,'last QCD transverse scale')
   end subroutine
+
+  subroutine check_ew_core()
+    ! W b -> t has QCD lines at the core mother and one daughter.
+    ! Its reference scale needs the outgoing momentum as well as the beams.
+    integer :: ipdg(3),cpdg(0:2,0:0,1),tree(2,-1:-1),ij(0),iord(0:0)
+    integer :: conf,lst(0,1),sp(0),ctype(7),qcd_mask(0:0,1),qcd_count(0:0),beam
+    integer(kind=8) :: config_masks(1,7)
+    double precision :: p(0:3,3),scales(0:0),mass(0),width(0),ew_energy,qcd_energy,swap(0:3)
+    ew_energy=(173d0**2+80d0**2)/(2d0*173d0)
+    qcd_energy=(173d0**2-80d0**2)/(2d0*173d0)
+    tree(:,-1)=[1,2]
+    call make_cluster_config_masks(3,0,1,lst,config_masks)
+    do beam=1,2
+       ipdg=[24,5,6]
+       p(:,1)=[ew_energy,0d0,0d0,qcd_energy]
+       p(:,2)=[qcd_energy,0d0,0d0,-qcd_energy]
+       p(:,3)=p(:,1)+p(:,2)
+       if(beam.eq.2)then
+          ipdg(1:2)=[5,24]
+          swap=p(:,1)
+          p(:,1)=p(:,2)
+          p(:,2)=swap
+       endif
+       ctype=0
+       call cluster(3,p,1,0,lst,config_masks,cpdg,qcd_mask,tree,ipdg,mass,width,1,sp,conf,scales,ij,iord,ctype,qcd_count)
+       if(qcd_count(0).ne.2)error stop 'EW core vertex classification'
+       call close(scales(0),sqrt(173d0**2-80d0**2),'EW core QCD invariant scale')
+    enddo
+  end subroutine
 end program
 
 ! Model/export interfaces are controlled data. All kinematic calculations and
@@ -240,6 +271,8 @@ double precision function get_mass_from_id(id)
   get_mass_from_id=0d0
   if (id.eq.23) get_mass_from_id=90d0
   if (id.eq.25) get_mass_from_id=125d0
+  if (id.eq.24) get_mass_from_id=80d0
+  if (abs(id).eq.6) get_mass_from_id=173d0
 end function
 
 subroutine set_pdg(dummy,iproc)
