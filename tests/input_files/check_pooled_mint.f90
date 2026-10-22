@@ -1,6 +1,6 @@
 module pooled_mint_fixture
   implicit none
-  integer, parameter :: ndimmax=4,n_ord_virt=2,norders=n_ord_virt
+  integer, parameter :: dp=kind(1d0),ndimmax=4,n_ord_virt=2,norders=n_ord_virt
   integer :: ndim=4,ichan=1,icell(4)=1
   double precision :: xacc(1,4,1)=0d0,f(10)=0d0,virtual_fraction(1)=.25d0
   double precision :: average_virtual(0:2,1),polyfit(0:2)=0d0,wgt_mult=1d0

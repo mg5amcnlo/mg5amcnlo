@@ -76,7 +76,12 @@ class TestBornSpreading(unittest.TestCase):
             (work / 'group_context.f90').write_text(
                 'module process_module\ninteger :: ndelH=1\n'
                 'integer :: event_colour_H(2,5,3,2)=0\nend module\n'
-                'module scale_module\ndouble precision :: emsca_H(3,2,1,1)=1d0\nend module\n')
+                'module scale_module\ndouble precision :: emsca_H(3,2,1,1)=1d0\nend module\n'
+                # Pool collection is disabled in this grouping fixture.
+                'subroutine capture_pooled_event_weights(i_soft)\n'
+                'integer, intent(in) :: i_soft\n'
+                "error stop 'unexpected pooled event-weight collection'\n"
+                'end subroutine\n')
             (work / 'grouping.f').write_text(''.join(
                 routine(TEMPLATE / 'fks_singular.f', name) for name in
                 ('sum_identical_contributions', 'apply_born_spread_weight',

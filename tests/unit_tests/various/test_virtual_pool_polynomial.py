@@ -56,7 +56,9 @@ class PolynomialPoolTests(unittest.TestCase):
 
     def test_born_noise_fit_generalizes_with_large_signed_integration_weights(self):
         rng=np.random.default_rng(928)
-        x=rng.uniform(-1,1,(1500,2))
+        # Lognormal carriers leave few effective observations. Average the
+        # label noise with a larger sample, retaining the accuracy threshold.
+        x=rng.uniform(-1,1,(12000,2))
         born=np.exp(rng.normal(0,2,len(x)))
         born[::101]=0.;born[1::71]*=-1
         virtual=born*(.4+.6*x[:,0]-.2*x[:,1]+rng.normal(0,.3,len(x)))

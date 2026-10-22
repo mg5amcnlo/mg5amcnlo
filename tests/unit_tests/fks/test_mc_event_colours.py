@@ -50,7 +50,14 @@ class TestMCEventColours(unittest.TestCase):
             (work / 'contexts.f90').write_text(
                 'module mc_native_context\ninteger :: history_flavours(1,1)=1\nend module\n'
                 'module mint_module\ninteger :: imode=0,born_spread_phase=0\n'
-                'integer :: ndim=1,ifold(1)=1\nlogical :: only_virt=.false.\nend module\n')
+                'integer :: ndim=1,ifold(1)=1\nlogical :: only_virt=.false.\n'
+                'logical :: use_pooled_virtual=.false.,pooled_virtual_collecting=.false.\n'
+                'end module\n'
+                # This fixture exercises event colours without pool collection.
+                'subroutine capture_pooled_event_weights(i_soft)\n'
+                'integer, intent(in) :: i_soft\n'
+                "error stop 'unexpected pooled event-weight collection'\n"
+                'end subroutine\n')
             routines = [('driver_mintMC.f', 'init_process_module_n1body_wrapper'),
                         ('driver_mintMC.f', 'init_process_module_n1body_flow'),
                         ('add_write_info.f', 'fill_icolor_H'),

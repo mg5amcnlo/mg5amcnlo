@@ -74,11 +74,21 @@ program check_pooled_virtual_weights
      enddo
      vs_virt=1000d0;wgts(1,1:2)=[3996d0,1d0]
      imode=1;call virt_surrogate_fit_point
-     imode=0;use_pooled_virtual=.true.;call virt_surrogate_fit_point
+     ! A barrier-trained model freezes the native fit during application.
+     imode=0;use_pooled_virtual=.true.;pooled_virtual_applying=.true.
+     call virt_surrogate_fit_point
      use_pooled_virtual=.false.;VirtTrickSurrogate=0;call virt_surrogate_fit_point
      VirtTrickSurrogate=2;vs_vcomp=.false.;call virt_surrogate_fit_point
      call vs_solve(1,.false.)
      if(abs(vs_value(1)-2.2d0)>1d-8)error stop 'fit weights or grid-setup gating changed'
+     ! Collection still adapts its native surrogate. One more target 4
+     ! with unit integrand factor changes the weighted mean to 664/301.
+     use_pooled_virtual=.true.;pooled_virtual_applying=.false.
+     VirtTrickSurrogate=2;vs_vcomp=.true.;vs_virt=4d0
+     wgts(1,1:2)=[12d0,1d0]
+     call virt_surrogate_fit_point
+     call vs_solve(1,.false.)
+     if(abs(vs_value(1)-664d0/301d0)>1d-8)error stop 'pooled collection did not adapt the native fit'
   case('surrogate_fitting')
      call vs_reset
      truth=[1d0,2d0,-.5d0,.25d0]
