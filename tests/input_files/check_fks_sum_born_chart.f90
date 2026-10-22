@@ -17,6 +17,7 @@ program check_fks_sum_born_chart
   integer :: granny_sector
   common/test_granny/granny_sector
   double precision :: bounds(3),sampled_final(3),native_bounds(3)
+  double precision :: foreign_bounds(3),foreign_native_bounds(3)
   integer :: sector
 
   itree(:,-1)=[3,4]
@@ -67,6 +68,37 @@ program check_fks_sum_born_chart
   call set_tau_min()
   if(any([tau_Born_lower_bound,tau_lower_bound,tau_lower_bound_resonance].ne.native_bounds)) &
     error stop 'auxiliary matching chart changed'
+
+  ! An auxiliary history can use a Born context absent from the integrated
+  ! sectors. Its recoil selection still needs the ordinary generation cuts.
+  nFKSprocess=3
+  active_context=2
+  native_mapping=.false.
+  FKSExplicitSum=.false.
+  call set_tau_min()
+  foreign_bounds=[tau_Born_lower_bound,tau_lower_bound,tau_lower_bound_resonance]
+  native_mapping=.true.
+  call set_tau_min()
+  foreign_native_bounds=[tau_Born_lower_bound,tau_lower_bound,tau_lower_bound_resonance]
+  if(all(foreign_bounds.eq.foreign_native_bounds))error stop 'fixture has no native cut difference'
+  FKSExplicitSum=.true.
+  do sector=1,2
+    ! Exercise both a fresh calculation and cached recoil/physical bounds.
+    call select_native_recoil(1)
+    if(.not.native_mapping.or.active_context.ne.2)error stop 'native context changed'
+    if(granny_sector.ne.3)error stop 'foreign recoil lost its FKS sector'
+    if(any([tau_Born_lower_bound,tau_lower_bound,tau_lower_bound_resonance].ne.foreign_bounds)) &
+      error stop 'foreign recoil lost its generation cuts'
+    call set_tau_min()
+    if(any([tau_Born_lower_bound,tau_lower_bound,tau_lower_bound_resonance].ne.foreign_native_bounds)) &
+      error stop 'foreign native map lost its physical bounds'
+  enddo
+  active_context=1
+  nFKSprocess=2
+  native_mapping=.false.
+  call set_tau_min()
+  if(any([tau_Born_lower_bound,tau_lower_bound,tau_lower_bound_resonance].ne.bounds)) &
+    error stop 'outer chart changed after foreign recoil'
   write(*,*) 'PASS common Born chart and local recoil'
 end program
 
@@ -74,7 +106,20 @@ subroutine set_granny(config,masses)
   implicit none
   integer :: sector,config,granny_sector
   double precision :: masses(*)
+  integer :: igranny,iaunt
+  logical :: granny_is_res,granny_chain(-5:5),granny_chain_real_final(-5:5)
   common/c_nFKSprocess/sector
   common/test_granny/granny_sector
+  common/c_granny_res/igranny,iaunt,granny_is_res,granny_chain,granny_chain_real_final
   granny_sector=sector
+  igranny=0
+  iaunt=0
+  granny_is_res=.false.
+  granny_chain=.false.
+  granny_chain_real_final=.false.
+end subroutine
+
+subroutine select_fks_recoil(members,allow)
+  implicit none
+  logical :: members(5),allow
 end subroutine

@@ -70,6 +70,7 @@ class TestFKSExplicitSum(unittest.TestCase):
         self.assertIn('FKSExplicitSum is not supported for UNLOPS', result.stdout)
 
     def test_common_born_chart_with_jet_cuts(self):
+        """Share outer charts while retaining auxiliary recoil and physical bounds."""
         with tempfile.TemporaryDirectory(prefix='mg5_fks_sum_chart_') as tmp:
             work = Path(tmp)
             includes = {
@@ -84,6 +85,8 @@ class TestFKSExplicitSum(unittest.TestCase):
                 'orders.inc': 'integer nsplitorders\nparameter(nsplitorders=1)',
                 'coupl.inc': '',
                 'born_props.inc': 'pmass=0d0\npwidth=0d0',
+                'born_conf.inc': 'integer iforest(2,-max_branch:-1,lmaxconfigs)\n'
+                                 'parameter(iforest=reshape([1,2,3,4],[2,2,1]))',
                 'fks_info.inc': 'integer fks_i_d(3),fks_j_d(3)\n'
                                 'parameter(fks_i_d=[5,5,5],fks_j_d=[1,3,2])',
             }
@@ -98,11 +101,13 @@ class TestFKSExplicitSum(unittest.TestCase):
                 'integer :: native_epoch=1,active_context=1,native_context_ids(3)=[1,1,2]\n'
                 'logical :: native_mapping=.false.\nend module\n')
             (work / 'chart.f').write_text(fortran_routine(TEMPLATE / 'setcuts.f', 'set_tau_min'))
+            (work / 'recoil.f').write_text(fortran_routine(
+                TEMPLATE / 'resonance_histories.f', 'select_native_recoil'))
             result = subprocess.run([
                 shutil.which('gfortran'), '-O2', '-fcheck=all',
                 '-ffixed-line-length-132', '-I', str(work), str(TEMPLATE / 'FKSParams.f90'),
                 str(TEMPLATE / 'fks_phase_space_data.f'), str(work / 'contexts.f90'),
-                str(work / 'chart.f'),
+                str(work / 'chart.f'), str(work / 'recoil.f'),
                 str(ROOT / 'tests/input_files/check_fks_sum_born_chart.f90'),
                 '-o', str(work / 'check')], cwd=work, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -130,7 +135,12 @@ class TestFKSExplicitSum(unittest.TestCase):
             (work / 'contexts.f90').write_text(
                 'module process_module\ninteger :: ndelH=1\n'
                 'integer :: event_colour_H(2,5,2,2)=0\nend module\n'
-                'module scale_module\nreal(8) :: emsca_H(2,2,1,1)=1d0\nend module\n')
+                'module scale_module\nreal(8) :: emsca_H(2,2,1,1)=1d0\nend module\n'
+                # Pool collection is disabled in this cancellation fixture.
+                'subroutine capture_pooled_event_weights(i_soft)\n'
+                'integer, intent(in) :: i_soft\n'
+                "error stop 'unexpected pooled event-weight collection'\n"
+                'end subroutine\n')
             (work / 'weights.f').write_text('\n'.join(fortran_routine(
                 TEMPLATE / 'fks_singular.f', name) for name in
                 ('sum_identical_contributions', 'fill_mint_function_NLOPS', 'fill_mint_function',

@@ -731,12 +731,14 @@ c
             endif
          enddo
       sampling_sector=nFKSprocess
-      if (FKSExplicitSum.and.nlo_ps.and..not.native_mapping) then
+      if (FKSExplicitSum.and.nlo_ps.and..not.native_mapping.and.
+     $    nFKSprocess.le.fks_integrated) then
 c S weights may be combined only at a common Born point. In particular,
 c jet cuts give ISR and FSR different Born thresholds. Use the same
 c sampling chart for all integrated sectors, also during event replay.
 c Choose the widest Born support; radiation and recoil remain local to
-c nFKSprocess. Auxiliary inner matching histories keep their own maps.
+c nFKSprocess. Auxiliary inner matching histories keep their own maps,
+c even when recoil selection temporarily requests generation cuts.
          sampling_sector=0
          do iFKS=1,fks_integrated
             if(native_context_ids(iFKS).ne.active_context)cycle
