@@ -57,6 +57,32 @@ program check_born_flow_rejection
     enddo
     if(draws.ne.old_draws)error stop 'sampled an invalid colour distribution'
     if(rejected_born_flow_points.ne.6)error stop 'incorrect rejection count'
+  elseif(index(mode,'massive').eq.1)then
+    nndim=5
+    ickkw=0
+    mcatnlo_delta=.false.
+    ifks=5
+    jfks=3
+    if(trim(mode).eq.'massive_middle')ifks=4
+    abrv='all'
+    x=0.5d0
+    FKSExplicitSum=.true.
+    MCExplicitKLSum=.false.
+    outer_no_endpoint=.true.
+    born_cuts=trim(mode).ne.'massive_uncut'
+    call weight_lines_allocated(5,32,1,1)
+    do i=0,2
+      dummy=sigintF(x,1d0,min(i,1),answer)
+      if(born_cuts.and.born_flow_picked.le.0)error stop 'shared Born lost its colour flow'
+      if(.not.born_cuts.and.born_flow_picked.ge.0)error stop 'ignored physical Born cuts'
+    enddo
+    dummy=sigintF(x,1d0,2,answer)
+    if(born_calls.ne.0.or.any(born_wgt_mint.ne.0d0).or.any(virt_wgt_mint.ne.0d0)) &
+         error stop 'included Born/virtual terms from an absent soft endpoint'
+    if(icontr.ne.3.or.any(answer.ne.9d0))error stop 'lost supported real-sector contributions'
+    if(draws.ne.1.or.rejected_born_flow_points.ne.0)error stop 'changed shared flow sampling'
+    if(last_grid_weight.ne.9d0.or.real_point_active)error stop 'invalid completed massive point'
+    call deallocate_weight_lines()
   else
     nndim=5
     ickkw=0
@@ -182,8 +208,20 @@ end subroutine
 logical function passcuts(p,rwgt)
   use flow_fixture
   double precision :: p(0:3,5),rwgt
+  integer :: i_fks,j_fks
+  common/fks_indices/i_fks,j_fks
   rwgt=1d0
-  passcuts=born_cuts
+  passcuts=born_cuts.and.p(0,1).gt.0d0
+  if(outer_no_endpoint.and.p(0,1).gt.0d0.and.any(p(0,:).eq.0d0))then
+    if(any(p(:,i_fks).ne.0d0))error stop 'missing zero-momentum FKS slot in Born cuts'
+  endif
+end function
+logical function passcuts_native_born(p,rwgt,born_ref_scale)
+  double precision :: p(0:3,5),rwgt,born_ref_scale
+  logical :: passcuts
+  external passcuts
+  born_ref_scale=1d0
+  passcuts_native_born=passcuts(p,rwgt)
 end function
 subroutine compute_born()
   use flow_fixture

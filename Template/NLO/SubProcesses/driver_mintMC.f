@@ -658,8 +658,9 @@ c
       include 'orders.inc'
       include 'fks_info.inc'
       include 'mc_histories.inc'
-      logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
-      logical rejected_point,weights_valid
+      logical firsttime,passcuts,passcuts_native_born,
+     $     passcuts_nbody,passcuts_n1body
+      logical rejected_point,weights_valid,born_cuts_for_flow
       save rejected_point
       data rejected_point/.false./
       integer i,ifl,proc_map(0:fks_configs,0:fks_configs),nFKS_picked_nbody,nFKS_in,nFKS_out,izero,mohdr,iFKS,sum,
@@ -670,7 +671,7 @@ c
       save vol1,proc_map,sum
       integer             ini_fin_fks
       common/fks_channels/ini_fin_fks
-      external passcuts
+      external passcuts,passcuts_native_born
       parameter (izero=0,mohdr=-100)
       data firsttime/.true./
       integer     fold,ifold_counter
@@ -702,6 +703,7 @@ c
       type(fks_phase_space_point) phase_space
       logical have_sum_born
       double precision sum_born(0:3,nexternal-1),sum_xbjrk(2)
+      double precision p_born_flow(0:3,nexternal),born_ref_scale
       interface
          subroutine repartition_MC_H(first_native,p,p_lab,
      $        p_cms,jacPS,vegas_wgt,sampling_wgt,born_flow_factor,
@@ -873,9 +875,22 @@ c 1/proc_map(0,0)*vol1)
             call sborn_native(p_born,wgt1)
             call get_born_flow(born_flow_picked,born_flow_factor)
             if(born_flow_picked.eq.0)goto 900
-! give it a negative value so that we can keep track of the fact that
-! this was obtained with momenta that do not pass the cuts.
-            born_flow_picked=-born_flow_picked
+! A second massive solution has no soft endpoint, but another sector
+! in an explicit FKS sum can have one at the same Born point. Check
+! the physical Born cuts before marking its shared flow negative.
+! Born/virtual weights still require the reference sector's endpoint.
+            born_cuts_for_flow=.false.
+            if(FKSExplicitSum.and.p1_cnt(0,1,0).lt.0d0)then
+               p_born_flow(:,1:i_fks-1)=p_born(:,1:i_fks-1)
+               p_born_flow(:,i_fks)=0d0
+               p_born_flow(:,i_fks+1:nexternal)=
+     $              p_born(:,i_fks:nexternal-1)
+! FxFx cuts need the physical Born's clustering labels and scales too.
+               born_cuts_for_flow=passcuts_native_born(p_born_flow,
+     $              rwgt,born_ref_scale)
+            endif
+            if(.not.born_cuts_for_flow)
+     $           born_flow_picked=-born_flow_picked
          endif
          
  11      continue

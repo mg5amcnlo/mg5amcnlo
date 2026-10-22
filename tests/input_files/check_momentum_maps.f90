@@ -183,6 +183,11 @@ program check_momentum_maps
      write(*,*)'PASS ',trim(mode)
      stop
   endif
+  if (mode.eq.'massive_born_measure') then
+     call check_massive_born_measure()
+     write(*,*)'PASS ',trim(mode)
+     stop
+  endif
   if (mode.eq.'soft_recoil_inverse') then
      ! Independent three-body massless kinematics: the soft spectator is
      ! transverse to one hard daughter. Boosting this recoil back to Born
@@ -558,6 +563,121 @@ program check_momentum_maps
   if(mode.eq.'native_massive'.and.nratios.eq.0)error stop 'no counterevent ratios tested'
   write(*,*) 'PASS ',trim(mode),nchecked,nplus,nminus
 contains
+  subroutine check_massive_born_measure()
+    ! Integrate the actual endpoint measure over both massive branches.
+    ! Removing the analytic soft radiation volume must leave one Born
+    ! measure for each emitter, including when their branch boundaries differ.
+    use fks_phase_space_data, only: p1_cnt,jac_cnt, &
+         xiimax_ev,xinorm_ev,nocntevents,isolsign
+    integer,parameter :: nx=16,ny=16
+    double precision,parameter :: recoils(4)=[4.7d0,300d0,900d0,173d0]
+    double precision :: mb(4),pmass(5)
+    common/to_mass/pmass
+    integer :: i_fks,j_fks
+    common/fks_indices/i_fks,j_fks
+    double precision :: rad(3),bounds(2),ratio,total,w,dx
+    double precision :: soft_volume,born_flux
+    integer :: sample,emitter,ix,iy,branch,minus_count
+    logical :: supported(2)
+
+    native_mapping=.false.
+    sqrtshat=1000d0
+    shat=sqrtshat**2
+    i_fks=5
+    soft_volume=shat/(16d0*pi**2)
+    ! For a 2->3 call with unit Born sampling factors, compute_flux supplies
+    ! 1/(2*s*(2*pi)**2); it is common to the real and soft configurations.
+    born_flux=1d0/(2d0*shat*(2d0*pi)**2)
+    minus_count=0
+    do sample=1,size(recoils)
+       mass=4.7d0
+       if(sample.eq.4)mass=173d0
+       mrec=recoils(sample)
+       energy=(shat+mass**2-mrec**2)/(2d0*sqrtshat)
+       momentum=sqrt(energy**2-mass**2)
+       born(:,1)=[sqrtshat/2d0,0d0,0d0,sqrtshat/2d0]
+       born(:,2)=[sqrtshat/2d0,0d0,0d0,-sqrtshat/2d0]
+       born(:,3)=[energy,0.3d0*momentum,0.4d0*momentum,sqrt(0.75d0)*momentum]
+       born(:,4)=born(:,1)+born(:,2)-born(:,3)
+       mb=[0d0,0d0,mass,mrec]
+       pmass=[mb,0d0]
+       do emitter=1,2
+          j_fks=emitter+2
+          total=0d0
+          do iy=1,ny
+             rad=[0.1d0,(iy-0.5d0)/ny,0.137d0]
+             call generate_massive_born_point(rad,born,mb)
+             ratio=xiimax_ev/xinorm_ev
+             do branch=1,2
+                dx=ratio/nx
+                if(branch.eq.2)dx=(1d0-ratio)/nx
+                if(dx.eq.0d0)cycle
+                do ix=1,nx
+                   rad(1)=(ix-0.5d0)*dx
+                   if(branch.eq.2)rad(1)=ratio+rad(1)
+                   call generate_massive_born_point(rad,born,mb)
+                   if(isolsign.eq.-1)then
+                      minus_count=minus_count+1
+                      if(.not.nocntevents.or.any(jac_cnt(0:2).gt.0d0).or. &
+                           any(p1_cnt(0,1,0:2).gt.0d0)) &
+                           error stop 'second branch acquired a soft counterevent'
+                      w=0d0
+                   else
+                      if(nocntevents.or.jac_cnt(0).le.0d0) &
+                           error stop 'first branch lost its soft counterevent'
+                      if(maxval(abs(p1_cnt(:,1:4,0)-born)).gt.1d-9.or. &
+                           any(p1_cnt(:,5,0).ne.0d0))error stop 'endpoint changed Born point'
+                      w=jac_cnt(0)/born_flux*xinorm_ev/(xiimax_ev*soft_volume)
+                   endif
+                   total=total+w*dx/ny
+                enddo
+             enddo
+          enddo
+          if(abs(total-1d0).gt.1d-10)then
+             write(*,*)'Born normalization',sample,emitter,total
+             error stop 'massive Born measure is not normalized'
+          endif
+       enddo
+       ! Keep exactly the same Born point and radiation coordinates. The
+       ! unequal-mass pair has different branches for its two emitters.
+       if(sample.eq.2)then
+          rad=[0.1d0,0.999d0,0.137d0]
+          do emitter=1,2
+             j_fks=emitter+2
+             call generate_massive_born_point(rad,born,mb)
+             bounds(emitter)=xiimax_ev/xinorm_ev
+          enddo
+          if(abs(bounds(1)-bounds(2)).lt.1d-3)error stop 'fixture has no branch difference'
+          rad(1)=sum(bounds)/2d0
+          do emitter=1,2
+             j_fks=emitter+2
+             call generate_massive_born_point(rad,born,mb)
+             supported(emitter)=jac_cnt(0).gt.0d0
+          enddo
+          if(supported(1).eqv.supported(2))error stop 'sector-dependent branch support lost'
+       endif
+    enddo
+    if(minus_count.eq.0)error stop 'normalization never tested the second branch'
+  end subroutine check_massive_born_measure
+
+  subroutine generate_massive_born_point(rad,born_point,mb)
+    use fks_phase_space, only: generate_FKS_kinematics
+    use fks_phase_space_data, only: p_born,p_born_l
+    double precision,intent(in) :: rad(3),born_point(0:3,4),mb(4)
+    double precision :: jac0,q(0:3,5),xb(2)
+    logical :: good
+    p_born=born_point
+    p_born_l=born_point
+    jac0=1d0
+    xb=1d0
+    good=.true.
+    call generate_FKS_kinematics(rad,.true.,jac0,1d0,shat,shat,sqrtshat, &
+         1d0,0d0,xb,mb,jac,q,good)
+    if(.not.good.or.jac.le.0d0.or..not.all(ieee_is_finite(q))) &
+         error stop 'invalid massive radiation point'
+    if(maxval(abs(p_born-born_point)).ne.0d0)error stop 'radiation changed shared Born input'
+  end subroutine
+
   subroutine check_counter_ratio(real_p,born_p,native_x,native_measure,checked)
     ! Compare the physical soft-counterevent/real measure ratio with the
     ! original xi parameterization, independently of either sampling Jacobian.
