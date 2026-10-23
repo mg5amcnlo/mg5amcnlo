@@ -3501,6 +3501,10 @@ c while for the S-events we can sum it to the 'i_soft' one.
 c H-event. Equal flavours, colours, shower scales and momenta can be
 c summed before taking the ABS value.
                if (niproc(ii).ne.niproc(i)) cycle
+               if (ickkw_mod.eq.3.and.mcatnlo_delta_mod) then
+                  if (emsca_H_hard(event_owner(ii),ifold_cnt(ii)).ne.
+     $                emsca_H_hard(event_owner(i),ifold_cnt(i))) cycle
+               endif
                if (any(emsca_H(event_owner(ii),ifold_cnt(ii),
      $              1:ndelH,1:ndelH).ne.emsca_H(event_owner(i),
      $              ifold_cnt(i),1:ndelH,1:ndelH)))
@@ -3964,6 +3968,8 @@ c found the contribution that should be written:
          ifold_picked=ifold_cnt(icontr_picked)
          showerscaleH(1:ndelH,1:ndelH)=emsca_H(iFKS_picked,ifold_picked
      $        ,1:ndelH,1:ndelH)
+         if (ickkw_mod.eq.3.and.mcatnlo_delta_mod)
+     $        showerscaleH_hard=emsca_H_hard(iFKS_picked,ifold_picked)
          colour_connections=event_colour_H(:,:,iFKS_picked,ifold_picked)
       else
          Hevents=.false.

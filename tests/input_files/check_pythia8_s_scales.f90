@@ -163,11 +163,31 @@ program check_pythia8_s_scales
   ickkw_mod=3
   calls_before=random_calls
   call compute_shower_scale_nbody(p,-3,mc_shower_scale_mass())
-  call require(all(shower_scale_nbody.eq.2000d0),'FxFx scale prescription')
+  if (delta) then
+    call close(shower_scale_nbody(1,2),2000d0,'FxFx Delta ISR hard scale')
+    call close(shower_scale_nbody(1,3),2000d0,'FxFx Delta IF hard scale')
+    call close(shower_scale_nbody(3,1),fi_cap,'FxFx Delta directed FI cap')
+    call close(shower_scale_nbody(3,4),ff_cap,'FxFx Delta FF cap')
+    call require(shower_scale_nbody(1,1).eq.-1d0,'FxFx Delta diagonal is absent')
+    call require(shower_scale_nbody(1,4).eq.-1d0,'FxFx Delta absent colour connection')
+  else
+    call require(all(shower_scale_nbody.eq.2000d0),'FxFx scale prescription')
+  endif
   call close(shower_scale_hard,2000d0,'FxFx undamped hard scale')
-  call require(all(shower_scale_nbody_min.eq.2000d0),'FxFx narrow lower bounds')
-  call require(all(shower_scale_nbody_max.eq.2003d0),'FxFx narrow upper bounds')
+  call require(all(pack(shower_scale_nbody_min,shower_scale_nbody.ge.0d0).eq.2000d0), &
+       'FxFx narrow lower bounds')
+  call require(all(pack(shower_scale_nbody_max,shower_scale_nbody.ge.0d0).eq.2003d0), &
+       'FxFx narrow upper bounds')
   call require(random_calls.eq.calls_before,'FxFx scale setting needs no damping draw')
+  if (delta) then
+    call Bornonly_shower_scale(p,1)
+    call close(shower_scale_hard,2000d0,'FxFx Delta Born hard scale')
+    call close(shower_scale_nbody(3,4),ff_cap,'FxFx Delta Born FF cap')
+    call require(shower_scale_nbody(1,3).eq.-1d0,'FxFx Delta Born selected flow mask')
+    call require(all(shower_scale_nbody_min.eq.-1d0).and.all(shower_scale_nbody_max.eq.-1d0), &
+         'FxFx Delta Born has no damping interval')
+    call require(random_calls.eq.calls_before,'FxFx Delta Born needs no random draw')
+  endif
 
   ! At the merging boundary, the scale stays at Q for every RNG value.
   ! The subtraction retains its old three-GeV transition above Q.
@@ -178,7 +198,8 @@ program check_pythia8_s_scales
     calls_before=random_calls
     call compute_shower_scale_nbody(p,-3,mc_shower_scale_mass())
     call close(shower_scale_hard,20d0,'FxFx scale at the merging boundary')
-    call require(all(shower_scale_nbody.eq.20d0),'FxFx scalar matrix at boundary')
+    call require(all(pack(shower_scale_nbody,shower_scale_nbody.ge.0d0).eq.20d0), &
+         'FxFx scalar matrix at boundary')
     call require(random_calls.eq.calls_before,'FxFx scale is independent of RNG')
   enddo
   do j=1,size(thresholds)
@@ -197,10 +218,12 @@ program check_pythia8_s_scales
   shower_scale_n1body=222d0
   emsca_H=333d0
   calls_before=random_calls
-  call set_FxFx_shower_scale_nbody(100d0)
+  call set_FxFx_shower_scale_nbody(100d0,p,-3)
   call close(shower_scale_hard,100d0,'native FxFx undamped clustering reference')
-  call require(all(shower_scale_nbody_min.eq.100d0),'native FxFx lower bounds')
-  call require(all(shower_scale_nbody_max.eq.103d0),'native FxFx upper bounds')
+  call require(all(pack(shower_scale_nbody_min,shower_scale_nbody.ge.0d0).eq.100d0), &
+       'native FxFx lower bounds')
+  call require(all(pack(shower_scale_nbody_max,shower_scale_nbody.ge.0d0).eq.103d0), &
+       'native FxFx upper bounds')
   call require(random_calls.eq.calls_before,'native FxFx scale needs no damping draw')
   call require(all(shower_scale_n1body.eq.222d0).and.all(emsca_H.eq.333d0), &
        'native FxFx scale leaves H-event matrices intact')

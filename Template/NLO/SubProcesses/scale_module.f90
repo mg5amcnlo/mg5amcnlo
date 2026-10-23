@@ -9,8 +9,8 @@ module scale_module
        &,shower_scale_n1body,showerscaleS,showerscaleH
   double precision,public,allocatable,dimension(:,:,:,:) :: emsca_S&
        &,emsca_H
-  double precision,public,allocatable :: emsca_S_hard(:,:)
-  double precision,public :: shower_scale_hard,showerscaleS_hard
+  double precision,public,allocatable :: emsca_S_hard(:,:),emsca_H_hard(:,:)
+  double precision,public :: shower_scale_hard,showerscaleS_hard,showerscaleH_hard
   ! The H colour assignment and its dipole scales must have the same owner.
   integer,public,allocatable :: event_colour_H(:,:,:,:)
 !  double precision,public :: SCALUP
@@ -42,6 +42,7 @@ contains
     if (.not.allocated(emsca_S)) &
          allocate(emsca_S(nfks,nfold,ndelS,ndelS))
     if (.not.allocated(emsca_S_hard)) allocate(emsca_S_hard(nfks,nfold))
+    if (.not.allocated(emsca_H_hard)) allocate(emsca_H_hard(nfks,nfold))
     if (.not.allocated(emsca_H)) &
          allocate(emsca_H(nfks,nfold,ndelH,ndelH))
     if (.not.allocated(event_colour_H)) &
@@ -71,14 +72,15 @@ contains
   end function scalar_S_scales
 
   subroutine native_S_scales(p,connected)
+    ! The caller chooses the hard scale, including the FxFx prescription.
     double precision, intent(in) :: p(0:3,next_n)
     logical, intent(in) :: connected(next_n,next_n)
     integer :: status
-    if (pythia8_S_scales()) then
+    if (shower_mc_mod.eq.'PYTHIA8') then
        call pythia8_starting_scales(next_n,p,mass_n,connected, &
             shower_scale_hard,shower_scale_nbody,status)
        if (status.eq.delta_ok) return
-    elseif (herwig7_S_scales()) then
+    elseif (shower_mc_mod.eq.'HERWIG7') then
        call herwig7_starting_scales(next_n,p,mass_n,connected, &
             shower_scale_hard,shower_scale_nbody,status)
        if (status.eq.hw7_ok) return
@@ -103,7 +105,7 @@ contains
     call refresh_qed_dipoles(p,.true.)
     call get_global_ref_scale(next_n,p)
     if (ickkw_mod.eq.3) then
-       call set_FxFx_shower_scale_nbody(global_ref_scale)
+       call set_FxFx_shower_scale_nbody(global_ref_scale,p,flow_picked)
        return
     endif
     shower_scale_hard=shower_scale_factor*global_ref_scale
@@ -169,15 +171,32 @@ contains
     endif
   end subroutine compute_shower_scale_nbody
 
-  subroutine set_FxFx_shower_scale_nbody(born_ref_scale)
+  subroutine set_FxFx_shower_scale_nbody(born_ref_scale,p,flow_picked)
     ! FxFx uses the smallest Born clustering scale, with scalar damping
     ! bounds. Native kl histories can reuse the clustering done for cuts.
     ! This operation performs no clustering, Sudakov evaluation or RNG draw.
     double precision, intent(in) :: born_ref_scale
+    double precision, intent(in) :: p(0:3,next_n)
+    integer, intent(in) :: flow_picked
+    logical :: connected(next_n,next_n)
     shower_scale_hard=shower_scale_factor*born_ref_scale
     shower_scale_nbody=shower_scale_hard
     shower_scale_nbody_min=shower_scale_hard
     shower_scale_nbody_max=shower_scale_hard+scaleMCdelta
+    if (.not.mcatnlo_delta_mod) return
+    ! Make PYTHIA's existing dipole ceilings explicit for Delta. Keep the
+    ! common FxFx boundary and damping bounds: independent S starting
+    ! scales would change the overlap with the analytic FxFx Sudakov.
+    if (flow_picked.gt.0) then
+       connected=valid_dipole_n(:,:,flow_picked)
+    else
+       connected=any(valid_dipole_n,dim=3)
+    endif
+    call native_S_scales(p,connected)
+    where (shower_scale_nbody.lt.0d0)
+       shower_scale_nbody_min=-1d0
+       shower_scale_nbody_max=-1d0
+    endwhere
   end subroutine set_FxFx_shower_scale_nbody
 
   subroutine save_shower_scale_nbody(ifks,ifold,father,partner)
@@ -257,7 +276,7 @@ contains
     if (ickkw_mod.eq.3) then
        ! For FxFx, the scale should be the smallest clustering scale as
        ! returned by the clustering routine. This is the global_ref_scale
-       shower_scale_nbody=shower_scale_factor*global_ref_scale
+       call set_FxFx_shower_scale_nbody(global_ref_scale,p,flow_picked)
        shower_scale_nbody_min=-1d0
        shower_scale_nbody_max=-1d0
        return

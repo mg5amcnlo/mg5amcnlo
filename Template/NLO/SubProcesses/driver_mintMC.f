@@ -972,35 +972,28 @@ c Check the sampled Born before native H histories change active data.
             call init_process_module_n1body_wrapper(born_flow_picked)
             call compute_shower_scale_n1body(p,i_fks,j_fks,
      $           mc_shower_scale_mass())
-! The shower scale to be used in the event file (if it's an H-event and
-! fks_picked will be iFKS). If the emission is hard, we take the dipole
-! scale as upper boundary for the next emissions. On the other hand, to
-! make sure that (soft/collinear) real-emission still "cancels the
-! divergence in the virtual" these configurations should have a shower
-! scale related to the underlying S-event.
-            if (born_flow_picked.gt.0) then
-               ! TODO: maybe we should also go here when the n-body does not pass the cuts. CHECK.
-               if (.not.mcatnlo_delta) then
-                  emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)
-     $                 =max(shower_scale_n1body(i_fks,j_fks),
-     $                 shower_scale_nbody(fks_father
-     $                 ,partner_picked(iFKS)))
-               else
-! in the case of MC@NLO-delta, an H-event contribution is by definition
-! 'hard', and we should use the corresponding dipole scale for
-! subsequent showering.
-                  emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)
-     $                 =shower_scale_n1body(1:ndelH,1:ndelH)
+            if (mcatnlo_delta) then
+! Delta H events use directed stopping scales for subsequent showering.
+               emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)
+     $              =shower_scale_n1body(1:ndelH,1:ndelH)
+               if (ickkw.eq.3) then
+! Retain the ordinary FxFx scalar with the same outer sector and fold.
+! Its Born reference is the hard scale, before the directed dipole caps.
+                  emsca_H_hard(iFKS,ifold_counter)=
+     $                 shower_scale_n1body(i_fks,j_fks)
+                  if (born_flow_picked.gt.0)
+     $                 emsca_H_hard(iFKS,ifold_counter)=max(
+     $                 emsca_H_hard(iFKS,ifold_counter),shower_scale_hard)
                endif
-            else ! we have no Born, so take the n+1-body dipole(s) as
-                 ! starting scale.
-               if (.not.mcatnlo_delta) then
-                  emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)
-     $                 =shower_scale_n1body(i_fks,j_fks)
-               else
-                  emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)
-     $                 =shower_scale_n1body(1:ndelH,1:ndelH)
-               endif
+            else
+! Ordinary H events use the real dipole bound, raised to the underlying
+! S-event scale when a Born flow exists, including below the Born cuts.
+               emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)
+     $              =shower_scale_n1body(i_fks,j_fks)
+               if (born_flow_picked.gt.0)
+     $            emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)
+     $              =max(shower_scale_n1body(i_fks,j_fks),
+     $              shower_scale_nbody(fks_father,partner_picked(iFKS)))
             endif
 c Compute the n1-body prefactors
             call compute_prefactors_n1body(vegas_wgt,jac)
@@ -1395,7 +1388,7 @@ c Sum the contributions that can be summed before taking the ABS value
             cuts_born=passcuts_native_born(p1_cnt(0,1,0),rwgt,
      $           native_born_ref_scale)
             if (ickkw.eq.3)call set_FxFx_shower_scale_nbody(
-     $           native_born_ref_scale)
+     $           native_born_ref_scale,p_born,-fksfather)
             call set_cms_stuff(-100)
             if (ickkw.eq.3) call set_FxFx_scale(-3,pn)
             cuts_real=passcuts(pn,rwgt)

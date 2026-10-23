@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
 
 @unittest.skipUnless(shutil.which('bash'), 'requires bash')
 class TestPythiaDeltaSteering(unittest.TestCase):
-    def steering(self, delta, dipole_setting):
+    def steering(self, delta, dipole_setting, ickkw=0):
         with tempfile.TemporaryDirectory(prefix='mg5_py8_steering_') as tmp:
             work = Path(tmp)
             (work / 'xmldoc').mkdir()
@@ -109,13 +109,13 @@ PY8VER=8.3
 UsedPdfLib=THISLIB
 BEAM1=1
 BEAM2=1
-ICKKW=0
+ICKKW="$3"
 runMCMadFKS
 '''
             result = subprocess.run(
                 [shutil.which('bash'), '-c', command, 'test',
                  str(MCATNLO / 'Scripts/MCatNLO_MadFKS_PYTHIA8.Script'),
-                 str(work / 'shower.dat')], cwd=work,
+                 str(work / 'shower.dat'), str(ickkw)], cwd=work,
                 env=dict(os.environ, DELTA='ON' if delta else 'OFF'),
                 text=True, capture_output=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -135,3 +135,13 @@ runMCMadFKS
         result = self.steering(False, True)
         self.assertNotIn('Beams:setProductionScalesFromLHEF', result)
         self.assertNotIn('Beams:setDipoleShowerStartingScalesFromLHEF', result)
+
+    def test_fxfx_steering_with_and_without_delta(self):
+        for delta in (False, True):
+            with self.subTest(delta=delta):
+                result = self.steering(delta, True, ickkw=3)
+                self.assertIn('Beams:setProductionScalesFromLHEF = on', result)
+                self.assertIn('JetMatching:doFxFx = on', result)
+                self.assertIn('JetMatching:merge = on', result)
+                self.assertEqual('Beams:setDipoleShowerStartingScalesFromLHEF = on'
+                                 in result, delta)

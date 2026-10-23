@@ -67,9 +67,11 @@ class TestBornSpreading(unittest.TestCase):
             shutil.copyfile(TEMPLATE / 'timing_variables.inc', work / 'timing_variables.inc')
             # Only S grouping is exercised; these supply the unused H metadata.
             (work / 'group_context.f90').write_text(
-                'module process_module\ninteger :: ndelH=1\n'
+                'module process_module\ninteger :: ndelH=1,ickkw_mod=0\n'
+                'logical :: mcatnlo_delta_mod=.false.\n'
                 'integer :: event_colour_H(2,5,3,2)=0\nend module\n'
-                'module scale_module\ndouble precision :: emsca_H(3,2,1,1)=1d0\nend module\n')
+                'module scale_module\ndouble precision :: emsca_H(3,2,1,1)=1d0\n'
+                'double precision :: emsca_H_hard(3,2)=1d0\nend module\n')
             (work / 'grouping.f').write_text(''.join(
                 routine(TEMPLATE / 'fks_singular.f', name) for name in
                 ('sum_identical_contributions', 'apply_born_spread_weight',

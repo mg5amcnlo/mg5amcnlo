@@ -697,7 +697,7 @@ c
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
       character*1000 buff
-      integer ifile,i,kk,oo
+      integer ifile,i,kk,oo,scale_end
       character*9 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
@@ -709,7 +709,7 @@ c
       common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
-      character*500 scale_str
+      character*16384 scale_str
       character*50 str_tmp
       CHARACTER(LEN=1000) ptclusstring
       common /c_ptclusstring/ ptclusstring
@@ -860,12 +860,20 @@ c
             endif
          endif
       endif
-      if (ickkw.eq.3) then
-         write(ifile,'(a)') trim(adjustl(ptclusstring))
-      endif
       if (mcatnlo_delta) then
 c Write the <scales> block only for scales related to valid colour lines
-         scale_str="<scales muf='-.1E+01' mur='-.1E+01'"
+         scale_str='<scales'
+         if (ickkw.eq.3) then
+c Pythia retains one scales object: merging tags and directed shower
+c scales must be attributes of the same element.
+            scale_end=index(ptclusstring,'>')
+            if (scale_end.eq.0) then
+               write(*,*) 'Missing FxFx scales tag in write_lhef_event'
+               stop 1
+            endif
+            scale_str=ptclusstring(:scale_end-1)
+         endif
+         scale_str=trim(scale_str)//" muf='-.1E+01' mur='-.1E+01'"
          do i=1,NUP
             if (abs(ISTUP(i)).ne.1) cycle
             do j=1,NUP
@@ -885,18 +893,25 @@ c Write the <scales> block only for scales related to valid colour lines
                   endif
                   write(str_tmp,701)
      &                 " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
+                  if (len_trim(scale_str)+len_trim(str_tmp).gt.
+     &                 len(scale_str)) then
+                     write(*,*) 'LHE scales tag exceeds buffer size'
+                     stop 1
+                  endif
                   scale_str=trim(scale_str)//trim(str_tmp)
                endif
             enddo
          enddo
          write(ifile,'(a)')"  "//trim(scale_str)//">"
          write(ifile,'(a)') "  </scales>"
+      elseif (ickkw.eq.3) then
+         write(ifile,'(a)') trim(adjustl(ptclusstring))
       endif
       write(ifile,'(a)') '  </event>'
  503  format(1x,i2,1x,i6,4(1x,e14.8))
  504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e24.17),2(1x,e10.4))
  601  format(a12,i4,a2,1x,e11.5,a7)
- 701  format(a8,i1,a1,i1,a2,e14.8,a1)
+ 701  format(a8,i0,a1,i0,a2,e14.8,a1)
 c
       return
       end
@@ -910,7 +925,7 @@ c
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
-      integer ifile,i,kk,jj,oo
+      integer ifile,i,kk,oo
       character*1000 buff
       character*500 string
       character*9 ch1
@@ -1051,7 +1066,7 @@ c
             endif
          endif
 
-         if (ickkw.eq.3) then
+         if (ickkw.eq.3.and..not.mcatnlo_delta) then
             read(ifile,'(a)') ptclusstring
          endif
       else
@@ -1062,7 +1077,7 @@ c
              enddo
              read(ifile,'(a)')string ! this is for closing <\rwgt>
          endif
-         if (ickkw.eq.3) then
+         if (ickkw.eq.3.and..not.mcatnlo_delta) then
             ptclusstring=buff
             read(ifile,'(a)')buff
          endif
@@ -1070,30 +1085,8 @@ c
          buff=' '
          backspace(ifile)
       endif
-      if (mcatnlo_delta) then
-c Read the <scales> block
-         do i=1,NUP
-            do j=1,NUP
-               SCALUP_a(i,j)=-1d0
-            enddo
-         enddo
-         read(ifile,'(a)')string
-         do i=1,len(trim(string))-6
-            if(string(i:i+5).eq.'scalup' .or.
-     &           string(i:i+5).eq.'SCALUP')then
-               read(string(i+7:i+7),*)ii
-               read(string(i+9:i+9),*)jj
-               read(string(i+12:i+25),*)SCALUP_a(ii,jj)
-            endif
-         enddo
-         read(ifile,'(a)')string
-         if(index(string,'</scales').eq.0)then
-            write(*,*)'In read_lhef_event:'
-            write(*,*)'Could not find the end of scales block:'
-            write(*,*)string(1:len_trim(string))
-            stop
-         endif
-      endif
+      if (mcatnlo_delta) call read_lhef_delta_scales(ifile,
+     &     NUP,MAXNUP,SCALUP_a,ptclusstring,ickkw.eq.3)
       read(ifile,'(a)')string
       if(index(string,'</event').eq.0) then
          write (*,*) 'ERROR #3: Cannot find end of event in'/
@@ -1115,7 +1108,7 @@ c Same as read_lhef_event, except for the end-of-file catch
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,*),VTIMUP(*),SPINUP(*)
-      integer ifile,i,kk,jj,oo
+      integer ifile,i,kk,oo
       character*1000 buff
       character*500 string
       character*9 ch1
@@ -1248,11 +1241,11 @@ c
                read(ifile,'(a)')string
             endif
          endif
-         if (ickkw.eq.3) then
+         if (ickkw.eq.3.and..not.mcatnlo_delta) then
             read(ifile,'(a)') ptclusstring
          endif
       else
-         if (ickkw.eq.3) then
+         if (ickkw.eq.3.and..not.mcatnlo_delta) then
             ptclusstring=buff
             read(ifile,'(a)')buff
          endif
@@ -1260,30 +1253,8 @@ c
          buff=' '
          backspace(ifile)
       endif
-      if (mcatnlo_delta) then
-c Read the <scales> block
-         do i=1,NUP
-            do j=1,NUP
-               SCALUP_a(i,j)=-1d0
-            enddo
-         enddo
-         read(ifile,'(a)')string
-         do i=1,len(trim(string))-6
-            if(string(i:i+5).eq.'scalup' .or.
-     &           string(i:i+5).eq.'SCALUP')then
-               read(string(i+7:i+7),*)ii
-               read(string(i+9:i+9),*)jj
-               read(string(i+12:i+25),*)SCALUP_a(ii,jj)
-            endif
-         enddo
-         read(ifile,'(a)')string
-         if(index(string,'</scales').eq.0)then
-            write(*,*)'In read_lhef_event:'
-            write(*,*)'Could not find the end of scales block:'
-            write(*,*)string(1:len_trim(string))
-            stop
-         endif
-      endif
+      if (mcatnlo_delta) call read_lhef_delta_scales(ifile,
+     &     NUP,MAXNUP,SCALUP_a,ptclusstring,ickkw.eq.3)
       read(ifile,'(a)')string
       if(index(string,'</event').eq.0) then
          write (*,*) 'ERROR #4: Cannot find end of event in'/
@@ -1294,6 +1265,89 @@ c
       return
       end
 
+
+
+      subroutine read_lhef_delta_scales(ifile,nup,maxnup,scalup_a,
+     &     ptclusstring,fxfx)
+c Read directed scales and retain only the FxFx attributes for rewriting.
+c Accept both a common scales element and older separate FxFx/Delta tags.
+      implicit none
+      integer ifile,nup,maxnup,i,j,k,p,q,r,eq,ios,start
+      double precision scalup_a(maxnup,maxnup)
+      character*(*) ptclusstring
+      character*16384 string
+      character*80 name
+      logical fxfx,has_delta
+      scalup_a(1:nup,1:nup)=-1d0
+      if (fxfx) ptclusstring='<scales'
+      do
+         read(ifile,'(a)',iostat=ios) string
+         if (ios.ne.0.or.index(string,'<scales').eq.0) goto 900
+         has_delta=.false.
+         do
+            if (len_trim(string).eq.len(string)) goto 900
+            start=1
+            do
+               eq=index(string(start:),'=')
+               if (eq.eq.0) exit
+               eq=eq+start-1
+               p=eq-1
+               do while(p.gt.1)
+                  if (string(p:p).eq.' ') exit
+                  p=p-1
+               enddo
+               name=string(p+1:eq-1)
+               do k=1,len_trim(name)
+                  i=iachar(name(k:k))
+                  if(i.ge.65.and.i.le.90) name(k:k)=achar(i+32)
+               enddo
+               q=eq+1
+               do while(q.lt.len_trim(string))
+                  if (string(q:q).ne.' ') exit
+                  q=q+1
+               enddo
+               if(iachar(string(q:q)).ne.39.and.
+     &              iachar(string(q:q)).ne.34) goto 900
+               r=index(string(q+1:),string(q:q))
+               if(r.eq.0) goto 900
+               r=q+r
+               if(index(name,'scalup_').eq.1) then
+                  has_delta=.true.
+                  k=index(name(8:),'_')
+                  if(k.eq.0) goto 900
+                  read(name(8:6+k),*,iostat=ios) i
+                  if(ios.ne.0) goto 900
+                  read(name(8+k:),*,iostat=ios) j
+                  if(ios.ne.0) goto 900
+                  if(i.lt.1.or.i.gt.nup.or.j.lt.1.or.j.gt.nup)
+     &                 goto 900
+                  read(string(q+1:r-1),*,iostat=ios) scalup_a(i,j)
+                  if(ios.ne.0) goto 900
+               elseif(fxfx.and.(index(name,'pt_clust_').eq.1.or.
+     &              name.eq.'fxfxdelta'.or.
+     &              index(name,'fxfxmatch').eq.1)) then
+                  if(len_trim(ptclusstring)+r-p+12.gt.
+     &                 len(ptclusstring)) goto 900
+                  ptclusstring=trim(ptclusstring)//' '//string(p+1:r)
+               elseif(name.eq.'muf'.or.name.eq.'mur') then
+                  has_delta=.true.
+               endif
+               start=r+1
+            enddo
+            if(index(string,'</scales').ne.0.or.
+     &           index(string,'/>').ne.0) exit
+            read(ifile,'(a)',iostat=ios) string
+            if(ios.ne.0.or.index(string,'</event').ne.0) goto 900
+         enddo
+         if(.not.fxfx.or.has_delta) exit
+      enddo
+      if(fxfx) ptclusstring=trim(ptclusstring)//'></scales>'
+      return
+ 900  continue
+      write(*,*) 'Invalid LHE scales block in read_lhef_delta_scales'
+      write(*,*) trim(string)
+      stop 1
+      end
 
 
       subroutine copy_header(infile,outfile,nevts)

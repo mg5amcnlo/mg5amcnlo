@@ -139,7 +139,7 @@ program check_mc_born_cuts
     calls_before=cluster_calls
     passed=passcuts_native_born(p,rwgt,born_ref_scale)
     if(.not.passed)error stop 'resolved Born rejected during scale reuse'
-    call set_FxFx_shower_scale_nbody(born_ref_scale)
+    call set_FxFx_shower_scale_nbody(born_ref_scale,p(:,1:6),1)
     if(cluster_calls.ne.calls_before+1)error stop 'extra clustering for native Born scale'
     if(shower_scale_hard.ne.expected_hard.or. &
          any(shower_scale_nbody.ne.expected_scales(:,:,1)).or. &

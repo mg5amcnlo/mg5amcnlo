@@ -103,6 +103,8 @@ end module
 
 module process_module
   logical :: qed_matching=.false.
+  logical :: mcatnlo_delta_mod=.false.
+  integer :: ickkw_mod=0
   integer,parameter :: ndelH=5
 end module
 
@@ -110,5 +112,7 @@ module scale_module
   implicit none
   integer :: born_flow_picked=0
   double precision :: emsca_H(1,8,5,5)=1d0
+  double precision :: emsca_H_hard(1,8)=1d0
+  double precision :: shower_scale_hard=1d0
   double precision :: shower_scale_n1body(5,5)=1d0,shower_scale_nbody(4,4)=1d0
 end module

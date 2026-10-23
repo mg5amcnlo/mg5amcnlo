@@ -1873,6 +1873,7 @@ class Event(list):
         self.comment = ''
         self.reweight_data = {}
         self.matched_scale_data = None
+        self.matched_scale_format = 'pt_clust_'
         self.syscalc_data = {}
         #Spin Information
         self.density = []
@@ -2263,30 +2264,42 @@ class Event(list):
     
             
     def parse_matching_scale(self):
-        """Parse the line containing the starting scale for the shower"""
-        
+        """Parse per-particle merging scales, or FxFx-Delta matching flags."""
         if self.matched_scale_data is not None:
             return self.matched_scale_data
-            
-        self.matched_scale_data = []
-        
 
-        pattern  = re.compile(r"<scales\s|</scales>")
-        data = re.split(pattern,self.tag)
-        if len(data) == 1:
-            return []
-        else:
-            tmp = {}
-            start,content, end = data
-            self.tag = "%s%s" % (start, end)
-            pattern = re.compile("pt_clust_(\\d*)=\"([\\de+-.]*)\"")
-            for id,value in pattern.findall(content):
-                tmp[int(id)] = float(value)
-            for i in range(1, len(self)+1):
-                if i in tmp:
-                    self.matched_scale_data.append(tmp[i])
-                else:
-                    self.matched_scale_data.append(-1)
+        pattern = re.compile(r'<scales\b([^>]*?)(?:/>|>.*?</scales>)', re.S)
+        scale_attributes = pattern.findall(self.tag)
+        if not scale_attributes:
+            self.matched_scale_data = []
+            return self.matched_scale_data
+        markers = re.findall(r'''\bfxfxdelta\s*=\s*(['"])([^'"]*)\1''', self.tag)
+        if any(float(value) != 1. for _, value in markers):
+            raise ValueError('FxFx-Delta event marker must equal one')
+        matching_format = 'fxfxmatch' if markers else 'pt_clust_'
+        matching = re.compile(r'''\s+(pt_clust_|fxfxmatch)(\d+)\s*=\s*(['"])([^'"]+)\3''')
+        values = {}
+        other_attributes = []
+        for attributes in scale_attributes:
+            for prefix, label, _, value in matching.findall(attributes):
+                if prefix != matching_format:
+                    continue
+                value = float(value)
+                if markers and value not in (0, 1):
+                    raise ValueError('FxFx-Delta matching flags must be zero or one')
+                values[int(label)] = value
+            # Delta dipole scales share this element with the merging tags.
+            # Retain their attributes when matching data are modified. In
+            # Delta mode flags supersede any legacy pt_clust attributes.
+            attributes = matching.sub('', attributes)
+            if attributes.strip():
+                other_attributes.append(attributes)
+
+        self.tag = pattern.sub('', self.tag)
+        if other_attributes:
+            self.tag += '<scales%s></scales>' % ''.join(other_attributes)
+        self.matched_scale_format = matching_format
+        self.matched_scale_data = [values.get(i, -1) for i in range(1, len(self)+1)]
         return self.matched_scale_data
             
     def parse_syscalc_info(self):
@@ -2362,9 +2375,16 @@ class Event(list):
         self.nexternal += decay_event.nexternal -1
         old_scales = list(self.parse_matching_scale())
         if old_scales:
-            jet_position = sum(1 for i in range(position) if self[i].status==1)
-            initial_pos = sum(1 for i in range(position) if self[i].status==-1)
-            self.matched_scale_data.pop(initial_pos+jet_position)
+            if self.matched_scale_format == 'fxfxmatch':
+                # Flags use full LHE labels, including intermediate particles.
+                # Retain the parent's slot and exclude its resonance daughters.
+                self.matched_scale_data[position] = -1
+                daughter_matching = 0
+            else:
+                jet_position = sum(1 for i in range(position) if self[i].status==1)
+                initial_pos = sum(1 for i in range(position) if self[i].status==-1)
+                self.matched_scale_data.pop(initial_pos+jet_position)
+                daughter_matching = old_scales[initial_pos+jet_position]
         # add the particle with only handling the 4-momenta/mother
         # color information will be corrected later.
         for particle in decay_event[1:]:
@@ -2373,7 +2393,7 @@ class Event(list):
             new_particle.event_id = len(self)
             self.append(new_particle)
             if old_scales:
-                self.matched_scale_data.append(old_scales[initial_pos+jet_position])
+                self.matched_scale_data.append(daughter_matching)
             # compute and assign the new four_momenta
             if at_rest:
                 new_momentum = FourMomentum(new_particle).boost(this_4mom)
@@ -3709,11 +3729,17 @@ class Event(list):
             tag_str = self.tag
             
         if self.matched_scale_data:
-            tmp_scale = ' '.join(['pt_clust_%i=\"%s\"' % (i+1,v)
-                                   for i,v in enumerate(self.matched_scale_data)
-                                              if v!=-1])
+            delta = self.matched_scale_format == 'fxfxmatch'
+            if delta and any(v not in (-1, 0, 1) for v in self.matched_scale_data):
+                raise ValueError('FxFx-Delta matching flags must be zero or one')
+            tmp_scale = ' '.join(
+                '%s%i="%s"' % (self.matched_scale_format, i, int(v) if delta else v)
+                for i, v in enumerate(self.matched_scale_data, 1) if v != -1)
             if tmp_scale:
-                tag_str = "<scales %s></scales>%s" % (tmp_scale, self.tag)
+                tag_str, count = re.subn(r'<scales\b', '<scales ' + tmp_scale,
+                                        tag_str, count=1)
+                if not count:
+                    tag_str = "<scales %s></scales>%s" % (tmp_scale, tag_str)
             
         if self.syscalc_data:
             keys= ['rscale', 'asrwt', ('pdfrwt', 'beam', '1'), ('pdfrwt', 'beam', '2'),

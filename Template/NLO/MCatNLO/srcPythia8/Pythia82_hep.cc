@@ -4,6 +4,7 @@
 #include "Pythia8Plugins/HepMC2.h"
 #include "Pythia8Plugins/aMCatNLOHooks.h"
 #include "Pythia8Plugins/CombineMatchingInput.h"
+#include "FxFxDeltaMatching.h"
 #include "HepMC/GenEvent.h"
 #include "HepMC/IO_GenEvent.h"
 
@@ -16,10 +17,6 @@ int main() {
 
   pythia.readFile(inputname.c_str());
 
-  //Create UserHooks pointer for the FxFX matching. Stop if it failed. Pass pointer to Pythia.
-  CombineMatchingInput* combined = NULL;
-  UserHooks* matching            = NULL;
-
   int nAbort=10;
   int nPrintLHA=1;
   int iAbort=0;
@@ -31,14 +28,19 @@ int main() {
   //FxFx merging
   bool isFxFx=pythia.flag("JetMatching:doFxFx");
   if (isFxFx) {
-    matching = combined->getHook(pythia);
+    CombineMatchingInput combined;
+    UserHooks* matching = NULL;
+    if (pythia.mode("JetMatching:scheme") == 1 &&
+        pythia.word("Alpgen:file") == "void")
+      matching = new FxFxDeltaMatching();
+    else
+      matching = combined.getHook(pythia);
     if (!matching) {
       std::cout << " Failed to initialise jet matching structures.\n"
                 << " Program stopped.";
       return 1;
     }
     pythia.setUserHooksPtr(matching);
-    int nJmax=pythia.mode("JetMatching:nJetMax");
     double Qcut=pythia.parm("JetMatching:qCut");
     double PTcut=pythia.parm("JetMatching:qCutME");
     if (Qcut <= PTcut || Qcut <= 0.) {
@@ -60,7 +62,6 @@ int main() {
 
   // Cross section an error.
   double sigmaTotal  = 0.;
-  double errorTotal  = 0.;
 
   for (int iEvent = 0; ; ++iEvent) {
     if (!pythia.next()) {

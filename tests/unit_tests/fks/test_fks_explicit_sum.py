@@ -128,9 +128,11 @@ class TestFKSExplicitSum(unittest.TestCase):
                                                for line in source.splitlines()))
             shutil.copyfile(TEMPLATE / 'timing_variables.inc', work / 'timing_variables.inc')
             (work / 'contexts.f90').write_text(
-                'module process_module\ninteger :: ndelH=1\n'
+                'module process_module\ninteger :: ndelH=1,ickkw_mod=0\n'
+                'logical :: mcatnlo_delta_mod=.false.\n'
                 'integer :: event_colour_H(2,5,2,2)=0\nend module\n'
-                'module scale_module\nreal(8) :: emsca_H(2,2,1,1)=1d0\nend module\n')
+                'module scale_module\nreal(8) :: emsca_H(2,2,1,1)=1d0\n'
+                'real(8) :: emsca_H_hard(2,2)=1d0\nend module\n')
             (work / 'weights.f').write_text('\n'.join(fortran_routine(
                 TEMPLATE / 'fks_singular.f', name) for name in
                 ('sum_identical_contributions', 'fill_mint_function_NLOPS', 'fill_mint_function',

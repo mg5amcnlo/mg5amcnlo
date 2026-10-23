@@ -125,7 +125,7 @@ c$$$      common /cshowerscale/SCALUP
 c pt_clust string
       integer need_matching(nexternal)
       common /c_need_matching_to_write/ need_matching
-      double precision ptclus
+      double precision ptclus,matching_scale
       CHARACTER temp*600,temp0*7,float*18
       CHARACTER integfour*4      
       CHARACTER(LEN=1000) ptclusstring
@@ -591,43 +591,38 @@ c
 ! considered in the MLM-like matching
 
       if (ickkw.eq.3) then
-         if (ndelS.ne.1 .or. ndelH.ne.1) then
-            ! TODO : IMPLEMENT FXFX-DELTA.
-            write (*,*) 'FxFx only implemented for non-Delta matching.'
-            stop 1
-         endif
          if (nincoming.ne.2) then
             write (*,*) 'Need to incoming particles with ickkw=3 '/
      $           /'(add_write_info.f)'
             stop
          endif
+! Ordinary FxFx marks matching partons by their scale relative to SCALUP.
+! With Delta, use explicit flags: PYTHIA interprets pt_clust attributes
+! as production scales, which would modify the directed shower scales.
+         if (.not.mcatnlo_delta_mod) then
+            if (iSorH_lhe.eq.1) then
+               matching_scale=showerscaleS(1,1)
+            else
+               matching_scale=showerscaleH(1,1)
+            endif
+         endif
          temp0='<scales'
          temp=''
+         if (mcatnlo_delta_mod) temp=' fxfxdelta="1"'
          do i=nincoming+1,nexpart
-            integfour=''
-            float=''
-            if (need_matching(i).ne.-1) then
-               if (iSorH_lhe.eq.1) then ! S-event
-                  ptclus=showerscaleS(1,1)
-               else
-                  ptclus=showerscaleH(1,1)
-               endif
-            else
-               if (nincoming.ne.2) then
-                  write (*,*) 'need two incoming particles '/
-     $                 /'in add_write_info.f'
-                  stop 1
-               endif
-               if (iSorH_lhe.eq.1) then ! S-event
-                  ptclus=showerscaleS(1,1)-0.001d0
-               else
-                  ptclus=showerscaleH(1,1)-0.001d0
-               endif
-            endif
-            Write(float,'(f16.5)') ptclus
             write(integfour,'(i4)') ito(i)
-            temp=trim(temp)//' pt_clust_'//trim(adjustl(integfour))/
-     $           /'="'//trim(adjustl(float))//'"'
+            if (mcatnlo_delta_mod) then
+               float='1'
+               if (need_matching(i).eq.-1) float='0'
+               temp=trim(temp)//' fxfxmatch'//trim(adjustl(integfour))/
+     $              /'="'//trim(float)//'"'
+            else
+               ptclus=matching_scale
+               if (need_matching(i).eq.-1) ptclus=ptclus-0.001d0
+               Write(float,'(f16.5)') ptclus
+               temp=trim(temp)//' pt_clust_'//trim(adjustl(integfour))/
+     $              /'="'//trim(adjustl(float))//'"'
+            endif
          enddo
          ptclusstring=trim(adjustl(temp0//trim(temp)//'></scales>'))
       endif

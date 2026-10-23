@@ -195,23 +195,29 @@ c
             enddo
          enddo
       else
-         if (iSorH_lhe.eq.1.and.scalar_S_scales()) then
+         if (mcatnlo_delta_mod) scalup_a(1:npart,1:npart)=
+     $        shower_scale_a(1:npart,1:npart)
+         if (ickkw.eq.3.and.mcatnlo_delta_mod) then
+c Retain the FxFx event scale alongside Delta's directed shower scales.
+c Separate matching flags identify the partons to the FxFx shower hook.
+            if (iSorH_lhe.eq.1) then
+               SCALUP=showerscaleS_hard
+            else
+               SCALUP=showerscaleH_hard
+            endif
+         elseif (iSorH_lhe.eq.1.and.scalar_S_scales()) then
 c The scalar is the damped hard scale. The shower applies its dipole
 c limits; Delta additionally records the effective directed scales.
             SCALUP=showerscaleS_hard
-            if (mcatnlo_delta_mod) scalup_a(1:npart,1:npart)=
-     $           shower_scale_a(1:npart,1:npart)
          elseif (.not.mcatnlo_delta_mod) then
             if (iSorH_lhe.eq.1) then ! S-event
                SCALUP=showerscaleS(1,1)
             else
                SCALUP=showerscaleH(1,1)
             endif
-            scalup_a(1:npart,1:npart)=-1d0
          else
-            ! use array of scale for MC@NLO-Delta
+            ! Delta supplies its shower scales through the matrix above.
             SCALUP=-1d0
-            scalup_a(1:npart,1:npart)=shower_scale_a(1:npart,1:npart)
          endif
       endif
 c
