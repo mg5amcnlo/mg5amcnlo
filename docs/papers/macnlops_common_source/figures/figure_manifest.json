@@ -1,0 +1,64 @@
+{
+  "figures": [
+    {
+      "file": "dy_first_mechanisms.pdf",
+      "name": "dy_first_mechanisms",
+      "sha256": "b885c63f7607cc22e618a1910515b15a15df1d75eb4b6e99184e54ab8e0fbee5",
+      "size_bytes": 27255,
+      "source": "/export/tmp/rikkert/macnlops_common_20261020/plots/dy/first/jet_pt_soft_mechanisms.pdf",
+      "source_relative_to_plots": "dy/first/jet_pt_soft_mechanisms.pdf"
+    },
+    {
+      "file": "dy_full_mechanisms.pdf",
+      "name": "dy_full_mechanisms",
+      "sha256": "829b49e63ca8a1b428972475fe38aa3302f94d87f35d3a1069db16154698f9aa",
+      "size_bytes": 28560,
+      "source": "/export/tmp/rikkert/macnlops_common_20261020/plots/dy/full/jet_pt_soft_mechanisms.pdf",
+      "source_relative_to_plots": "dy/full/jet_pt_soft_mechanisms.pdf"
+    },
+    {
+      "file": "ttbar_full_mechanisms.pdf",
+      "name": "ttbar_full_mechanisms",
+      "sha256": "52382da115769a9119c24ff6e2c63d9004ebcb2a20e6061624adb9630a78b1b1",
+      "size_bytes": 27709,
+      "source": "/export/tmp/rikkert/macnlops_common_20261020/plots/ttbar/full/jet_pt_soft_mechanisms.pdf",
+      "source_relative_to_plots": "ttbar/full/jet_pt_soft_mechanisms.pdf"
+    },
+    {
+      "file": "ttbar_full_source_signs.pdf",
+      "name": "ttbar_full_source_signs",
+      "sha256": "4ba22eb84f11a8b405e8976a932894182f12c92aac4288321dbe3e1e8dfbf028",
+      "size_bytes": 36097,
+      "source": "/export/tmp/rikkert/macnlops_common_20261020/plots/ttbar/full/jet_pt_soft_source_signs.pdf",
+      "source_relative_to_plots": "ttbar/full/jet_pt_soft_source_signs.pdf"
+    },
+    {
+      "file": "wbb_first_mechanisms.pdf",
+      "name": "wbb_first_mechanisms",
+      "sha256": "78f0bf962592c6332b7de5036d9d9c22b093d8484340e3aefc902aced3d57cff",
+      "size_bytes": 29307,
+      "source": "/export/tmp/rikkert/macnlops_common_20261020/plots/wbb/first/jet_pt_soft_mechanisms.pdf",
+      "source_relative_to_plots": "wbb/first/jet_pt_soft_mechanisms.pdf"
+    },
+    {
+      "file": "wbb_full_pair_mass.pdf",
+      "name": "wbb_full_pair_mass",
+      "sha256": "7321ab47b3cd37d7f715417bb0e0635eae25e9b65b3ae64f6b37974ed4d3dac2",
+      "size_bytes": 31836,
+      "source": "/export/tmp/rikkert/macnlops_common_20261020/plots/wbb/full/pair_mass_log_ratio_zoom.pdf",
+      "source_relative_to_plots": "wbb/full/pair_mass_log_ratio_zoom.pdf"
+    },
+    {
+      "file": "zz_full_mechanisms.pdf",
+      "name": "zz_full_mechanisms",
+      "sha256": "25b4955f398d6527c1afb0ef340a31a1fc0f767b70049f70ac6ed69ce68a097e",
+      "size_bytes": 27552,
+      "source": "/export/tmp/rikkert/macnlops_common_20261020/plots/zz/full/jet_pt_soft_mechanisms.pdf",
+      "source_relative_to_plots": "zz/full/jet_pt_soft_mechanisms.pdf"
+    }
+  ],
+  "panel_count": 7,
+  "plots_base": "/export/tmp/rikkert/macnlops_common_20261020/plots",
+  "schema": "macnlops-paper-vector-figure-selection-v1",
+  "scope": "Byte copies of seven existing vector PDFs; no rebinning, simulation, normalization or rasterization."
+}

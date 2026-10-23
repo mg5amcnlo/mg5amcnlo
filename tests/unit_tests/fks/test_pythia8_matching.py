@@ -402,6 +402,19 @@ class TestPythia8Matching(unittest.TestCase):
                 self.assertRelative(row[2]*row[3]/(effective_xi**2*effective_delta),
                                     reference)
 
+    def test_massless_quark_pair_absolute_colour_end_coefficient(self):
+        # Literal pT2nextQCD: wtPSqqbar=.25*nf, a uniform species draw
+        # supplies 1/nf, and weightGluonToQuark=1 gives z^2+(1-z)^2.
+        # Each gluon colour end therefore has coefficient .25*P(z).
+        for z in (.2,.35,.5,.8):
+            for t in (100.,1000.,15000.):
+                p, measure = fsr(0.,400.,z,t)
+                row = self.run_driver('event',event_input(p,kind=5))[0]
+                actual = row[6]/(row[4]**2*(1-row[5]))
+                expected = (.25*(z*z+(1-z)**2)/t /
+                            (16*math.pi**3*measure))
+                self.assertRelative(actual,expected)
+
     def test_complete_gluon_daughter_and_connection_sum(self):
         for z, t in ((z, t) for z in (.2, .35, .5, .8) for t in (15000., 20000.)):
             p, measure = fsr(0., 400., z, t)

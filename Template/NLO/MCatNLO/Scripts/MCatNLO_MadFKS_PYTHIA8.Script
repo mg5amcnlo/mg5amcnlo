@@ -824,6 +824,55 @@ EOF
 done
 
 
+if [ "${MACNLOPS_CONTINUATION:-OFF}" = "ON" ]
+then
+  # Apply the accepted endpoint's continuation contract after user overrides.
+  # The same scale import applies to ordinary and Delta source matching.
+  if ! grep -q 'name="Beams:setDipoleShowerStartingScalesFromLHEF"' \
+      "$thisdir/xmldoc/BeamParameters.xml"
+  then
+    echo "MAcNLOPS continuation requires per-dipole LHE starting-scale support" >&2
+    exit 1
+  fi
+  cat <<EOF >> "$ifile"
+
+! Consume each accepted LHE input once; stop on a failed shower.
+Main:spareFlag1 = on
+
+! Continue from the written endpoint and its remaining scale limits.
+Beams:setProductionScalesFromLHEF = on
+Beams:setDipoleShowerStartingScalesFromLHEF = on
+TimeShower:globalRecoil = off
+TimeShower:pTmaxMatch = 1
+SpaceShower:pTmaxMatch = 1
+TimeShower:pTmaxFudge = 1.
+SpaceShower:pTmaxFudge = 1.
+TimeShower:limitPTmaxGlobal = on
+TimeShower:pTmin = $MACNLOPS_FSR_CUTOFF
+SpaceShower:pTmin = $MACNLOPS_ISR_CUTOFF
+LesHouches:setQuarkMass = 0
+LesHouches:setLeptonMass = 0
+
+! Preserve the first-emission matching and the parton-level QCD setup.
+TimeShower:MEcorrections = off
+SpaceShower:MEcorrections = off
+TimeShower:MEafterFirst = off
+SpaceShower:MEafterFirst = off
+PartonLevel:MPI = off
+HadronLevel:all = off
+BeamRemnants:primordialKT = off
+ColourReconnection:reconnect = off
+ProcessLevel:resonanceDecays = off
+PartonLevel:FSRinResonances = off
+SpaceShower:QEDshowerByQ = off
+SpaceShower:QEDshowerByL = off
+TimeShower:QEDshowerByQ = off
+TimeShower:QEDshowerByL = off
+TimeShower:QEDshowerByGamma = off
+EOF
+fi
+
+
 cp -f $thisdir/$ifile Pythia8.cmd
 
 }

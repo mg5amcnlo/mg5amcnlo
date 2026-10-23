@@ -59,6 +59,7 @@ class TestBornSpreading(unittest.TestCase):
             includes = {
                 'nexternal.inc': 'integer nexternal,nincoming\nparameter(nexternal=5,nincoming=2)',
                 'genps.inc': 'integer maxproc\nparameter(maxproc=2)',
+                'run.inc': 'logical macnlops\nparameter(macnlops=.false.)',
                 'nFKSconfigs.inc': 'integer fks_configs\nparameter(fks_configs=3)',
                 'fks_info.inc': 'integer pdg_type_d(3,5),fks_i_d(3)\n'
                                 'common/test_fks_info/pdg_type_d,fks_i_d',

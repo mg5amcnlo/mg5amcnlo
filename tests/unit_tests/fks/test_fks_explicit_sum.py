@@ -29,7 +29,7 @@ class TestFKSExplicitSum(unittest.TestCase):
             (work / name).write_text(''.join('      ' + line + '\n'
                                            for line in source.splitlines()))
         (work / 'map.f').write_text(fortran_routine(
-            TEMPLATE / 'driver_mintMC.f', 'setup_proc_map'))
+            TEMPLATE / 'mc_matching_runtime.f', 'setup_proc_map'))
         (work / 'explicit.dat').write_text('#FKSExplicitSum\n.true.\n')
         (work / 'sampled.dat').write_text('#FKSExplicitSum\n.false.\n')
         (work / 'old.dat').write_text('#MCExplicitKLSum\n.true.\n')
@@ -124,6 +124,7 @@ class TestFKSExplicitSum(unittest.TestCase):
             includes = {
                 'nexternal.inc': 'integer nexternal,nincoming\nparameter(nexternal=5,nincoming=2)',
                 'genps.inc': 'integer maxproc\nparameter(maxproc=1)',
+                'run.inc': 'logical macnlops\nparameter(macnlops=.false.)',
                 'nFKSconfigs.inc': 'integer fks_configs\nparameter(fks_configs=2)',
                 'orders.inc': 'integer amp_split_size\nparameter(amp_split_size=1)',
                 'fks_info.inc': 'integer pdg_type_d(2,5),fks_i_d(2)\n'

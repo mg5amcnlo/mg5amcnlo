@@ -412,7 +412,7 @@ c G replacement: Hhat_ij = S_ij sum_kl P_kl (S_kl R - M_kl).
 
 
       subroutine compute_MCsubtraction_kl(k_fks,l_fks,xi,y,p,p_cm,p_born
-     $     ,include_gfun,z,n_connect,amp_split_xmcxsec)
+     $     ,include_gfun,z,n_connect,amp_split_xmcxsec,scalar_kernel)
       use fks_phase_space_data, only: veckn_ev,veckbarn_ev,xp0jfks
       use scale_module, only: born_flow_picked
       implicit none
@@ -427,6 +427,7 @@ c G replacement: Hhat_ij = S_ij sum_kl P_kl (S_kl R - M_kl).
       common /to_mass/pmass
       integer n_connect,i_connect(2),iconnect
       logical include_gfun
+      logical,optional,intent(in) :: scalar_kernel
       double precision g_damping,qMC,connection_damping(2)
       double precision born_weights(amp_split_size)
       double precision born_spin_weights(amp_split_size)
@@ -449,6 +450,11 @@ c Born amplitudes and the splitting order belong to the history and do
 c not depend on its colour connection. Prepare them once per history.
       call prepare_MCsubtraction_born(p,xi,y,p_born,kernel_index,
      $     born_weights,born_spin_weights)
+! The one-step shower can disable azimuthal spin correlations. This
+! affects only its separately evaluated proposal, never the source D.
+      if (present(scalar_kernel)) then
+         if (scalar_kernel) born_spin_weights=0d0
+      endif
       if (kernel_index.eq.2) then
          call find_qed_connector(p_born,fksfather,n_connect,i_connect)
       else
@@ -2795,10 +2801,12 @@ c
       double precision bogus_probne_fun,qMC
       double precision x,tmp
       integer itype
-! Artificial no-emission factor for the non-Delta debugging path.
+! Artificial no-emission factor of the ordinary non-Delta source.
 ! Mode 2 is smooth: P=0 below 0.5 GeV and P=1 above 10 GeV.
-! Mode 3 disables it. The native-history evaluator applies P once to
+! Mode 3 disables it. Ordinary native-history weights apply P once to
 ! the real, MC and G-replacement terms, retaining (1-P)*R in S.
+! The explicit legacy resolved source replaces this factor and G; raw
+! physical shower proposals do not contain this artificial factor.
 ! Physical Delta uses compute_delta instead, not a product with this P.
       data itype/2/
 c

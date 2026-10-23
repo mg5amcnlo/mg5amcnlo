@@ -72,7 +72,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 momentum_reshuffling.o						\
 	 rescale_alpha_tagged.o						\
 	 fks_Sij.o $(fastjetfortran_madfks) fks_singular.o		\
-	 montecarlocounter.o mcatnlo_delta_scales.o herwig7_scales.o		\
+	 montecarlocounter.o mc_pythia8_kernel.o mcatnlo_delta_scales.o herwig7_scales.o	\
 	 boostwdir2.o cluster.o splitorders_stuff.o reweight_xsec.o	\
 	 get_color.o iproc_map.o sudakov.o  				\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
@@ -95,7 +95,10 @@ RUN= $(FO_ANALYSE) $(FILES) cuts.o dummy_fct.o pythia_unlops.o recluster.o 		\
 MINTFO= $(RUN) driver_mintFO.o handling_lhe_events.o write_event.o BinothLHA.o
 
 # Files for mintMC
-MINTMC= $(RUN) driver_mintMC.o handling_lhe_events.o write_event.o BinothLHA.o
+MINTMC= $(RUN) driver_mintMC.o mc_matching_runtime.o handling_lhe_events.o write_event.o BinothLHA.o
+
+# Reuse the same matching implementation for arbitrary real-emission points.
+MACNLOPS= $(RUN) driver_macnlops.o mc_matching_runtime.o handling_lhe_events.o write_event.o BinothLHADummy.o
 
 # Files for check_poles
 POLES= $(RUN) check_poles.o BinothLHA.o write_event.o handling_lhe_events.o
@@ -192,6 +195,9 @@ madevent_mintFO: $(MINTFO) $(libmadloop) makefile $(LIBS)
 	rm handling_lhe_events.o
 	strip madevent_mintFO
 
+macnlops_evaluator: $(MACNLOPS) makefile $(LIBS)
+	$(FC) $(LDFLAGS) -o $@ $(MACNLOPS) $(APPLLIBS) $(LINKLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FJLIBS)
+
 reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
 	$(FC) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
 	rm handling_lhe_events.o
@@ -204,7 +210,7 @@ libMadLoop.a:
 # Keep this below executable targets so it does not change the default goal.
 add_write_info.o analysis_lhe.o BinothLHA.o BinothLHA_user.o \
     check_poles.o check_sudakov.o check_sudakov_angle2.o cluster.o cuts.o \
-    driver_mintFO.o driver_mintMC.o ewsudakov_functions_dummy.o \
+    driver_mintFO.o driver_mintMC.o mc_matching_runtime.o driver_macnlops.o ewsudakov_functions_dummy.o \
     fks_Sij.o fks_singular.o genps_fks.o genps_fks_sampling.o \
     genps_fks_radiation.o initial_recoil.o \
     mc_native_runtime.o montecarlocounter.o pythia_unlops.o \
@@ -218,14 +224,15 @@ montecarlocounter.o : scale_module.o genps_fks_helpers.o process_module.o mcatnl
 montecarlocounter.o : nexternal.inc born_nhel.inc orders.inc
 montecarlocounter.o : fks_powers.inc
 # Build the counterterm module before its callers need mc_counterterms.mod.
-fks_singular.o test_soft_col_limits.o driver_mintMC.o: montecarlocounter.o
+fks_singular.o test_soft_col_limits.o driver_mintMC.o mc_matching_runtime.o driver_macnlops.o: montecarlocounter.o
+driver_macnlops.o fks_singular.o: mc_pythia8_kernel.o
 fks_singular.o : scale_module.o process_module.o
-add_write_info.o write_event.o test_soft_col_limits.o driver_mintMC.o: scale_module.o
+add_write_info.o write_event.o test_soft_col_limits.o driver_mintMC.o mc_matching_runtime.o driver_macnlops.o: scale_module.o
 genps_fks.o: genps_fks_sampling.o genps_fks_radiation.o \
     genps_fks_helpers.o mc_native_context.o
 genps_fks_sampling.o genps_fks_radiation.o: genps_fks_helpers.o mc_native_context.o
 genps_fks_radiation.o: FKSParams.o
-driver_mintFO.o driver_mintMC.o write_event.o add_write_info.o \
+driver_mintFO.o driver_mintMC.o mc_matching_runtime.o driver_macnlops.o write_event.o add_write_info.o \
     test_soft_col_limits.o symmetry_fks_v3.o: genps_fks.o
 driver_mintFO.o: process_module.o
 mint_module.o : FKSParams.o virtual_surrogate.o
@@ -235,8 +242,9 @@ fks_singular.o genps_fks.o setscales.o cuts.o fastjet_wrapper.o \
 BinothLHA_OLP.o: FKSParams.o
 BinothLHA.o: FKSParams.o
 reweight_xsec_events.o: weight_lines.o
+add_write_info.o: weight_lines.o FKSParams.o mc_histories.inc
 fks_singular.o: weight_lines.o mint_module.o fks_symmetry.inc
-driver_mintMC.o: weight_lines.o mint_module.o genps_fks_helpers.o fks_symmetry.inc mc_histories.inc
+driver_mintMC.o mc_matching_runtime.o driver_macnlops.o: weight_lines.o mint_module.o genps_fks_helpers.o fks_symmetry.inc mc_histories.inc
 driver_mintFO.o: weight_lines.o mint_module.o FKSParams.o
 chooser_functions.o: weight_lines.o
 cluster.o: weight_lines.o FKSParams.o
@@ -254,7 +262,7 @@ write_event.o: mint_module.o
 check_poles.o: mint_module.o
 clean:
 	@rm -f *.o write_ajob_basic reweight_xsec_events madevent_* check_poles\
-	    test_M* gensym
+	    test_M* gensym macnlops_evaluator
 	for dir in `ls -d V*`; do cd $$dir; make clean; cd ../; done
 
 ifneq ("$(wildcard born_support.f)","")
@@ -266,10 +274,10 @@ endif
 ifneq ("$(wildcard mc_native_context.f90)","")
 mc_native_context.o: $(LIBDIR)mc_born_types.mod $(LIBDIR)mc_born_support.mod
 mc_native_context.o: FFLAGS += -ffree-line-length-none
-mc_native_runtime.o mc_native_props.o real_me_chooser.o chooser_functions.o genps_fks.o setcuts.o fks_singular.o driver_mintMC.o weight_lines.o iproc_map.o cluster.o: mc_native_context.o
+mc_native_runtime.o mc_native_props.o real_me_chooser.o chooser_functions.o genps_fks.o setcuts.o fks_singular.o driver_mintMC.o mc_matching_runtime.o driver_macnlops.o weight_lines.o iproc_map.o cluster.o: mc_native_context.o
 mc_native_runtime.o: FFLAGS += -ffixed-line-length-none
 
 # Native metadata dimensions are shared by all runtime COMMON declarations.
 # Regenerating a table must rebuild every Fortran consumer of that layout.
-$(filter %.o,$(FILES) $(RUN) $(MINTFO) $(MINTMC) $(POLES) $(TEST) $(SYM) $(RWGFILES)): genps.inc nFKSconfigs.inc maxconfigs.inc maxparticles.inc born_nhel.inc born_conf.inc born_coloramps.inc born_leshouche.inc fks_info.inc fks_symmetry.inc mc_histories.inc leshouche_decl.inc configs_and_props_decl.inc real_from_born_configs.inc
+$(filter %.o,$(FILES) $(RUN) $(MINTFO) $(MINTMC) $(MACNLOPS) $(POLES) $(TEST) $(SYM) $(RWGFILES)): genps.inc nFKSconfigs.inc maxconfigs.inc maxparticles.inc born_nhel.inc born_conf.inc born_coloramps.inc born_leshouche.inc fks_info.inc fks_symmetry.inc mc_histories.inc leshouche_decl.inc configs_and_props_decl.inc real_from_born_configs.inc
 endif

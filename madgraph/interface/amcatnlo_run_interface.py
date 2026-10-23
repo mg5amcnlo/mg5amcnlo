@@ -25,6 +25,7 @@ import logging
 import math
 import optparse
 import os
+from pathlib import Path
 import pydoc
 import random
 import re
@@ -81,6 +82,7 @@ except ImportError:
     import internal.FO_analyse_card as analyse_card 
     import internal.lhe_parser as lhe_parser
     import internal.collect_events as collect_events
+    import internal.macnlops as macnlops
 else:
     # import from madgraph directory
     aMCatNLO = False
@@ -98,6 +100,7 @@ else:
     import madgraph.various.lhe_parser as lhe_parser
     from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error,MG5DIR
     import madgraph.various.collect_events as collect_events
+    import madgraph.various.macnlops as macnlops
 
 class aMCatNLOError(Exception):
     pass
@@ -473,8 +476,22 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('Directory %s does not exists' % \
                             pjoin(os.getcwd(), 'Events',  args[0]))
 
-        self.set_run_name(args[0], level= 'shower')
-        args[0] = pjoin(self.me_dir, 'Events', args[0])
+        event_directory = pjoin(self.me_dir, 'Events', args[0])
+        run_name = args[0]
+        run_parts = Path(os.path.relpath(event_directory,
+                                        pjoin(self.me_dir, 'Events'))).parts
+        if len(run_parts) > 1 and run_parts[0] != os.pardir:
+            candidate = pjoin(event_directory, 'events.lhe')
+            if not os.path.isfile(candidate):
+                candidate += '.gz'
+            if os.path.isfile(candidate):
+                with macnlops.LHEStream(candidate) as source:
+                    if macnlops.matched_lhe_header(source.header):
+                        # Nested matched samples belong to their source run;
+                        # their input directory is not a new run identifier.
+                        run_name = run_parts[0]
+        self.set_run_name(run_name, level= 'shower')
+        args[0] = event_directory
     
     def check_plot(self, args):
         """Check the argument for the plot command
@@ -1895,7 +1912,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if not mode in ['LO', 'NLO', 'noshower', 'noshowerLO'] \
                                                       and not options['parton']:
             self.run_mcatnlo(evt_file, options)
-            self.exec_cmd('madanalysis5_hadron --no_default', postcmd=False, printcmd=False)
+            if not self.run_card['macnlops']:
+                self.exec_cmd('madanalysis5_hadron --no_default', postcmd=False, printcmd=False)
 
         elif mode == 'noshower':
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical. Please, shower the Les Houches events before using them for physics analyses.""")
@@ -3948,6 +3966,9 @@ RESTART = %(mint_mode)s
             gzip_level=6,
             verbose=False,
         )
+        if self.run_card['macnlops']:
+            macnlops.write_source_manifest(self.me_dir, self.run_name,
+                                          evt_files + [evt_file])
         
         if not options['reweightonly']:
             self.print_summary(options, 2, mode, scale_pdf_info)
@@ -3964,6 +3985,18 @@ RESTART = %(mint_mode)s
     def run_mcatnlo(self, evt_file, options):
         """runs mcatnlo on the generated event file, to produce showered-events
         """
+        source_file = evt_file if os.path.isfile(evt_file) else evt_file + '.gz'
+        with macnlops.LHEStream(source_file) as source:
+            source_card = re.search(r'<MGRunCard>(.*?)</MGRunCard>', source.header, re.S | re.I)
+            matched_sample = macnlops.matched_lhe_header(source.header)
+        self.macnlops_continuation = (macnlops.continuation_contract(source_file)
+                                      if matched_sample else None)
+        source_macnlops = source_card and macnlops.run_card_values(source_card[1]).get('macnlops')
+        if source_macnlops in ('true', '.true.', 't') and not matched_sample:
+            output = macnlops.run_generated_sample(self.me_dir, evt_file,
+                self.options['pythia8_path'], self.get_randinit_seed())
+            logger.info('Collected MAcNLOPS first-emission events: %s', output)
+            return
         logger.info('Preparing MCatNLO run')
         try:     
             misc.gunzip(evt_file)
@@ -3972,6 +4005,14 @@ RESTART = %(mint_mode)s
 
         self.banner = banner_mod.Banner(evt_file)
         shower = self.banner.get_detail('run_card', 'parton_shower').upper()
+        if self.macnlops_continuation:
+            if shower != 'PYTHIA8':
+                raise aMCatNLOError('MAcNLOPS LHE continuation requires PYTHIA8')
+            self.banner.run_card['nevents'] = self.macnlops_continuation['events']
+            # Source-run split files are a different event population. The
+            # collected matched file is already randomized and sum-normalized.
+            self.shower_card['nsplit_jobs'] = 1
+            logger.info('Continuing the accepted MAcNLOPS LHE with local recoil and saved shower bounds')
 
         #check that the number of split event files divides the number of
         # events, otherwise set it to 1
@@ -4138,20 +4179,22 @@ RESTART = %(mint_mode)s
         os.mkdir(rundir)
         files.cp(shower_card_path, rundir)
 
-        #look for the event files (don't resplit if one asks for the 
-        # same number of event files as in the previous run)
-        event_files = misc.glob('events.lhe_*', pjoin(self.me_dir, 'Events', self.run_name))
-        if max(len(event_files), 1) != self.shower_card['nsplit_jobs']:
-            logger.info('Cleaning old files and splitting the event file...')
-            #clean the old files
-            files.rm([f for f in event_files if 'events.lhe' not in f])
-            if self.shower_card['nsplit_jobs'] > 1:
-                eventfile = lhe_parser.EventFile(evt_file)
-                eventfile.split(self.banner.get_detail('run_card', 'nevents') / self.shower_card['nsplit_jobs'], cwd = pjoin(self.me_dir, 'Events', self.run_name))
-                logger.info('Splitting done.')
-            event_files = misc.glob('events.lhe_*', pjoin(self.me_dir, 'Events', self.run_name)) 
-
-        event_files.sort()
+        # The accepted continuation is one collected file. Only ordinary
+        # source samples may reuse or regenerate the source run's split files.
+        event_files = []
+        if not self.macnlops_continuation:
+            event_directory = pjoin(self.me_dir, 'Events', self.run_name)
+            event_files = misc.glob('events.lhe_*', event_directory)
+            if max(len(event_files), 1) != self.shower_card['nsplit_jobs']:
+                logger.info('Cleaning old files and splitting the event file...')
+                files.rm([f for f in event_files if 'events.lhe' not in f])
+                if self.shower_card['nsplit_jobs'] > 1:
+                    eventfile = lhe_parser.EventFile(evt_file)
+                    eventfile.split(self.banner.get_detail('run_card', 'nevents') /
+                                    self.shower_card['nsplit_jobs'], cwd=event_directory)
+                    logger.info('Splitting done.')
+                event_files = misc.glob('events.lhe_*', event_directory)
+            event_files.sort()
 
         self.update_status('Showering events...', level='shower')
         logger.info('(Running in %s)' % rundir)
@@ -4824,6 +4867,11 @@ RESTART = %(mint_mode)s
             content += 'PDFCODE=0\n'
 
         content += 'ICKKW=%s\n' % self.banner.get_detail('run_card', 'ickkw')
+        continuation = getattr(self, 'macnlops_continuation', None)
+        content += 'MACNLOPS_CONTINUATION=%s\n' % ('ON' if continuation else 'OFF')
+        if continuation:
+            content += 'MACNLOPS_ISR_CUTOFF=%.17e\nMACNLOPS_FSR_CUTOFF=%.17e\n' % tuple(
+                continuation['shower_cutoffs'])
         if self.banner.get_detail('run_card', 'mcatnlo_delta') :
             content += 'DELTA=ON\n'
         else:
@@ -5472,6 +5520,8 @@ RESTART = %(mint_mode)s
 
         # if --nocompile option is specified, check here that all exes exists. 
         # If they exists, return
+        if self.run_card['macnlops'] and options['nocompile']:
+            raise aMCatNLOError('MAcNLOPS must measure the shower profile and compile it before integration; omit --nocompile')
         if all([os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, exe)) \
                 for p_dir in p_dirs]) and options['nocompile']:
             return
@@ -5543,6 +5593,12 @@ RESTART = %(mint_mode)s
                     self.make_opts_var['pdlabel'] = self.run_card['pdlabel']
 
             self.make_opts_var['lhapdf'] = ""
+
+        if self.run_card['macnlops']:
+            if mode not in ('aMC@NLO', 'noshower'):
+                raise aMCatNLOError('MAcNLOPS requires full NLO matched event generation')
+            macnlops.prepare_generation(self.me_dir, self.run_card,
+                                        self.options['pythia8_path'])
 
         # create param_card.inc and run_card.inc
         self.do_treatcards('', amcatnlo=True, mode=mode)

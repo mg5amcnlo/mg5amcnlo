@@ -594,6 +594,7 @@ c its value to the list of weights using the add_wgt subroutine
       include 'nexternal.inc'
       include 'coupl.inc'
       include 'orders.inc'
+      include 'run.inc'
       integer orders(nsplitorders)
       integer iamp
       double precision s_ev,fks_Sij,p(0:3,nexternal),wgt1,fx_ev
@@ -606,8 +607,10 @@ c its value to the list of weights using the add_wgt subroutine
       integer get_orders_tag
       if (f_r.eq.0d0) return
 ! Do not evaluate a real matrix element whose only records are discarded.
-      if (mc_H_only.and.sudakov_damp.le.0d0) return
-      if (mc_S_only.and.sudakov_damp.ge.1d0) return
+      if (.not.(macnlops.and.macnlops_resolved_source)) then
+         if (mc_H_only.and.sudakov_damp.le.0d0) return
+         if (mc_S_only.and.sudakov_damp.ge.1d0) return
+      endif
       s_ev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
       if (s_ev.le.0.d0) return
       call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
@@ -620,10 +623,16 @@ c its value to the list of weights using the add_wgt subroutine
         orders_tag=get_orders_tag(orders)
         amp_pos=iamp
         wgt1=amp_split(iamp)*s_ev*f_r/g**(qcd_power)
-        if (sudakov_damp.gt.0d0) then
+        if(macnlops.and.macnlops_resolved_source)then
+c Preserve both raw R copies until the actual subprocess flavour is
+c known. include_PDF_and_alphas applies P to H and (1-P) to S.
+          call add_wgt(1,orders,wgt1,0d0,0d0)
+          call add_wgt(11,orders,wgt1,0d0,0d0)
+        elseif (sudakov_damp.gt.0d0) then
           call add_wgt(1,orders,wgt1*sudakov_damp,0d0,0d0)
         endif
-        if (sudakov_damp.lt.1d0) then
+        if (.not.(macnlops.and.macnlops_resolved_source).and.
+     $      sudakov_damp.lt.1d0) then
           call add_wgt(11,orders,wgt1*(1d0-sudakov_damp),0d0,0d0)
         endif
       enddo
@@ -916,7 +925,8 @@ c value to the list of weights using the add_wgt subroutine
 ! G replacement. During H repartitioning add_wgt discards S records.
       use mc_counterterms, only: gfactsf,gfactcl,gfactazi
       use mint_module, only: pass_cuts_check
-      use weight_lines, only: mc_H_only,mc_S_only
+      use weight_lines, only: mc_H_only,mc_S_only,
+     $     macnlops_gate_active
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -927,6 +937,9 @@ c value to the list of weights using the add_wgt subroutine
       common /to_abrv/ abrv
 
       probne=1d0
+      macnlops_gate_active=macnlops.and.macnlops_resolved_source.and.
+     $     passcuts_nbody.and.
+     $     abrv.ne.'real'
       gfactsf=1d0
       gfactcl=1d0
       gfactazi=0d0
@@ -989,14 +1002,18 @@ c value to the list of weights using the add_wgt subroutine
          call include_multichannel_enhance(2)
          call compute_real_emission(p,probne)
       endif
+      macnlops_gate_active=.false.
       end
 
       subroutine compute_MC_subt_term(p,p_cms,probne)
       use mc_counterterms, only: compute_MCsubtraction_kl,compute_delta,
-     $     bogus_probne_fun,get_qMC
+     $     bogus_probne_fun,get_qMC,gfactsf,gfactcl,gfactazi
       use fks_phase_space_data, only: xi_i_fks_ev,y_ij_fks_ev,p_born,xbjrk_cnt
       use extra_weights
       use process_module, only: mcatnlo_delta_mod
+      use weight_lines, only: macnlops_current_z,
+     $     replay_delta_probability,append_delta_probability
+      use scale_module, only: born_flow_picked
       implicit none
 c     Compute the ordinary, complete native-history MC contribution. The
 c     driver repartitions H only after adding its real and G terms. It
@@ -1008,6 +1025,7 @@ c     respectively.
       include 'timing_variables.inc'
       include 'coupl.inc'
       include 'orders.inc'
+      include 'run.inc'
       integer iconnect,n_connect
       double precision p(0:3,nexternal),probne,fks_Sij,sevmc_Hev,sevmc_Sev,g22,wgt1,xlum_mc_fact,fks_Hij,
      $     amp_split_xmcxsec(amp_split_size,2),xi,y,z(2),p_cms(0:3,nexternal)
@@ -1021,8 +1039,10 @@ c     respectively.
       integer iamp
       integer orders(nsplitorders)
       integer get_orders_tag
-      logical include_gfun
+      logical include_gfun,replayed
       if(timing_sampled)call timing_enter(timing_mc)
+      if(mcatnlo_delta_mod.and.macnlops_resolved_source)
+     $   error stop 'Delta matching is incompatible with resolved source'
       probne=1d0
       if (p(0,1).le.0d0) goto 9909
       sevmc_Hev = fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
@@ -1033,13 +1053,28 @@ c Use the coordinates of the active map, including the resonance frame.
       xi=xi_i_fks_ev
       y=y_ij_fks_ev
 !     This history keeps its own G-functions and no-emission probability.
-      include_gfun=.true.
+      include_gfun=.not.(macnlops.and.macnlops_resolved_source)
       call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p
      $     ,p_cms,p_born,include_gfun,z,n_connect
-     $     ,amp_split_xmcxsec)
+     $     ,amp_split_xmcxsec,
+     $     macnlops.and.macnlops_resolved_source)
+      if(macnlops.and.macnlops_resolved_source)then
+c A positive scalar proposal replaces the G-completed source kernel.
+c P and flavour-dependent shower support are applied after PDF lookup.
+         gfactsf=1d0
+         gfactcl=1d0
+         gfactazi=0d0
+      endif
       if (mcatnlo_delta_mod) then
 !     include Delta
-         call compute_delta(p,probne)
+! Replay only the actual stochastic H multiplier. The real, MC and G
+! terms below still use their original native maps, PDFs and measures.
+         call replay_delta_probability(born_flow_picked,probne,
+     $        replayed)
+         if(.not.replayed)call compute_delta(p,probne)
+         call append_delta_probability(born_flow_picked,probne)
+      elseif(macnlops.and.macnlops_resolved_source)then
+         probne=1d0
       else
 !     Compute the artificial P_b from THIS history's kinematics, once.
 !     It also returns to the driver for its G terms and real H/S split;
@@ -1049,6 +1084,7 @@ c Use the coordinates of the active map, including the resonance frame.
       
       do iconnect=1,n_connect
          if (all(amp_split_xmcxsec(:,iconnect).eq.0d0)) cycle
+         macnlops_current_z=z(iconnect)
          call get_mc_lum(j_fks,z(iconnect),xi,xlum_mc_fact
      $        ,xbjrk_cnt(1,0))
 !     Restore the regulated factors for this native FKS chart. Its phase
@@ -1966,7 +2002,9 @@ c equal to ione, so no need to define separate factors.
       
       subroutine add_wgt(type,orders,wgt1,wgt2,wgt3)
       use mc_born_types, only: born_is_finite
-      use fks_phase_space_data,only: p_born,p_ev,ybst_til_tolab,p1_cnt
+      use fks_phase_space_data,only: p_born,p_ev,ybst_til_tolab,p1_cnt,
+     $     xi_i_fks_ev,y_ij_fks_ev,xbjrk_cnt
+      use mc_counterterms,only: get_qMC
 c Adds a contribution to the list in weight_lines. 'type' sets the type
 c of the contribution and wgt1..wgt3 are the coefficients multiplying
 c the logs. The arguments are:
@@ -2070,6 +2108,7 @@ c        contribution
       integer type,i,j,cntslot
       logical foundIt,foundOrders
       double precision wgt1,wgt2,wgt3
+      double precision total_born(0:3)
       integer orders(nsplitorders)
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
@@ -2177,6 +2216,22 @@ c after restoring the native state. A partial subtraction is not valid.
       icontr=icontr+1
       call weight_lines_allocated(nexternal,icontr,max_wgt,max_iproc)
       itype(icontr)=type
+      call reset_macnlops_line(icontr)
+      if(mc_H_only)delta_line_context(icontr)=delta_context_active
+      if(macnlops.and.
+     $   (macnlops_gate_active.or.macnlops_proposal_active).and.
+     $   (type.eq.1.or.type.eq.11.or.type.eq.12.or.type.eq.13))then
+         macnlops_meta(1,icontr)=get_qMC(xi_i_fks_ev,
+     $        y_ij_fks_ev)**2
+         total_born=sum(p_born(:,1:nincoming),dim=2)
+         macnlops_meta(2,icontr)=total_born(0)**2-
+     $        sum(total_born(1:3)**2)
+         macnlops_meta(3:4,icontr)=xbjrk_cnt(:,0)
+         if(type.eq.12.or.type.eq.13)
+     $        macnlops_meta(5,icontr)=macnlops_current_z
+         macnlops_meta(6,icontr)=1d0
+         if(macnlops_proposal_active)macnlops_meta(6,icontr)=2d0
+      endif
 
 C here we rescale the contributions by the ratio of alpha's in different
 C schemes; it is needed when there are tagged photons around
@@ -2322,6 +2377,8 @@ c or to fill histograms.
       external find_virtual_mint_carrier
       logical virt_found
       double precision xlum,dlum,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac,wgt_wo_pdf,conv
+      double precision macnlops_flavour_factor
+      external macnlops_flavour_factor
       external rwgt_muR_dep_fac
       external dlum
       integer              nFKSprocess
@@ -2477,6 +2534,17 @@ c Flavour splitting can modify old records; leave that path unchanged.
          do j=1,iproc
             parton_iproc(j,i)=parton_iproc(j,i) * wgt_wo_pdf
          enddo
+         if(macnlops.and.(itype(i).eq.1.or.itype(i).eq.11.or.
+     $        itype(i).eq.12.or.itype(i).eq.13))then
+c Apply the physical flavour's gate and shower coefficient before any
+c histories, colours or subprocesses are combined for unweighting.
+            do j=1,iproc
+               if(parton_iproc(j,i).eq.0d0)cycle
+               parton_iproc(j,i)=parton_iproc(j,i)*
+     $              macnlops_flavour_factor(i,j)
+            enddo
+            wgts(iwgt,i)=sum(parton_iproc(1:iproc,i))
+         endif
          if ((itype(i).eq.14.or.i.eq.mint_carrier)
      $        .and..not.virt_found) then
             virt_found=.true.
@@ -2502,6 +2570,137 @@ c and not be part of the plots nor computation of the cross section.
          endif
       enddo
       return
+      end
+
+
+      subroutine macnlops_validate_profile
+c System-only parameters must come from the actual Pythia initialization
+c before grids or weights are built. A standalone treatcards invocation
+c restores sentinels and must never silently remove the matching gate.
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      implicit none
+      include 'run.inc'
+      if(.not.macnlops)return
+      if(.not.all(ieee_is_finite([macnlops_isr_cutoff,
+     $     macnlops_fsr_cutoff,macnlops_charm_mass,
+     $     macnlops_bottom_mass,macnlops_beam_xmax])).or.
+     $     macnlops_isr_cutoff.le.0d0.or.
+     $     macnlops_fsr_cutoff.le.0d0.or.
+     $     macnlops_charm_mass.lt.1.2d0.or.
+     $     macnlops_bottom_mass.lt.4d0.or.
+     $     any(macnlops_beam_xmax.le.0d0).or.
+     $     any(macnlops_beam_xmax.gt.1d0).or.
+     $     (macnlops_nquark_in.ne.4.and.
+     $      macnlops_nquark_in.ne.5).or.
+     $     macnlops_ngluon_to_quark.ne.macnlops_nquark_in)then
+         write(*,*) 'MAcNLOPS shower profile is absent or invalid.'
+         write(*,*) 'Probe Pythia before preparing generation cards.'
+         write(*,*) 'ISR/FSR cutoffs, charm/bottom masses, beam xMax:',
+     $        macnlops_isr_cutoff,macnlops_fsr_cutoff,
+     $        macnlops_charm_mass,macnlops_bottom_mass,
+     $        macnlops_beam_xmax
+         write(*,*) 'Incoming and pair-production flavour counts:',
+     $        macnlops_nquark_in,macnlops_ngluon_to_quark
+         stop 1
+      endif
+      end
+
+
+      double precision function macnlops_flavour_factor(ict,ipro)
+c Legacy resolved source D*=(1-P)R+P K has a per-flavour gate.
+c Ordinary source records retain G and bogus P without this correction.
+c Raw proposal records independently select the same physical support;
+c they never inherit bogus P from either source construction.
+      use weight_lines
+      use mc_native_context, only: history_permutations
+      use mc_pythia8_kernel, only: py8_isr_mass_floor,
+     $     py8_isr_ordinary_weight,py8_fsr_ordinary_weight
+      implicit none
+      include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+      include 'fks_info.inc'
+      include 'run.inc'
+      integer ict,ipro,history,sector,ifks,jfks,k,status,father,
+     $     ids(nexternal),born_ids(2)
+      logical profile_checked
+      save profile_checked
+      data profile_checked/.false./
+      double precision cut,pt2,p_gate,correction,msister,
+     $     get_mass_from_id
+      external get_mass_from_id
+
+      macnlops_flavour_factor=1d0
+      if(.not.macnlops)return
+      if(.not.profile_checked)then
+         call macnlops_validate_profile
+         profile_checked=.true.
+      endif
+      if(macnlops_meta(6,ict).eq.0d0)then
+c A Born state outside generation cuts transfers no real weight to S.
+c This also permits a caller to request the ungated physical R density.
+         if(macnlops_resolved_source.and.itype(ict).eq.11)
+     $        macnlops_flavour_factor=0d0
+         return
+      endif
+      sector=nFKS(ict)
+      ifks=fks_i_d(sector)
+      jfks=fks_j_d(sector)
+      father=min(ifks,jfks)
+      history=native_ids(3,ict)
+      do k=1,nexternal
+         if(history.gt.0.and.H_event(ict))then
+            ids(k)=parton_pdg(history_permutations(k,history),ipro,ict)
+         else
+            ids(k)=parton_pdg(k,ipro,ict)
+         endif
+      enddo
+      born_ids=parton_pdg_uborn(1:2,ipro,ict)
+      cut=max(macnlops_isr_cutoff,macnlops_fsr_cutoff)
+      do k=1,2
+         cut=max(cut,sqrt(2d0)*py8_isr_mass_floor(born_ids(k),
+     $        macnlops_charm_mass,macnlops_bottom_mass))
+      enddo
+      pt2=macnlops_meta(1,ict)
+      p_gate=0d0
+      if(pt2.gt.cut**2)p_gate=1d0
+      if(itype(ict).eq.11)then
+         macnlops_flavour_factor=1d0-p_gate
+         return
+      endif
+      macnlops_flavour_factor=p_gate
+      if(p_gate.eq.0d0.or.itype(ict).eq.1)return
+      if(itype(ict).ne.12.and.itype(ict).ne.13)return
+      msister=get_mass_from_id(ids(ifks))
+      if(jfks.le.nincoming)then
+         if(abs(ids(jfks)).ge.1.and.abs(ids(jfks)).le.6.and.
+     $      abs(ids(jfks)).gt.macnlops_nquark_in)then
+            macnlops_flavour_factor=0d0
+            return
+         endif
+         call py8_isr_ordinary_weight(born_ids(jfks),ids(jfks),
+     $        ids(ifks),macnlops_meta(5,ict),pt2,
+     $        macnlops_meta(2,ict),macnlops_meta(2+jfks,ict),
+     $        macnlops_beam_xmax(jfks),macnlops_charm_mass,
+     $        macnlops_bottom_mass,msister,.false.,correction,status)
+      else
+c Massive Q->Qg has an additional physical pT cutoff after its pair
+c mass is rescaled. The native scalar map supplies the other factors.
+         call py8_fsr_ordinary_weight(parton_pdg_uborn(father,ipro,
+     $        ict),ids(jfks),ids(ifks),macnlops_meta(5,ict),pt2,
+     $        get_mass_from_id(parton_pdg_uborn(father,ipro,ict)),
+     $        get_mass_from_id(ids(jfks)),msister,
+     $        macnlops_fsr_cutoff,macnlops_ngluon_to_quark,
+     $        correction,status)
+      endif
+      if(status.ne.0)then
+         write(*,*) 'Unsupported MAcNLOPS source shower kernel',
+     $        status,sector,history,ifks,jfks
+         write(*,*) 'Actual Born and real flavours:',born_ids,ids
+         write(*,*) 'Frozen native shower kinematics:',
+     $        macnlops_meta(:,ict)
+         stop 1
+      endif
+      macnlops_flavour_factor=p_gate*correction
       end
 
       subroutine recompute_xlum_for_wgt_mint(i,xlum)
@@ -2700,7 +2899,8 @@ c keeps its contribution from the bias_wgt.
                endif
             enddo
          else
-            ipro=iproc_picked
+            ipro=group_flavour_row(icontr_picked,iproc_picked,ict)
+            if(ipro.eq.0)stop 'Missing H-group native flavour in bias'
             wgt_denom=wgt_denom+parton_iproc(ipro,ict)
             wgt_num=wgt_num+parton_iproc(ipro,ict)/bias_wgt(ict)
             if (Flavour_Bias(2).ne.1) then ! non-trivial Flavour bias. Check consistency of flavour configuration
@@ -2778,6 +2978,7 @@ c update the event weight to be written in the file
          nFKS(ict_new)=nFKS(ict)
          event_nFKS(ict_new)=event_nFKS(ict)
          native_ids(:,ict_new)=native_ids(:,ict)
+         call copy_macnlops_line(ict,ict_new)
          y_bst(ict_new)=y_bst(ict)
          QCDpower(ict_new)=QCDpower(ict)
          cpower(ict_new)=cpower(ict)
@@ -3490,7 +3691,9 @@ c various FKS configurations can be summed together.
       include 'genps.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
-      integer i,j,ii,jj,i_soft,nfolds,ifold_sample
+      include 'run.inc'
+      integer i,j,ii,jj,i_soft,nfolds,ifold_sample,
+     $     h_flavour_map(maxproc)
       logical momenta_equal,pdg_equal,equal,found_S,colour_con_equal
       logical collect_born_spread
       external momenta_equal,pdg_equal,colour_con_equal
@@ -3541,6 +3744,9 @@ c while for the S-events we can sum it to the 'i_soft' one.
          if (H_event(i)) then
             do ii=1,i
                if (.not.H_event(ii)) cycle
+! Different Delta draws are distinct conditional H components. Their
+! signs cannot be reconstructed from a single selected replay packet.
+               if(delta_line_context(ii).ne.delta_line_context(i))cycle
 c H-event. Equal flavours, colours, shower scales and momenta can be
 c summed before taking the ABS value.
                if (niproc(ii).ne.niproc(i)) cycle
@@ -3553,10 +3759,22 @@ c summed before taking the ABS value.
      $              ifold_cnt(i)))) cycle
                equal=.true.
                do j=1,niproc(ii)
-                  if (.not.pdg_equal(parton_pdg(1,j,ii),
-     &                               parton_pdg(1,j,i))) then
-                     equal=.false.
-                     exit
+                  h_flavour_map(j)=j
+                  if(macnlops)then
+! Complete H must be combined by physical flavour before unweighting.
+! Native Born providers can enumerate identical real flavours in a
+! different row order. Preserve those native tables for reweighting.
+                     h_flavour_map(j)=group_flavour_row(ii,j,i)
+                     if(h_flavour_map(j).eq.0)then
+                        equal=.false.
+                        exit
+                     endif
+                  else
+                     if (.not.pdg_equal(parton_pdg(1,j,ii),
+     &                                  parton_pdg(1,j,i))) then
+                        equal=.false.
+                        exit
+                     endif
                   endif
                enddo
                if (.not. equal) cycle
@@ -3565,7 +3783,8 @@ c summed before taking the ABS value.
 c     Identical contributions found: sum the contribution "i" to "ii"
                call add_group_member(ii,i)
                do j=1,niproc(ii)
-                  unwgt(j,ii)=unwgt(j,ii)+parton_iproc(j,i)
+                  unwgt(j,ii)=unwgt(j,ii)+
+     $                 parton_iproc(h_flavour_map(j),i)
                enddo
                exit
             enddo
@@ -4196,7 +4415,8 @@ c iproc_picked:
             enddo
          else
 c H-event
-            ipro=iproc_picked
+            ipro=group_flavour_row(icontr_picked,iproc_picked,ict)
+            if(ipro.eq.0)stop 'Missing H-group native flavour in rwgt'
             n_ctr_found=n_ctr_found+1
 
             if (.not.allocated(n_ctr_str))

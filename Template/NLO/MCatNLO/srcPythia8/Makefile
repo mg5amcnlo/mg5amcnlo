@@ -65,7 +65,13 @@ Pythia83: $(FORFILE) $(PYTHIA8_LIB)
 	  -L$(PYTHIA8LOCATION)/$(LIBDIR) -lpythia8 $(LIBGZIP) \
 	  -lHepMCfio $(LIBGFORTRAN) $(HEPMCINCLIB) $(EXTRAPATHS) $(EXTRALIBS) \
 
-.PHONY: clean
+# Standalone stock-Pythia first-emission driver; no provider, HepMC or Fortran analysis.
+MacNLOPS: MacNLOPS.cc $(PYTHIA8_LIB)
+	$(CXX) $(CXXFLAGS) -std=c++11 -I$(PYTHIA8LOCATION)/$(INCDIR) \
+	  $< -o MacNLOPS.exe -L$(PYTHIA8LOCATION)/$(LIBDIR) \
+	  -Wl,-rpath,$(PYTHIA8LOCATION)/$(LIBDIR) -lpythia8 $(LIBGZIP)
+
+.PHONY: clean MacNLOPS
 clean:
 	rm -rf *.exe
 	rm -f *~; rm -f \#*; rm -f core*

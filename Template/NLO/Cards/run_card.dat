@@ -96,6 +96,9 @@ $ion_pdf
                             ! scale by this factor
   %(mcatnlo_delta)s = MCatNLO_DELTA ! use MC@NLO-Delta matching, arXiv:2002.12716
                         ! (only with Pythia8309 or later)
+  %(store_hard_momenta)s = store_hard_momenta ! annotate momenta before shower-mass reshuffling
+  %(macnlops)s = macnlops ! prepare a common MC@NLO input for matching
+  %(macnlops_resolved_source)s = macnlops_resolved_source ! legacy scalar/gated source (ordinary MC@NLO is the default)
 #***********************************************************************
 # Renormalization and factorization scales                             *
 # (Default functional form for the non-fixed scales is the sum of      *

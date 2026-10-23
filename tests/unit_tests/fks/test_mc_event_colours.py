@@ -33,6 +33,7 @@ class TestMCEventColours(unittest.TestCase):
                 'nexternal.inc': 'integer nexternal,nincoming\n'
                                  'parameter(nexternal=5,nincoming=2)',
                 'genps.inc': 'integer maxproc,maxflow\nparameter(maxproc=1,maxflow=1)',
+                'run.inc': 'logical macnlops\nparameter(macnlops=.false.)',
                 'born_nhel.inc': 'integer max_bcol\nparameter(max_bcol=1)',
                 'born_leshouche.inc': 'common/test_born_colours/idup,mothup,icolup',
                 'orders.inc': 'integer nsplitorders,qcd_pos,qed_pos\n'
@@ -51,8 +52,8 @@ class TestMCEventColours(unittest.TestCase):
                 'module mc_native_context\ninteger :: history_flavours(1,1)=1\nend module\n'
                 'module mint_module\ninteger :: imode=0,born_spread_phase=0\n'
                 'integer :: ndim=1,ifold(1)=1\nlogical :: only_virt=.false.\nend module\n')
-            routines = [('driver_mintMC.f', 'init_process_module_n1body_wrapper'),
-                        ('driver_mintMC.f', 'init_process_module_n1body_flow'),
+            routines = [('mc_matching_runtime.f', 'init_process_module_n1body_wrapper'),
+                        ('mc_matching_runtime.f', 'init_process_module_n1body_flow'),
                         ('add_write_info.f', 'fill_icolor_H'),
                         ('add_write_info.f', 'fill_icolor_S'),
                         ('fks_singular.f', 'pick_unweight_contr'),

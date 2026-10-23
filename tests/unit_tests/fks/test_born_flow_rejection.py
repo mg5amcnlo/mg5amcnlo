@@ -33,7 +33,7 @@ class TestBornFlowRejection(unittest.TestCase):
         (work / 'routines.f').write_text(
             fortran_routine(TEMPLATE / 'fks_singular.f', 'get_born_flow') +
             fortran_routine(TEMPLATE / 'fks_singular.f', 'get_born_flow_weights') +
-            fortran_routine(TEMPLATE / 'driver_mintMC.f', 'sigintF'))
+            fortran_routine(TEMPLATE / 'mc_matching_runtime.f', 'sigintF'))
         # These operations do not participate in the rejection protocol. The
         # fixture below supplies the Born proposals and contribution records.
         noops = ('find_iproc_map', 'setup_event_attributes', 'update_fks_dir',

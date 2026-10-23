@@ -42,7 +42,8 @@ class TestPDFLuminosityCache(unittest.TestCase):
                 'genps.inc': 'integer maxproc\nparameter(maxproc=3)',
                 'run.inc': 'double precision xbk(2),q2fact(2)\n'
                            'integer lpp(2),flavour_bias(2)\n'
-                           'common/test_pdf_run/xbk,q2fact,lpp,flavour_bias',
+                           'common/test_pdf_run/xbk,q2fact,lpp,flavour_bias\n'
+                           'logical macnlops\nparameter(macnlops=.false.)',
                 'orders.inc': 'integer nsplitorders,amp_split_size,qcd_pos\n'
                               'parameter(nsplitorders=1,amp_split_size=1,qcd_pos=1)',
                 'coupl.inc': '',

@@ -69,6 +69,7 @@ vendor/CutTools/includects/
 mg5decay/mysmallmodel
 tests/input_files/*/*.pkl
 vendor/StdHEP/log.*
+vendor/StdHEP/lib/*.so
 tmp
 check_sa_born_splitOrders.f
 models/*.tgz

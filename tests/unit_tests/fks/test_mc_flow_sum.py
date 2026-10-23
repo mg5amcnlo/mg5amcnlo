@@ -72,7 +72,7 @@ class TestMCFlowSum(unittest.TestCase):
                 (work / name).write_text(''.join('      ' + line + '\n'
                                                for line in source.splitlines()))
             (work / 'weights.f').write_text('\n'.join([
-                fortran_routine(TEMPLATE / 'driver_mintMC.f',
+                fortran_routine(TEMPLATE / 'mc_matching_runtime.f',
                                 'compute_NLOPS_flow_weights'),
                 fortran_routine(TEMPLATE / 'fks_singular.f',
                                 'include_born_flow_weight'),

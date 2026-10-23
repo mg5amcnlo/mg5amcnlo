@@ -8,6 +8,17 @@
 ! Only complete native H weights are retained during repartitioning.
          logical :: mc_H_only=.false.
          logical :: mc_S_only=.false.
+! The MacNLOPS matching gate is applied after the actual luminosity
+! flavours are known. Preserve the generating history rather than the
+! representative flavour used by the matrix-element table.
+         logical :: macnlops_gate_active=.false.
+! Proposal records use the certified physical support even when the
+! source keeps ordinary G/P subtraction. Never damp this K by bogus P.
+         logical :: macnlops_proposal_active=.false.
+         double precision :: macnlops_current_z=0d0
+! Per contribution: qMC**2, shat_Born, xBorn(1:2), connection z,
+! and a flag: 1=legacy resolved-source gate, 2=physical proposal support.
+         double precision, allocatable :: macnlops_meta(:,:)
          integer :: rejected_born_flow_points=0
          integer :: rejected_mc_kinematics_points=0
          integer :: rejected_nonfinite_points=0
@@ -22,6 +33,20 @@
      $        ,orderstag(:),amppos(:),need_match(:,:)
 ! Keep the event/shower owner separate from the native PDF/ME history.
          integer, allocatable :: event_nFKS(:),native_ids(:,:)
+! A Delta H sum is conditional on one joint draw of all its native
+! starting scales. Keep that draw with the whole group, not its last row.
+         type delta_weight_context
+            integer :: owner=0,count=0
+            double precision :: insertion=0d0
+            integer, allocatable :: keys(:,:)
+            double precision, allocatable :: probability(:)
+            logical, allocatable :: used(:)
+         end type delta_weight_context
+         type(delta_weight_context), allocatable :: delta_contexts(:)
+         integer, allocatable :: delta_line_context(:)
+         integer :: delta_context_count=0,delta_context_active=0
+         integer :: delta_history=0,delta_recoil=0
+         logical :: delta_replay=.false.
 ! Packed contribution groups retain insertion order using linear storage.
          integer, allocatable :: group_size(:),group_start(:)
      $        ,group_members(:),group_owner(:),group_cursor(:)
@@ -33,11 +58,173 @@
      $        ,bias_wgt(:)
          save
       contains
+         subroutine reset_delta_contexts()
+         if(allocated(delta_contexts))deallocate(delta_contexts)
+         delta_context_count=0
+         delta_context_active=0
+         delta_history=0
+         delta_recoil=0
+         delta_replay=.false.
+         end subroutine reset_delta_contexts
+
+         subroutine begin_delta_context(owner,insertion)
+         integer, intent(in) :: owner
+         double precision, intent(in) :: insertion
+         type(delta_weight_context), allocatable :: grown(:)
+         integer capacity
+         if(owner.le.0.or..not.(insertion.ge.0d0.and.
+     $      insertion.le.1d0))error stop 'Invalid Delta context'
+         if(.not.allocated(delta_contexts))allocate(delta_contexts(8))
+         if(delta_context_count.eq.size(delta_contexts))then
+            capacity=2*size(delta_contexts)
+            allocate(grown(capacity))
+            grown(1:delta_context_count)=delta_contexts
+            call move_alloc(grown,delta_contexts)
+         endif
+         delta_context_count=delta_context_count+1
+         delta_context_active=delta_context_count
+         delta_contexts(delta_context_active)%owner=owner
+         delta_contexts(delta_context_active)%insertion=insertion
+         delta_contexts(delta_context_active)%count=0
+         allocate(delta_contexts(delta_context_active)%keys(3,16),
+     $      delta_contexts(delta_context_active)%probability(16),
+     $      delta_contexts(delta_context_active)%used(16))
+         delta_replay=.false.
+         end subroutine begin_delta_context
+
+         subroutine append_delta_probability(flow,probability)
+         integer, intent(in) :: flow
+         double precision, intent(in) :: probability
+         integer n,capacity,key(3),i
+         integer, allocatable :: keys(:,:)
+         double precision, allocatable :: values(:)
+         logical, allocatable :: used(:)
+         if(delta_context_active.eq.0.or.delta_replay)return
+         key=[delta_history,delta_recoil,flow]
+         if(any(key.le.0).or..not.(probability.ge.0d0.and.
+     $      probability.le.1d0))error stop 'Invalid Delta probability'
+         associate(packet=>delta_contexts(delta_context_active))
+         n=packet%count
+         do i=1,n
+            if(all(packet%keys(:,i).eq.key))
+     $         error stop 'Duplicate Delta probability'
+         enddo
+         if(.not.allocated(packet%keys))then
+            allocate(packet%keys(3,16),packet%probability(16),
+     $           packet%used(16))
+         elseif(n.eq.size(packet%probability))then
+            capacity=2*size(packet%probability)
+            allocate(keys(3,capacity),values(capacity),used(capacity))
+            keys(:,1:n)=packet%keys
+            values(1:n)=packet%probability
+            used(1:n)=packet%used
+            call move_alloc(keys,packet%keys)
+            call move_alloc(values,packet%probability)
+            call move_alloc(used,packet%used)
+         endif
+         packet%count=n+1
+         packet%keys(:,n+1)=key
+         packet%probability(n+1)=probability
+         packet%used(n+1)=.false.
+         end associate
+         end subroutine append_delta_probability
+
+         subroutine replay_delta_probability(flow,probability,replayed)
+         integer, intent(in) :: flow
+         double precision, intent(out) :: probability
+         logical, intent(out) :: replayed
+         integer i,key(3)
+         replayed=.false.
+         probability=1d0
+         if(.not.delta_replay)return
+         if(delta_context_active.eq.0)
+     $      error stop 'Missing Delta replay packet'
+         key=[delta_history,delta_recoil,flow]
+         associate(packet=>delta_contexts(delta_context_active))
+         do i=1,packet%count
+            if(.not.all(packet%keys(:,i).eq.key))cycle
+            if(packet%used(i))error stop 'Repeated Delta replay key'
+            probability=packet%probability(i)
+            packet%used(i)=.true.
+            replayed=.true.
+            return
+         enddo
+         end associate
+         error stop 'Missing Delta replay key'
+         end subroutine replay_delta_probability
+
+         logical function complete_delta_replay()
+         complete_delta_replay=.true.
+         if(.not.delta_replay)return
+         associate(packet=>delta_contexts(delta_context_active))
+         if(packet%count.gt.0)complete_delta_replay=
+     $      all(packet%used(1:packet%count))
+         end associate
+         end function complete_delta_replay
+
          integer function event_owner(ict)
          integer, intent(in) :: ict
          event_owner=nFKS(ict)
          if (event_nFKS(ict).gt.0) event_owner=event_nFKS(ict)
          end function event_owner
+
+         integer function group_flavour_row(igroup,ipro,ict)
+! Keep native flavour tables intact. An H group uses its owner's row
+! order, while its member may enumerate the same physical flavours in
+! a different order. Match repeated rows by occurrence for a bijection.
+         integer, intent(in) :: igroup,ipro,ict
+         integer i,occurrence,matched
+         group_flavour_row=0
+         if(ipro.lt.1.or.ipro.gt.niproc(igroup))return
+         occurrence=0
+         do i=1,ipro
+            if(all(parton_pdg(:,i,igroup).eq.
+     $           parton_pdg(:,ipro,igroup)))occurrence=occurrence+1
+         enddo
+         matched=0
+         do i=1,niproc(ict)
+            if(.not.all(parton_pdg(:,i,ict).eq.
+     $           parton_pdg(:,ipro,igroup)))cycle
+            matched=matched+1
+            if(matched.ne.occurrence)cycle
+            group_flavour_row=i
+            return
+         enddo
+         end function group_flavour_row
+
+         logical function group_flavour_complete(igroup,ipro,compatible)
+! A physical flavour can occur in partially overlapping native tables.
+! Its signed sum is global only if every compatible H record containing
+! that flavour belongs to the selected group, irrespective of row order.
+         integer, intent(in) :: igroup,ipro
+         logical, intent(in) :: compatible(:)
+         integer i,j
+         group_flavour_complete=.false.
+         if(igroup.lt.1.or.igroup.gt.icontr)return
+         if(ipro.lt.1.or.ipro.gt.niproc(igroup))return
+         if(size(compatible).lt.icontr)return
+         do i=1,icontr
+            if(.not.compatible(i).or..not.H_event(i))cycle
+            do j=1,niproc(i)
+               if(.not.all(parton_pdg(:,j,i).eq.
+     $              parton_pdg(:,ipro,igroup)))cycle
+               if(group_owner(i).ne.igroup)return
+            enddo
+         enddo
+         group_flavour_complete=.true.
+         end function group_flavour_complete
+
+         subroutine reset_macnlops_line(ict)
+         integer, intent(in) :: ict
+         macnlops_meta(:,ict)=0d0
+         delta_line_context(ict)=0
+         end subroutine reset_macnlops_line
+
+         subroutine copy_macnlops_line(source,target)
+         integer, intent(in) :: source,target
+         macnlops_meta(:,target)=macnlops_meta(:,source)
+         delta_line_context(target)=delta_line_context(source)
+         end subroutine copy_macnlops_line
 
          subroutine add_group_member(igroup,ict)
          integer, intent(in) :: igroup,ict
@@ -188,6 +375,11 @@ c native provenance
          itemp2=0
          itemp2(:,1:max_contr)=native_ids
          call move_alloc(itemp2,native_ids)
+c MacNLOPS generating-history metadata (new slots are inactive).
+         allocate(temp2(6,contr_capacity))
+         temp2=0d0
+         temp2(:,1:max_contr)=macnlops_meta
+         call move_alloc(temp2,macnlops_meta)
 c QCDpower         
          allocate(itemp1(contr_capacity))
          itemp1(1:max_contr)=QCDpower
@@ -213,6 +405,10 @@ c plot_id
          itemp1(1:max_contr)=plot_id
          call move_alloc(itemp1,plot_id)
 c ifold_cnt
+         allocate(itemp1(contr_capacity))
+         itemp1=0
+         itemp1(1:max_contr)=delta_line_context
+         call move_alloc(itemp1,delta_line_context)
          allocate(itemp1(contr_capacity))
          itemp1(1:max_contr)=ifold_cnt
          call move_alloc(itemp1,ifold_cnt)
@@ -338,6 +534,10 @@ c update maximum
       event_nFKS=0
       allocate(native_ids(3,1))
       native_ids=0
+      allocate(delta_line_context(1))
+      delta_line_context=0
+      allocate(macnlops_meta(6,1))
+      macnlops_meta=0d0
       allocate(QCDpower(1))
       allocate(pdg(nexternal,0:1))
       allocate(pdg_uborn(nexternal,0:1))
@@ -392,6 +592,12 @@ c update maximum
       if (allocated(nFKS)) deallocate(nFKS)
       if (allocated(event_nFKS)) deallocate(event_nFKS)
       if (allocated(native_ids)) deallocate(native_ids)
+      if (allocated(delta_line_context)) deallocate(delta_line_context)
+      call reset_delta_contexts()
+      if (allocated(macnlops_meta)) deallocate(macnlops_meta)
+      macnlops_gate_active=.false.
+      macnlops_proposal_active=.false.
+      macnlops_current_z=0d0
       if (allocated(QCDpower)) deallocate(QCDpower)
       if (allocated(pdg)) deallocate(pdg)
       if (allocated(pdg_uborn)) deallocate(pdg_uborn)

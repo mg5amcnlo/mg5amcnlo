@@ -5883,6 +5883,25 @@ class RunCardNLO(RunCard):
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
         self.add_param('mcatnlo_delta', False)
+        self.add_param('store_hard_momenta', True,
+                       comment='Store the hard external momenta before shower-mass reshuffling in each LHE event')
+        self.add_param('macnlops', False, hidden=True,
+                       comment='Prepare a common MC@NLO input for matching and preserve hard-event momenta')
+        self.add_param('macnlops_resolved_source', False, hidden=True,
+                       comment='Use the legacy scalar/gated source instead of ordinary MC@NLO counterterms')
+        self.add_param('macnlops_flavour_count', 5, hidden=True, include=False,
+                       allowed=[4, 5], comment='Incoming and gluon-splitting flavours (match the hard PDF scheme)')
+        self.add_param('macnlops_nquark_in', 5, system=True)
+        self.add_param('macnlops_ngluon_to_quark', 5, system=True)
+        # Filled from the actual shower profile before compiling a MAcNLOPS run.
+        self.add_param('macnlops_isr_cutoff', -1.0, system=True)
+        self.add_param('macnlops_fsr_cutoff', -1.0, system=True)
+        self.add_param('macnlops_charm_mass', -1.0, system=True)
+        self.add_param('macnlops_bottom_mass', -1.0, system=True)
+        self.add_param('macnlops_beam_xmax1', -1.0, system=True,
+                       fortran_name='macnlops_beam_xmax(1)')
+        self.add_param('macnlops_beam_xmax2', -1.0, system=True,
+                       fortran_name='macnlops_beam_xmax(2)')
         self.add_param('fixed_ren_scale', False)
         self.add_param('fixed_fac_scale', False)
         self.add_param('fixed_extra_scale', True, hidden=True, system=True) # set system since running from Ellis-Sexton scale not implemented
@@ -6154,8 +6173,19 @@ class RunCardNLO(RunCard):
             if ifold not in [1,2,4,8]: 
                 raise InvalidRunCard("The three 'folding' parameters should be equal to 1, 2, 4, or 8.")
     # Check MC@NLO-Delta
+        if self['macnlops_resolved_source'] and not self['macnlops']:
+            raise InvalidRunCard('macnlops_resolved_source requires macnlops=True')
         if self['mcatnlo_delta'] and not self['parton_shower'].lower() == 'pythia8':
             raise InvalidRunCard("MC@NLO-DELTA only possible with matching to Pythia8")
+        if self['macnlops']:
+            if self['parton_shower'].lower() != 'pythia8' or self['ickkw'] != 0:
+                raise InvalidRunCard('MAcNLOPS requires unmerged PYTHIA8 MC@NLO generation')
+            if self['mcatnlo_delta'] and self['macnlops_resolved_source']:
+                raise InvalidRunCard('MC@NLO-Delta requires macnlops_resolved_source=False')
+            if self['event_norm'] != 'sum' or self['pdlabel'].lower() != 'lhapdf':
+                raise InvalidRunCard('MAcNLOPS requires event_norm=sum and pdlabel=lhapdf')
+            if len(self['lhaid']) != 1 or any(self['reweight_scale']) or any(self['reweight_pdf']):
+                raise InvalidRunCard('MAcNLOPS rejection requires a single central weight; disable scale/PDF reweighting')
 
     # check that the flavour_bias is consistent
         if len(self['flavour_bias']) != 2:

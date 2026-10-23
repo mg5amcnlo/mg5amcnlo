@@ -6,6 +6,9 @@ implementations stay in the output-wide library; only immutable tables and
 small real/PDF dispatchers are installed in each subprocess.
 """
 
+from collections import Counter
+import hashlib
+import json
 import re
 
 from madgraph import MadGraph5Error
@@ -165,7 +168,7 @@ def write_context(root, outer, records, tables, sources):
                 continue
             mappings.append(line[:match.start(1)]+str(alias)+line[match.end(1):])
     write(directory/'real_from_born_configs.inc',mappings)
-    rows = write_histories(directory,outer,tables,aliases)
+    rows = write_histories(directory,outer,tables,aliases,by_id)
     write_module(directory,outer,by_id,keys,reachable,rows,maxproc)
     write_born_tables(directory)
     write_dispatchers(directory,outer,by_id,keys,sources)
@@ -184,7 +187,60 @@ def write_context(root, outer, records, tables, sources):
     write(directory/'pmass.inc',['call mc_native_masses(pmass)'])
 
 
-def write_histories(directory, outer, tables, aliases):
+def history_flavours_complete(outer, tables, by_id):
+    """Whether every owner can combine its full physical H flavour table.
+
+    Runtime grouping compares complete native tables, including zero-PDF
+    rows.  A partially overlapping native table therefore cannot certify
+    the sign of a global physical H density.  Duplicate owner PDG rows
+    also remain distinct unweighting choices and need retained labels.
+    """
+    sectors = {sector['sector']: sector for sector in outer['sectors']}
+    if len(tables) != len(sectors) or set(table['sector'] for table in tables) != set(sectors):
+        return False
+    for table in tables:
+        if table['unresolved'] or table['ambiguous'] or not table['histories']:
+            return False
+        owner = sectors[table['sector']]
+        expected = Counter(tuple(leg[0] for leg in process[1])
+                           for process in owner['processes'])
+        if not expected or any(count != 1 for count in expected.values()):
+            return False
+        for history in table['histories']:
+            native = by_id.get(history['context'])
+            if native is None:
+                return False
+            sector = next((sector for sector in native['sectors']
+                           if sector['sector'] == history['sector']), None)
+            permutation = history['permutation']
+            if sector is None or sorted(permutation) != list(range(1, outer['nexternal'] + 1)):
+                return False
+            actual = Counter()
+            for process in sector['processes']:
+                if len(process[1]) != outer['nexternal']:
+                    return False
+                row = [0] * outer['nexternal']
+                for leg, position in zip(process[1], permutation):
+                    row[position - 1] = leg[0]
+                actual[tuple(row)] += 1
+            if actual != expected:
+                return False
+    return True
+
+
+def write_histories(directory, outer, tables, aliases, by_id):
+    # A Delta replay packet contains indices into this exact registry.  Flavour
+    # equivalence alone cannot identify the original stochastic history sum.
+    flavour_complete = history_flavours_complete(outer, tables, by_id)
+    registry = dict(outer=outer, tables=tables, flavour_complete=flavour_complete,
+                    aliases=[list(key) + [value]
+                             for key, value in sorted(aliases.items())],
+                    contexts=[by_id[key] for key in sorted(by_id)])
+    encoded = json.dumps(registry, sort_keys=True, separators=(',', ':')).encode('utf-8')
+    fingerprint = hashlib.sha256(encoded).hexdigest()
+    (directory / 'mc_histories.json').write_text(json.dumps(dict(
+        schema='macnlops-history-registry-v1', sha256=fingerprint,
+        registry=registry), sort_keys=True, indent=2) + '\n')
     rows,first,last,own,complete = [],[],[],[],[]
     for table in tables:
         first.append(len(rows)+1)
@@ -201,7 +257,12 @@ def write_histories(directory, outer, tables, aliases):
     if not tables:
         first,last,own,complete = [1],[0],[0],[True]
     nrows, nsectors = max(1,len(rows)),len(aliases)
-    lines = ['integer MC_HIST_COUNT','parameter(MC_HIST_COUNT=%d)' % len(rows),
+    lines = ['character*64 MC_HIST_REGISTRY_SHA256',
+             "parameter(MC_HIST_REGISTRY_SHA256='%s')" % fingerprint,
+             'logical MC_HIST_FLAVOUR_COMPLETE',
+             'parameter(MC_HIST_FLAVOUR_COMPLETE=%s)' %
+             ('.true.' if flavour_complete else '.false.'),
+             'integer MC_HIST_COUNT','parameter(MC_HIST_COUNT=%d)' % len(rows),
              'integer MC_HIST_FIRST(%d),MC_HIST_LAST(%d),MC_HIST_OWN(%d)' % (nsectors,nsectors,nsectors),
              'logical MC_HIST_COMPLETE(%d)' % nsectors,
              'integer MC_HIST_NATIVE(%d),MC_HIST_I(%d),MC_HIST_J(%d)' % (nrows,nrows,nrows),
@@ -318,6 +379,7 @@ def write_dispatchers(directory,outer,by_id,keys,sources):
             'type(BornModelState),save::state',
             'integer,save::epoch=-1,next_entry=1',
             'double precision p(0:3,nexternal),q(0:3,nexternal),r(0:3,nexternal),wgt',
+            'double precision q_me(0:3,nexternal)',
             'double precision wgt_me_born,wgt_me_real',
             'common/c_wgt_me_tree/wgt_me_born,wgt_me_real',
             'integer nfksprocess,evaluator,i,j',
@@ -370,9 +432,17 @@ def write_dispatchers(directory,outer,by_id,keys,sources):
              'if(.not.born_model_state_equal(cache(j)%model,state))cycle',
              'wgt=cache(j)%weight','amp_split=cache(j)%amplitudes',
              'wgt_me_real=wgt','return','enddo','endif',
+             # HELAS's massless spinor chart is singular at the negative z
+             # axis. Near-beam roundoff can give tiny nonzero transverse
+             # components and E+pz, suppressing a perfectly physical ME.
+             # Rotate only its local evaluation copy, never a physical point,
+             # a cache key, a cut, or a scale. Restricted spin states retain
+             # their caller's quantization frame.
+             'q_me=q',
+             'if(share_real_frame(nfksprocess))call stable_real_basis(q,q_me)',
              'select case(evaluator)']
     for evaluator in sorted({s['real'] for s in outer['sectors']}):
-        real += ['case(%d)' % evaluator, 'call smatrix%d(q,wgt)' % evaluator]
+        real += ['case(%d)' % evaluator, 'call smatrix%d(q_me,wgt)' % evaluator]
     real += ['case default','stop "Invalid local real evaluator"','end select',
              'if(shared_real_active)then', 'j=next_entry',
              'cache(j)%evaluator=evaluator','cache(j)%momenta=q',
@@ -380,7 +450,42 @@ def write_dispatchers(directory,outer,by_id,keys,sources):
              'cache(j)%model%complex_values=state%complex_values',
              'cache(j)%weight=wgt',
              'cache(j)%amplitudes=amp_split',
-             'next_entry=mod(next_entry,cache_size)+1','endif','end']
+             'next_entry=mod(next_entry,cache_size)+1','endif',
+             'contains',
+             'subroutine stable_real_basis(pin,pout)',
+             'double precision,intent(in)::pin(0:3,nexternal)',
+             'double precision,intent(out)::pout(0:3,nexternal)',
+             'double precision directions(2,nexternal),norm,scale,angle,c,s,score,best,best_c,best_s,twopi',
+             'integer leg,axis',
+             # N+1 equally spaced possible z axes on the original xy plane
+             # suffice for N momentum directions: some axis is at least
+             # pi/(N+1) away from every negative momentum direction. Choose
+             # the best one. The initial beams consequently have pz'=0, and
+             # no other leg is moved onto the spinor coordinate singularity.
+             'directions=0d0',
+             'do leg=1,nexternal',
+             'scale=maxval(abs(pin(1:3,leg)))',
+             'if(scale.eq.0d0)cycle',
+             'norm=sqrt(sum((pin(1:3,leg)/scale)**2))',
+             'directions(:,leg)=pin(1:2,leg)/scale/norm',
+             'enddo',
+             'twopi=8d0*atan(1d0)',
+             'best=-huge(1d0)', 'best_c=1d0', 'best_s=0d0',
+             'do axis=0,nexternal',
+             'angle=twopi*dble(axis)/dble(nexternal+1)',
+             'c=cos(angle)', 's=sin(angle)',
+             'score=minval(1d0+c*directions(1,:)+s*directions(2,:))',
+             'if(score.le.best)cycle',
+             'best=score', 'best_c=c', 'best_s=s', 'enddo',
+             # Rows (old z, s old x - c old y, c old x + s old y)
+             # form a proper orthogonal matrix, so all four-vector masses
+             # and pairwise Lorentz products are preserved, without a boost
+             # or an on-shell projection.
+             'pout(0,:)=pin(0,:)',
+             'pout(1,:)=pin(3,:)',
+             'pout(2,:)=best_s*pin(1,:)-best_c*pin(2,:)',
+             'pout(3,:)=best_c*pin(1,:)+best_s*pin(2,:)',
+             'end subroutine stable_real_basis','end']
     lumi += ['case default','stop "Invalid native PDF sector"','end select','call mc_filter_native_lum(dlum)','end']
     write(directory/'real_me_chooser.f',real)
     write(directory/'parton_lum_chooser.f',lumi)

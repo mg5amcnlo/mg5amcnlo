@@ -56,7 +56,7 @@ if [ "$SHOWER" == "HERWIG6" ] || [ "$SHOWER" == "PYTHIA6Q" ] || [ "$SHOWER" == "
 
 elif [ "$SHOWER" == "PYTHIA8" ] ; then
     if [ -f config.sh ] ; then source config.sh ; fi
-    ./Pythia8.exe Pythia8.cmd > mcatnlo_run.log 2>&1
+    ./Pythia8.exe Pythia8.cmd > mcatnlo_run.log 2>&1 || exit $?
 fi
 
 if [ "$OUTPUT" == "HEP" ] ; then

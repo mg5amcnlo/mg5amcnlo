@@ -27,7 +27,7 @@ class TestMCBornCuts(unittest.TestCase):
             for name, source in includes.items():
                 (work / name).write_text(''.join(
                     '      ' + line + '\n' for line in source.splitlines()))
-            routines = [fortran_routine(TEMPLATE / 'driver_mintMC.f',
+            routines = [fortran_routine(TEMPLATE / 'mc_matching_runtime.f',
                                         'passcuts_native_born')]
             routines += [fortran_routine(TEMPLATE / 'cuts.f', name)
                          for name in ('identify_QCD_partons', 'passcuts_fxfx')]

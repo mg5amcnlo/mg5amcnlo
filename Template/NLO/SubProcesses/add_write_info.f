@@ -7,12 +7,19 @@ c intermediate resonances. It also boosts the events to the lab frame
      $     generate_momenta
       use process_module
       use scale_module
+      use FKSParams, only: MCExplicitKLSum,MCSubtractionAtFixedFlow,
+     $     FKSExplicitSum
+      use weight_lines, only: icontr_picked,native_ids,nFKS,
+     $     group_size,event_owner,icontr,iproc_picked,H_event,
+     $     momenta,ifold_cnt,group_flavour_complete,delta_line_context,
+     $     delta_contexts
       implicit none
       include "genps.inc"
       include "nexternal.inc"
       include "born_nhel.inc"
       include "born_coloramps.inc"
       include "nFKSconfigs.inc"
+      include "mc_histories.inc"
       include "run.inc"
 
 c Arguments
@@ -136,9 +143,17 @@ c pt_clust string
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
       type(fks_phase_space_point) phase_space
+      double precision hard_p(0:4,nexternal),hard_boost,
+     $     get_mass_from_id
+      integer hard_meta(15),delta_packet
+      external get_mass_from_id
+      logical momenta_equal
+      external momenta_equal
+      logical,allocatable :: hard_compatible(:)
 c
 c Set the leshouche info and fks info
 c
+      call clear_macnlops_hard_event()
       call fks_inc_chooser()
       call leshouche_inc_chooser()
 
@@ -285,6 +300,17 @@ c
 c Shift particle momenta to put them on the mass shell as given in the
 c subroutine fill_MC_mshell().
 c
+      hard_p=0d0
+      hard_boost=ybst_til_tolab
+      if(store_hard_momenta)then
+c Capture before generate_momenta changes the mass inputs and common
+c Born momenta. This block never changes the ordinary LHE particle list.
+         if(Hevents)then
+            hard_p(0:3,1:nexpart)=pp(:,1:nexpart)
+         else
+            hard_p(0:3,1:nexpart)=p_born(:,1:nexpart)
+         endif
+      endif
       if(putonshell)then
          mfail=-1
 c fills the common block with the MC masses (special treatment of i_fks
@@ -407,6 +433,88 @@ c
                jpart(3,i) = jpart(3,i+1)
             endif
          enddo
+      endif
+
+c Save only native external legs, after the S flavours were collapsed
+c and before auxiliary resonance records alter their mother labels.
+      if(store_hard_momenta)then
+         if(abs(hard_boost).gt.1d-7)then
+            chy=cosh(hard_boost)
+            shy=sinh(hard_boost)
+            chymo=chy-1d0
+            do i=1,nexpart
+               call boostwdir2(chy,shy,chymo,xdir,
+     $              hard_p(0,i),hard_p(0,i))
+            enddo
+         endif
+         do i=1,nexpart
+            hard_p(4,i)=get_mass_from_id(jpart(1,i))
+         enddo
+         hard_meta=0
+         hard_meta(1)=merge(2,1,Hevents)
+         hard_meta(2)=nFKSprocess
+         hard_meta(3)=nFKSprocess
+         hard_meta(7)=born_flow_picked
+         hard_meta(8)=merge(1,0,MCExplicitKLSum)
+         hard_meta(9)=merge(1,0,MCSubtractionAtFixedFlow)
+         hard_meta(10)=merge(1,0,FKSExplicitSum)
+         hard_meta(11)=merge(1,0,macnlops)
+         hard_meta(12)=max_bcol
+         hard_meta(14)=merge(1,0,macnlops.and.
+     $        macnlops_resolved_source)
+         if(mcatnlo_delta)hard_meta(14)=2
+         if(allocated(nFKS))then
+            if(icontr_picked.ge.1.and.
+     $         icontr_picked.le.size(nFKS))then
+               hard_meta(2)=event_owner(icontr_picked)
+               hard_meta(3)=nFKS(icontr_picked)
+               hard_meta(4:6)=native_ids(:,icontr_picked)
+               hard_meta(13)=group_size(icontr_picked)
+            endif
+         endif
+         if(MCExplicitKLSum.and..not.MCSubtractionAtFixedFlow.and.
+     $      macnlops.and.hard_meta(13).gt.0.and.
+     $      MC_HIST_FLAVOUR_COMPLETE)then
+            hard_meta(15)=1
+            if(Hevents)then
+            allocate(hard_compatible(icontr))
+            hard_compatible=.false.
+            do i=1,icontr
+               if(.not.H_event(i))cycle
+               if(delta_line_context(i).ne.
+     $            delta_line_context(icontr_picked))cycle
+               if(.not.momenta_equal(momenta(0,1,i),
+     $              momenta(0,1,icontr_picked)))cycle
+               if(any(emsca_H(event_owner(i),ifold_cnt(i),
+     $              1:ndelH,1:ndelH).ne.
+     $              emsca_H(event_owner(icontr_picked),
+     $              ifold_cnt(icontr_picked),1:ndelH,1:ndelH)))cycle
+               if(any(event_colour_H(:,:,event_owner(i),ifold_cnt(i))
+     $              .ne.event_colour_H(:,:,event_owner(icontr_picked),
+     $              ifold_cnt(icontr_picked))))cycle
+               hard_compatible(i)=.true.
+            enddo
+            if(.not.group_flavour_complete(icontr_picked,iproc_picked,
+     $           hard_compatible))hard_meta(15)=0
+            deallocate(hard_compatible)
+            endif
+         endif
+         if(mcatnlo_delta.and.Hevents)then
+            if(delta_line_context(icontr_picked).eq.0)
+     $         hard_meta(15)=0
+         endif
+         call store_macnlops_hard_event(nexpart,jpart(1,1),
+     $        hard_p,hard_meta)
+         if(mcatnlo_delta.and.Hevents)then
+            delta_packet=delta_line_context(icontr_picked)
+            if(delta_packet.gt.0)then
+               associate(packet=>delta_contexts(delta_packet))
+               call store_macnlops_delta_context(packet%owner,
+     $              packet%insertion,packet%count,packet%keys,
+     $              packet%probability,MC_HIST_REGISTRY_SHA256)
+               end associate
+            endif
+         endif
       endif
 
 c
@@ -836,7 +944,7 @@ c      include 'fks.inc'
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision ran2,rrnd
-      save rrnd
+      common/c_mc_colour_insertion/rrnd
       external ran2
       integer jpart(7,-nexternal+3:2*nexternal-3),iflow
       integer i_part,j_part,imother,lc
@@ -1117,6 +1225,23 @@ c The following works only if i_fks is always greater than j_fks.
       endif
 c
       return
+      end
+
+
+      subroutine get_macnlops_colour_insertion(insertion)
+      implicit none
+      double precision insertion,rrnd
+      common/c_mc_colour_insertion/rrnd
+      insertion=rrnd
+      end
+
+      subroutine set_macnlops_colour_insertion(insertion)
+      implicit none
+      double precision insertion,rrnd
+      common/c_mc_colour_insertion/rrnd
+      if(.not.(insertion.ge.0d0.and.insertion.le.1d0))
+     $   error stop 'Invalid native colour-insertion variate'
+      rrnd=insertion
       end
 
 

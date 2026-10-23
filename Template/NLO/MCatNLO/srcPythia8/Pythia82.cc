@@ -59,6 +59,8 @@ int main() {
   int nstep=5000;
   int iEventtot=pythia.mode("Main:numberOfEvents");
   int iEventshower=pythia.mode("Main:spareMode1");
+  // The MAcNLOPS continuation card enables one pass over the accepted LHE.
+  const bool continuation=pythia.flag("Main:spareFlag1");
   string evt_norm=pythia.word("Main:spareWord1");
   int iEventtot_norm=iEventtot;
   if (evt_norm != "sum"){
@@ -86,7 +88,7 @@ int main() {
     }
   }
 
-  pythia.init();
+  if (!pythia.init() && continuation) return 1;
 
   HepMC::IO_BaseClass *_hepevtio;
   HepMC::Pythia8ToHepMC ToHepMC;
@@ -94,22 +96,31 @@ int main() {
   double nSelected;
   int nTry;
   double norm;
+  if (continuation) norm=0.;
 
   // Cross section
   double sigmaTotal  = 0.;
   int iLHEFread=0;
 
   for (int iEvent = 0; ; ++iEvent) {
+    // A continuation consumes each retained input exactly once.
+    if (continuation && iEvent >= iEventshower) break;
     if (!pythia.next()) {
+      if (continuation) {
+        std::cerr << "Continuation shower failed at input event "
+                  << iEvent+1 << "\n";
+        return 1;
+      }
       if (++iAbort < nAbort) continue;
       break;
     }
     // the number of events read by Pythia so far
     nSelected=double(pythia.info.nSelected());
     // normalisation factor for the default analyses defined in pyanal_
-    norm=iEventtot_norm*iEvent/nSelected;
+    if (continuation) norm=double(iEventtot_norm)*double(iEvent+1)/nSelected;
+    else norm=iEventtot_norm*iEvent/nSelected;
 
-    if (nSelected >= iEventshower) break;
+    if (!continuation && nSelected >= iEventshower) break;
     if (pythia.info.isLHA() && iPrintLHA < nPrintLHA) {
       pythia.LHAeventList();
       pythia.info.list();

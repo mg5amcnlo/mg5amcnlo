@@ -1,0 +1,75 @@
+Frozen patched-study manuscript checks, 20 October 2026
+======================================================
+
+Full-shower driver removal, 21 October 2026
+-----------------------------------------
+Current production writes an accepted first-emission LHE for a separate
+ordinary Pythia shower. The uninterrupted full-shower driver and its
+generation/audit tools have been removed. Frozen figures, numerical results
+and historical code hashes are retained. No manuscript build, event
+generation or shower run was performed for this removal.
+
+Runtime-status documentation revision, 21 October 2026
+----------------------------------------------------
+The article and README now distinguish the frozen PATCHED calculation
+from the active stock-Pythia runtime. MAcNLOPS trial-headroom, PDF-envelope
+provider and nf4 coupling patches are no longer active dependencies; the
+custom headroom option is removed. Incoming/splitting flavour counts remain
+four or five, while effective stock alpha_s_nfmax is five for both profiles.
+Native trial-bound warnings are recorded without source-event rejection,
+drop or retry. The unrelated existing global QED patch is outside this change.
+
+This revision preserves all old numerical results and their historical
+qualifications. It makes no new stock-runtime envelope, nf4 coupling,
+physical-accuracy or production-validation claim. The revised LaTeX builds
+successfully to 19 A4 pages, with resolved references and no layout warnings.
+The source package includes the runtime-status note. Extraction preserves
+the frozen tables, exact numerical data and historical code hashes.
+No production simulation or previously skipped audit was restarted. The
+build records below describe the preceding 20 October edition.
+
+Content review
+--------------
+* Theory/source review of the frozen implementation: complete ordinary H density, G raw/effective soft
+  factors and additive templates, exact fourth-power bogus profile,
+  source partition before taking its negative part, actual-history gate,
+  bounded residual equations, signed finite-coupling identity, full-shower
+  continuation and conditional NLO argument checked against the then-frozen code.
+* Historical implementation review: pre-regeneration hard packet, untouched normal LHE
+  writer path, final in-memory external-particle DY presentation, evaluated
+  UFO masses, native heavy floors, massive-FSR cutoff, recoil profile,
+  proposal-envelope compensation, nf4 patch, spinor-chart fix and polarized
+  bypass checked against code and existing records.
+* Numerical review: both generated tables and exact paper_data.json rows
+  compared with the frozen complete accounting report. Inclusive rates,
+  signed gains/losses, paired errors, conditional rejection pulls, 79 required
+  residual points and 54 actual negative-H survivors checked. Actual 5F
+  PDF is MSTW2008nlo90cl/0; active generation cuts and no-jet first-bin
+  convention checked separately.
+* References: primary arXiv/publisher records and the official Lund thesis
+  checked; the Che--Frederix item is identified as a preprint.
+* Figures: seven unchanged vector copies, pinned by SHA256; selected
+  manuscript pages inspected visually for equations, tables, plots,
+  captions and final reference layout.
+
+Document verification of the 20 October edition (historical)
+------------------------------------------------------------
+* LaTeX/BibTeX build completed; references and citations resolved.
+* That edition: 18 A4 pages, three tables, seven panels in four figures,
+  eleven references. No overfull boxes or oversized figures.
+* One harmless underfull paragraph warning remains in the appendix's list
+  of long literal code paths; no text is clipped.
+* Portable ZIP is unpacked and rebuilt independently of the production
+  event/data tree. All required tables, bibliography and vector figures
+  are included in the source package.
+
+Scope
+-----
+These are historical checks of the patched-study manuscript against its
+frozen source/runtime and results, not current stock-runtime qualifications.
+No new physical events, showers or rejection samples were generated.
+The user's previously skipped whole-production particle and final
+independent histogram/package audits were not restarted. The article
+explicitly distinguishes completed accounting/configuration and prefix
+particle checks from those unfinished production audits. No new universal
+positivity, finite-coupling equivalence or all-process NLO proof is claimed.

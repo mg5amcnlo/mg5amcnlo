@@ -7,6 +7,14 @@ c Utility routines for LHEF. Originally taken from collect_events.f
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
       data nattr,npNLO,npLO /0,-1,-1/
+      integer hard_event_lines
+      character*1000 hard_event_text(503)
+      common/c_macnlops_hard_event/hard_event_lines,hard_event_text
+      data hard_event_lines/0/
+      integer delta_event_lines
+      character*256 delta_event_text(8194)
+      common/c_macnlops_delta_event/delta_event_lines,delta_event_text
+      data delta_event_lines/0/
       end
 
       subroutine write_lhef_header(ifile,nevents,MonteCarlo)
@@ -709,8 +717,6 @@ c
       common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
-      character*500 scale_str
-      character*50 str_tmp
       CHARACTER(LEN=1000) ptclusstring
       common /c_ptclusstring/ ptclusstring
       include './run.inc'
@@ -865,7 +871,7 @@ c
       endif
       if (mcatnlo_delta) then
 c Write the <scales> block only for scales related to valid colour lines
-         scale_str="<scales muf='-.1E+01' mur='-.1E+01'"
+         write(ifile,'(a)')"  <scales muf='-.1E+01' mur='-.1E+01'"
          do i=1,NUP
             if (abs(ISTUP(i)).ne.1) cycle
             do j=1,NUP
@@ -883,20 +889,20 @@ c Write the <scales> block only for scales related to valid colour lines
      &                    i,j,SCALUP_a(i,j)
                      stop 1
                   endif
-                  write(str_tmp,701)
+                  write(ifile,701)
      &                 " scalup_",i,"_",j,"='",SCALUP_a(i,j),"'"
-                  scale_str=trim(scale_str)//trim(str_tmp)
                endif
             enddo
          enddo
-         write(ifile,'(a)')"  "//trim(scale_str)//">"
+         write(ifile,'(a)') '  >'
          write(ifile,'(a)') "  </scales>"
       endif
+      call write_macnlops_hard_event(ifile)
       write(ifile,'(a)') '  </event>'
  503  format(1x,i2,1x,i6,4(1x,e14.8))
  504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e24.17),2(1x,e10.4))
  601  format(a12,i4,a2,1x,e11.5,a7)
- 701  format(a8,i1,a1,i1,a2,e14.8,a1)
+ 701  format(2x,a8,i0,a1,i0,a2,es26.17e3,a1)
 c
       return
       end
@@ -933,6 +939,7 @@ c
       integer mg_rwgt_count
       common/rwgt_count/mg_rwgt_count
 c
+      call clear_macnlops_hard_event()
       read(ifile,'(a)')string
       nattr=0
       npNLO=-1
@@ -1070,31 +1077,17 @@ c
          buff=' '
          backspace(ifile)
       endif
-      if (mcatnlo_delta) then
-c Read the <scales> block
-         do i=1,NUP
-            do j=1,NUP
-               SCALUP_a(i,j)=-1d0
-            enddo
-         enddo
-         read(ifile,'(a)')string
-         do i=1,len(trim(string))-6
-            if(string(i:i+5).eq.'scalup' .or.
-     &           string(i:i+5).eq.'SCALUP')then
-               read(string(i+7:i+7),*)ii
-               read(string(i+9:i+9),*)jj
-               read(string(i+12:i+25),*)SCALUP_a(ii,jj)
-            endif
-         enddo
-         read(ifile,'(a)')string
-         if(index(string,'</scales').eq.0)then
-            write(*,*)'In read_lhef_event:'
-            write(*,*)'Could not find the end of scales block:'
-            write(*,*)string(1:len_trim(string))
-            stop
-         endif
-      endif
+      if(mcatnlo_delta)call read_macnlops_delta_scales(
+     $     ifile,NUP,MAXNUP,SCALUP_a)
       read(ifile,'(a)')string
+      if(index(string,'<macnlops_hard_event').ne.0)then
+         call read_macnlops_hard_event(ifile,string)
+         read(ifile,'(a)')string
+      endif
+      if(index(string,'<macnlops_delta_context').ne.0)then
+         call read_macnlops_delta_context(ifile,string)
+         read(ifile,'(a)')string
+      endif
       if(index(string,'</event').eq.0) then
          write (*,*) 'ERROR #3: Cannot find end of event in'/
      $        /' handling_lhe_event.f'
@@ -1136,6 +1129,7 @@ c Same as read_lhef_event, except for the end-of-file catch
       CHARACTER(LEN=1000) ptclusstring
       common /c_ptclusstring/ ptclusstring
 c
+      call clear_macnlops_hard_event()
       read(ifile,'(a)')string
       if(index(string,'<event').eq.0)then
         if(index(string,'</LesHouchesEvents>').ne.0)then
@@ -1260,31 +1254,17 @@ c
          buff=' '
          backspace(ifile)
       endif
-      if (mcatnlo_delta) then
-c Read the <scales> block
-         do i=1,NUP
-            do j=1,NUP
-               SCALUP_a(i,j)=-1d0
-            enddo
-         enddo
-         read(ifile,'(a)')string
-         do i=1,len(trim(string))-6
-            if(string(i:i+5).eq.'scalup' .or.
-     &           string(i:i+5).eq.'SCALUP')then
-               read(string(i+7:i+7),*)ii
-               read(string(i+9:i+9),*)jj
-               read(string(i+12:i+25),*)SCALUP_a(ii,jj)
-            endif
-         enddo
-         read(ifile,'(a)')string
-         if(index(string,'</scales').eq.0)then
-            write(*,*)'In read_lhef_event:'
-            write(*,*)'Could not find the end of scales block:'
-            write(*,*)string(1:len_trim(string))
-            stop
-         endif
-      endif
+      if(mcatnlo_delta)call read_macnlops_delta_scales(
+     $     ifile,NUP,MAXNUP,SCALUP_a)
       read(ifile,'(a)')string
+      if(index(string,'<macnlops_hard_event').ne.0)then
+         call read_macnlops_hard_event(ifile,string)
+         read(ifile,'(a)')string
+      endif
+      if(index(string,'<macnlops_delta_context').ne.0)then
+         call read_macnlops_delta_context(ifile,string)
+         read(ifile,'(a)')string
+      endif
       if(index(string,'</event').eq.0) then
          write (*,*) 'ERROR #4: Cannot find end of event in'/
      $        /' handling_lhe_event.f'
@@ -1535,3 +1515,300 @@ c independent (char(62)=">", char(61)="=", char(39)="'")
       return
       end
 
+
+
+      subroutine clear_macnlops_hard_event()
+c A single-use event-local buffer also preserves annotations through the
+c ordinary Fortran collect/reweight readers. No generator module is needed.
+      implicit none
+      integer hard_event_lines
+      character*1000 hard_event_text(503)
+      common/c_macnlops_hard_event/hard_event_lines,hard_event_text
+      integer delta_event_lines
+      character*256 delta_event_text(8194)
+      common/c_macnlops_delta_event/delta_event_lines,delta_event_text
+      hard_event_lines=0
+      delta_event_lines=0
+      end
+
+      subroutine store_macnlops_hard_event(nup,ic,p,meta)
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      implicit none
+      integer nup,ic(7,*),meta(15),i
+      double precision p(0:4,*)
+      integer hard_event_lines
+      character*1000 hard_event_text(503)
+      common/c_macnlops_hard_event/hard_event_lines,hard_event_text
+      character*12 source,partition
+      call clear_macnlops_hard_event()
+      if(nup.lt.2.or.nup.gt.500)error stop 'Invalid hard-event size'
+      source='ordinary'
+      if(meta(14).eq.1)source='resolved'
+      if(meta(14).eq.2)source='delta'
+      partition='sampled'
+      if(meta(15).eq.1)partition='global_sum'
+      hard_event_text(1)='  <macnlops_hard_event version="1"'//
+     $     ' frame="lab" source="'//trim(source)//
+     $     '" partition="'//trim(partition)//'">'
+      write(hard_event_text(2),'(14(i11,1x))')nup,meta(1:13)
+      do i=1,nup
+         if(.not.all(ieee_is_finite(p(:,i))).or.p(0,i).le.0d0.or.
+     $      p(4,i).lt.0d0.or.abs(ic(6,i)).ne.1)
+     $        error stop 'Invalid hard-event particle'
+         write(hard_event_text(i+2),
+     $        '(6(i11,1x),7(es26.17e3,1x))')
+     $        ic(1,i),ic(6,i),ic(2,i),ic(3,i),ic(4,i),ic(5,i),
+     $        p(1:3,i),p(0,i),p(4,i),0d0,dble(ic(7,i))
+      enddo
+      hard_event_text(nup+3)='  </macnlops_hard_event>'
+      hard_event_lines=nup+3
+      end
+
+      subroutine write_macnlops_hard_event(ifile)
+      implicit none
+      integer ifile,i,hard_event_lines
+      character*1000 hard_event_text(503)
+      common/c_macnlops_hard_event/hard_event_lines,hard_event_text
+      integer delta_event_lines
+      character*256 delta_event_text(8194)
+      common/c_macnlops_delta_event/delta_event_lines,delta_event_text
+      if(hard_event_lines.lt.0.or.hard_event_lines.gt.503)
+     $     error stop 'Invalid hard-event buffer'
+      do i=1,hard_event_lines
+         write(ifile,'(a)')trim(hard_event_text(i))
+      enddo
+      if(delta_event_lines.lt.0.or.delta_event_lines.gt.8194)
+     $     error stop 'Invalid Delta context buffer'
+      do i=1,delta_event_lines
+         write(ifile,'(a)')trim(delta_event_text(i))
+      enddo
+      call clear_macnlops_hard_event()
+      end
+
+      subroutine read_macnlops_hard_event(ifile,header)
+c Preserve the producer's exact records after strict structural checks.
+c This is used by collect_events as well as the EOF-catching reader.
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      implicit none
+      integer ifile,hard_event_lines,nup,meta(13),i,ios,ids(6),nin
+      character*(*) header
+      character*1000 hard_event_text(503),line
+      character*1 extra
+      double precision values(7)
+      common/c_macnlops_hard_event/hard_event_lines,hard_event_text
+      if(hard_event_lines.ne.0)
+     $     error stop 'Duplicate hard-event annotation'
+      if(index(header,'version="1"').eq.0.or.
+     $   index(header,'frame="lab"').eq.0.or.
+     $   (index(header,'source="ordinary"').eq.0.and.
+     $    index(header,'source="resolved"').eq.0.and.
+     $    index(header,'source="delta"').eq.0).or.
+     $   (index(header,'partition="sampled"').eq.0.and.
+     $    index(header,'partition="global_sum"').eq.0))
+     $     error stop 'Unsupported hard-event annotation header'
+      hard_event_text(1)=header
+      read(ifile,'(a)',iostat=ios)line
+      if(ios.ne.0)error stop 'Truncated hard-event annotation'
+      read(line,*,iostat=ios)nup,meta
+      if(ios.ne.0.or.nup.lt.2.or.nup.gt.500)
+     $     error stop 'Invalid hard-event metadata'
+      read(line,*,iostat=ios)nup,meta,extra
+      if(ios.ge.0)error stop 'Extra hard-event metadata fields'
+      if((meta(1).ne.1.and.meta(1).ne.2).or.
+     $   any(meta(8:11).lt.0).or.any(meta(8:11).gt.1).or.
+     $   meta(12).lt.1.or.meta(13).lt.0)
+     $     error stop 'Invalid hard-event partition flags'
+      if(index(header,'partition="global_sum"').ne.0)then
+         if(meta(8).ne.1.or.meta(9).ne.0.or.meta(11).ne.1.or.
+     $      meta(13).le.0)error stop 'Inconsistent global hard partition'
+      endif
+      hard_event_text(2)=line
+      nin=0
+      do i=1,nup
+         read(ifile,'(a)',iostat=ios)line
+         if(ios.ne.0)error stop 'Truncated hard-event particles'
+         read(line,*,iostat=ios)ids,values
+         if(ios.ne.0)error stop 'Invalid hard-event particle fields'
+         read(line,*,iostat=ios)ids,values,extra
+         if(ios.ge.0)error stop 'Extra hard-event particle fields'
+         if(.not.all(ieee_is_finite(values)).or.values(4).le.0d0.or.
+     $      values(5).lt.0d0.or.abs(ids(2)).ne.1.or.ids(1).eq.0.or.
+     $      any(ids(3:6).lt.0).or.any(ids(3:4).gt.nup))
+     $        error stop 'Invalid hard-event external particle'
+         if(ids(2).eq.-1)nin=nin+1
+         hard_event_text(i+2)=line
+      enddo
+      if(nin.lt.1.or.nin.gt.2)
+     $     error stop 'Hard annotation needs one or two incoming legs'
+      read(ifile,'(a)',iostat=ios)line
+      if(ios.ne.0.or.trim(adjustl(line)).ne.
+     $   '</macnlops_hard_event>')error stop 'Missing hard-event terminator'
+      hard_event_text(nup+3)=line
+      hard_event_lines=nup+3
+      end
+
+
+      subroutine store_macnlops_delta_context(owner,insertion,n,keys,
+     $     probability,registry)
+c Store the actual conditional source multiplier, not a fitted average
+c and not the selected owner's continuation <scales> matrix.
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      implicit none
+      integer owner,n,keys(3,*),i,j,delta_event_lines
+      double precision insertion,probability(*)
+      character*(*) registry
+      character*256 delta_event_text(8194)
+      common/c_macnlops_delta_event/delta_event_lines,delta_event_text
+      if(owner.lt.1.or.n.lt.0.or.n.gt.8192.or.
+     $   .not.ieee_is_finite(insertion).or.insertion.lt.0d0.or.
+     $   insertion.gt.1d0.or.len_trim(registry).ne.64)
+     $     error stop 'Invalid Delta source context'
+      do i=1,64
+         if(index('0123456789abcdef',registry(i:i)).eq.0)
+     $      error stop 'Invalid Delta registry fingerprint'
+      enddo
+      write(delta_event_text(1),
+     $     '(a,i0,a,es26.17e3,a,a,a)')
+     $     '  <macnlops_delta_context version="1" owner="',owner,
+     $     '" insertion="',insertion,'" registry="',trim(registry),'">'
+      do i=1,n
+         if(any(keys(:,i).le.0).or.
+     $      .not.ieee_is_finite(probability(i)).or.
+     $      probability(i).lt.0d0.or.probability(i).gt.1d0)
+     $        error stop 'Invalid Delta source probability'
+         do j=1,i-1
+            if(all(keys(:,i).eq.keys(:,j)))
+     $         error stop 'Duplicate Delta source key'
+         enddo
+         write(delta_event_text(i+1),'(3(i11,1x),es26.17e3)')
+     $        keys(:,i),probability(i)
+      enddo
+      delta_event_text(n+2)='  </macnlops_delta_context>'
+      delta_event_lines=n+2
+      end
+
+
+      subroutine read_macnlops_delta_context(ifile,header)
+c Generic collection/reweighting preserves the packet without depending
+c on generated process modules or interpreting its history registry.
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      implicit none
+      integer ifile,delta_event_lines,n,ios,i,j,keys(3,8192),owner,
+     $     pos,last
+      double precision insertion,probability(8192)
+      character*(*) header
+      character*256 delta_event_text(8194),line,raw(8192)
+      character*64 registry
+      character*1 extra
+      common/c_macnlops_delta_event/delta_event_lines,delta_event_text
+      if(delta_event_lines.ne.0)
+     $     error stop 'Duplicate Delta source annotation'
+      if(index(header,'version="1"').eq.0)
+     $     error stop 'Unsupported Delta source version'
+      pos=index(header,'owner="')+7
+      if(pos.le.7)error stop 'Missing Delta context owner'
+      last=index(header(pos:),'"')+pos-2
+      read(header(pos:last),*,iostat=ios)owner
+      if(ios.ne.0)error stop 'Invalid Delta context owner'
+      pos=index(header,'insertion="')+11
+      if(pos.le.11)error stop 'Missing Delta insertion'
+      last=index(header(pos:),'"')+pos-2
+      read(header(pos:last),*,iostat=ios)insertion
+      if(ios.ne.0)error stop 'Invalid Delta insertion'
+      pos=index(header,'registry="')+10
+      if(pos.le.10)error stop 'Missing Delta registry'
+      last=index(header(pos:),'"')+pos-2
+      if(last-pos.ne.63)error stop 'Invalid Delta registry'
+      registry=header(pos:last)
+      n=0
+      do
+         read(ifile,'(a)',iostat=ios)line
+         if(ios.ne.0)error stop 'Truncated Delta source packet'
+         if(trim(adjustl(line)).eq.'</macnlops_delta_context>')exit
+         n=n+1
+         if(n.gt.8192)error stop 'Delta context capacity exceeded'
+         raw(n)=line
+         read(line,*,iostat=ios)keys(:,n),probability(n)
+         if(ios.ne.0)error stop 'Invalid Delta context row'
+         read(line,*,iostat=ios)keys(:,n),probability(n),extra
+         if(ios.ge.0)error stop 'Extra Delta context row fields'
+      enddo
+      call store_macnlops_delta_context(owner,insertion,n,keys,
+     $     probability,registry)
+c Preserve exact producer text, including the supported attribute order.
+      delta_event_text(1)=header
+      delta_event_text(2:n+1)=raw(1:n)
+      end
+
+
+      subroutine read_macnlops_delta_scales(ifile,nup,maxnup,scales)
+c Accept the historical inline block and full-precision multiline XML.
+c Indices refer to written particles (including auxiliary resonances).
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      implicit none
+      integer ifile,nup,maxnup,ios,i,j,k,position,found,first,
+     $     separator,equals,last,code
+      double precision scales(maxnup,maxnup),value
+      character*10000 line,lower
+      character*1 quote,extra
+      if(nup.lt.1.or.nup.gt.maxnup)
+     $   error stop 'Invalid Delta scale dimensions'
+      scales(1:nup,1:nup)=-1d0
+      read(ifile,'(a)',iostat=ios)line
+      if(ios.ne.0.or.index(adjustl(line),'<scales').ne.1)
+     $   error stop 'Missing Delta scales block'
+      do
+         lower=line
+         do k=1,len_trim(lower)
+            code=iachar(lower(k:k))
+            if(code.ge.65.and.code.le.90)lower(k:k)=achar(code+32)
+         enddo
+         position=1
+         do
+            found=index(lower(position:),'scalup_')
+            if(found.eq.0)exit
+            first=position+found+6
+            separator=index(lower(first:),'_')+first-1
+            if(separator.lt.first)
+     $         error stop 'Invalid Delta scale leg pair'
+            equals=index(lower(separator+1:),'=')+separator
+            if(equals.le.separator)
+     $         error stop 'Invalid Delta scale attribute'
+            read(lower(first:separator-1),*,iostat=ios)i
+            if(ios.ne.0)error stop 'Invalid Delta first leg'
+            read(lower(separator+1:equals-1),*,iostat=ios)j
+            if(ios.ne.0.or.i.lt.1.or.i.gt.nup.or.j.lt.1.or.
+     $         j.gt.nup.or.i.eq.j)
+     $         error stop 'Delta scale leg out of range'
+            first=equals+1
+            do while(first.le.len_trim(line))
+               if(line(first:first).ne.' ')exit
+               first=first+1
+            enddo
+            quote=line(first:first)
+            if(quote.ne."'".and.quote.ne.'"')
+     $         error stop 'Unquoted Delta scale'
+            first=first+1
+            last=index(line(first:),quote)+first-2
+            if(last.lt.first)error stop 'Unterminated Delta scale'
+            read(line(first:last),*,iostat=ios)value
+            if(ios.ne.0)error stop 'Invalid Delta scale number'
+            read(line(first:last),*,iostat=ios)value,extra
+            if(ios.ge.0)error stop 'Extra Delta scale fields'
+            if(.not.ieee_is_finite(value).or.value.lt.0d0)
+     $         error stop 'Invalid Delta scale value'
+            if(scales(i,j).ge.0d0)
+     $         error stop 'Duplicate Delta scale pair'
+            scales(i,j)=value
+            position=last+2
+         enddo
+         if(index(line,'>').ne.0)exit
+         read(ifile,'(a)',iostat=ios)line
+         if(ios.ne.0)error stop 'Truncated Delta scale attributes'
+      enddo
+      if(index(line,'/>').ne.0.or.
+     $   index(line,'</scales>').ne.0)return
+      read(ifile,'(a)',iostat=ios)line
+      if(ios.ne.0.or.trim(adjustl(line)).ne.'</scales>')
+     $   error stop 'Missing Delta scales terminator'
+      end

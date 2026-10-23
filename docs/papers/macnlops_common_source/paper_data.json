@@ -1,0 +1,667 @@
+{
+  "accounting_source_sha256": "f39f0d5068b9bff0403148c0c79eb1072fa21947fac50be4d35524c26fbff945",
+  "max_finite_Hminus_over_Kg": {
+    "dy": 1.8850752438960958,
+    "ttbar": 3.4280561210318115,
+    "wbb": 5.579695444997095,
+    "zz": 1.3472100641779114
+  },
+  "processes": {
+    "dy": {
+      "H_gain_pb": 47.122452999000004,
+      "actual_minus_conditional_expected_shift_pb": 0.4569042106836321,
+      "conditional_expected_H_gain_pb": 47.128486706692485,
+      "conditional_expected_S_loss_pb": 31.138597039376116,
+      "conditional_expected_net_shift_pb": 15.989889667316369,
+      "conditional_rejection_pull": 0.7681492395291455,
+      "conditional_rejection_sigma_pb": 0.59481177246716,
+      "continuation_warning_events": 0,
+      "counts": {
+        "accepted_H": 27293,
+        "accepted_S": 165473,
+        "input_H": 31436,
+        "input_S": 168564,
+        "negative_accepted_H": 25,
+        "negative_accepted_S": 9947,
+        "negative_input_H": 4168,
+        "negative_input_S": 10144,
+        "rejected_H": 4143,
+        "rejected_S": 3091
+      },
+      "first_full_weight_identity": true,
+      "full_emissions": 9870216,
+      "input_events": 200000,
+      "negative_H_expected_retained_events": 24.46951719660103,
+      "negative_H_expected_retained_weight_pb": -0.27831611730751976,
+      "negative_H_input_events": 4168,
+      "negative_H_requiring_signed_residual": 25,
+      "negative_H_retained_events": 25,
+      "negative_H_retained_weight_pb": -0.284349825,
+      "negative_H_with_zero_K": 24,
+      "negative_S_input_events": 10144,
+      "negative_S_retained_events": 9947,
+      "negative_S_retained_weight_pb": -113.13710837100001,
+      "net_shift_fixed_count_centered_error_pb": 0.9666944969420564,
+      "net_shift_paired_event_error_pb": 0.9673913701657311,
+      "net_shift_pb": 16.446793877999973,
+      "net_shift_source_percent": 0.8437587526841551,
+      "original_sumw_pb": 1949.229424368,
+      "process": "dy",
+      "retained_events": 192766,
+      "retained_sumw_pb": 1965.6762182460002,
+      "signed_S_loss_pb": 30.67565912100003,
+      "source": {
+        "path": "/export/tmp/rikkert/macnlops_common_20261020/sources/dy/Events/common_200k_v2/events.lhe.gz",
+        "sha256": "8963faed49224ccad8ae78ddbf170bb541da1f9203c26a30d9fa0e5429098147"
+      },
+      "source_H_gate": {
+        "path": "/export/tmp/rikkert/macnlops_common_20261020/matching/dy/primary/source_h_sign_gate.json",
+        "sha256": "6eac6c6612492c47328092342ffc8ec6c45c2d45ae6696ca8fd58a70f8bd1f84"
+      }
+    },
+    "ttbar": {
+      "H_gain_pb": 166.869938781,
+      "actual_minus_conditional_expected_shift_pb": -0.8997771857402554,
+      "conditional_expected_H_gain_pb": 166.86786161535923,
+      "conditional_expected_S_loss_pb": 122.46131630661897,
+      "conditional_expected_net_shift_pb": 44.40654530874026,
+      "conditional_rejection_pull": -1.2247616368309677,
+      "conditional_rejection_sigma_pb": 0.7346549391181133,
+      "continuation_warning_events": 0,
+      "counts": {
+        "accepted_H": 13125,
+        "accepted_S": 132992,
+        "input_H": 41826,
+        "input_S": 158174,
+        "negative_accepted_H": 13,
+        "negative_accepted_S": 10750,
+        "negative_input_H": 28714,
+        "negative_input_S": 12732,
+        "rejected_H": 28701,
+        "rejected_S": 25182
+      },
+      "first_full_weight_identity": true,
+      "full_emissions": 18342465,
+      "input_events": 200000,
+      "negative_H_expected_retained_events": 13.357264654683512,
+      "negative_H_expected_retained_weight_pb": -0.07766021864076697,
+      "negative_H_input_events": 28714,
+      "negative_H_requiring_signed_residual": 21,
+      "negative_H_retained_events": 13,
+      "negative_H_retained_weight_pb": -0.075583053,
+      "negative_H_with_zero_K": 9,
+      "negative_S_input_events": 12732,
+      "negative_S_retained_events": 10750,
+      "negative_S_retained_weight_pb": -62.50137074999999,
+      "net_shift_fixed_count_centered_error_pb": 1.3460983979029586,
+      "net_shift_paired_event_error_pb": 1.3496058799868094,
+      "net_shift_pb": 43.506768123000015,
+      "net_shift_source_percent": 6.389828192779317,
+      "original_sumw_pb": 680.875397748,
+      "process": "ttbar",
+      "retained_events": 146117,
+      "retained_sumw_pb": 724.382165871,
+      "signed_S_loss_pb": 123.36317065799999,
+      "source": {
+        "path": "/export/tmp/rikkert/macnlops_common_20261020/sources/ttbar/Events/common_200k_v2/events.lhe.gz",
+        "sha256": "047e4294aa7cdf64d57032dd32dc2f8df32ee30edbe495d862969dae5220ed03"
+      },
+      "source_H_gate": {
+        "path": "/export/tmp/rikkert/macnlops_common_20261020/matching/ttbar/primary/source_h_sign_gate.json",
+        "sha256": "dbba59c1ea47d4fdb57fc3cf852715b18a65e3d5f1807b197e227a4a4a2301d3"
+      }
+    },
+    "wbb": {
+      "H_gain_pb": 46.6361386368,
+      "actual_minus_conditional_expected_shift_pb": 0.4787567632581329,
+      "conditional_expected_H_gain_pb": 46.63303721284911,
+      "conditional_expected_S_loss_pb": 56.05857449450725,
+      "conditional_expected_net_shift_pb": -9.425537281658137,
+      "conditional_rejection_pull": 1.3176807982405438,
+      "conditional_rejection_sigma_pb": 0.36333288296938165,
+      "continuation_warning_events": 0,
+      "counts": {
+        "accepted_H": 43752,
+        "accepted_S": 120480,
+        "input_H": 57138,
+        "input_S": 142862,
+        "negative_accepted_H": 6,
+        "negative_accepted_S": 17509,
+        "negative_input_H": 13392,
+        "negative_input_S": 20723,
+        "rejected_H": 13386,
+        "rejected_S": 22382
+      },
+      "first_full_weight_identity": true,
+      "full_emissions": 11170379,
+      "input_events": 200000,
+      "negative_H_expected_retained_events": 6.890203653649478,
+      "negative_H_expected_retained_weight_pb": -0.024005116750887717,
+      "negative_H_input_events": 13392,
+      "negative_H_requiring_signed_residual": 22,
+      "negative_H_retained_events": 6,
+      "negative_H_retained_weight_pb": -0.0209036928,
+      "negative_H_with_zero_K": 0,
+      "negative_S_input_events": 20723,
+      "negative_S_retained_events": 17509,
+      "negative_S_retained_weight_pb": -61.0004595392,
+      "net_shift_fixed_count_centered_error_pb": 0.6585972398941972,
+      "net_shift_paired_event_error_pb": 0.6588993702021992,
+      "net_shift_pb": -8.946780518400004,
+      "net_shift_source_percent": -1.9488502694088194,
+      "original_sumw_pb": 459.079933376,
+      "process": "wbb",
+      "retained_events": 164232,
+      "retained_sumw_pb": 450.1331528576,
+      "signed_S_loss_pb": 55.5829191552,
+      "source": {
+        "path": "/export/tmp/rikkert/macnlops_common_20261020/sources/wbb/Events/common_200k_v2/events.lhe.gz",
+        "sha256": "0f923f01fa811b8081a0b74e7fd4a9627f94ea663198c2bea83bbb33597ea0ec"
+      },
+      "source_H_gate": {
+        "path": "/export/tmp/rikkert/macnlops_common_20261020/matching/wbb/primary/source_h_sign_gate.json",
+        "sha256": "55db8d55ebfd5e4b706b1f81763b2b42145cd503028ac7bfd978b83326b20d0f"
+      }
+    },
+    "zz": {
+      "H_gain_pb": 0.20163981867800002,
+      "actual_minus_conditional_expected_shift_pb": -0.009816905208561655,
+      "conditional_expected_H_gain_pb": 0.20161903991961855,
+      "conditional_expected_S_loss_pb": 0.12738381598905718,
+      "conditional_expected_net_shift_pb": 0.07423522393056137,
+      "conditional_rejection_pull": -3.0325870239737864,
+      "conditional_rejection_sigma_pb": 0.0032371388293081717,
+      "continuation_warning_events": 0,
+      "counts": {
+        "accepted_H": 39146,
+        "accepted_S": 156505,
+        "input_H": 41647,
+        "input_S": 158353,
+        "negative_accepted_H": 10,
+        "negative_accepted_S": 9130,
+        "negative_input_H": 2511,
+        "negative_input_S": 9203,
+        "rejected_H": 2501,
+        "rejected_S": 1848
+      },
+      "first_full_weight_identity": true,
+      "full_emissions": 11079601,
+      "input_events": 200000,
+      "negative_H_expected_retained_events": 10.257725260083909,
+      "negative_H_expected_retained_weight_pb": -0.0008270155383814714,
+      "negative_H_input_events": 2511,
+      "negative_H_requiring_signed_residual": 11,
+      "negative_H_retained_events": 10,
+      "negative_H_retained_weight_pb": -0.00080623678,
+      "negative_H_with_zero_K": 10,
+      "negative_S_input_events": 9203,
+      "negative_S_retained_events": 9130,
+      "negative_S_retained_weight_pb": -0.73609418014,
+      "net_shift_fixed_count_centered_error_pb": 0.00531494726153612,
+      "net_shift_paired_event_error_pb": 0.005316885530883957,
+      "net_shift_pb": 0.06441831872199999,
+      "net_shift_source_percent": 0.45250662619214815,
+      "original_sumw_pb": 14.235884071816,
+      "process": "zz",
+      "retained_events": 195651,
+      "retained_sumw_pb": 14.300302390538,
+      "signed_S_loss_pb": 0.13722149995600003,
+      "source": {
+        "path": "/export/tmp/rikkert/macnlops_common_20261020/sources/zz/Events/common_200k_v2/events.lhe.gz",
+        "sha256": "ef7c67d345b7f57444194f0b139fa77baf99f16d46accea7d8611d54b4b391c7"
+      },
+      "source_H_gate": {
+        "path": "/export/tmp/rikkert/macnlops_common_20261020/matching/zz/primary/source_h_sign_gate.json",
+        "sha256": "d9bba06eb4f66d787f18c8e30fc3351e883e9dbcc83b96d413f9a800417530b4"
+      }
+    }
+  },
+  "setup": {
+    "audit_scope": "Whole-source structural audit, all-H density/sign gates and signed accounting completed. Full-cohort particle scan and remaining independent post-histogram/package verification were skipped at the user request; no complete all-endpoint certificate is claimed.",
+    "common": {
+      "MPI": false,
+      "QED": false,
+      "UE": false,
+      "absolute_signed_weights_unchanged": true,
+      "baseline_and_pre_rejection_exactly_identical": true,
+      "beam_remnants": false,
+      "colour_reconnection": false,
+      "decays": false,
+      "first_and_full_use_same_rejection_mask": true,
+      "first_level": "S: first competing QCD ISR/FSR or no emission; H: original hard endpoint",
+      "full_level": "QCD parton-shower continuation of the same event, with the same first-step decision",
+      "hadronization": false,
+      "normalization": "pb, unscaled original additive event weights; no survivor renormalization",
+      "one_source_and_one_native_history_per_process": true,
+      "weak_showers": false
+    },
+    "observables": {
+      "bottom_pair": "Sum of stable b and bbar four-vectors; m_bb=sqrt((p_b+p_bbar)^2), pT_bb and y_bb; angular observables use b vs bbar",
+      "jet_rapidity": "After clustering require leading-jet pT>20GeV for this observable only; softer/no-jet events go to missing flow, not discarded globally",
+      "leading_jet_pt": "No jet pT selection for spectra; soft range0..50GeV with0.5GeV bins; broad range0..600GeV",
+      "leading_radiation_jet": "anti-kT R=0.4 from stable final-state quarks |PDG|<=5 and gluons; top excluded; for Wbb remove stable b and bbar from radiation clustering; separate all-parton jet diagnostics exist",
+      "system": "DY ee; ZZ pair; ttbar pair; Wbb complete W+b+bbar system; pair_mass in Wbb is bb only"
+    },
+    "processes": {
+      "dy": {
+        "LHAPDF_ID": 21150,
+        "PDF": "LHAPDF6:MSTW2008nlo90cl/0",
+        "PDF_member": 0,
+        "alpha_s_MZ": 0.120179,
+        "alpha_s_order": 2,
+        "beam_xmax": [
+          0.9998556507692308,
+          0.9998556507692308
+        ],
+        "chunk_events": 5000,
+        "cut_note": "No active generation cuts other than DY dilepton mass threshold.",
+        "cuts": {
+          "etaj": -1.0,
+          "etal": -1.0,
+          "maxjetflavor": 4,
+          "mll": 60.0,
+          "mll_sf": 60.0,
+          "ptj": 0.0,
+          "ptl": 0.0
+        },
+        "cuts_note": "The inherited hidden maxjetflavor=4 is raised to model Nf=5 by generated setcuts.f in5FS; analysis clustering includes u..b independently. Only the DY mll/mll_sf=60GeV threshold is an active fiducial cut; lepton cuts in channels with no external leptons are inert.",
+        "effective_maxjetflavor_after_setcuts": 5,
+        "event_norm": "sum",
+        "flavours": 5,
+        "generation_cut_maxjetflavor_before_setcuts": 4,
+        "internal_heavy_mass_floors_GeV": {
+          "4": 1.2,
+          "5": 4
+        },
+        "model": "loop_sm-no_b_mass",
+        "model_particles": {
+          "1": {
+            "mass": 0.0,
+            "name": "d",
+            "width": 0.0
+          },
+          "11": {
+            "mass": 0.0,
+            "name": "e-",
+            "width": 0.0
+          },
+          "2": {
+            "mass": 0.0,
+            "name": "u",
+            "width": 0.0
+          },
+          "21": {
+            "mass": 0.0,
+            "name": "g",
+            "width": 0.0
+          },
+          "23": {
+            "mass": 91.188,
+            "name": "z",
+            "width": 2.441404
+          },
+          "24": {
+            "mass": 80.41900244575616,
+            "name": "w+",
+            "width": 2.0476
+          },
+          "3": {
+            "mass": 0.0,
+            "name": "s",
+            "width": 0.0
+          },
+          "4": {
+            "mass": 0.0,
+            "name": "c",
+            "width": 0.0
+          },
+          "5": {
+            "mass": 0.0,
+            "name": "b",
+            "width": 0.0
+          },
+          "6": {
+            "mass": 173.0,
+            "name": "t",
+            "width": 1.4915
+          }
+        },
+        "muR_equals_muF": "m(e+e-)",
+        "reaction": "p p > e+ e- [QCD]",
+        "reweighting": false,
+        "scale_definition": "invariant mass of external e+e- pair",
+        "shower_chunk_seeds": [
+          740001,
+          740040
+        ],
+        "shower_cutoffs_GeV": [
+          0.5000000000000001,
+          0.5867333369950679
+        ],
+        "source_construction": "ordinary MC@NLO with original G/P and bogus-Sudakov retained; resolved_source=False",
+        "source_events": 200000,
+        "source_file": "/export/tmp/rikkert/macnlops_common_20261020/sources/dy/Events/common_200k_v2/events.lhe.gz",
+        "source_presentation": "stock mass reshuffle plus pre-shuffle hard annotation",
+        "source_seed": 20261101,
+        "source_sha256": "8963faed49224ccad8ae78ddbf170bb541da1f9203c26a30d9fa0e5429098147",
+        "sqrt_s_GeV": 13000
+      },
+      "ttbar": {
+        "LHAPDF_ID": 21150,
+        "PDF": "LHAPDF6:MSTW2008nlo90cl/0",
+        "PDF_member": 0,
+        "alpha_s_MZ": 0.120179,
+        "alpha_s_order": 2,
+        "beam_xmax": [
+          0.9998556507692308,
+          0.9998556507692308
+        ],
+        "chunk_events": 5000,
+        "cut_note": "ptj10 is inactive for this inclusive top-pair source: tops are excluded from the light-jet count, and a real point has only one light QCD parton; passcuts_jets requires more than one",
+        "cuts": {
+          "etaj": -1.0,
+          "etal": -1.0,
+          "maxjetflavor": 4,
+          "mll": 0.0,
+          "mll_sf": 30.0,
+          "ptj": 10.0,
+          "ptl": 0.0
+        },
+        "cuts_note": "The inherited hidden maxjetflavor=4 is raised to model Nf=5 by generated setcuts.f in5FS; analysis clustering includes u..b independently. The retained ptj=10GeV is inactive: top is excluded and a real point has at most one light parton, while passcuts_jets applies only for nQCD>1.",
+        "effective_maxjetflavor_after_setcuts": 5,
+        "event_norm": "sum",
+        "flavours": 5,
+        "generation_cut_maxjetflavor_before_setcuts": 4,
+        "internal_heavy_mass_floors_GeV": {
+          "4": 1.2,
+          "5": 4
+        },
+        "model": "loop_sm-no_b_mass",
+        "model_particles": {
+          "1": {
+            "mass": 0.0,
+            "name": "d",
+            "width": 0.0
+          },
+          "11": {
+            "mass": 0.0,
+            "name": "e-",
+            "width": 0.0
+          },
+          "2": {
+            "mass": 0.0,
+            "name": "u",
+            "width": 0.0
+          },
+          "21": {
+            "mass": 0.0,
+            "name": "g",
+            "width": 0.0
+          },
+          "23": {
+            "mass": 91.188,
+            "name": "z",
+            "width": 2.441404
+          },
+          "24": {
+            "mass": 80.41900244575616,
+            "name": "w+",
+            "width": 2.0476
+          },
+          "3": {
+            "mass": 0.0,
+            "name": "s",
+            "width": 0.0
+          },
+          "4": {
+            "mass": 0.0,
+            "name": "c",
+            "width": 0.0
+          },
+          "5": {
+            "mass": 0.0,
+            "name": "b",
+            "width": 0.0
+          },
+          "6": {
+            "mass": 173.0,
+            "name": "t",
+            "width": 0.0
+          }
+        },
+        "muR_equals_muF": "HT/2",
+        "reaction": "p p > t t~ [QCD]",
+        "reweighting": false,
+        "scale_definition": "one half of sum of final-state transverse masses, including the real parton at real phase-space points",
+        "shower_chunk_seeds": [
+          760001,
+          760040
+        ],
+        "shower_cutoffs_GeV": [
+          0.5000000000000001,
+          0.5867333369950679
+        ],
+        "source_construction": "ordinary MC@NLO with original G/P and bogus-Sudakov retained; resolved_source=False",
+        "source_events": 200000,
+        "source_file": "/export/tmp/rikkert/macnlops_common_20261020/sources/ttbar/Events/common_200k_v2/events.lhe.gz",
+        "source_presentation": "stock mass reshuffle plus pre-shuffle hard annotation",
+        "source_seed": 20261103,
+        "source_sha256": "047e4294aa7cdf64d57032dd32dc2f8df32ee30edbe495d862969dae5220ed03",
+        "sqrt_s_GeV": 13000
+      },
+      "wbb": {
+        "LHAPDF_ID": 23300,
+        "PDF": "LHAPDF6:MSTW2008nlo68cl_nf4/0",
+        "PDF_member": 0,
+        "alpha_s_MZ": 0.114904,
+        "alpha_s_order": 2,
+        "beam_xmax": [
+          0.9998556507692308,
+          0.9998556507692308
+        ],
+        "chunk_events": 5000,
+        "cut_note": "No active generation cuts other than DY dilepton mass threshold.",
+        "cuts": {
+          "etaj": -1.0,
+          "etal": -1.0,
+          "maxjetflavor": 4,
+          "mll": 0.0,
+          "mll_sf": 0.0,
+          "ptj": 0.0,
+          "ptl": 0.0
+        },
+        "cuts_note": "The inherited hidden maxjetflavor=4 is raised to model Nf=5 by generated setcuts.f in5FS; analysis clustering includes u..b independently. Only the DY mll/mll_sf=60GeV threshold is an active fiducial cut; lepton cuts in channels with no external leptons are inert.",
+        "effective_maxjetflavor_after_setcuts": 4,
+        "event_norm": "sum",
+        "flavours": 4,
+        "generation_cut_maxjetflavor_before_setcuts": 4,
+        "internal_heavy_mass_floors_GeV": {
+          "4": 1.2,
+          "5": 4.7
+        },
+        "model": "loop_sm",
+        "model_particles": {
+          "1": {
+            "mass": 0.0,
+            "name": "d",
+            "width": 0.0
+          },
+          "11": {
+            "mass": 0.0,
+            "name": "e-",
+            "width": 0.0
+          },
+          "2": {
+            "mass": 0.0,
+            "name": "u",
+            "width": 0.0
+          },
+          "21": {
+            "mass": 0.0,
+            "name": "g",
+            "width": 0.0
+          },
+          "23": {
+            "mass": 91.188,
+            "name": "z",
+            "width": 2.441404
+          },
+          "24": {
+            "mass": 80.41900244575616,
+            "name": "w+",
+            "width": 2.0476
+          },
+          "3": {
+            "mass": 0.0,
+            "name": "s",
+            "width": 0.0
+          },
+          "4": {
+            "mass": 0.0,
+            "name": "c",
+            "width": 0.0
+          },
+          "5": {
+            "mass": 4.7,
+            "name": "b",
+            "width": 0.0
+          },
+          "6": {
+            "mass": 173.0,
+            "name": "t",
+            "width": 1.4915
+          }
+        },
+        "muR_equals_muF": "HT/2",
+        "reaction": "p p > w+ b b~ QCD=2 QED=1 [QCD]",
+        "reweighting": false,
+        "scale_definition": "one half of sum of final-state transverse masses, including the real parton at real phase-space points",
+        "shower_chunk_seeds": [
+          770001,
+          770040
+        ],
+        "shower_cutoffs_GeV": [
+          0.5000000000000001,
+          0.5944395349334878
+        ],
+        "source_construction": "ordinary MC@NLO with original G/P and bogus-Sudakov retained; resolved_source=False",
+        "source_events": 200000,
+        "source_file": "/export/tmp/rikkert/macnlops_common_20261020/sources/wbb/Events/common_200k_v2/events.lhe.gz",
+        "source_presentation": "stock mass reshuffle plus pre-shuffle hard annotation",
+        "source_seed": 20261104,
+        "source_sha256": "0f923f01fa811b8081a0b74e7fd4a9627f94ea663198c2bea83bbb33597ea0ec",
+        "sqrt_s_GeV": 13000
+      },
+      "zz": {
+        "LHAPDF_ID": 21150,
+        "PDF": "LHAPDF6:MSTW2008nlo90cl/0",
+        "PDF_member": 0,
+        "alpha_s_MZ": 0.120179,
+        "alpha_s_order": 2,
+        "beam_xmax": [
+          0.9998556507692308,
+          0.9998556507692308
+        ],
+        "chunk_events": 5000,
+        "cut_note": "No active generation cuts other than DY dilepton mass threshold.",
+        "cuts": {
+          "etaj": -1.0,
+          "etal": -1.0,
+          "maxjetflavor": 4,
+          "mll": 0.0,
+          "mll_sf": 30.0,
+          "ptj": 0.0,
+          "ptl": 0.0
+        },
+        "cuts_note": "The inherited hidden maxjetflavor=4 is raised to model Nf=5 by generated setcuts.f in5FS; analysis clustering includes u..b independently. Only the DY mll/mll_sf=60GeV threshold is an active fiducial cut; lepton cuts in channels with no external leptons are inert.",
+        "effective_maxjetflavor_after_setcuts": 5,
+        "event_norm": "sum",
+        "flavours": 5,
+        "generation_cut_maxjetflavor_before_setcuts": 4,
+        "internal_heavy_mass_floors_GeV": {
+          "4": 1.2,
+          "5": 4
+        },
+        "model": "loop_sm-no_b_mass",
+        "model_particles": {
+          "1": {
+            "mass": 0.0,
+            "name": "d",
+            "width": 0.0
+          },
+          "11": {
+            "mass": 0.0,
+            "name": "e-",
+            "width": 0.0
+          },
+          "2": {
+            "mass": 0.0,
+            "name": "u",
+            "width": 0.0
+          },
+          "21": {
+            "mass": 0.0,
+            "name": "g",
+            "width": 0.0
+          },
+          "23": {
+            "mass": 91.188,
+            "name": "z",
+            "width": 2.441404
+          },
+          "24": {
+            "mass": 80.41900244575616,
+            "name": "w+",
+            "width": 2.0476
+          },
+          "3": {
+            "mass": 0.0,
+            "name": "s",
+            "width": 0.0
+          },
+          "4": {
+            "mass": 0.0,
+            "name": "c",
+            "width": 0.0
+          },
+          "5": {
+            "mass": 0.0,
+            "name": "b",
+            "width": 0.0
+          },
+          "6": {
+            "mass": 173.0,
+            "name": "t",
+            "width": 1.4915
+          }
+        },
+        "muR_equals_muF": "m(ZZ)",
+        "reaction": "p p > z z [QCD]",
+        "reweighting": false,
+        "scale_definition": "invariant mass of external ZZ pair",
+        "shower_chunk_seeds": [
+          750001,
+          750040
+        ],
+        "shower_cutoffs_GeV": [
+          0.5000000000000001,
+          0.5867333369950679
+        ],
+        "source_construction": "ordinary MC@NLO with original G/P and bogus-Sudakov retained; resolved_source=False",
+        "source_events": 200000,
+        "source_file": "/export/tmp/rikkert/macnlops_common_20261020/sources/zz/Events/common_200k_v2/events.lhe.gz",
+        "source_presentation": "stock mass reshuffle plus pre-shuffle hard annotation",
+        "source_seed": 20261102,
+        "source_sha256": "ef7c67d345b7f57444194f0b139fa77baf99f16d46accea7d8611d54b4b391c7",
+        "sqrt_s_GeV": 13000
+      }
+    },
+    "scale_cuts_evidence": [
+      "/export/tmp/rikkert/macnlops_common_20261020/sources/ttbar/SubProcesses/setscales.f:554",
+      "/export/tmp/rikkert/macnlops_common_20261020/sources/ttbar/SubProcesses/setcuts.f:62",
+      "/export/tmp/rikkert/macnlops_common_20261020/sources/ttbar/SubProcesses/cuts.f:505",
+      "/export/tmp/rikkert/macnlops_common_20261020/sources/dy/SubProcesses/dummy_fct.f:68"
+    ],
+    "schema": "paper-results-setup-v1"
+  }
+}

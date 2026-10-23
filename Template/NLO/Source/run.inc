@@ -65,6 +65,24 @@ c
       logical                 mcatnlo_delta
       common /cMCatNLO_Delta/ mcatnlo_delta
 
+      logical                 store_hard_momenta
+      common /cStoreHardMomenta/ store_hard_momenta
+
+c Preserve original hard coordinates for differential matching rejection.
+      logical                 macnlops
+      common /cMAcNLOPS/ macnlops
+      logical                 macnlops_resolved_source
+      common /cMAcNLOPSConstruction/ macnlops_resolved_source
+      double precision macnlops_isr_cutoff,macnlops_fsr_cutoff,
+     $     macnlops_charm_mass,macnlops_bottom_mass,
+     $     macnlops_beam_xmax(2)
+      common /cMAcNLOPSProfile/ macnlops_isr_cutoff,
+     $     macnlops_fsr_cutoff,macnlops_charm_mass,
+     $     macnlops_bottom_mass,macnlops_beam_xmax
+      integer macnlops_nquark_in,macnlops_ngluon_to_quark
+      common /cMAcNLOPSFlavours/ macnlops_nquark_in,
+     $     macnlops_ngluon_to_quark
+
 c Born spreading of the Born contribution in S events
       logical                 born_spreading
       common /cBornSpreading/ born_spreading

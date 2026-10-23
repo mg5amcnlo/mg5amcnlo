@@ -1,0 +1,191 @@
+{
+  "code_at_manuscript_review": [
+    {
+      "repository_relative_path": "Template/NLO/SubProcesses/fks_singular.f",
+      "sha256": "c4ed5143581b5866f426d19d98d0213da8b3fa435a2be34e98f62d7de6d16c0e"
+    },
+    {
+      "repository_relative_path": "Template/NLO/SubProcesses/montecarlocounter.f",
+      "sha256": "94a953a3c6133d5e000d9e1151b4ef80576023273d203adde24ab46276bd98f7"
+    },
+    {
+      "repository_relative_path": "Template/NLO/SubProcesses/add_write_info.f",
+      "sha256": "8ee623a154492200b962c9f1dde476fc7c61eee2b0e405b4403bc4604d03fe0e"
+    },
+    {
+      "repository_relative_path": "Template/NLO/SubProcesses/handling_lhe_events.f",
+      "sha256": "0bf9d1d46f4ec2047f7df30b8632b0b841135babcdb301f7639af118d3bde367"
+    },
+    {
+      "repository_relative_path": "Template/NLO/SubProcesses/driver_macnlops.f",
+      "sha256": "f12f36280e61429633f549775629956832bc2b1865eb9b8def271f129cadc5eb"
+    },
+    {
+      "repository_relative_path": "Template/NLO/SubProcesses/mc_matching_runtime.f",
+      "sha256": "ab6d9e4ea6ebb3cbaaa6f0fdd2737d43c7e9307bfb7e6a5ac5f10fae7a1df35e"
+    },
+    {
+      "repository_relative_path": "Template/NLO/SubProcesses/mc_pythia8_kernel.f90",
+      "sha256": "831161f464fc869e6c0cb3eb2de1572b8f603dd5fed343faa4244f0985119cc8"
+    },
+    {
+      "repository_relative_path": "Template/NLO/MCatNLO/srcPythia8/MacNLOPS.cc",
+      "sha256": "647baba4253f5584ebbdbbae16e71a0820f6db55dd3f2fbadf1d4bb70f0f04ac"
+    },
+    {
+      "repository_relative_path": "Template/NLO/MCatNLO/srcPythia8/MacNLOPSFull.cc",
+      "sha256": "060e92ed1e733f04f1ab43b699a4e7422684644d79c2686d0a344eb90eb9e6a8"
+    },
+    {
+      "repository_relative_path": "Template/NLO/MCatNLO/srcPythia8/MacNLOPSPDFBounds.cc",
+      "sha256": "24caae4193c1a7c0eb60b06c230ab915a52cea545c782daad0e10b1f4304e6ee"
+    },
+    {
+      "repository_relative_path": "Template/NLO/MCatNLO/srcPythia8/patches/pythia8318-certified-pdf-envelope.patch",
+      "sha256": "c7a36a032b65e4a4964475173df895af54ef615c1e343bfbd08b8b18c42170fe"
+    },
+    {
+      "repository_relative_path": "Template/NLO/MCatNLO/srcPythia8/patches/pythia8318-four-flavour-alpha.patch",
+      "sha256": "5de6930a45e3fe450be7f23be47f62cb3c6132bef3ed4abd210761c3cbb8cce0"
+    },
+    {
+      "repository_relative_path": "Template/NLO/MCatNLO/srcPythia8/patches/pythia8318-four-flavour-showers.patch",
+      "sha256": "d2ef58e24b0d266f7250b0a74055f17fd46155dbcea02b229560834a41fd5a8e"
+    },
+    {
+      "repository_relative_path": "madgraph/iolibs/native_histories.py",
+      "sha256": "0fb84feb01653ed5e61be520a201ca362e46b4fc0dfef6ef01c35acc51c68ced"
+    },
+    {
+      "repository_relative_path": "madgraph/various/macnlops.py",
+      "sha256": "35428233a4c431c065ff94d79e87244d9e67bb1c6eaf5bd2b00a4c54d8f69276"
+    },
+    {
+      "repository_relative_path": "docs/audits/plot_macnlops_validation.py",
+      "sha256": "c0079a913a340fe7e05f94384fd654b495f716130f6914fac30e9be166966556"
+    }
+  ],
+  "code_provenance_note": "Historical hashes describe the frozen patched production reviewed for the manuscript. The current runtime uses stock Pythia; extraction does not recompute historical code hashes from the current checkout.",
+  "production_root": "/export/tmp/rikkert/macnlops_common_20261020",
+  "records": [
+    {
+      "bytes": 2422,
+      "relative_path": "source_production_index.json",
+      "sha256": "631acfba0d4bd9e89f56adeccce7094d15a2e694d40fcae8f6f5e76fad2ae4fa"
+    },
+    {
+      "bytes": 13052,
+      "relative_path": "analysis/final_accounting_review.json",
+      "sha256": "f39f0d5068b9bff0403148c0c79eb1072fa21947fac50be4d35524c26fbff945"
+    },
+    {
+      "bytes": 76640,
+      "relative_path": "analysis/common_matching_statistics/report.json",
+      "sha256": "a2de7dc5215d803bbce074398931badcda1f8b46d58802e46ef86b81c80f4b31"
+    },
+    {
+      "bytes": 14715,
+      "relative_path": "analysis/frozen_source_independent_audit.json",
+      "sha256": "671c3d36240581d4b0f3747ad53de4cc1c7a0409baabd264c025494ceaee7ea6"
+    },
+    {
+      "bytes": 1973,
+      "relative_path": "analysis/source_integrals.json",
+      "sha256": "edf88be41f3e32b18226f5a80046401e95c22acf00714e0ad357ab5b23861089"
+    },
+    {
+      "bytes": 422752,
+      "relative_path": "analysis/required_residual_diagnostics.json",
+      "sha256": "890eaea5f4892b0ed9de80f55198da52a48a9ed5ec4ad7025925655f7afec280"
+    },
+    {
+      "bytes": 1574188,
+      "relative_path": "analysis/required_residual_diagnostics_ttbar_wbb.json",
+      "sha256": "f7733c4606c198c51982494ad2634b901c91b0939d398ed9a0c33b91c75cccc3"
+    },
+    {
+      "bytes": 5499,
+      "relative_path": "analysis/qcd_only_native_runtime_review.json",
+      "sha256": "16bdae8617f687eff7f4ce7ae2674c6419ea888f079c5789397d2b9ed3dbbe98"
+    },
+    {
+      "bytes": 6471,
+      "relative_path": "analysis/common_particle_audit/first_chunks/all_processes_summary.json",
+      "sha256": "b42ee8c48d36439d8d7ee97def0b40f4b48f9ebce8a66b0c8de5105c4941948b"
+    },
+    {
+      "bytes": 291,
+      "relative_path": "analysis/user_audit_skip.json",
+      "sha256": "4ac5b7c337a374d9a266cf032dbed7c16056377c53475a096c7c39cf55ef91b1"
+    },
+    {
+      "bytes": 26166,
+      "relative_path": "analysis/dy_full_configuration_audit.json",
+      "sha256": "9e990ad7db4f18cd6a99c61a5443da31ac637b82319a306178baf0f8ab7324aa"
+    },
+    {
+      "bytes": 26202,
+      "relative_path": "analysis/zz_full_configuration_audit.json",
+      "sha256": "1b0976c1ea0172c22fbd0fdec5fae0163c48d8d6ab561c69c18b7eedd4a5a380"
+    },
+    {
+      "bytes": 26207,
+      "relative_path": "analysis/ttbar_full_configuration_audit.json",
+      "sha256": "ae368ce8551ce7a95aa71cd3c5c97e69ca3bfb1f2df40ca5e49148dad7b76e97"
+    },
+    {
+      "bytes": 26208,
+      "relative_path": "analysis/wbb_full_configuration_audit.json",
+      "sha256": "66cac77782069ad504abf68d97bd416ddca87e60fce5fc6ca1625d5535ab0ae5"
+    },
+    {
+      "bytes": 14299,
+      "relative_path": "paper_work/setup_review.json",
+      "sha256": "4074a5af682a16a413fcdd8e70c29f362d847156d4707295065fd6f0bcee48e7"
+    },
+    {
+      "bytes": 17216,
+      "relative_path": "paper_work/results_review.md",
+      "sha256": "e23c13f50ac2ddf7e93ab61493eeef5d534745370f13d0fb67c4f036837c92d5"
+    },
+    {
+      "bytes": 22895,
+      "relative_path": "paper_work/implementation_review.md",
+      "sha256": "a45f13e8c74781c8cf114bf0c025843bfa73e9bba70b9f732bd794cca0ed7bc0"
+    },
+    {
+      "bytes": 19218,
+      "relative_path": "paper_work/theory_review.md",
+      "sha256": "994d2685732de2c8864b08d19ecc08deb4e64bdaededce91409b77f433847f26"
+    },
+    {
+      "bytes": 4214,
+      "relative_path": "paper_work/implementation_draft_review.md",
+      "sha256": "4def462115fccff1ffbb081c8241240b5c8e35b2ceb9c06d81c0786d036e3d2e"
+    },
+    {
+      "bytes": 2573,
+      "relative_path": "paper_work/manuscript_theory_review.json",
+      "sha256": "c06436f7f1aae40c90f70d73bf2130da498e56aac826ca01e5b4be821caa88af"
+    }
+  ],
+  "scope": "Existing records and selected figures were read for manuscript verification. Skipped whole-production particle and final independent histogram/package audits were not restarted.",
+  "sources": {
+    "dy": {
+      "path": "/export/tmp/rikkert/macnlops_common_20261020/sources/dy/Events/common_200k_v2/events.lhe.gz",
+      "sha256": "8963faed49224ccad8ae78ddbf170bb541da1f9203c26a30d9fa0e5429098147"
+    },
+    "ttbar": {
+      "path": "/export/tmp/rikkert/macnlops_common_20261020/sources/ttbar/Events/common_200k_v2/events.lhe.gz",
+      "sha256": "047e4294aa7cdf64d57032dd32dc2f8df32ee30edbe495d862969dae5220ed03"
+    },
+    "wbb": {
+      "path": "/export/tmp/rikkert/macnlops_common_20261020/sources/wbb/Events/common_200k_v2/events.lhe.gz",
+      "sha256": "0f923f01fa811b8081a0b74e7fd4a9627f94ea663198c2bea83bbb33597ea0ec"
+    },
+    "zz": {
+      "path": "/export/tmp/rikkert/macnlops_common_20261020/sources/zz/Events/common_200k_v2/events.lhe.gz",
+      "sha256": "ef7c67d345b7f57444194f0b139fa77baf99f16d46accea7d8611d54b4b391c7"
+    }
+  }
+}
