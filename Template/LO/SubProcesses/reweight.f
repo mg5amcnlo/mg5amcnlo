@@ -239,17 +239,13 @@ c     the hardest and ipart(2) is the softest.
       double precision p(0:3,nexternal)
       integer imo,ida1,ida2,i,idmo,idda1,idda2
       integer ipdg(n_max_cl),ipart(2,n_max_cl)
-      logical isjet,isquark
+      logical isjet
       external isjet
       integer iddgluon, iddother, idgluon, idother
       logical isqcd
       external isqcd
       integer get_color
       external get_color 
-c     A quark keeps its flavour through q -> q g/a, also when it is not a
-c     jet (e.g. b at maxjetflavor=4): the graph label of the line can be
-c     the one of another flavour combination of the same subprocess
-      isquark(i)=abs(i).ge.1.and.abs(i).le.5
 
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
@@ -273,22 +269,22 @@ c           This is last clustering - keep mother ipart
          elseif(ipart(1,ida2).ge.1.and.ipart(1,ida2).le.2)then
             ipart(1,imo)=ipart(1,ida2)        
 c           Transmit jet PDG code
-            if(isjet(idmo).or.isquark(idmo)) then
-               if(isquark(idda1).and.
+            if(isjet(idmo)) then
+               if(idda1.lt.21.and.isjet(idda1).and.
      $              (idda2.eq.21.or.idda2.eq.22))
      $              ipdg(imo)=-idda1
-               if(isquark(idda2).and.
+               if(idda2.lt.21.and.isjet(idda2).and.
      $              (idda1.eq.21.or.idda1.eq.22))
      $              ipdg(imo)=idda2
             endif
          elseif(ipart(1,ida1).ge.1.and.ipart(1,ida1).le.2)then
             ipart(1,imo)=ipart(1,ida1)
 c           Transmit jet PDG code
-            if(isjet(idmo).or.isquark(idmo)) then
-               if(isquark(idda2).and.
+            if(isjet(idmo)) then
+               if(idda2.lt.21.and.isjet(idda2).and.
      $            (idda1.eq.21.or.idda1.eq.22))
      $              ipdg(imo)=-idda2
-               if(isquark(idda1).and.
+               if(idda1.lt.21.and.isjet(idda1).and.
      $            (idda2.eq.21.or.idda2.eq.22))
      $              ipdg(imo)=idda1
             endif
@@ -300,11 +296,11 @@ c           Transmit jet PDG code
       endif        
 c     FS clustering
 c     Transmit parton PDG code for parton vertex
-      if(isjet(idmo).or.isquark(idmo)) then
-         if(isquark(idda1).and.
+      if(isjet(idmo)) then
+         if(idda1.lt.21.and.isjet(idda1).and.
      $        (idda2.eq.21.or.idda2.eq.22))
      $        ipdg(imo)=idda1
-         if(isquark(idda2).and.
+         if(idda2.lt.21.and.isjet(idda2).and.
      $        (idda1.eq.21.or.idda1.eq.22))
      $        ipdg(imo)=idda2
          idmo=ipdg(imo)
@@ -436,39 +432,6 @@ c     sextet -> (anti-)quark (anti-)quark': use both, but take hardest as 1
       if (btest(mlevel,4)) then
         write(*,*) 'XY -> ',(ipart(i,imo),i=1,2),' (',ipdg(imo),')'
       endif
-
-      return
-      end
-
-      subroutine set_cl_ids(p,idext,idcl)
-c**************************************************
-c   Flavour labels of the clustering tree of the current graph for one
-c   event: graph labels, external legs set to idext, quark flavours
-c   transmitted to the internal lines. Works on a copy so that no label
-c   is carried over from one event to the next.
-c**************************************************
-      implicit none
-
-      include 'genps.inc'
-      include 'nexternal.inc'
-      include 'maxamps.inc'
-      include 'cluster.inc'
-
-      double precision p(0:3,nexternal)
-      integer idext(nexternal),idcl(n_max_cl)
-      integer ipart(2,n_max_cl),i,n
-      INTEGER IMIRROR,IPROC
-      COMMON/TO_MIRROR/IMIRROR, IPROC
-
-      idcl(:)=ipdgcl(:,igraphs(1),iproc)
-      do i=1,nexternal
-         idcl(ishft(1,i-1))=idext(i)
-         ipart(1,ishft(1,i-1))=i
-         ipart(2,ishft(1,i-1))=0
-      enddo
-      do n=1,nexternal-3
-         call ipartupdate(p,imocl(n),idacl(n,1),idacl(n,2),idcl,ipart)
-      enddo
 
       return
       end
@@ -617,26 +580,11 @@ C     ICONFIG has this config number
 c     Common block for reweighting info
 c     q2bck holds the central q2fact scales
       integer jlast(2)
+      integer njetstore(lmaxconfigs),iqjetstore(nexternal-2,lmaxconfigs)
       real*8 q2bck(2)
       integer njets,iqjets(nexternal)
-      common /to_rw/jlast,njets,iqjets,q2bck
-c     Jet memo: number of jets found for a config, kept for each pattern
-c     of jet legs (masklist) of the flavour labellings used, since a
-c     parton can be a jet in one flavour combination of a subprocess and
-c     not in another (e.g. b at maxjetflavor=4)
-      integer, allocatable, save :: njetstore(:,:), iqjetstore(:,:,:)
-      integer, allocatable, save :: masklist(:)
-      integer nmask
-      save nmask
-      logical memo_init
-      data memo_init/.false./
-      save memo_init
-      integer IPSEL
-      COMMON /SubProc/ IPSEL
-      integer idup(nexternal,maxproc,maxsproc)
-      integer mothup(2,nexternal)
-      integer icolup(2,nexternal,maxflow,maxsproc)
-      include 'leshouche.inc'
+      common /to_rw/jlast,njetstore,iqjetstore,njets,iqjets,q2bck
+      data njetstore/lmaxconfigs*-1/
       real*8 xptj,xptb,xpta,xptl,xmtc
       real*8 xetamin,xqcut,deltaeta
       common /to_specxpt/xptj,xptb,xpta,xptl,xmtc,xetamin,xqcut,deltaeta
@@ -670,7 +618,13 @@ c     Variables for keeping track of jets
       integer fsnum(2),ida(2),imo,jcode
       logical chclusold,fail,increasecode
       save chclusold
-      integer jetmask,imemo,idext(nexternal),idcl(n_max_cl)
+      logical checked_jet_flavours
+      data checked_jet_flavours/.false./
+      save checked_jet_flavours
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
+      include 'leshouche.inc'
       integer tmpindex
       integer pdgm, pdgid1, pdgid2
 
@@ -700,47 +654,36 @@ c
 c     First time, cluster according to this config and store jets
 c     (following times, only accept configurations if the same partons
 c      are flagged as jets)
-      if(.not.memo_init)then
-c        Distinct patterns of jet legs over all flavour combinations
-         allocate(masklist(maxsproc*maxproc))
-         nmask=0
-         do m=1,maxsproc
-            do k=1,maxproc
-               if(k.gt.1.and.idup(1,k,m).eq.0) cycle
-               jetmask=0
+c     The clustering labels (ipdgcl) and the jet memo are kept per
+c     subprocess, not per flavour combination: the combinations grouped
+c     in a subprocess must agree on which legs are jets. They do not when
+c     a massless quark is above maxjetflavor (e.g. massless b with
+c     maxjetflavor=4), and the matching would then use the cuts, jets
+c     and PDF ratios of another flavour (#456).
+      if(.not.checked_jet_flavours.and.ickkw.gt.0)then
+         checked_jet_flavours=.true.
+         do k=1,maxsproc
+            do m=2,maxproc
+               if(idup(1,m,k).eq.0) cycle
                do i=1,nexternal
-                  if(isjet(idup(i,k,m))) jetmask=ibset(jetmask,i-1)
+                  if(isjet(idup(i,m,k)).neqv.isjet(idup(i,1,k)))then
+                     open(unit=26,file='../../../error',status='unknown')
+                     write(26,*) 'Error: matching (ickkw>0) needs ',
+     $                 'maxjetflavor to include every massless quark: ',
+     $                 'pdg ',idup(i,m,k),' and ',idup(i,1,k),
+     $                 ' share a subprocess but only one is a jet'
+                     write(*,*) 'Error: matching (ickkw>0) needs ',
+     $                 'maxjetflavor to include every massless quark: ',
+     $                 'pdg ',idup(i,m,k),' and ',idup(i,1,k),
+     $                 ' share a subprocess but only one is a jet'
+                     stop 1
+                  endif
                enddo
-               if(.not.any(masklist(1:nmask).eq.jetmask))then
-                  nmask=nmask+1
-                  masklist(nmask)=jetmask
-               endif
             enddo
          enddo
-         allocate(njetstore(lmaxconfigs,nmask))
-         allocate(iqjetstore(nexternal-2,lmaxconfigs,nmask))
-         njetstore(:,:)=-1
-         memo_init=.true.
       endif
-c     Flavours of the external legs: the combination drawn for this event
-c     when called from rewgt, otherwise (before it is drawn) the first
-c     combination of the subprocess, as for the cuts in setcuts.f
-      if(keepq2bck)then
-         idext(:)=idup(:,ipsel,iproc)
-      else
-         idext(:)=idup(:,1,iproc)
-      endif
-c     Jet memo of this config for the pattern of jet legs (incoming
-c     legs included: they change which emissions are jets)
-      jetmask=0
-      do i=1,nexternal
-         if(isjet(idext(i))) jetmask=ibset(jetmask,i-1)
-      enddo
-      do imemo=1,nmask
-         if(masklist(imemo).eq.jetmask) exit
-      enddo
       chclusold=chcluster
-      if(njetstore(iconfig,imemo).eq.-1)then
+      if(njetstore(iconfig).eq.-1)then
          chcluster=.true.
       endif
  100  clustered = cluster(p(0,1))
@@ -757,15 +700,13 @@ c     legs included: they change which emissions are jets)
       endif
 c     Reset chcluster to run_card value
       chcluster=chclusold
-c     Flavour labels of the clustering tree for this event
-      call set_cl_ids(p,idext,idcl)
 
       if (btest(mlevel,1)) then
         write(*,*)'setclscales: identified tree {'
         do i=1,nexternal-2
-          write(*,*)'  ',i,': ',idacl(i,1),'(',idcl(idacl(i,1)),')',
-     $       '&',idacl(i,2),'(',idcl(idacl(i,2)),')',
-     $       ' -> ',imocl(i),'(',idcl(imocl(i)),')',
+          write(*,*)'  ',i,': ',idacl(i,1),'(',ipdgcl(idacl(i,1),igraphs(1),iproc),')',
+     $       '&',idacl(i,2),'(',ipdgcl(idacl(i,2),igraphs(1),iproc),')',
+     $       ' -> ',imocl(i),'(',ipdgcl(imocl(i),igraphs(1),iproc),')',
      $       ', ptij = ',dsqrt(pt2ijcl(i))
           write(*,*)'   icluster(',i,')=',(icluster(j,i),j=1,4)
         enddo
@@ -805,7 +746,7 @@ c   the hardest and ipart(2) is the softest.
       enddo
       do n=1,nexternal-3
         call ipartupdate(p,imocl(n),idacl(n,1),idacl(n,2),
-     $       idcl,ipart)
+     $       ipdgcl(1,igraphs(1),iproc),ipart)
       enddo
 
 c     Prepare beam related variables for scale and jet determination
@@ -820,7 +761,7 @@ c        jcentral is the central scale vertex on this side. i.e it stops
 c        when the T channel particles is not colored anymore.
          jcentral(i)=0
 c        qcdline gives whether this IS line is QCD
-         qcdline(i)=isqcd(idcl(ibeam(i)))
+         qcdline(i)=isqcd(ipdgcl(ibeam(i),igraphs(1),iproc))
 c        partonline gives whether this IS line is parton (start out true for any QCD)
          partonline(i)=qcdline(i)
 c        goodjet gives whether this cluster line is considered a jet
@@ -830,7 +771,7 @@ c        i.e. if all related/previous clustering are jet
 
       do i=3,nexternal
          j=ishft(1,i-1)
-         goodjet(j)=isjet(idcl(j))
+         goodjet(j)=isjet(ipdgcl(j,igraphs(1),iproc))
       enddo
 
 c     Go through clusterings and set factorization scale points for use in dsig
@@ -867,7 +808,7 @@ c             If jfirst not set, set it
 c             Stop fact scale where parton line stops
                  jlast(j)=n
                  partonline(j)=goodjet(ida(3-i)).and.
-     $                isjet(idcl(imo))
+     $                isjet(ipdgcl(imo,igraphs(1),iproc))
               else if (jfirst(j).eq.0) then
                  jfirst(j) = n
                  goodjet(imo)=.false.
@@ -878,8 +819,8 @@ c             If not jet vertex, increase jcode. This is needed
 c             e.g. in VBF if we pass over to the other side and hit
 c             parton vertices again.
               if(.not.goodjet(ida(3-i)).or.
-     $             .not.isjet(idcl(ida(i))).or.
-     $             .not.isjet(idcl(imo))) then
+     $             .not.isjet(ipdgcl(ida(i),igraphs(1),iproc)).or.
+     $             .not.isjet(ipdgcl(imo,igraphs(1),iproc))) then
                   jcode=jcode+1
                   increasecode=.true.
                else if(increasecode) then
@@ -890,7 +831,7 @@ c             Consider t-channel jet radiations as jets only if
 c             FS line is a jet line
               if(goodjet(ida(3-i))) then
                  if(partonline(j).or.
-     $ idcl(ida(3-i)).eq.21)then
+     $ ipdgcl(ida(3-i),igraphs(1),iproc).eq.21)then
 c                   Need to include gluon to avoid soft singularity
                     iqjets(ipart(1,ida(3-i)))=1 ! 1 means for sure jet
                  else
@@ -900,7 +841,7 @@ c                   Need to include gluon to avoid soft singularity
 c             Trace QCD line through event
               if(qcdline(j))then
                  jcentral(j)=n
-                 qcdline(j)=isqcd(idcl(imo))
+                 qcdline(j)=isqcd(ipdgcl(imo,igraphs(1),iproc))
               endif
             endif
           enddo
@@ -909,16 +850,16 @@ c             Trace QCD line through event
 c          FS clustering
 c          Check QCD jet, take care so not a decay
            if(.not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
-     $        idcl,ipart,n.eq.nexternal-2)) then
-              pdgm   = idcl(imocl(n))
-              pdgid1 = idcl(idacl(n,1))
-              pdgid2 = idcl(idacl(n,2))
+     $        ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)) then
+              pdgm   = ipdgcl(imocl(n),igraphs(1),iproc)
+              pdgid1 = ipdgcl(idacl(n,1),igraphs(1),iproc)
+              pdgid2 = ipdgcl(idacl(n,2),igraphs(1),iproc)
               if (isqcd(pdgm).and.isqcd(pdgid1).and.isqcd(pdgid2))then
                   continue
 c          Remove non-gluon jets that lead up to non-jet vertices
            elseif(ipart(1,imocl(n)).gt.2)then ! ipart(1) set and not IS line
 c          The ishft gives the FS particle corresponding to imocl
-              if(.not.is_octet(idcl(ishft(1,ipart(1,imocl(n))-1))))then
+              if(.not.is_octet(ipdgcl(ishft(1,ipart(1,imocl(n))-1),igraphs(1),iproc)))then
                  ! split case for q a > q and for g > g h (with the gluon splitting into quark)
                  ! also check for case of three scalar interaction (then do nothing)
                  if (.not.isqcd(pdgm).and..not.isqcd(pdgid1).and..not.isqcd(pdgid2)) then
@@ -935,15 +876,15 @@ c          The ishft gives the FS particle corresponding to imocl
                        iqjets(ipart(1,imocl(n)))=0
                     endif
                  endif
-              else if (is_octet(idcl(imocl(n))))then
+              else if (is_octet(ipdgcl(imocl(n),igraphs(1),iproc)))then
 c                special case for g > g h remove also the hardest gluon
                  iqjets(ipart(1,imocl(n)))=0
               endif
            endif
            if(ipart(2,imocl(n)).gt.2)then ! ipart(1) set and not IS line
 c             The ishft gives the FS particle corresponding to imocl
-              if(.not.is_octet(idcl(ishft(1,ipart(2,imocl(n))-1))).and.
-     $                                   .not.is_octet(idcl(imocl(n)))) then
+              if(.not.is_octet(ipdgcl(ishft(1,ipart(2,imocl(n))-1),igraphs(1),iproc)).and.
+     $                                   .not.is_octet(ipdgcl(imocl(n),igraphs(1),iproc))) then
 c                 The second condition is to prevent the case of ggh where the gluon split in quark later.
 c                 The first quark is already remove so we shouldn't remove this one. introduce for gg_hgqq (in heft)      
               iqjets(ipart(2,imocl(n)))=0
@@ -957,18 +898,18 @@ c          Set goodjet to false for mother
 c          This is a jet vertex, so set jet flag for final-state jets
 c          ifsno gives leg number if daughter is FS particle, otherwise 0
            fsnum(1)=ifsno(idacl(n,1),ipart)
-           if(isjet(idcl(idacl(n,1))).and.
+           if(isjet(ipdgcl(idacl(n,1),igraphs(1),iproc)).and.
      $          fsnum(1).gt.0) then
               iqjets(fsnum(1))=1
            endif
            fsnum(1)=ifsno(idacl(n,2),ipart)
-           if(isjet(idcl(idacl(n,2))).and.
+           if(isjet(ipdgcl(idacl(n,2),igraphs(1),iproc)).and.
      $          fsnum(1).gt.0) then
               iqjets(fsnum(1))=1
            endif
 c          Flag mother as good jet if PDG is jet and both daughters are jets
            goodjet(imocl(n))=
-     $          (isjet(idcl(imocl(n))).and.
+     $          (isjet(ipdgcl(imocl(n),igraphs(1),iproc)).and.
      $          goodjet(idacl(n,1)).and.goodjet(idacl(n,2)))
             
 c       check case with g > g g
@@ -984,9 +925,9 @@ c
 c             in that case the up gluon can be tag as the hardest one
 c             but this one is also lead to no QCD one.
 c             so in that case we have to change ipart(1) to the sofest gluon
-           pdgm   = idcl(imocl(n))
-           pdgid1 = idcl(idacl(n,1))
-           pdgid2 = idcl(idacl(n,2))
+           pdgm   = ipdgcl(imocl(n),igraphs(1),iproc)
+           pdgid1 = ipdgcl(idacl(n,1),igraphs(1),iproc)
+           pdgid2 = ipdgcl(idacl(n,2),igraphs(1),iproc)
            if (is_octet(pdgm).and.is_octet(pdgid1).and.is_octet(pdgid2))then
 c              write(*,*) 'pure QCD vertex (2)'
 c              write(*,*) pdgm , '>', pdgid1,' ', pdgid2
@@ -1055,18 +996,18 @@ c       There parton emissions with code <= jcode are not jets
          enddo
          write(*,*)
       endif
-      if(njetstore(iconfig,imemo).eq.-1) then
+      if(njetstore(iconfig).eq.-1) then
 c     Store external jet numbers if first time
          njets=0
          do i=3,nexternal
             if(iqjets(i).gt.0)then
                njets=njets+1
-               iqjetstore(njets,iconfig,imemo)=i
+               iqjetstore(njets,iconfig)=i
             endif
          enddo
-         njetstore(iconfig,imemo)=njets
+         njetstore(iconfig)=njets
         if (btest(mlevel,4))
-     $       write(*,*) 'Storing jets: ',(iqjetstore(i,iconfig,imemo),i=1,njets)
+     $       write(*,*) 'Storing jets: ',(iqjetstore(i,iconfig),i=1,njets)
 c     Recluster without requiring chcluster
          goto 100
       else
@@ -1077,21 +1018,21 @@ c     if not, recluster according to iconfig
          do i=1,nexternal
             if(iqjets(i).gt.0)then
                njets=njets+1
-c               if (iqjetstore(njets,iconfig,imemo).ne.i) fail=.true.
+c               if (iqjetstore(njets,iconfig).ne.i) fail=.true.
             endif
          enddo
-         if(njets.ne.njetstore(iconfig,imemo)) fail=.true.
+         if(njets.ne.njetstore(iconfig)) fail=.true.
          if (fail) then
             if (igraphs(1).eq.iconfig) then
                open(unit=26,file='../../../error',status='unknown',err=999)
                write(*,*) 'Error: Failed despite same graph: ',iconfig
                write(*,*) 'Have jets (>0)',(iqjets(i),i=1,nexternal)
                write(*,*) 'Should be ',
-     $              (iqjetstore(i,iconfig,imemo),i=1,njetstore(iconfig,imemo))
+     $              (iqjetstore(i,iconfig),i=1,njetstore(iconfig))
                write(26,*) 'Error: Failed despite same graph: ',iconfig,
      $              '. Have jets (>0)',(iqjets(i),i=1,nexternal),
      $              ', should be ',
-     $              (iqjetstore(i,iconfig,imemo),i=1,njetstore(iconfig,imemo))
+     $              (iqjetstore(i,iconfig),i=1,njetstore(iconfig))
                stop 4
             endif
             if (btest(mlevel,3))
@@ -1106,9 +1047,9 @@ c     If last clustering is s-channel QCD (e.g. ttbar) use mt2last instead
 c     (i.e. geom. average of transverse mass of t and t~)
         if(mt2last.gt.4d0 .and. nexternal.gt.3) then
            if(jlast(1).eq.nexternal-2.and.jlast(2).eq.nexternal-2.and.
-     $        isqcd(idcl(idacl(nexternal-3,1))).and.
-     $        isqcd(idcl(idacl(nexternal-3,2))).and.
-     $        isqcd(idcl(imocl(nexternal-3))))then
+     $        isqcd(ipdgcl(idacl(nexternal-3,1),igraphs(1),iproc)).and.
+     $        isqcd(ipdgcl(idacl(nexternal-3,2),igraphs(1),iproc)).and.
+     $        isqcd(ipdgcl(imocl(nexternal-3),igraphs(1),iproc)))then
               mt2ij(nexternal-2)=mt2last
               mt2ij(nexternal-3)=mt2last
               if (btest(mlevel,3)) then
@@ -1148,8 +1089,8 @@ c                    Daughter among jets - check xqcut
                      if(sqrt(pt2ijcl(n)).lt.xqcut)then
                         if (btest(mlevel,3))
      $                       write(*,*) 'Failed xqcut: ',n,
-     $                       idcl(idacl(n,1)),
-     $                       idcl(idacl(n,2)),
+     $                       ipdgcl(idacl(n,1),igraphs(1),iproc),
+     $                       ipdgcl(idacl(n,2),igraphs(1),iproc),
      $                       sqrt(pt2ijcl(n))
                         setclscales=.false.
                         clustered = .false.
@@ -1322,7 +1263,7 @@ c              First adjust goodjet based on iqjets
 c              Now reset ptclus if jet vertex
                if(ipart(j,ida(i)).gt.2) then
                   if(isjetvx(imocl(n),idacl(n,1),idacl(n,2),
-     $               idcl,ipart,n.eq.nexternal-2)
+     $               ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)
      $              .and.goodjet(ida(i))) then
                      ptclus(ipart(j,ida(i)))=
      $                    max(ptclus(ipart(j,ida(i))),dsqrt(pt2ijcl(n)))
@@ -1435,15 +1376,15 @@ C     ICONFIG has this config number
 c     Common block for reweighting info
 c     q2bck holds the central q2fact scales
       integer jlast(2)
+      integer njetstore(lmaxconfigs),iqjetstore(nexternal-2,lmaxconfigs)
       real*8 q2bck(2)
       integer njets,iqjets(nexternal)
-      common /to_rw/jlast,njets,iqjets,q2bck
+      common /to_rw/jlast,njetstore,iqjetstore,njets,iqjets,q2bck
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
 
-      integer idcl(n_max_cl)
 C   local variables
       integer i, j, idi, idj
       real*8 PI
@@ -1497,11 +1438,14 @@ c   Since we use pdf reweighting, need to know particle identities
       endif
 
       if (use_syst.and.igraphs(1).eq.0) igraphs(1) = iconfig ! happens if use_syst=T BUT fix scale
+c     Set incoming particle identities
+      ipdgcl(1,igraphs(1),iproc)=idup(1,ipsel,iproc)
+      ipdgcl(2,igraphs(1),iproc)=idup(2,ipsel,iproc)
       if (btest(mlevel,2)) then
          write(*,*) 'Set particle identities: ',
-     $        1,idup(1,ipsel,iproc),
+     $        1,ipdgcl(1,igraphs(1),iproc),
      $        ' and ',
-     $        2,idup(2,ipsel,iproc)
+     $        2,ipdgcl(2,igraphs(1),iproc)
 
       endif
       
@@ -1511,7 +1455,7 @@ c     Store pdf information for systematics studies (initial)
          if(use_syst)then
             do j=1,2
                 n_pdfrw(j)=1
-                i_pdgpdf(1,j)=idup(j,ipsel,iproc)
+                i_pdgpdf(1,j)=ipdgcl(j,igraphs(1),iproc)
                 s_xpdf(1,j)=xbk(ib(j))
                 s_qpdf(1,j)=sqrt(q2fact(j))
             enddo
@@ -1527,8 +1471,6 @@ c     Store pdf information for systematics studies (initial)
 c        rewgt = 0d0
         return
       endif
-c     Flavour labels of the clustering tree for the drawn combination
-      call set_cl_ids(p,idup(1,ipsel,iproc),idcl)
 
 
 c     Store pdf information for systematics studies (initial)
@@ -1536,7 +1478,7 @@ c     need to be done after      setclscales since that one clean the syscalc va
       if(use_syst)then
          do j=1,2
             n_pdfrw(j)=1
-            i_pdgpdf(1,j)=idcl(j)
+            i_pdgpdf(1,j)=ipdgcl(j,igraphs(1),iproc)
             s_xpdf(1,j)=xbk(ib(j))
             s_qpdf(1,j)=sqrt(q2fact(j))
          enddo
@@ -1568,9 +1510,9 @@ c      ilast(0)=nexternal
       if (btest(mlevel,1)) then
         write(*,*)'rewgt: identified tree {'
         do i=1,nexternal-2
-          write(*,*)'  ',i,': ',idacl(i,1),'(',idcl(idacl(i,1)),')',
-     $       '&',idacl(i,2),'(',idcl(idacl(i,2)),')',
-     $       ' -> ',imocl(i),'(',idcl(imocl(i)),')',
+          write(*,*)'  ',i,': ',idacl(i,1),'(',ipdgcl(idacl(i,1),igraphs(1),iproc),')',
+     $       '&',idacl(i,2),'(',ipdgcl(idacl(i,2),igraphs(1),iproc),')',
+     $       ' -> ',imocl(i),'(',ipdgcl(imocl(i),igraphs(1),iproc),')',
      $       ', ptij = ',dsqrt(pt2ijcl(i))
         enddo
         write(*,*)'  graphs (',igraphs(0),'):',(igraphs(i),i=1,igraphs(0))
@@ -1593,17 +1535,18 @@ c     Prepare for resetting q2fact based on PDF reweighting
 c     Prepare checking for parton vertices
       do i=1,nexternal
          j=ishft(1,i-1)
-c        Particle identities of the chosen combination (all legs, not
-c        only jets) are set in setclscales
+c        Set jet identities according to chosen subprocess
+         if(isjet(idup(i,ipsel,iproc)))
+     $        ipdgcl(j,igraphs(1),iproc)=idup(i,ipsel,iproc)
          if (btest(mlevel,2))
      $        write(*,*) 'Set particle identities: ',
-     $        i,idcl(j)
+     $        i,ipdgcl(j,igraphs(1),iproc)
          if(i.le.2)then
-            goodjet(j)=isparton(idcl(j))
+            goodjet(j)=isparton(ipdgcl(j,igraphs(1),iproc))
          elseif(iqjets(i).gt.0) then
             goodjet(j)=.true.
-         elseif(isparton(idcl(j)).and.
-     $          .not.isjet(idcl(j))) then
+         elseif(isparton(ipdgcl(j,igraphs(1),iproc)).and.
+     $          .not.isjet(ipdgcl(j,igraphs(1),iproc))) then
             goodjet(j)=.true.            
          else
             goodjet(j)=.false.
@@ -1623,28 +1566,28 @@ c       scale for alpha_s reweighting
            q2now = scale**2
         endif
         if (btest(mlevel,3)) then
-          write(*,*)'  ',n,': ',idacl(n,1),'(',idcl(idacl(n,1)),
-     &       ')&',idacl(n,2),'(',idcl(idacl(n,2)),
-     &       ') -> ',imocl(n),'(',idcl(imocl(n)),
+          write(*,*)'  ',n,': ',idacl(n,1),'(',ipdgcl(idacl(n,1),igraphs(1),iproc),
+     &       ')&',idacl(n,2),'(',ipdgcl(idacl(n,2),igraphs(1),iproc),
+     &       ') -> ',imocl(n),'(',ipdgcl(imocl(n),igraphs(1),iproc),
      &       '), ptij = ',dsqrt(q2now) 
         endif
 c   Update particle tree map
         call ipartupdate(p,imocl(n),idacl(n,1),idacl(n,2),
-     $       idcl,ipart)
+     $       ipdgcl(1,igraphs(1),iproc),ipart)
 c     perform alpha_s reweighting only for vertices where a parton is produced
 c     and not for the last clustering (use non-fixed ren. scale for these)
         if (n.lt.nexternal-2)then
 c          Use goodjet to trace allowed parton lines.
 c          For ISR, allow only splittings where all particles are along
 c          good parton lines; for FSR, just require one FS particle to be good
-           goodjet(imocl(n))=isparton(idcl(imocl(n)))
+           goodjet(imocl(n))=isparton(ipdgcl(imocl(n),igraphs(1),iproc))
      $          .and.goodjet(idacl(n,1)).and.goodjet(idacl(n,2))
            if(btest(mlevel,4))
      $          write(*,*)'Set goodjet ',imocl(n),' to ',goodjet(imocl(n))
            if(ipart(1,imocl(n)).le.2.and.goodjet(imocl(n)).or.  ! ISR
      $        ipart(1,imocl(n)).gt.2.and.                       ! FSR
      $          ispartonvx(imocl(n),idacl(n,1),idacl(n,2),
-     $          idcl,ipart,.false.).and.
+     $          ipdgcl(1,igraphs(1),iproc),ipart,.false.).and.
      $        (goodjet(idacl(n,1)).or.goodjet(idacl(n,2)))) then
 c       alpha_s weight
               rewgt=rewgt*alphas(alpsfact*sqrt(q2now))/asref
@@ -1654,8 +1597,8 @@ c             Store information for systematics studies
                  s_qalps(n_alpsem)=sqrt(q2now)
               endif
               if (btest(mlevel,3)) then
-                 write(*,*)' reweight vertex: ',idcl(imocl(n)),
-     $                idcl(idacl(n,1)),idcl(idacl(n,2))
+                 write(*,*)' reweight vertex: ',ipdgcl(imocl(n),igraphs(1),iproc),
+     $                ipdgcl(idacl(n,1),igraphs(1),iproc),ipdgcl(idacl(n,2),igraphs(1),iproc)
                  write(*,*)'       as: ',alphas(alpsfact*dsqrt(q2now)),
      &                '/',asref,' -> ',alphas(alpsfact*dsqrt(q2now))/asref
                  write(*,*)' and G=',SQRT(4d0*PI*ALPHAS(scale))
@@ -1667,7 +1610,7 @@ c       Perform PDF and, if ickkw=2, Sudakov reweighting
           isvx=.false.
           do i=1,2
 c         write(*,*)'weight ',idacl(n,i),', ptij=',pt2prev(idacl(n,i))
-            if (isqcd(idcl(idacl(n,i)))) then
+            if (isqcd(ipdgcl(idacl(n,i),igraphs(1),iproc))) then
                if(ickkw.eq.2.and.pt2min.eq.0d0) then
                   pt2min=pt2ijcl(n)
                   if (btest(mlevel,3))
@@ -1677,7 +1620,7 @@ c         write(*,*)'weight ',idacl(n,i),', ptij=',pt2prev(idacl(n,i))
      $              pt2prev(idacl(n,i))=
      $              max(pt2min,p(0,i)**2-p(1,i)**2-p(2,i)**2-p(3,i)**2)
                do j=1,2
-                  if (isparton(idcl(idacl(n,i))).and
+                  if (isparton(ipdgcl(idacl(n,i),igraphs(1),iproc)).and
      $                 .idacl(n,i).eq.ibeam(j)) then
 c               is sudakov weight - calculate only once for each parton
 c               line where parton line ends with change of parton id or
@@ -1685,17 +1628,19 @@ c               non-radiation vertex
                      isvx=.true.
                      ibeam(j)=imocl(n)
 c                    Perform Sudakov reweighting if ickkw=2
-                     if(ickkw.eq.2.and.(idcl(idacl(n,i)).ne.
-     $                    idcl(imocl(n)).or.
+                     if(ickkw.eq.2.and.(ipdgcl(idacl(n,i),igraphs(1),iproc).ne.
+     $                    ipdgcl(imocl(n),igraphs(1),iproc).or.
      $                    .not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
-     $                    idcl,ipart,n.eq.nexternal-2)).and.
+     $                    ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)).and.
      $                    pt2prev(idacl(n,i)).lt.pt2ijcl(n))then
-                        tmp=min(1d0,max(getissud(ibeam(j),idcl(idacl(n,i)),xnow(j),xnow(3-j),pt2ijcl(n)),1d-20)/
-     $                       max(getissud(ibeam(j),idcl(idacl(n,i)),xnow(j),xnow(3-j),pt2prev(idacl(n,i))),1d-20))
+                        tmp=min(1d0,max(getissud(ibeam(j),ipdgcl(idacl(n,i),
+     $                       igraphs(1),iproc),xnow(j),xnow(3-j),pt2ijcl(n)),1d-20)/
+     $                       max(getissud(ibeam(j),ipdgcl(idacl(n,i),
+     $                       igraphs(1),iproc),xnow(j),xnow(3-j),pt2prev(idacl(n,i))),1d-20))
                         rewgt=rewgt*tmp
                         pt2prev(imocl(n))=pt2ijcl(n)
                         if (btest(mlevel,3)) then
-                           write(*,*)' reweight line: ',idcl(idacl(n,i)), idacl(n,i)
+                           write(*,*)' reweight line: ',ipdgcl(idacl(n,i),igraphs(1),iproc), idacl(n,i)
                            write(*,*)'     pt2prev, pt2new, x1, x2: ',pt2prev(idacl(n,i)),pt2ijcl(n),xnow(j),xnow(3-j)
                            write(*,*)'           Sud: ',tmp
                            write(*,*)'        -> rewgt: ',rewgt
@@ -1706,13 +1651,13 @@ c                    Perform Sudakov reweighting if ickkw=2
 c                 End Sudakov reweighting when we reach a non-radiation vertex
                      if(ickkw.eq.2.and..not.
      $                    ispartonvx(imocl(n),idacl(n,1),idacl(n,2),
-     $                    idcl,ipart,n.eq.nexternal-2)) then
+     $                    ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)) then
                         pt2prev(imocl(n))=1d30
                         if (btest(mlevel,3)) then
                           write(*,*)' rewgt: ending reweighting for vx ',
      $                          idacl(n,1),idacl(n,2),imocl(n),
-     $                          ' with ids ',idcl(idacl(n,1)),
-     $                          idcl(idacl(n,2)),idcl(imocl(n))
+     $                          ' with ids ',ipdgcl(idacl(n,1),igraphs(1),iproc),
+     $                          ipdgcl(idacl(n,2),igraphs(1),iproc),ipdgcl(imocl(n),igraphs(1),iproc)
                         endif
                      endif
 c               PDF reweighting
@@ -1743,10 +1688,11 @@ c                    if non-radiating vertex or last 2->2
      $                          ' to: ',sqrt(pt2pdf(imocl(n)))
                      else if(pt2pdf(idacl(n,i)).lt.q2now.and.
      $                       n.le.jlast(j))then
-                        pdfj1=pdg2pdf(abs(lpp(IB(j))),idcl(idacl(n,i))*sign(1,lpp(IB(j))), IB(j),
+                        pdfj1=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i),
+     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))), IB(j),
      $                       xnow(j),sqrt(q2now))
-                        pdfj2=pdg2pdf(abs(lpp(IB(j))),idcl(idacl(n,i))
-     $                       *sign(1,lpp(IB(j))), IB(j),
+                        pdfj2=pdg2pdf(abs(lpp(IB(j))),ipdgcl(idacl(n,i), 
+     $                       igraphs(1),iproc)*sign(1,lpp(IB(j))), IB(j),
      $                       xnow(j),sqrt(pt2pdf(idacl(n,i))))
                         if(pdfj2.lt.1d-10)then
 c                          Scale too low for heavy quark
@@ -1760,7 +1706,7 @@ c                          Scale too low for heavy quark
 c     Store information for systematics studies
                         if(use_syst)then
                            n_pdfrw(j)=n_pdfrw(j)+1
-                           i_pdgpdf(n_pdfrw(j),j)=idcl(idacl(n,i))
+                           i_pdgpdf(n_pdfrw(j),j)=ipdgcl(idacl(n,i),igraphs(1),iproc)
                            if (zcl(n).gt.0d0.and.zcl(n).lt.1d0) then
                               s_xpdf(n_pdfrw(j),j)=xnow(j)/zcl(n)
                            else
@@ -1769,7 +1715,7 @@ c     Store information for systematics studies
                            s_qpdf(n_pdfrw(j),j)=sqrt(q2now)
                         endif
                         if (btest(mlevel,3)) then
-                           write(*,*)' reweight ',n,i,idcl(idacl(n,i)),' by pdfs: '
+                           write(*,*)' reweight ',n,i,ipdgcl(idacl(n,i),igraphs(1),iproc),' by pdfs: '
                            write(*,*)'     x, ptprev, ptnew: ',xnow(j),
      $                          sqrt(pt2pdf(idacl(n,i))),sqrt(q2now)
                            write(*,*)'           PDF: ',pdfj1,' / ',pdfj2
@@ -1793,15 +1739,15 @@ c                    If no reweighting, just copy daughter scale for mother
                enddo
 c           fs sudakov weight
                if(ickkw.eq.2.and.pt2prev(idacl(n,i)).lt.pt2ijcl(n).and.
-     $              (isvx.or.idcl(idacl(n,i)).ne.idcl(imocl(n)).or.
-     $              (idcl(idacl(n,i)).ne.
-     $              idcl(idacl(n,3-i)).and.
+     $              (isvx.or.ipdgcl(idacl(n,i),igraphs(1),iproc).ne.ipdgcl(imocl(n),igraphs(1),iproc).or.
+     $              (ipdgcl(idacl(n,i),igraphs(1),iproc).ne.
+     $              ipdgcl(idacl(n,3-i),igraphs(1),iproc).and.
      $              pt2prev(idacl(n,i)).gt.pt2prev(idacl(n,3-i))))) then
                   tmp=sudwgt(sqrt(pt2min),sqrt(pt2prev(idacl(n,i))),
-     &                 dsqrt(pt2ijcl(n)),idcl(idacl(n,i)),1)
+     &                 dsqrt(pt2ijcl(n)),ipdgcl(idacl(n,i),igraphs(1),iproc),1)
                   rewgt=rewgt*tmp
                   if (btest(mlevel,3)) then
-                     write(*,*)' reweight fs line: ',idcl(idacl(n,i)), idacl(n,i)
+                     write(*,*)' reweight fs line: ',ipdgcl(idacl(n,i),igraphs(1),iproc), idacl(n,i)
                      write(*,*)'     pt2prev, pt2new: ',pt2prev(idacl(n,i)),pt2ijcl(n)
                      write(*,*)'           Sud: ',tmp
                      write(*,*)'        -> rewgt: ',rewgt
@@ -1813,13 +1759,13 @@ c           fs sudakov weight
             endif
  10         continue
           enddo
-          if (ickkw.eq.2.and.n.eq.nexternal-2.and.isqcd(idcl(imocl(n))).and.
+          if (ickkw.eq.2.and.n.eq.nexternal-2.and.isqcd(ipdgcl(imocl(n),igraphs(1),iproc)).and.
      $         pt2prev(imocl(n)).lt.pt2ijcl(n)) then
              tmp=sudwgt(sqrt(pt2min),sqrt(pt2prev(imocl(n))),
-     &            dsqrt(pt2ijcl(n)),idcl(imocl(n)),1)
+     &            dsqrt(pt2ijcl(n)),ipdgcl(imocl(n),igraphs(1),iproc),1)
              rewgt=rewgt*tmp
              if (btest(mlevel,3)) then
-                write(*,*)' reweight last fs line: ',idcl(imocl(n)), imocl(n)
+                write(*,*)' reweight last fs line: ',ipdgcl(imocl(n),igraphs(1),iproc), imocl(n)
                 write(*,*)'     pt2prev, pt2new: ',pt2prev(imocl(n)),pt2ijcl(n)
                 write(*,*)'           Sud: ',tmp
                 write(*,*)'        -> rewgt: ',rewgt
