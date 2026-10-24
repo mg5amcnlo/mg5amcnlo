@@ -229,6 +229,197 @@ C       We are using the grouped_processes grid and it is initialized.
       RETURN
       END
 
+      SUBROUTINE STORE_GROUPING_CHOICE(IWARP)
+      IMPLICIT NONE
+c
+c     Keep a copy of SELPROC/SUMPROB (set by prepare_grouping_choice
+c     for the events of warp IWARP) such that the subprocess can be
+c     selected once the full vector is known (see select_grouping_vec)
+c
+      INTEGER IWARP
+      INCLUDE 'genps.inc'
+      INCLUDE 'maxconfigs.inc'
+      INCLUDE 'nexternal.inc'
+      INCLUDE 'maxamps.inc'
+      include 'vector.inc'
+      DOUBLE PRECISION SELPROC(2, MAXSPROC, LMAXCONFIGS)
+      double precision sumprob
+      common /to_grouping_selection/sumprob,selproc
+      DOUBLE PRECISION SELPROC_WARP(2, MAXSPROC, LMAXCONFIGS, NB_WARP)
+      DOUBLE PRECISION SUMPROB_WARP(NB_WARP)
+      COMMON /TO_GROUPING_SELECTION_WARP/SELPROC_WARP, SUMPROB_WARP
+
+      SELPROC_WARP(:,:,:,IWARP) = SELPROC(:,:,:)
+      SUMPROB_WARP(IWARP) = SUMPROB
+      RETURN
+      END
+
+      SUBROUTINE SELECT_GROUPING_VEC(IMIRROR_VEC, IPROC, ICONF_VEC, WGT,
+     &     VECSIZE_USED)
+      USE DISCRETESAMPLER
+      IMPLICIT NONE
+c
+c     Select the subprocess (IPROC), the configuration and the beam
+c     orientation for all the warps of a vector.
+c     All the warps of a vector are evaluated with the same matrix
+c     element, so they must share IPROC, while ICONF/IMIRROR are per warp.
+c     With a single warp, this is the same as select_grouping.
+c     Otherwise IPROC is drawn according to the PDF weights of the
+c     subprocesses averaged over the warps:
+c        P(I) = 1/NWARP sum_w SUM_{J,K} SELPROC_w(K,I,J)/SUMPROB_w
+c     and (ICONF,IMIRROR) of warp w conditionally to IPROC:
+c        P_w(J,K|I) = SELPROC_w(K,I,J) / SUM_{J,K} SELPROC_w(K,I,J)
+c     the weights of warp w being divided by P(I)*P_w(J,K|I)
+c
+c     INPUT (via common block): SELPROC_WARP, SUMPROB_WARP
+c     INPUT/OUTPUT: WGT(VECSIZE_USED) multiplied by the jacobian
+c     OUTPUT: IMIRROR_VEC(NB_WARP), IPROC, ICONF_VEC(NB_WARP)
+c
+      INCLUDE 'genps.inc'
+      INCLUDE 'maxconfigs.inc'
+      INCLUDE 'nexternal.inc'
+      INCLUDE 'maxamps.inc'
+      include 'vector.inc'
+      include 'run.inc'
+      INTEGER VECSIZE_USED
+      INTEGER IMIRROR_VEC(NB_WARP), IPROC, ICONF_VEC(NB_WARP)
+      DOUBLE PRECISION WGT(*)
+
+      DOUBLE PRECISION SELPROC(2, MAXSPROC, LMAXCONFIGS)
+      double precision sumprob
+      common /to_grouping_selection/sumprob,selproc
+      DOUBLE PRECISION SELPROC_WARP(2, MAXSPROC, LMAXCONFIGS, NB_WARP)
+      DOUBLE PRECISION SUMPROB_WARP(NB_WARP)
+      COMMON /TO_GROUPING_SELECTION_WARP/SELPROC_WARP, SUMPROB_WARP
+
+      INTEGER SYMCONF(0:LMAXCONFIGS)
+      COMMON /TO_SYMCONF/ SYMCONF
+      INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
+      include 'config_subproc_map.inc'
+      logical init_mode
+      common/to_determine_zero_hel/init_mode
+c
+c     LOCAL
+c
+      INTEGER I, J, K, IW, IVEC, NB_WARP_USED, NWARP_NONZERO
+      DOUBLE PRECISION R, TOTWGT, PROCPROB(MAXSPROC), SUMPROC, JAC
+
+      NB_WARP_USED = VECSIZE_USED / WARP_SIZE
+      IF (MAXSPROC.EQ.1.OR.NB_WARP_USED.EQ.1) THEN
+c       the subprocess choice of the warps cannot differ
+        DO IW=1, NB_WARP_USED
+          SELPROC(:,:,:) = SELPROC_WARP(:,:,:,IW)
+          SUMPROB = SUMPROB_WARP(IW)
+          CALL SELECT_GROUPING(IMIRROR_VEC(IW), IPROC, ICONF_VEC(IW),
+     &         WGT, IW)
+        ENDDO
+        RETURN
+      ENDIF
+
+      IF (MC_GROUPED_SUBPROC) THEN
+        WRITE(*,*) 'ERROR: MC over grouped subprocesses not '//
+     &       'supported with several warps'
+        STOP 1
+      ENDIF
+c
+c     Probability to select each subprocess (averaged over the warps)
+c
+      PROCPROB(:) = 0D0
+      NWARP_NONZERO = 0
+      DO IW=1, NB_WARP_USED
+        IF (SUMPROB_WARP(IW).EQ.0D0) CYCLE
+        NWARP_NONZERO = NWARP_NONZERO + 1
+        DO I=1,MAXSPROC
+          SUMPROC = 0D0
+          DO J=1,SYMCONF(0)
+            IF(INIT_MODE.OR.CONFSUB(I,SYMCONF(J)).NE.0) THEN
+              SUMPROC = SUMPROC + SELPROC_WARP(1,I,J,IW)
+     &             + SELPROC_WARP(2,I,J,IW)
+            ENDIF
+          ENDDO
+          PROCPROB(I) = PROCPROB(I) + SUMPROC/SUMPROB_WARP(IW)
+        ENDDO
+      ENDDO
+c
+c     Select the subprocess
+c
+      IPROC = 0
+      IF (NWARP_NONZERO.GT.0) THEN
+        PROCPROB(:) = PROCPROB(:) / NWARP_NONZERO
+        CALL RANMAR(R)
+        TOTWGT = 0D0
+        DO I=1,MAXSPROC
+          TOTWGT = TOTWGT + PROCPROB(I)
+          IF (R.LT.TOTWGT.AND.PROCPROB(I).GT.0D0) THEN
+            IPROC = I
+            EXIT
+          ENDIF
+        ENDDO
+c       protection against rounding (R close to 1)
+        IF (IPROC.EQ.0) THEN
+          DO I=MAXSPROC,1,-1
+            IF (PROCPROB(I).GT.0D0) THEN
+              IPROC = I
+              EXIT
+            ENDIF
+          ENDDO
+        ENDIF
+      ENDIF
+      IF (IPROC.EQ.0) IPROC = 1
+c
+c     Select the configuration and orientation of each warp
+c
+      DO IW=1, NB_WARP_USED
+        SUMPROC = 0D0
+        DO J=1,SYMCONF(0)
+          IF(INIT_MODE.OR.CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
+            SUMPROC = SUMPROC + SELPROC_WARP(1,IPROC,J,IW)
+     &           + SELPROC_WARP(2,IPROC,J,IW)
+          ENDIF
+        ENDDO
+        ICONF_VEC(IW) = 0
+        IF (SUMPROC.GT.0D0) THEN
+          CALL RANMAR(R)
+          R = R*SUMPROC
+          TOTWGT = 0D0
+          DO J=1,SYMCONF(0)
+            IF(INIT_MODE.OR.CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
+              DO K=1,2
+                TOTWGT = TOTWGT + SELPROC_WARP(K,IPROC,J,IW)
+                IF (R.LT.TOTWGT) THEN
+                  ICONF_VEC(IW) = J
+                  IMIRROR_VEC(IW) = K
+                  GOTO 60
+                ENDIF
+              ENDDO
+            ENDIF
+          ENDDO
+ 60       CONTINUE
+        ENDIF
+        IF (ICONF_VEC(IW).NE.0) THEN
+          JAC = SUMPROC / PROCPROB(IPROC)
+     &         / SELPROC_WARP(IMIRROR_VEC(IW),IPROC,ICONF_VEC(IW),IW)
+        ELSE
+c         this subprocess does not contribute for this warp: keep a
+c         valid configuration (needed for clustering) with zero weight
+          JAC = 0D0
+          IMIRROR_VEC(IW) = 1
+          DO J=1,SYMCONF(0)
+            IF(INIT_MODE.OR.CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
+              ICONF_VEC(IW) = J
+              EXIT
+            ENDIF
+          ENDDO
+          IF (ICONF_VEC(IW).EQ.0) ICONF_VEC(IW) = 1
+        ENDIF
+        DO I=1, WARP_SIZE
+          IVEC = (IW-1)*WARP_SIZE + I
+          WGT(IVEC) = WGT(IVEC)*JAC
+        ENDDO
+      ENDDO
+      RETURN
+      END
+
       SUBROUTINE DSIG_VEC(ALL_P,ALL_WGT,all_xbk,all_q2fact,all_cm_rap,ICONF_vec,IPROC,IMIRROR_vec,ALL_OUT,VECSIZE_USED)
 c     ******************************************************
 c
