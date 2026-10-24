@@ -239,13 +239,17 @@ c     the hardest and ipart(2) is the softest.
       double precision p(0:3,nexternal)
       integer imo,ida1,ida2,i,idmo,idda1,idda2
       integer ipdg(n_max_cl),ipart(2,n_max_cl)
-      logical isjet
+      logical isjet,isquark
       external isjet
       integer iddgluon, iddother, idgluon, idother
       logical isqcd
       external isqcd
       integer get_color
       external get_color 
+c     A quark keeps its flavour through q -> q g/a, also when it is not a
+c     jet (e.g. b at maxjetflavor=4): the stored label can be the one of
+c     another flavour combination of the same subprocess
+      isquark(i)=abs(i).ge.1.and.abs(i).le.6
 
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
@@ -269,22 +273,22 @@ c           This is last clustering - keep mother ipart
          elseif(ipart(1,ida2).ge.1.and.ipart(1,ida2).le.2)then
             ipart(1,imo)=ipart(1,ida2)        
 c           Transmit jet PDG code
-            if(isjet(idmo)) then
-               if(idda1.lt.21.and.isjet(idda1).and.
+            if(isjet(idmo).or.isquark(idmo)) then
+               if(isquark(idda1).and.
      $              (idda2.eq.21.or.idda2.eq.22))
      $              ipdg(imo)=-idda1
-               if(idda2.lt.21.and.isjet(idda2).and.
+               if(isquark(idda2).and.
      $              (idda1.eq.21.or.idda1.eq.22))
      $              ipdg(imo)=idda2
             endif
          elseif(ipart(1,ida1).ge.1.and.ipart(1,ida1).le.2)then
             ipart(1,imo)=ipart(1,ida1)
 c           Transmit jet PDG code
-            if(isjet(idmo)) then
-               if(idda2.lt.21.and.isjet(idda2).and.
+            if(isjet(idmo).or.isquark(idmo)) then
+               if(isquark(idda2).and.
      $            (idda1.eq.21.or.idda1.eq.22))
      $              ipdg(imo)=-idda2
-               if(idda1.lt.21.and.isjet(idda1).and.
+               if(isquark(idda1).and.
      $            (idda2.eq.21.or.idda2.eq.22))
      $              ipdg(imo)=idda1
             endif
@@ -296,11 +300,11 @@ c           Transmit jet PDG code
       endif        
 c     FS clustering
 c     Transmit parton PDG code for parton vertex
-      if(isjet(idmo)) then
-         if(idda1.lt.21.and.isjet(idda1).and.
+      if(isjet(idmo).or.isquark(idmo)) then
+         if(isquark(idda1).and.
      $        (idda2.eq.21.or.idda2.eq.22))
      $        ipdg(imo)=idda1
-         if(idda2.lt.21.and.isjet(idda2).and.
+         if(isquark(idda2).and.
      $        (idda1.eq.21.or.idda1.eq.22))
      $        ipdg(imo)=idda2
          idmo=ipdg(imo)
@@ -580,11 +584,28 @@ C     ICONFIG has this config number
 c     Common block for reweighting info
 c     q2bck holds the central q2fact scales
       integer jlast(2)
-      integer njetstore(lmaxconfigs),iqjetstore(nexternal-2,lmaxconfigs)
+c     njetstore/iqjetstore: jets found for a config, kept separately for
+c     each pattern of final-state jets (jetmaskstore) of the flavour
+c     combinations, since a parton can be a jet in one combination of a
+c     subprocess and not in another (e.g. b at maxjetflavor=4)
+      integer maxjetmask
+      parameter (maxjetmask=4)
+      integer njetstore(lmaxconfigs,maxjetmask)
+      integer iqjetstore(nexternal-2,lmaxconfigs,maxjetmask)
+      integer jetmaskstore(lmaxconfigs,maxjetmask)
       real*8 q2bck(2)
       integer njets,iqjets(nexternal)
-      common /to_rw/jlast,njetstore,iqjetstore,njets,iqjets,q2bck
-      data njetstore/lmaxconfigs*-1/
+      common /to_rw/jlast,njetstore,iqjetstore,njets,iqjets,q2bck,
+     $     jetmaskstore
+      logical memo_init
+      data memo_init/.false./
+      save memo_init
+      integer IPSEL
+      COMMON /SubProc/ IPSEL
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
+      include 'leshouche.inc'
       real*8 xptj,xptb,xpta,xptl,xmtc
       real*8 xetamin,xqcut,deltaeta
       common /to_specxpt/xptj,xptb,xpta,xptl,xmtc,xetamin,xqcut,deltaeta
@@ -618,6 +639,7 @@ c     Variables for keeping track of jets
       integer fsnum(2),ida(2),imo,jcode
       logical chclusold,fail,increasecode
       save chclusold
+      integer icomb,jetmask,imemo
       integer tmpindex
       integer pdgm, pdgid1, pdgid2
 
@@ -647,8 +669,39 @@ c
 c     First time, cluster according to this config and store jets
 c     (following times, only accept configurations if the same partons
 c      are flagged as jets)
+      if(.not.memo_init)then
+         njetstore(:,:)=-1
+         jetmaskstore(:,:)=-1
+         memo_init=.true.
+      endif
+c     Flavour combination used to label the external legs: the one drawn
+c     for this event when called from rewgt, otherwise (before the
+c     combination is known) the first one of the subprocess
+      if(keepq2bck)then
+         icomb=ipsel
+      else
+         icomb=1
+      endif
+c     Select the jet memo of this config for the combination's pattern of
+c     final-state jets (reuse the last slot if all are taken)
+      jetmask=0
+      do i=3,nexternal
+         if(isjet(idup(i,icomb,iproc))) jetmask=ibset(jetmask,i-1)
+      enddo
+      imemo=maxjetmask
+      do i=1,maxjetmask
+         if(jetmaskstore(iconfig,i).eq.jetmask.or.
+     $        jetmaskstore(iconfig,i).eq.-1)then
+            imemo=i
+            exit
+         endif
+      enddo
+      if(jetmaskstore(iconfig,imemo).ne.jetmask)then
+         jetmaskstore(iconfig,imemo)=jetmask
+         njetstore(iconfig,imemo)=-1
+      endif
       chclusold=chcluster
-      if(njetstore(iconfig).eq.-1)then
+      if(njetstore(iconfig,imemo).eq.-1)then
          chcluster=.true.
       endif
  100  clustered = cluster(p(0,1))
@@ -665,6 +718,10 @@ c      are flagged as jets)
       endif
 c     Reset chcluster to run_card value
       chcluster=chclusold
+c     Label the external legs with the PDG codes of the combination
+      do i=1,nexternal
+         ipdgcl(ishft(1,i-1),igraphs(1),iproc)=idup(i,icomb,iproc)
+      enddo
 
       if (btest(mlevel,1)) then
         write(*,*)'setclscales: identified tree {'
@@ -961,18 +1018,18 @@ c       There parton emissions with code <= jcode are not jets
          enddo
          write(*,*)
       endif
-      if(njetstore(iconfig).eq.-1) then
+      if(njetstore(iconfig,imemo).eq.-1) then
 c     Store external jet numbers if first time
          njets=0
          do i=3,nexternal
             if(iqjets(i).gt.0)then
                njets=njets+1
-               iqjetstore(njets,iconfig)=i
+               iqjetstore(njets,iconfig,imemo)=i
             endif
          enddo
-         njetstore(iconfig)=njets
+         njetstore(iconfig,imemo)=njets
         if (btest(mlevel,4))
-     $       write(*,*) 'Storing jets: ',(iqjetstore(i,iconfig),i=1,njets)
+     $       write(*,*) 'Storing jets: ',(iqjetstore(i,iconfig,imemo),i=1,njets)
 c     Recluster without requiring chcluster
          goto 100
       else
@@ -983,21 +1040,21 @@ c     if not, recluster according to iconfig
          do i=1,nexternal
             if(iqjets(i).gt.0)then
                njets=njets+1
-c               if (iqjetstore(njets,iconfig).ne.i) fail=.true.
+c               if (iqjetstore(njets,iconfig,imemo).ne.i) fail=.true.
             endif
          enddo
-         if(njets.ne.njetstore(iconfig)) fail=.true.
+         if(njets.ne.njetstore(iconfig,imemo)) fail=.true.
          if (fail) then
             if (igraphs(1).eq.iconfig) then
                open(unit=26,file='../../../error',status='unknown',err=999)
                write(*,*) 'Error: Failed despite same graph: ',iconfig
                write(*,*) 'Have jets (>0)',(iqjets(i),i=1,nexternal)
                write(*,*) 'Should be ',
-     $              (iqjetstore(i,iconfig),i=1,njetstore(iconfig))
+     $              (iqjetstore(i,iconfig,imemo),i=1,njetstore(iconfig,imemo))
                write(26,*) 'Error: Failed despite same graph: ',iconfig,
      $              '. Have jets (>0)',(iqjets(i),i=1,nexternal),
      $              ', should be ',
-     $              (iqjetstore(i,iconfig),i=1,njetstore(iconfig))
+     $              (iqjetstore(i,iconfig,imemo),i=1,njetstore(iconfig,imemo))
                stop 4
             endif
             if (btest(mlevel,3))
@@ -1341,10 +1398,19 @@ C     ICONFIG has this config number
 c     Common block for reweighting info
 c     q2bck holds the central q2fact scales
       integer jlast(2)
-      integer njetstore(lmaxconfigs),iqjetstore(nexternal-2,lmaxconfigs)
+c     njetstore/iqjetstore: jets found for a config, kept separately for
+c     each pattern of final-state jets (jetmaskstore) of the flavour
+c     combinations, since a parton can be a jet in one combination of a
+c     subprocess and not in another (e.g. b at maxjetflavor=4)
+      integer maxjetmask
+      parameter (maxjetmask=4)
+      integer njetstore(lmaxconfigs,maxjetmask)
+      integer iqjetstore(nexternal-2,lmaxconfigs,maxjetmask)
+      integer jetmaskstore(lmaxconfigs,maxjetmask)
       real*8 q2bck(2)
       integer njets,iqjets(nexternal)
-      common /to_rw/jlast,njetstore,iqjetstore,njets,iqjets,q2bck
+      common /to_rw/jlast,njetstore,iqjetstore,njets,iqjets,q2bck,
+     $     jetmaskstore
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
@@ -1500,9 +1566,8 @@ c     Prepare for resetting q2fact based on PDF reweighting
 c     Prepare checking for parton vertices
       do i=1,nexternal
          j=ishft(1,i-1)
-c        Set jet identities according to chosen subprocess
-         if(isjet(idup(i,ipsel,iproc)))
-     $        ipdgcl(j,igraphs(1),iproc)=idup(i,ipsel,iproc)
+c        Particle identities of the chosen combination (all legs, not
+c        only jets) are set in setclscales
          if (btest(mlevel,2))
      $        write(*,*) 'Set particle identities: ',
      $        i,ipdgcl(j,igraphs(1),iproc)
