@@ -63,6 +63,13 @@ c Each soft/collinear sample has its own failure count.
             y_ij_fks_fix=y_ij_fks_fix_input
          endif
          call generate_valid_momenta(wgt,xx,p)
+c Hold the other radiation coordinate fixed for overlap tests. Forward
+c maps use the sampled coordinates for the variable not taken to its
+c endpoint; changing cxiyfix alone does not fix that variable in all maps.
+         if(colltest.and.xi_i_fks_fix_input.ne.-2d0)
+     $        xx(ndim-2)=sqrt(xi_i_fks_fix_input)
+         if(softtest.and.y_ij_fks_fix_input.ne.-2d0)
+     $        xx(ndim-1)=sqrt((1d0-y_ij_fks_fix_input)/2d0)
 
          do i=1,nstep
             if (softtest) xi_i_fks_fix=0.1d0**i
@@ -773,14 +780,24 @@ c$$$         endif
          write(*,*) '  Enter alpha>0 to set G_azi=0 (no azi corr)'
          read (*,*) alazi,beazi
       endif
-      ! TODO : remove this option
-      write(*,*) 'Enter xi_i, y_ij to be used in coll/soft tests'
+      write(*,*) 'Enter energy sample xi_hat, y_ij for coll/soft tests'
+      write(*,*) ' Fixed xi_hat sets x_E^2; the map supplies its upper bound'
       write(*,*) ' Enter -2 to generate them randomly'
       read (*,*) xi_i_fks_fix_input,y_ij_fks_fix_input
 
-      if (xi_i_fks_fix_input.ne.-2d0 .or. y_ij_fks_fix_input.ne.-2d0)
+c Fixed inputs also test the overlap: take the collinear limit at a small
+c fixed energy sample and the soft limit at fixed y close to one. Endpoints
+c are excluded here; test_limits supplies the exact limiting point.
+      if (xi_i_fks_fix_input.ne.-2d0.and..not.
+     $     (xi_i_fks_fix_input.gt.0d0.and.xi_i_fks_fix_input.lt.1d0))
      $     then
-         write (*,*) 'Cannot use fixed inputs'
+         write (*,*) 'Fixed xi must be between 0 and 1, or -2 for random.'
+         stop 1
+      endif
+      if (y_ij_fks_fix_input.ne.-2d0.and..not.
+     $     (y_ij_fks_fix_input.gt.-1d0.and.y_ij_fks_fix_input.lt.1d0))
+     $     then
+         write (*,*) 'Fixed y must be between -1 and 1, or -2 for random.'
          stop 1
       endif
       

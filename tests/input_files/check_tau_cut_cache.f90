@@ -189,6 +189,12 @@ program check_tau_cut_cache
     call verify(0)
     FKSExplicitSum=.true.
     call verify(1)
+    active_history=1
+    ! Native cut preparation clears native_mapping temporarily. It must
+    ! retain its own bounds and must not reuse the outer common-chart entry.
+    call verify(0)
+    active_history=0
+    call verify(0)
     nlo_ps=.false.
     call verify(1)
     nlo_ps=.true.

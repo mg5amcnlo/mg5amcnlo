@@ -54,6 +54,28 @@ program check_fks_sum_born_chart
   call set_tau_min()
   if(tau_Born_lower_bound.ne.bounds(1))error stop 'event replay changed Born chart'
 
+  ! Recoil selection temporarily clears native_mapping while preparing an
+  ! inner history. Its own cut bounds must survive a cached outer chart.
+  active_history=1
+  call set_tau_min()
+  if(any([tau_Born_lower_bound,tau_lower_bound,tau_lower_bound_resonance].ne.sampled_final)) &
+    error stop 'inner history reused the outer common Born chart'
+
+  ! A foreign history can have no integrated outer sector at all.
+  active_context=2
+  nFKSprocess=3
+  call set_tau_min()
+  if(any([tau_Born_lower_bound,tau_lower_bound,tau_lower_bound_resonance].ne.bounds)) &
+    error stop 'foreign history changed its own Born chart'
+  if(granny_sector.ne.3)error stop 'foreign history lost its recoil sector'
+
+  active_context=1
+  nFKSprocess=2
+  active_history=0
+  call set_tau_min()
+  if(any([tau_Born_lower_bound,tau_lower_bound,tau_lower_bound_resonance].ne.bounds)) &
+    error stop 'inner history changed the cached outer chart'
+
   nlo_ps=.false.
   call set_tau_min()
   if(any([tau_Born_lower_bound,tau_lower_bound,tau_lower_bound_resonance].ne.sampled_final)) &
