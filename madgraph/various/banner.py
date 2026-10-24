@@ -1668,11 +1668,32 @@ class RivetCard(ConfigFile):
       Give weight names in case the jet merging is used to use for Rivet runs
         '''
 
-        if self['weight_name'] == "default":
-            if runcard['ickkw'] == 0:
-                self['weight_name'] = "None"
-            else:
-                self['weight_name'] = "Weight_MERGING={0}".str(round(py8card['JetMatching:qCut'],3))
+        if self['weight_name'] != "default":
+            return
+
+        # Same run-type classification and automatic merging scale as
+        # do_pythia8/setup_Pythia8RunAndCard in madevent_interface.py
+        if int(runcard['ickkw']) == 1:
+            # MLM
+            scale = py8card['JetMatching:qCut']
+            if scale == -1.0:
+                scale = 1.5*runcard['xqcut']
+        elif int(runcard['ickkw']) == 2 or runcard['ktdurham'] > 0.0 or \
+                                                    runcard['ptlund'] > 0.0:
+            # CKKW-L
+            scale = py8card['Merging:TMS']
+            if scale == -1.0:
+                if runcard['ptlund'] > 0.0:
+                    scale = runcard['ptlund']
+                else:
+                    scale = runcard['ktdurham']
+        else:
+            self['weight_name'] = "None"
+            return
+
+        # MG5aMC_PY8_interface names the HepMC weights with
+        # 'fixed << setprecision(3)' (e.g. Weight_MERGING=30.000)
+        self['weight_name'] = "Weight_MERGING=%.3f" % scale
 
     def setRelevantParamCard(self, f_params, f_relparams):
 
