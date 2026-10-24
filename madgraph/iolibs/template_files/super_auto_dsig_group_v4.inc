@@ -312,9 +312,8 @@ c       DO I=1,MAXSPROC
 c       	    SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF_VEC(1)))
 c      	ENDDO
 
-c     set the running scale 
-c     and update the couplings accordingly
-      call update_scale_coupling_vec(all_p, all_wgt, all_q2fact, VECSIZE_USED)
+c     the running scale and the couplings are set in DSIGPROC_VEC
+c     (on the permuted/mirrored momenta seen by the matrix element)
 
       IF(grouped_MC_grid_status.eq.0) then
 C       If we were in the initialization phase of the grid for MC over grouped processes, we must instruct the matrix<i> subroutine not to add again an entry in the grid for this PS point at the call DSIGPROC just below.
@@ -852,6 +851,7 @@ c     endif
 
 c     set the running scale 
 c     and update the couplings accordingly (but deactivate for discrete sampler(imode=5) and 
+c     use P1 (permuted/mirrored momenta) to be consistent with the matrix element
       IF (VECSIZE_MEMMAX.LE.1.and.imode.ne.5) THEN ! no-vector (NB not VECSIZE_USED!)
             call update_scale_coupling(p1, wgt)
       endif
@@ -937,6 +937,8 @@ c     To limit the number of calls to switchmom, use in DSIGPROC the cached vari
 	  DATA LAST_ICONF/-1/
 	  COMMON/TO_LAST_ICONF/LAST_ICONF
 	  integer ivec
+      INTEGER IMIRROR_GLOBAL, IPROC_GLOBAL
+      COMMON/TO_MIRROR/ IMIRROR_GLOBAL, IPROC_GLOBAL
 C  
 C EXTERNAL FUNCTIONS
 C  
@@ -1006,6 +1008,22 @@ C       Flip momenta (rotate around x axis)
 C       Flip beam identity -> moved to auto_dsigX (since depend of the warp)
              ENDDO
       
+           ENDIF
+c     set the running scale and update the couplings accordingly,
+c     using the momenta/config/mirror of this warp (as the matrix element)
+           IF (IMODE.NE.5) THEN
+             ICONFIG=SYMCONF(ICONF_VEC(CURR_WARP))
+             DO I=1,MAXSPROC
+               SUBDIAG(I) = CONFSUB(I,ICONFIG)
+             ENDDO
+             IMIRROR_GLOBAL = IMIRROR
+             IPROC_GLOBAL = IPROC
+             DO IVEC = (CURR_WARP-1)*WARP_SIZE+1,CURR_WARP*WARP_SIZE
+               XBK(:) = ALL_XBK(:,IVEC)
+               CM_RAP = ALL_CM_RAP(IVEC)
+               CALL UPDATE_SCALE_COUPLING_IVEC(ALL_P1(0,1,IVEC),
+     &              ALL_WGT(IVEC), ALL_Q2FACT(1,IVEC), IVEC)
+             ENDDO
            ENDIF
       ENDDO
 

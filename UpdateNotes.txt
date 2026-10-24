@@ -5,6 +5,13 @@ ANNOUNCEMENT:
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
 3.8.2 (XX/XX/XX):
+    OM: LO grouped output (default): the renormalisation/factorisation scales and the MLM xqcut
+        veto were computed on the momenta before the symmetry permutation of the channel (#453).
+        Channels with such permutations were biased (e.g. -3.5% for u q > z u q, also with MLM).
+        Fixed both for the scalar and the vector (vector_size>1, cudacpp) mode.
+    OM: LO vector mode (vector_size>1): fix the reweighting of MLM matching (the central factorisation
+        scale of the last event of the batch was used for all events), the config/mirror used per warp,
+        and a crash (memory corruption) when vector_size was changed in the run_card after the output.
     OM: MadSpin (spinmode=PA): new option 'auto_zero_width_PA' (default True) setting the width
         of the particles decayed by MadSpin to zero in the matrix element of the production density
         matrix, and each one in the matrix element of its own decay density matrix only (Breit-Wigner
