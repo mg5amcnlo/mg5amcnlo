@@ -3129,7 +3129,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         subprocess grouping it with lighter quarks is cut and reweighted as if
         it were the lighter quark (#456)."""
 
-        if run_card['ickkw'] <= 0 or run_card['maxjetflavor'] >= 5:
+        if run_card['ickkw'] != 1 or run_card['maxjetflavor'] >= 5:
             return
         heaviest, Pname = 0, None
         for Pdir in self.get_Pdir():
@@ -3146,10 +3146,10 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         if heaviest:
             name = {4: 'c', 5: 'b'}.get(heaviest, str(heaviest))
             raise banner_mod.InvalidRunCard(
-                'MLM matching (ickkw=%s) with a massless %s quark (%s) requires '
+                'MLM matching (ickkw=1) with a massless %s quark (%s) requires '
                 'maxjetflavor=%s (set to %s): the %s must then be treated as a '
                 'jet. Set maxjetflavor to %s, or use a model with a massive %s.'
-                % (run_card['ickkw'], name, Pname, heaviest,
+                % (name, Pname, heaviest,
                    run_card['maxjetflavor'], name, heaviest, name))
 
     def do_treatcards(self, line, mode=None, opt=None):
