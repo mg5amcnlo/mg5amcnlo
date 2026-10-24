@@ -618,6 +618,13 @@ c     Variables for keeping track of jets
       integer fsnum(2),ida(2),imo,jcode
       logical chclusold,fail,increasecode
       save chclusold
+      logical checked_jet_flavours
+      data checked_jet_flavours/.false./
+      save checked_jet_flavours
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
+      include 'leshouche.inc'
       integer tmpindex
       integer pdgm, pdgid1, pdgid2
 
@@ -647,6 +654,34 @@ c
 c     First time, cluster according to this config and store jets
 c     (following times, only accept configurations if the same partons
 c      are flagged as jets)
+c     The clustering labels (ipdgcl) and the jet memo are kept per
+c     subprocess, not per flavour combination: the combinations grouped
+c     in a subprocess must agree on which legs are jets. They do not when
+c     a massless quark is above maxjetflavor (e.g. massless b with
+c     maxjetflavor=4), and the matching would then use the cuts, jets
+c     and PDF ratios of another flavour (#456).
+      if(.not.checked_jet_flavours.and.ickkw.gt.0)then
+         checked_jet_flavours=.true.
+         do k=1,maxsproc
+            do m=2,maxproc
+               if(idup(1,m,k).eq.0) cycle
+               do i=1,nexternal
+                  if(isjet(idup(i,m,k)).neqv.isjet(idup(i,1,k)))then
+                     open(unit=26,file='../../../error',status='unknown')
+                     write(26,*) 'Error: matching (ickkw>0) needs ',
+     $                 'maxjetflavor to include every massless quark: ',
+     $                 'pdg ',idup(i,m,k),' and ',idup(i,1,k),
+     $                 ' share a subprocess but only one is a jet'
+                     write(*,*) 'Error: matching (ickkw>0) needs ',
+     $                 'maxjetflavor to include every massless quark: ',
+     $                 'pdg ',idup(i,m,k),' and ',idup(i,1,k),
+     $                 ' share a subprocess but only one is a jet'
+                     stop 1
+                  endif
+               enddo
+            enddo
+         enddo
+      endif
       chclusold=chcluster
       if(njetstore(iconfig).eq.-1)then
          chcluster=.true.
