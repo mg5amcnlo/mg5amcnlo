@@ -528,8 +528,9 @@ class TestMECmdShell(unittest.TestCase):
             self.cmd_line = MECmd.MadEventCmdShell(me_dir=self.run_dir)
             self.cmd_line.no_notification()
             self.cmd_line.exec_cmd('set automatic_html_opening False')
-            # avoid the (independent) bias of refining split jobs without
-            # the survey grid, which only affects the grouped output here
+            # use the same refine setup (survey grid kept) for grouped and
+            # non-grouped: whether a job is split depends on the output
+            # mode and changes the refine grid, which is independent of #453
             with mock.patch.object(gen_ximprove.gen_ximprove, 'keep_grid_for_refine', True), \
                  mock.patch.object(gen_ximprove.gen_ximprove_v4, 'keep_grid_for_refine', True):
                 self.do('generate_events -f')
