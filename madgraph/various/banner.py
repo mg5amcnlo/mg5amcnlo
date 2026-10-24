@@ -1673,20 +1673,20 @@ class RivetCard(ConfigFile):
 
         # Same run-type classification and automatic merging scale as
         # do_pythia8/setup_Pythia8RunAndCard in madevent_interface.py
-        if int(runcard['ickkw']) == 1:
+        # (ktdurham/ptlund/xqcut are LO-only: absent from RunCardNLO)
+        ickkw = int(runcard['ickkw'])
+        ktdurham = runcard['ktdurham'] if 'ktdurham' in runcard else 0.0
+        ptlund = runcard['ptlund'] if 'ptlund' in runcard else 0.0
+        if ickkw == 1:
             # MLM
             scale = py8card['JetMatching:qCut']
             if scale == -1.0:
                 scale = 1.5*runcard['xqcut']
-        elif int(runcard['ickkw']) == 2 or runcard['ktdurham'] > 0.0 or \
-                                                    runcard['ptlund'] > 0.0:
+        elif ickkw == 2 or ktdurham > 0.0 or ptlund > 0.0:
             # CKKW-L
             scale = py8card['Merging:TMS']
             if scale == -1.0:
-                if runcard['ptlund'] > 0.0:
-                    scale = runcard['ptlund']
-                else:
-                    scale = runcard['ktdurham']
+                scale = ptlund if ptlund > 0.0 else ktdurham
         else:
             self['weight_name'] = "None"
             return

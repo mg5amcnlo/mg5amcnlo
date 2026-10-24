@@ -583,6 +583,15 @@ class TestRivetCard(unittest.TestCase):
                                               {'Merging:TMS': -1.0}),
                          'Weight_MERGING=40.000')
 
+        # NLO run_card (no ktdurham/ptlund/xqcut entries): no crash
+        for ickkw in [0, 3]:
+            run_card = bannermod.RunCardNLO()
+            run_card['ickkw'] = ickkw
+            rivet_card = bannermod.RivetCard()
+            rivet_card.setWeightName(runcard=run_card,
+                                     py8card=bannermod.PY8Card())
+            self.assertEqual(rivet_card['weight_name'], 'None')
+
         # user-defined weight name is kept
         self.assertEqual(self.get_weight_name({'ickkw': 1},
                                               {'JetMatching:qCut': 30.0},
