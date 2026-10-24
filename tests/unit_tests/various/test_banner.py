@@ -541,6 +541,63 @@ Beams:LHEF='events_ouaf.lhe.gz'
         self.assertEqual(modified_PY8Card, read_PY8Card)
 
 
+class TestRivetCard(unittest.TestCase):
+    """ Test the RivetCard functionality """
+
+    def get_weight_name(self, run_opts={}, py8_opts={}, weight_name=None):
+        run_card = bannermod.RunCardLO()
+        for key, value in run_opts.items():
+            run_card[key] = value
+        py8_card = bannermod.PY8Card()
+        for key, value in py8_opts.items():
+            py8_card[key] = value
+        rivet_card = bannermod.RivetCard()
+        if weight_name is not None:
+            rivet_card['weight_name'] = weight_name
+        rivet_card.setWeightName(runcard=run_card, py8card=py8_card)
+        return rivet_card['weight_name']
+
+    def test_setWeightName(self):
+        """ check that the weight name matches the HepMC weight name written
+            by MG5aMC_PY8_interface for the central merging scale """
+
+        # no merging
+        self.assertEqual(self.get_weight_name({'ickkw': 0}), 'None')
+
+        # MLM: user-defined and automatic (1.5*xqcut) qCut
+        self.assertEqual(self.get_weight_name({'ickkw': 1},
+                                              {'JetMatching:qCut': 30.0}),
+                         'Weight_MERGING=30.000')
+        self.assertEqual(self.get_weight_name({'ickkw': 1, 'xqcut': 20.0},
+                                              {'JetMatching:qCut': -1.0}),
+                         'Weight_MERGING=30.000')
+
+        # CKKW-L: user-defined and automatic (ptlund/ktdurham) TMS
+        self.assertEqual(self.get_weight_name({'ickkw': 0, 'ptlund': 15.0},
+                                              {'Merging:TMS': 25.5}),
+                         'Weight_MERGING=25.500')
+        self.assertEqual(self.get_weight_name({'ickkw': 0, 'ptlund': 15.0},
+                                              {'Merging:TMS': -1.0}),
+                         'Weight_MERGING=15.000')
+        self.assertEqual(self.get_weight_name({'ickkw': 0, 'ktdurham': 40.0},
+                                              {'Merging:TMS': -1.0}),
+                         'Weight_MERGING=40.000')
+
+        # NLO run_card (no ktdurham/ptlund/xqcut entries): no crash
+        for ickkw in [0, 3]:
+            run_card = bannermod.RunCardNLO()
+            run_card['ickkw'] = ickkw
+            rivet_card = bannermod.RivetCard()
+            rivet_card.setWeightName(runcard=run_card,
+                                     py8card=bannermod.PY8Card())
+            self.assertEqual(rivet_card['weight_name'], 'None')
+
+        # user-defined weight name is kept
+        self.assertEqual(self.get_weight_name({'ickkw': 1},
+                                              {'JetMatching:qCut': 30.0},
+                                              weight_name='MUR=1_MUF=1'),
+                         'MUR=1_MUF=1')
+
 
 import shutil
 class TestRunCard(unittest.TestCase):
