@@ -3122,6 +3122,36 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
     
 
     ############################################################################      
+    def check_mlm_massless_b(self, run_card):
+        """MLM matching with a massless quark among the external particles
+        requires maxjetflavor to include it (5 for a massless b). Otherwise
+        the quark is not a jet: nothing regulates its collinear region, and a
+        subprocess grouping it with lighter quarks is cut and reweighted as if
+        it were the lighter quark (#456)."""
+
+        if run_card['ickkw'] <= 0 or run_card['maxjetflavor'] >= 5:
+            return
+        heaviest, Pname = 0, None
+        for Pdir in self.get_Pdir():
+            pmass = {}
+            for line in open(pjoin(Pdir, 'pmass.inc')):
+                found = re.search(r'PMASS\((\d+)\)\s*=\s*(\S+)', line, re.I)
+                if found:
+                    pmass[int(found.group(1))] = found.group(2).upper()
+            for ids in SubProcesses.get_subP_ids(Pdir):
+                for i, pdg in enumerate(ids):
+                    if run_card['maxjetflavor'] < abs(pdg) <= 5 and \
+                            abs(pdg) > heaviest and pmass.get(i+1) == 'ZERO':
+                        heaviest, Pname = abs(pdg), os.path.basename(Pdir)
+        if heaviest:
+            name = {4: 'c', 5: 'b'}.get(heaviest, str(heaviest))
+            raise banner_mod.InvalidRunCard(
+                'MLM matching (ickkw=%s) with a massless %s quark (%s) requires '
+                'maxjetflavor=%s (set to %s): the %s must then be treated as a '
+                'jet. Set maxjetflavor to %s, or use a model with a massive %s.'
+                % (run_card['ickkw'], name, Pname, heaviest,
+                   run_card['maxjetflavor'], name, heaviest, name))
+
     def do_treatcards(self, line, mode=None, opt=None):
         """Advanced commands: create .inc files from param_card.dat/run_card.dat"""
 
@@ -3221,6 +3251,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             else:
                 run_card = self.run_card
             self.run_card = run_card
+            self.check_mlm_massless_b(run_card)
             if self.cluster:
                 self.cluster.modify_interface(self)
             if self.ninitial == 1:
