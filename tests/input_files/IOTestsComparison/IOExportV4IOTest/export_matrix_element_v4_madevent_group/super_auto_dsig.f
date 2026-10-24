@@ -318,10 +318,8 @@ C     DO I=1,MAXSPROC
 C     SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF_VEC(1)))
 C     ENDDO
 
-C     set the running scale 
-C     and update the couplings accordingly
-      CALL UPDATE_SCALE_COUPLING_VEC(ALL_P, ALL_WGT, ALL_Q2FACT,
-     $  VECSIZE_USED)
+C     the running scale and the couplings are set in DSIGPROC_VEC
+C     (on the permuted/mirrored momenta seen by the matrix element)
 
       IF(GROUPED_MC_GRID_STATUS.EQ.0) THEN
 C       If we were in the initialization phase of the grid for MC over
@@ -911,8 +909,10 @@ C     endif
 C     set the running scale 
 C     and update the couplings accordingly (but deactivate for
 C      discrete sampler(imode=5) and 
+C     use P1 (permuted/mirrored momenta) to be consistent with the
+C      matrix element
       IF (VECSIZE_MEMMAX.LE.1.AND.IMODE.NE.5) THEN  ! no-vector (NB not VECSIZE_USED!)
-        CALL UPDATE_SCALE_COUPLING(PP, WGT)
+        CALL UPDATE_SCALE_COUPLING(P1, WGT)
       ENDIF
 
 
@@ -1002,6 +1002,8 @@ C      called from elsewhere) and when set to 0, it resets the cache.
       DATA LAST_ICONF/-1/
       COMMON/TO_LAST_ICONF/LAST_ICONF
       INTEGER IVEC
+      INTEGER IMIRROR_GLOBAL, IPROC_GLOBAL
+      COMMON/TO_MIRROR/ IMIRROR_GLOBAL, IPROC_GLOBAL
 C     
 C     EXTERNAL FUNCTIONS
 C     
@@ -1075,6 +1077,23 @@ C           Flip beam identity -> moved to auto_dsigX (since depend of
 C            the warp)
           ENDDO
 
+        ENDIF
+C       set the running scale and update the couplings accordingly,
+C       using the momenta/config/mirror of this warp (as the matrix
+C        element)
+        IF (IMODE.NE.5) THEN
+          ICONFIG=SYMCONF(ICONF_VEC(CURR_WARP))
+          DO I=1,MAXSPROC
+            SUBDIAG(I) = CONFSUB(I,ICONFIG)
+          ENDDO
+          IMIRROR_GLOBAL = IMIRROR
+          IPROC_GLOBAL = IPROC
+          DO IVEC = (CURR_WARP-1)*WARP_SIZE+1,CURR_WARP*WARP_SIZE
+            XBK(:) = ALL_XBK(:,IVEC)
+            CM_RAP = ALL_CM_RAP(IVEC)
+            CALL UPDATE_SCALE_COUPLING_IVEC(ALL_P1(0,1,IVEC),
+     &              ALL_WGT(IVEC), ALL_Q2FACT(1,IVEC), IVEC)
+          ENDDO
         ENDIF
       ENDDO
 

@@ -492,6 +492,57 @@ class TestMECmdShell(unittest.TestCase):
         #check precision
         self.assertLess(err2 / val2, 0.005)
         self.assertLess(err1 / val1, 0.005)
+
+    def test_group_subprocess_permuted_scale(self):
+        """check that grouped (scalar and vector) and non-grouped output agree
+        when the grouped channels use a symmetry permutation of the momenta
+        and the scales depend on the clustering (MLM). see issue #453"""
+
+        from unittest import mock
+        gen_ximprove = MECmd.gen_ximprove
+
+        results = {}
+        for name, group, vector_size in [('grouped', True, 1),
+                                         ('grouped_vec', True, 16),
+                                         ('nongrouped', False, 1)]:
+            self.run_dir = pjoin(self.path, 'MGPROC_%s' % name)
+            mg_cmd = MGCmd.MasterCmd()
+            mg_cmd.no_notification()
+            mg_cmd.exec_cmd('set automatic_html_opening False --no_save')
+            mg_cmd.exec_cmd('set group_subprocesses %s' % group)
+            mg_cmd.exec_cmd('define q = u d')
+            mg_cmd.exec_cmd('generate u q > z u q')
+            mg_cmd.exec_cmd('output %s' % self.run_dir)
+
+            run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards', 'run_card.dat'))
+            run_card.set('nevents', 10000, user=True)
+            run_card.set('iseed', 11, user=True)
+            run_card.set('use_syst', False, user=True)
+            run_card.set('ickkw', 1, user=True)
+            run_card.set('xqcut', 40.0, user=True)
+            run_card.set('drjj', 0.0, user=True)
+            if vector_size > 1:
+                run_card.set('vector_size', vector_size, user=True)
+            run_card.write(pjoin(self.run_dir, 'Cards', 'run_card.dat'))
+
+            self.cmd_line = MECmd.MadEventCmdShell(me_dir=self.run_dir)
+            self.cmd_line.no_notification()
+            self.cmd_line.exec_cmd('set automatic_html_opening False')
+            # avoid the (independent) bias of refining split jobs without
+            # the survey grid, which only affects the grouped output here
+            with mock.patch.object(gen_ximprove.gen_ximprove, 'keep_grid_for_refine', True), \
+                 mock.patch.object(gen_ximprove.gen_ximprove_v4, 'keep_grid_for_refine', True):
+                self.do('generate_events -f')
+            results[name] = (self.cmd_line.results.current['cross'],
+                             self.cmd_line.results.current['error'])
+
+        val0, err0 = results['nongrouped']
+        self.assertGreater(val0, 0)
+        for name in ['grouped', 'grouped_vec']:
+            val, err = results[name]
+            # without the fix, grouped is ~3% low (about 8 sigma)
+            self.assertLess(abs(val - val0) / math.hypot(err, err0), 4,
+                            '%s: %s +- %s vs nongrouped %s +- %s' % (name, val, err, val0, err0))
         
     def test_e_p_collision(self):
         """check that e p > e j gives the correct result"""
