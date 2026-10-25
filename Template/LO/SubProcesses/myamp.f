@@ -539,6 +539,10 @@ c            write(*,*) 'Using 2',l2,x2
             xo = min(x1,x2)
 
 c           Use 1/10000 of sqrt(s) as minimum, to always get integration
+c           The t-channel x is relative to [tmin,tmax] (one_tree in genps.f)
+c           whose size is ~shat: xo/stot is the smallest value it can take
+c           (shat=stot) which is the right floor for the preset (a larger
+c           value based on the minimal shat starves the high shat events)
             xo = xo*xo/stot
             if (xo.eq.0d0)then
                xo=1/10000d0

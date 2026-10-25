@@ -921,11 +921,12 @@ c        the grid can not learn the 1/s behaviour in absolute units)
             srem = smax*x(nbranch-1+(-ibranch)*2)
             jac = jac*smax/stot
          endif
-         m(ibranch-1)=dsqrt(max(srem, 0d0))
+c        avoid rounding outside [smin,smax] at the end-points
+         srem = min(max(srem, smin), smax)
+         m(ibranch-1)=dsqrt(srem)
 c         write(*,*) 'Using s',nbranch-1+(-ibranch)*2
 
-         if (m(ibranch-1)**2.lt.smin.or.m(ibranch-1)**2.gt.smax
-     $        .or.m(ibranch-1).ne.m(ibranch-1)) then
+         if (srem.ne.srem) then
             jac=-1d0
             return
          endif
