@@ -619,11 +619,11 @@ jobs:
       - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
-      - name: test one of the test test_utilities test_DensityMatrixObservables test_DensityMatrixObservables22 test_additional_steering test_DensityMatrixObservables23 test_DensityMatrixObservables33 test_density_selection_not_used test_density_selection_default_order test_density_selection_observable_order test_density_selection_observable_ranks test_density_selection_tie test_density_selection_wrong_inputs
+      - name: test one of the test test_utilities test_DensityMatrixObservables test_DensityMatrixObservables22 test_additional_steering test_DensityMatrixObservables23 test_DensityMatrixObservables33 test_DensityMatrixObservables2_3 test_DensityMatrixObservables222 test_DensityMatrixObservables223 test_density_selection_not_used test_density_selection_default_order test_density_selection_observable_order test_density_selection_observable_ranks test_density_selection_tie test_density_selection_wrong_inputs
         run: |
             cd $GITHUB_WORKSPACE
-            sudo pip install scipy
-            ./tests/test_manager.py test_DensityMatrixObservables test_DensityMatrixObservables22 test_additional_steering test_DensityMatrixObservables23 test_DensityMatrixObservables33 test_utilities test_density_selection_not_used test_density_selection_default_order test_density_selection_observable_order test_density_selection_observable_ranks test_density_selection_tie test_density_selection_wrong_inputs -t0
+            sudo pip install scipy cvxpy
+            ./tests/test_manager.py test_DensityMatrixObservables test_DensityMatrixObservables22 test_additional_steering test_DensityMatrixObservables23 test_DensityMatrixObservables33 test_DensityMatrixObservables2_3 test_DensityMatrixObservables222 test_DensityMatrixObservables223 test_utilities test_density_selection_not_used test_density_selection_default_order test_density_selection_observable_order test_density_selection_observable_ranks test_density_selection_tie test_density_selection_wrong_inputs -t0
 
 
 

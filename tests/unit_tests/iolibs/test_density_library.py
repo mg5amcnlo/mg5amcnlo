@@ -782,7 +782,276 @@ class TestDensityLibrary(unittest.TestCase):
         Mana = rho33_ref_instance.Get_Mana()
         Mana_ref = 1.1717878855241677
         self.assertAlmostEqual(Mana_ref, Mana, places=7)
-    
-    
-    
-    
+
+
+    def test_DensityMatrixObservables222(self):
+        """Test the methods of the class DensityMatrixObservables222 in Density_functions.py"""
+        import numpy as np
+
+        def projector(vector):
+            """Creates the density matrix of a pure state `vector`"""
+            vector = np.array(vector, dtype=complex)
+            vector = vector/np.linalg.norm(vector)
+            return np.outer(vector, vector.conj())
+
+        #first check that it redirects density matrices to the correct class. Even if you call the class with bad dimensions, the code should redirect to the correct one
+        rho222 = np.zeros((8, 8))
+        rho222[0][0] = 1
+        self.assertIsInstance(dens.DensityMatrixObservables(rho222), dens.DensityMatrixObservables222)
+        self.assertIsInstance(dens.DensityMatrixObservables22(rho222), dens.DensityMatrixObservables222)
+        #the line form (as given by Fortran) is also redirected
+        self.assertIsInstance(dens.DensityMatrixObservables(list(rho222[np.triu_indices(8)])), dens.DensityMatrixObservables222)
+
+
+        #GHZ = (|000> + |111>)/sqrt(2)
+        ghz = np.zeros(8)
+        ghz[[0, 7]] = 1
+        rho222_ghz_instance = dens.DensityMatrixObservables(projector(ghz))
+
+        #W = (|001> + |010> + |100>)/sqrt(3)
+        w = np.zeros(8)
+        w[[1, 2, 4]] = 1
+        rho222_w_instance = dens.DensityMatrixObservables(projector(w))
+
+        #Get_Polarisations
+        #GHZ: every particle is maximally mixed once the two others are traced out
+        #W: each particle is in |0> with probability 2/3, B_z = 1/3
+        Pol_ghz = rho222_ghz_instance.Get_Polarisations()
+        Pol_w = rho222_w_instance.Get_Polarisations()
+        self.assertEqual([len(Pol) for Pol in Pol_ghz], [3, 3, 3])
+        for p in range(3):
+            for i in range(3):
+                self.assertAlmostEqual(Pol_ghz[p][i], 0., places=7)
+                self.assertAlmostEqual(Pol_w[p][i], [0., 0., 1/3.][i], places=7)
+
+        #Get_2particles_correlations
+        #GHZ: C = diag(0, 0, 1) for every pair
+        #W: every pair is in the state (|00><00| + 2|psi+><psi+|)/3, C = diag(2/3, 2/3, -1/3)
+        Corr_ghz = rho222_ghz_instance.Get_2particles_correlations()
+        Corr_w = rho222_w_instance.Get_2particles_correlations()
+        self.assertEqual([np.shape(Corr) for Corr in Corr_ghz], [(3, 3), (3, 3), (3, 3)])
+        for p in range(3):
+            for i in range(3):
+                for j in range(3):
+                    self.assertAlmostEqual(Corr_ghz[p][i][j], np.diag([0., 0., 1.])[i][j], places=7)
+                    self.assertAlmostEqual(Corr_w[p][i][j], np.diag([2/3., 2/3., -1/3.])[i][j], places=7)
+
+        #Get_3particles_correlations
+        #GHZ: D_xxx = 1, D_xyy = D_yxy = D_yyx = -1
+        #W: D_zzz = -1, D_xxz = D_xzx = D_zxx = D_yyz = D_yzy = D_zyy = 2/3
+        Corr123_ghz = rho222_ghz_instance.Get_3particles_correlations()
+        Corr123_w = rho222_w_instance.Get_3particles_correlations()
+        Corr123_ghz_ref = np.zeros((3, 3, 3))
+        Corr123_ghz_ref[0][0][0] = 1.
+        Corr123_ghz_ref[0][1][1] = Corr123_ghz_ref[1][0][1] = Corr123_ghz_ref[1][1][0] = -1.
+        Corr123_w_ref = np.zeros((3, 3, 3))
+        Corr123_w_ref[2][2][2] = -1.
+        for i in range(2):
+            Corr123_w_ref[i][i][2] = Corr123_w_ref[i][2][i] = Corr123_w_ref[2][i][i] = 2/3.
+        self.assertEqual(np.shape(Corr123_ghz), (3, 3, 3))
+        for i in range(3):
+            for j in range(3):
+                for k in range(3):
+                    self.assertAlmostEqual(Corr123_ghz_ref[i][j][k], Corr123_ghz[i][j][k], places=7)
+                    self.assertAlmostEqual(Corr123_w_ref[i][j][k], Corr123_w[i][j][k], places=7)
+
+
+        #generic mixed state, given in line form: the Fano-Bloch coefficients should allow to reconstruct the density matrix
+        rng = np.random.default_rng(12345)
+        aux = rng.normal(size=(8, 8)) + 1j * rng.normal(size=(8, 8))
+        rho222_mixed = aux @ aux.conj().T
+        rho222_mixed = rho222_mixed/np.trace(rho222_mixed)
+        rho222_mixed_line = [rho222_mixed[i][k] for i in range(8) for k in range(i, 8)] #upper triangle, as filled by Fortran
+        rho222_mixed_instance = dens.DensityMatrixObservables(rho222_mixed_line)
+        self.assertIsInstance(rho222_mixed_instance, dens.DensityMatrixObservables222)
+
+        Pol1, Pol2, Pol3 = rho222_mixed_instance.Get_Polarisations()
+        Corr12, Corr13, Corr23 = rho222_mixed_instance.Get_2particles_correlations()
+        Corr123 = rho222_mixed_instance.Get_3particles_correlations()
+
+        def kron3(op1, op2, op3):
+            return np.kron(np.kron(op1, op2), op3)
+
+        #rho = 1/8 [I + B1.sigma + B2.sigma + B3.sigma + C12 sigma sigma + C13 sigma sigma + C23 sigma sigma + D sigma sigma sigma]
+        I2 = dens.Identity2
+        rho_reconstructed = kron3(I2, I2, I2).astype(complex)
+        for i in range(3):
+            rho_reconstructed += Pol1[i] * kron3(dens.sigma[i], I2, I2)
+            rho_reconstructed += Pol2[i] * kron3(I2, dens.sigma[i], I2)
+            rho_reconstructed += Pol3[i] * kron3(I2, I2, dens.sigma[i])
+            for j in range(3):
+                rho_reconstructed += Corr12[i][j] * kron3(dens.sigma[i], dens.sigma[j], I2)
+                rho_reconstructed += Corr13[i][j] * kron3(dens.sigma[i], I2, dens.sigma[j])
+                rho_reconstructed += Corr23[i][j] * kron3(I2, dens.sigma[i], dens.sigma[j])
+                for k in range(3):
+                    rho_reconstructed += Corr123[i][j][k] * kron3(dens.sigma[i], dens.sigma[j], dens.sigma[k])
+        rho_reconstructed = rho_reconstructed/8.
+
+        for i in range(8):
+            for j in range(8):
+                self.assertAlmostEqual(rho_reconstructed[i][j], rho222_mixed[i][j], places=7)
+
+        #consistency with the qubit-qubit class once one of the qubits is traced out
+        for traced, Pol_first, Pol_second, Corr_pair in [(0, Pol2, Pol3, Corr23), (1, Pol1, Pol3, Corr13), (2, Pol1, Pol2, Corr12)]:
+            rho22_instance = dens.DensityMatrixObservables(rho222_mixed_instance.partial_trace(traced, ['fermion', 'fermion', 'fermion']))
+            self.assertIsInstance(rho22_instance, dens.DensityMatrixObservables22)
+            Corr_from_22, _ = rho22_instance.Get_Correlations()
+            Pol1_from_22, Pol2_from_22 = rho22_instance.Get_Polarisations()
+            for i in range(3):
+                self.assertAlmostEqual(Pol_first[i], Pol1_from_22[i].real, places=7)
+                self.assertAlmostEqual(Pol_second[i], Pol2_from_22[i].real, places=7)
+                for j in range(3):
+                    self.assertAlmostEqual(Corr_pair[i][j], Corr_from_22[i][j], places=7)
+
+
+        #operator_expectation: values smaller than epsilon are set to 0, and a non-hermitian matrix raises an error
+        self.assertEqual(rho222_ghz_instance.operator_expectation([dens.sigma[0], I2, I2]), 0.)
+        rho222_non_hermitian = np.zeros((8, 8), dtype=complex)
+        rho222_non_hermitian[0][0] = 1
+        rho222_non_hermitian[0][1] = 1j
+        rho222_non_hermitian_instance = dens.DensityMatrixObservables(rho222_non_hermitian)
+        self.assertRaises(ValueError, rho222_non_hermitian_instance.operator_expectation, [I2, I2, dens.sigma[0]])
+
+        #the instance is not modified
+        for i in range(8):
+            for j in range(8):
+                self.assertAlmostEqual(rho222_mixed_instance.square_matrix()[i][j], rho222_mixed[i][j], places=7)
+
+
+    def test_DensityMatrixObservables223(self):
+        """Test the methods of the class DensityMatrixObservables223 in Density_functions.py"""
+        import numpy as np
+
+        def projector(vector):
+            vector = np.array(vector, dtype=complex)
+            vector = vector/np.linalg.norm(vector)
+            return np.outer(vector, vector.conj())
+
+        #first check that it redirects density matrices to the correct class. Even if you call the class with bad dimensions, the code should redirect to the correct one
+        rho223 = np.zeros((12, 12))
+        rho223[0][0] = 1
+        self.assertIsInstance(dens.DensityMatrixObservables(rho223), dens.DensityMatrixObservables223)
+        self.assertIsInstance(dens.DensityMatrixObservables22(rho223), dens.DensityMatrixObservables223)
+        #the line form (as given by Fortran) is also redirected
+        self.assertIsInstance(dens.DensityMatrixObservables(list(rho223[np.triu_indices(12)])), dens.DensityMatrixObservables223)
+
+
+        #(|000> + |112>)/sqrt(2) in a fermion-fermion-boson system (2x2x3)
+        state = np.zeros(12)
+        state[np.ravel_multi_index((0, 0, 0), (2, 2, 3))] = 1
+        state[np.ravel_multi_index((1, 1, 2), (2, 2, 3))] = 1
+        rho223_ref_instance = dens.DensityMatrixObservables(projector(state))
+
+        #Get_Polarisations
+        Pol1, Pol2, Pol3 = rho223_ref_instance.Get_Polarisations()
+        Pol1_ref = np.zeros(3)
+        Pol2_ref = np.zeros(3)
+        Pol3_ref = np.zeros(8)
+        Pol3_ref[2] = 1/4.
+        Pol3_ref[7] = -1/(4*np.sqrt(3))
+        self.assertEqual((len(Pol1), len(Pol2), len(Pol3)), (3, 3, 8))
+        for i in range(3):
+            self.assertAlmostEqual(Pol1_ref[i], Pol1[i], places=7)
+            self.assertAlmostEqual(Pol2_ref[i], Pol2[i], places=7)
+        for a in range(8):
+            self.assertAlmostEqual(Pol3_ref[a], Pol3[a], places=7)
+
+        #Get_2particles_correlations
+        Corr12, Corr13, Corr23 = rho223_ref_instance.Get_2particles_correlations()
+        Corr12_ref = np.zeros((3, 3))
+        Corr12_ref[2][2] = 1.
+        Corr13_ref = np.zeros((3, 8))
+        Corr13_ref[2][2] = 1/4.
+        Corr13_ref[2][7] = np.sqrt(3)/4.
+        Corr23_ref = Corr13_ref #the state is symmetric under the exchange of the two qubits
+        self.assertEqual((np.shape(Corr12), np.shape(Corr13), np.shape(Corr23)), ((3, 3), (3, 8), (3, 8)))
+        for i in range(3):
+            for j in range(3):
+                self.assertAlmostEqual(Corr12_ref[i][j], Corr12[i][j], places=7)
+            for a in range(8):
+                self.assertAlmostEqual(Corr13_ref[i][a], Corr13[i][a], places=7)
+                self.assertAlmostEqual(Corr23_ref[i][a], Corr23[i][a], places=7)
+
+        #Get_3particles_correlations
+        Corr123 = rho223_ref_instance.Get_3particles_correlations()
+        Corr123_ref = np.zeros((3, 3, 8))
+        Corr123_ref[0][0][3] = 1/2.
+        Corr123_ref[0][1][4] = -1/2.
+        Corr123_ref[1][0][4] = -1/2.
+        Corr123_ref[1][1][3] = -1/2.
+        Corr123_ref[2][2][2] = 1/4.
+        Corr123_ref[2][2][7] = -1/(4*np.sqrt(3))
+        self.assertEqual(np.shape(Corr123), (3, 3, 8))
+        for i in range(3):
+            for j in range(3):
+                for a in range(8):
+                    self.assertAlmostEqual(Corr123_ref[i][j][a], Corr123[i][j][a], places=7)
+
+
+        #generic mixed state, given in line form: the Fano-Bloch coefficients should allow to reconstruct the density matrix
+        rng = np.random.default_rng(12345)
+        aux = rng.normal(size=(12, 12)) + 1j * rng.normal(size=(12, 12))
+        rho223_mixed = aux @ aux.conj().T
+        rho223_mixed = rho223_mixed/np.trace(rho223_mixed)
+        rho223_mixed_line = [rho223_mixed[i][k] for i in range(12) for k in range(i, 12)] #upper triangle, as filled by Fortran
+        rho223_mixed_instance = dens.DensityMatrixObservables(rho223_mixed_line)
+        self.assertIsInstance(rho223_mixed_instance, dens.DensityMatrixObservables223)
+
+        Pol1, Pol2, Pol3 = rho223_mixed_instance.Get_Polarisations()
+        Corr12, Corr13, Corr23 = rho223_mixed_instance.Get_2particles_correlations()
+        Corr123 = rho223_mixed_instance.Get_3particles_correlations()
+
+        def kron3(op1, op2, op3):
+            return np.kron(np.kron(op1, op2), op3)
+
+        #rho = 1/12 [I + B1.sigma + B2.sigma + C12 sigma sigma] + 1/4 [B3.lambda + C13 sigma lambda + C23 sigma lambda + D sigma sigma lambda]
+        rho_reconstructed = kron3(dens.Identity2, dens.Identity2, dens.Identity3).astype(complex)/12.
+        for i in range(3):
+            rho_reconstructed += Pol1[i] * kron3(dens.sigma[i], dens.Identity2, dens.Identity3)/12.
+            rho_reconstructed += Pol2[i] * kron3(dens.Identity2, dens.sigma[i], dens.Identity3)/12.
+            for j in range(3):
+                rho_reconstructed += Corr12[i][j] * kron3(dens.sigma[i], dens.sigma[j], dens.Identity3)/12.
+                for a in range(8):
+                    rho_reconstructed += Corr123[i][j][a] * kron3(dens.sigma[i], dens.sigma[j], dens.Lambda[a])/4.
+            for a in range(8):
+                rho_reconstructed += Corr13[i][a] * kron3(dens.sigma[i], dens.Identity2, dens.Lambda[a])/4.
+                rho_reconstructed += Corr23[i][a] * kron3(dens.Identity2, dens.sigma[i], dens.Lambda[a])/4.
+        for a in range(8):
+            rho_reconstructed += Pol3[a] * kron3(dens.Identity2, dens.Identity2, dens.Lambda[a])/4.
+
+        for i in range(12):
+            for j in range(12):
+                self.assertAlmostEqual(rho_reconstructed[i][j], rho223_mixed[i][j], places=7)
+
+        #consistency with the qubit-qutrit class once one of the qubits is traced out
+        for traced, Pol_qubit, Corr_qubit_qutrit in [(0, Pol2, Corr23), (1, Pol1, Corr13)]:
+            rho23_instance = dens.DensityMatrixObservables(rho223_mixed_instance.partial_trace(traced, ['fermion', 'fermion', 'boson']))
+            Corr23_from_23, _ = rho23_instance.Get_Correlations(['fermion', 'boson'])
+            Pol1_from_23, Pol2_from_23 = rho23_instance.Get_Polarisations(['fermion', 'boson'])
+            for i in range(3):
+                self.assertAlmostEqual(Pol_qubit[i], Pol1_from_23[i].real, places=7)
+                for a in range(8):
+                    self.assertAlmostEqual(Corr_qubit_qutrit[i][a], Corr23_from_23[i][a], places=7)
+            for a in range(8):
+                self.assertAlmostEqual(Pol3[a], Pol2_from_23[a].real, places=7)
+
+        #consistency with the qubit-qubit class once the qutrit is traced out
+        rho22_instance = dens.DensityMatrixObservables(rho223_mixed_instance.partial_trace(2, ['fermion', 'fermion', 'boson']))
+        Corr12_from_22, _ = rho22_instance.Get_Correlations()
+        for i in range(3):
+            for j in range(3):
+                self.assertAlmostEqual(Corr12[i][j], Corr12_from_22[i][j], places=7)
+
+
+        #operator_expectation: values smaller than epsilon are set to 0, and a non-hermitian matrix raises an error
+        self.assertEqual(rho223_ref_instance.operator_expectation([dens.sigma[0], dens.Identity2, dens.Identity3]), 0.)
+        rho223_non_hermitian = np.zeros((12, 12), dtype=complex)
+        rho223_non_hermitian[0][0] = 1
+        rho223_non_hermitian[0][1] = 1j
+        rho223_non_hermitian_instance = dens.DensityMatrixObservables(rho223_non_hermitian)
+        self.assertRaises(ValueError, rho223_non_hermitian_instance.operator_expectation, [dens.Identity2, dens.Identity2, dens.Lambda[0]])
+
+        #the instance is not modified
+        for i in range(12):
+            for j in range(12):
+                self.assertAlmostEqual(rho223_mixed_instance.square_matrix()[i][j], rho223_mixed[i][j], places=7)

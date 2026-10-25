@@ -1131,7 +1131,7 @@ class DensityMatrixObservables22(DensityMatrixObservables):
         """
 
         Srho = self.Von_Neumann_entropy() # S(rho)
-        rhoB = self.Partial_Trace(1, ['fermion', 'fermion'])
+        rhoB = self.partial_trace(0, ['fermion', 'fermion'])
         SrhoB = self.Von_Neumann_entropy(rho=rhoB) #S(rho_B)
 
         B_plus, B_minus = self.Get_Polarisations()
@@ -1421,7 +1421,6 @@ class DensityMatrixObservables33(DensityMatrixObservables):
         """
         Polarisation1 = np.zeros(8, dtype=float)
         Polarisation2 = np.zeros(8, dtype=float)
-        Polarisation2 = np.zeros(8, dtype=np.complex128)
         for i in range(8):
             tensorprod1 = np.kron(Lambda[i], Identity3)
             tensorprod2 = np.kron(Identity3, Lambda[i])
@@ -1512,8 +1511,8 @@ class DensityMatrixObservables33(DensityMatrixObservables):
             Output: square of the lower bound of the concurrence for a system composed of a pair of qutrits.
         """
 
-        RhoA = self.Partial_Trace(2, ['boson', 'boson'])
-        RhoB = self.Partial_Trace(1, ['boson', 'boson'])
+        RhoA = self.partial_trace(1, ['boson', 'boson'])
+        RhoB = self.partial_trace(0, ['boson', 'boson'])
 
         if ((np.trace(RhoA) - 1) > epsilon) or ((np.trace(RhoB) - 1) > epsilon):
             print('Warning: the traced-out density matrices have non unitary trace!')
@@ -1531,8 +1530,8 @@ class DensityMatrixObservables33(DensityMatrixObservables):
             Output: square of the upper bound of the concurrence for a system composed of a pair of qutrits.
         """
 
-        RhoA = self.Partial_Trace(2, ['boson', 'boson'])
-        RhoB = self.Partial_Trace(1, ['boson', 'boson'])
+        RhoA = self.partial_trace(1, ['boson', 'boson'])
+        RhoB = self.partial_trace(0, ['boson', 'boson'])
 
         if ((np.trace(RhoA) - 1) > epsilon) or ((np.trace(RhoB) - 1) > epsilon):
             print('Warning: the traced-out density matrices have non unitary trace!')
@@ -1551,3 +1550,182 @@ class DensityMatrixObservables33(DensityMatrixObservables):
         if (d1 not in [3, 5]) or (d2 not in [3, 5]):
             raise ValueError("Mana is only defined for odd-dimension Hilbert spaces. Please use it for adapted systems.")
         return np.log2(self.Sum_Discrete_Wigner(d1, d2, epsilon))
+
+
+class DensityMatrixObservables222(DensityMatrixObservables):
+    """
+        Class reprensenting density matrices of qubit-qubit-qubit systems.
+        It is a child of the generic class and thus inherits its methods.
+        We define here the observables specific to qubit-qubit-qubit systems.
+    """
+
+    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None) -> None:
+        """The initialisation is the same as the parent class because it needs to accept the same input"""
+        super().__init__(user_input, len_user_input)
+        if self.density_matrix_dimension != 8:
+            raise ValueError("The dimension of a qubit-qubit-qubit density matrix should be 8.")
+
+    def operator_expectation(self, operators:list, rho=None, epsilon=1e-10) -> float:
+        """
+            Input:  operators -> list of the three 2x2 matrices acting on each qubit (Pauli matrices or Identity2)
+                    rho -> density matrix in square form (computed from self if not given)
+                    epsilon -> threshold parameter
+            Output: Tr(rho . operators[0] x operators[1] x operators[2]), set to 0 if smaller than epsilon
+
+            The result is real since rho and the Pauli strings are hermitian. An error is raised if the imaginary
+            part is bigger than epsilon, as this means the density matrix is not hermitian.
+        """
+        if rho is None:
+            rho = self.square_matrix()
+        observable = np.kron(np.kron(operators[0], operators[1]), operators[2])
+        expectation = np.trace(observable @ rho)
+
+        if abs(expectation.imag) > epsilon:
+            raise ValueError(f"The expectation value of a Pauli string has an imaginary part bigger than {epsilon}. The density matrix is probably not hermitian, please check.")
+        if abs(expectation.real) < epsilon:
+            return 0.
+        return expectation.real
+
+    def Get_Polarisations(self, epsilon=1e-10) -> tuple[list[float], list[float], list[float]]:
+        """
+            Input:  self -> density matrix
+                    epsilon -> threshold parameter, values smaller than it are set to 0
+            Output: Polarisation vectors (B1, B2, B3) of the three particles, each a real array of size 3
+                    with B1_i = Tr(rho sigma_i x I x I), B2_i = Tr(rho I x sigma_i x I), B3_i = Tr(rho I x I x sigma_i)
+        """
+        Polarisation1, Polarisation2, Polarisation3 = np.zeros(3), np.zeros(3), np.zeros(3)
+        rho = self.square_matrix()
+
+        for i in range(3):
+            Polarisation1[i] = self.operator_expectation([sigma[i], Identity2, Identity2], rho, epsilon)
+            Polarisation2[i] = self.operator_expectation([Identity2, sigma[i], Identity2], rho, epsilon)
+            Polarisation3[i] = self.operator_expectation([Identity2, Identity2, sigma[i]], rho, epsilon)
+
+        return Polarisation1, Polarisation2, Polarisation3
+
+    def Get_2particles_correlations(self, epsilon=1e-10) -> tuple[list[float, float], list[float, float], list[float, float]]:
+        """
+            Input:  self -> density matrix
+                    epsilon -> threshold parameter, values smaller than it are set to 0
+            Output: Two-qubit correlation matrices (C12, C13, C23), each a real 3x3 array
+                    with C12_ij = Tr(rho sigma_i x sigma_j x I), C13_ij = Tr(rho sigma_i x I x sigma_j), C23_ij = Tr(rho I x sigma_i x sigma_j)
+                    The first index always refers to the particle that comes first in the density matrix.
+        """
+        Correlations12, Correlations13, Correlations23 = np.zeros((3, 3)), np.zeros((3, 3)), np.zeros((3, 3))
+        rho = self.square_matrix()
+
+        for i in range(3):
+            for j in range(3):
+                Correlations12[i][j] = self.operator_expectation([sigma[i], sigma[j], Identity2], rho, epsilon)
+                Correlations13[i][j] = self.operator_expectation([sigma[i], Identity2, sigma[j]], rho, epsilon)
+                Correlations23[i][j] = self.operator_expectation([Identity2, sigma[i], sigma[j]], rho, epsilon)
+
+        return Correlations12, Correlations13, Correlations23
+
+    def Get_3particles_correlations(self, epsilon=1e-10) -> list[float, float, float]:
+        """
+            Input:  self -> density matrix
+                    epsilon -> threshold parameter, values smaller than it are set to 0
+            Output: Three-qubit correlation tensor D, a real 3x3x3 array with D_ijk = Tr(rho sigma_i x sigma_j x sigma_k)
+        """
+        Correlations123 = np.zeros((3, 3, 3))
+        rho = self.square_matrix()
+
+        for i in range(3):
+            for j in range(3):
+                for k in range(3):
+                    Correlations123[i][j][k] = self.operator_expectation([sigma[i], sigma[j], sigma[k]], rho, epsilon)
+
+        return Correlations123
+
+
+class DensityMatrixObservables223(DensityMatrixObservables):
+    """
+        Class reprensenting density matrices of qubit-qubit-qutrit systems.
+        It is a child of the generic class and thus inherits its methods.
+        We define here the observables specific to qubit-qubit-qutrit systems.
+        The two qubits are assumed to be the first two particles of the density matrix and the qutrit the last one.
+        As for the qubit-qutrit and qutrit-qutrit classes, each Gell-Mann matrix in an expectation value comes with a factor 1/2.
+    """
+
+    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None) -> None:
+        """The initialisation is the same as the parent class because it needs to accept the same input"""
+        super().__init__(user_input, len_user_input)
+        if self.density_matrix_dimension != 12:
+            raise ValueError("The dimension of a qubit-qubit-qutrit density matrix should be 12.")
+
+    def operator_expectation(self, operators:list, rho=None, epsilon=1e-10) -> float:
+        """
+            Input:  operators -> list of the three matrices acting on each particle (2x2 Pauli matrices or Identity2 for the qubits,
+                                 3x3 Gell-Mann matrices or Identity3 for the qutrit)
+                    rho -> density matrix in square form (computed from self if not given)
+                    epsilon -> threshold parameter
+            Output: Tr(rho . operators[0] x operators[1] x operators[2]), set to 0 if smaller than epsilon
+
+            The result is real since rho and the operators are hermitian. An error is raised if the imaginary
+            part is bigger than epsilon, as this means the density matrix is not hermitian.
+        """
+        if rho is None:
+            rho = self.square_matrix()
+        observable = np.kron(np.kron(operators[0], operators[1]), operators[2])
+        expectation = np.trace(observable @ rho)
+
+        if abs(expectation.imag) > epsilon:
+            raise ValueError(f"The expectation value of an operator has an imaginary part bigger than {epsilon}. The density matrix is probably not hermitian, please check.")
+        if abs(expectation.real) < epsilon:
+            return 0.
+        return expectation.real
+
+    def Get_Polarisations(self, epsilon=1e-10) -> tuple[list[float], list[float], list[float]]:
+        """
+            Input:  self -> density matrix
+                    epsilon -> threshold parameter, values smaller than it are set to 0
+            Output: Polarisation vectors (B1, B2, B3) of the three particles, B1 and B2 real arrays of size 3, B3 a real array of size 8
+                    with B1_i = Tr(rho sigma_i x I x I), B2_i = Tr(rho I x sigma_i x I), B3_a = Tr(rho I x I x lambda_a)/2
+        """
+        Polarisation1, Polarisation2, Polarisation3 = np.zeros(3), np.zeros(3), np.zeros(8)
+        rho = self.square_matrix()
+
+        for i in range(3):
+            Polarisation1[i] = self.operator_expectation([sigma[i], Identity2, Identity3], rho, epsilon)
+            Polarisation2[i] = self.operator_expectation([Identity2, sigma[i], Identity3], rho, epsilon)
+        for a in range(8):
+            Polarisation3[a] = self.operator_expectation([Identity2, Identity2, Lambda[a]], rho, epsilon)/2.
+
+        return Polarisation1, Polarisation2, Polarisation3
+
+    def Get_2particles_correlations(self, epsilon=1e-10) -> tuple[list[float, float], list[float, float], list[float, float]]:
+        """
+            Input:  self -> density matrix
+                    epsilon -> threshold parameter, values smaller than it are set to 0
+            Output: Two-particle correlation matrices (C12, C13, C23), C12 a real 3x3 array, C13 and C23 real 3x8 arrays
+                    with C12_ij = Tr(rho sigma_i x sigma_j x I), C13_ia = Tr(rho sigma_i x I x lambda_a)/2, C23_ia = Tr(rho I x sigma_i x lambda_a)/2
+                    The first index always refers to the particle that comes first in the density matrix.
+        """
+        Correlations12, Correlations13, Correlations23 = np.zeros((3, 3)), np.zeros((3, 8)), np.zeros((3, 8))
+        rho = self.square_matrix()
+
+        for i in range(3):
+            for j in range(3):
+                Correlations12[i][j] = self.operator_expectation([sigma[i], sigma[j], Identity3], rho, epsilon)
+            for a in range(8):
+                Correlations13[i][a] = self.operator_expectation([sigma[i], Identity2, Lambda[a]], rho, epsilon)/2.
+                Correlations23[i][a] = self.operator_expectation([Identity2, sigma[i], Lambda[a]], rho, epsilon)/2.
+
+        return Correlations12, Correlations13, Correlations23
+
+    def Get_3particles_correlations(self, epsilon=1e-10) -> list[float, float, float]:
+        """
+            Input:  self -> density matrix
+                    epsilon -> threshold parameter, values smaller than it are set to 0
+            Output: Three-particle correlation tensor D, a real 3x3x8 array with D_ija = Tr(rho sigma_i x sigma_j x lambda_a)/2
+        """
+        Correlations123 = np.zeros((3, 3, 8))
+        rho = self.square_matrix()
+
+        for i in range(3):
+            for j in range(3):
+                for a in range(8):
+                    Correlations123[i][j][a] = self.operator_expectation([sigma[i], sigma[j], Lambda[a]], rho, epsilon)/2.
+
+        return Correlations123
