@@ -12,6 +12,10 @@ ANNOUNCEMENT:
     OM: LO vector mode (vector_size>1): fix the reweighting of MLM matching (the central factorisation
         scale of the last event of the batch was used for all events), the config/mirror used per warp,
         and a crash (memory corruption) when vector_size was changed in the run_card after the output.
+    OM: LO vector mode with nb_warp>1: when a P directory groups several subprocesses, each warp
+        selected its own subprocess but only the last one was evaluated for all warps (wrong weights,
+        'Clustering failed' crashes). The subprocess is now chosen once per vector (from the PDF weights
+        averaged over the warps) and the configuration/beam orientation per warp.
     OM: MadSpin (spinmode=PA): new option 'auto_zero_width_PA' (default True) setting the width
         of the particles decayed by MadSpin to zero in the matrix element of the production density
         matrix, and each one in the matrix element of its own decay density matrix only (Breit-Wigner
