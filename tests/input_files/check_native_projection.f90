@@ -454,6 +454,26 @@ subroutine check_singletop_projection()
      if(maxval(abs(outlab-lab)).gt.1d-7*maxval(abs(lab))) &
           error stop 'single-top native recoil changed real point'
   enddo
+  ! Million-event single-top run, seed 2630401, b u > t d g: a forward
+  ! massless spectator inherits a small spacelike virtuality from the
+  ! shower boost. It is -1.10e-6 GeV^2 at shat=2.54e5 GeV^2, beyond a
+  ! bound based only on the much smaller partonic CM energy. Its recoil
+  ! mass is known exactly because the recoil is one massless particle.
+  lab(:,1)=[1.13155335665560415d1,3.55271367880050093d-15,-1.77635683940025046d-15,1.13155335665578605d1]
+  lab(:,2)=[5.60233157968030901d3,3.55271367880050093d-15,0d0,-5.60233157968030991d3]
+  lab(:,3)=[9.72049808787098755d2,2.36853180101609269d1,-8.89220139589781411d1,-9.52094381827414963d2]
+  lab(:,4)=[4.18786566667487386d3,-5.54607609148451957d1,6.35392390471370163d1,-4.18701632564471129d3]
+  lab(:,5)=[4.53731637784677275d2,3.17754429046850966d1,2.53827749118414197d1,-4.51905338641569358d2]
+  do jfks=1,4
+     call ieee_set_flag(ieee_invalid,.false.)
+     call generate_native_momenta(lab,out,outlab,cms,jac,pass)
+     call ieee_get_flag(ieee_invalid,invalid)
+     if(invalid)error stop 'invalid arithmetic in boosted single-top projection'
+     if(.not.pass.or..not.ieee_is_finite(jac).or.jac.le.0d0) &
+          error stop 'boosted single-top native recoil projection failed'
+     if(maxval(abs(outlab-lab)).gt.1d-7*maxval(abs(lab))) &
+          error stop 'boosted single-top native recoil changed real point'
+  enddo
   ! A small physical timelike recoil must survive, while a spacelike
   ! recoil larger than boost roundoff must still reject the point.
   born=0d0

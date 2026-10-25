@@ -834,6 +834,12 @@ then
     echo "MAcNLOPS continuation requires per-dipole LHE starting-scale support" >&2
     exit 1
   fi
+  if [ -z "${MACNLOPS_PHYSICS_FILE:-}" ] || [ ! -f "$thisdir/$MACNLOPS_PHYSICS_FILE" ]
+  then
+    echo "MAcNLOPS continuation requires the accepted LHE's recorded shower profile" >&2
+    exit 1
+  fi
+  cat "$thisdir/$MACNLOPS_PHYSICS_FILE" >> "$ifile"
   cat <<EOF >> "$ifile"
 
 ! Consume each accepted LHE input once; stop on a failed shower.
@@ -859,6 +865,7 @@ SpaceShower:MEcorrections = off
 TimeShower:MEafterFirst = off
 SpaceShower:MEafterFirst = off
 PartonLevel:MPI = off
+PartonLevel:Remnants = on
 HadronLevel:all = off
 BeamRemnants:primordialKT = off
 ColourReconnection:reconnect = off

@@ -320,6 +320,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
           pjoin('various','lhe_parser.py'),
           pjoin('various','collect_events.py'),
           pjoin('various','macnlops.py'),
+          pjoin('various','macnlops_components.py'),
           pjoin('madevent','sum_html.py'),
           pjoin('madevent','gen_crossxhtml.py'),          
           pjoin('iolibs','files.py'),

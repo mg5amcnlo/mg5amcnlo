@@ -1,0 +1,182 @@
+{
+  "created_utc": "2026-10-25T06:07:29.086154+00:00",
+  "delta_calculation_trap": true,
+  "driver_sha256": "42087291a689d8cf90457e6f41f9addab31c70699788e089eb4666525804040f",
+  "emitters": [
+    {
+      "kernel_closure_relative_error": 4.07080656992245e-16,
+      "orientations": [
+        {
+          "born_permutation": [
+            0,
+            1,
+            3,
+            2
+          ],
+          "densities": [
+            10004521.861980017,
+            16365131.518479314,
+            16365131.518479317
+          ],
+          "endpoint_permutation": [
+            0,
+            1,
+            3,
+            2,
+            4
+          ],
+          "equivalent_emitters": 2,
+          "normalization": "3",
+          "orientation": "native",
+          "selector": [
+            3,
+            6,
+            2
+          ],
+          "source_orbit": 6,
+          "unpartitioned_kernel": 18302467.7516568
+        },
+        {
+          "born_permutation": [
+            0,
+            1,
+            3,
+            2
+          ],
+          "densities": [
+            1184354.8386362803,
+            1937336.233177476,
+            1937336.233177476
+          ],
+          "endpoint_permutation": [
+            0,
+            1,
+            3,
+            4,
+            2
+          ],
+          "equivalent_emitters": 2,
+          "normalization": "3",
+          "orientation": "gg-swapped",
+          "selector": [
+            3,
+            6,
+            2
+          ],
+          "source_orbit": 6,
+          "unpartitioned_kernel": 18302467.7516568
+        }
+      ],
+      "source_radiator": 3,
+      "unpartitioned_exchange_relative_error": 0.0
+    },
+    {
+      "kernel_closure_relative_error": 4.07080656992245e-16,
+      "orientations": [
+        {
+          "born_permutation": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "densities": [
+            10004521.861980017,
+            16365131.518479314,
+            16365131.518479317
+          ],
+          "endpoint_permutation": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "equivalent_emitters": 2,
+          "normalization": "3",
+          "orientation": "native",
+          "selector": [
+            2,
+            5,
+            1
+          ],
+          "source_orbit": 6,
+          "unpartitioned_kernel": 18302467.7516568
+        },
+        {
+          "born_permutation": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "densities": [
+            1184354.8386362803,
+            1937336.233177476,
+            1937336.233177476
+          ],
+          "endpoint_permutation": [
+            0,
+            1,
+            2,
+            4,
+            3
+          ],
+          "equivalent_emitters": 2,
+          "normalization": "3",
+          "orientation": "gg-swapped",
+          "selector": [
+            2,
+            5,
+            1
+          ],
+          "source_orbit": 6,
+          "unpartitioned_kernel": 18302467.7516568
+        }
+      ],
+      "source_radiator": 4,
+      "unpartitioned_exchange_relative_error": 0.0
+    }
+  ],
+  "passed": true,
+  "real_momenta": [
+    [
+      500.0,
+      0.0,
+      0.0,
+      500.0
+    ],
+    [
+      500.0,
+      0.0,
+      0.0,
+      -500.0
+    ],
+    [
+      425.0,
+      -75.0,
+      418.33001326703777,
+      0.0
+    ],
+    [
+      425.0,
+      -75.0,
+      -418.33001326703777,
+      0.0
+    ],
+    [
+      150.0,
+      150.0,
+      0.0,
+      0.0
+    ]
+  ],
+  "registry_sha256": "7611cb2f262a9907434f165b7c5c31fa132d1203a314cf8a44f0627c68b130e1",
+  "schema": "macnlops-gg-component-point-v1",
+  "scope": "one synthetic real point; no integration or Pythia shower",
+  "source_selector": [
+    2,
+    5,
+    1
+  ]
+}

@@ -1,0 +1,2 @@
+# Preserve generated card snapshots verbatim for their recorded checksums.
+*.dat -whitespace

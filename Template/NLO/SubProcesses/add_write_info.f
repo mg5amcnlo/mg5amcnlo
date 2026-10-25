@@ -12,7 +12,10 @@ c intermediate resonances. It also boosts the events to the lab frame
       use weight_lines, only: icontr_picked,native_ids,nFKS,
      $     group_size,event_owner,icontr,iproc_picked,H_event,
      $     momenta,ifold_cnt,group_flavour_complete,delta_line_context,
-     $     delta_contexts
+     $     delta_contexts,component_line_context,component_contexts,
+     $     sampled_flavour_complete,
+     $     source_born_config,source_born_graph,source_flow_probability,
+     $     source_diagram_symmetry
       implicit none
       include "genps.inc"
       include "nexternal.inc"
@@ -145,7 +148,8 @@ c pt_clust string
       type(fks_phase_space_point) phase_space
       double precision hard_p(0:4,nexternal),hard_boost,
      $     get_mass_from_id
-      integer hard_meta(15),delta_packet
+      integer hard_meta(15),delta_packet,component_packet,component_meta(4)
+      double precision component_values(4)
       external get_mass_from_id
       logical momenta_equal
       external momenta_equal
@@ -505,6 +509,33 @@ c and before auxiliary resonance records alter their mother labels.
          endif
          call store_macnlops_hard_event(nexpart,jpart(1,1),
      $        hard_p,hard_meta)
+         if(macnlops.and..not.MCExplicitKLSum.and.
+     $      MCSubtractionAtFixedFlow)then
+            if(Hevents)then
+               if(.not.sampled_flavour_complete(icontr_picked,
+     $            iproc_picked))error stop
+     $            'Sampled H physical flavour is not a complete component'
+               component_packet=component_line_context(icontr_picked)
+               if(component_packet.lt.1)
+     $            error stop 'Sampled H lacks its source component'
+               associate(packet=>component_contexts(component_packet))
+               component_meta=[packet%sector,packet%config,
+     $              packet%graph,packet%flow]
+               component_values=[packet%flow_probability,
+     $              packet%insertion,packet%source_factor,
+     $              packet%diagram_symmetry]
+               end associate
+            else
+c S weights are combined at one Born point/diagram/flow. Its eventual
+c shower emission, not this provenance sector, selects the H component.
+               component_meta=[hard_meta(2),source_born_config,
+     $              source_born_graph,abs(born_flow_picked)]
+               component_values=[source_flow_probability,0d0,1d0,
+     $              source_diagram_symmetry]
+            endif
+            call store_macnlops_component(component_meta,component_values,
+     $           MC_HIST_REGISTRY_SHA256)
+         endif
          if(mcatnlo_delta.and.Hevents)then
             delta_packet=delta_line_context(icontr_picked)
             if(delta_packet.gt.0)then

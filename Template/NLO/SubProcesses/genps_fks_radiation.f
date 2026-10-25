@@ -681,7 +681,7 @@ c
 
       subroutine generate_momenta_massive_final_inverse(xp,xi_i_fks
      $           ,y_ij_fks,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat
-     $           ,i_fks,j_fks,m_j_fks)
+     $           ,i_fks,j_fks,m_j_fks,known_recoil_mass2)
       use fks_phase_space_data, only: xinorm_ev
       use mc_native_context, only: active_native_mapping=>native_mapping
       implicit none
@@ -699,6 +699,7 @@ c
      $     native_eborn,native_delta,native_onepy,native_ratio,
      $     native_recoil,native_inverse_denom
       double precision rho,dot,sstiny,cctiny,branch_sign
+      double precision,optional,intent(in) :: known_recoil_mass2
       external rho,dot
       logical        softtest,colltest
       common/sctests/softtest,colltest
@@ -733,6 +734,12 @@ c subtracting the hard daughters from the beams loses that precision.
       enddo
       sumrec=recoil(0)+rho(recoil)
       xmrec2=dot(recoil,recoil)
+c A native caller can supply the exact invariant of a one-particle
+c massless recoil. Its shower-boost roundoff reflects the lab energy,
+c which can be much larger than the partonic CM energy used below.
+      if(native_mapping.and.present(known_recoil_mass2))then
+         if(known_recoil_mass2.ge.0d0)xmrec2=known_recoil_mass2
+      endif
 c Apply the same massless-recoil roundoff bound as get_recoil before
 c taking a square root in the inverse map.
       if(xmrec2.lt.0d0.and.xmrec2.ge.-1d-12*shat)xmrec2=0d0

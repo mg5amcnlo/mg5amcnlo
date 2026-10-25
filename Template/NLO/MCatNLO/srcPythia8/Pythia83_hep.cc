@@ -5,6 +5,7 @@
 #include "Pythia8Plugins/CombineMatchingInput.h"
 #include "HepMC/GenEvent.h"
 #include "HepMC/IO_GenEvent.h"
+#include "LHEF.h"
 
 using namespace Pythia8;
 
@@ -28,6 +29,11 @@ int main() {
   int iPrintLHA=0;
   int iEventtot=pythia.mode("Main:numberOfEvents");
   int iEventshower=pythia.mode("Main:spareMode1");
+  // A continuation consumes the accepted LHE once, preserving its weights.
+  const bool continuation=pythia.flag("Main:spareFlag1");
+  if (continuation) pythia.settings.forceParm("SpaceShower:pT0Ref", 0.);
+  LHEF::Reader* sourceWeights=continuation
+      ? new LHEF::Reader(pythia.word("Beams:LHEF")) : NULL;
   string evt_norm=pythia.word("Main:spareWord1");
 
   //FxFx merging
@@ -55,7 +61,7 @@ int main() {
   // Initialise Pythia.
   if (!pythia.init()) {
     cout << "Error: could not initialise Pythia" << endl;
-    return 0;
+    return continuation ? 1 : 0;
   };
 
   HepMC::Pythia8ToHepMC ToHepMC;
@@ -70,14 +76,23 @@ int main() {
   double errorTotal  = 0.;
 
   for (int iEvent = 0; ; ++iEvent) {
+    if (continuation && iEvent >= iEventshower) break;
     if (!pythia.next()) {
+      if (continuation) {
+        std::cerr << "Continuation shower failed at input event " << iEvent+1 << "\n";
+        return 1;
+      }
       if (++iAbort < nAbort) continue;
       break;
     }
     // the number of events read by Pythia so far
     int nSelected=pythia.info.nSelected();
 
-    if (nSelected > iEventshower) break;
+    if (!continuation && nSelected > iEventshower) break;
+    if (continuation && (nSelected != iEvent+1 || pythia.info.nTried() != iEvent+1)) {
+      std::cerr << "Continuation shower skipped an input event\n";
+      return 1;
+    }
     if (pythia.info.isLHA() && iPrintLHA < nPrintLHA) {
       pythia.LHAeventList();
       pythia.info.list();
@@ -88,6 +103,13 @@ int main() {
 
     HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
     double evtweight = pythia.info.weight();
+    if (continuation) {
+      if (!sourceWeights->readEvent()) {
+        std::cerr << "Missing continuation source weight at event " << iEvent+1 << "\n";
+        return 1;
+      }
+      evtweight=sourceWeights->hepeup.XWGTUP;
+    }
     double normhepmc;
     // ALWAYS NORMALISE HEPMC WEIGHTS TO SUM TO THE CROSS SECTION
     if (evt_norm != "sum") {
@@ -96,8 +118,18 @@ int main() {
       normhepmc = double(iEventtot) / double(iEventshower);
     }
     sigmaTotal += evtweight*normhepmc;
-    hepmcevt->weights().push_back(evtweight*normhepmc);
+    if (!continuation) hepmcevt->weights().push_back(evtweight*normhepmc);
     ToHepMC.fill_next_event( pythia, hepmcevt );
+    if (continuation) {
+      // Stock strategy -3 exposes a sign through Info. Restore the retained
+      // LHE normalization for the nominal and any shower variation weights.
+      const double factor=pythia.info.weight()!=0.
+          ? evtweight*normhepmc/pythia.info.weight() : 0.;
+      for (size_t i=0; i<hepmcevt->weights().size(); ++i)
+        hepmcevt->weights()[i]*=factor;
+      if (hepmcevt->weights().empty()) hepmcevt->weights().push_back(evtweight*normhepmc);
+      else hepmcevt->weights()[0]=evtweight*normhepmc;
+    }
     // Add the weight of the current event to the cross section.
     // Report cross section to hepmc
     HepMC::GenCrossSection xsec;
@@ -108,6 +140,7 @@ int main() {
     delete hepmcevt;
   }
 
+  delete sourceWeights;
   pythia.stat();
   if (isFxFx){
     std::cout << " \n";

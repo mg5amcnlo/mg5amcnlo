@@ -1,16 +1,36 @@
 """First-emission LHE hand-off contracts; no native build or shower."""
 from collections import Counter
+import copy
 import math
 import os
 from pathlib import Path
 import subprocess
 import tempfile
+import re
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
 from madgraph.various import macnlops as mc
 from tests.unit_tests.various.test_macnlops import HEADER, event, hard_annotation
+
+
+def shower_profile(delta=False):
+    return dict(schema='macnlops-generation-profile-v1', shower_backend='stock-pythia8',
+        construction=mc.DELTA_SOURCE if delta else mc.ORDINARY_SOURCE,
+        alpha_s_mz=.120179, alpha_s_order=2, pdf='LHAPDF6:fixture/0',
+        lhapdf_library_sha256=None,
+        pdf_info_sha256='a' * 64, pdf_member_sha256='b' * 64,
+        shower_libraries={'libpythia8.so': 'c' * 64},
+        support=dict(alpha_s_nfmax=5, n_quark_in=4, n_gluon_to_quark=4,
+            shower_cutoffs=[.5, .5], particle_masses={'1': 0., '4': 0., '5': 4.7, '21': 0.},
+            qcd_only_off_switches={'PartonLevel:MPI': False, 'PartonLevel:Remnants': False}),
+        effective_shower_settings={
+            'SpaceShower:alphaSvalue': '0.12018', 'TimeShower:alphaSvalue': '0.12018',
+            'SpaceShower:alphaSorder': '2', 'TimeShower:alphaSorder': '2',
+            'SpaceShower:nQuarkIn': '4', 'TimeShower:nGluonToQuark': '4',
+            'StandardModel:alphaSnfmax': '5', 'SpaceShower:pT0Ref': '0.',
+            'PDF:pSet': 'LHAPDF6:fixture/0', 'TimeShower:globalRecoil': 'on'})
 
 
 def endpoint(state='emitted', delta=False):
@@ -57,6 +77,8 @@ class KeepEverything:
 class TestContinuation(unittest.TestCase):
     def fixture(self, root, delta=False):
         blocks = [endpoint(state, delta) for state in ('emitted', 'exhausted', 'unshowered')]
+        if delta:
+            blocks[-1] = blocks[-1].replace('source_scalup="100"', 'source_scalup="-1"')
         source = root / 'proposals.lhe'
         # Both the run-card event target and source flag are operational here:
         # the accepted file must acquire its own count and continuation stage.
@@ -71,7 +93,8 @@ class TestContinuation(unittest.TestCase):
         metadata.write_text(''.join(json.dumps(row) + '\n' for row in rows))
         output = root / 'accepted.lhe.gz'
         report = mc.reject_proposals(source, metadata, output, KeepEverything(),
-                                     signed_residuals=True, require_continuation=True)
+                                     signed_residuals=True, require_continuation=True,
+                                     shower_profile=shower_profile(delta))
         return output, report, blocks
 
     def test_current_starts_and_source_provenance_are_distinct_in_both_modes(self):
@@ -113,6 +136,24 @@ class TestContinuation(unittest.TestCase):
         with self.assertRaises(mc.MatchingError):
             mc.Event(block.replace('scalup_1="70"', 'scalup_1="0"'))
 
+    def test_delta_h_source_sentinel_is_inert_provenance(self):
+        block = endpoint('unshowered', delta=True).replace(
+            'source_scalup="100"', 'source_scalup="-1"')
+        parsed = mc.Event(block)
+        self.assertEqual(parsed.source_scale, -1.)
+        self.assertEqual(parsed.scale, 100.)
+        self.assertTrue(all(value > 0 for value in parsed.continuation_leg_scales.values()))
+        parsed.check_proposal_metadata(dict(event_kind='H', emitted=False,
+            source_scalup=-1., continuation_scalup=100.), require_continuation=True)
+        invalid = [block.replace('source="delta"', 'source="ordinary"'),
+                   block.replace('source_scalup="-1"', 'source_scalup="-2"'),
+                   block.replace('scale="100" source_scalup', 'scale="-1" source_scalup')]
+        invalid.extend(endpoint(state, delta=True).replace(
+            'source_scalup="100"', 'source_scalup="-1"') for state in ('emitted', 'exhausted'))
+        for document in invalid:
+            with self.subTest(document=document), self.assertRaises(mc.MatchingError):
+                mc.Event(document)
+
     def test_veto_and_randomized_collection_preserve_all_active_starts(self):
         for delta in (False, True):
             with self.subTest(delta=delta), tempfile.TemporaryDirectory() as tmp:
@@ -134,6 +175,114 @@ class TestContinuation(unittest.TestCase):
                 self.assertEqual(contract['events'], 3)
                 self.assertEqual(contract['shower_cutoffs'], [.5, .5])
                 self.assertEqual(contract['counts']['exhausted'], 1)
+                self.assertEqual(contract['shower_profile'], shower_profile(delta))
+
+    def test_portable_profile_preserves_exact_coupling_masses_and_flavours(self):
+        profile = shower_profile()
+        header = mc.with_shower_profile(HEADER, profile)
+        self.assertEqual(mc.read_shower_profile(header), profile)
+        settings = dict(line.split(' = ', 1) for line in mc.continuation_physics(profile).splitlines()
+                        if not line.startswith('!'))
+        self.assertEqual(float(settings['SpaceShower:alphaSvalue']), .120179)
+        self.assertEqual(float(settings['TimeShower:alphaSvalue']), .120179)
+        self.assertEqual(settings['SpaceShower:alphaSorder'], '2')
+        self.assertEqual(settings['SpaceShower:nQuarkIn'], '4')
+        self.assertEqual(settings['TimeShower:nGluonToQuark'], '4')
+        self.assertEqual(float(settings['5:m0']), 4.7)
+        self.assertNotIn('SpaceShower:pT0Ref', settings)
+        with self.assertRaisesRegex(mc.MatchingError, 'fingerprint'):
+            mc.read_shower_profile(header.replace('0.120179', '0.118'))
+        with self.assertRaisesRegex(mc.MatchingError, 'duplicate'):
+            mc.read_shower_profile(header + header)
+        for key, value in (('SpaceShower:pT0Ref', '.5'), ('SpaceShower:nQuarkIn', '5'),
+                           ('TimeShower:alphaSorder', '1'), ('PDF:pSet', '13')):
+            invalid = copy.deepcopy(profile)
+            invalid['effective_shower_settings'][key] = value
+            with self.subTest(key=key), self.assertRaises(mc.MatchingError):
+                mc.with_shower_profile(HEADER, invalid)
+
+    def test_profile_identity_is_required_across_collection_and_for_continuation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            accepted, report, blocks = self.fixture(root)
+            with mc.LHEStream(accepted) as stream:
+                header = re.sub(r'<macnlops_shower_profile\b.*?</macnlops_shower_profile>',
+                                '', stream.header, flags=re.S)
+            legacy = root / 'legacy.lhe'
+            legacy.write_text(header + ''.join(blocks) + '</LesHouchesEvents>\n')
+            with self.assertRaisesRegex(mc.MatchingError, 'lacks its measured shower profile'):
+                mc.continuation_contract(legacy)
+            with self.assertRaisesRegex(mc.MatchingError, 'different first-emission shower profiles'):
+                mc.collect_matched_events([accepted, legacy], [report, report], root / 'mixed.lhe', 3)
+            changed = shower_profile()
+            changed['support']['particle_masses']['5'] = 4.8
+            legacy.write_text(mc.with_shower_profile(header, changed) + ''.join(blocks) +
+                              '</LesHouchesEvents>\n')
+            with self.assertRaisesRegex(mc.MatchingError, 'different first-emission shower profiles'):
+                mc.collect_matched_events([accepted, legacy], [report, report], root / 'mixed.lhe', 3)
+
+    def test_native_snapshot_keeps_physics_without_paths_or_random_seeds(self):
+        profile = shower_profile()
+        settings = profile.pop('effective_shower_settings')
+        profile['native_build'] = {'path': '/old/machine/native.build.json', 'sha256': 'a' * 64}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'effective.cmnd'
+            path.write_text('! Complete native settings dump\nRandom:seed = 73\n'
+                'Beams:LHEF = /old/machine/input.lhe\n' +
+                ''.join('%s = %s\n' % item for item in settings.items()))
+            recorded = mc.recorded_shower_profile(profile, path)
+        self.assertNotIn('native_build', recorded)
+        self.assertEqual(recorded['effective_shower_settings'], settings)
+        self.assertEqual(recorded['alpha_s_mz'], .120179)
+
+    def test_continuation_checks_original_pdf_and_libraries_without_reading_current_cards(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            accepted, _, _ = self.fixture(root)
+            # Resolve the source PDF from the accepted banner, even when the
+            # process Cards and generation profile have subsequently changed.
+            with mc.open_lhe(accepted, 'rt') as stream:
+                text = stream.read().replace('sum = event_norm',
+                    'sum = event_norm\nlhapdf = pdlabel\n260000 = lhaid')
+            with mc.open_lhe(accepted, 'wt') as stream:
+                stream.write(text)
+            info = root / 'fixture.info'
+            info.write_text('original PDF metadata')
+            member = root / 'fixture_0000.dat'
+            member.write_text('original PDF member')
+            backend = root / 'native/libLHAPDF.so'
+            backend.parent.mkdir()
+            backend.write_text('original native LHAPDF library')
+            profile = shower_profile()
+            profile['pdf_info_sha256'] = mc.sha256(info)
+            profile['pdf_member_sha256'] = mc.sha256(member)
+            profile['lhapdf_library_sha256'] = mc.sha256(backend)
+            contract = dict(shower_profile=profile)
+            (root / 'Cards').mkdir()
+            (root / 'Cards/run_card.dat').write_text('1 = lhaid\ninternal = pdlabel\n')
+            (root / 'Cards/macnlops_profile.json').write_text('{}')
+            output = root / 'physics.cmnd'
+            def original_pdf(process, card, with_info=False):
+                self.assertEqual(card['lhaid'], '260000')
+                self.assertEqual(card['pdlabel'], 'lhapdf')
+                return profile['pdf'], info
+            with patch.object(mc, 'pdf_name', side_effect=original_pdf), \
+                    patch.object(mc, 'shower_library_hashes', return_value=profile['shower_libraries']), \
+                    patch.object(mc, 'shower_environment', return_value={'LD_LIBRARY_PATH': str(backend.parent)}):
+                environment = mc.write_continuation_settings(root, '/pythia', accepted, contract, output)
+                self.assertEqual(environment, {'LD_LIBRARY_PATH': str(backend.parent)})
+                actual = re.search(r'^SpaceShower:alphaSvalue = (.*)$', output.read_text(), re.M)
+                self.assertEqual(float(actual[1]), .120179)
+                backend.write_text('different native LHAPDF library')
+                with self.assertRaisesRegex(mc.MatchingError, 'Continuation LHAPDF library differs'):
+                    mc.write_continuation_settings(root, '/pythia', accepted, contract, output)
+                backend.write_text('original native LHAPDF library')
+                member.write_text('changed PDF member')
+                with self.assertRaisesRegex(mc.MatchingError, 'Continuation PDF differs'):
+                    mc.write_continuation_settings(root, '/pythia', accepted, contract, output)
+            with patch.object(mc, 'shower_library_hashes', return_value={'libpythia8.so': 'd' * 64}), \
+                    self.assertRaisesRegex(mc.MatchingError, 'Continuation Pythia libraries differ'):
+                mc.write_continuation_settings(root, '/pythia', accepted, contract, output)
 
     def test_old_endpoint_files_are_not_claimed_as_corrected_continuations(self):
         self.assertFalse(mc.matched_lhe_header(HEADER))
@@ -196,8 +345,11 @@ class TestContinuation(unittest.TestCase):
             parameter.write_text('<flag name="Beams:setDipoleShowerStartingScalesFromLHEF"/>')
             script, output = root / 'settings.sh', root / 'pythia.cmnd'
             script.write_text(block)
+            physics = root / 'physics.cmnd'
+            physics.write_text(mc.continuation_physics(shower_profile()))
             environment = dict(os.environ, MACNLOPS_CONTINUATION='ON', thisdir=str(root),
-                               ifile=str(output), MACNLOPS_ISR_CUTOFF='0.5', MACNLOPS_FSR_CUTOFF='0.7')
+                               ifile=str(output), MACNLOPS_ISR_CUTOFF='0.5', MACNLOPS_FSR_CUTOFF='0.7',
+                               MACNLOPS_PHYSICS_FILE=physics.name)
             output.write_text('TimeShower:globalRecoil = on\nHadronLevel:all = on\n')
             result = subprocess.run(['bash', str(script)], env=environment,
                                     capture_output=True, text=True)
@@ -213,12 +365,22 @@ class TestContinuation(unittest.TestCase):
             self.assertEqual(settings['SpaceShower:pTmin'], '0.5')
             self.assertEqual(settings['TimeShower:pTmin'], '0.7')
             self.assertEqual(settings['LesHouches:setQuarkMass'], '0')
+            self.assertEqual(float(settings['SpaceShower:alphaSvalue']), .120179)
+            self.assertEqual(settings['TimeShower:alphaSorder'], '2')
+            self.assertEqual(settings['SpaceShower:nQuarkIn'], '4')
+            self.assertEqual(settings['TimeShower:nGluonToQuark'], '4')
+            self.assertEqual(float(settings['5:m0']), 4.7)
+            self.assertEqual(settings['PartonLevel:Remnants'], 'on')
             previous = output.read_bytes()
             environment['MACNLOPS_CONTINUATION'] = 'OFF'
             self.assertEqual(subprocess.run(['bash', str(script)], env=environment,
                                            capture_output=True).returncode, 0)
             self.assertEqual(output.read_bytes(), previous)
             environment['MACNLOPS_CONTINUATION'] = 'ON'
+            physics.unlink()
+            self.assertNotEqual(subprocess.run(['bash', str(script)], env=environment,
+                                              capture_output=True).returncode, 0)
+            physics.write_text(mc.continuation_physics(shower_profile()))
             parameter.unlink()
             self.assertNotEqual(subprocess.run(['bash', str(script)], env=environment,
                                               capture_output=True).returncode, 0)

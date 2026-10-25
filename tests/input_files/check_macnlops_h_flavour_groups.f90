@@ -49,6 +49,31 @@ program check_h_groups
   if(group_flavour_row(1,2,2)/=1)stop 7
   if(group_flavour_row(1,3,2)/=2)stop 8
 
+  ! Even identical momenta/colours/scales must not mix independently
+  ! sampled native components before the sign used for unweighting.
+  call begin_component_context(1,1,1,1,.25d0,.3d0,1d0)
+  component_line_context(1)=component_context_active
+  call end_component_context(.4d0)
+  call begin_component_context(1,1,1,1,.25d0,.3d0,1d0)
+  component_line_context(2)=component_context_active
+  call end_component_context(.4d0)
+  call sum_identical_contributions
+  if(any(group_size(1:2)/=[1,1]))stop 18
+  if(any(unwgt(1:3,1:2)/=first_weights))stop 19
+  if(.not.sampled_flavour_complete(1,1))stop 20
+  component_line_context(2)=component_line_context(1)
+  ! A missing same-component member must fail the local density proof.
+  if(sampled_flavour_complete(1,1))stop 21
+  call sum_identical_contributions
+  if(group_size(1)/=2.or..not.sampled_flavour_complete(1,1))stop 22
+  ! Splitting identical physical flavours into two owner rows cannot be
+  ! represented by an evaluator which sums their physical density.
+  parton_pdg(:,2,1)=parton_pdg(:,1,1)
+  if(sampled_flavour_complete(1,1))stop 23
+  parton_pdg(:,1:3,1:2)=first_pdg
+  component_line_context=0
+  call sum_identical_contributions
+
   ! Exercise both downstream consumers with a selected physical u row.
   ! A same-index lookup would use d instead and fail the weight check.
   Hevents=.true.;icontr_picked=1;iproc_picked=2

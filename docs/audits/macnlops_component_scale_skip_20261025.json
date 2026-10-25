@@ -1,0 +1,45 @@
+{
+  "cut_and_beam_K_zero": true,
+  "delta_calculation_trap": true,
+  "densities": [
+    [
+      516673137.40688443,
+      516673137.40688443,
+      516673158.0820367
+    ],
+    [
+      2296347.5849073804,
+      2298904.482429085,
+      2296368.376598666
+    ],
+    [
+      51689.14131141333,
+      53498.401494356745,
+      51710.66948355469
+    ],
+    [
+      51689.14131141333,
+      53498.401494356745,
+      0.0
+    ],
+    [
+      51689.14131141333,
+      53498.401494356745,
+      0.0
+    ]
+  ],
+  "driver_sha256": "42087291a689d8cf90457e6f41f9addab31c70699788e089eb4666525804040f",
+  "ordinary_bitwise_identical": true,
+  "passed": true,
+  "points": 5,
+  "schema": "macnlops-local-h-scale-skip-check-v1",
+  "scope": "temporary drivers and existing DY objects; no generation or shower",
+  "source_P_policy": "ordinary bogus P retained; scalar explicit support configuration",
+  "source_energy_GeV": [
+    0.2,
+    3.0,
+    20.0,
+    20.0,
+    20.0
+  ]
+}

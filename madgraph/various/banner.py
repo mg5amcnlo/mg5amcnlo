@@ -6182,6 +6182,9 @@ class RunCardNLO(RunCard):
                 raise InvalidRunCard('MAcNLOPS requires unmerged PYTHIA8 MC@NLO generation')
             if self['mcatnlo_delta'] and self['macnlops_resolved_source']:
                 raise InvalidRunCard('MC@NLO-Delta requires macnlops_resolved_source=False')
+            if not self['store_hard_momenta']:
+                raise InvalidRunCard('MAcNLOPS requires store_hard_momenta=True to retain '
+                                     'momenta before shower-mass reshuffling')
             if self['event_norm'] != 'sum' or self['pdlabel'].lower() != 'lhapdf':
                 raise InvalidRunCard('MAcNLOPS requires event_norm=sum and pdlabel=lhapdf')
             if len(self['lhaid']) != 1 or any(self['reweight_scale']) or any(self['reweight_pdf']):

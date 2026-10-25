@@ -25,7 +25,7 @@ class TestMacNLOPSMassShell(unittest.TestCase):
         cls.work = Path(cls.temporary.name)
         source = (ROOT / 'Template/NLO/SubProcesses/driver_macnlops.f').read_text()
         guard = source[source.index('      hard_scale2=max('):
-                       source.index('      if(.not.MC_HIST_COMPLETE(owner))')]
+                       source.index('      if(.not.local_component.and..not.MC_HIST_COMPLETE(owner))')]
         driver = cls.work / 'guard.f'
         driver.write_text('''      program test
       implicit none

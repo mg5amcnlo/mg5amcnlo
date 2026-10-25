@@ -122,12 +122,23 @@ c
       call setrun                !Sets up run parameters
       if(macnlops)then
          call macnlops_validate_profile
-c The positive and negative parts are nonlinear. Native histories and
-c Born colours must be summed before classifying an H event by sign.
-         MCExplicitKLSum=.true.
-         MCSubtractionAtFixedFlow=.false.
-         write(*,*) 'MacNLOPS: summing all native H histories ',
-     $        'and Born colour flows before event unweighting'
+c Both supported source laws keep their own sign classification. Do not
+c silently replace sampled native components by a global history sum.
+         if(MCExplicitKLSum.eqv.MCSubtractionAtFixedFlow)then
+            write(*,*) 'MacNLOPS requires either sampled native ',
+     $           'histories at fixed flow, or the complete history/flow sum'
+            stop 1
+         endif
+         if(MCExplicitKLSum)then
+            write(*,*) 'MacNLOPS source: complete native H-history ',
+     $           'and Born-colour sum'
+         else
+            if(macnlops_resolved_source)
+     $         error stop 'Legacy resolved source needs global H summation'
+            write(*,*) 'MacNLOPS source: sampled native H components ',
+     $           'at fixed Born colour flow'
+         endif
+         write(*,*) 'MacNLOPS source FKSExplicitSum = ',FKSExplicitSum
       endif
       call configure_fxfx_sudakov(ickkw,nlo_ps,shower_mc,.true.)
       call print_fks_isr_mapping(nlo_ps,shower_mc)

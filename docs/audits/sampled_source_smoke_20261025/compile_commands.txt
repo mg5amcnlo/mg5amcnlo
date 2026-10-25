@@ -1,0 +1,4 @@
+set nb_core 1
+set run_mode 0
+compile MC -f
+quit

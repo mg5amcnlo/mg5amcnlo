@@ -1,0 +1,22 @@
+{
+  "counts": {
+    "accepted_H": 5,
+    "accepted_S": 52,
+    "input_H": 10,
+    "input_S": 54
+  },
+  "cross_section_error_convention": "quadrature of independent-channel finite-sample errors; original trials include rejections",
+  "inputs": [
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/Events/smoke_ordinary/macnlops/events/events.lhe.gz"
+  ],
+  "lhe_continuation": true,
+  "matching_seeds": [
+    975314
+  ],
+  "normalization": "sum; unchanged surviving input weights",
+  "output": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/Events/smoke_ordinary/macnlops/events.lhe.gz",
+  "shuffle_seed": 975314,
+  "sumw": 18.64120686,
+  "sumw2": 7.61522176556968,
+  "veto_prescription": "component-source-v1"
+}

@@ -1,7 +1,8 @@
       program macnlops_evaluator
 c Evaluate the source hard remainder and the scalar shower proposal at
-c a supplied, flavour-resolved real point. No integration-channel or
-c random colour-flow weight belongs in these differential densities.
+c a supplied, flavour-resolved real point. Sampling probabilities never
+c belong in these densities. V3 retains the selected physical diagram
+c partition and Born-flow fraction instead of summing components.
       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       use FKSParams
       use mint_module
@@ -19,7 +20,9 @@ c random colour-flow weight belongs in these differential densities.
       include 'run.inc'
       include 'mc_histories.inc'
       integer ids(nexternal),owner,nlegs,request,status,ios,i,
-     $     rows,seed,key(3),row
+     $     rows,seed,key(3),row,component_config,component_flow,
+     $     damping_mode,component_graph,born_ids(nexternal-1),
+     $     born_colours(2,nexternal-1),born_legs
       integer nFKSprocess
       common/c_nFKSprocess/nFKSprocess
       double precision lab(0:3,nexternal),real_density,
@@ -28,6 +31,9 @@ c random colour-flow weight belongs in these differential densities.
       character*256 request_line
       character*64 registry
       double precision insertion,probability,rng_init,ran2
+      double precision diagram_symmetry,born_lab(0:3,nexternal-1),
+     $     born_masses(nexternal-1)
+      logical component_request,has_component_born
       external ran2
       double precision beam_xmax(2),ptmin_isr,ptmin_fsr
       common/macnlops_shower_config/beam_xmax,ptmin_isr,ptmin_fsr
@@ -66,10 +72,8 @@ c random colour-flow weight belongs in these differential densities.
      $     nincoming,mcatnlo_delta,ebeam(1)+ebeam(2),max_bcol,maxflow,0)
       call init_scale_module(nexternal,shower_scale_factor,
      $     fks_configs,1)
-c These are the source driver's input_app.txt defaults, written by
-c aMCatNLOCmd.write_input_file. Ordinary-source audits retain G and P;
-c The default source retains ordinary G/P subtraction. The explicit
-c macnlops_resolved_source option selects the legacy convex source.
+c Use the source driver's input_app.txt defaults. Ordinary matching
+c retains G/P; macnlops_resolved_source selects the legacy convex source.
       alsf=1d0
       besf=-0.1d0
       alazi=-1d0
@@ -91,7 +95,8 @@ c the actual S event's SCALUP/colour/shower random numbers.
       if(mcatnlo_delta)rng_init=ran2()
       doreweight=.false.
       separate_flavour_configs=.false.
-c Exact colour summation is needed even if the integration sampled it.
+c Apply physical flow weights explicitly below. Global requests sum all
+c flows; local requests retain only their selected flow.
       MCSubtractionAtFixedFlow=.false.
 c Standalone density audits can request the uncut scalar kernel. The
 c production runner supplies actual shower beam bounds and cutoffs.
@@ -121,16 +126,44 @@ c production runner supplies actual shower beam bounds and cutoffs.
          endif
          read(request_line,*,iostat=ios) marker,request,owner,nlegs
          if(ios.ne.0.or.(marker.ne.'MACNLOPS_POINT_V1'.and.
-     $        marker.ne.'MACNLOPS_POINT_V2').or.
+     $        marker.ne.'MACNLOPS_POINT_V2'.and.
+     $        marker.ne.'MACNLOPS_POINT_V3').or.
      $        nlegs.ne.nexternal) stop 'Invalid MacNLOPS point header'
-         if(mcatnlo_delta.and.marker.ne.'MACNLOPS_POINT_V2')
+         component_request=marker.eq.'MACNLOPS_POINT_V3'
+         if(mcatnlo_delta.and.marker.ne.'MACNLOPS_POINT_V2'.and.
+     $      .not.component_request)
      $      stop 'Delta input requires a conditional V2 context'
          do i=1,nexternal
             read(*,*,iostat=ios) ids(i),lab(:,i)
             if(ios.ne.0)stop 'Invalid MacNLOPS momentum row'
          enddo
          call reset_delta_contexts()
-         if(mcatnlo_delta)then
+         has_component_born=.false.
+         born_ids=0
+         born_colours=0
+         born_lab=0d0
+         born_masses=0d0
+         if(component_request)then
+            read(*,'(a)',iostat=ios)request_line
+            if(ios.ne.0)stop 'Missing local component selector'
+            component_config=0
+            component_graph=0
+            component_flow=0
+            damping_mode=-1
+            diagram_symmetry=0d0
+            read(request_line,*,iostat=ios)marker,component_config,
+     $           component_graph,component_flow,damping_mode,
+     $           diagram_symmetry
+            if(ios.ne.0.or.marker.ne.'COMPONENT_LOCAL_V1'.or.
+     $         component_config.lt.1.or.component_graph.lt.1.or.
+     $         component_flow.lt.1.or.
+     $         damping_mode.lt.0.or.damping_mode.gt.1.or.
+     $         .not.ieee_is_finite(diagram_symmetry).or.
+     $         diagram_symmetry.le.0d0)
+     $         stop 'Invalid local component selector'
+            if(mcatnlo_delta.neqv.(damping_mode.eq.1))
+     $         stop 'Local damping mode differs from source matching'
+         elseif(mcatnlo_delta)then
             read(*,'(a)',iostat=ios)request_line
             if(ios.ne.0)stop 'Missing Delta request context'
             read(request_line,*,iostat=ios)marker
@@ -162,7 +195,27 @@ c production runner supplies actual shower beam bounds and cutoffs.
             endif
             call set_macnlops_colour_insertion(insertion)
          endif
-         read(*,*,iostat=ios) marker
+         read(*,'(a)',iostat=ios)request_line
+         if(ios.ne.0)stop 'Missing MacNLOPS point terminator'
+         read(request_line,*,iostat=ios)marker
+         if(ios.ne.0)stop 'Invalid MacNLOPS point terminator'
+         if(component_request.and.marker.eq.'COMPONENT_BORN_V1')then
+            born_legs=0
+            read(request_line,*,iostat=ios)marker,born_legs
+            if(ios.ne.0.or.born_legs.ne.nexternal-1)
+     $         stop 'Invalid local Born particle count'
+            do i=1,nexternal-1
+               read(*,*,iostat=ios)born_ids(i),born_colours(:,i),
+     $              born_lab(:,i),born_masses(i)
+               if(ios.ne.0.or.any(born_colours(:,i).lt.0).or.
+     $            .not.all(ieee_is_finite(born_lab(:,i))).or.
+     $            .not.ieee_is_finite(born_masses(i)).or.
+     $            born_masses(i).lt.0d0)
+     $            stop 'Invalid local Born particle row'
+            enddo
+            has_component_born=.true.
+            read(*,*,iostat=ios)marker
+         endif
          if(ios.ne.0.or.marker.ne.'END_POINT')
      $        stop 'Missing MacNLOPS point terminator'
          status=1
@@ -171,8 +224,17 @@ c production runner supplies actual shower beam bounds and cutoffs.
          shower_density=0d0
          if(owner.ge.1.and.owner.le.fks_configs.and.
      $        all(ieee_is_finite(lab))) then
-            call macnlops_density(owner,ids,lab,real_density,
-     $           subtraction_density,shower_density,status)
+            if(component_request)then
+               call macnlops_component_density(owner,ids,lab,
+     $              component_config,component_graph,component_flow,
+     $              damping_mode,
+     $              diagram_symmetry,has_component_born,born_ids,
+     $              born_colours,born_lab,born_masses,real_density,
+     $              subtraction_density,shower_density,status)
+            else
+               call macnlops_density(owner,ids,lab,real_density,
+     $              subtraction_density,shower_density,status)
+            endif
          endif
          write(*,'(a,2(1x,i12),3(1x,es26.17e3))')
      $        'MACNLOPS_DENSITY_V1',request,status,real_density,
@@ -184,13 +246,58 @@ c production runner supplies actual shower beam bounds and cutoffs.
 
 
       subroutine macnlops_density(owner,ids,lab,r,d,k,status)
+c Preserve the global V1/V2 audit interface. The V3 path below selects
+c one native sector, physical diagram partition and Born flow instead.
+      implicit none
+      include 'nexternal.inc'
+      integer owner,ids(nexternal),status
+      integer born_ids(nexternal-1),born_colours(2,nexternal-1)
+      double precision lab(0:3,nexternal),r,d,k,
+     $     born_lab(0:3,nexternal-1),born_masses(nexternal-1)
+      born_ids=0
+      born_colours=0
+      born_lab=0d0
+      born_masses=0d0
+      call macnlops_density_impl(owner,ids,lab,.false.,0,0,0,0,
+     $     1d0,.false.,born_ids,born_colours,born_lab,born_masses,
+     $     r,d,k,status)
+      end
+
+
+      subroutine macnlops_component_density(owner,ids,lab,
+     $     component_config,component_graph,component_flow,damping_mode,
+     $     diagram_symmetry,has_component_born,born_ids,born_colours,
+     $     born_lab,born_masses,r,d,k,status)
+c Source sampling probabilities never enter these physical densities.
+c Ordinary matching retains its bogus P in H; Delta matching requests
+c H before its physical Delta multiplier, without evaluating a Delta.
+      implicit none
+      include 'nexternal.inc'
+      integer owner,ids(nexternal),component_config,component_graph,
+     $     component_flow,damping_mode,status,born_ids(nexternal-1),
+     $     born_colours(2,nexternal-1)
+      double precision lab(0:3,nexternal),diagram_symmetry,r,d,k,
+     $     born_lab(0:3,nexternal-1),born_masses(nexternal-1)
+      logical has_component_born
+      call macnlops_density_impl(owner,ids,lab,.true.,
+     $     component_config,component_graph,component_flow,damping_mode,
+     $     diagram_symmetry,has_component_born,born_ids,born_colours,
+     $     born_lab,born_masses,r,d,k,status)
+      end
+
+
+      subroutine macnlops_density_impl(owner,ids,lab,
+     $     local_component,component_config,component_graph,component_flow,
+     $     damping_mode,diagram_symmetry,has_component_born,born_ids,
+     $     born_colours,born_lab,born_masses,r,d,k,status)
       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       use fks_phase_space, only: generate_native_momenta
       use fks_phase_space_data, only: p_born,p1_cnt,xinorm_ev,
      $     xi_i_fks_ev,y_ij_fks_ev
       use fks_phase_space_helpers, only: apply_momentum_permutation
       use mc_native_context, only: set_native_history,native_mapping,
-     $     mc_begin_real_point,mc_end_real_point
+     $     mc_begin_real_point,mc_end_real_point,active_context,
+     $     local_context
       use mc_counterterms, only: fksfather,mc_shower_scale_mass
       use process_module
       use scale_module
@@ -201,11 +308,15 @@ c production runner supplies actual shower beam bounds and cutoffs.
       include 'genps.inc'
       include 'nFKSconfigs.inc'
       include 'born_nhel.inc'
+      include 'born_conf.inc'
       include 'mc_histories.inc'
       integer owner,ids(nexternal),status,hist,sector,flow,
      $     n_recoil,recoil,configs(lmaxconfigs),
      $     groups(lmaxconfigs),i_fks,j_fks,MCcntcalled,kernel_status,
-     $     leg
+     $     leg,hist_first,hist_last,recoil_first,recoil_last,
+     $     component_config,component_graph,component_flow,damping_mode,
+     $     born_ids(nexternal-1),born_colours(2,nexternal-1),
+     $     equivalent_emitters
       common/fks_indices/i_fks,j_fks
       common/c_MCcntcalled/MCcntcalled
       double precision lab(0:3,nexternal),r,d,k,h,
@@ -213,7 +324,10 @@ c production runner supplies actual shower beam bounds and cutoffs.
      $     plab(0:3,nexternal),pcms(0:3,nexternal),jac,measure,
      $     born,flows(max_bcol),total,probne,rwgt,reference,
      $     value,macnlops_flavour_sum,model_mass,mass2,tolerance,
-     $     get_mass_from_id,hard_scale2
+     $     get_mass_from_id,hard_scale2,diagram_symmetry
+      double precision component_normalization
+      double precision born_lab(0:3,nexternal-1),
+     $     born_masses(nexternal-1)
       external macnlops_flavour_sum,get_mass_from_id
       double precision factors(9),mc_factors(8),pdf_factors(3),
      $     factors_save(9),mc_save(8),pdf_save(3)
@@ -225,7 +339,8 @@ c production runner supplies actual shower beam bounds and cutoffs.
       common/numberofparticles/sym,symborn,symdeg,
      $     ngluons,nquarks,nphotons
       logical valid,cuts_born,cuts_real,passcuts,
-     $     passcuts_native_born,is_leading(max_bcol)
+     $     passcuts_native_born,is_leading(max_bcol),local_component,
+     $     has_component_born
       integer nleading
       common/c_leading_cflows/is_leading,nleading
       integer this_config
@@ -246,6 +361,7 @@ c production runner supplies actual shower beam bounds and cutoffs.
       mc_S_only=.false.
       macnlops_gate_active=.false.
       macnlops_proposal_active=.false.
+      if(owner.lt.1.or.owner.gt.fks_configs)goto 900
 c Pythia's forced heavy-flavour conversion can assign a massive emitted
 c c/b sister even when particleData and the hard model use mass zero.
 c Such a point has no inverse in the massless hard real phase space.
@@ -272,20 +388,52 @@ c at event scale while still resolving physical heavy-mass shifts.
             goto 900
          endif
       enddo
-      if(.not.MC_HIST_COMPLETE(owner))then
+      if(.not.local_component.and..not.MC_HIST_COMPLETE(owner))then
          status=2
          goto 900
+      endif
+      hist_first=MC_HIST_FIRST(owner)
+      hist_last=MC_HIST_LAST(owner)
+      if(local_component)then
+         if(component_flow.lt.1.or.component_flow.gt.max_bcol.or.
+     $      component_config.lt.1.or.component_graph.lt.1.or.
+     $      damping_mode.lt.0.or.
+     $      damping_mode.gt.1.or.
+     $      (mcatnlo_delta_mod.neqv.(damping_mode.eq.1)).or.
+     $      .not.ieee_is_finite(diagram_symmetry).or.
+     $      diagram_symmetry.le.0d0)then
+            status=30
+            goto 900
+         endif
+         hist_first=MC_HIST_OWN(owner)
+         hist_last=hist_first
+         if(hist_first.lt.1.or.hist_first.gt.MC_HIST_COUNT)then
+            status=31
+            goto 900
+         endif
+         if(MC_HIST_NATIVE(hist_first).ne.owner.or.
+     $      any(MC_HIST_PERM(:,hist_first).ne.
+     $      [(leg,leg=1,nexternal)]))then
+            status=31
+            goto 900
+         endif
       endif
       native_mapping=.true.
       mc_H_only=.true.
       mc_S_only=.false.
       nonfinite_contribution=.false.
       call mc_begin_real_point(lab)
-      do hist=MC_HIST_FIRST(owner),MC_HIST_LAST(owner)
+      do hist=hist_first,hist_last
          delta_history=hist
          sector=MC_HIST_NATIVE(hist)
          call update_fks_dir(sector)
          call set_native_history(hist)
+         if(local_component.and.active_context.ne.local_context)then
+c A flow or graph ordinal has meaning only in its original Born basis.
+c Cross-provider component transport needs an explicit certified map.
+            status=35
+            goto 900
+         endif
          call init_process_module_nbody_wrapper()
          call update_coltype_and_charge(sector,i_fks,j_fks)
          call apply_momentum_permutation(MC_HIST_PERM(:,hist),
@@ -295,8 +443,27 @@ c at event scale while still resolving physical heavy-mass shifts.
             goto 900
          endif
          call native_recoil_groups(n_recoil,configs,groups)
-         do recoil=1,n_recoil
+         recoil_first=1
+         recoil_last=n_recoil
+         if(local_component)then
+            if(component_config.gt.lmaxconfigs)then
+               status=32
+               goto 900
+            endif
+            if(groups(component_config).le.0)then
+               status=32
+               goto 900
+            endif
+            if(mapconfig(component_config).ne.component_graph)then
+               status=34
+               goto 900
+            endif
+            recoil_first=groups(component_config)
+            recoil_last=recoil_first
+         endif
+         do recoil=recoil_first,recoil_last
             iconfig=configs(recoil)
+            if(local_component)iconfig=component_config
             delta_recoil=iconfig
             call select_native_recoil(iconfig)
             call generate_native_momenta(flipped,p,plab,pcms,
@@ -306,14 +473,26 @@ c at event scale while still resolving physical heavy-mass shifts.
                goto 900
             endif
             this_config=iconfig
+            if(local_component.and.has_component_born)then
+               call macnlops_validate_component_born(component_flow,
+     $              born_ids,born_colours,born_lab,born_masses,status)
+               if(status.ne.0)goto 900
+            endif
             measure=xinorm_ev*xi_i_fks_ev*jac*sym
             if(.not.ieee_is_finite(measure).or.measure.le.0d0)then
                status=5
                goto 900
             endif
             call compute_prefactors_n1body(1d0,jac)
-            if(n_recoil.gt.1)call include_native_recoil_weights(
-     $           recoil,groups)
+            if(local_component)then
+c Individual diagram weights differ between real and projected Born
+c contributions. Keep those physical partitions, even though the
+c positive sampling factors q_sector and q_flow cancel in the ratio.
+               call macnlops_include_diagram_weights(p,
+     $              diagram_symmetry)
+            elseif(n_recoil.gt.1)then
+               call include_native_recoil_weights(recoil,groups)
+            endif
             factors_save=factors
             mc_save=mc_factors
             pdf_save=pdf_factors
@@ -325,6 +504,12 @@ c at event scale while still resolving physical heavy-mass shifts.
                status=6
                goto 900
             endif
+            if(local_component)then
+               if(.not.is_leading(component_flow))then
+                  status=33
+                  goto 900
+               endif
+            endif
             call compute_shower_scale_nbody(p_born,-fksfather,
      $           mc_shower_scale_mass())
             cuts_born=passcuts_native_born(p1_cnt(0,1,0),rwgt,
@@ -333,17 +518,33 @@ c at event scale while still resolving physical heavy-mass shifts.
             cuts_real=passcuts(p,rwgt)
             do flow=1,max_bcol
                if(.not.is_leading(flow))cycle
+               if(local_component.and.flow.ne.component_flow)cycle
                born_flow_picked=flow
-               call init_process_module_n1body_flow(flow,.true.)
-               call compute_shower_scale_n1body(p,i_fks,j_fks,
-     $              mc_shower_scale_mass())
-               emsca_H=0d0
+               if(.not.local_component)then
+c Only Delta evaluation needs the H colour insertion and starting
+c scales. A local unit replay never evaluates Delta, and ordinary
+c local H uses only its scalar bogus P. Avoid unused H clustering.
+                  call init_process_module_n1body_flow(flow,.true.)
+                  call compute_shower_scale_n1body(p,i_fks,j_fks,
+     $                 mc_shower_scale_mass())
+                  emsca_H=0d0
+               endif
                factors=factors_save
                mc_factors=mc_save
                pdf_factors=pdf_save
                call include_born_flow_weight(flows(flow)/total,1d0)
                MCcntcalled=0
                icontr=0
+               if(local_component.and.damping_mode.eq.1.and.
+     $            cuts_born)then
+c A unit replay removes only Delta. Switching to ordinary matching
+c here would incorrectly introduce its separate bogus Sudakov P.
+                  call begin_delta_context(owner,0.5d0)
+                  delta_history=hist
+                  delta_recoil=iconfig
+                  call append_delta_probability(flow,1d0)
+                  delta_replay=.true.
+               endif
                call compute_native_NLOPS_weights(p,pcms,
      $              cuts_born,cuts_real,probne)
                if(nonfinite_contribution)then
@@ -390,6 +591,20 @@ c source construction. It never receives source G or bogus P factors.
          enddo
       enddo
       d=r-h
+      if(local_component)then
+c The generated native Born is in the real-state statistical measure.
+c For an actual, ancestry-labelled shower emission, restore I_R/I_B.
+c The reduced source represents O=fac_i*fac_j/(I_R/I_B) equivalent
+c Born emitters. Its H is their sum, while this request conditions on
+c one actual emitter. Apply the same positive conversion to all three
+c densities: neither the veto nor the H-residual ratio changes.
+         call macnlops_component_normalization(owner,
+     $        component_normalization,equivalent_emitters,status)
+         if(status.ne.0)goto 900
+         r=r*component_normalization
+         d=d*component_normalization
+         k=k*component_normalization
+      endif
       if(.not.complete_delta_replay())then
          status=11
          goto 900
@@ -414,6 +629,165 @@ c source construction. It never receives source G or bogus P factors.
       mc_H_only=.false.
       macnlops_gate_active=.false.
       macnlops_proposal_active=.false.
+      end
+
+
+      subroutine macnlops_validate_component_born(flow,ids,colours,
+     $     lab,masses,status)
+c The supplied point is the actual pre-emission S Born, with inherited
+c leg identities in native Born order. An inverse endpoint projection
+c may not silently substitute a different Born geometry or colour flow.
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      use fks_phase_space_data, only: p_born,xbjrk_cnt
+      implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
+      include 'born_nhel.inc'
+      include 'run.inc'
+      integer flow,ids(nexternal-1),colours(2,nexternal-1),status,
+     $     idup(nexternal-1,maxproc),mothup(2,nexternal-1,maxproc),
+     $     icolup(2,nexternal-1,max_bcol),i,j
+      include 'born_leshouche.inc'
+      double precision lab(0:3,nexternal-1),masses(nexternal-1),
+     $     model_mass,get_mass_from_id,mass2,native_dot,supplied_dot,
+     $     scale2,tolerance,fraction
+      double precision,parameter :: closure_rtol=1d-7
+      logical flavour_match,macnlops_same_colour_topology
+      external get_mass_from_id,macnlops_same_colour_topology
+      status=36
+      if(flow.lt.1.or.flow.gt.max_bcol)return
+      flavour_match=.false.
+      do i=1,iproc_born
+         if(all(ids.eq.idup(:,i)))flavour_match=.true.
+      enddo
+      if(.not.flavour_match)return
+      if(.not.macnlops_same_colour_topology(nexternal-1,colours,
+     $     icolup(:,:,flow)))return
+      status=37
+      if(.not.all(ieee_is_finite(lab)).or.
+     $   .not.all(ieee_is_finite(masses)).or.any(masses.lt.0d0).or.
+     $   any(lab(0,:).le.0d0))return
+      scale2=max(1d0,maxval(abs(lab))**2,maxval(abs(p_born))**2)
+      tolerance=closure_rtol*scale2
+      do i=1,nexternal-1
+         model_mass=get_mass_from_id(ids(i))
+         if(abs(masses(i)-model_mass).gt.closure_rtol*
+     $      max(1d0,masses(i),model_mass))return
+         mass2=lab(0,i)**2-sum(lab(1:3,i)**2)
+         if(abs(mass2-model_mass**2).gt.tolerance)return
+      enddo
+      status=38
+      do j=1,nexternal-1
+         do i=1,j
+            native_dot=p_born(0,i)*p_born(0,j)-
+     $           sum(p_born(1:3,i)*p_born(1:3,j))
+            supplied_dot=lab(0,i)*lab(0,j)-
+     $           sum(lab(1:3,i)*lab(1:3,j))
+            if(abs(native_dot-supplied_dot).gt.tolerance)then
+               write(*,'(a,2(1x,i6),3(1x,es26.17e3))')
+     $              'MACNLOPS_BORN_MISMATCH_V1',i,j,native_dot,
+     $              supplied_dot,tolerance
+               return
+            endif
+         enddo
+      enddo
+      do i=1,nincoming
+         fraction=lab(0,i)/ebeam(i)
+         if(abs(fraction-xbjrk_cnt(i,0)).gt.closure_rtol*
+     $      max(1d-12,abs(fraction),abs(xbjrk_cnt(i,0))))then
+            write(*,'(a,1x,i6,2(1x,es26.17e3))')
+     $           'MACNLOPS_BORN_FRACTION_V1',i,xbjrk_cnt(i,0),fraction
+            return
+         endif
+      enddo
+      status=0
+      end
+
+
+      logical function macnlops_same_colour_topology(nlegs,first,second)
+c A bijective relabelling of colour tags preserves every ordered slot
+c equality. Keep colour and anticolour slots distinct: an adjacency
+c matrix alone loses the two orientations of a gluon colour flow.
+      implicit none
+      integer nlegs,first(2,nlegs),second(2,nlegs),i,j,a,b
+      macnlops_same_colour_topology=.false.
+      if(any(first.lt.0).or.any(second.lt.0))return
+      if(any((first.eq.0).neqv.(second.eq.0)))return
+      do j=1,nlegs
+         do b=1,2
+            do i=1,nlegs
+               do a=1,2
+                  if((first(a,i).eq.first(b,j)).neqv.
+     $               (second(a,i).eq.second(b,j)))return
+               enddo
+            enddo
+         enddo
+      enddo
+      macnlops_same_colour_topology=.true.
+      end
+
+
+      subroutine macnlops_include_diagram_weights(p,diagram_symmetry)
+c Apply the same individual graph partition used by source generation,
+c at each contribution's own projection and coupling scale. H-only
+c evaluation suppresses the integration driver calls to this routine;
+c temporarily lift that guard here, exactly once, before evaluating H.
+      use fks_phase_space_data, only: p1_cnt
+      use weight_lines, only: mc_H_only
+      implicit none
+      include 'nexternal.inc'
+      double precision p(0:3,nexternal),diagram_symmetry,
+     $     diagramsymmetryfactor,saved_symmetry
+      common/dsymfactor/diagramsymmetryfactor
+      logical saved_h_only
+      saved_h_only=mc_H_only
+      saved_symmetry=diagramsymmetryfactor
+      mc_H_only=.false.
+      diagramsymmetryfactor=diagram_symmetry
+      call set_cms_stuff(-100)
+      call set_alphaS(p)
+      call include_multichannel_enhance(4)
+      call set_cms_stuff(0)
+      call set_alphaS(p1_cnt(0,1,0))
+      call include_multichannel_enhance(3)
+      call set_cms_stuff(-100)
+      call set_alphaS(p)
+      call include_multichannel_enhance(2)
+      diagramsymmetryfactor=saved_symmetry
+      mc_H_only=saved_h_only
+      end
+
+
+      subroutine macnlops_component_normalization(owner,normalization,
+     $     emitters,status)
+c Statistical factors come from complete exported external states,
+c including their tags and helicities, rather than a PDG-only factorial.
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      implicit none
+      include 'nFKSconfigs.inc'
+      include 'fks_symmetry.inc'
+      integer owner,emitters,status
+      double precision normalization,orbit,tolerance
+      status=39
+      normalization=0d0
+      emitters=0
+      if(owner.lt.1.or.owner.gt.fks_configs)return
+      if(FKS_FAC_I_D(owner).le.0.or.FKS_FAC_J_D(owner).le.0.or.
+     $   .not.ieee_is_finite(FKS_IDEN_BORN_D(owner)).or.
+     $   .not.ieee_is_finite(FKS_IDEN_REAL_D(owner)).or.
+     $   FKS_IDEN_BORN_D(owner).le.0d0.or.
+     $   FKS_IDEN_REAL_D(owner).le.0d0)return
+      normalization=FKS_IDEN_REAL_D(owner)/FKS_IDEN_BORN_D(owner)
+      if(.not.ieee_is_finite(normalization).or.
+     $   normalization.le.0d0)return
+      orbit=dble(FKS_FAC_I_D(owner))*dble(FKS_FAC_J_D(owner))/
+     $     normalization
+      if(.not.ieee_is_finite(orbit).or.orbit.lt.1d0.or.
+     $   orbit.gt.dble(huge(emitters)/2))return
+      emitters=nint(orbit)
+      tolerance=64d0*epsilon(1d0)*max(1d0,orbit)
+      if(abs(orbit-dble(emitters)).gt.tolerance)return
+      status=0
       end
 
 

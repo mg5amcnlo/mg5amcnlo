@@ -1,0 +1,10 @@
+{
+  "kind": "routing_microbenchmark",
+  "iterations": 20000,
+  "route_candidates": 101,
+  "uncached_seconds": 0.3922298571560532,
+  "cached_seconds": 0.01582743297331035,
+  "speedup": 24.781647018658468,
+  "scope": "Discrete route lookup only; not a full matching-run speedup",
+  "cores": 1
+}

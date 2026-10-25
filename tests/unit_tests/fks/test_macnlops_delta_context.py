@@ -1,8 +1,7 @@
 """Small conditional-Delta fixtures; no exported process or shower runtime.
 
-These tests are intentionally not executed as part of resource-constrained
-development instructions that prohibit compiling/running native fixtures.
-Normal unit-test invocation needs only gfortran, not PDFs or Sudakov tables.
+Only extracted routines and controlled contribution stubs are compiled.
+The tests need gfortran, but no PDFs, Sudakov tables or generated process.
 """
 from pathlib import Path
 import shutil
@@ -93,7 +92,7 @@ class TestMacNLOPSDeltaContext(unittest.TestCase):
 
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
 class TestMacNLOPSDeltaSource(unittest.TestCase):
-    def test_native_mc_term_uses_delta_once_and_replay_keeps_s_compensation(self):
+    def test_native_wrapper_preserves_delta_compensation_and_ordinary_limit(self):
         from tests.unit_tests.fks.test_momentum_maps import fortran_routine
         with tempfile.TemporaryDirectory(prefix='macnlops-delta-source-') as temporary:
             work = Path(temporary)
@@ -105,14 +104,17 @@ class TestMacNLOPSDeltaSource(unittest.TestCase):
                 'timing_variables.inc': '''logical,parameter :: timing_sampled=.false.
 integer,parameter :: timing_mc=1''',
                 'run.inc': '''logical macnlops,macnlops_resolved_source
-common/test_source_mode/macnlops,macnlops_resolved_source''',
+common/test_source_mode/macnlops,macnlops_resolved_source
+integer ickkw
+parameter(ickkw=0)''',
             }
             for name, text in includes.items():
                 (work / name).write_text('\n'.join(
                     row if row.startswith('     $') else '      ' + row
                     for row in text.splitlines()) + '\n')
-            (work / 'counterterm.f').write_text(fortran_routine(
-                TEMPLATE / 'fks_singular.f', 'compute_MC_subt_term'))
+            (work / 'counterterm.f').write_text('\n'.join(fortran_routine(
+                TEMPLATE / 'fks_singular.f', name) for name in (
+                    'compute_MC_subt_term', 'compute_native_NLOPS_weights')))
             result = subprocess.run(['gfortran', '-O0', '-fcheck=all',
                 '-ffixed-line-length-none', '-I.', str(TEMPLATE / 'weight_lines.f'),
                 str(ROOT / 'tests/input_files/check_macnlops_delta_source.f90'),
@@ -123,6 +125,8 @@ common/test_source_mode/macnlops,macnlops_resolved_source''',
                                     capture_output=True, text=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn('PASS native Delta MC term', result.stdout)
+            self.assertIn('PASS native Delta wrapper', result.stdout)
+            self.assertIn('PASS native ordinary bogus-P wrapper', result.stdout)
 
 
 if __name__ == '__main__':

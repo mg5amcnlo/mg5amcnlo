@@ -713,6 +713,7 @@ c absent endpoints cannot inherit data from a previous radiation trial.
 
       subroutine generate_FKS_kinematics(rad,nbody_only,xjac0,xpswgt0,stot,shat_born,sqrtshat_born,tau_born,ycm_born,
      $     xbjrk_born,m_born,jac,p,pass)
+      use mc_native_context, only: native_mapping
       use fks_phase_space_data, only: resonance_momentum,resonance_mass2,resonance_recoil,
      $     resonance_members,initial_recoil_leg,nocntevents,sqrtshat,shat,isolsign
       implicit none
@@ -729,7 +730,8 @@ c The momentum checker expects the full legacy branch-indexed layout.
       integer imother
       double precision xmrec2,m_j_fks,phi_i_fks,tau,
      $   xi_i_fks,y_ij_fks,xi_i_hat,xiimax,xinorm,xjac,xpswgt,
-     $   ycm,xp(0:3,nexternal),xbjrk(2),p_i_fks(0:3),beam_ratio
+     $   ycm,xp(0:3,nexternal),xbjrk(2),p_i_fks(0:3),beam_ratio,
+     $   native_recoil_mass2
       integer i,ireal
 
       real*8 pi
@@ -769,7 +771,21 @@ c
 c
 c For final state j_fks, compute the recoil invariant mass
       if (j_fks.gt.nincoming.and..not.resonance_recoil) then
-         call get_recoil(p_born_l,imother,shat_born,xmrec2,pass)
+         native_recoil_mass2=-1d0
+         if(native_mapping.and.nexternal.eq.nincoming+3)then
+            do i=nincoming+1,nexternal-1
+               if(i.ne.imother.and.m_born(i).eq.0d0)
+     $              native_recoil_mass2=0d0
+            enddo
+         endif
+c The native inverse uses the known invariant for a single massless
+c spectator; the forward reconstruction must use the same invariant.
+         if(native_recoil_mass2.eq.0d0)then
+            xmrec2=0d0
+            pass=.true.
+         else
+            call get_recoil(p_born_l,imother,shat_born,xmrec2,pass)
+         endif
          if (.not.pass) then
             xjac0=-44
             return
@@ -1482,6 +1498,7 @@ c histories only consume momenta and active data, so skip their snapshot.
 ! No Born integration-channel coordinates or Jacobians are recovered.
       use fks_phase_space_helpers, only: boost_n1_to_its_cms,
      $     boost_n1_to_lab,get_xi_from_p,get_yij_from_p,get_phi_from_p
+      use mc_native_context, only: native_mapping
       implicit none
       double precision xjac0,xpswgt0,xx(3),p_cms(0:3,nexternal),stot
      $     ,tau_born,ycm_born,xbjrk_born(2),pb(0:3,
@@ -1491,7 +1508,9 @@ c histories only consume momenta and active data, so skip their snapshot.
       double precision pmass(nexternal)
       common /to_mass/pmass
       double precision m_j_fks,xi_i_fks,y_ij_fks,phi_i_fks,xbjrk(2),shat
-     $     ,sqrtshat,tau,ycm,y_lab_to_cms,xbar,trial_jac,trial_ps
+     $     ,sqrtshat,tau,ycm,y_lab_to_cms,xbar,trial_jac,trial_ps,
+     $     known_recoil_mass2
+      integer leg
       logical pass
       m_j_fks=pmass(j_fks)
 
@@ -1547,9 +1566,17 @@ c a direct inversion in the lab would use a different transverse basis.
      $           ,y_ij_fks,phi_i_fks,pb,xx,xjac0,xpswgt0
      $           ,shat,sqrtshat,i_fks,j_fks)
          else
+            known_recoil_mass2=-1d0
+            if(native_mapping.and.nexternal.eq.nincoming+3)then
+               do leg=nincoming+1,nexternal
+                  if(leg.eq.i_fks.or.leg.eq.j_fks)cycle
+                  if(pmass(leg).eq.0d0)known_recoil_mass2=0d0
+               enddo
+            endif
             call generate_momenta_massive_final_inverse(p_cms,xi_i_fks
      $           ,y_ij_fks,phi_i_fks,pb,xx,xjac0,xpswgt0
-     $           ,shat,sqrtshat,i_fks,j_fks,m_j_fks)
+     $           ,shat,sqrtshat,i_fks,j_fks,m_j_fks,
+     $           known_recoil_mass2)
          endif
          tau_born=tau
          ycm_born=ycm

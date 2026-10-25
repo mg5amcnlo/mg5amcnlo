@@ -15,6 +15,11 @@ c Utility routines for LHEF. Originally taken from collect_events.f
       character*256 delta_event_text(8194)
       common/c_macnlops_delta_event/delta_event_lines,delta_event_text
       data delta_event_lines/0/
+      integer component_event_lines
+      character*1000 component_event_text(4)
+      common/c_macnlops_component_event/component_event_lines,
+     $     component_event_text
+      data component_event_lines/0/
       end
 
       subroutine write_lhef_header(ifile,nevents,MonteCarlo)
@@ -1084,6 +1089,10 @@ c
          call read_macnlops_hard_event(ifile,string)
          read(ifile,'(a)')string
       endif
+      if(index(string,'<macnlops_component').ne.0)then
+         call read_macnlops_component(ifile,string)
+         read(ifile,'(a)')string
+      endif
       if(index(string,'<macnlops_delta_context').ne.0)then
          call read_macnlops_delta_context(ifile,string)
          read(ifile,'(a)')string
@@ -1259,6 +1268,10 @@ c
       read(ifile,'(a)')string
       if(index(string,'<macnlops_hard_event').ne.0)then
          call read_macnlops_hard_event(ifile,string)
+         read(ifile,'(a)')string
+      endif
+      if(index(string,'<macnlops_component').ne.0)then
+         call read_macnlops_component(ifile,string)
          read(ifile,'(a)')string
       endif
       if(index(string,'<macnlops_delta_context').ne.0)then
@@ -1527,8 +1540,13 @@ c ordinary Fortran collect/reweight readers. No generator module is needed.
       integer delta_event_lines
       character*256 delta_event_text(8194)
       common/c_macnlops_delta_event/delta_event_lines,delta_event_text
+      integer component_event_lines
+      character*1000 component_event_text(4)
+      common/c_macnlops_component_event/component_event_lines,
+     $     component_event_text
       hard_event_lines=0
       delta_event_lines=0
+      component_event_lines=0
       end
 
       subroutine store_macnlops_hard_event(nup,ic,p,meta)
@@ -1572,10 +1590,19 @@ c ordinary Fortran collect/reweight readers. No generator module is needed.
       integer delta_event_lines
       character*256 delta_event_text(8194)
       common/c_macnlops_delta_event/delta_event_lines,delta_event_text
+      integer component_event_lines
+      character*1000 component_event_text(4)
+      common/c_macnlops_component_event/component_event_lines,
+     $     component_event_text
       if(hard_event_lines.lt.0.or.hard_event_lines.gt.503)
      $     error stop 'Invalid hard-event buffer'
       do i=1,hard_event_lines
          write(ifile,'(a)')trim(hard_event_text(i))
+      enddo
+      if(component_event_lines.ne.0.and.component_event_lines.ne.4)
+     $     error stop 'Invalid sampled component buffer'
+      do i=1,component_event_lines
+         write(ifile,'(a)')trim(component_event_text(i))
       enddo
       if(delta_event_lines.lt.0.or.delta_event_lines.gt.8194)
      $     error stop 'Invalid Delta context buffer'
@@ -1645,6 +1672,77 @@ c This is used by collect_events as well as the EOF-catching reader.
      $   '</macnlops_hard_event>')error stop 'Missing hard-event terminator'
       hard_event_text(nup+3)=line
       hard_event_lines=nup+3
+      end
+
+
+      subroutine store_macnlops_component(meta,values,registry)
+c The scalar S entry is provenance, not a newly sampled H context.
+c H values retain the source's actual q_flow, insertion and multiplier.
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      implicit none
+      integer meta(4),i,component_event_lines
+      double precision values(4)
+      character*(*) registry
+      character*1000 component_event_text(4)
+      common/c_macnlops_component_event/component_event_lines,
+     $     component_event_text
+      if(any(meta.lt.1).or.len_trim(registry).ne.64.or.
+     $   .not.all(ieee_is_finite(values)).or.values(1).le.0d0.or.
+     $   values(1).gt.1d0.or.values(2).lt.0d0.or.values(2).gt.1d0.or.
+     $   values(3).lt.0d0.or.values(3).gt.1d0.or.values(4).le.0d0)
+     $     error stop 'Invalid sampled source component'
+      do i=1,64
+         if(index('0123456789abcdef',registry(i:i)).eq.0)
+     $      error stop 'Invalid sampled source registry'
+      enddo
+      component_event_text(1)=
+     $     '  <macnlops_component version="1" registry="'//
+     $     trim(registry)//'">'
+      write(component_event_text(2),'(4(i11,1x))')meta
+      write(component_event_text(3),'(4(es26.17e3,1x))')values
+      component_event_text(4)='  </macnlops_component>'
+      component_event_lines=4
+      end
+
+
+      subroutine read_macnlops_component(ifile,header)
+c Preserve source-component packets through ordinary collect/reweight I/O.
+      implicit none
+      integer ifile,component_event_lines,meta(4),ios,pos,last
+      double precision values(4)
+      character*(*) header
+      character*64 registry
+      character*1000 component_event_text(4),rows(3)
+      character*1 extra
+      common/c_macnlops_component_event/component_event_lines,
+     $     component_event_text
+      if(component_event_lines.ne.0)
+     $     error stop 'Duplicate sampled source component'
+      if(index(header,'version="1"').eq.0)
+     $     error stop 'Unsupported sampled source version'
+      pos=index(header,'registry="')+10
+      if(pos.le.10)error stop 'Missing sampled source registry'
+      last=index(header(pos:),'"')+pos-2
+      if(last-pos.ne.63)error stop 'Invalid sampled source registry'
+      registry=header(pos:last)
+      read(ifile,'(a)',iostat=ios)rows(1)
+      if(ios.ne.0)error stop 'Truncated sampled source metadata'
+      read(rows(1),*,iostat=ios)meta
+      if(ios.ne.0)error stop 'Invalid sampled source metadata'
+      read(rows(1),*,iostat=ios)meta,extra
+      if(ios.ge.0)error stop 'Extra sampled source metadata fields'
+      read(ifile,'(a)',iostat=ios)rows(2)
+      if(ios.ne.0)error stop 'Truncated sampled source scalars'
+      read(rows(2),*,iostat=ios)values
+      if(ios.ne.0)error stop 'Invalid sampled source scalars'
+      read(rows(2),*,iostat=ios)values,extra
+      if(ios.ge.0)error stop 'Extra sampled source scalar fields'
+      read(ifile,'(a)',iostat=ios)rows(3)
+      if(ios.ne.0.or.trim(adjustl(rows(3))).ne.
+     $   '</macnlops_component>')error stop 'Missing component terminator'
+      call store_macnlops_component(meta,values,registry)
+      component_event_text(1)=header
+      component_event_text(2:4)=rows
       end
 
 

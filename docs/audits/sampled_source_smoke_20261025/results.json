@@ -1,0 +1,360 @@
+{
+  "schema": "macnlops-sampled-source-smoke-v1",
+  "process": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar",
+  "compile_status": 0,
+  "compile_seconds": 42.4584204161074,
+  "cores": 1,
+  "requested_source_events": 64,
+  "fresh_grid_points": 400,
+  "fresh_grid_iterations": 2,
+  "ordinary": {
+    "job": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/SubProcesses/P0_uux_emep/smoke_ordinary",
+    "stages": [
+      {
+        "mode": 0,
+        "status": 0,
+        "seconds": 0.08869483112357557,
+        "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/ordinary_mode0.in"
+      },
+      {
+        "mode": 1,
+        "status": 0,
+        "seconds": 0.08551424997858703,
+        "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/ordinary_mode1.in"
+      },
+      {
+        "mode": 2,
+        "status": 0,
+        "seconds": 0.04460740811191499,
+        "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/ordinary_mode2.in"
+      }
+    ],
+    "source": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/Events/smoke_ordinary/events.lhe.gz",
+    "counts": {
+      "S": 54,
+      "negative_S": 3,
+      "H": 10,
+      "negative_H": 5
+    },
+    "source_contract": {
+      "schema": "macnlops-hard-source-contract-v1",
+      "source": "ordinary",
+      "partition": "sampled",
+      "counts": {
+        "S": 54,
+        "H": 10
+      }
+    },
+    "matched": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/Events/smoke_ordinary/macnlops/events.lhe.gz",
+    "matching_seconds": 5.358733247034252,
+    "source_lhe_version": "3.0",
+    "has_source_run_card": true,
+    "source_sumw": 17.54466528,
+    "source_sumabsw": 23.39288704,
+    "source_sha256": "2f8e2ec78be67296c179de0d6762986c6dc9973612ed37e8fe757a6ddc090613",
+    "effective_source_flags": [
+      [
+        0,
+        1,
+        0,
+        1
+      ]
+    ],
+    "negative_h_source_factors": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "all_events_have_components": true,
+    "old_delta_context_count": 0,
+    "generation_upper_bound_failures": 8,
+    "output_lhe_version": "3.0",
+    "accepted_counts": {
+      "H": 5,
+      "S": 52
+    },
+    "accepted_events": 57,
+    "accepted_sumw": 18.64120686,
+    "accepted_sumabsw": 20.83429002,
+    "output_sha256": "8a2114fb6bf72def7e8188a535ee6370858522f2f5f8d2c4b7d3787994679e47",
+    "continuation_counts": {
+      "H": 5,
+      "unshowered": 5,
+      "S": 52,
+      "emitted": 52
+    },
+    "matching_partition": "sampled",
+    "veto_prescription": "component-source-v1",
+    "decision_counts": {
+      "accepted_H": 5,
+      "accepted_S": 52,
+      "input_H": 10,
+      "input_S": 54,
+      "negative_accepted_S": 3,
+      "negative_input_H": 5,
+      "negative_input_S": 3,
+      "rejected_H": 5,
+      "rejected_S": 2
+    },
+    "weight_sums": {
+      "accepted": 18.64120686,
+      "input": 17.54466528
+    },
+    "continuation_contract_passed": true,
+    "matching_header_passed": true,
+    "weights_are_unscaled_source_subset": true
+  },
+  "delta": {
+    "process": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta",
+    "derived_export": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar",
+    "compile_status": 0,
+    "compile_seconds": 3.087905135937035,
+    "job": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/SubProcesses/P0_uux_emep/smoke_delta",
+    "stages": [
+      {
+        "mode": 0,
+        "status": 0,
+        "seconds": 0.0925787768792361,
+        "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/delta_mode0.in"
+      },
+      {
+        "mode": 1,
+        "status": 0,
+        "seconds": 0.08977831900119781,
+        "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/delta_mode1.in"
+      },
+      {
+        "mode": 2,
+        "status": 0,
+        "seconds": 0.050298082176595926,
+        "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/delta_mode2.in"
+      }
+    ],
+    "source": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/Events/smoke_delta/events.lhe.gz",
+    "counts": {
+      "S": 55,
+      "negative_S": 2,
+      "H": 9,
+      "negative_H": 0
+    },
+    "source_contract": {
+      "schema": "macnlops-hard-source-contract-v1",
+      "source": "delta",
+      "partition": "sampled",
+      "counts": {
+        "S": 55,
+        "H": 9
+      }
+    },
+    "matched": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/Events/smoke_delta/macnlops/events.lhe.gz",
+    "matching_seconds": 5.128513046074659,
+    "source_lhe_version": "3.0",
+    "has_source_run_card": true,
+    "source_sumw": 20.3669766,
+    "source_sumabsw": 21.72477504,
+    "source_sha256": "caac5dd972fd628a71f54b52202dd4457f592651d3aca394024f5f985f0da33e",
+    "effective_source_flags": [
+      [
+        0,
+        1,
+        0,
+        1
+      ]
+    ],
+    "negative_h_source_factors": [],
+    "all_events_have_components": true,
+    "old_delta_context_count": 0,
+    "generation_upper_bound_failures": 9,
+    "output_lhe_version": "3.0",
+    "accepted_counts": {
+      "S": 53,
+      "H": 9
+    },
+    "accepted_events": 62,
+    "accepted_sumw": 19.68807738,
+    "accepted_sumabsw": 21.04587582,
+    "output_sha256": "da252338f0051b28db9fb9bc0c3a4cf1949dae932bee4bf850acacf52018cd06",
+    "continuation_counts": {
+      "S": 53,
+      "emitted": 53,
+      "H": 9,
+      "unshowered": 9
+    },
+    "matching_partition": "sampled",
+    "veto_prescription": "component-undamped-delta-v1",
+    "decision_counts": {
+      "accepted_H": 9,
+      "accepted_S": 53,
+      "input_H": 9,
+      "input_S": 55,
+      "negative_accepted_S": 2,
+      "negative_input_S": 2,
+      "rejected_S": 2
+    },
+    "weight_sums": {
+      "accepted": 19.68807738000001,
+      "input": 20.366976600000008
+    },
+    "continuation_contract_passed": true,
+    "matching_header_passed": true,
+    "weights_are_unscaled_source_subset": true
+  },
+  "delta128": {
+    "source": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/Events/smoke_delta128/events.lhe.gz",
+    "counts": {
+      "S": 107,
+      "negative_S": 1,
+      "H": 21,
+      "negative_H": 3
+    },
+    "generation_seconds": 0.16605355590581894,
+    "seed": 975329,
+    "source_contract": {
+      "schema": "macnlops-hard-source-contract-v1",
+      "source": "delta",
+      "partition": "sampled",
+      "counts": {
+        "S": 107,
+        "H": 21
+      }
+    },
+    "matched": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/Events/smoke_delta128/macnlops/events.lhe.gz",
+    "matching_seconds": 4.475341700948775,
+    "source_lhe_version": "3.0",
+    "has_source_run_card": true,
+    "source_sumw": 20.366976,
+    "source_sumabsw": 21.7247744,
+    "source_sha256": "9055b2ddedca0715319581efdbb10eb92195821233aa75130f08f23c30fcd973",
+    "effective_source_flags": [
+      [
+        0,
+        1,
+        0,
+        1
+      ]
+    ],
+    "negative_h_source_factors": [
+      0.15271413790676952,
+      0.9433069375738227,
+      0.7615419866646846
+    ],
+    "all_events_have_components": true,
+    "old_delta_context_count": 0,
+    "generation_upper_bound_failures": 19,
+    "output_lhe_version": "3.0",
+    "accepted_counts": {
+      "S": 103,
+      "H": 18
+    },
+    "accepted_events": 121,
+    "accepted_sumw": 20.1972512,
+    "accepted_sumabsw": 20.536700800000002,
+    "output_sha256": "4f88e4f170b19e2751ab7ac0021023671967df88c38d0a4873a14db8379bf15b",
+    "continuation_counts": {
+      "S": 103,
+      "emitted": 103,
+      "H": 18,
+      "unshowered": 18
+    },
+    "matching_partition": "sampled",
+    "veto_prescription": "component-undamped-delta-v1",
+    "decision_counts": {
+      "accepted_H": 18,
+      "accepted_S": 103,
+      "input_H": 21,
+      "input_S": 107,
+      "negative_accepted_S": 1,
+      "negative_input_H": 3,
+      "negative_input_S": 1,
+      "rejected_H": 3,
+      "rejected_S": 4
+    },
+    "weight_sums": {
+      "accepted": 20.197251200000064,
+      "input": 20.366976000000065
+    },
+    "continuation_contract_passed": true,
+    "matching_header_passed": true,
+    "weights_are_unscaled_source_subset": true
+  },
+  "explicit_outer_sum": {
+    "process": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_explicitS",
+    "job": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_explicitS/SubProcesses/P0_uux_emep/smoke_explicitS",
+    "stages": [
+      {
+        "mode": 0,
+        "status": 0,
+        "seconds": 0.12729293201118708,
+        "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/explicitS_mode0.in"
+      },
+      {
+        "mode": 1,
+        "status": 0,
+        "seconds": 0.1314351400360465,
+        "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/explicitS_mode1.in"
+      },
+      {
+        "mode": 2,
+        "status": 0,
+        "seconds": 0.05560784600675106,
+        "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/explicitS_mode2.in"
+      }
+    ],
+    "source": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_explicitS/Events/smoke_explicitS/events.lhe.gz",
+    "counts": {
+      "S": 53,
+      "negative_S": 0,
+      "H": 11,
+      "negative_H": 0
+    },
+    "flags": [
+      [
+        0,
+        1,
+        1,
+        1
+      ]
+    ],
+    "source_contract": {
+      "schema": "macnlops-hard-source-contract-v1",
+      "source": "ordinary",
+      "partition": "sampled",
+      "counts": {
+        "S": 53,
+        "H": 11
+      }
+    },
+    "source_lhe_version": "3.0",
+    "has_source_run_card": true,
+    "source_sumw": 21.37435904,
+    "source_sumabsw": 21.37435904,
+    "source_sha256": "58d05eabfd366eb9f13833c1218cae6f9e92351210da887e5e151f90da524d4d",
+    "effective_source_flags": [
+      [
+        0,
+        1,
+        1,
+        1
+      ]
+    ],
+    "negative_h_source_factors": [],
+    "all_events_have_components": true,
+    "old_delta_context_count": 0,
+    "generation_upper_bound_failures": 11
+  },
+  "purpose": "Bounded source/first-emission/selection plumbing checks; not a precision or distribution validation.",
+  "limitations": [
+    "Tiny fresh grids intentionally undersample the integrand and have unweighting-envelope overshoots; no cross-section or precision inference is made.",
+    "Single Born flavour and diagram/colour flow in the genuine DY checks; separate Fortran fixtures exercise nontrivial flow weights and reordered physical-flavour tables.",
+    "The Delta 64-event sample contains no negative H; its separately recorded 128-event follow-up exercises three genuinely generated negative H events."
+  ],
+  "requested_source_switches": {
+    "MCExplicitKLSum": false,
+    "MCSubtractionAtFixedFlow": true,
+    "FKSExplicitSum": false
+  },
+  "global_defaults_preserved": true,
+  "commands_file": "commands.json"
+}

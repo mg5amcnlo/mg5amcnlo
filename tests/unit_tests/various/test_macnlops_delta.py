@@ -46,6 +46,53 @@ class TestMacNLOPSDeltaMeasure(unittest.TestCase):
         self.assertEqual(max(-mean_h, F(0)), 0)
         self.assertEqual(actual_negative_records, F(3, 2))
 
+    def test_original_veto_cancels_a_common_physical_sudakov(self):
+        # The ideal Nason--Salam kernel is also the hard subtraction.
+        # Delta_PS = Delta_source and Bbar/B = 1 here, not in general.
+        real, kernel, delta = F(3, 5), F(1), F(1, 5)
+        hard = delta * (real - kernel)
+        first_s = delta * kernel
+        gain = -hard
+        current_veto = 1 - bounded_acceptances(hard, kernel)[1]
+        original_veto = (kernel - real) / kernel
+        self.assertEqual(current_veto, F(2, 25))
+        self.assertEqual(original_veto, F(2, 5))
+        self.assertEqual(gain - first_s * original_veto, 0)
+        self.assertEqual(gain - first_s * current_veto, F(8, 125))
+
+    def test_undamped_bounded_veto_also_needs_a_different_h_residual(self):
+        # G completion can make the undamped negative H larger than K.
+        h0, kernel, delta = F(2), F(1), F(1, 4)
+        source_h = -delta * h0
+        first_s = delta * kernel
+        veto = min(h0 / kernel, F(1))
+        correct_keep_h = max(1 - kernel / h0, F(0))
+        current_keep_h = bounded_acceptances(source_h, kernel)[0]
+        self.assertEqual(-source_h * (1 - correct_keep_h) - first_s * veto, 0)
+        self.assertEqual(-source_h * (1 - current_keep_h) - first_s * veto, F(1, 4))
+
+    def test_different_history_sudakovs_obstruct_global_r_over_k(self):
+        kernel = sum(self.subtraction)
+        real = sum(self.real)
+        hard = conditional_h(self.real, self.subtraction, self.delta_states[0])
+        self.assertEqual((real, kernel, hard), (F(8), F(7), F(-3)))
+        self.assertEqual(max(1 - real / kernel, F(0)), 0)
+        self.assertEqual(max(-hard, F(0)), 3)
+
+    def test_replacing_completed_subtraction_by_kernel_can_change_nlo(self):
+        # Independent source and shower densities at leading order. The
+        # coefficient of epsilon is nonzero even with Delta=1; it is not
+        # a second-order difference attributable to Sudakov expansion.
+        for epsilon in (F(1), F(1, 10), F(1, 100)):
+            real, completed_d, kernel = (epsilon * value
+                                        for value in (F(3, 5), F(4, 5), F(1)))
+            hard = real - completed_d
+            keep_h, keep_s = bounded_acceptances(hard, kernel)
+            gain = -hard * (1 - keep_h)
+            original_veto = max(1 - real / kernel, F(0))
+            self.assertEqual(gain - kernel * (1 - keep_s), 0)
+            self.assertEqual((gain - kernel * original_veto) / epsilon, F(-1, 5))
+
     def test_independent_auxiliary_thinning_closes_each_leading_bin(self):
         # q bins have (K_g, positive eligible S, negative eligible S,
         # signed protected S).  Protected S is never vetoed.

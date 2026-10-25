@@ -3744,6 +3744,9 @@ c while for the S-events we can sum it to the 'i_soft' one.
          if (H_event(i)) then
             do ii=1,i
                if (.not.H_event(ii)) cycle
+! A sampled sector/diagram/flow is part of the conditional source law.
+! Distinct component draws must not be combined before classifying H.
+               if(.not.same_source_component(ii,i))cycle
 ! Different Delta draws are distinct conditional H components. Their
 ! signs cannot be reconstructed from a single selected replay packet.
                if(delta_line_context(ii).ne.delta_line_context(i))cycle
@@ -3825,6 +3828,18 @@ c in the spreading factor and must not cancel the fitted nonvirtual row.
          endif
       enddo
       call pack_contribution_groups
+! Certify the local physical-flavour sum before fill_mint_function_NLOPS
+! takes its positive/negative parts for integration and unweighting.
+      if(macnlops)then
+         do i=1,icontr
+            if(.not.H_event(i).or.group_size(i).eq.0.or.
+     $         component_line_context(i).eq.0)cycle
+            do j=1,niproc(i)
+               if(.not.sampled_flavour_complete(i,j))error stop
+     $            'Incomplete sampled H physical-flavour density'
+            enddo
+         enddo
+      endif
       return
       end
 

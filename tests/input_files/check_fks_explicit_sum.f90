@@ -30,6 +30,7 @@ program check_fks_explicit_sum
     call FKSParamReader(trim(arg),.true.,.true.)
     if(.not.FKSExplicitSum)error stop 'template default'
     if(MCExplicitKLSum)error stop 'template matching default'
+    if(.not.MCSubtractionAtFixedFlow)error stop 'template matching default'
     write(*,*) 'PASS card'
   case('map')
     call get_command_argument(2,arg)

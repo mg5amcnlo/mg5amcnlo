@@ -29,6 +29,7 @@ from pathlib import Path
 import pydoc
 import random
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -4012,6 +4013,9 @@ RESTART = %(mint_mode)s
             # Source-run split files are a different event population. The
             # collected matched file is already randomized and sum-normalized.
             self.shower_card['nsplit_jobs'] = 1
+            # The accepted file pins its source PDF; a mutable shower card may
+            # not replace it with the normal internal-PDF default.
+            self.shower_card['pdfcode'] = 1
             logger.info('Continuing the accepted MAcNLOPS LHE with local recoil and saved shower bounds')
 
         #check that the number of split event files divides the number of
@@ -4160,6 +4164,8 @@ RESTART = %(mint_mode)s
         misc.call(['./MCatNLO_MadFKS.inputs'], stdout=open(mcatnlo_log, 'w'),
                     stderr=open(mcatnlo_log, 'w'), 
                     cwd=pjoin(self.me_dir, 'MCatNLO'),
+                    env=(self.macnlops_continuation['environment']
+                         if self.macnlops_continuation else None),
                     close_fds=True)
 
         exe = 'MCATNLO_%s_EXE' % shower
@@ -4244,9 +4250,17 @@ RESTART = %(mint_mode)s
                 ld_library_path = 'DYLD_LIBRARY_PATH'
             else:
                 ld_library_path = 'LD_LIBRARY_PATH'
-            fsock.write(open(pjoin(self.me_dir, 'MCatNLO', 'shower_template.sh')).read() \
+            script = open(pjoin(self.me_dir, 'MCatNLO', 'shower_template.sh')).read() \
                 % {'ld_library_path': ld_library_path,
-                   'extralibs': ':'.join(extrapaths)})
+                   'extralibs': ':'.join(extrapaths)}
+            if self.macnlops_continuation:
+                # Batch jobs must resolve the validated native backend and PDF
+                # data, independently of the environment on the worker node.
+                environment = self.macnlops_continuation['environment']
+                exports = ''.join('export %s=%s\n' % (key, shlex.quote(environment[key]))
+                    for key in ('LD_LIBRARY_PATH', 'LHAPDF_DATA_PATH'))
+                script = script.replace('\n', '\n' + exports, 1)
+            fsock.write(script)
         subprocess.call(['chmod', '+x', pjoin(rundir, 'shower.sh')])
 
         if event_files:
@@ -4872,6 +4886,11 @@ RESTART = %(mint_mode)s
         if continuation:
             content += 'MACNLOPS_ISR_CUTOFF=%.17e\nMACNLOPS_FSR_CUTOFF=%.17e\n' % tuple(
                 continuation['shower_cutoffs'])
+            physics_file = 'macnlops_continuation.cmnd'
+            continuation['environment'] = macnlops.write_continuation_settings(
+                self.me_dir, self.options['pythia8_path'], evt_file, continuation,
+                pjoin(self.me_dir, 'MCatNLO', physics_file))
+            content += 'MACNLOPS_PHYSICS_FILE=%s\n' % physics_file
         if self.banner.get_detail('run_card', 'mcatnlo_delta') :
             content += 'DELTA=ON\n'
         else:

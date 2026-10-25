@@ -5,6 +5,7 @@ c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
       use mint_module
+      use weight_lines, only: source_born_config,source_born_graph
       implicit none
 c
 c     Constants
@@ -175,6 +176,8 @@ c These should be ignored (but kept for 'historical reasons')
          endif
       enddo
       write(*,*) 'Running Configuration Number: ',iconfig,ini_fin_fks
+      source_born_config=iconfig
+      source_born_graph=mapconfig(iconfig,0)
       nchans=1
       iconfigs(1)=iconfig
       wgt_mult=1d0
@@ -330,6 +333,9 @@ c
       double precision born_flow_factor
 ! The same flow is used throughout the folds, so keep its draw probability.
       save born_flow_factor
+      double precision component_insertion
+      double precision diagramsymmetryfactor
+      common/dsymfactor/diagramsymmetryfactor
       type(fks_phase_space_point) phase_space
       logical have_sum_born
       double precision sum_born(0:3,nexternal-1),sum_xbjrk(2)
@@ -447,6 +453,7 @@ c 1/proc_map(0,0)*vol1)
          p_lab=phase_space%p_lab
          p_cms=phase_space%p_cms
          if (p_born(0,1).lt.0d0) goto 12
+         source_diagram_symmetry=diagramsymmetryfactor
          if (FKSExplicitSum) then
             sum_born=phase_space%born%p
             sum_xbjrk=phase_space%born%xbjrk
@@ -456,6 +463,9 @@ c 1/proc_map(0,0)*vol1)
          call set_cms_stuff(izero)
          if (ickkw.eq.3) call set_FxFx_scale(1,p1_cnt(0,1,0))
          passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+         if(macnlops.and..not.MCExplicitKLSum.and.passcuts_nbody)
+     $      call check_component_source_born(phase_space%born%p,
+     $      phase_space%born%xbjrk)
 
          if (passcuts_nbody) then
             pass_cuts_check=.true.
@@ -526,6 +536,10 @@ c 1/proc_map(0,0)*vol1)
             if(.not.born_cuts_for_flow)
      $           born_flow_picked=-born_flow_picked
          endif
+
+c The Born flow is drawn once at ifl=0 and reused in every radiation
+c fold. Its actual q_c accompanies H components and the combined S state.
+         source_flow_probability=born_flow_factor
 
  11      continue
 c The n+1-body contributions (including counter terms)
@@ -654,6 +668,9 @@ c check if event or counter-event passes cuts
             call set_cms_stuff(izero)
             if (ickkw.eq.3) call set_FxFx_scale(-2,p1_cnt(0,1,0))
             passcuts_nbody=passcuts(p1_cnt(0,1,0),rwgt)
+            if(macnlops.and..not.MCExplicitKLSum.and.passcuts_nbody)
+     $         call check_component_source_born(phase_space%born%p,
+     $         phase_space%born%xbjrk)
             if (passcuts_nbody .and. (born_flow_picked .le.0)) then
                write (*,*) 'something funny is going on: passing cuts,'
      $              //' but no born_flow assigned.'
@@ -679,7 +696,15 @@ c check if event or counter-event passes cuts
             mc_S_only=calibrating_spread.or.
      $           (MCExplicitKLSum.and.ickkw.ne.4.and.abrv.ne.'real'.and.
      $           p(0,1).gt.0d0.and.jacPS.gt.0d0.and.MC_HIST_COUNT.gt.0)
+            if(macnlops.and..not.MCExplicitKLSum)then
+               call get_macnlops_colour_insertion(component_insertion)
+               call begin_component_context(iFKS,iconfig,source_born_graph,
+     $              abs(born_flow_picked),born_flow_factor,
+     $              component_insertion,diagramsymmetryfactor)
+            endif
             call compute_NLOPS_flow_weights(p,p_cms,passcuts_nbody,passcuts_n1body,probne,weights_valid)
+            if(macnlops.and..not.MCExplicitKLSum)
+     $         call end_component_context(probne)
             mc_S_only=.false.
             if(.not.weights_valid)then
                call mc_end_real_point()

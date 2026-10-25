@@ -1,0 +1,51 @@
+{
+  "cards": {
+    "param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+    "run_card.dat": "bda12a9f5532c8c9d0bc28d7f7bb348aeb9891eab7e3a7e2ca1903919e9b207a"
+  },
+  "counts": {
+    "accepted_H": 5,
+    "accepted_S": 52,
+    "input_H": 10,
+    "input_S": 54,
+    "negative_accepted_S": 3,
+    "negative_input_H": 5,
+    "negative_input_S": 3,
+    "rejected_H": 5,
+    "rejected_S": 2
+  },
+  "decisions": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/Events/smoke_ordinary/macnlops/events/events.lhe.gz.decisions.jsonl",
+  "effective_settings_sha256": "efcad02c1fc80fb571ea623215d64de3881f02ef8cc575ac0fa8ef2ac087c074",
+  "fks_parameters": "83a729d833012f1d045343c176862694e039805b2e5c1553556c21294ee4c5c5",
+  "hard_source_contract": {
+    "counts": {
+      "H": 10,
+      "S": 54
+    },
+    "partition": "sampled",
+    "schema": "macnlops-hard-source-contract-v1",
+    "source": "ordinary"
+  },
+  "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/Events/smoke_ordinary/events.lhe.gz",
+  "input_sha256": "b7af74f63c63b14b9f609fa6be34e541ced94ab204d63e64b9e3404a8c6dfba8",
+  "lhe_continuation": true,
+  "matching_partition": "sampled",
+  "normalization": "sum; retained input event weights",
+  "pdf": "LHAPDF6:MSTW2008nlo90cl/0",
+  "pdf_info_sha256": "482a0a205677a8c76c87213399e8929cf20ba92b2cb7bd2c9ba92ef2a1a4cd06",
+  "seed": 975314,
+  "shower": "/export/tmp/rikkert/Pythia/pythia8318",
+  "shower_support": [
+    0.9998556507692308,
+    0.9998556507692308,
+    0.5000000000000001,
+    0.5867333369950679
+  ],
+  "signed_residuals": true,
+  "source_construction": "ordinary-mcatnlo-v1",
+  "veto_prescription": "component-source-v1",
+  "weight_sums": {
+    "accepted": 18.64120686,
+    "input": 17.54466528
+  }
+}

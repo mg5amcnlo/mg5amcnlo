@@ -193,12 +193,44 @@ class TestMacNLOPSCollection(unittest.TestCase):
     def test_exported_script_can_import_the_sibling_collector(self):
         with tempfile.TemporaryDirectory() as temp:
             folder = Path(temp)
-            for module in (mc, mc.collect_events):
+            for module in (mc, mc.collect_events, mc.macnlops_components):
                 shutil.copyfile(module.__file__, folder / Path(module.__file__).name)
             result = subprocess.run([sys.executable, str(folder / 'macnlops.py'), '--help'],
                                     cwd=folder, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn('--output-dir', result.stdout)
+
+    def test_prescription_survives_collection_and_mixed_methods_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            pairs = self.fixture(folder)[:2]
+            inputs, reports = map(list, zip(*pairs))
+            policy = 'global-source-v1'
+            for filename, report in pairs:
+                with mc.open_lhe(filename) as stream:
+                    text = stream.read().replace('<macnlops ',
+                        '<macnlops prescription="%s" ' % policy)
+                def qualify(match):
+                    block = re.sub(r'<macnlops_hard_event\b.*?</macnlops_hard_event>\s*',
+                                   '', match[0], flags=re.S)
+                    return block.replace('</event>', hard_annotation(mc.Event(block).kind) + '</event>')
+                text = re.sub(r'<event\b.*?</event>', qualify, text, flags=re.S)
+                with mc.open_lhe(filename, 'wt') as stream:
+                    stream.write(text)
+                report['veto_prescription'] = policy
+            output = folder / 'accepted.lhe.gz'
+            summary = mc.collect_matched_events(inputs, reports, output, 5)
+            self.assertEqual(summary['veto_prescription'], policy)
+            with mc.LHEStream(output) as stream:
+                self.assertIn('prescription="%s"' % policy, stream.header)
+            reports[1]['veto_prescription'] = 'component-source-v1'
+            with self.assertRaisesRegex(mc.MatchingError, 'report/header prescriptions'):
+                mc.collect_matched_events(inputs, reports, folder / 'failed.lhe.gz', 5)
+            inputs[1].write_text(inputs[1].read_text().replace(policy, 'component-source-v1'))
+            with self.assertRaisesRegex(mc.MatchingError, 'different MAcNLOPS veto prescriptions'):
+                mc.collect_matched_events(inputs, reports, folder / 'mixed.lhe.gz', 5)
+            self.assertFalse((folder / 'failed.lhe.gz').exists())
+            self.assertFalse((folder / 'mixed.lhe.gz').exists())
 
 
 if __name__ == '__main__':

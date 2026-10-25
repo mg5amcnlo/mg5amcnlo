@@ -1,5 +1,114 @@
 # MAcNLOPS from the generated measures
 
+## Sampled fixed-flow matching: 25 October implementation
+
+Fresh MAcNLOPS sources can now use `MCExplicitKLSum=False` and
+`MCSubtractionAtFixedFlow=True`, with `FKSExplicitSum=False` to sample
+the outer FKS contribution groups. The settings are read from
+`Cards/FKS_params.dat`; the MAcNLOPS driver no longer overrides them with
+an explicit history/colour sum. `FKSExplicitSum` is independent: disabling
+it samples a group that may include associated nonsingular sectors, not
+necessarily just one numerical term. The alternative globally summed
+mode (`MCExplicitKLSum=True`, `MCSubtractionAtFixedFlow=False`) remains
+available for the qualified old source prescription. Mixed combinations
+are rejected. All large-sample figures below describe that **old global
+prescription**, not the new sampled prescription.
+
+The component label is a native sector/history, a Born integration
+configuration and diagram, and a Born colour flow. A versioned
+`macnlops_component` event packet stores those labels, an immutable
+generated-registry fingerprint, the flow-sampling probability, source
+insertion variate and damping, and the diagram symmetry factor. H rows
+are grouped within this component before unweighting and sign selection;
+the source writer certifies the complete physical flavour group. S rows
+carry the diagram and flow, but their source integration sector does not
+restrict which leg may shower. S grouping checks that its contributing
+rows have the same Born kinematics and incoming fractions.
+
+For an actual S emission, the saved Pythia ancestry identifies the Born
+radiator, emitted particle and spectator identities. The density route
+stays in the exact source Born provider. Identical Born-particle
+permutations require a certified transformation of both the diagram and
+the oriented colour topology; merely copying their numeric indices is
+wrong. Configured interaction trees and colour flows are included in the
+registry for this purpose. Ambiguous gluon daughter orientations are
+marked with probabilities proportional to their physical kernels. The
+native inverse Born state is checked against the actual pre-shuffle S
+state, including flavours, colours, masses, Lorentz invariants and
+incoming fractions. No Pythia library change is used.
+
+Write `a` for the resulting component and `lambda` for its source scale
+and colour-insertion auxiliaries. Let `D_G,a` denote its full G-completed
+counterterm, including its physical diagram and flow fractions. Its
+undamped hard density is `H_0,a = R_a - D_G,a`. For a Delta source,
+
+\[
+ H_{\Delta,a}=\Delta_a H_{0,a},\qquad
+ u_a=[-H_{0,a}]_+,\qquad
+ v_{S,a}=\min(u_a/K_a,1),\qquad
+ a_{H^-,a}=\max(1-K_a/u_a,0).
+\]
+
+The surviving negative-H measure is therefore
+`Delta_a [u_a-K_a]_+`. These formulas have their continuous operational
+limits: no negative numerator means no S veto; at `K_a=0` the S event is
+kept and the negative H is retained. Strict positivity remains an optional
+diagnostic and fails when a residual is necessary. The nominal source
+weights are never divided by Delta or by the flow-sampling probability.
+The latter is an importance-sampling factor in generation, not an extra
+factor in the physical local density.
+
+The V3 local evaluator keeps Delta source algebra, replays **unit** Delta
+for the selected component, and consequently evaluates `H_0,a` without
+computing a numerical source Sudakov at the S endpoint. It restores the
+source's distinct real and Born diagram fractions and retains both
+colour connections of a fixed gluon flow. Ordinary MC@NLO uses the same
+local machinery with its genuine bogus-Sudakov `P_a` retained:
+the transferred numerator is `[P_a(D_G,a-R_a)]_+`. Replacing that
+kinematic profile by one is not an ordinary-source optimization.
+
+Real/Born identical-particle factors also belong to the measure. After
+removing the reduced source's outer `F=fac_i fac_j`, the native MC term
+still contains `I_B/I_R`. The local evaluator multiplies **all** of
+`R,D,K` by `I_R/I_B` to express densities per actual Born emitter.
+The reduced source represents `O=F I_B/I_R` equivalent emitters;
+the worker checks that `O` is a positive integer. This common conversion
+does not change the local veto or H acceptance. It is not a correction
+to K alone.
+
+Sampling makes the required Delta factorization meaningful before
+taking a negative part; it does not establish exact finite cancellation.
+In a positive one-component description, let the actual eligible S
+emission density be `beta_a Delta_PS,a K_a`. The difference introduced by
+the bounded pair is
+
+\[
+ \delta\rho_a=
+  [\overline\Delta_a-\beta_a\Delta_{{\rm PS},a}]\min(u_a,K_a),\qquad
+ \overline\Delta_a=\mathbb E_{\lambda\mid q,a}[\Delta_a(\lambda)].
+\]
+
+The average is over the source auxiliary law before H unweighting. The
+algorithm does not evaluate it: the undamped local numerator and kernel
+are independent of those auxiliaries.
+
+It vanishes under equality of the source and physical shower factors and
+`beta_a=1`. Neither equality is assumed by the implementation. Signed S
+coefficients, differing starting-scale laws, shower-kernel correspondence
+and subsequent continuations remain relevant. The literal
+`(1-R_a/K_a)_+` follows in the special case `D_G,a=K_a`; more generally
+the removable negative parts must agree. The native G/spin completion
+need not satisfy that condition.
+
+The output LHE header and JSON reports distinguish
+`component-undamped-delta-v1`, `component-source-v1` and
+`global-source-v1`; the collector rejects mixed prescriptions. Local
+evaluation avoids the global history sum and Delta calculation. Immutable
+diagram/flow transports are cached, while every event retains a fresh
+kinematic density evaluation. Existing checksum and global-route caches
+are described below. The earlier global formulas and production evidence
+in this note retain their original scope.
+
 ## Runtime status: stock Pythia after 21 October 2026
 
 The active runtime now uses the selected Pythia installation without the
@@ -73,7 +182,7 @@ manifest and matching evaluator/card context.
 The resolved `D*` source discussed later is a distinct, earlier construction;
 adding the artificial no-emission factor to that source would not make it
 ordinary MC@NLO. The implemented importer requires a qualified versioned
-hard-point annotation and a certified global source partition. It fails
+hard-point annotation and a certified global or sampled source partition. It fails
 explicitly when those are absent; it does not retrofit anonymous stock
 files. A zero-cancellation fallback is mathematically possible but is not
 an implemented generic-import promise. Historical validation results
@@ -168,8 +277,9 @@ alone does not prove completeness.
 establish a global density. A sampled colour/sector partition requires its
 own negative-measure reconstruction. An existing stock file without the
 block is not made qualified by silently assuming hard-model masses or
-global summation. The current importer rejects missing or sampled
-annotations explicitly. A future zero-cancellation fallback could retain
+global summation. The current importer rejects missing annotations and
+requires the additional qualified component packet for sampled input.
+A future zero-cancellation fallback could retain
 all signed events there, while a nonzero veto would need the separate
 stock-transport and source-partition proof below. New annotated
 generation is an information-preserving handoff, not evidence of generic
@@ -219,7 +329,9 @@ False = mcatnlo_delta
 ```
 
 `macnlops=True` prepares the measured matching profile and complete source
-coalescing. `store_hard_momenta=True` writes the hard-point annotation;
+coalescing. It requires `store_hard_momenta=True`; disabling that annotation
+is rejected during run-card validation, before generation. The annotation
+records the momenta before shower-mass reshuffling;
 the ordinary event body still uses its stock MC-mass reshuffle. The default
 `macnlops_resolved_source=False` keeps the ordinary G/P counterterm and
 records profile construction `ordinary-mcatnlo-v1`. Setting
@@ -276,6 +388,15 @@ True = mcatnlo_delta
 True = store_hard_momenta
 ```
 
+As for ordinary MAcNLOPS, set `parton_shower=PYTHIA8`, `ickkw=0`,
+`event_norm=sum` and `pdlabel=lhapdf`, choose one central PDF member, and
+disable scale/PDF reweighting. The first-emission driver currently requires
+stock Pythia 8.318. The campaign prepared the summed-history, summed-colour
+source (`MCExplicitKLSum=True`, `MCSubtractionAtFixedFlow=False`). The
+new sampled fixed-flow mode is described at the start of this note.
+The global evaluator still requires equal source-owner auxiliary laws;
+the sampled evaluator uses the exact source provider and component instead.
+
 Its construction label is `mcatnlo-delta-v1` and the hard annotation has
 `source="delta"`. The unrejected comparison must be labelled **MC@NLO-Delta**
 and use that same source and native proposals. It is not the ordinary
@@ -295,6 +416,30 @@ current continuation scales. It cannot be imported as a fresh matching
 source or have its source Delta computed again at the showered point.
 Subsequent showering consumes this retained LHE endpoint in a separate
 stage, as described under “Continuing the retained LHE endpoint” below.
+
+For a fresh source generated with these flags and `noshower`, the normal
+process-directory interface performs the two stages separately:
+
+```text
+shower run_01
+shower run_01/macnlops
+```
+
+The first command generates at most one emission for each S event, applies
+H removal and S veto, and writes the single randomized
+`Events/run_01/macnlops/events.lhe.gz`. If the initial launch already ran
+that stage, start with the second command. The second command showers the
+accepted file using its current production and dipole scales, with
+hadronisation, MPI, primordial transverse momentum and QED radiation off.
+It does not generate another matching proposal or repeat removal/veto.
+If `macnlops` already exists, first-stage reruns use `macnlops_2`, etc.; use
+the output directory reported by that run for continuation.
+
+Lightweight regression fixtures exercise the paired native Delta source
+terms and the Python workflow with controlled native/PDF substitutes.
+The bounded native and process-level checks of 23 October are described
+below. They test source reconstruction and the separate shower handoff;
+precision distribution comparisons remain outstanding.
 
 For one history, suppressing its auxiliary state momentarily, the paired
 source terms are
@@ -431,6 +576,100 @@ instead require
 Equal source and shower Delta factors would remove the inverse-Sudakov
 factor in that ideal expression. The implemented bounded `H_minus/K_g`
 rule does not make this identification or claim exact rate recovery.
+
+#### 25 October audit: implemented versus undamped Delta veto
+
+The original Nason–Salam acceptance uses the same `K` in the shower and
+in `H=R-K`, and rejects an emitted S event with
+`v_0=(K-R)_+/K`. Its physical shower Sudakov already multiplies the
+emission density; it is not included again in that multiplier.
+[Nason and Salam, Eq. (3.1)](https://arxiv.org/abs/2111.03553).
+For a Delta source this differs from the implemented conditional rule.
+The distinction is meaningful even when both prescriptions have the
+same fixed-order expansion.
+
+In the one-history idealization, let `D_G=K`, `u=(K-R)_+`,
+`beta=barB_Delta/B`, and use common support. Then
+
+\[
+ H_{-,\Delta}=\Delta_{\rm src}u,\qquad
+ F_{S,g}^\Delta=\beta\Delta_{\rm PS}K,\qquad
+ v_{\rm impl}=\Delta_{\rm src}u/K,\qquad v_0=u/K.
+\]
+
+With complete H removal, their endpoint differences from their common
+unrejected Delta source are
+
+\[
+ \delta\rho_{\rm impl}
+   =\Delta_{\rm src}u(1-\beta\Delta_{\rm PS}),\qquad
+ \delta\rho_0=u(\Delta_{\rm src}-\beta\Delta_{\rm PS}).
+\]
+
+If `Delta_src=Delta_PS` and `beta=1`, the undamped multiplier cancels
+exactly while the implemented rule rejects too little S density. In
+this limit the implemented rule introduces an extra source-Sudakov
+suppression relative to the original multiplier. This can be a large
+finite or resummed difference. It is not, by itself, an NLO error:
+`Delta_src=1+O(alpha_s)` makes the prescriptions differ beyond NLO at
+fixed resolved kinematics, provided their required leading native
+kernel correspondence holds. The Delta paper explicitly distinguishes
+its fixed-order equivalence from comparable showered results.
+[Frederix et al., Eqs. (3.6)–(3.9) and the following discussion](https://arxiv.org/abs/2002.12716).
+
+The H cap must also match the chosen undamped prescription. More
+generally, suppose a **common** source factor can be extracted,
+`H_minus_Delta=Delta_src*u`, where `u=(D_G-R)_+`, and the actual eligible
+S density is `F_S,g^Delta=Delta_src*K_g`. A bounded pair is then
+
+\[
+ v_0=\min(u/K_g,1),\qquad
+ a_{H^-}^{(0)}=\max(1-K_g/u,0),\qquad
+ H_{-,\mathrm{rem}}^{(0)}=\Delta_{\rm src}(u-K_g)_+.
+\]
+
+These ratios apply on positive denominators; with no eligible S support
+the transfer is zero. They transfer `Delta_src*min(u,K_g)` exactly under
+the stated assumptions. Keeping the implemented residual
+`(Delta_src*u-K_g)_+` while changing only the S veto would not implement
+this bounded pair.
+
+The literal global replacement `v_0=(K_g-R)_+/K_g` is **not adopted**
+for the actual general source. The complete `D_G` includes G/spin
+completion, native measures and support and is not identical to `K_g`.
+Assuming leading native correspondence and each
+`Delta_h=1+O(alpha_s)`, replacing only the S veto while keeping the
+current H cap gives the leading difference
+
+\[
+ \delta\rho_{\rm literal}
+   =\min\{(D_G-R)_+,K_g\}-(K_g-R)_+
+      +\mathcal O(\alpha_s^{p+2}).
+\]
+
+For complete H removal the first term is simply `(D_G-R)_+`.
+Equality of the removable negative parts at leading order is required;
+otherwise the substitution can affect NLO. All quantities must use
+the same physical measure and eligibility support, including the
+protected-heavy-flavour gates.
+
+Furthermore, history-dependent source factors cannot generally be
+extracted before the global negative part. Even with `D_G,h=K_h`
+termwise, the finite example `R_h=(2,6)`, `K_h=(6,1)` and
+`Delta_h=(1,0.2)` gives `H_Delta=-3`, whereas total `R=8` and `K_g=7`
+give the proposed global veto zero. This is a counterexample to finite
+factorization, not a demonstration of a failed fixed-order expansion.
+
+An alternative could use the fully summed undamped completed density
+`H_0=sum_h(R_h-D_G,h)` in the S numerator, retaining its G completion.
+This could avoid source-Delta evaluation at S emissions, but requires
+its own H-removal/residual rule and treatment of conditional signs and
+continuation. That global alternative remains unimplemented. The new
+component-local prescription at the start of this note retains the labels
+before sign selection instead. Exact finite
+cancellation would still require the actual eligible S density.
+The measured distributions and frozen results use their documented
+implemented global rules; none validates the new sampled prescription.
 
 Generation provenance must bind the actual exported `sudakov.f`
 interpolation and `MCmasses_PYTHIA8.inc` inputs as well as the cards,
@@ -2064,7 +2303,31 @@ The source run's split files are not reused for this different event
 population. The continuation loop processes the requested number of retained
 events and stops on a shower failure instead of skipping an accepted input.
 Older matched files without the corrected continuation
-contract must be regenerated.
+contract and recorded shower profile must be regenerated from their
+original hard source.
+The accepted LHE header carries the measured first-stage shower settings,
+with the exact input coupling, masses, flavour policy and cutoffs. The
+second stage restores these settings before applying its continuation
+scale and recoil choices. It also checks the Pythia-library, native
+LHAPDF-backend and PDF-data fingerprints, and supplies the validated
+library and PDF search paths to the shower job. A later edit to the
+process's shower or run card cannot
+silently change this physics profile. In particular, the normal shower
+defaults of one-loop running and `alphaSvalue = 0.118` must not replace
+the first-stage coupling. The native consumer restores
+`SpaceShower:pT0Ref = 0` with `forceParm`, because ordinary card reading
+clamps that value to a positive stock XML minimum.
+
+Original Delta H records can have `SCALUP = -1`; their directed scale
+matrix supplies the physical shower starts. This one sentinel is accepted
+only for Delta H sources and retained as inert `source_scalup` provenance.
+Every active endpoint scale remains strictly positive. Continuation also
+retains the absolute nominal LHE weight: for LHA strategy `-3`, Pythia's
+`Info::weight()` supplies only its sign, which is insufficient for the
+sum-normalized accepted sample. Both the HepMC-only and Fortran-analysis
+drivers enforce one pass over retained inputs and stop on a failed or
+skipped input. The Fortran-analysis route also writes one-based event
+numbers, since its histogram normalization uses `NEVHEP` as a count.
 Import must preserve the current endpoint masses and momenta. In
 particular, a native forced-heavy sister can have mass 1.2 or 4 GeV while
 the five-flavour particle-data hard mass is zero. The default quark-mass
@@ -2099,8 +2362,63 @@ Lightweight tests cover continuation parsing, preservation through rejection
 and collection, shower dispatch and event-loop accounting. Small C++ fixtures
 exercise the native listing parser, precision restoration and endpoint scale
 mapping without instantiating Pythia. The native driver also passes C++11
-syntax checks. Native re-import and end-to-end shower checks remain pending;
-the older frozen production comparisons do not validate this handoff.
+syntax checks. The bounded native checks below exercise actual re-import
+and production shower evolution. The older frozen production comparisons
+do not validate this handoff.
+
+### Bounded native checks, 23 October 2026
+
+Independent generated-matrix-element checks compare the evaluator's Delta
+H density with the actual source `repartition_MC_H` contribution, including
+native stopping scales and the shipped Sudakov tables. The maximum of
+`abs(H_source - (R-D))/max(1,abs(R),abs(D))` is `3.06e-14` for 100 DY points,
+`1.06e-14` for 100 top-pair points and `5.88e-12` for 50 massive-bottom
+four-flavour Wbb points. Replaying an auxiliary packet and reversing query
+order give identical results. Changing the auxiliary seed changes the
+Delta H term while leaving the physical real and shower kernel densities
+unchanged; setting Delta to zero gives zero H. These checks use real-only
+exports rather than integrated/unweighted production samples.
+
+Stock Pythia 8.318 also consumes 620 native endpoints: 200 events from a
+fresh full-NLO Delta DY source and 420 controlled ordinary/Delta kinematic
+fixtures covering DY-like, top-pair and four-flavour bottom-pair states.
+The checks preserve imported momenta, masses, colours and raw LHA weights,
+and inspect 2,789 initial directed scale caps and 26,926 subsequent ISR/FSR
+branch ceilings. All 60 exhausted fixture endpoints have no further
+production radiation. This tests the transport contract; it does not test
+the generic HepMC writer's weight normalization or certify rejection
+densities for synthetic fixtures.
+
+Fresh full-NLO sources also complete first-emission matching, collection
+and the normal process-directory HepMC continuation command:
+
+| Sample | Source events | Accepted S | Accepted H | Negative H removed | S vetoed |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Ordinary DY | 200 | 172 | 24 | 4 | 0 |
+| Delta DY | 200 | 173 | 26 | 0 | 1 |
+| Delta top pairs | 100 | 78 | 16 | 4 | 2 |
+
+Every accepted event is written once and its nominal weight agrees
+exactly with the retained LHE. The final HepMC signed-weight sums are
+`1926.197274`, `1942.928645` and `861.3662992 pb`, respectively; their
+cumulative cross-section fields agree to floating-point accumulation
+accuracy. Hadronisation, MPI, primordial transverse momentum and QED
+radiation are disabled. These independent, small source samples are
+workflow checks, not paired cross-section or distribution comparisons.
+Negative S weights remain; these checks do not demonstrate that every
+possible negative H can be removed without a signed residual.
+The separate Fortran HwU rate check for the same 94 accepted top-pair
+events gives `861.36630 pb`, agreeing with their signed weight sum within
+the histogram's printed precision. This catches an otherwise separate
+event-count normalization error in the analysis route.
+
+The artifacts for these bounded checks are under
+`/export/tmp/rikkert/macnlops_deep_checks_20261023_0537`, including
+`evaluator/summary.json` and `native/native_summary.json`. Small source
+samples and selected phase-space points cannot establish a global veto
+bound, the frequency of negative H residuals, or precision agreement of
+final showered distributions. An LHE restart also retains the conditional
+shower-state limitations described above.
 
 ### Historical shared-input scientific comparisons
 

@@ -87,6 +87,56 @@ def prepare(exporter, elements):
     exporter.born_support_registry = registry
 
 
+def component_basis_metadata(born):
+    """Expose labelled Born diagrams/flows for identical-leg transport.
+
+    These are the actual configuration and amplitude indices written by
+    write_born_conf_file, not an independently sorted diagram basis.  The
+    interaction tree comes from the existing FKSDiagramTag construction;
+    its external labels remain explicit and internal node numbers carry no
+    physics.  A runtime permutation can therefore certify both the graph
+    and the planar colour assignment before reusing component ordinals.
+    """
+    process = born['processes'][0]
+    legs = process.get_legs_with_decays()
+    nincoming = born.get_nexternal_ninitial()[1]
+    colours = []
+    if born['color_basis']:
+        representations = {
+            leg['number']: process['model'].get_particle(leg['id']).get_color()
+            * (-1)**(1 + leg['state']) for leg in legs}
+        flows = born['color_basis'].color_flow_decomposition(representations, nincoming)
+        colours = [[list(flow[leg['number']]) for leg in legs] for flow in flows]
+    else:
+        colours = [[[0, 0] for leg in legs]]
+    diagrams = born['base_amplitude']['diagrams']
+    minimum_vertex = min((max(len(v['legs']) for v in d['vertices'])
+                          for d in diagrams), default=0)
+    graphs = []
+    for position, diagram in enumerate(diagrams):
+        if any(len(v['legs']) > minimum_vertex for v in diagram['vertices']):
+            continue
+        nodes, edges = [], []
+
+        def append(link):
+            index = len(nodes)
+            if link.end_link:
+                nodes.append(dict(leg=link.links[0][1], pdg=link.links[0][0][0]))
+            else:
+                nodes.append(dict(interaction=link.vertex_id[0]))
+                for child in link.links:
+                    edges.append([index, append(child)])
+            return index
+
+        append(fks_common.FKSDiagramTag(diagram).tag)
+        graphs.append(dict(config=len(graphs) + 1,
+                           graph=born['diagrams'][position]['amplitudes'][0]['number'],
+                           tree=dict(nodes=nodes, edges=edges)))
+    return dict(schema='macnlops-component-basis-v1',
+                external_states=[fks_common.external_leg_identity(leg) for leg in legs],
+                flows=colours, graphs=graphs)
+
+
 def worker_record(exporter, me, amp_orders):
     """Write immutable native metadata alongside the worker's generated files."""
     name = Path.cwd().name
@@ -111,6 +161,7 @@ def worker_record(exporter, me, amp_orders):
                  helicity_matrices=[helicity_matrix_metadata(matrix, proc['model'])
                      for matrix in [born]+list(me.extra_cnt_me_list)+
                      [real.matrix_element for real in me.real_processes]])
+    entry['component_basis'] = component_basis_metadata(born)
     # Packed matrices follow the same (i,j), i <= j order as the Born colour
     # sum. Off-diagonal entries include the second half of the symmetric sum.
     entry['colour_matrices'] = []

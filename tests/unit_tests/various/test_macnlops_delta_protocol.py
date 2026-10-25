@@ -72,6 +72,27 @@ class TestDeltaProtocol(unittest.TestCase):
         with self.assertRaisesRegex(InvalidRunCard, 'resolved_source=False'):
             card.check_validity()
 
+    def test_run_card_requires_hard_momenta_only_for_macnlops(self):
+        from madgraph.various.banner import InvalidRunCard, RunCardNLO
+        for delta in (False, True):
+            with self.subTest(delta=delta):
+                card = RunCardNLO()
+                for key, value in dict(macnlops=True, mcatnlo_delta=delta,
+                        store_hard_momenta=False, parton_shower='PYTHIA8',
+                        event_norm='sum', pdlabel='lhapdf', lhaid=[260000],
+                        reweight_scale=[False], reweight_pdf=[False]).items():
+                    card.set(key, value, user=True)
+                with self.assertRaisesRegex(InvalidRunCard, 'store_hard_momenta=True'):
+                    card.check_validity()
+                self.assertFalse(card['store_hard_momenta'])
+                card.set('store_hard_momenta', True, user=True)
+                card.check_validity()
+                self.assertEqual(mc.source_construction(card),
+                                 mc.DELTA_SOURCE if delta else mc.ORDINARY_SOURCE)
+                card.set('macnlops', False, user=True)
+                card.set('store_hard_momenta', False, user=True)
+                card.check_validity()
+
     def test_context_round_trip_and_fail_closed_validation(self):
         parsed = mc.Event(delta_event())
         self.assertEqual(parsed.delta.owner, 1)

@@ -24,6 +24,7 @@ class TestBornFlowRejection(unittest.TestCase):
             'orders.inc': 'integer amp_split_size,nsplitorders\n'
                           'parameter(amp_split_size=1,nsplitorders=1)',
             'run.inc': 'integer ickkw\nlogical mcatnlo_delta\n'
+                       'logical,parameter :: macnlops=.false.\n'
                        'common/test_run/ickkw,mcatnlo_delta',
             'fks_info.inc': '',
             'mc_histories.inc': 'integer MC_HIST_COUNT\nparameter(MC_HIST_COUNT=1)',

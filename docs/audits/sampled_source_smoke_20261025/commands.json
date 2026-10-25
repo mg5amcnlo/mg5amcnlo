@@ -1,0 +1,194 @@
+{
+  "cores": 1,
+  "thread_environment": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "MAKEFLAGS": "-j1"
+  },
+  "commands": [
+    {
+      "stage": "export",
+      "argv": [
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/bin/mg5_aMC",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/export_commands.mg5"
+      ],
+      "cwd": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS",
+      "timeout_seconds": 90
+    },
+    {
+      "stage": "compile",
+      "argv": [
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/bin/aMCatNLO",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/compile_commands.txt"
+      ],
+      "cwd": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar",
+      "timeout_seconds": 120
+    },
+    {
+      "stage": "ordinary_matching",
+      "api": "madgraph.various.macnlops.run_generated_sample",
+      "arguments": {
+        "process_dir": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar",
+        "filename": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/Events/smoke_ordinary/events.lhe.gz",
+        "pythia8": "/export/tmp/rikkert/Pythia/pythia8318",
+        "seed": 975313
+      }
+    },
+    {
+      "stage": "ordinary_mint0",
+      "argv": [
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/SubProcesses/P0_uux_emep/madevent_mintMC"
+      ],
+      "cwd": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/SubProcesses/P0_uux_emep/smoke_ordinary",
+      "stdin": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/ordinary_mode0.in",
+      "timeout_seconds": 30
+    },
+    {
+      "stage": "ordinary_mint1",
+      "argv": [
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/SubProcesses/P0_uux_emep/madevent_mintMC"
+      ],
+      "cwd": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/SubProcesses/P0_uux_emep/smoke_ordinary",
+      "stdin": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/ordinary_mode1.in",
+      "timeout_seconds": 30
+    },
+    {
+      "stage": "ordinary_mint2",
+      "argv": [
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/SubProcesses/P0_uux_emep/madevent_mintMC"
+      ],
+      "cwd": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/SubProcesses/P0_uux_emep/smoke_ordinary",
+      "stdin": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/ordinary_mode2.in",
+      "timeout_seconds": 30
+    },
+    {
+      "stage": "delta_matching",
+      "api": "madgraph.various.macnlops.run_generated_sample",
+      "arguments": {
+        "process_dir": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta",
+        "filename": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/Events/smoke_delta/events.lhe.gz",
+        "pythia8": "/export/tmp/rikkert/Pythia/pythia8318",
+        "seed": 975323
+      }
+    },
+    {
+      "stage": "delta_mint0",
+      "argv": [
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/SubProcesses/P0_uux_emep/madevent_mintMC"
+      ],
+      "cwd": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/SubProcesses/P0_uux_emep/smoke_delta",
+      "stdin": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/delta_mode0.in",
+      "timeout_seconds": 30
+    },
+    {
+      "stage": "delta_mint1",
+      "argv": [
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/SubProcesses/P0_uux_emep/madevent_mintMC"
+      ],
+      "cwd": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/SubProcesses/P0_uux_emep/smoke_delta",
+      "stdin": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/delta_mode1.in",
+      "timeout_seconds": 30
+    },
+    {
+      "stage": "delta_mint2",
+      "argv": [
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/SubProcesses/P0_uux_emep/madevent_mintMC"
+      ],
+      "cwd": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/SubProcesses/P0_uux_emep/smoke_delta",
+      "stdin": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/delta_mode2.in",
+      "timeout_seconds": 30
+    },
+    {
+      "stage": "delta128_matching",
+      "api": "madgraph.various.macnlops.run_generated_sample",
+      "arguments": {
+        "process_dir": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta",
+        "filename": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/Events/smoke_delta128/events.lhe.gz",
+        "pythia8": "/export/tmp/rikkert/Pythia/pythia8318",
+        "seed": 975331
+      }
+    },
+    {
+      "stage": "delta128_generation",
+      "argv": [
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/SubProcesses/P0_uux_emep/madevent_mintMC"
+      ],
+      "cwd": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/SubProcesses/P0_uux_emep/smoke_delta",
+      "stdin": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/delta_mode2_128.in",
+      "timeout_seconds": 20,
+      "randinit": "r=975329"
+    },
+    {
+      "stage": "explicit_outer_sum_mint0",
+      "argv": [
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_explicitS/SubProcesses/P0_uux_emep/madevent_mintMC"
+      ],
+      "cwd": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_explicitS/SubProcesses/P0_uux_emep/smoke_explicitS",
+      "stdin": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/explicitS_mode0.in",
+      "timeout_seconds": 30
+    },
+    {
+      "stage": "explicit_outer_sum_mint1",
+      "argv": [
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_explicitS/SubProcesses/P0_uux_emep/madevent_mintMC"
+      ],
+      "cwd": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_explicitS/SubProcesses/P0_uux_emep/smoke_explicitS",
+      "stdin": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/explicitS_mode1.in",
+      "timeout_seconds": 30
+    },
+    {
+      "stage": "explicit_outer_sum_mint2",
+      "argv": [
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_explicitS/SubProcesses/P0_uux_emep/madevent_mintMC"
+      ],
+      "cwd": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_explicitS/SubProcesses/P0_uux_emep/smoke_explicitS",
+      "stdin": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/explicitS_mode2.in",
+      "timeout_seconds": 30
+    }
+  ],
+  "setups": [
+    {
+      "name": "ordinary",
+      "fresh_export": true,
+      "run_card_snapshot": "ordinary_run_card.dat",
+      "param_card_snapshot": "param_card.dat",
+      "FKS_parameters": "ordinary_FKS_params.dat"
+    },
+    {
+      "name": "delta",
+      "copy_code_assets_from": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar",
+      "excluded": [
+        "Events",
+        "smoke_ordinary",
+        "smoke_delta"
+      ],
+      "run_card_snapshot": "delta_run_card.dat",
+      "API_prepare_generation": true,
+      "compile_commands": [
+        [
+          "make",
+          "-j1"
+        ],
+        [
+          "make",
+          "-j1",
+          "madevent_mintMC"
+        ]
+      ],
+      "fresh_grids": true
+    },
+    {
+      "name": "explicit_outer_sum",
+      "copy_code_assets_from": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar",
+      "excluded": [
+        "Events",
+        "smoke_ordinary",
+        "smoke_delta"
+      ],
+      "FKSExplicitSum": true,
+      "fresh_grids": true,
+      "showered": false
+    }
+  ]
+}

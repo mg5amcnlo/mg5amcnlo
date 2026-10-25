@@ -20,6 +20,9 @@ program check_born_flow_rejection
   common/to_abrv/abrv
   external sigintF
   call get_command_argument(1,mode)
+  ! This fixture audits the global native-history rejection path by
+  ! default; its legacy modes explicitly select sampled matching.
+  MCExplicitKLSum=.true.
   nan=ieee_value(0d0,ieee_quiet_nan)
   inf=ieee_value(0d0,ieee_positive_inf)
   leading=[.true.,.true.,.false.]

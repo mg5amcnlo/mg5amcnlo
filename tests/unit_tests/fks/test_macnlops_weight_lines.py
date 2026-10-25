@@ -11,6 +11,52 @@ ROOT = Path(__file__).resolve().parents[3]
 
 @unittest.skipUnless(shutil.which('gfortran'), 'gfortran is required')
 class TestMacNLOPSWeightLines(unittest.TestCase):
+    def test_sampled_component_identity_survives_growth_copy_and_point_reset(self):
+        with tempfile.TemporaryDirectory(prefix='macnlops-component-lines-') as temporary:
+            work = Path(temporary)
+            (work / 'check.f90').write_text('''program check
+ use weight_lines
+ implicit none
+ integer first,i
+ call begin_component_context(2,3,7,4,.25d0,.3d0,2d0)
+ first=component_context_active
+ call weight_lines_allocated(5,1,1,1)
+ call reset_macnlops_line(1)
+ call end_component_context(.4d0)
+ call weight_lines_allocated(5,40,1,1)
+ call copy_macnlops_line(1,2)
+ if(.not.same_source_component(1,2))stop 1
+ if(component_line_context(1)/=first)stop 2
+ do i=1,20
+   call begin_component_context(2,3,7,4,.25d0,.3d0,2d0)
+   call reset_macnlops_line(3)
+   call end_component_context(.4d0)
+ enddo
+ if(same_source_component(1,3))stop 3
+ if(component_contexts(first)%flow_probability/=.25d0)stop 4
+ if(component_contexts(first)%source_factor/=.4d0)stop 5
+ if(component_contexts(first)%insertion/=.3d0)stop 6
+ if(component_contexts(first)%config/=3.or.component_contexts(first)%graph/=7)stop 10
+ if(component_contexts(first)%diagram_symmetry/=2d0)stop 11
+ call reset_macnlops_line(3)
+ if(component_line_context(3)/=0)stop 7
+ call deallocate_weight_lines
+ if(allocated(component_line_context).or.allocated(component_contexts))stop 8
+ if(component_context_active/=0.or.component_context_count/=0)stop 9
+ print *, 'PASS sampled component identity lifecycle'
+end program
+''')
+            result = subprocess.run(['gfortran', '-O0', '-fcheck=all',
+                '-ffixed-line-length-none',
+                str(ROOT / 'Template/NLO/SubProcesses/weight_lines.f'),
+                str(work / 'check.f90'), '-o', str(work / 'check')],
+                cwd=work, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            result = subprocess.run([str(work / 'check')], cwd=work,
+                                    capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn('PASS sampled component identity lifecycle', result.stdout)
+
     def test_partial_native_flavour_overlap_is_not_a_global_group(self):
         with tempfile.TemporaryDirectory(prefix='macnlops-group-coverage-') as temporary:
             work=Path(temporary)

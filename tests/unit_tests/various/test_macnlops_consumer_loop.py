@@ -38,14 +38,14 @@ class TestMacNLOPSConsumerLoop(unittest.TestCase):
 using namespace std;
 struct State {
   bool continuation=true;
-  int requested=3,total=3,fail=0,calls=0,selected=0,read=0;
-  double norm=-1.;
+  int requested=3,total=3,fail=0,calls=0,selected=0,read=0,skip=0,event_number=-1;
+  double norm=-1.,sigma=0.;
   vector<double> source{2.,-3.,5.},written,analysed;
 } state;
 struct Info {
   int nSelected() const {return state.selected;}
-  int nTried() const {return state.calls;}
-  double weight() const {return state.source.at(state.calls-1);}
+  int nTried() const {return state.calls+state.skip;}
+  double weight() const {return state.source.at(state.calls-1)>0.?1.:-1.;}
   bool isLHA() const {return false;}
   void list() const {}
 };
@@ -64,6 +64,7 @@ namespace HepMC {
 struct GenEvent {
   vector<double> values{0.};
   vector<double>& weights(){return values;}
+  void set_event_number(int n){state.event_number=n;}
 };
 struct Pythia8ToHepMC {
   void fill_next_event(Pythia& p,GenEvent* e){e->values[0]=p.info.weight();}
@@ -74,10 +75,15 @@ struct IO_BaseClass {
 struct IO_HEPEVT:IO_BaseClass {};
 }
 struct Reader {
-  void lhef_read_wgts_(double* weights){weights[0]=state.source.at(state.read++);}
+  struct {struct {double XWGTUP;} hepeup;} reader;
+  void lhef_read_wgts_(double*){reader.hepeup.XWGTUP=state.source.at(state.read++);}
 };
 struct {double EVWGT;} cevwgt;
-void pyanal_(int&,double* weights){state.analysed.push_back(weights[0]);}
+void pyanal_(int&,double* weights){
+  if(state.continuation&&state.event_number!=int(state.analysed.size())+1)
+    throw std::runtime_error("Fortran NEVHEP must count processed continuation events");
+  state.analysed.push_back(weights[0]);
+}
 void pyaend_(double& norm){state.norm=norm;}
 int consume(bool sum) {
   Pythia pythia;Reader read;
@@ -90,6 +96,7 @@ int consume(bool sum) {
   HepMC::IO_BaseClass* _hepevtio;
   HepMC::Pythia8ToHepMC ToHepMC;
 __ACTUAL_LOOP__
+  state.sigma=sigmaTotal;
   return 0;
 }
 void array(const vector<double>& values) {
@@ -99,10 +106,10 @@ void array(const vector<double>& values) {
 }
 int main(int argc,char** argv) {
   state.requested=atoi(argv[1]);state.total=state.requested;
-  state.fail=atoi(argv[2]);state.continuation=atoi(argv[3]);
+  state.fail=atoi(argv[2]);state.continuation=atoi(argv[3]);state.skip=atoi(argv[5]);
   int code=consume(atoi(argv[4]));
   cout<<setprecision(17)<<"{\"code\":"<<code<<",\"calls\":"<<state.calls
-      <<",\"read\":"<<state.read<<",\"norm\":"<<state.norm<<",\"written\":";
+      <<",\"read\":"<<state.read<<",\"norm\":"<<state.norm<<",\"sigma\":"<<state.sigma<<",\"written\":";
   array(state.written);cout<<",\"analysed\":";array(state.analysed);cout<<"}\n";
 }
 '''
@@ -114,24 +121,25 @@ int main(int argc,char** argv) {
         if result.returncode:
             raise AssertionError(result.stdout + result.stderr)
 
-    def check(self, count, fail=0, continuation=True, sum_norm=True):
+    def check(self, count, fail=0, continuation=True, sum_norm=True, skip=0):
         result = subprocess.run([str(self.executable), str(count), str(fail),
-            str(int(continuation)), str(int(sum_norm))], text=True,
+            str(int(continuation)), str(int(sum_norm)), str(skip)], text=True,
             capture_output=True, timeout=5)
         self.assertEqual(result.returncode, 0, result.stderr)
         return json.loads(result.stdout)
 
     def test_one_event_is_written_and_norm_is_nonzero(self):
         self.assertEqual(self.check(1), dict(code=0, calls=1, read=1,
-            norm=1., written=[2.], analysed=[2.]))
+            norm=1., sigma=2., written=[2.], analysed=[2.]))
 
     def test_three_signed_events_are_written_without_reading_a_fourth(self):
         self.assertEqual(self.check(3), dict(code=0, calls=3, read=3,
-            norm=3., written=[2., -3., 5.], analysed=[2., -3., 5.]))
+            norm=3., sigma=4., written=[2., -3., 5.], analysed=[2., -3., 5.]))
 
     def test_average_normalization_uses_processed_events(self):
         report = self.check(3, sum_norm=False)
         self.assertEqual(report['norm'], 1.)
+        self.assertAlmostEqual(report['sigma'], 4. / 3.)
         self.assertEqual(report['written'], [2., -3., 5.])
 
     def test_failed_next_stops_before_consuming_any_replacement(self):
@@ -143,9 +151,135 @@ int main(int argc,char** argv) {
             self.assertEqual(report['analysed'], report['written'])
             self.assertEqual(report['read'], failed - 1)
 
+    def test_skipped_source_cannot_be_replaced_in_the_analysis_path(self):
+        self.assertEqual(self.check(3, skip=1), dict(code=1, calls=1, read=0,
+            norm=-1., sigma=0., written=[], analysed=[]))
+
     def test_opt_out_preserves_legacy_stop_and_normalization(self):
         self.assertEqual(self.check(3, continuation=False), dict(code=0,
-            calls=3, read=2, norm=2., written=[2., -3.], analysed=[2., -3.]))
+            calls=3, read=2, norm=2., sigma=0., written=[1., -1.], analysed=[1., -1.]))
+
+
+@unittest.skipUnless(shutil.which('g++'), 'requires a C++ compiler')
+class TestMacNLOPSHepMCConsumerLoop(unittest.TestCase):
+    """Exercise the separate HepMC-only driver selected by ANALYSE = ''."""
+    @classmethod
+    def setUpClass(cls):
+        bodies = []
+        for name in ('Pythia8_hep.cc', 'Pythia82_hep.cc', 'Pythia83_hep.cc'):
+            source = (DRIVERS / name).read_text()
+            start = source.index('  for (int iEvent = 0;')
+            bodies.append(source[start:source.index('\n  delete sourceWeights;', start)])
+        if bodies[1:] != bodies[:1] * 2:
+            raise AssertionError('HepMC consumer loop must agree across all three Pythia versions')
+        cls.temporary = tempfile.TemporaryDirectory(prefix='macnlops-hepmc-loop-')
+        cls.addClassCleanup(cls.temporary.cleanup)
+        work = Path(cls.temporary.name)
+        cls.executable = work / 'check'
+        stub = r'''
+#include <iostream>
+#include <vector>
+#include <string>
+#include <cstdlib>
+#include <iomanip>
+using namespace std;
+struct State {
+  int calls=0,read=0,requested=3,fail=0,skip=0,missing=0;
+  double sigma=0.;
+  vector<double> raw{2.,-3.,5.};
+  vector<vector<double> > written;
+} state;
+struct Info {
+  int nSelected()const{return state.calls;}
+  int nTried()const{return state.calls+state.skip;}
+  bool isLHA()const{return false;}
+  double weight()const{return state.raw.at(state.calls-1)>0.?1.:-1.;}
+  double sigmaErr()const{return 0.;}
+  void list()const{}
+};
+struct Listing {void list()const{}};
+struct Pythia {
+  Info info;Listing process,event;
+  bool next(){++state.calls;return state.calls!=state.fail&&state.calls<=int(state.raw.size());}
+  void LHAeventList(){}
+};
+struct Reader {
+  struct {double XWGTUP;} hepeup;
+  bool readEvent(){if(state.read==state.missing)return false;hepeup.XWGTUP=state.raw.at(state.read++);return true;}
+};
+namespace HepMC {
+struct GenCrossSection {void set_cross_section(double s,double){state.sigma=s;}};
+struct GenEvent {
+  vector<double> values;
+  vector<double>& weights(){return values;}
+  void set_cross_section(GenCrossSection){}
+};
+struct Pythia8ToHepMC {
+  void fill_next_event(Pythia& p,GenEvent* e){e->values.push_back(p.info.weight());e->values.push_back(2.*p.info.weight());}
+};
+}
+struct Writer {
+  void operator<<(HepMC::GenEvent* e){state.written.push_back(e->weights());}
+};
+int consume(bool continuation,bool sum) {
+  Pythia pythia;Reader source,*sourceWeights=&source;
+  HepMC::Pythia8ToHepMC ToHepMC;Writer ascii_io;
+  int iEventshower=state.requested,iEventtot=state.requested;
+  int iAbort=0,nAbort=1,iPrintLHA=0,nPrintLHA=0;
+  string evt_norm=sum?"sum":"average";
+  double sigmaTotal=0.;
+__ACTUAL_LOOP__
+  return 0;
+}
+int main(int argc,char**argv) {
+  state.requested=atoi(argv[1]);state.fail=atoi(argv[2]);state.skip=atoi(argv[5]);state.missing=atoi(argv[6]);
+  int code=consume(atoi(argv[3]),atoi(argv[4]));
+  cout<<setprecision(17)<<"{\"code\":"<<code<<",\"calls\":"<<state.calls<<",\"read\":"<<state.read
+      <<",\"sigma\":"<<state.sigma<<",\"written\":[";
+  for(size_t i=0;i<state.written.size();++i){if(i)cout<<',';cout<<'[';
+    for(size_t j=0;j<state.written[i].size();++j){if(j)cout<<',';cout<<state.written[i][j];}cout<<']';}
+  cout<<"]}\n";
+}
+'''
+        source = work / 'check.cc'
+        source.write_text(stub.replace('__ACTUAL_LOOP__', bodies[0]))
+        result = subprocess.run(['nice', '-n', '19', 'g++', '-std=c++11', '-O0',
+            str(source), '-o', str(cls.executable)], cwd=work, text=True,
+            capture_output=True, timeout=30)
+        if result.returncode:
+            raise AssertionError(result.stdout + result.stderr)
+
+    def check(self, count=3, fail=0, continuation=True, sum_norm=True, skip=0, missing=-1):
+        result = subprocess.run([str(self.executable), str(count), str(fail),
+            str(int(continuation)), str(int(sum_norm)), str(skip), str(missing)],
+            text=True, capture_output=True, timeout=5)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return json.loads(result.stdout)
+
+    def test_raw_nominal_and_variations_survive_without_duplicate_weight(self):
+        self.assertEqual(self.check(), dict(code=0, calls=3, read=3, sigma=4.,
+            written=[[2., 4.], [-3., -6.], [5., 10.]]))
+        self.assertEqual(self.check(count=1), dict(code=0, calls=1, read=1, sigma=2.,
+            written=[[2., 4.]]))
+
+    def test_average_normalization_is_applied_once(self):
+        result = self.check(sum_norm=False)
+        self.assertAlmostEqual(result['sigma'], 4. / 3.)
+        for actual, expected in zip(result['written'], [[2/3, 4/3], [-1., -2.], [5/3, 10/3]]):
+            for a, b in zip(actual, expected):
+                self.assertAlmostEqual(a, b)
+
+    def test_failure_missing_weight_or_skipped_source_stops(self):
+        for kwargs in (dict(fail=2), dict(missing=1), dict(skip=1)):
+            with self.subTest(kwargs=kwargs):
+                result = self.check(**kwargs)
+                self.assertEqual(result['code'], 1)
+                self.assertEqual(len(result['written']), 0 if kwargs.get('skip') else 1)
+                self.assertEqual(result['read'], len(result['written']))
+
+    def test_legacy_hepmc_path_is_unchanged(self):
+        self.assertEqual(self.check(continuation=False), dict(code=0, calls=4, read=0,
+            sigma=1., written=[[1., 1., 2.], [-1., -1., -2.], [1., 1., 2.]]))
 
 
 if __name__ == '__main__':

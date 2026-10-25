@@ -1,0 +1,22 @@
+{
+  "counts": {
+    "accepted_H": 18,
+    "accepted_S": 103,
+    "input_H": 21,
+    "input_S": 107
+  },
+  "cross_section_error_convention": "quadrature of independent-channel finite-sample errors; original trials include rejections",
+  "inputs": [
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/Events/smoke_delta128/macnlops/events/events.lhe.gz"
+  ],
+  "lhe_continuation": true,
+  "matching_seeds": [
+    975332
+  ],
+  "normalization": "sum; unchanged surviving input weights",
+  "output": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/Events/smoke_delta128/macnlops/events.lhe.gz",
+  "shuffle_seed": 975332,
+  "sumw": 20.197251200000064,
+  "sumw2": 3.485587435939843,
+  "veto_prescription": "component-undamped-delta-v1"
+}

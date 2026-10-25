@@ -188,7 +188,6 @@ struct InputEvent {
       throw std::runtime_error("Malformed LHE event header");
     process = integer(h[1]); weight = number(h[2]); scale = number(h[3]);
     alphaEM = number(h[4]); alphaS = number(h[5]);
-    if (scale < 0.) throw std::runtime_error("Negative LHE shower scale");
     for (int i = 0; i < n; ++i) {
       std::string line;
       if (!std::getline(input, line))
@@ -344,12 +343,48 @@ std::string dipoleName(int radiator, int recoiler) {
 
 void prepareSourceMatching(InputEvent& input, bool delta) {
   input.delta = delta;
+  // MC@NLO-Delta H records use -1 as the unused scalar sentinel; their
+  // directed scale matrix below supplies the actual native shower start.
+  // Keep the sentinel as source provenance, not as a continuation scale.
+  if (input.scale < 0. && !(delta && input.kind == 2 && input.scale == -1.))
+    throw std::runtime_error("Negative LHE shower scale");
   if (input.hasEndpoint || sourceXMLBlock(input.extra, "macnlops_continuation").present)
     throw std::runtime_error("Derived endpoint requires shower continuation; do not repeat first-emission matching");
   if (input.hasHard && ((input.hardSource == "delta") != delta))
     throw std::runtime_error("Source matching mode conflicts with hard-event annotation");
   const auto scales = sourceXMLBlock(input.extra, "scales");
   const auto context = sourceXMLBlock(input.extra, "macnlops_delta_context");
+  const auto component = sourceXMLBlock(input.extra, "macnlops_component");
+  if (component.present) {
+    const auto& a = component.attributes;
+    if (!input.hasHard || input.hardPartition != "sampled" ||
+        input.hardSource == "resolved" ||
+        input.hardMetadata[8] != 0 || input.hardMetadata[9] != 1 ||
+        a.size() != 2 || !a.count("version") || a.at("version") != "1" ||
+        !a.count("registry") || a.at("registry").size() != 64 ||
+        a.at("registry").find_first_not_of("0123456789abcdef") != std::string::npos)
+      throw std::runtime_error("Invalid sampled-component source metadata");
+    std::istringstream rows(component.contents);
+    std::vector<std::string> data;
+    std::string line;
+    while (std::getline(rows, line)) if (!trim(line).empty()) data.push_back(line);
+    if (data.size() != 2)
+      throw std::runtime_error("Invalid sampled-component row count");
+    const auto labels = fields(data[0], 4, "sampled-component labels");
+    const auto weights = fields(data[1], 4, "sampled-component weights");
+    for (const auto& value : labels)
+      if (integer(value) < 1) throw std::runtime_error("Invalid sampled-component label");
+    const double q = number(weights[0]), insertion = number(weights[1]);
+    const double sourceFactor = number(weights[2]), symmetry = number(weights[3]);
+    if (integer(labels[0]) != input.hardMetadata[2] ||
+        integer(labels[3]) != std::abs(input.hardMetadata[7]) ||
+        input.hardMetadata[11] != 1 || input.hardMetadata[13] < 1 ||
+        (input.kind == 2 && input.hardMetadata[3] != integer(labels[0])) ||
+        q <= 0. || q > 1. || insertion < 0. || insertion > 1. ||
+        sourceFactor < 0. || sourceFactor > 1. || symmetry <= 0. ||
+        (input.kind == 1 && (insertion != 0. || sourceFactor != 1.)))
+      throw std::runtime_error("Invalid sampled-component source labels or weights");
+  }
   bool hasDeltaScales = false;
   for (const auto& entry : scales.attributes)
     hasDeltaScales = hasDeltaScales || entry.first.compare(0, 7, "scalup_") == 0;
@@ -392,7 +427,7 @@ void prepareSourceMatching(InputEvent& input, bool delta) {
         throw std::runtime_error("Incomplete Delta dipole-scale matrix");
   if (input.dipoleScales.empty())
     throw std::runtime_error("Delta source has no coloured dipole starting scales");
-  if (input.kind == 2 && !context.present)
+  if (input.kind == 2 && !context.present && !component.present)
     throw std::runtime_error("Delta H source requires density-context provenance");
   if (!context.present) return;
   const auto& a = context.attributes;
@@ -497,8 +532,15 @@ void validateHardInput(const InputEvent& input, const Pythia& engine) {
   }
   if (incoming != 2 || !outgoing)
     throw std::runtime_error("Invalid hard-model incoming/final multiplicity");
+  // An FKS hard annotation precedes the shower-mass reshuffle and its
+  // momentum repair. Rare generated points retain a few 1e-8 relative
+  // balance residuals even though every external leg is on shell. Keep
+  // the strict plain-LHE check and admit that numerical source precision
+  // for the annotated hard coordinates without changing their momenta.
+  const long double balanceTolerance =
+    (input.hasHard && input.hardUsed ? 1.e-7L : 1.e-9L) * eventScale;
   for (const auto& value : balance)
-    if (std::abs(value) > 1.e-9 * eventScale)
+    if (std::abs(value) > balanceTolerance)
       throw std::runtime_error("Hard-model event does not conserve four-momentum");
 }
 
@@ -559,6 +601,8 @@ public:
         infoPtr->scales->attributes != input.scaleAttributes))
       throw std::runtime_error("Pythia/raw Delta starting-scale mismatch (LHEF 2/3 required)");
     input.showerScale = scale();
+    if (delta && (!std::isfinite(input.showerScale) || input.showerScale <= 0.))
+      throw std::runtime_error("Invalid effective Delta shower starting scale");
     for (std::size_t i = 0; i < input.originalParticles.size(); ++i) {
       const auto& p = input.originalParticles[i];
       const auto& q = particles[i+1];

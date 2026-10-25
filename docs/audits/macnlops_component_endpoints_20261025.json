@@ -1,0 +1,365 @@
+{
+  "closure_relative_tolerance": 1e-07,
+  "created_utc": "2026-10-25T06:02:56.090223+00:00",
+  "delta_calculation_trap": true,
+  "driver_sha256": "42087291a689d8cf90457e6f41f9addab31c70699788e089eb4666525804040f",
+  "passed": true,
+  "points": [
+    {
+      "born_flow": 1,
+      "born_permutation": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "config": 1,
+      "densities": [
+        11461895027.5604,
+        11763599112.62292,
+        11763599112.62292
+      ],
+      "diagnostics": [],
+      "emission_type": "ISR",
+      "endpoint_permutation": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "graph": 1,
+      "native_sector": 2,
+      "process": "DY_5FS",
+      "pt_evol": 0.8827944955247873,
+      "radiator_pdg": -1,
+      "registry_sha256": "0c5c932dfc2f08579c38b1bcbafa182883dece7e1cf082a2950b0c3c895d9612",
+      "request_sha256": "e6ae2fa4f8961abaf1e8d07ac5b06b004369cfa1b27e60ae0c017d20db244867",
+      "sequence": 1,
+      "sidecar": "DY_5FS/Events/delta_1M/macnlops/SubProcesses__P0_ddx_emep__GF1.0__events/shower.jsonl",
+      "sidecar_record_sha256": "ba1f47180f5890dfa1201e9cfcebb904c5c241bb8e6425cdf238ab745e633fe4",
+      "status": 0
+    },
+    {
+      "born_flow": 1,
+      "born_permutation": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "config": 1,
+      "densities": [
+        2037620.2734679973,
+        2293668.9642243953,
+        2293668.964224396
+      ],
+      "diagnostics": [],
+      "emission_type": "ISR",
+      "endpoint_permutation": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "graph": 1,
+      "native_sector": 4,
+      "process": "DY_5FS",
+      "pt_evol": 29.78867920503178,
+      "radiator_pdg": -1,
+      "registry_sha256": "0c5c932dfc2f08579c38b1bcbafa182883dece7e1cf082a2950b0c3c895d9612",
+      "request_sha256": "2d95ab2de596ffca9ab895f3b5ea4554d6a8bfc4a5fe36679816e7483b73f582",
+      "sequence": 2,
+      "sidecar": "DY_5FS/Events/delta_1M/macnlops/SubProcesses__P0_ddx_emep__GF1.0__events/shower.jsonl",
+      "sidecar_record_sha256": "b188e2e5da9a6a43fe2d36d3bc2373f517be6bbef34856fc75ed17d9f7c4fcce",
+      "status": 0
+    },
+    {
+      "born_flow": 2,
+      "born_permutation": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "config": 1,
+      "densities": [
+        345080944.57704926,
+        347429550.4458518,
+        338693169.44648933
+      ],
+      "diagnostics": [],
+      "emission_type": "ISR",
+      "endpoint_permutation": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "graph": 1,
+      "native_sector": 6,
+      "process": "TTbar_5FS",
+      "pt_evol": 15.78022836780882,
+      "radiator_pdg": 21,
+      "registry_sha256": "a09c4aa5d1d62edb38ec2e9ceefda4b5b9810a8a43f2b91e167a03aa55a3494d",
+      "request_sha256": "0d9f7de13a73f790d84c40c99e35cd8604c18cc7f88990761570c31f26be2cfc",
+      "sequence": 2,
+      "sidecar": "TTbar_5FS/Events/delta_1M/macnlops/SubProcesses__P0_gg_ttx__GF1.0_1__events/shower.jsonl",
+      "sidecar_record_sha256": "b9ee1b39d2e9f659b9cedcd840944a1d795f8401401fdbad75158c587acb9613",
+      "status": 0
+    },
+    {
+      "born_flow": 2,
+      "born_permutation": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "config": 1,
+      "densities": [
+        313149216.02154654,
+        303880217.87770295,
+        270966762.9258282
+      ],
+      "diagnostics": [],
+      "emission_type": "ISR",
+      "endpoint_permutation": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "graph": 1,
+      "native_sector": 2,
+      "process": "TTbar_5FS",
+      "pt_evol": 33.481720285121135,
+      "radiator_pdg": 21,
+      "registry_sha256": "a09c4aa5d1d62edb38ec2e9ceefda4b5b9810a8a43f2b91e167a03aa55a3494d",
+      "request_sha256": "f59a7c879796c908202bef75645ecb16f73cbc917c0d26a795f0c51072158d12",
+      "sequence": 3,
+      "sidecar": "TTbar_5FS/Events/delta_1M/macnlops/SubProcesses__P0_gg_ttx__GF1.0_1__events/shower.jsonl",
+      "sidecar_record_sha256": "de947b7bdb8c07224d26237010acd711a0306034ff7847b77140a89dc3fb272a",
+      "status": 0
+    },
+    {
+      "born_flow": 1,
+      "born_permutation": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "config": 1,
+      "densities": [
+        8106677.001409821,
+        12203764.227122976,
+        12203764.227122974
+      ],
+      "diagnostics": [],
+      "emission_type": "FSR",
+      "endpoint_permutation": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "graph": 1,
+      "native_sector": 3,
+      "process": "TTbar_5FS",
+      "pt_evol": 96.79863171474369,
+      "radiator_pdg": 6,
+      "registry_sha256": "a09c4aa5d1d62edb38ec2e9ceefda4b5b9810a8a43f2b91e167a03aa55a3494d",
+      "request_sha256": "9e757cd01acbb14978608ebf85d7c33e4b713fa5402875fc7833b339e2352d77",
+      "sequence": 8,
+      "sidecar": "TTbar_5FS/Events/delta_1M/macnlops/SubProcesses__P0_gg_ttx__GF1.0_1__events/shower.jsonl",
+      "sidecar_record_sha256": "f63dc4803515c02f8f93d04483dd2eda564ef456ed05baaac4169580a98937cd",
+      "status": 0
+    },
+    {
+      "born_flow": 2,
+      "born_permutation": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "config": 1,
+      "densities": [
+        6324458.890103961,
+        4055550.168223615,
+        4025204.5903694713
+      ],
+      "diagnostics": [],
+      "emission_type": "FSR",
+      "endpoint_permutation": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "graph": 1,
+      "native_sector": 4,
+      "process": "Wbb_4FS",
+      "pt_evol": 10.056517993044153,
+      "radiator_pdg": -5,
+      "registry_sha256": "39f8849c55b05962150dda11b539180df5f5eadac73d787da3edcc37bff8d8e9",
+      "request_sha256": "c871bee5162ed957d0b598882dccac52a7d2fcbecbcc36e9e4d2cede4e63010c",
+      "sequence": 1,
+      "sidecar": "Wbb_4FS/Events/delta_1M/macnlops/SubProcesses__P0_dxu_bbxwp__GF1.0_10__events/shower.jsonl",
+      "sidecar_record_sha256": "eeb29cf524827be087452da88c06899123b03941af3810b671b815adbc388864",
+      "status": 0
+    },
+    {
+      "born_flow": 2,
+      "born_permutation": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "config": 1,
+      "densities": [
+        49008031.86718889,
+        55026674.47764014,
+        55026674.47764014
+      ],
+      "diagnostics": [],
+      "emission_type": "FSR",
+      "endpoint_permutation": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "graph": 1,
+      "native_sector": 4,
+      "process": "Wbb_4FS",
+      "pt_evol": 5.995628253390171,
+      "radiator_pdg": -5,
+      "registry_sha256": "39f8849c55b05962150dda11b539180df5f5eadac73d787da3edcc37bff8d8e9",
+      "request_sha256": "d15c2ad610b989f8fbb443ae0f46dca4a37de402af7292ae17d7185fd3a350ea",
+      "sequence": 10,
+      "sidecar": "Wbb_4FS/Events/delta_1M/macnlops/SubProcesses__P0_dxu_bbxwp__GF1.0_10__events/shower.jsonl",
+      "sidecar_record_sha256": "281e294627adadd32190958b003e20a25723c71ea7646ae4e7b6031d5b15443f",
+      "status": 0
+    },
+    {
+      "born_flow": 1,
+      "born_permutation": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "config": 1,
+      "densities": [
+        5476025.175490352,
+        78066834.81127691,
+        78066834.81127693
+      ],
+      "diagnostics": [],
+      "emission_type": "FSR",
+      "endpoint_permutation": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "graph": 1,
+      "native_sector": 4,
+      "process": "SingleTop_5FS",
+      "pt_evol": 28.658047707210944,
+      "radiator_pdg": -2,
+      "registry_sha256": "0213d691bbe0de0ee376b872d75ab7a0201a2bfaaf0ba048b4ea4ee8f9cdca96",
+      "request_sha256": "7cfec1758b4a169967b8bb2ae6127e9eceb2d6152c8198ed17af2876a6ec9e54",
+      "sequence": 4,
+      "sidecar": "SingleTop_5FS/Events/delta_1M/macnlops/SubProcesses__P0_bdx_tux__GF1.0_1__events/shower.jsonl",
+      "sidecar_record_sha256": "cf7f0468f855e3e1295ed402e55cf37dc79270e51116cf8b28aaabb99d298b66",
+      "status": 0
+    },
+    {
+      "born_flow": 1,
+      "born_permutation": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "config": 1,
+      "densities": [
+        511427105.39647436,
+        1036130799.6478739,
+        1036130799.6478739
+      ],
+      "diagnostics": [],
+      "emission_type": "FSR",
+      "endpoint_permutation": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "graph": 1,
+      "native_sector": 4,
+      "process": "SingleTop_5FS",
+      "pt_evol": 12.374562242980408,
+      "radiator_pdg": -4,
+      "registry_sha256": "0213d691bbe0de0ee376b872d75ab7a0201a2bfaaf0ba048b4ea4ee8f9cdca96",
+      "request_sha256": "dd2d0f62877c592c7436c206414d4305c4de6fee6c6507200f0dba8a502c16b9",
+      "sequence": 5,
+      "sidecar": "SingleTop_5FS/Events/delta_1M/macnlops/SubProcesses__P0_bdx_tux__GF1.0_1__events/shower.jsonl",
+      "sidecar_record_sha256": "a782af6ede2d45333929c42870beffcd4969384658e4631319b4e3e429e5fd0a",
+      "status": 0
+    },
+    {
+      "born_flow": 1,
+      "born_permutation": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "config": 1,
+      "densities": [
+        42148999.406567566,
+        56020757.74588169,
+        56020757.7458817
+      ],
+      "diagnostics": [],
+      "emission_type": "FSR",
+      "endpoint_permutation": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "graph": 1,
+      "native_sector": 3,
+      "process": "SingleTop_5FS",
+      "pt_evol": 27.416000092606694,
+      "radiator_pdg": 6,
+      "registry_sha256": "0213d691bbe0de0ee376b872d75ab7a0201a2bfaaf0ba048b4ea4ee8f9cdca96",
+      "request_sha256": "8f5a90f9b38134ed0844619e8f4de33479eb62c504e7c75462542f69b0736732",
+      "sequence": 9,
+      "sidecar": "SingleTop_5FS/Events/delta_1M/macnlops/SubProcesses__P0_bdx_tux__GF1.0_1__events/shower.jsonl",
+      "sidecar_record_sha256": "c8fa902d6984260eb7942754d86500a932e6f37d5bf743324bf46b7a6f9653f1",
+      "status": 0
+    }
+  ],
+  "schema": "macnlops-component-endpoint-check-v1",
+  "scope": "saved first-ten-record prefixes; no event generation or showering"
+}

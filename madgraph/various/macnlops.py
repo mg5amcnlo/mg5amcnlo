@@ -1,19 +1,21 @@
 """First-emission matching from a common, signed MC@NLO input.
 
-Ordinary MC@NLO counterterms and their bogus-Sudakov damping define the
-default source. MC@NLO-Delta uses its paired source terms and conditional
-damping replay instead. The leading shower coefficient defines the
-cancellation; any part that cannot be cancelled by a probability remains
-a signed H residual. The scalar/gated source is an explicit legacy option.
+Ordinary MC@NLO retains its counterterms and bogus-Sudakov damping. Sampled
+fixed-flow sources carry the native sector, Born diagram and colour flow.
+Their Delta veto uses the complete undamped local H, including the G term;
+legacy globally summed Delta sources still use conditional damping replay.
+Any part that cannot be transferred with a bounded probability remains a
+signed H residual. The scalar/gated source is an explicit legacy option.
 """
 
 from __future__ import annotations
 
 import argparse
-from collections import Counter
+from collections import Counter, OrderedDict
 from dataclasses import dataclass
 import gzip
 import hashlib
+import html
 import json
 import math
 import os
@@ -21,15 +23,17 @@ from pathlib import Path
 import random
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
 import threading
 
 try:
-    from . import collect_events
+    from . import collect_events, macnlops_components
 except ImportError:  # Direct invocation of an exported bin/internal/macnlops.py.
     import collect_events
+    import macnlops_components
 
 
 class MatchingError(RuntimeError):
@@ -39,8 +43,18 @@ class MatchingError(RuntimeError):
 ORDINARY_SOURCE = 'ordinary-mcatnlo-v1'
 RESOLVED_SOURCE = 'resolved-convex-v1'
 DELTA_SOURCE = 'mcatnlo-delta-v1'
+SOURCE_NAMES = {ORDINARY_SOURCE: 'ordinary', RESOLVED_SOURCE: 'resolved',
+                DELTA_SOURCE: 'delta'}
+SOURCE_CONSTRUCTIONS = {name: construction for construction, name in SOURCE_NAMES.items()}
+HARD_METADATA_FIELDS = (
+    'nup', 'kind', 'owner', 'native_sector', 'native_provider',
+    'native_context', 'native_history', 'born_flow', 'mc_kl_sum',
+    'fixed_flow', 'fks_sum', 'flavour_coalesced', 'max_bcol', 'group_size')
 _model_mass_cache = {}
 _model_mass_lock = threading.Lock()
+_CHECKSUM_CACHE_LIMIT = 4096
+_checksum_cache = OrderedDict()
+_checksum_cache_lock = threading.Lock()
 
 
 def hard_model_masses(process_dir):
@@ -115,18 +129,28 @@ def source_construction(card):
 
 def hard_source_name(construction):
     try:
-        return {ORDINARY_SOURCE: 'ordinary', RESOLVED_SOURCE: 'resolved',
-                DELTA_SOURCE: 'delta'}[construction]
+        return SOURCE_NAMES[construction]
     except KeyError as exc:
         raise MatchingError('Unknown MAcNLOPS source construction') from exc
+
+
+def matching_prescription(construction, partition):
+    if partition == 'sampled':
+        if construction == RESOLVED_SOURCE:
+            raise MatchingError('The legacy resolved source requires a global H sum')
+        return ('component-undamped-delta-v1' if construction == DELTA_SOURCE
+                else 'component-source-v1')
+    if partition == 'global_sum':
+        return 'global-source-v1'
+    raise MatchingError('Unknown native source partition')
 
 
 @dataclass(frozen=True)
 class Densities:
     """R, the effective transfer R-H, and the physical leading kernel K_g.
 
-    For a Delta source, subtraction includes its compensating real term;
-    it is not just Delta times the MC counterterm.
+    In global Delta mode, subtraction includes the compensating real term.
+    In sampled Delta mode it is the undamped local G-completed counterterm.
     """
     real: float
     subtraction: float
@@ -233,6 +257,19 @@ def xml_attributes(text, context='continuation XML'):
     return attributes
 
 
+def xml_packet(block, name, context):
+    """Read one optional annotation, rejecting duplicate or incomplete tags."""
+    tag = re.escape(name)
+    starts = list(re.finditer(r'<%s\b' % tag, block))
+    closes = list(re.finditer(r'</%s\s*>' % tag, block))
+    if not starts and not closes:
+        return None
+    match = re.search(r'<%s\b([^>]*)>(.*?)</%s\s*>' % (tag, tag), block, re.S)
+    if len(starts) != 1 or len(closes) != 1 or match is None:
+        raise MatchingError('Malformed or duplicate %s' % context)
+    return xml_attributes(match[1], context), match[2]
+
+
 @dataclass(frozen=True)
 class HardEvent:
     """The native external point, stored before the shower-mass transport.
@@ -245,29 +282,23 @@ class HardEvent:
     metadata: tuple
     particles: tuple
     masses: tuple
+    colours: tuple
 
     @classmethod
     def from_block(cls, block, kind):
-        starts = list(re.finditer(r'<macnlops_hard_event\b', block))
-        closes = list(re.finditer(r'</macnlops_hard_event\s*>', block))
-        if not starts and not closes:
+        packet = xml_packet(block, 'macnlops_hard_event', 'hard-event annotation')
+        if packet is None:
             return None
-        if len(starts) != 1 or len(closes) != 1 or closes[0].start() < starts[0].start():
-            raise MatchingError('Duplicate or truncated hard-event annotation')
-        match = re.search(r'<macnlops_hard_event\b([^>]*)>(.*?)'
-                          r'</macnlops_hard_event\s*>', block, re.S)
-        if match is None:
-            raise MatchingError('Malformed hard-event annotation')
-        attributes = xml_attributes(match[1], 'hard-event')
+        attributes, contents = packet
         if (set(attributes) != {'version', 'frame', 'source', 'partition'} or
                 attributes['version'] != '1' or attributes['frame'] != 'lab' or
-                attributes['source'] not in ('ordinary', 'resolved', 'delta') or
+                attributes['source'] not in SOURCE_NAMES.values() or
                 attributes['partition'] not in ('global_sum', 'sampled')):
             raise MatchingError('Unsupported hard-event annotation contract')
-        rows = match[2].strip().splitlines()
+        rows = contents.strip().splitlines()
         try:
             metadata = tuple(map(int, rows[0].split()))
-            if len(metadata) != 14:
+            if len(metadata) != len(HARD_METADATA_FIELDS):
                 raise ValueError('metadata field count')
             nlegs, hard_kind = metadata[:2]
             if (not 3 <= nlegs <= 500 or len(rows) != nlegs + 1 or
@@ -281,7 +312,7 @@ class HardEvent:
                     ((metadata[8], metadata[9], metadata[11]) != (1, 0, 1) or
                      metadata[13] < 1)):
                 raise ValueError('global partition flags')
-            particles, masses = [], []
+            particles, masses, colours = [], [], []
             for row in rows[1:]:
                 fields = row.split()
                 if len(fields) != 13:
@@ -297,13 +328,52 @@ class HardEvent:
                 particles.append((ids[0], ids[1],
                                   (values[3], values[0], values[1], values[2])))
                 masses.append(values[4])
+                colours.append(ids[4:6])
             if (tuple(status for _, status, _ in particles[:2]) != (-1, -1) or
                     any(status != 1 for _, status, _ in particles[2:])):
                 raise ValueError('incoming particle count')
         except (IndexError, ValueError, OverflowError) as exc:
             raise MatchingError('Invalid hard-event annotation: %s' % exc) from exc
         return cls(attributes['source'], attributes['partition'], metadata,
-                   tuple(particles), tuple(masses))
+                   tuple(particles), tuple(masses), tuple(colours))
+
+
+@dataclass(frozen=True)
+class Component:
+    """A sampled native component; S sector is provenance, not its emitter."""
+    registry: str
+    sector: int
+    config: int
+    graph: int
+    flow: int
+    flow_probability: float
+    insertion: float
+    source_factor: float
+    diagram_symmetry: float
+
+    @classmethod
+    def from_block(cls, block):
+        packet = xml_packet(block, 'macnlops_component', 'sampled-component annotation')
+        if packet is None:
+            return None
+        attributes, contents = packet
+        if (set(attributes) != {'version', 'registry'} or attributes['version'] != '1' or
+                re.fullmatch(r'[0-9a-f]{64}', attributes['registry']) is None):
+            raise MatchingError('Invalid sampled-component registry or version')
+        rows = contents.strip().splitlines()
+        try:
+            if len(rows) != 2:
+                raise ValueError('row count')
+            labels = tuple(map(int, rows[0].split()))
+            values = tuple(map(number, rows[1].split()))
+            if (len(labels) != 4 or min(labels) < 1 or len(values) != 4 or
+                    not all(math.isfinite(value) for value in values) or
+                    not 0 < values[0] <= 1 or not 0 <= values[1] <= 1 or
+                    not 0 <= values[2] <= 1 or values[3] <= 0):
+                raise ValueError('component labels or weights')
+        except (ValueError, OverflowError) as exc:
+            raise MatchingError('Invalid sampled component: %s' % exc) from exc
+        return cls(attributes['registry'], *labels, *values)
 
 
 @dataclass(frozen=True)
@@ -316,17 +386,10 @@ class DeltaContext:
 
     @classmethod
     def from_block(cls, block):
-        starts = list(re.finditer(r'<macnlops_delta_context\b', block))
-        closes = list(re.finditer(r'</macnlops_delta_context\s*>', block))
-        if not starts and not closes:
+        packet = xml_packet(block, 'macnlops_delta_context', 'Delta context')
+        if packet is None:
             return None
-        if len(starts) != 1 or len(closes) != 1 or closes[0].start() < starts[0].start():
-            raise MatchingError('Duplicate or truncated Delta context')
-        match = re.search(r'<macnlops_delta_context\b([^>]*)>(.*?)'
-                          r'</macnlops_delta_context\s*>', block, re.S)
-        if match is None:
-            raise MatchingError('Malformed Delta context')
-        attributes = xml_attributes(match[1], 'Delta context')
+        attributes, contents = packet
         try:
             if (set(attributes) != {'version', 'owner', 'insertion', 'registry'} or
                     attributes['version'] != '1' or
@@ -336,7 +399,7 @@ class DeltaContext:
             if owner < 1 or not math.isfinite(insertion) or not 0 <= insertion <= 1:
                 raise ValueError('invalid owner or insertion variate')
             probabilities, keys = [], set()
-            for row in match[2].strip().splitlines():
+            for row in contents.strip().splitlines():
                 fields = row.split()
                 if len(fields) != 4:
                     raise ValueError('invalid probability field count')
@@ -383,7 +446,7 @@ class Continuation:
         except (ValueError, OverflowError) as exc:
             raise MatchingError('Invalid continuation scale') from exc
         if (not all(math.isfinite(x) for x in values) or values[0] <= 0 or
-                values[1] < 0 or min(values[2:]) <= 0):
+                (values[1] < 0 and values[1] != -1) or min(values[2:]) <= 0):
             raise MatchingError('Invalid continuation scale or cutoff')
         return cls(attributes['state'], *values)
 
@@ -406,6 +469,7 @@ class Event:
             raise MatchingError('Nonfinite LHE event header')
         self.particles = []
         self.particle_masses = []
+        self.particle_colours = []
         for line in lines[index + 1:index + 1 + self.nlegs]:
             fields = line.split()
             if len(fields) != 13:
@@ -416,11 +480,29 @@ class Event:
             if not math.isfinite(mass) or mass < 0:
                 raise MatchingError('Invalid declared LHE particle mass')
             self.particle_masses.append(mass)
+            self.particle_colours.append(tuple(map(int, fields[4:6])))
         tag = re.search(r'^\s*#aMCatNLO\s+([12])\s', self.block, re.M)
         if tag is None:
             raise MatchingError('Missing MC@NLO S/H event tag')
         self.kind = 'S' if tag[1] == '1' else 'H'
         self.hard = HardEvent.from_block(self.block, self.kind)
+        self.component = Component.from_block(self.block)
+        if self.component is not None:
+            if (self.hard is None or self.hard.partition != 'sampled' or
+                    self.hard.metadata[8:10] != (0, 1)):
+                raise MatchingError('Component packet requires a native fixed-flow source')
+            if self.hard.source == 'resolved':
+                raise MatchingError('The legacy resolved source requires a global H sum')
+            if (self.component.sector != self.hard.metadata[2] or
+                    self.component.flow != abs(self.hard.metadata[7])):
+                raise MatchingError('Component packet disagrees with source owner or colour flow')
+            if (self.hard.metadata[11] != 1 or self.hard.metadata[13] < 1):
+                raise MatchingError('Sampled source requires a qualified complete flavour group')
+            if self.kind == 'H' and self.hard.metadata[3] != self.component.sector:
+                raise MatchingError('Sampled H requires a complete native flavour group')
+            if self.kind == 'S' and (self.component.source_factor != 1. or
+                                     self.component.insertion != 0.):
+                raise MatchingError('S component packet must not pretend to be a source-H Delta context')
         self.delta = DeltaContext.from_block(self.block)
         if self.delta is not None:
             if self.hard is None or self.hard.source != 'delta':
@@ -463,6 +545,12 @@ class Event:
 
     def check_continuation(self):
         continuation = self.require_continuation()
+        # Standard Delta H sources use SCALUP=-1: their dipole matrix
+        # supplies the physical starts. Keep that sentinel as provenance;
+        # the written endpoint still has strictly positive current scales.
+        if (continuation.source_scalup < 0 and
+                (self.kind != 'H' or self.hard is None or self.hard.source != 'delta')):
+            raise MatchingError('Negative source SCALUP requires a Delta H endpoint')
         if ((self.kind == 'H') != (continuation.state == 'unshowered') or
                 not math.isclose(self.scale, continuation.scale, rel_tol=2.e-14)):
             raise MatchingError('Continuation state/SCALUP conflicts with the written endpoint')
@@ -510,9 +598,31 @@ class Event:
             raise MatchingError('One-step shower S/H tag mismatch')
         if 'source_weight' in record and record['source_weight'] != self.weight:
             raise MatchingError('One-step shower changed an input event weight')
+        if self.component is not None:
+            required = ('particles', 'source_hard_particles', 'source_particles',
+                        'source_partition', 'source_weight', 'beam_xmax')
+            if any(key not in record for key in required):
+                raise MatchingError('Sampled proposal lacks complete source/endpoint metadata')
+            self._check_record_particles(record['particles'], self.particles,
+                self.particle_masses, self.particle_colours, 'written endpoint')
+            self._check_record_particles(record['source_hard_particles'],
+                self.hard.particles, self.hard.masses, self.hard.colours, 'source hard point')
+            self._check_record_particles(record['source_particles'],
+                self.hard.particles, self.hard.masses, self.hard.colours, 'showered source point')
+            expected = dict(zip(HARD_METADATA_FIELDS, self.hard.metadata))
+            expected.update(version=1, frame='lab', source=self.hard.source,
+                            partition=self.hard.partition)
+            partition = record['source_partition']
+            if (not isinstance(partition, dict) or
+                    any(partition.get(key) != value for key, value in expected.items()) or
+                    any(type(partition.get(key)) is not int
+                        for key in HARD_METADATA_FIELDS + ('version',))):
+                raise MatchingError('One-step metadata disagrees with source partition')
         continuation = (self.require_continuation() if require_continuation
                         else self.continuation)
         if continuation is None:
+            if self.component is not None:
+                raise MatchingError('Sampled proposal lacks first-emission continuation metadata')
             return
         expected_state = ('unshowered' if self.kind == 'H' else
                           'emitted' if record['emitted'] else 'exhausted')
@@ -530,9 +640,39 @@ class Event:
                 self.continuation_dipole_scales.items())],
             source_scalup=self.source_scale,
             shower_cutoffs=[continuation.cutoff_isr, continuation.cutoff_fsr])
+        if self.component is not None and any(key not in record for key in expected_metadata):
+            raise MatchingError('Sampled proposal lacks complete continuation metadata')
         for key, value in expected_metadata.items():
             if key in record and record[key] != value:
                 raise MatchingError('Written continuation disagrees with native %s' % key)
+
+    @staticmethod
+    def _check_record_particles(recorded, particles, masses, colours, label):
+        """Bind discrete labels and round-tripped numerical coordinates."""
+        try:
+            if not isinstance(recorded, list) or len(recorded) != len(particles):
+                raise ValueError('particle count')
+            for row, (pdg, status, momentum), mass, colour in zip(
+                    recorded, particles, masses, colours):
+                if (not isinstance(row, dict) or type(row.get('id')) is not int or
+                        type(row.get('status')) is not int or
+                        (row['id'], row['status']) != (pdg, status) or
+                        not isinstance(row.get('colors'), (list, tuple)) or
+                        tuple(row['colors']) != tuple(colour) or
+                        any(type(value) is not int for value in row['colors'])):
+                    raise ValueError('particle labels')
+                point = row['p']
+                if (len(point) != 4 or not all(math.isfinite(value) for value in point) or
+                        not math.isfinite(row['mass'])):
+                    raise ValueError('particle coordinates')
+                scale = max(1., *(abs(value) for value in momentum))
+                if (any(not math.isclose(value, other, rel_tol=5.e-14,
+                                         abs_tol=5.e-14 * scale)
+                        for value, other in zip(point, momentum)) or
+                        not math.isclose(row['mass'], mass, rel_tol=5.e-14, abs_tol=5.e-14)):
+                    raise ValueError('particle coordinates')
+        except (KeyError, TypeError, ValueError, OverflowError) as exc:
+            raise MatchingError('One-step metadata disagrees with %s: %s' % (label, exc)) from exc
 
     def density_particles(self):
         if (self.hard is not None and self.kind == 'H' and
@@ -577,12 +717,12 @@ def require_lhef_scales(header):
 def hard_source_contract(filename, construction):
     """Qualify every original source event before requesting any cancellation.
 
-    A sampled component has a different negative measure from the negative
-    part of the global sum. Its labels are retained, but that conditional
-    matching density is not implemented by the global evaluator.
+    Sampled and globally summed source signs require different evaluators.
+    The qualified component packet selects the local construction explicitly.
     """
     expected = hard_source_name(construction)
     counts = Counter()
+    partitions = set()
     with LHEStream(filename) as stream:
         require_lhef_scales(stream.header)
         for sequence, block in enumerate(stream, 1):
@@ -593,17 +733,21 @@ def hard_source_contract(filename, construction):
                 raise MatchingError('Input event %d is already a shower endpoint' % sequence)
             if event.hard.source != expected:
                 raise MatchingError('Source event %d has a different counterterm construction' % sequence)
-            if event.hard.partition != 'global_sum':
+            if event.hard.partition == 'sampled' and event.component is None:
                 raise MatchingError('Source event %d has a sampled H partition; its '
-                                    'conditional density is required before removal and veto' % sequence)
-            if expected == 'delta' and event.kind == 'H' and event.delta is None:
+                                    'qualified conditional component packet is required' % sequence)
+            if (expected == 'delta' and event.kind == 'H' and event.delta is None and
+                    event.hard.partition == 'global_sum'):
                 raise MatchingError('Source H event %d lacks its conditional Delta replay context; '
                                     'generate a fresh annotated MC@NLO-Delta source' % sequence)
             counts[event.kind] += 1
+            partitions.add(event.hard.partition)
     if not counts:
         raise MatchingError('The source contains no events')
+    if len(partitions) != 1:
+        raise MatchingError('Mixed sampled and globally summed source partitions')
     return dict(schema='macnlops-hard-source-contract-v1',
-                source=expected, partition='global_sum', counts=dict(counts))
+                source=expected, partition=partitions.pop(), counts=dict(counts))
 
 
 def matched_lhe_header(header):
@@ -629,6 +773,10 @@ def continuation_contract(filename):
         require_lhef_scales(stream.header)
         if not matched_lhe_header(stream.header):
             raise MatchingError('Continuation needs an accepted first-emission sample')
+        profile = read_shower_profile(stream.header)
+        if profile is None:
+            raise MatchingError('This older matched LHE lacks its measured shower profile; '
+                                'regenerate the first-emission sample')
         for block in stream:
             event = Event(block)
             continuation = event.require_continuation()
@@ -640,14 +788,173 @@ def continuation_contract(filename):
             counts[continuation.state] += 1
     if cutoffs is None:
         raise MatchingError('The accepted first-emission sample is empty')
+    if list(cutoffs) != profile['support']['shower_cutoffs']:
+        raise MatchingError('Continuation scales and recorded shower profile have different cutoffs')
     return dict(schema='macnlops-lhe-continuation-v1', events=counts['S'] + counts['H'],
-                counts=dict(counts), shower_cutoffs=list(cutoffs))
+                counts=dict(counts), shower_cutoffs=list(cutoffs), shower_profile=profile)
+
+
+def shower_setting_key(key):
+    """Physics settings to carry between stages; exclude paths, seeds and I/O."""
+    return (key.startswith(('SpaceShower:', 'TimeShower:', 'PDF:')) or
+            key in ('StandardModel:alphaSnfmax', 'PartonShowers:model'))
+
+
+def continuation_physics(profile):
+    """Render the measured first-step physics independently of current Cards.
+
+    Pythia's settings dump rounds floating-point values. The validated profile
+    supplies the exact coupling, masses and cutoffs; stage-specific recoil and
+    scale-import choices are applied subsequently by the normal shower script.
+    """
+    try:
+        if (profile['schema'] != 'macnlops-generation-profile-v1' or
+                profile['construction'] not in (ORDINARY_SOURCE, RESOLVED_SOURCE, DELTA_SOURCE) or
+                profile['shower_backend'] != 'stock-pythia8'):
+            raise ValueError('profile identity')
+        support = profile['support']
+        settings = dict(profile['effective_shower_settings'])
+        for key, value in settings.items():
+            if (not shower_setting_key(key) or not isinstance(value, str) or
+                    not value or any(char in value for char in '\r\n!#')):
+                raise ValueError('physics setting')
+        required = ('SpaceShower:alphaSvalue', 'SpaceShower:alphaSorder',
+                    'TimeShower:alphaSvalue', 'TimeShower:alphaSorder',
+                    'SpaceShower:nQuarkIn', 'TimeShower:nGluonToQuark',
+                    'SpaceShower:pT0Ref', 'StandardModel:alphaSnfmax', 'PDF:pSet')
+        if any(key not in settings for key in required):
+            raise ValueError('incomplete effective settings')
+        if (settings['PDF:pSet'] != profile['pdf'] or
+                number(settings['SpaceShower:pT0Ref']) != 0.):
+            raise ValueError('PDF or ISR regularization')
+        alpha, order = profile['alpha_s_mz'], profile['alpha_s_order']
+        if not math.isfinite(alpha) or alpha <= 0 or type(order) is not int or order not in range(4):
+            raise ValueError('coupling')
+        for family in ('SpaceShower', 'TimeShower'):
+            # Check the rounded native dump before restoring the exact input.
+            if (abs(number(settings[family + ':alphaSvalue']) - alpha) > 1.e-5 or
+                    int(settings[family + ':alphaSorder']) != order):
+                raise ValueError('effective coupling differs from generation')
+            settings[family + ':alphaSvalue'] = '%.17e' % alpha
+            settings[family + ':alphaSorder'] = str(order)
+        for key, field in (('StandardModel:alphaSnfmax', 'alpha_s_nfmax'),
+                           ('SpaceShower:nQuarkIn', 'n_quark_in'),
+                           ('TimeShower:nGluonToQuark', 'n_gluon_to_quark')):
+            if int(settings[key]) != support[field]:
+                raise ValueError('flavour policy')
+        cutoffs = support['shower_cutoffs']
+        if len(cutoffs) != 2 or any(not math.isfinite(x) or x <= 0 for x in cutoffs):
+            raise ValueError('shower cutoffs')
+        settings['SpaceShower:pTmin'] = '%.17e' % cutoffs[0]
+        settings['TimeShower:pTmin'] = '%.17e' % cutoffs[1]
+        masses = support['particle_masses']
+        if not masses or any(int(pdg) <= 0 or not math.isfinite(mass) or mass < 0
+                             for pdg, mass in masses.items()):
+            raise ValueError('particle masses')
+        for key, value in support['qcd_only_off_switches'].items():
+            if not re.fullmatch(r'[A-Za-z0-9]+:[A-Za-z0-9]+', key) or value is not False:
+                raise ValueError('parton-level profile')
+            settings[key] = 'off'
+        if (not profile['shower_libraries'] or any(not re.fullmatch(r'[0-9a-f]{64}', value)
+                for value in list(profile['shower_libraries'].values()) +
+                [profile['pdf_info_sha256'], profile['pdf_member_sha256']])):
+            raise ValueError('library/PDF fingerprints')
+        backend = profile['lhapdf_library_sha256']
+        if backend is not None and not re.fullmatch(r'[0-9a-f]{64}', backend):
+            raise ValueError('LHAPDF backend fingerprint')
+    except (KeyError, TypeError, ValueError, OverflowError) as exc:
+        raise MatchingError('Invalid recorded MAcNLOPS shower profile: %s' % exc) from exc
+    # The native consumer uses forceParm: ordinary readString would clamp zero
+    # to the stock XML minimum, introducing an ISR damping absent at stage one.
+    del settings['SpaceShower:pT0Ref']
+    lines = ['! Physics measured for the accepted MAcNLOPS sample.',
+             '! SpaceShower:pT0Ref = 0 is restored by the native continuation consumer.']
+    lines.extend('%s = %s' % item for item in sorted(settings.items()))
+    lines.extend('%d:m0 = %.17e' % (int(pdg), mass)
+                 for pdg, mass in sorted(masses.items(), key=lambda item: int(item[0])))
+    return '\n'.join(lines) + '\n'
+
+
+def lhapdf_backend_hash(environment):
+    """Identify the shared backend selected by the native library search path."""
+    for folder in environment.get('LD_LIBRARY_PATH', '').split(os.pathsep):
+        if folder and (Path(folder) / 'libLHAPDF.so').is_file():
+            return sha256(Path(folder) / 'libLHAPDF.so')
+    return None
+
+
+def recorded_shower_profile(profile, effective_settings, environment=None):
+    """Make a portable physics packet from the validated run and native dump."""
+    record = {key: value for key, value in profile.items() if key != 'native_build'}
+    record['lhapdf_library_sha256'] = lhapdf_backend_hash(environment or {})
+    record['effective_shower_settings'] = {}
+    for line in Path(effective_settings).read_text().splitlines():
+        if '=' not in line or line.lstrip().startswith(('!', '#')):
+            continue
+        key, value = (item.strip() for item in line.split('=', 1))
+        if shower_setting_key(key):
+            record['effective_shower_settings'][key] = value
+    continuation_physics(record)
+    return record
+
+
+def with_shower_profile(header, profile):
+    if '<macnlops_shower_profile' in header:
+        raise MatchingError('Duplicate MAcNLOPS shower profile')
+    continuation_physics(profile)
+    payload = json.dumps(profile, sort_keys=True, separators=(',', ':'), allow_nan=False)
+    digest = hashlib.sha256(payload.encode('utf-8')).hexdigest()
+    packet = '<macnlops_shower_profile sha256="%s">%s</macnlops_shower_profile>\n' % (
+        digest, html.escape(payload, quote=False))
+    if '</header>' not in header:
+        raise MatchingError('Missing LHE header')
+    return header.replace('</header>', packet + '</header>', 1)
+
+
+def read_shower_profile(header):
+    packet = xml_packet(header, 'macnlops_shower_profile', 'MAcNLOPS shower profile')
+    if packet is None:
+        return None
+    attributes, contents = packet
+    payload = html.unescape(contents)
+    if attributes.get('sha256') != hashlib.sha256(payload.encode('utf-8')).hexdigest():
+        raise MatchingError('MAcNLOPS shower profile fingerprint mismatch')
+    try:
+        profile = json.loads(payload)
+    except ValueError as exc:
+        raise MatchingError('Invalid MAcNLOPS shower profile JSON') from exc
+    continuation_physics(profile)
+    return profile
+
+
+def write_continuation_settings(process_dir, pythia8, filename, contract, output):
+    """Check installed physics inputs, then restore the accepted file's profile."""
+    profile = contract['shower_profile']
+    if shower_library_hashes(pythia8) != profile['shower_libraries']:
+        raise MatchingError('Continuation Pythia libraries differ from the first-emission run')
+    with LHEStream(filename) as stream:
+        source_card = re.search(r'<MGRunCard>(.*?)</MGRunCard>', stream.header, re.S | re.I)
+    if source_card is None:
+        raise MatchingError('Accepted LHE has no source run card for its PDF')
+    pdf, info = pdf_name(Path(process_dir), run_card_values(source_card[1]), with_info=True)
+    if (pdf != profile['pdf'] or sha256(info) != profile['pdf_info_sha256'] or
+            pdf_member_hash(pdf, info) != profile['pdf_member_sha256']):
+        raise MatchingError('Continuation PDF differs from the first-emission run')
+    environment = shower_environment(pythia8, info)
+    if lhapdf_backend_hash(environment) != profile['lhapdf_library_sha256']:
+        raise MatchingError('Continuation LHAPDF library differs from the first-emission run')
+    Path(output).write_text(continuation_physics(profile))
+    return environment
 
 
 class NativeEvaluator:
-    """Route labelled real points to generated complete-history evaluators."""
+    """Route real points to their qualified global or sampled densities."""
 
-    def __init__(self, process_dir, log_dir, environment=None, auxiliary_seed=1):
+    def __init__(self, process_dir, log_dir, environment=None, auxiliary_seed=1,
+                 partition='global_sum'):
+        if partition not in ('global_sum', 'sampled'):
+            raise MatchingError('Unknown native source partition')
+        self.partition = partition
         self.process_dir = Path(process_dir).resolve()
         self.log_dir = Path(log_dir)
         self.routes = []
@@ -657,11 +964,14 @@ class NativeEvaluator:
         self.auxiliary_seed = int(auxiliary_seed)
         self.registries = {}
         self.delta_law_certificates = {}
+        self._route_cache = {}
+        self._component_basis_cache = {}
         self.construction = source_construction(run_card_values(
             (self.process_dir / 'Cards/run_card.dat').read_text()))
+        matching_prescription(self.construction, self.partition)
         self.model_masses = hard_model_masses(self.process_dir)
         for filename in sorted((self.process_dir / 'SubProcesses').glob('P*/leshouche_info.dat')):
-            if self.construction == DELTA_SOURCE:
+            if self.construction == DELTA_SOURCE or self.partition == 'sampled':
                 registry_file = filename.with_name('mc_histories.json')
                 if not registry_file.is_file():
                     raise MatchingError('Missing Delta history registry; export a fresh process: %s' % registry_file)
@@ -689,6 +999,9 @@ class NativeEvaluator:
                                         tuple(map(int, fields[3:]))))
         if not self.routes:
             raise MatchingError('No generated real-flavour tables in %s' % process_dir)
+        self._registry_routes = {}
+        for directory, record in self.registries.items():
+            self._registry_routes.setdefault(record['sha256'], []).append(directory)
 
     def configure(self, beam_xmax, shower_cutoffs):
         values = tuple(beam_xmax) + tuple(shower_cutoffs)
@@ -698,10 +1011,35 @@ class NativeEvaluator:
             raise MatchingError('Shower support changed within a source file')
         self.configuration = values
 
+    @staticmethod
+    def _flavour_permutation(ids, labels):
+        """Map compatible flavour rows, preserving the order of identical legs."""
+        available, permutation = list(range(2, len(ids))), [0, 1]
+        for pdg in labels[2:]:
+            position = next(i for i in available if ids[i] == pdg)
+            available.remove(position)
+            permutation.append(position)
+        return tuple(permutation)
+
+    @staticmethod
+    def _momenta(external):
+        """Canonical point serialization, also used to seed auxiliary draws."""
+        return ''.join('%d %s\n' % (pdg, ' '.join('%.17e' % x for x in p))
+                       for pdg, p in external)
+
     def _route(self, external, delta=None):
         ids = tuple(pdg for pdg, _ in external)
         if self.construction == DELTA_SOURCE and delta is None:
             self._certify_delta_auxiliary_law(ids)
+        # Generated flavour tables are fixed for this evaluator. Cache only
+        # their discrete route/permutation, never momenta or density values.
+        # Replay must remain keyed by the exact source registry and owner.
+        key = (ids, None if delta is None else (delta.registry, delta.owner))
+        cached = self._route_cache.get(key)
+        if cached is not None:
+            directory, sector, permutation = cached
+            return directory, sector, [external[i] for i in permutation]
+        final_flavours = Counter(ids[2:])
         for directory, sector, labels in self.routes:
             if self.construction == DELTA_SOURCE:
                 registry = self.registries[directory]
@@ -716,15 +1054,12 @@ class NativeEvaluator:
                     if (registry['sha256'] != delta.registry or sector != delta.owner or
                             labels != ids):
                         continue
+                    self._route_cache[key] = directory, sector, tuple(range(len(ids)))
                     return directory, sector, external
-            if labels[:2] != ids[:2] or Counter(labels[2:]) != Counter(ids[2:]):
+            if labels[:2] != ids[:2] or Counter(labels[2:]) != final_flavours:
                 continue
-            available = list(range(2, len(ids)))
-            permutation = [0, 1]
-            for pdg in labels[2:]:
-                position = next(i for i in available if ids[i] == pdg)
-                available.remove(position)
-                permutation.append(position)
+            permutation = self._flavour_permutation(ids, labels)
+            self._route_cache[key] = directory, sector, permutation
             return directory, sector, [external[i] for i in permutation]
         if delta is not None:
             raise MatchingError('No exact Delta replay registry/owner/flavour route for PDGs %s' % (ids,))
@@ -748,11 +1083,7 @@ class NativeEvaluator:
             if (not registry['flavour_complete'] or not tables or labels[:2] != ids[:2] or
                     Counter(labels[2:]) != Counter(ids[2:])):
                 continue
-            available, permutation = list(range(2, len(ids))), [0, 1]
-            for pdg in labels[2:]:
-                position = next(i for i in available if ids[i] == pdg)
-                available.remove(position)
-                permutation.append(position)
+            permutation = self._flavour_permutation(ids, labels)
             outer = registry['outer']
             sectors = [sector for sector in outer['sectors'] if sector['sector'] == owner]
             processes = [process for sector in sectors for process in sector['processes']
@@ -793,8 +1124,7 @@ class NativeEvaluator:
         directory, sector, external = self._route(event.external(), delta=replay)
         version = 2 if delta_mode else 1
         request = 'MACNLOPS_POINT_V%d %d %d %d\n' % (version, request_id, sector, len(external))
-        momenta = ''.join('%d %s\n' % (pdg, ' '.join('%.17e' % x for x in p))
-                          for pdg, p in external)
+        momenta = self._momenta(external)
         request += momenta
         if replay is not None:
             request += 'DELTA_REPLAY %d %.17e %s\n' % (
@@ -810,6 +1140,113 @@ class NativeEvaluator:
             request += 'DELTA_SAMPLE %d\n' % seed
         return directory, request + 'END_POINT\n'
 
+    def _component_requests(self, event, request_id):
+        """Build local requests in the exact source Born provider and basis."""
+        component = event.component
+        if component is None or event.hard.partition != 'sampled':
+            raise MatchingError('Local matching requires a qualified component packet')
+        directories = self._registry_routes.get(component.registry, ())
+        if len(directories) != 1:
+            raise MatchingError('No unique native Born provider for the component registry')
+        directory = directories[0]
+        registry = self.registries[directory]['registry']
+        external = event.external()
+        if event.kind == 'H':
+            if event.endpoint_origin == 'shower':
+                raise MatchingError('H component requires its original hard point')
+            if event.weight < 0 and component.source_factor == 0.:
+                raise MatchingError('Negative H event has a zero source multiplier')
+            ids = tuple(pdg for pdg, _ in external)
+            if (directory, component.sector, ids) not in self.routes:
+                raise MatchingError('H component registry/sector/ordered flavours disagree')
+            choices = [(component.sector, tuple(range(len(external))), None, 'source')]
+        else:
+            record = getattr(event, 'shower_record', None)
+            if record is None or not record.get('emitted'):
+                raise MatchingError('Local S evaluation requires the actual first-branch record')
+            try:
+                candidates = macnlops_components.branch_candidates(
+                    record, registry, source_directory=directory.name)
+            except macnlops_components.MappingError as exc:
+                raise MatchingError('Cannot identify sampled shower component: %s' % exc) from exc
+            choices = [(choice.sector, choice.permutation, choice.born_permutation,
+                        choice.orientation) for choice in candidates]
+        mode = int(self.construction == DELTA_SOURCE)
+        requests = []
+        for sector, permutation, born_permutation, orientation in choices:
+            config, graph, flow = component.config, component.graph, component.flow
+            if born_permutation is not None:
+                key = (directory, tuple(born_permutation), config, graph, flow)
+                if key not in self._component_basis_cache:
+                    try:
+                        self._component_basis_cache[key] = (
+                            macnlops_components.transport_component_basis(
+                                registry, born_permutation, config, graph, flow))
+                    except macnlops_components.MappingError as exc:
+                        raise MatchingError('Cannot transport the source Born basis: %s' % exc) from exc
+                config, graph, flow = self._component_basis_cache[key]
+            ordered = [external[index] for index in permutation]
+            request = 'MACNLOPS_POINT_V3 %d %d %d\n' % (request_id, sector, len(ordered))
+            request += self._momenta(ordered)
+            request += 'COMPONENT_LOCAL_V1 %d %d %d %d %.17e\n' % (
+                config, graph, flow, mode, component.diagram_symmetry)
+            if born_permutation is not None:
+                # The hard annotation supplies pre-shuffle Born momenta and
+                # oriented colours. The native worker independently checks
+                # this actual state against its inverse map and selected flow.
+                request += 'COMPONENT_BORN_V1 %d\n' % len(born_permutation)
+                for index in born_permutation:
+                    pdg, _, momentum = event.hard.particles[index]
+                    colours = event.hard.colours[index]
+                    request += '%d %d %d %s\n' % (pdg, *colours, ' '.join(
+                        '%.17e' % x for x in (*momentum, event.hard.masses[index])))
+            requests.append((directory, request + 'END_POINT\n', dict(
+                registry=component.registry, sector=sector, config=config,
+                graph=graph, flow=flow, orientation=orientation,
+                source_basis=[component.config, component.graph, component.flow],
+                born_permutation=None if born_permutation is None else list(born_permutation),
+                permutation=list(permutation),
+                prescription='undamped-delta' if mode else 'ordinary-source')))
+        if not requests:
+            raise MatchingError('No qualified local component for the observed branching')
+        return requests
+
+    def _evaluate_component(self, event, request_id):
+        candidates = self._component_requests(event, request_id)
+        densities = [self._query(directory, request, request_id)
+                     for directory, request, _ in candidates]
+        for density in densities:
+            density.acceptance(signed_residuals=True)  # Validate R,D,K before marking.
+        total_kernel = math.fsum(density.shower for density in densities)
+        if not math.isfinite(total_kernel):
+            raise MatchingError('Nonfinite sum of component shower kernels')
+        selected, marking = 0, 1.
+        if len(candidates) > 1 and total_kernel > 0.:
+            # This auxiliary labels equivalent daughter orientations only.
+            # It is separate from both the native shower and the event veto.
+            identity = '%d:%d:%s' % (self.auxiliary_seed, request_id,
+                                     ''.join(request for _, request, _ in candidates))
+            # Exactly representable in [0,1); a 256-bit integer converted to
+            # float can round to one and select a zero-kernel first entry.
+            uniform = (int.from_bytes(hashlib.sha256(identity.encode('ascii')).digest()[:8],
+                                      'big') >> 11) * 2.**-53
+            threshold, cumulative = uniform * total_kernel, 0.
+            selected = max(index for index, density in enumerate(densities)
+                           if density.shower > 0.)
+            for index, density in enumerate(densities):
+                cumulative += density.shower
+                if threshold < cumulative:
+                    selected = index
+                    break
+            marking = densities[selected].shower / total_kernel
+        # If every component has K=0, the bounded veto retains S for every
+        # possible mark. Keep one evaluated density and expose zero support.
+        event.matching_component = dict(candidates[selected][2],
+            candidates=len(candidates), marking_probability=marking,
+            total_kernel=total_kernel,
+            candidate_kernels=[density.shower for density in densities])
+        return densities[selected]
+
     def evaluate(self, event, request_id):
         if self.configuration is None:
             raise MatchingError('Missing actual beam bounds and cutoffs from the one-step shower')
@@ -819,11 +1256,17 @@ class NativeEvaluator:
         if (event.hard is not None and event.hard.source !=
                 hard_source_name(self.construction)):
             raise MatchingError('Hard-event source construction disagrees with the evaluator')
-        if event.hard is not None and event.hard.partition != 'global_sum':
+        if event.hard is not None and event.hard.partition != self.partition:
             raise MatchingError('Sampled H source partitions require their conditional '
                                 'density; a global H density cannot determine this veto')
         check_hard_mass_coordinates(event, self.model_masses)
+        if self.partition == 'sampled':
+            return self._evaluate_component(event, request_id)
         directory, request = self._request(event, request_id)
+        return self._query(directory, request, request_id)
+
+    def _query(self, directory, request, request_id):
+        """One native request, with no change to its source or proposal laws."""
         if directory not in self.workers:
             log = open(self.log_dir / (directory.name + '.log'), 'w')
             try:
@@ -888,7 +1331,7 @@ def sample_sum_variance(trials, weight, square):
 
 
 def sample_header(header, counts, process_weights, process_squares, process_maxima,
-                  process_variances=None, continuation=False):
+                  process_variances=None, continuation=False, matching_policy=None):
     """Describe the retained sum-normalised sample in its LHE init block."""
     match = re.search(r'(<init>)(.*?)(</init>)', header, re.S)
     rows = [line.split() for line in match[2].splitlines() if line.strip()]
@@ -913,10 +1356,13 @@ def sample_header(header, counts, process_weights, process_squares, process_maxi
                           '\n%d = nevents ! retained first-emission events' % retained, match[1])
             return '<MGRunCard>' + body + '</MGRunCard>'
         header = re.sub(r'<MGRunCard>(.*?)</MGRunCard>', retained_card, header, flags=re.S | re.I)
-    annotation = ('<macnlops normalization="sum" stage="first-emission"%s>\n'
+    policy_attribute = (' prescription="%s"' % html.escape(matching_policy, quote=True)
+                        if matching_policy is not None else '')
+    annotation = ('<macnlops normalization="sum" stage="first-emission"%s%s>\n'
                   'Input events: %d\nRetained events: %d\n'
                   'Cross section is the sum of retained input weights.\n'
-                  '</macnlops>\n') % (' continuation="lhe-v1"' if continuation else '', total_trials,
+                  '</macnlops>\n') % (' continuation="lhe-v1"' if continuation else '',
+                  policy_attribute, total_trials,
                   counts['accepted_S'] + counts['accepted_H'])
     if '</header>' in header:
         header = header.replace('</header>', annotation + '</header>', 1)
@@ -942,6 +1388,8 @@ def collect_matched_events(inputs, reports, output, seed):
     process_rows = {}
     beam_fields = None
     header = None
+    shower_profiles = []
+    matching_policies = []
     continuation_modes = set()
     with tempfile.TemporaryDirectory(prefix='.macnlops_collect_', dir=output.parent) as temporary:
         temporary = Path(temporary)
@@ -957,6 +1405,22 @@ def collect_matched_events(inputs, reports, output, seed):
             with LHEStream(plain) as source:
                 if header is None:
                     header = source.header
+                markers = list(re.finditer(r'<macnlops\b([^>]*)>', source.header))
+                if len(markers) > 1:
+                    raise MatchingError('Duplicate MAcNLOPS sample header')
+                policy = (xml_attributes(markers[0][1]).get('prescription')
+                          if markers else None)
+                if policy not in (None, 'global-source-v1', 'component-source-v1',
+                                  'component-undamped-delta-v1'):
+                    raise MatchingError('Unknown MAcNLOPS veto prescription')
+                matching_policies.append(policy)
+                if policy != report.get('veto_prescription'):
+                    raise MatchingError('Matching report/header prescriptions disagree')
+                if matching_policies[-1] != matching_policies[0]:
+                    raise MatchingError('Cannot combine different MAcNLOPS veto prescriptions')
+                shower_profiles.append(read_shower_profile(source.header))
+                if shower_profiles[-1] != shower_profiles[0]:
+                    raise MatchingError('Cannot combine different first-emission shower profiles')
                 init = re.search(r'<init>(.*?)</init>', source.header, re.S)
                 try:
                     rows = [line.split('#', 1)[0].split() for line in init[1].splitlines()
@@ -979,6 +1443,23 @@ def collect_matched_events(inputs, reports, output, seed):
                     raise MatchingError('Incompatible LHE beams/PDFs/weight convention in %s' % filename)
                 for block in source:
                     event = Event(block)
+                    if event.hard is not None:
+                        if event.hard.partition == 'sampled' and event.component is None:
+                            raise MatchingError('Sampled collection requires a qualified component packet')
+                        construction = SOURCE_CONSTRUCTIONS[event.hard.source]
+                        expected_policy = matching_prescription(construction, event.hard.partition)
+                        if (shower_profiles[-1] is not None and
+                                shower_profiles[-1]['construction'] != construction):
+                            raise MatchingError('Event body/shower-profile source construction disagrees')
+                        legacy_global = policy is None and event.hard.partition == 'global_sum'
+                        if not legacy_global and policy != expected_policy:
+                            raise MatchingError('Event body/header matching prescriptions disagree')
+                        for field, expected in (('matching_partition', event.hard.partition),
+                                                ('source_construction', construction)):
+                            if field in report and report[field] != expected:
+                                raise MatchingError('Event body/report source provenance disagrees')
+                    elif policy is not None:
+                        raise MatchingError('Matching prescription requires event source provenance')
                     continuation_modes.add(event.continuation is not None)
                     if event.process not in declared:
                         raise MatchingError('Event process missing from LHE init block in %s' % filename)
@@ -1023,7 +1504,8 @@ def collect_matched_events(inputs, reports, output, seed):
                         (not continuation_modes and all(report.get('lhe_continuation', False)
                                                         for report in reports)))
         header = sample_header(header, counts, weights, squares, maxima,
-                               process_variances=variances, continuation=continuation)
+                               process_variances=variances, continuation=continuation,
+                               matching_policy=matching_policies[0])
         header = re.sub(r'(<macnlops\b[^>]*)(>)',
                         lambda match: match[1] + ' shuffle_seed="%d">' % seed, header, count=1)
         # The standard collector rewrites the complete iseed line. Keep the
@@ -1041,6 +1523,7 @@ def collect_matched_events(inputs, reports, output, seed):
         os.replace(staged, output)
     return dict(output=str(output), shuffle_seed=seed, inputs=[str(path) for path in inputs],
                 lhe_continuation=continuation,
+                veto_prescription=matching_policies[0],
                 matching_seeds=[report.get('seed') for report in reports], counts=dict(counts),
                 sumw=sum(weights.values()), sumw2=sum(squares.values()),
                 normalization='sum; unchanged surviving input weights',
@@ -1068,7 +1551,8 @@ def matching_scale(record, profile):
 
 
 def reject_proposals(proposals, metadata, output, evaluator, seed=1, signed_residuals=False,
-                     profile=None, require_continuation=False):
+                     profile=None, require_continuation=False, shower_profile=None,
+                     matching_policy=None):
     """Make one decision per original event and preserve its absolute weight.
 
     Output is published only after all density and synchronisation checks pass.
@@ -1102,6 +1586,7 @@ def reject_proposals(proposals, metadata, output, evaluator, seed=1, signed_resi
                 if record['sequence'] != sequence:
                     raise MatchingError('One-step shower sequence mismatch')
                 event = Event(block)
+                event.shower_record = record
                 continuation_modes.add(event.continuation is not None)
                 event.check_proposal_metadata(record, require_continuation)
                 if 'beam_xmax' in record and 'shower_cutoffs' in record:
@@ -1144,6 +1629,7 @@ def reject_proposals(proposals, metadata, output, evaluator, seed=1, signed_resi
                 audit.write(json.dumps(dict(sequence=sequence, kind=kind,
                     accepted=accepted, acceptance=probability,
                     matching_scale=gate_scale,
+                    component=getattr(event, 'matching_component', None),
                     densities=None if density is None else density.__dict__)) + '\n')
             if meta.readline():
                 raise MatchingError('Extra one-step shower metadata')
@@ -1152,9 +1638,12 @@ def reject_proposals(proposals, metadata, output, evaluator, seed=1, signed_resi
             continuation = require_continuation or continuation_modes == {True}
             retained.seek(0)
             with open_lhe(temporary, 'wt') as target:
-                target.write(sample_header(source.header, counts, process_weights,
+                header = (with_shower_profile(source.header, shower_profile)
+                          if shower_profile is not None else source.header)
+                target.write(sample_header(header, counts, process_weights,
                                            process_squares, process_maxima,
-                                           continuation=continuation))
+                                           continuation=continuation,
+                                           matching_policy=matching_policy))
                 shutil.copyfileobj(retained, target)
                 target.write('</LesHouchesEvents>\n')
         os.replace(temporary, output)
@@ -1165,23 +1654,83 @@ def reject_proposals(proposals, metadata, output, evaluator, seed=1, signed_resi
         raise
     return dict(counts=dict(counts), weight_sums=dict(weight_sums),
                 seed=seed, decisions=str(audit_output), signed_residuals=signed_residuals,
+                veto_prescription=matching_policy,
                 lhe_continuation=continuation)
 
 
-def sha256(path):
-    digest = hashlib.sha256()
-    with open(path, 'rb') as stream:
+def _checksum_signature(info):
+    """Identity and mutation metadata of the actual file, following symlinks."""
+    return (info.st_dev, info.st_ino, info.st_size,
+            info.st_mtime_ns, info.st_ctime_ns)
+
+
+def _assert_checksum_unchanged(path, signature):
+    try:
+        current = _checksum_signature(os.stat(path))
+    except OSError as exc:
+        raise MatchingError('File changed while hashing: %s' % path) from exc
+    if current != signature:
+        raise MatchingError('File changed while hashing: %s' % path)
+
+
+def _read_checksum(path, decompressed, signature):
+    """Hash one stable opened file; never publish a digest after a mutation."""
+    digest, size = hashlib.sha256(), 0
+    opener = gzip.open if decompressed else open
+    with opener(path, 'rb') as stream:
+        if _checksum_signature(os.fstat(stream.fileno())) != signature:
+            raise MatchingError('File changed while hashing: %s' % path)
         for block in iter(lambda: stream.read(1024 * 1024), b''):
             digest.update(block)
-    return digest.hexdigest()
+            size += len(block)
+        if _checksum_signature(os.fstat(stream.fileno())) != signature:
+            raise MatchingError('File changed while hashing: %s' % path)
+    _assert_checksum_unchanged(path, signature)
+    return digest.hexdigest(), size
+
+
+def _cached_checksum(path, decompressed=False):
+    """Reuse stable regular-file digests without weakening normal mutation checks.
+
+    The content identity includes ctime, so restoring mtime after a rewrite
+    cannot reuse an old digest. Hard links and symlinks to the same inode
+    share entries, while raw and gzip-decoded content remain distinct.
+    Metadata is checked again even on a cache hit. Nonregular/zero-size files
+    are not cached; this also excludes common dynamic procfs-style inputs.
+    """
+    path = os.fspath(path)
+    info = os.stat(path)
+    signature = _checksum_signature(info)
+    cacheable = stat.S_ISREG(info.st_mode) and info.st_size > 0
+    key = (decompressed, signature)
+    if cacheable:
+        with _checksum_cache_lock:
+            cached = _checksum_cache.get(key)
+            if cached is not None:
+                _checksum_cache.move_to_end(key)
+        if cached is not None:
+            _assert_checksum_unchanged(path, signature)
+            return cached
+    value, size = _read_checksum(path, decompressed, signature)
+    # Some virtual files advertise a fixed nonzero size unrelated to their
+    # content. A raw read of such an input must not become a reusable entry.
+    if cacheable and (decompressed or size == info.st_size):
+        with _checksum_cache_lock:
+            _checksum_cache[key] = value
+            _checksum_cache.move_to_end(key)
+            while len(_checksum_cache) > _CHECKSUM_CACHE_LIMIT:
+                _checksum_cache.popitem(last=False)
+    return value
+
+
+def sha256(path):
+    """SHA256 of the exact file bytes."""
+    return _cached_checksum(path)
 
 
 def lhe_sha256(path):
-    digest = hashlib.sha256()
-    with open_lhe(path, 'rb') as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b''):
-            digest.update(block)
-    return digest.hexdigest()
+    """SHA256 of LHE bytes, decoding only the same .gz suffix as open_lhe."""
+    return _cached_checksum(path, decompressed=str(path).endswith('.gz'))
 
 
 def source_files(process_dir):
@@ -1725,18 +2274,24 @@ def run_file(filename, process_dir, job, driver, args, seed):
             command.append('--mcatnlo-delta')
         with open(job / 'shower.log', 'w') as log:
             subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, check=True, env=environment)
-    with NativeEvaluator(process_dir, job, environment=environment, auxiliary_seed=seed) as evaluator:
+    shower_profile = recorded_shower_profile(profile, Path(str(metadata) + '.settings.cmnd'), environment)
+    with NativeEvaluator(process_dir, job, environment=environment, auxiliary_seed=seed,
+                         partition=contract['partition']) as evaluator:
         report = reject_proposals(proposal, metadata, job / 'events.lhe.gz', evaluator,
                                   seed=seed, profile=support,
-                                  signed_residuals=signed_residuals, require_continuation=True)
+                                  signed_residuals=signed_residuals, require_continuation=True,
+                                  shower_profile=shower_profile,
+                                  matching_policy=matching_prescription(
+                                      profile['construction'], contract['partition']))
         report['shower_support'] = evaluator.configuration
-        if profile['construction'] == DELTA_SOURCE:
+        if profile['construction'] == DELTA_SOURCE and contract['partition'] == 'global_sum':
             report['delta_auxiliary'] = dict(seed=seed,
                 sampling='independent conditional source-H law; bounded C/K_g',
                 owner_law_certificates=[dict(pdgs=list(ids), sha256=digest)
                     for ids, digest in sorted(evaluator.delta_law_certificates.items())])
     report.update(input=str(filename.resolve()), input_sha256=sha256(filename),
                   hard_source_contract=contract,
+                  matching_partition=contract['partition'],
                   source_construction=profile['construction'],
                   pdf=central_pdf, shower=str(args.pythia8.resolve()),
                   normalization='sum; retained input event weights',

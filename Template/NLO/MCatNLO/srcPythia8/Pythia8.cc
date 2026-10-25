@@ -59,6 +59,9 @@ int main() {
   int iEventshower=pythia.mode("Main:spareMode1");
   // The MAcNLOPS continuation card enables one pass over the accepted LHE.
   const bool continuation=pythia.flag("Main:spareFlag1");
+  // Preserve the matching profile's unregularized ISR kernel. Reading
+  // pT0Ref=0 from a card clamps it to the tune-oriented XML minimum.
+  if (continuation) pythia.settings.forceParm("SpaceShower:pT0Ref", 0.);
   string evt_norm=pythia.word("Main:spareWord1");
   int iEventtot_norm=iEventtot;
   if (evt_norm != "sum"){
@@ -112,6 +115,10 @@ int main() {
     else norm=iEventtot_norm*iEvent/nSelected;
 
     if (!continuation && nSelected >= iEventshower) break;
+    if (continuation && (nSelected != iEvent+1 || pythia.info.nTried() != iEvent+1)) {
+      std::cerr << "Continuation shower skipped an input event\n";
+      return 1;
+    }
     if (pythia.info.isLHA() && iPrintLHA < nPrintLHA) {
       pythia.LHAeventList();
       pythia.info.list();
@@ -120,7 +127,15 @@ int main() {
       ++iPrintLHA;
     }
 
-    double evtweight = pythia.info.weight();
+    // Re-synchronize the independent LHE reader before using this event's
+    // weights. For strategy -3 Pythia's Info weight contains only the sign;
+    // a retained MAcNLOPS event must keep its absolute source normalization.
+    nTry=pythia.info.nTried();
+    for (; iLHEFread<nTry ; ++iLHEFread) {
+      read.lhef_read_wgts_(cwgt_ww);
+    }
+    double evtweight = continuation ? read.reader.hepeup.XWGTUP
+                                    : pythia.info.weight();
     double normhepmc;
     // Add the weight of the current event to the cross section.
     normhepmc = 1. / double(iEventshower);
@@ -132,6 +147,11 @@ int main() {
 
     HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
     ToHepMC.fill_next_event( pythia, hepmcevt );
+    if (continuation) {
+      hepmcevt->weights()[0]=evtweight;
+      // Fortran analyses use NEVHEP as a count when normalizing histograms.
+      hepmcevt->set_event_number(iEvent+1);
+    }
 
     //define the IO_HEPEVT
     _hepevtio = new HepMC::IO_HEPEVT;
@@ -140,13 +160,7 @@ int main() {
     //event weight
     cevwgt.EVWGT=hepmcevt->weights()[0];
 
-    //call the FORTRAN analysis for this event. First, make sure to
-    //re-synchronize the reading of the weights with the reading of
-    //the event. (They get desynchronised if an event was rejected).
-    nTry=pythia.info.nTried();
-    for (; iLHEFread<nTry ; ++iLHEFread) {
-      read.lhef_read_wgts_(cwgt_ww);
-    }
+    // Call the FORTRAN analysis with the same nominal weight as HepMC.
     cwgt_ww[0]=cevwgt.EVWGT;
     pyanal_(cwgtinfo_nn,cwgt_ww);
 

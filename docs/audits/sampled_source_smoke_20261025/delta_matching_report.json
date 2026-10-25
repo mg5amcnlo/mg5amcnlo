@@ -1,0 +1,49 @@
+{
+  "cards": {
+    "param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+    "run_card.dat": "83971694fbc6aa151b7a0427c91042cbe6598cac34a939ff8936fda272f801d3"
+  },
+  "counts": {
+    "accepted_H": 9,
+    "accepted_S": 53,
+    "input_H": 9,
+    "input_S": 55,
+    "negative_accepted_S": 2,
+    "negative_input_S": 2,
+    "rejected_S": 2
+  },
+  "decisions": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/Events/smoke_delta/macnlops/events/events.lhe.gz.decisions.jsonl",
+  "effective_settings_sha256": "06c2331375ea493eb9126dec1c63061ae4d0ed0d31d87503cc97f2f5d4c88469",
+  "fks_parameters": "83a729d833012f1d045343c176862694e039805b2e5c1553556c21294ee4c5c5",
+  "hard_source_contract": {
+    "counts": {
+      "H": 9,
+      "S": 55
+    },
+    "partition": "sampled",
+    "schema": "macnlops-hard-source-contract-v1",
+    "source": "delta"
+  },
+  "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/Events/smoke_delta/events.lhe.gz",
+  "input_sha256": "3963741d4de32772ec6da2499c9b48c6dca5198771ede2943badca683222dab8",
+  "lhe_continuation": true,
+  "matching_partition": "sampled",
+  "normalization": "sum; retained input event weights",
+  "pdf": "LHAPDF6:MSTW2008nlo90cl/0",
+  "pdf_info_sha256": "482a0a205677a8c76c87213399e8929cf20ba92b2cb7bd2c9ba92ef2a1a4cd06",
+  "seed": 975324,
+  "shower": "/export/tmp/rikkert/Pythia/pythia8318",
+  "shower_support": [
+    0.9998556507692308,
+    0.9998556507692308,
+    0.5000000000000001,
+    0.5867333369950679
+  ],
+  "signed_residuals": true,
+  "source_construction": "mcatnlo-delta-v1",
+  "veto_prescription": "component-undamped-delta-v1",
+  "weight_sums": {
+    "accepted": 19.68807738000001,
+    "input": 20.366976600000008
+  }
+}

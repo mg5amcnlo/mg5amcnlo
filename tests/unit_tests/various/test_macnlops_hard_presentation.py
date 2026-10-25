@@ -422,12 +422,36 @@ class TestHardPresentation(unittest.TestCase):
         if result.returncode:
             raise AssertionError(result.stdout + result.stderr)
         parser = cls.work / 'parser.cc'
-        parser.write_text('#define main unused_main\n#include "' +
+        continuation_setups = []
+        for name in ('Pythia8.cc', 'Pythia82.cc', 'Pythia83.cc'):
+            driver = (SOURCE / name).read_text()
+            begin = driver.index('  const bool continuation=')
+            end = driver.index('  string evt_norm=', begin)
+            if not driver.index('pythia.readFile(') < begin < driver.index('pythia.init('):
+                raise AssertionError('Continuation settings must apply after reading and before init')
+            continuation_setups.append(driver[begin:end])
+        if continuation_setups[1:] != continuation_setups[:1] * 2:
+            raise AssertionError('Continuation setup must agree across all three drivers')
+        parser.write_text(('#define main unused_main\n#include "' +
             str(SOURCE / 'MacNLOPS.cc') + '"\n#undef main\n' + r'''
 int main(int argc, char** argv) {
   try {
+    if (argc == 3 && std::string(argv[1]) == "--continuation-settings") {
+      Pythia pythia;
+      pythia.readString("SpaceShower:pT0Ref = 0");
+      const double clamped = pythia.parm("SpaceShower:pT0Ref");
+      pythia.readString(std::string("Main:spareFlag1 = ") + argv[2]);
+__CONTINUATION_SETUP__
+      std::cout << std::setprecision(17) << "{\"clamped\":" << clamped
+                << ",\"effective\":" << pythia.parm("SpaceShower:pT0Ref") << "}\n";
+      return 0;
+    }
     if (argc == 3 && std::string(argv[1]) == "--native-import") {
       Pythia p;
+      // LHEF 3 import fills Info's weight container, which Pythia wires
+      // during init(). No event generation is needed for this reader test.
+      p.readString("ProcessLevel:all = off");
+      if (!p.init()) throw std::runtime_error("Native reader initialization failed");
       LHAupLHEF reader(const_cast<Info*>(&p.info), argv[2], nullptr, true, true);
       if (!reader.setInit()) throw std::runtime_error("Native LHE header import failed");
       while (reader.setEvent()) {
@@ -464,7 +488,7 @@ int main(int argc, char** argv) {
     return 0;
   } catch(const std::exception& e) { std::cerr << e.what(); return 1; }
 }
-''')
+''').replace('__CONTINUATION_SETUP__', continuation_setups[0]))
         cls.parser = cls.work / 'parser.exe'
         result = subprocess.run(['g++', '-std=c++11', '-O1',
             '-I' + str(cls.prefix / 'include'), str(parser), '-o', str(cls.parser),
@@ -581,6 +605,28 @@ int main(int argc, char** argv) {
         self.assertEqual(row['native_dipole_scales'],
             [[1, 4, 40.], [2, 3, 30.], [3, 2, 10.], [4, 1, 25.]])
 
+    def test_delta_h_scalar_sentinel_uses_the_imported_matrix(self):
+        source = delta_event(kind=2, resonance=True, scale=-1.)
+        result, output, metadata, _ = self.run_native(
+            'delta_h_sentinel', source, extra=('--mcatnlo-delta',))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        row = json.loads(metadata.read_text())
+        self.assertEqual(row['source_scalup'], -1.)
+        self.assertEqual(row['shower_scalup'], 40.)
+        self.assertEqual(row['continuation_scalup'], 40.)
+        endpoint = blocks(output)[0]
+        marker = assert_handoff(self, source.rstrip(), endpoint, 'unshowered')
+        self.assertEqual(float(marker['source_scalup']), -1.)
+        self.assertEqual(self.native_import(endpoint, 'delta_h_sentinel')['scale'], 40.)
+        for label, invalid, extra in (
+                ('ordinary_negative', event(kind=2, scale=-1.), ()),
+                ('delta_h_bad_negative', delta_event(kind=2, scale=-2.), ('--mcatnlo-delta',)),
+                ('delta_s_negative', delta_event(kind=1, scale=-1.), ('--mcatnlo-delta',))):
+            with self.subTest(case=label):
+                failed, _, _, _ = self.run_native(label, invalid, extra=extra)
+                self.assertNotEqual(failed.returncode, 0)
+                self.assertIn('Negative LHE shower scale', failed.stderr)
+
     def test_delta_source_packets_fail_closed(self):
         valid = delta_event(2, resonance=True)
         controls = {
@@ -619,6 +665,39 @@ int main(int argc, char** argv) {
                                 capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0)
 
+    def test_sampled_component_qualifies_delta_h_without_probability_replay(self):
+        from tests.unit_tests.various.test_macnlops_component_protocol import packet
+        path = self.work / 'component.delta.lhe'
+        for kind in (1, 2):
+            valid = re.sub(r'<macnlops_delta_context\b.*?</macnlops_delta_context>\n',
+                           '', delta_event(kind), flags=re.S)
+            valid = valid.replace('%d %d 1 1 1 1 0 1 1 0 0 0 1 0' % (4, kind),
+                                  '%d %d 1 1 1 1 0 1 0 1 0 1 1 1' % (4, kind))
+            component = packet(source_factor=1. if kind == 1 else .2,
+                               insertion=0. if kind == 1 else .3)
+            valid = valid.replace('</event>', component + '</event>')
+            path.write_text(HEADER + valid + '</LesHouchesEvents>\n')
+            result = subprocess.run([str(self.parser), '--delta-source', str(path)],
+                                    capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            controls = [valid.replace('1 2 7 1\n', '2 2 7 1\n'),
+                        valid.replace('1 2 7 1\n', '1 2 7 2\n'),
+                        valid.replace('.5 ', 'nan '),
+                        valid.replace('</event>', component + '</event>')]
+            controls.append(valid.replace('0 1 0 1 1 1\n', '0 1 0 0 1 1\n'))
+            controls.append(valid.replace('0 1 0 1 1 1\n', '0 1 0 1 1 0\n'))
+            for invalid in controls:
+                path.write_text(HEADER + invalid + '</LesHouchesEvents>\n')
+                result = subprocess.run([str(self.parser), '--delta-source', str(path)],
+                                        capture_output=True, text=True, timeout=10)
+                self.assertNotEqual(result.returncode, 0, 'Malformed component was accepted')
+            path.write_text(HEADER + valid.replace('source="delta"', 'source="resolved"') +
+                            '</LesHouchesEvents>\n')
+            result = subprocess.run([str(self.parser), '--ordinary-source', str(path)],
+                                    capture_output=True, text=True, timeout=10)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('Invalid sampled-component source metadata', result.stderr)
+
     def test_identical_annotated_hard_presentation_before_any_veto(self):
         # Both comparison branches consume the same annotated hard point.
         # Only the untouched ordinary transport coordinates differ here.
@@ -654,6 +733,33 @@ int main(int argc, char** argv) {
             self.assertEqual([p[1] for p in point.external()],
                              [(100., 0., 0., 100.), (100., 0., 0., -100.),
                               (100., 100., 0., 0.), (100., -100., 0., 0.)])
+
+    def test_hard_annotation_conservation_roundoff(self):
+        # FKS hard coordinates precede the MC mass shuffle's momentum repair.
+        # Exercise a 2e-8 relative source residual with exactly on-shell legs.
+        def shifted_incoming(delta):
+            records = particles()
+            energy = 100. + delta
+            for index, sign in [(0, 1), (1, -1)]:
+                row = records[index].split()
+                row[8:10] = [f'{sign * energy:.17g}', f'{energy:.17g}']
+                records[index] = ' '.join(row)
+            return records
+        records = shifted_incoming(1.e-6)
+        result, output, metadata, source = self.run_native(
+            'annotation_roundoff', event(kind=2, hard=records))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        from madgraph.various.macnlops import Event
+        self.assertEqual(Event(blocks(output)[0]).external(),
+                         Event(blocks(source)[0]).external())
+        result, _, _, _ = self.run_native('annotation_bad_balance',
+            event(kind=2, hard=shifted_incoming(1.e-3)))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('does not conserve four-momentum', result.stderr)
+        result, _, _, _ = self.run_native('plain_bad_balance',
+            event(kind=2, shuffled=False, annotation=False, records=records))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('does not conserve four-momentum', result.stderr)
 
     def test_emitted_endpoint_keeps_real_body_and_requires_continuation_consumer(self):
         result, output, metadata, _ = self.run_native('emitted', event())
@@ -735,6 +841,17 @@ int main(int argc, char** argv) {
                                         capture_output=True, text=True)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn('Non-QCD shower setting enabled', result.stderr)
+
+    def test_continuation_restores_zero_isr_regularization_after_card_clamping(self):
+        for mode in ('on', 'off'):
+            with self.subTest(continuation=mode):
+                result = subprocess.run([str(self.parser), '--continuation-settings', mode],
+                                        capture_output=True, text=True, env=self.environment)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                row = next(json.loads(line) for line in result.stdout.splitlines()
+                           if line.startswith('{'))
+                self.assertGreater(row['clamped'], 0.)
+                self.assertEqual(row['effective'], 0. if mode == 'on' else row['clamped'])
 
     def test_model_top_and_four_flavour_bottom_masses_are_retained(self):
         cases = [(6, 173., 172.5, 5), (5, 4.7, 4.8, 4)]
