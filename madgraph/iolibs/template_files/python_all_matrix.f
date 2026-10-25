@@ -308,7 +308,7 @@ C
 C     CONSTANT
 C     
       DOUBLE PRECISION    EPSILON
-      PARAMETER (EPSILON=1D-10)
+      PARAMETER (EPSILON=1D-6)
 
 CF2PY DOUBLE PRECISION, INTENT(OUT) :: PROT(0:3, NEXTERNAL)
 CF2PY INTEGER, INTENT(IN) :: NEXTERNAL
@@ -322,24 +322,26 @@ C
       REAL*8 PROT(0:3, *)
       DOUBLE PRECISION THETA, PHI
       INTEGER I, NEXTERNAL
+      DOUBLE PRECISION PNORM
 
       DO I= 1, NEXTERNAL
         PROT(0, I) = P(0, I)
+        PNORM = DSQRT(P(1, I)**2 + P(2, I)**2 + P(3, I)**2)
 
         PROT(1, I) = -DSIN(PHI)*P(1, I) + DCOS(PHI)*P(2, I)  !p_n
-        IF (ABS(PROT(1, I)/PROT(0, I)) < EPSILON) THEN
+        IF (ABS(PROT(1, I))/PNORM < EPSILON) THEN
           PROT(1, I) = 0D0
         ENDIF
 
         PROT(2, I) = -DCOS(PHI)*DCOS(THETA)*P(1, I) - DSIN(PHI)*  ! p_r
      & DCOS(THETA)*P(2, I) + DSIN(THETA)*P(3, I)
-        IF (ABS(PROT(2, I)/PROT(0, I)) < EPSILON) THEN
+        IF (ABS(PROT(2, I))/PNORM < EPSILON) THEN
           PROT(2, I) = 0D0
         ENDIF
 
         PROT(3, I) = DCOS(PHI)*DSIN(THETA)*P(1, I) + DSIN(PHI)*
      & DSIN(THETA)*P(2, I) + DCOS(THETA)*P(3, I) !p_k
-        IF (ABS(PROT(3, I)/PROT(0, I)) < EPSILON) THEN
+        IF (ABS(PROT(3, I))/PNORM < EPSILON) THEN
           PROT(3, I) = 0D0
         ENDIF
       ENDDO
