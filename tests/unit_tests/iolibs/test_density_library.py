@@ -134,25 +134,59 @@ class TestDensityLibrary(unittest.TestCase):
         #Von_Neumann_entropy
         self.assertAlmostEqual(dens.DensityMatrixObservables(rho_normalised).Von_Neumann_entropy(), 1.8268234912200536, places=7)
 
-        #Partial_Transpose
+        #partial_transpose
         rho_bell_state = [[0.5, 0, 0, -0.5], [0, 0, 0, 0], [0, 0, 0, 0], [-0.5, 0, 0, 0.5]]
         rho_bell_state_instance = dens.DensityMatrixObservables(rho_bell_state)
         rhoT_ref = [[0.5, 0, 0, 0], [0, 0, -0.5, 0], [0, -0.5, 0, 0], [0, 0, 0, 0.5]]
-        rho1T = rho_bell_state_instance.Partial_Transpose(1, ["fermion", "fermion"])
-        rho2T = rho_bell_state_instance.Partial_Transpose(2, ["fermion", "fermion"])
+        rho1T = rho_bell_state_instance.partial_transpose([2, 2], 0)
+        rho2T = rho_bell_state_instance.partial_transpose([2, 2], 1)
         for i in range(len(rhoT_ref)):
             for j in range(len(rhoT_ref[0])):
                 self.assertAlmostEqual(rho1T[i][j], rhoT_ref[i][j], places=7)
                 self.assertAlmostEqual(rho2T[i][j], rhoT_ref[i][j], places=7)
+
+        #partial_transpose with 3 different matrices
+        rho_A = rho_bell_state 
+        rho_B = [[0.5, 0.5j],[-0.5j, 0.5]]
+        #np.kron(rho_A, rho_B)
+        rho_3q_instance = dens.DensityMatrixObservables([[ 0.25+0.j  ,  0.  +0.25j,  0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  , 0.  +0.j  , -0.25+0.j  , -0.  -0.25j],
+                                                        [ 0.  -0.25j,  0.25+0.j  ,  0.  -0.j  ,  0.  +0.j  ,  0.  -0.j  , 0.  +0.j  ,  0.  +0.25j, -0.25+0.j  ],
+                                                        [ 0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  , 0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  ],
+                                                        [ 0.  -0.j  ,  0.  +0.j  ,  0.  -0.j  ,  0.  +0.j  ,  0.  -0.j  , 0.  +0.j  ,  0.  -0.j  ,  0.  +0.j  ],
+                                                        [ 0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  , 0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  ],
+                                                        [ 0.  -0.j  ,  0.  +0.j  ,  0.  -0.j  ,  0.  +0.j  ,  0.  -0.j  , 0.  +0.j  ,  0.  -0.j  ,  0.  +0.j  ],
+                                                        [-0.25+0.j  , -0.  -0.25j,  0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  , 0.  +0.j  ,  0.25+0.j  ,  0.  +0.25j],
+                                                        [ 0.  +0.25j, -0.25+0.j  ,  0.  -0.j  ,  0.  +0.j  ,  0.  -0.j  , 0.  +0.j  ,  0.  -0.25j,  0.25+0.j  ]])
+
+        rhoT_subspace1_reference = [[ 0.25+0.j  ,  0.  +0.25j,  0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  ],
+                                    [ 0.  -0.25j,  0.25+0.j  ,  0.  -0.j  ,  0.  +0.j  ,  0.  -0.j  ,  0.  +0.j  ,  0.  -0.j  ,  0.  +0.j  ],
+                                    [ 0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  , -0.25+0.j  , -0.  -0.25j,  0.  +0.j  ,  0.  +0.j  ],
+                                    [ 0.  -0.j  ,  0.  +0.j  ,  0.  -0.j  ,  0.  +0.j  ,  0.  +0.25j, -0.25+0.j  ,  0.  -0.j  ,  0.  +0.j  ],
+                                    [ 0.  +0.j  ,  0.  +0.j  , -0.25+0.j  , -0.  -0.25j,  0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  ],
+                                    [ 0.  -0.j  ,  0.  +0.j  ,  0.  +0.25j, -0.25+0.j  ,  0.  -0.j  ,  0.  +0.j  ,  0.  -0.j  ,  0.  +0.j  ],
+                                    [ 0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  ,  0.  +0.j  ,  0.25+0.j  ,  0.  +0.25j],
+                                    [ 0.  -0.j  ,  0.  +0.j  ,  0.  -0.j  ,  0.  +0.j  ,  0.  -0.j  ,  0.  +0.j  ,  0.  -0.25j,  0.25+0.j  ]]
+
+        rhoT_subspace1 = rho_3q_instance.partial_transpose([2, 2, 2], 1)
+        for i in range(len(rhoT_subspace1_reference)):
+                    for j in range(len(rhoT_subspace1_reference[0])):
+                        self.assertAlmostEqual(rhoT_subspace1[i][j], rhoT_subspace1_reference[i][j], places=7)
         
-        #Partial_Trace
+        #partial_trace
         rho_traced_ref = [[0.5, 0], [0, 0.5]]
-        rho_traced1 = rho_bell_state_instance.Partial_Trace(1, ["fermion", "fermion"])
-        rho_traced2 = rho_bell_state_instance.Partial_Trace(2, ["fermion", "fermion"])
+        rho_traced1 = rho_bell_state_instance.partial_trace(0, ["fermion", "fermion"])
+        rho_traced2 = rho_bell_state_instance.partial_trace(1, ["fermion", "fermion"])
         for i in range(len(rho_traced_ref)):
             for j in range(len(rho_traced_ref[0])):
                 self.assertAlmostEqual(rho_traced_ref[i][j], rho_traced1[i][j], places=7)
                 self.assertAlmostEqual(rho_traced_ref[i][j], rho_traced2[i][j], places=7)
+
+        #partial_trace for 3 subspaces
+        rho_traced_3q = rho_3q_instance.partial_trace([0, 1], dims=[2, 2, 2])
+        rho_traced_3q_ref = [[0.5, 0.5j],[-0.5j, 0.5]]
+        for i in range(len(rho_traced_3q_ref)):
+            for j in range(len(rho_traced_3q_ref[0])):
+                self.assertAlmostEqual(rho_traced_3q_ref[i][j], rho_traced_3q[i][j], places=7)
 
         #Negativity
         rho_negativity = [[0.47644727, 0.00761944j, -0.00761944j, 0.40012663],
@@ -273,6 +307,49 @@ class TestDensityLibrary(unittest.TestCase):
         
     
     
+    def test_DensityMatrixObservables2_3(self):
+        """Test the methods of the single particle classes DensityMatrixObservables2 and DensityMatrixObservables3 in Density_functions.py"""
+        import numpy as np
+
+        #redirection to the correct class, from square and line matrices
+        self.assertIsInstance(dens.DensityMatrixObservables([[1, 0], [0, 0]]), dens.DensityMatrixObservables2)
+        self.assertIsInstance(dens.DensityMatrixObservables([1, 0, 0]), dens.DensityMatrixObservables2)
+        self.assertIsInstance(dens.DensityMatrixObservables([[1, 0, 0], [0, 0, 0], [0, 0, 0]]), dens.DensityMatrixObservables3)
+        self.assertIsInstance(dens.DensityMatrixObservables([1, 0, 0, 0, 0, 0]), dens.DensityMatrixObservables3)
+        rho_bell = dens.DensityMatrixObservables([[0.5, 0, 0, 0.5], [0, 0, 0, 0], [0, 0, 0, 0], [0.5, 0, 0, 0.5]])
+
+        #qubit: rho = (1 + B.sigma)/2, given as a line matrix (rho_00, rho_01, rho_11)
+        B_ref = [0.3, -0.4, 0.5]
+        rho2_instance = dens.DensityMatrixObservables([(1 + B_ref[2])/2., (B_ref[0] - 1j*B_ref[1])/2., (1 - B_ref[2])/2.])
+        for i in range(3):
+            self.assertAlmostEqual(rho2_instance.Get_Polarisations()[i], B_ref[i], places=10)
+            self.assertAlmostEqual(rho2_instance.spin_expectation()[i], B_ref[i]/2., places=10)
+
+        #qutrit: one Z of H -> Z Z, |psi> = (|+-> - beta |00> + |-+>)/sqrt(2 + beta^2), arXiv:2209.13441
+        #the reduced density matrix is diag(1, beta^2, 1)/(2 + beta^2): A_20 = sqrt(2) (1 - beta^2)/(2 + beta^2), all other A_LM = 0
+        beta = 1.7
+        psi = np.zeros(9)
+        psi[[2, 4, 6]] = np.array([1., -beta, 1.])/np.sqrt(2. + beta**2)
+        rho33_instance = dens.DensityMatrixObservables(np.outer(psi, psi))
+        rho3_instance = dens.DensityMatrixObservables(rho33_instance.partial_trace(1, ['boson', 'boson']))
+        self.assertIsInstance(rho3_instance, dens.DensityMatrixObservables3)
+
+        #qutrit: polarisations and spin expectation must agree with the ones of DensityMatrixObservables33, and rho = 1/3 + P.Lambda
+        rho_qutrit = [[0.5, 0.1 + 0.2j, -0.05j], [0.1 - 0.2j, 0.3, 0.1], [0.05j, 0.1, 0.2]]
+        rho_qutrit_instance = dens.DensityMatrixObservables(rho_qutrit)
+        rho33_instance = dens.DensityMatrixObservables(np.kron(rho_qutrit, np.diag([0.2, 0.5, 0.3])))
+        Pol33 = rho33_instance.Get_Polarisations()[0]
+        Spin33 = rho33_instance.spin_expectation()[0]
+        Pol3 = rho_qutrit_instance.Get_Polarisations()
+        for a in range(8):
+            self.assertAlmostEqual(Pol3[a], Pol33[a].real, places=10)
+        for i in range(3):
+            self.assertAlmostEqual(rho_qutrit_instance.spin_expectation()[i], Spin33[i], places=10)
+        rho_rebuilt = np.eye(3)/3. + sum(Pol3[a]*dens.Lambda[a] for a in range(8))
+        for i in range(3):
+            for j in range(3):
+                self.assertAlmostEqual(rho_rebuilt[i][j], rho_qutrit[i][j], places=10)
+
     def test_DensityMatrixObservables22(self):
         """Test the methods of the class DensityMatrixObservables22 in Density_functions.py"""
 
@@ -585,7 +662,7 @@ class TestDensityLibrary(unittest.TestCase):
 
         #spin_expectation
         spin1, spin2 = rho23_ref_instance.spin_expectation(["fermion", "boson"])
-        spin1_ref = [0., -0.61134373, -0.46115294]
+        spin1_ref = [0., -0.305671865, -0.23057647]
         spin2_ref = [0., 0.20641352, -0.08176407]
         for i in range(len(spin1_ref)):
             self.assertAlmostEqual(spin1_ref[i], spin1[i], places=7)

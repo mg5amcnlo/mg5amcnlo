@@ -211,14 +211,14 @@ class DensityMatrixObservables(list):
         It can be called like: density_instance = DensityMatrixObservables(density_input) where density_input is a density matrix.
         Different methods are defined to allow generic operations on density matrices (trace, transpose, partial transpose, etc.)
         Different methods are also defined to calculate the Quantum Information observables (purity, concurrence, etc.)
-        A class is defined for qubit-qubit systems, as well as qubit-qutrit and qutrit-qutrit systems. 
+        A class is defined for single qubits and qutrits, for qubit-qubit systems, as well as qubit-qutrit and qutrit-qutrit systems. 
         In these classes we defined the observables specific to these systems like concurrence.
         This class redirects to the specific classes based on the user input. One should always call this generic class.
     """
     def __new__(cls, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None):
         """ 
         This method determines the dimension of the user input and decides which subclass to instanciate.
-        For now, there are classes for density matrices of 2x2, 2x3 and 3x3 systems.
+        For now, there are classes for density matrices of single qubits and qutrits, and of 2x2, 2x3, 3x3, 2x2x2 and 2x2x3 systems.
         """
         if len_user_input is None: #we add the optional information of the length of the line matrix to use for Fortran input
             len_user_input = len(user_input)
@@ -260,14 +260,8 @@ class DensityMatrixObservables(list):
 
         # According to the dimension of the density matrix given, we instanciate the specific class
         # If none corresponds, we stay in the generic class
-        if dim_density_matrix == 4:
-            return super(DensityMatrixObservables, cls).__new__(DensityMatrixObservables22, user_input, len_user_input)
-        elif dim_density_matrix == 6:
-            return super(DensityMatrixObservables, cls).__new__(DensityMatrixObservables23, user_input, len_user_input)
-        elif dim_density_matrix == 9:
-            return super(DensityMatrixObservables, cls).__new__(DensityMatrixObservables33, user_input, len_user_input)
-        else:
-            return super(DensityMatrixObservables, cls).__new__(DensityMatrixObservables, user_input, len_user_input)
+        subclass = DensityMatrixObservables.class_for_dimension(dim_density_matrix)
+        return super(DensityMatrixObservables, cls).__new__(subclass, user_input, len_user_input)
         
               
     def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None) -> None:
@@ -337,6 +331,63 @@ class DensityMatrixObservables(list):
             if dim_density_matrix%1 == 0:
                 self.density_matrix = rho_temp
                 self.density_matrix_dimension = int(dim_density_matrix)
+
+    @staticmethod
+    def class_for_dimension(dim_density_matrix:int) -> type:
+        """Returns the class to use for a density matrix of dimension dim_density_matrix (generic class if no specific one)."""
+        if dim_density_matrix == 2:
+            return DensityMatrixObservables2
+        elif dim_density_matrix == 3:
+            return DensityMatrixObservables3
+        elif dim_density_matrix == 4:
+            return DensityMatrixObservables22
+        elif dim_density_matrix == 6:
+            return DensityMatrixObservables23
+        elif dim_density_matrix == 9:
+            return DensityMatrixObservables33
+        elif dim_density_matrix == 8:
+            return DensityMatrixObservables222
+        elif dim_density_matrix == 12:
+            return DensityMatrixObservables223
+        else:
+            return DensityMatrixObservables
+
+    @staticmethod
+    def get_subsystem_dims(particle_type:list[str]=None, dims:list[int]=None, D:int=None) -> list[int]:
+        """
+            Input:  particle_type -> list of type of the particles ('fermion' or 'boson')
+                    dims -> list of the dimension of each subspace (overrides particle_type)
+                    D -> dimension of the full density matrix, used to check dims or to guess it
+            Output: dims -> list of the dimension of each subspace
+
+            If neither dims nor particle_type is given, the density matrix is assumed to be made of two subsystems of same dimension.
+        """
+        if dims is None:
+            if particle_type is not None:
+                dim_of_type = {'fermion': 2, 'boson': 3}
+                try:
+                    dims = [dim_of_type[p] for p in particle_type]
+                except KeyError as error:
+                    raise ValueError('Unknown particle type %s, expected fermion or boson' % error)
+            elif D is not None and np.sqrt(D)%1 == 0.: #two systems of same dimension
+                dims = [int(np.sqrt(D))]*2
+            else:
+                raise ValueError('Cannot guess the dimension of the subspaces, please give dims or particle_type')
+        
+        dims = [int(d) for d in dims]
+        if D is not None and int(np.prod(dims)) != D:
+            raise ValueError('The density matrix has dimension %d, not compatible with subspaces of dimensions %s' % (D, dims))
+        return dims
+
+    @staticmethod
+    def get_subsystem_indices(index:Union[int, list[int]], n:int) -> list[int]:
+        """Converts the subsystem index(es) given by the user (starting at 0) to a sorted list of indices and checks they are valid."""
+        if np.isscalar(index):
+            index = [index]
+        indices = sorted({int(i) for i in index})
+        if any(i < 0 or i >= n for i in indices):
+            raise ValueError('The value of index is not correct, it should be between 0 and %d' % (n - 1))
+        return indices      
 
     def is_hermitian(self):
         Matrix = self.square_matrix()
@@ -462,198 +513,145 @@ class DensityMatrixObservables(list):
             entropy += -eig * np.log2(eig)
 
         return entropy.real
-    
-    def Partial_Transpose(self, index:int, particle_type:list[str]) ->list[complex, complex]:
-        """
-            Input:  rho -> density matrix
-                    index -> integer designating the subspace to transpose (1 or 2)
-                    particle_type -> list of 2 elements, the type of both particles in the density matrix ('fermion' or 'boson')
-            Output: the density matrix partially transposed
+
+    def partial_transpose(self, dims, systems, aux_matrix=None):
+        """Partial transpose of a density matrix over a set of subsystems.
+
+        rho        : (D, D) array, with D = prod(dims)
+        dims       : sequence of subsystem dimensions, e.g. [2, 3, 2]
+        systems    : int or sequence of ints, indices of the subsystems to transpose (starts at index 0)
+        aux_matrix : matrix that we want to partially transpose that is not the density matrix
         """
 
-        rho = self.square_matrix()
+        if aux_matrix is None:
+            rho = self.square_matrix()
+        else:
+            rho = aux_matrix
         
-        if len(particle_type) != 2:
-            raise ValueError("The particle_type input must be of length 2.")
+        dims = [int(d) for d in dims] #dimension of each subspace
+        n = len(dims) #number of subspaces
+        D = int(np.prod(dims)) #dimension of the density matrix
+        if np.isscalar(systems):
+            systems = [systems]
+        systems = {s % n for s in systems}
 
-        #Basis1 is the basis of the dimension of the first particle, Basis2 is the same for the second particle
-        if particle_type[0] == 'fermion':
-            n1 = 2
-        elif particle_type[0] == 'boson':
-            n1 = 3
-        else:
-            raise ValueError("The type of the first particle is not correct (either designs a scalar particle or a non recognised particle). Please change it.")
+        # cvxpy variables/expressions cannot be reshaped by numpy,
+        # so we use the cvxpy partial transpose, one subsystem at a time
+        if not isinstance(rho, np.ndarray): #we only want to import cvxpy if the aux_matrix given is not a numpy array (so if it is a cvxpy variable)
+            try: 
+                import cvxpy as cp
+                if isinstance(rho, cp.Expression):
+                    if rho.shape != (D, D):
+                        raise ValueError("rho has shape %s, expected (%d, %d)" % (rho.shape, D, D))
+                    for s in sorted(systems):
+                        rho = cp.partial_transpose(rho, dims, axis=s)
+                    return rho
+            except ImportError:
+                pass
 
-        if particle_type[1] == 'fermion':
-            n2 = 2
-        elif particle_type[1] == 'boson':
-            n2 = 3
-        else:
-            raise ValueError("The type of the second particle is not correct (either designs a scalar particle or a non recognised particle). Please change it.")
+        rho = np.asarray(rho)
+        if rho.shape != (D, D):
+            raise ValueError("rho has shape %s, expected (%d, %d)" % (rho.shape, D, D))
 
-        Basis1 = np.identity(n1)
-        Basis2 = np.identity(n2)
+        # rho[i1..in, j1..jn] -> swap the row/column index of each transposed subsystem
+        perm = list(range(2 * n))
+        for s in systems:
+            perm[s], perm[n + s] = n + s, s
+        return rho.reshape(dims + dims).transpose(perm).reshape(D, D)
+    
 
-        # Reference : rho_line.append(np.dot(np.kron(Basis3[i], Basis3[j]), np.dot(rho, np.kron(Basis3[k], Basis3[l]))))
-        rho_line = []
-
-        if index == 0: #no change
-            for i in range(len(Basis1)):
-                for j in range(len(Basis2)):
-                    for k in range(len(Basis1)):
-                        for l in range(len(Basis2)):
-                            rho_line.append(np.dot(np.kron(Basis1[i], Basis2[j]), np.dot(rho, np.kron(Basis1[k], Basis2[l]))))  # exchanging j and l is transpose over A
-                                                                                                                                # exchanging i and k is transpose over B
-        elif index == 1: #transpose over first subspace
-            for i in range(len(Basis1)):
-                for j in range(len(Basis2)):
-                    for k in range(len(Basis1)):
-                        for l in range(len(Basis2)):
-                            rho_line.append(np.dot(np.kron(Basis1[i], Basis2[l]), np.dot(rho, np.kron(Basis1[k], Basis2[j]))))
-        elif index == 2:
-            for i in range(len(Basis1)):
-                for j in range(len(Basis2)):
-                    for k in range(len(Basis1)):
-                        for l in range(len(Basis2)):
-                            rho_line.append(np.dot(np.kron(Basis1[k], Basis2[j]), np.dot(rho, np.kron(Basis1[i], Basis2[l]))))
-        else:
-            raise ValueError("The value of index is wrong, please use 1 to transpose over the first subspace or 2 to transpose over the second.")                   
-
-        return np.array(rho_line).reshape(n1*n2,n1*n2)
-
-    def Partial_Trace(self, index:int, particle_type:list[str]) -> list[complex, complex]:
+    def partial_trace(self, index:Union[int, list[int]], particle_type:list[str]=None, dims:list[int]=None, inplace=False) -> list[complex, complex]:
         """
             Input: self -> density matrix in matrix format
-                index -> number of the subspace to trace over (1 or 2)
-                particle_type -> list of type of the particles in the density matrix ('fermion' or 'boson')
-            Output: TracedRho -> the density matrix with one of its subspace traced over
+                index -> index of the subspace(s) to trace over, starting at 0 (int or list of int)
+                particle_type -> list of type of the particles in the density matrix ('fermion' or 'boson'),
+                                 used to get the dimension of each subspace if dims is not given
+                dims -> list of the dimension of each subspace, e.g. [2, 3, 2] (overrides particle_type)
+                inplace -> if True, the instance is also changed: it then holds the traced density matrix (in square form)
+                           and its class is updated to the one matching the new dimension
+            Output: TracedRho -> the density matrix with the subspace(s) traced over
 
-            Calculates the partial trace of a density matrix of a pair of qubits or qutrits or a system qubit/qutrit
-            index = 1, tracing over the first Hilbert Space
-            index = 2, tracing over the second Hilbert space
+            Calculates the partial trace of a density matrix made of any number of subsystems of any dimension.
+            If neither dims nor particle_type is given, the density matrix is assumed to be made of two subsystems of same dimension.
+            Ex: index = 0, tracing over the first Hilbert Space
+                index = [0, 2], tracing over the first and third Hilbert spaces
         """
-        rho = self.square_matrix()
+        rho = np.asarray(self.square_matrix())
 
-        if isinstance(rho, list):
-            rho = np.array(rho)
-
-        if rho.shape[0] != rho.shape[1]:
+        if rho.ndim != 2 or rho.shape[0] != rho.shape[1]:
             raise ValueError('Asked the partial trace of a non-square matrix, problem')
-        
-        if np.sqrt(rho.shape[0])%1 == 0.: #the density matrix is composed of two systems of same dimension
-            n = int(np.sqrt(rho.shape[0]))
-            Basis = np.eye(n, dtype=int)
-            TracedRho = 0
-            if index == 1:
-                for i in range(n):
-                    Term1 = np.kron(Basis[i], Basis)
-                    Term2 = np.transpose(np.kron(Basis[i], Basis))
-                    TracedRho += np.dot(Term1, np.dot(rho, Term2))
-            elif index == 2:
-                for i in range(n):
-                    Term1 = np.kron(Basis, Basis[i])
-                    Term2 = np.transpose(np.kron(Basis, Basis[i]))
-                    TracedRho += np.dot(Term1, np.dot(rho, Term2))
-            else:
-                raise ValueError('The value of index is not correct')
+        D = rho.shape[0]
 
-        #the density matrix is composed of two systems of different dimensions, from rho itself we can't know which one is the first particle so we need to propagate the pdg-id codes
-        elif rho.shape[0] == 6: #this case is the one for fermion-boson or boson-fermion
-            if particle_type[0] == 'fermion' and particle_type[1] == 'boson': #fermion 1st particle, boson second particle
-                if index == 1:
-                    n = 2
-                    Basis = np.eye(n, dtype=int)
-                    TracedRho = 0
-                    for i in range(n):
-                        Term1 = np.kron(Basis[i], Identity3)
-                        Term2 = np.transpose(np.kron(Basis[i], Identity3))
-                        TracedRho += np.dot(Term1, np.dot(rho, Term2))
+        dims = self.get_subsystem_dims(particle_type, dims, D)
+        n = len(dims)
+        traced = self.get_subsystem_indices(index, n) #subspaces to trace over
+        kept_dims = [dims[i] for i in range(n) if i not in traced]
+        d_kept = int(np.prod(kept_dims))
 
-                elif index == 2:
-                    n = 3
-                    Basis = np.eye(n, dtype=int)
-                    TracedRho = 0
-                    for i in range(n):
-                        Term1 = np.kron(Identity2, Basis[i])
-                        Term2 = np.transpose(np.kron(Identity2, Basis[i]))
-                        TracedRho += np.dot(Term1, np.dot(rho, Term2))
-                else:
-                        raise ValueError('The value of index is not correct')
-                    
-            elif particle_type[0] == 'boson' and particle_type[1] == 'fermion': #boson 1st particle, fermion second particle
-                if index == 1:
-                    n = 3
-                    Basis = np.eye(n, dtype=int)
-                    TracedRho = 0
-                    for i in range(n):
-                        Term1 = np.kron(Basis[i], Identity2)
-                        Term2 = np.transpose(np.kron(Basis[i], Identity2))
-                        TracedRho += np.dot(Term1, np.dot(rho, Term2))
+        # rho[i1..in, j1..jn] -> sum over i_s = j_s for each traced subspace s
+        # we trace starting from the last subspace so the axes of the remaining ones are unchanged
+        TracedRho = rho.reshape(dims + dims)
+        n_left = n
+        for s in reversed(traced):
+            TracedRho = np.trace(TracedRho, axis1=s, axis2=s + n_left)
+            n_left -= 1
+        TracedRho = TracedRho.reshape(d_kept, d_kept)
 
-                elif index == 2:
-                    n = 2
-                    Basis = np.eye(n, dtype=int)
-                    TracedRho = 0
-                    for i in range(n):
-                        Term1 = np.kron(Identity3, Basis[i])
-                        Term2 = np.transpose(np.kron(Identity3, Basis[i]))
-                        TracedRho += np.dot(Term1, np.dot(rho, Term2))
-                else:
-                        raise ValueError('The value of index is not correct')
-        
-        else:
-            raise ValueError("Partial_Trace is not yet implemented for systems beyond 2x2, 2x3 and 3x3.")
-        
+        if inplace:
+            self.density_matrix = TracedRho
+            self.density_matrix_dimension = d_kept
+            self.__class__ = DensityMatrixObservables.class_for_dimension(d_kept)
+
         return TracedRho
 
-    def Negativity(self, particle_type:list[str], epsilon=1e-10) -> tuple[float, float]:
-            """
-            Input:  self -> density matrix
-                    particle_type -> list of the particle type: "fermion" or "boson"
-            Output: negativity and logarithmic negativity
-            This functions computes the negativity of a density matrix composed of any two particles.
-            """
-            from numpy import linalg as la
-            #We take the partial transpose of the second particle because the negativity does not depend on it 
-            rho_TB = self.Partial_Transpose(2, particle_type)
-            aux = np.dot(np.transpose(np.conjugate(rho_TB)), rho_TB)
+    def Negativity(self, particle_type:list[str]=None, epsilon=1e-10, dims:list[int]=None, index:Union[int, list[int]]=None) -> tuple[float, float]:
+        """
+        Input:  self -> density matrix
+                particle_type -> list of the particle type: "fermion" or "boson" (used to get dims if dims is not given)
+                epsilon -> threshold under which the results are set to 0 to deal with numerical instabilities
+                dims -> list of the dimension of each subspace, e.g. [2, 3, 2] (overrides particle_type)
+                index -> subsystem(s) on one side of the bipartition, starting at 0 (int or list of int),
+                         by default the last subsystem, i.e. the bipartition (0...n-2)|n-1
+        Output: negativity and logarithmic negativity
 
-            eigvals, _ = la.eigh(aux) # diagonalization formula: M = P D P^{-1}
-            for i in range(len(eigvals)): # we need to put this threshold because of numerical unstabilities small negative eigenvalues can appear
-                if abs(eigvals[i]) < epsilon:
-                        eigvals[i] = 0.
-            norm_trace = np.sum(np.sqrt(eigvals))
+        This functions computes the negativity of a density matrix with respect to the bipartition index|rest,
+        for any number of subsystems of any dimension: N = (||rho^T_index||_1 - 1)/2, E_N = log2(||rho^T_index||_1).
+        The result does not depend on which side of the bipartition is transposed.
+        """
+        dims = self.get_subsystem_dims(particle_type, dims, self.density_matrix_dimension)
+        if index is None: #by default we transpose the last subsystem
+            index = len(dims) - 1
+        rho_T = self.partial_transpose(dims, self.get_subsystem_indices(index, len(dims)))
+        # rho^T is hermitian so its trace norm is the sum of the absolute values of its eigenvalues
+        norm_trace = np.sum(np.abs(la.eigvalsh(rho_T)))
 
-            Negativity = (norm_trace - 1)/2.
-            Log_Negativity = np.log2(norm_trace)
+        Negativity = (norm_trace - 1)/2.
+        Log_Negativity = np.log2(norm_trace)
 
-            if abs(Negativity.real) < epsilon:
-                Negativity = 0.
-            if (Log_Negativity.real) < epsilon:
-                Log_Negativity = 0.
+        if abs(Negativity) < epsilon:
+            Negativity = 0.
+        if Log_Negativity < epsilon:
+            Log_Negativity = 0.
 
-            return Negativity.real, Log_Negativity.real
+        return float(Negativity), float(Log_Negativity)
 
-
-    def PeresHorodecki_criterion(self, particle_type: list[str], epsilon=1e-7) -> tuple[bool, list[float]]:
+    def PeresHorodecki_criterion(self, particle_type:list[str]=None, epsilon=1e-7, dims:list[int]=None, index:Union[int, list[int]]=None) -> tuple[bool, list[float]]:
         """
         Input:  rho -> density matrix
-                particle_type -> type of the two particles in the density matrix ('fermion' or 'boson')
+                particle_type -> type of the particles in the density matrix ('fermion' or 'boson')
                 epsilon -> treshold under which the eigenvalues are taken as 0 to deal with numerical instabilities
-        Output: flag_entanglement -> True if the criterion is satisfied and shows entanglement
+                dims -> list of the dimension of each subspace (overrides particle_type)
+                index -> subsystem(s) on one side of the bipartition, starting at 0 (last subsystem by default)
+        Output: flag_entanglement -> True if the criterion is satisfied and shows entanglement across the bipartition index|rest
                 eigvals -> eigenvalues of the partially transposed density matrix
         """
-        from numpy import linalg as la
-        rhoTB = self.Partial_Transpose(2, particle_type)
-        eigvals, _ = la.eigh(rhoTB)
-        for i in range(len(eigvals)):
-            if abs(eigvals[i]) < epsilon:
-                eigvals[i] = 0
-        flag_entanglement = False
-        for eig in eigvals:
-            if eig < 0.:
-                flag_entanglement = True
-                break
+        dims = self.get_subsystem_dims(particle_type, dims, self.density_matrix_dimension)
+        if index is None: #by default we transpose the last subsystem
+            index = len(dims) - 1
+        rhoTB = self.partial_transpose(dims, self.get_subsystem_indices(index, len(dims)))
+        eigvals = la.eigvalsh(rhoTB)
+        eigvals[np.abs(eigvals) < epsilon] = 0.
+        flag_entanglement = bool(np.any(eigvals < 0.))
 
         return flag_entanglement, eigvals
     
@@ -827,6 +825,81 @@ class DensityMatrixObservables(list):
         
         return coherence
 
+class DensityMatrixObservables2(DensityMatrixObservables):
+    """
+        Class reprensenting density matrices of a single qubit (spin-1/2 particle).
+        It is a child of the generic class and thus inherits its methods.
+        The basis is the one of the helicities given by MadGraph: (+1/2, -1/2).
+        The density matrix is rho = (1 + B.sigma)/2, with B the polarisation (Bloch) vector, B_i = <sigma_i>.
+    """
+    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None) -> None:
+        """The initialisation is the same as the parent class because it needs to accept the same input"""
+        super().__init__(user_input, len_user_input)
+        if self.density_matrix_dimension != 2:
+            raise ValueError("The dimension of a qubit density matrix should be 2.")
+
+    def Get_Polarisations(self, epsilon=1e-10) -> list[float]:
+        """
+            Input:  self -> density matrix
+                    epsilon -> threshold parameter
+            Output: Polarisation vector B_i = Tr(sigma_i rho), same normalisation as DensityMatrixObservables22
+        """
+        Polarisation = np.zeros(3, dtype=float)
+        for i in range(3):
+            Polarisation[i] = np.real(np.trace(np.dot(sigma[i], self.square_matrix())))
+            if np.abs(Polarisation[i]) < epsilon:
+                Polarisation[i] = 0.
+        return Polarisation
+
+    def spin_expectation(self, epsilon=1e-10) -> list[float]:
+        """
+            Input:  self -> density matrix
+                    epsilon -> threshold parameter
+            Output: Spin expectation value <S_i> = B_i/2
+        """
+        return self.Get_Polarisations(epsilon)/2.
+
+
+class DensityMatrixObservables3(DensityMatrixObservables):
+    """
+        Class reprensenting density matrices of a single qutrit (massive spin-1 particle).
+        It is a child of the generic class and thus inherits its methods.
+        The basis is the one of the helicities given by MadGraph: (+1, 0, -1).
+        The density matrix is rho = 1/3 + P_a lambda_a, with lambda_a the Gell-Mann matrices and P_a = <lambda_a>/2,
+        the same normalisation as DensityMatrixObservables33.
+    """
+    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None) -> None:
+        """The initialisation is the same as the parent class because it needs to accept the same input"""
+        super().__init__(user_input, len_user_input)
+        if self.density_matrix_dimension != 3:
+            raise ValueError("The dimension of a qutrit density matrix should be 3.")
+
+    def Get_Polarisations(self, epsilon=1e-10) -> list[float]:
+        """
+            Input:  self -> density matrix
+                    epsilon -> threshold parameter
+            Output: Polarisation vector P_a = Tr(lambda_a rho)/2 (8 components)
+        """
+        Polarisation = np.zeros(8, dtype=float)
+        for i in range(8):
+            Polarisation[i] = np.real(np.trace(np.dot(Lambda[i], self.square_matrix())))/2.
+            if np.abs(Polarisation[i]) < epsilon:
+                Polarisation[i] = 0.
+        return Polarisation
+
+    def spin_expectation(self, epsilon=1e-10) -> list[float]:
+        """
+            Input:  self -> density matrix
+                    epsilon -> threshold parameter
+            Output: Spin expectation value <J_i>, same relations to P_a as in DensityMatrixObservables33
+        """
+        Polarisation = self.Get_Polarisations(epsilon)
+        spin_exp = np.zeros(3, dtype=float)
+        spin_exp[0] = np.sqrt(2) * (Polarisation[0] + Polarisation[5])
+        spin_exp[1] = np.sqrt(2) * (Polarisation[1] + Polarisation[6])
+        spin_exp[2] = Polarisation[2] + np.sqrt(3) * Polarisation[7]
+        return spin_exp
+
 class DensityMatrixObservables22(DensityMatrixObservables):
     """
         Class reprensenting density matrices of qubit-qubit systems.
@@ -860,25 +933,21 @@ class DensityMatrixObservables22(DensityMatrixObservables):
         """
             Input:  self -> density matrix
                     epsilon -> threshold parameter
-            Output: Polarisation vectors of the two particles of the system
+            Output: Polarisation vectors of the two particles of the system,
+                    B1_i = Tr(rho sigma_i x I), B2_i = Tr(rho I x sigma_i)
         """
-        Polarisation1 = np.zeros(3, dtype=np.complex128)
-        Polarisation2 = np.zeros(3, dtype=np.complex128)
+        Polarisation1 = np.zeros(3, dtype=float)
+        Polarisation2 = np.zeros(3, dtype=float)
         for i in range(3):
             tensorprod1 = np.kron(sigma[i], Identity2)
             tensorprod2 = np.kron(Identity2, sigma[i])
-            Polarisation1[i] = np.trace(np.dot(tensorprod1, self.square_matrix()))
-            Polarisation2[i] = np.trace(np.dot(tensorprod2, self.square_matrix()))
+            Polarisation1[i] = np.real(np.trace(np.dot(tensorprod1, self.square_matrix())))
+            Polarisation2[i] = np.real(np.trace(np.dot(tensorprod2, self.square_matrix())))
 
-        if np.abs(Polarisation1[i].real) < epsilon:
-            Polarisation1[i] = 0. + Polarisation1[i].imag*1j
-        if np.abs(Polarisation1[i].imag) < epsilon:
-            Polarisation1[i] = Polarisation1[i].real + 0.*1j
-        
-        if np.abs(Polarisation2[i].real) < epsilon:
-            Polarisation2[i] = 0. + Polarisation2[i].imag*1j
-        if np.abs(Polarisation2[i].imag) < epsilon:
-            Polarisation2[i] = Polarisation2[i].real +0.*1j
+            if np.abs(Polarisation1[i]) < epsilon:
+                Polarisation1[i] = 0.
+            if np.abs(Polarisation2[i]) < epsilon:
+                Polarisation2[i] = 0.
 
         return Polarisation1, Polarisation2
 
@@ -1166,7 +1235,7 @@ class DensityMatrixObservables23(DensityMatrixObservables):
     """
         Class reprensenting density matrices of qubit-qutrit systems.
         It is a child of the generic class and thus inherits its methods.
-        We define here the observables specific to qubit-qubit systems.
+        We define here the observables specific to qubit-qutrit systems.
     """
 
     def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None) -> None:
@@ -1207,38 +1276,42 @@ class DensityMatrixObservables23(DensityMatrixObservables):
         """
             Input:  self -> density matrix
                     epsilon -> threshold parameter
-            Output: Polarisation vectors of the two particles of the system
+            Output: Polarisation vectors of the two particles of the system,
+                    B_i = Tr(rho_qubit sigma_i) for the qubit and P_a = Tr(rho_qutrit lambda_a)/2 for the qutrit
         """
         if particle_type[0] == 'boson':
-            Polarisation1 = np.zeros(8, dtype=np.complex128)
-            Polarisation2 = np.zeros(3, dtype=np.complex128)
+            Polarisation1 = np.zeros(8, dtype=float)
+            Polarisation2 = np.zeros(3, dtype=float)
+
             for i in range(8):
                 tensorprod1 = np.kron(Lambda[i], Identity2)
-                Polarisation1[i] = np.trace(np.dot(tensorprod1, self.square_matrix()))/2.
+                Polarisation1[i] = np.real(np.trace(np.dot(tensorprod1, self.square_matrix())))/2.
+                if np.abs(Polarisation1[i]) < epsilon:
+                    Polarisation1[i] = 0.
+
             for j in range(3):
                 tensorprod2 = np.kron(Identity3, sigma[j])
-                Polarisation2[j] = np.trace(np.dot(tensorprod2, self.square_matrix()))
+                Polarisation2[j] = np.real(np.trace(np.dot(tensorprod2, self.square_matrix())))
+                if np.abs(Polarisation2[j]) < epsilon:
+                    Polarisation2[j] = 0.
+
         elif particle_type[0] == 'fermion':
-            Polarisation1 = np.zeros(3, dtype=np.complex128)
-            Polarisation2 = np.zeros(8, dtype=np.complex128)
+            Polarisation1 = np.zeros(3, dtype=float)
+            Polarisation2 = np.zeros(8, dtype=float)
+
             for i in range(3):
                 tensorprod1 = np.kron(sigma[i], Identity3)
-                Polarisation1[i] = np.trace(np.dot(tensorprod1, self.square_matrix()))
+                Polarisation1[i] = np.real(np.trace(np.dot(tensorprod1, self.square_matrix())))
+                if np.abs(Polarisation1[i]) < epsilon:
+                    Polarisation1[i] = 0.
+
             for j in range(8):
                 tensorprod2 = np.kron(Identity2, Lambda[j])
-                Polarisation2[j] = np.trace(np.dot(tensorprod2, self.square_matrix()))/2.
+                Polarisation2[j] = np.real(np.trace(np.dot(tensorprod2, self.square_matrix())))/2.
+                if np.abs(Polarisation2[j]) < epsilon:
+                    Polarisation2[j] = 0.
         else:
             raise ValueError("particle_type only accepts elements that are 'fermion' or 'boson'.")
-        
-        if np.abs(Polarisation1[i].real) < epsilon:
-            Polarisation1[i] = 0. + Polarisation1[i].imag*1j
-        if np.abs(Polarisation1[i].imag) < epsilon:
-            Polarisation1[i] = Polarisation1[i].real + 0.*1j
-        
-        if np.abs(Polarisation2[i].real) < epsilon:
-            Polarisation2[i] = 0. + Polarisation2[i].imag*1j
-        if np.abs(Polarisation2[i].imag) < epsilon:
-            Polarisation2[i] = Polarisation2[i].real +0.*1j
 
         return Polarisation1, Polarisation2
 
@@ -1256,9 +1329,9 @@ class DensityMatrixObservables23(DensityMatrixObservables):
             spin_exp1[0] = np.sqrt(2) * (Polarisation1[0] + Polarisation1[5])
             spin_exp1[1] = np.sqrt(2) * (Polarisation1[1] + Polarisation1[6])
             spin_exp1[2] = Polarisation1[2] + np.sqrt(3) * Polarisation1[7]
-            spin_exp2 = np.array(Polarisation2)
+            spin_exp2 = np.array(Polarisation2)/2.
         elif particle_type[0] == 'fermion':
-            spin_exp1 = np.array(Polarisation1)
+            spin_exp1 = np.array(Polarisation1)/2.
             spin_exp2[0] = np.sqrt(2) * (Polarisation2[0] + Polarisation2[5])
             spin_exp2[1] = np.sqrt(2) * (Polarisation2[1] + Polarisation2[6])
             spin_exp2[2] = Polarisation2[2] + np.sqrt(3) * Polarisation2[7]
@@ -1310,9 +1383,9 @@ class DensityMatrixObservables23(DensityMatrixObservables):
 
 class DensityMatrixObservables33(DensityMatrixObservables):
     """
-        Class reprensenting density matrices of qubit-qubit systems.
+        Class reprensenting density matrices of qutrit-qutrit systems.
         It is a child of the generic class and thus inherits its methods.
-        We define here the observables specific to qubit-qubit systems.
+        We define here the observables specific to qutrit-qutrit systems.
     """
     
     def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None) -> None:
@@ -1343,25 +1416,22 @@ class DensityMatrixObservables33(DensityMatrixObservables):
         """
             Input:  self -> density matrix
                     epsilon -> threshold parameter
-            Output: Polarisation vectors of the two particles of the system
+            Output: Polarisation vectors of the two particles of the system,
+                    P1_a = Tr(rho lambda_a x I)/2, P2_a = Tr(rho I x lambda_a)/2, i.e. rho_1 = 1/3 + P1_a lambda_a
         """
-        Polarisation1 = np.zeros(8, dtype=np.complex128)
+        Polarisation1 = np.zeros(8, dtype=float)
+        Polarisation2 = np.zeros(8, dtype=float)
         Polarisation2 = np.zeros(8, dtype=np.complex128)
         for i in range(8):
             tensorprod1 = np.kron(Lambda[i], Identity3)
             tensorprod2 = np.kron(Identity3, Lambda[i])
-            Polarisation1[i] = np.trace(np.dot(tensorprod1, self.square_matrix()))/2.
-            Polarisation2[i] = np.trace(np.dot(tensorprod2, self.square_matrix()))/2.
+            Polarisation1[i] = np.real(np.trace(np.dot(tensorprod1, self.square_matrix())))/2.
+            Polarisation2[i] = np.real(np.trace(np.dot(tensorprod2, self.square_matrix())))/2.
 
-        if np.abs(Polarisation1[i].real) < epsilon:
-            Polarisation1[i] = 0. + Polarisation1[i].imag*1j
-        if np.abs(Polarisation1[i].imag) < epsilon:
-            Polarisation1[i] = Polarisation1[i].real + 0.*1j
-        
-        if np.abs(Polarisation2[i].real) < epsilon:
-            Polarisation2[i] = 0. + Polarisation2[i].imag*1j
-        if np.abs(Polarisation2[i].imag) < epsilon:
-            Polarisation2[i] = Polarisation2[i].real +0.*1j
+            if np.abs(Polarisation1[i]) < epsilon:
+                Polarisation1[i] = 0.
+            if np.abs(Polarisation2[i]) < epsilon:
+                Polarisation2[i] = 0.
 
         return Polarisation1, Polarisation2
 
