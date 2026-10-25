@@ -585,6 +585,16 @@ class TestMECmdShell(unittest.TestCase):
                 self.do('generate_events -f')
             results[name] = (self.cmd_line.results.current['cross'],
                              self.cmd_line.results.current['error'])
+            # the preset grid (setgrid) must stay inside [xgmin, xgmax]:
+            # a bin below xgmin has a negative width, which gives negative
+            # weights in the first survey iteration (barely visible in the
+            # cross-section) and this warning in the channel logs
+            logs = misc.glob(pjoin('P*', 'G*', '*.log'),
+                             pjoin(self.run_dir, 'SubProcesses'))
+            self.assertTrue(logs, 'no survey log found for %s' % name)
+            for log in logs:
+                self.assertFalse('xbin not returning correct x' in open(log).read(),
+                                 '%s: negative width bin in %s' % (name, log))
 
         val0, err0 = results['nongrouped']
         val1, err1 = results['grouped']
