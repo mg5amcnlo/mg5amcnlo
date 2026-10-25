@@ -1,0 +1,1040 @@
+diff --git a/Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script b/Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script
+index b1ccf26dd..c0d85c3b3 100755
+--- a/Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script
++++ b/Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script
+@@ -834,6 +834,12 @@ then
+     echo "MAcNLOPS continuation requires per-dipole LHE starting-scale support" >&2
+     exit 1
+   fi
++  if [ -z "${MACNLOPS_PHYSICS_FILE:-}" ] || [ ! -f "$thisdir/$MACNLOPS_PHYSICS_FILE" ]
++  then
++    echo "MAcNLOPS continuation requires the accepted LHE's recorded shower profile" >&2
++    exit 1
++  fi
++  cat "$thisdir/$MACNLOPS_PHYSICS_FILE" >> "$ifile"
+   cat <<EOF >> "$ifile"
+ 
+ ! Consume each accepted LHE input once; stop on a failed shower.
+@@ -859,6 +865,7 @@ SpaceShower:MEcorrections = off
+ TimeShower:MEafterFirst = off
+ SpaceShower:MEafterFirst = off
+ PartonLevel:MPI = off
++PartonLevel:Remnants = on
+ HadronLevel:all = off
+ BeamRemnants:primordialKT = off
+ ColourReconnection:reconnect = off
+diff --git a/Template/NLO/MCatNLO/srcPythia8/MacNLOPS.cc b/Template/NLO/MCatNLO/srcPythia8/MacNLOPS.cc
+index a8cf82db6..22dbe70df 100644
+--- a/Template/NLO/MCatNLO/srcPythia8/MacNLOPS.cc
++++ b/Template/NLO/MCatNLO/srcPythia8/MacNLOPS.cc
+@@ -188,7 +188,6 @@ struct InputEvent {
+       throw std::runtime_error("Malformed LHE event header");
+     process = integer(h[1]); weight = number(h[2]); scale = number(h[3]);
+     alphaEM = number(h[4]); alphaS = number(h[5]);
+-    if (scale < 0.) throw std::runtime_error("Negative LHE shower scale");
+     for (int i = 0; i < n; ++i) {
+       std::string line;
+       if (!std::getline(input, line))
+@@ -344,6 +343,11 @@ std::string dipoleName(int radiator, int recoiler) {
+ 
+ void prepareSourceMatching(InputEvent& input, bool delta) {
+   input.delta = delta;
++  // MC@NLO-Delta H records use -1 as the unused scalar sentinel; their
++  // directed scale matrix below supplies the actual native shower start.
++  // Keep the sentinel as source provenance, not as a continuation scale.
++  if (input.scale < 0. && !(delta && input.kind == 2 && input.scale == -1.))
++    throw std::runtime_error("Negative LHE shower scale");
+   if (input.hasEndpoint || sourceXMLBlock(input.extra, "macnlops_continuation").present)
+     throw std::runtime_error("Derived endpoint requires shower continuation; do not repeat first-emission matching");
+   if (input.hasHard && ((input.hardSource == "delta") != delta))
+@@ -497,8 +501,15 @@ void validateHardInput(const InputEvent& input, const Pythia& engine) {
+   }
+   if (incoming != 2 || !outgoing)
+     throw std::runtime_error("Invalid hard-model incoming/final multiplicity");
++  // An FKS hard annotation precedes the shower-mass reshuffle and its
++  // momentum repair. Rare generated points retain a few 1e-8 relative
++  // balance residuals even though every external leg is on shell. Keep
++  // the strict plain-LHE check and admit that numerical source precision
++  // for the annotated hard coordinates without changing their momenta.
++  const long double balanceTolerance =
++    (input.hasHard && input.hardUsed ? 1.e-7L : 1.e-9L) * eventScale;
+   for (const auto& value : balance)
+-    if (std::abs(value) > 1.e-9 * eventScale)
++    if (std::abs(value) > balanceTolerance)
+       throw std::runtime_error("Hard-model event does not conserve four-momentum");
+ }
+ 
+@@ -559,6 +570,8 @@ public:
+         infoPtr->scales->attributes != input.scaleAttributes))
+       throw std::runtime_error("Pythia/raw Delta starting-scale mismatch (LHEF 2/3 required)");
+     input.showerScale = scale();
++    if (delta && (!std::isfinite(input.showerScale) || input.showerScale <= 0.))
++      throw std::runtime_error("Invalid effective Delta shower starting scale");
+     for (std::size_t i = 0; i < input.originalParticles.size(); ++i) {
+       const auto& p = input.originalParticles[i];
+       const auto& q = particles[i+1];
+diff --git a/Template/NLO/MCatNLO/srcPythia8/Pythia8.cc b/Template/NLO/MCatNLO/srcPythia8/Pythia8.cc
+index 62e744c1a..e1f77ba2a 100644
+--- a/Template/NLO/MCatNLO/srcPythia8/Pythia8.cc
++++ b/Template/NLO/MCatNLO/srcPythia8/Pythia8.cc
+@@ -58,6 +58,9 @@ int main() {
+   int iEventshower=pythia.mode("Main:spareMode1");
+   // The MAcNLOPS continuation card enables one pass over the accepted LHE.
+   const bool continuation=pythia.flag("Main:spareFlag1");
++  // Preserve the matching profile's unregularized ISR kernel. Reading
++  // pT0Ref=0 from a card clamps it to the tune-oriented XML minimum.
++  if (continuation) pythia.settings.forceParm("SpaceShower:pT0Ref", 0.);
+   string evt_norm=pythia.word("Main:spareWord1");
+   int iEventtot_norm=iEventtot;
+   if (evt_norm != "sum"){
+@@ -111,6 +114,10 @@ int main() {
+     else norm=iEventtot_norm*iEvent/nSelected;
+ 
+     if (!continuation && nSelected >= iEventshower) break;
++    if (continuation && (nSelected != iEvent+1 || pythia.info.nTried() != iEvent+1)) {
++      std::cerr << "Continuation shower skipped an input event\n";
++      return 1;
++    }
+     if (pythia.info.isLHA() && iPrintLHA < nPrintLHA) {
+       pythia.LHAeventList();
+       pythia.info.list();
+@@ -119,7 +126,15 @@ int main() {
+       ++iPrintLHA;
+     }
+ 
+-    double evtweight = pythia.info.weight();
++    // Re-synchronize the independent LHE reader before using this event's
++    // weights. For strategy -3 Pythia's Info weight contains only the sign;
++    // a retained MAcNLOPS event must keep its absolute source normalization.
++    nTry=pythia.info.nTried();
++    for (; iLHEFread<nTry ; ++iLHEFread) {
++      read.lhef_read_wgts_(cwgt_ww);
++    }
++    double evtweight = continuation ? read.reader.hepeup.XWGTUP
++                                    : pythia.info.weight();
+     double normhepmc;
+     // Add the weight of the current event to the cross section.
+     normhepmc = 1. / double(iEventshower);
+@@ -131,6 +146,11 @@ int main() {
+ 
+     HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
+     ToHepMC.fill_next_event( pythia, hepmcevt );
++    if (continuation) {
++      hepmcevt->weights()[0]=evtweight;
++      // Fortran analyses use NEVHEP as a count when normalizing histograms.
++      hepmcevt->set_event_number(iEvent+1);
++    }
+ 
+     //define the IO_HEPEVT
+     _hepevtio = new HepMC::IO_HEPEVT;
+@@ -139,13 +159,7 @@ int main() {
+     //event weight
+     cevwgt.EVWGT=hepmcevt->weights()[0];
+ 
+-    //call the FORTRAN analysis for this event. First, make sure to
+-    //re-synchronize the reading of the weights with the reading of
+-    //the event. (They get desynchronised if an event was rejected).
+-    nTry=pythia.info.nTried();
+-    for (; iLHEFread<nTry ; ++iLHEFread) {
+-      read.lhef_read_wgts_(cwgt_ww);
+-    }
++    // Call the FORTRAN analysis with the same nominal weight as HepMC.
+     cwgt_ww[0]=cevwgt.EVWGT;
+     pyanal_(cwgtinfo_nn,cwgt_ww);
+ 
+diff --git a/Template/NLO/MCatNLO/srcPythia8/Pythia82.cc b/Template/NLO/MCatNLO/srcPythia8/Pythia82.cc
+index 7bbeea391..a56601b26 100644
+--- a/Template/NLO/MCatNLO/srcPythia8/Pythia82.cc
++++ b/Template/NLO/MCatNLO/srcPythia8/Pythia82.cc
+@@ -57,6 +57,9 @@ int main() {
+   int iEventshower=pythia.mode("Main:spareMode1");
+   // The MAcNLOPS continuation card enables one pass over the accepted LHE.
+   const bool continuation=pythia.flag("Main:spareFlag1");
++  // Preserve the matching profile's unregularized ISR kernel. Reading
++  // pT0Ref=0 from a card clamps it to the tune-oriented XML minimum.
++  if (continuation) pythia.settings.forceParm("SpaceShower:pT0Ref", 0.);
+   string evt_norm=pythia.word("Main:spareWord1");
+   int iEventtot_norm=iEventtot;
+   if (evt_norm != "sum"){
+@@ -117,6 +120,10 @@ int main() {
+     else norm=iEventtot_norm*iEvent/nSelected;
+ 
+     if (!continuation && nSelected >= iEventshower) break;
++    if (continuation && (nSelected != iEvent+1 || pythia.info.nTried() != iEvent+1)) {
++      std::cerr << "Continuation shower skipped an input event\n";
++      return 1;
++    }
+     if (pythia.info.isLHA() && iPrintLHA < nPrintLHA) {
+       pythia.LHAeventList();
+       pythia.info.list();
+@@ -125,7 +132,15 @@ int main() {
+       ++iPrintLHA;
+     }
+ 
+-    double evtweight = pythia.info.weight();
++    // Re-synchronize the independent LHE reader before using this event's
++    // weights. For strategy -3 Pythia's Info weight contains only the sign;
++    // a retained MAcNLOPS event must keep its absolute source normalization.
++    nTry=pythia.info.nTried();
++    for (; iLHEFread<nTry ; ++iLHEFread) {
++      read.lhef_read_wgts_(cwgt_ww);
++    }
++    double evtweight = continuation ? read.reader.hepeup.XWGTUP
++                                    : pythia.info.weight();
+     double normhepmc;
+     // Add the weight of the current event to the cross section.
+     normhepmc = 1. / double(iEventshower);
+@@ -137,6 +152,11 @@ int main() {
+ 
+     HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
+     ToHepMC.fill_next_event( pythia, hepmcevt );
++    if (continuation) {
++      hepmcevt->weights()[0]=evtweight;
++      // Fortran analyses use NEVHEP as a count when normalizing histograms.
++      hepmcevt->set_event_number(iEvent+1);
++    }
+ 
+     //define the IO_HEPEVT
+     _hepevtio = new HepMC::IO_HEPEVT;
+@@ -145,13 +165,7 @@ int main() {
+     //event weight
+     cevwgt.EVWGT=hepmcevt->weights()[0];
+ 
+-    //call the FORTRAN analysis for this event. First, make sure to
+-    //re-synchronize the reading of the weights with the reading of
+-    //the event. (They get desynchronised if an event was rejected).
+-    nTry=pythia.info.nTried();
+-    for (; iLHEFread<nTry ; ++iLHEFread) {
+-      read.lhef_read_wgts_(cwgt_ww);
+-    }
++    // Call the FORTRAN analysis with the same nominal weight as HepMC.
+     cwgt_ww[0]=cevwgt.EVWGT;
+     pyanal_(cwgtinfo_nn,cwgt_ww);
+ 
+diff --git a/Template/NLO/MCatNLO/srcPythia8/Pythia82_hep.cc b/Template/NLO/MCatNLO/srcPythia8/Pythia82_hep.cc
+index fa37f7029..5c28b7160 100644
+--- a/Template/NLO/MCatNLO/srcPythia8/Pythia82_hep.cc
++++ b/Template/NLO/MCatNLO/srcPythia8/Pythia82_hep.cc
+@@ -6,6 +6,7 @@
+ #include "Pythia8Plugins/CombineMatchingInput.h"
+ #include "HepMC/GenEvent.h"
+ #include "HepMC/IO_GenEvent.h"
++#include "LHEF.h"
+ 
+ using namespace Pythia8;
+ 
+@@ -26,6 +27,11 @@ int main() {
+   int iPrintLHA=0;
+   int iEventtot=pythia.mode("Main:numberOfEvents");
+   int iEventshower=pythia.mode("Main:spareMode1");
++  // A continuation consumes the accepted LHE once, preserving its weights.
++  const bool continuation=pythia.flag("Main:spareFlag1");
++  if (continuation) pythia.settings.forceParm("SpaceShower:pT0Ref", 0.);
++  LHEF::Reader* sourceWeights=continuation
++      ? new LHEF::Reader(pythia.word("Beams:LHEF")) : NULL;
+   string evt_norm=pythia.word("Main:spareWord1");
+ 
+   //FxFx merging
+@@ -49,7 +55,7 @@ int main() {
+     }
+   }
+ 
+-  pythia.init();
++  if (!pythia.init() && continuation) return 1;
+ 
+   HepMC::Pythia8ToHepMC ToHepMC;
+   HepMC::IO_GenEvent ascii_io(outputname.c_str(), std::ios::out);
+@@ -63,14 +69,23 @@ int main() {
+   double errorTotal  = 0.;
+ 
+   for (int iEvent = 0; ; ++iEvent) {
++    if (continuation && iEvent >= iEventshower) break;
+     if (!pythia.next()) {
++      if (continuation) {
++        std::cerr << "Continuation shower failed at input event " << iEvent+1 << "\n";
++        return 1;
++      }
+       if (++iAbort < nAbort) continue;
+       break;
+     }
+     // the number of events read by Pythia so far
+     int nSelected=pythia.info.nSelected();
+ 
+-    if (nSelected > iEventshower) break;
++    if (!continuation && nSelected > iEventshower) break;
++    if (continuation && (nSelected != iEvent+1 || pythia.info.nTried() != iEvent+1)) {
++      std::cerr << "Continuation shower skipped an input event\n";
++      return 1;
++    }
+     if (pythia.info.isLHA() && iPrintLHA < nPrintLHA) {
+       pythia.LHAeventList();
+       pythia.info.list();
+@@ -81,6 +96,13 @@ int main() {
+ 
+     HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
+     double evtweight = pythia.info.weight();
++    if (continuation) {
++      if (!sourceWeights->readEvent()) {
++        std::cerr << "Missing continuation source weight at event " << iEvent+1 << "\n";
++        return 1;
++      }
++      evtweight=sourceWeights->hepeup.XWGTUP;
++    }
+     double normhepmc;
+     // ALWAYS NORMALISE HEPMC WEIGHTS TO SUM TO THE CROSS SECTION
+     if (evt_norm != "sum") {
+@@ -89,8 +111,18 @@ int main() {
+       normhepmc = double(iEventtot) / double(iEventshower);
+     }
+     sigmaTotal += evtweight*normhepmc;
+-    hepmcevt->weights().push_back(evtweight*normhepmc);
++    if (!continuation) hepmcevt->weights().push_back(evtweight*normhepmc);
+     ToHepMC.fill_next_event( pythia, hepmcevt );
++    if (continuation) {
++      // Stock strategy -3 exposes a sign through Info. Restore the retained
++      // LHE normalization for the nominal and any shower variation weights.
++      const double factor=pythia.info.weight()!=0.
++          ? evtweight*normhepmc/pythia.info.weight() : 0.;
++      for (size_t i=0; i<hepmcevt->weights().size(); ++i)
++        hepmcevt->weights()[i]*=factor;
++      if (hepmcevt->weights().empty()) hepmcevt->weights().push_back(evtweight*normhepmc);
++      else hepmcevt->weights()[0]=evtweight*normhepmc;
++    }
+     // Add the weight of the current event to the cross section.
+     // Report cross section to hepmc
+     HepMC::GenCrossSection xsec;
+@@ -101,6 +133,7 @@ int main() {
+     delete hepmcevt;
+   }
+ 
++  delete sourceWeights;
+   pythia.stat();
+   if (isFxFx){
+     std::cout << " \n";
+diff --git a/Template/NLO/MCatNLO/srcPythia8/Pythia83.cc b/Template/NLO/MCatNLO/srcPythia8/Pythia83.cc
+index 056dc5ad4..94fb4440c 100644
+--- a/Template/NLO/MCatNLO/srcPythia8/Pythia83.cc
++++ b/Template/NLO/MCatNLO/srcPythia8/Pythia83.cc
+@@ -56,6 +56,9 @@ int main() {
+   int iEventshower=pythia.mode("Main:spareMode1");
+   // The MAcNLOPS continuation card enables one pass over the accepted LHE.
+   const bool continuation=pythia.flag("Main:spareFlag1");
++  // Preserve the matching profile's unregularized ISR kernel. Reading
++  // pT0Ref=0 from a card clamps it to the tune-oriented XML minimum.
++  if (continuation) pythia.settings.forceParm("SpaceShower:pT0Ref", 0.);
+   string evt_norm=pythia.word("Main:spareWord1");
+   int iEventtot_norm=iEventtot;
+   if (evt_norm != "sum"){
+@@ -121,6 +124,10 @@ int main() {
+     else norm=iEventtot_norm*iEvent/nSelected;
+ 
+     if (!continuation && nSelected >= iEventshower) break;
++    if (continuation && (nSelected != iEvent+1 || pythia.info.nTried() != iEvent+1)) {
++      std::cerr << "Continuation shower skipped an input event\n";
++      return 1;
++    }
+     if (pythia.info.isLHA() && iPrintLHA < nPrintLHA) {
+       pythia.LHAeventList();
+       pythia.info.list();
+@@ -129,7 +136,15 @@ int main() {
+       ++iPrintLHA;
+     }
+ 
+-    double evtweight = pythia.info.weight();
++    // Re-synchronize the independent LHE reader before using this event's
++    // weights. For strategy -3 Pythia's Info weight contains only the sign;
++    // a retained MAcNLOPS event must keep its absolute source normalization.
++    nTry=pythia.info.nTried();
++    for (; iLHEFread<nTry ; ++iLHEFread) {
++      read.lhef_read_wgts_(cwgt_ww);
++    }
++    double evtweight = continuation ? read.reader.hepeup.XWGTUP
++                                    : pythia.info.weight();
+     double normhepmc;
+     // Add the weight of the current event to the cross section.
+     normhepmc = 1. / double(iEventshower);
+@@ -141,6 +156,11 @@ int main() {
+ 
+     HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
+     ToHepMC.fill_next_event( pythia, hepmcevt );
++    if (continuation) {
++      hepmcevt->weights()[0]=evtweight;
++      // Fortran analyses use NEVHEP as a count when normalizing histograms.
++      hepmcevt->set_event_number(iEvent+1);
++    }
+ 
+     //define the IO_HEPEVT
+     _hepevtio = new HepMC::IO_HEPEVT;
+@@ -149,13 +169,7 @@ int main() {
+     //event weight
+     cevwgt.EVWGT=hepmcevt->weights()[0];
+ 
+-    //call the FORTRAN analysis for this event. First, make sure to
+-    //re-synchronize the reading of the weights with the reading of
+-    //the event. (They get desynchronised if an event was rejected).
+-    nTry=pythia.info.nTried();
+-    for (; iLHEFread<nTry ; ++iLHEFread) {
+-      read.lhef_read_wgts_(cwgt_ww);
+-    }
++    // Call the FORTRAN analysis with the same nominal weight as HepMC.
+     cwgt_ww[0]=cevwgt.EVWGT;
+     pyanal_(cwgtinfo_nn,cwgt_ww);
+ 
+diff --git a/Template/NLO/MCatNLO/srcPythia8/Pythia83_hep.cc b/Template/NLO/MCatNLO/srcPythia8/Pythia83_hep.cc
+index dc57514b0..d9ee20d4a 100644
+--- a/Template/NLO/MCatNLO/srcPythia8/Pythia83_hep.cc
++++ b/Template/NLO/MCatNLO/srcPythia8/Pythia83_hep.cc
+@@ -5,6 +5,7 @@
+ #include "Pythia8Plugins/CombineMatchingInput.h"
+ #include "HepMC/GenEvent.h"
+ #include "HepMC/IO_GenEvent.h"
++#include "LHEF.h"
+ 
+ using namespace Pythia8;
+ 
+@@ -25,6 +26,11 @@ int main() {
+   int iPrintLHA=0;
+   int iEventtot=pythia.mode("Main:numberOfEvents");
+   int iEventshower=pythia.mode("Main:spareMode1");
++  // A continuation consumes the accepted LHE once, preserving its weights.
++  const bool continuation=pythia.flag("Main:spareFlag1");
++  if (continuation) pythia.settings.forceParm("SpaceShower:pT0Ref", 0.);
++  LHEF::Reader* sourceWeights=continuation
++      ? new LHEF::Reader(pythia.word("Beams:LHEF")) : NULL;
+   string evt_norm=pythia.word("Main:spareWord1");
+ 
+   //FxFx merging
+@@ -52,7 +58,7 @@ int main() {
+   // Initialise Pythia.
+   if (!pythia.init()) {
+     cout << "Error: could not initialise Pythia" << endl;
+-    return 0;
++    return continuation ? 1 : 0;
+   };
+ 
+   HepMC::Pythia8ToHepMC ToHepMC;
+@@ -67,14 +73,23 @@ int main() {
+   double errorTotal  = 0.;
+ 
+   for (int iEvent = 0; ; ++iEvent) {
++    if (continuation && iEvent >= iEventshower) break;
+     if (!pythia.next()) {
++      if (continuation) {
++        std::cerr << "Continuation shower failed at input event " << iEvent+1 << "\n";
++        return 1;
++      }
+       if (++iAbort < nAbort) continue;
+       break;
+     }
+     // the number of events read by Pythia so far
+     int nSelected=pythia.info.nSelected();
+ 
+-    if (nSelected > iEventshower) break;
++    if (!continuation && nSelected > iEventshower) break;
++    if (continuation && (nSelected != iEvent+1 || pythia.info.nTried() != iEvent+1)) {
++      std::cerr << "Continuation shower skipped an input event\n";
++      return 1;
++    }
+     if (pythia.info.isLHA() && iPrintLHA < nPrintLHA) {
+       pythia.LHAeventList();
+       pythia.info.list();
+@@ -85,6 +100,13 @@ int main() {
+ 
+     HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
+     double evtweight = pythia.info.weight();
++    if (continuation) {
++      if (!sourceWeights->readEvent()) {
++        std::cerr << "Missing continuation source weight at event " << iEvent+1 << "\n";
++        return 1;
++      }
++      evtweight=sourceWeights->hepeup.XWGTUP;
++    }
+     double normhepmc;
+     // ALWAYS NORMALISE HEPMC WEIGHTS TO SUM TO THE CROSS SECTION
+     if (evt_norm != "sum") {
+@@ -93,8 +115,18 @@ int main() {
+       normhepmc = double(iEventtot) / double(iEventshower);
+     }
+     sigmaTotal += evtweight*normhepmc;
+-    hepmcevt->weights().push_back(evtweight*normhepmc);
++    if (!continuation) hepmcevt->weights().push_back(evtweight*normhepmc);
+     ToHepMC.fill_next_event( pythia, hepmcevt );
++    if (continuation) {
++      // Stock strategy -3 exposes a sign through Info. Restore the retained
++      // LHE normalization for the nominal and any shower variation weights.
++      const double factor=pythia.info.weight()!=0.
++          ? evtweight*normhepmc/pythia.info.weight() : 0.;
++      for (size_t i=0; i<hepmcevt->weights().size(); ++i)
++        hepmcevt->weights()[i]*=factor;
++      if (hepmcevt->weights().empty()) hepmcevt->weights().push_back(evtweight*normhepmc);
++      else hepmcevt->weights()[0]=evtweight*normhepmc;
++    }
+     // Add the weight of the current event to the cross section.
+     // Report cross section to hepmc
+     HepMC::GenCrossSection xsec;
+@@ -105,6 +137,7 @@ int main() {
+     delete hepmcevt;
+   }
+ 
++  delete sourceWeights;
+   pythia.stat();
+   if (isFxFx){
+     std::cout << " \n";
+diff --git a/Template/NLO/MCatNLO/srcPythia8/Pythia8_hep.cc b/Template/NLO/MCatNLO/srcPythia8/Pythia8_hep.cc
+index 580bd88f2..6595376a1 100644
+--- a/Template/NLO/MCatNLO/srcPythia8/Pythia8_hep.cc
++++ b/Template/NLO/MCatNLO/srcPythia8/Pythia8_hep.cc
+@@ -4,6 +4,7 @@
+ #include "Pythia8/Pythia8ToHepMC.h"
+ #include "HepMC/GenEvent.h"
+ #include "HepMC/IO_GenEvent.h"
++#include "LHEF.h"
+ #include "../examples/CombineMatchingInput.h"
+ 
+ using namespace Pythia8;
+@@ -27,6 +28,11 @@ int main() {
+   int iPrintLHA=0;
+   int iEventtot=pythia.mode("Main:numberOfEvents");
+   int iEventshower=pythia.mode("Main:spareMode1");
++  // A continuation consumes the accepted LHE once, preserving its weights.
++  const bool continuation=pythia.flag("Main:spareFlag1");
++  if (continuation) pythia.settings.forceParm("SpaceShower:pT0Ref", 0.);
++  LHEF::Reader* sourceWeights=continuation
++      ? new LHEF::Reader(pythia.word("Beams:LHEF")) : NULL;
+   string evt_norm=pythia.word("Main:spareWord1");
+ 
+   //FxFx merging
+@@ -43,7 +49,7 @@ int main() {
+     }
+   }
+ 
+-  pythia.init();
++  if (!pythia.init() && continuation) return 1;
+ 
+   HepMC::Pythia8ToHepMC ToHepMC;
+   HepMC::IO_GenEvent ascii_io(outputname.c_str(), std::ios::out);
+@@ -57,14 +63,23 @@ int main() {
+   double errorTotal  = 0.;
+ 
+   for (int iEvent = 0; ; ++iEvent) {
++    if (continuation && iEvent >= iEventshower) break;
+     if (!pythia.next()) {
++      if (continuation) {
++        std::cerr << "Continuation shower failed at input event " << iEvent+1 << "\n";
++        return 1;
++      }
+       if (++iAbort < nAbort) continue;
+       break;
+     }
+     // the number of events read by Pythia so far
+     int nSelected=pythia.info.nSelected();
+ 
+-    if (nSelected > iEventshower) break;
++    if (!continuation && nSelected > iEventshower) break;
++    if (continuation && (nSelected != iEvent+1 || pythia.info.nTried() != iEvent+1)) {
++      std::cerr << "Continuation shower skipped an input event\n";
++      return 1;
++    }
+     if (pythia.info.isLHA() && iPrintLHA < nPrintLHA) {
+       pythia.LHAeventList();
+       pythia.info.list();
+@@ -75,6 +90,13 @@ int main() {
+ 
+     HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
+     double evtweight = pythia.info.weight();
++    if (continuation) {
++      if (!sourceWeights->readEvent()) {
++        std::cerr << "Missing continuation source weight at event " << iEvent+1 << "\n";
++        return 1;
++      }
++      evtweight=sourceWeights->hepeup.XWGTUP;
++    }
+     double normhepmc;
+     // ALWAYS NORMALISE HEPMC WEIGHTS TO SUM TO THE CROSS SECTION
+     if (evt_norm != "sum") {
+@@ -83,8 +105,18 @@ int main() {
+       normhepmc = double(iEventtot) / double(iEventshower);
+     }
+     sigmaTotal += evtweight*normhepmc;
+-    hepmcevt->weights().push_back(evtweight*normhepmc);
++    if (!continuation) hepmcevt->weights().push_back(evtweight*normhepmc);
+     ToHepMC.fill_next_event( pythia, hepmcevt );
++    if (continuation) {
++      // Stock strategy -3 exposes a sign through Info. Restore the retained
++      // LHE normalization for the nominal and any shower variation weights.
++      const double factor=pythia.info.weight()!=0.
++          ? evtweight*normhepmc/pythia.info.weight() : 0.;
++      for (size_t i=0; i<hepmcevt->weights().size(); ++i)
++        hepmcevt->weights()[i]*=factor;
++      if (hepmcevt->weights().empty()) hepmcevt->weights().push_back(evtweight*normhepmc);
++      else hepmcevt->weights()[0]=evtweight*normhepmc;
++    }
+     // Add the weight of the current event to the cross section.
+     // Report cross section to hepmc
+     HepMC::GenCrossSection xsec;
+@@ -95,6 +127,7 @@ int main() {
+     delete hepmcevt;
+   }
+ 
++  delete sourceWeights;
+   pythia.stat();
+   if (isFxFx){
+     std::cout << " \n";
+diff --git a/Template/NLO/SubProcesses/genps_fks.f b/Template/NLO/SubProcesses/genps_fks.f
+index 22160e9bc..d13b06d72 100644
+--- a/Template/NLO/SubProcesses/genps_fks.f
++++ b/Template/NLO/SubProcesses/genps_fks.f
+@@ -713,6 +713,7 @@ c absent endpoints cannot inherit data from a previous radiation trial.
+ 
+       subroutine generate_FKS_kinematics(rad,nbody_only,xjac0,xpswgt0,stot,shat_born,sqrtshat_born,tau_born,ycm_born,
+      $     xbjrk_born,m_born,jac,p,pass)
++      use mc_native_context, only: native_mapping
+       use fks_phase_space_data, only: resonance_momentum,resonance_mass2,resonance_recoil,
+      $     resonance_members,initial_recoil_leg,nocntevents,sqrtshat,shat,isolsign
+       implicit none
+@@ -729,7 +730,8 @@ c The momentum checker expects the full legacy branch-indexed layout.
+       integer imother
+       double precision xmrec2,m_j_fks,phi_i_fks,tau,
+      $   xi_i_fks,y_ij_fks,xi_i_hat,xiimax,xinorm,xjac,xpswgt,
+-     $   ycm,xp(0:3,nexternal),xbjrk(2),p_i_fks(0:3),beam_ratio
++     $   ycm,xp(0:3,nexternal),xbjrk(2),p_i_fks(0:3),beam_ratio,
++     $   native_recoil_mass2
+       integer i,ireal
+ 
+       real*8 pi
+@@ -769,7 +771,21 @@ c
+ c
+ c For final state j_fks, compute the recoil invariant mass
+       if (j_fks.gt.nincoming.and..not.resonance_recoil) then
+-         call get_recoil(p_born_l,imother,shat_born,xmrec2,pass)
++         native_recoil_mass2=-1d0
++         if(native_mapping.and.nexternal.eq.nincoming+3)then
++            do i=nincoming+1,nexternal-1
++               if(i.ne.imother.and.m_born(i).eq.0d0)
++     $              native_recoil_mass2=0d0
++            enddo
++         endif
++c The native inverse uses the known invariant for a single massless
++c spectator; the forward reconstruction must use the same invariant.
++         if(native_recoil_mass2.eq.0d0)then
++            xmrec2=0d0
++            pass=.true.
++         else
++            call get_recoil(p_born_l,imother,shat_born,xmrec2,pass)
++         endif
+          if (.not.pass) then
+             xjac0=-44
+             return
+@@ -1482,6 +1498,7 @@ c histories only consume momenta and active data, so skip their snapshot.
+ ! No Born integration-channel coordinates or Jacobians are recovered.
+       use fks_phase_space_helpers, only: boost_n1_to_its_cms,
+      $     boost_n1_to_lab,get_xi_from_p,get_yij_from_p,get_phi_from_p
++      use mc_native_context, only: native_mapping
+       implicit none
+       double precision xjac0,xpswgt0,xx(3),p_cms(0:3,nexternal),stot
+      $     ,tau_born,ycm_born,xbjrk_born(2),pb(0:3,
+@@ -1491,7 +1508,9 @@ c histories only consume momenta and active data, so skip their snapshot.
+       double precision pmass(nexternal)
+       common /to_mass/pmass
+       double precision m_j_fks,xi_i_fks,y_ij_fks,phi_i_fks,xbjrk(2),shat
+-     $     ,sqrtshat,tau,ycm,y_lab_to_cms,xbar,trial_jac,trial_ps
++     $     ,sqrtshat,tau,ycm,y_lab_to_cms,xbar,trial_jac,trial_ps,
++     $     known_recoil_mass2
++      integer leg
+       logical pass
+       m_j_fks=pmass(j_fks)
+ 
+@@ -1547,9 +1566,17 @@ c a direct inversion in the lab would use a different transverse basis.
+      $           ,y_ij_fks,phi_i_fks,pb,xx,xjac0,xpswgt0
+      $           ,shat,sqrtshat,i_fks,j_fks)
+          else
++            known_recoil_mass2=-1d0
++            if(native_mapping.and.nexternal.eq.nincoming+3)then
++               do leg=nincoming+1,nexternal
++                  if(leg.eq.i_fks.or.leg.eq.j_fks)cycle
++                  if(pmass(leg).eq.0d0)known_recoil_mass2=0d0
++               enddo
++            endif
+             call generate_momenta_massive_final_inverse(p_cms,xi_i_fks
+      $           ,y_ij_fks,phi_i_fks,pb,xx,xjac0,xpswgt0
+-     $           ,shat,sqrtshat,i_fks,j_fks,m_j_fks)
++     $           ,shat,sqrtshat,i_fks,j_fks,m_j_fks,
++     $           known_recoil_mass2)
+          endif
+          tau_born=tau
+          ycm_born=ycm
+diff --git a/Template/NLO/SubProcesses/genps_fks_radiation.f b/Template/NLO/SubProcesses/genps_fks_radiation.f
+index e9733e3fd..4033385b6 100644
+--- a/Template/NLO/SubProcesses/genps_fks_radiation.f
++++ b/Template/NLO/SubProcesses/genps_fks_radiation.f
+@@ -681,7 +681,7 @@ c
+ 
+       subroutine generate_momenta_massive_final_inverse(xp,xi_i_fks
+      $           ,y_ij_fks,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat
+-     $           ,i_fks,j_fks,m_j_fks)
++     $           ,i_fks,j_fks,m_j_fks,known_recoil_mass2)
+       use fks_phase_space_data, only: xinorm_ev
+       use mc_native_context, only: active_native_mapping=>native_mapping
+       implicit none
+@@ -699,6 +699,7 @@ c
+      $     native_eborn,native_delta,native_onepy,native_ratio,
+      $     native_recoil,native_inverse_denom
+       double precision rho,dot,sstiny,cctiny,branch_sign
++      double precision,optional,intent(in) :: known_recoil_mass2
+       external rho,dot
+       logical        softtest,colltest
+       common/sctests/softtest,colltest
+@@ -733,6 +734,12 @@ c subtracting the hard daughters from the beams loses that precision.
+       enddo
+       sumrec=recoil(0)+rho(recoil)
+       xmrec2=dot(recoil,recoil)
++c A native caller can supply the exact invariant of a one-particle
++c massless recoil. Its shower-boost roundoff reflects the lab energy,
++c which can be much larger than the partonic CM energy used below.
++      if(native_mapping.and.present(known_recoil_mass2))then
++         if(known_recoil_mass2.ge.0d0)xmrec2=known_recoil_mass2
++      endif
+ c Apply the same massless-recoil roundoff bound as get_recoil before
+ c taking a square root in the inverse map.
+       if(xmrec2.lt.0d0.and.xmrec2.ge.-1d-12*shat)xmrec2=0d0
+diff --git a/madgraph/interface/amcatnlo_run_interface.py b/madgraph/interface/amcatnlo_run_interface.py
+index 87f94e02f..b2d9209e7 100755
+--- a/madgraph/interface/amcatnlo_run_interface.py
++++ b/madgraph/interface/amcatnlo_run_interface.py
+@@ -31,6 +31,7 @@ from pathlib import Path
+ import pydoc
+ import random
+ import re
++import shlex
+ import shutil
+ import subprocess
+ import sys
+@@ -4256,6 +4257,9 @@ RESTART = %(mint_mode)s
+             # Source-run split files are a different event population. The
+             # collected matched file is already randomized and sum-normalized.
+             self.shower_card['nsplit_jobs'] = 1
++            # The accepted file pins its source PDF; a mutable shower card may
++            # not replace it with the normal internal-PDF default.
++            self.shower_card['pdfcode'] = 1
+             logger.info('Continuing the accepted MAcNLOPS LHE with local recoil and saved shower bounds')
+ 
+         #check that the number of split event files divides the number of
+@@ -4404,6 +4408,8 @@ RESTART = %(mint_mode)s
+         misc.call(['./MCatNLO_MadFKS.inputs'], stdout=open(mcatnlo_log, 'w'),
+                     stderr=open(mcatnlo_log, 'w'), 
+                     cwd=pjoin(self.me_dir, 'MCatNLO'),
++                    env=(self.macnlops_continuation['environment']
++                         if self.macnlops_continuation else None),
+                     close_fds=True)
+ 
+         exe = 'MCATNLO_%s_EXE' % shower
+@@ -4488,9 +4494,17 @@ RESTART = %(mint_mode)s
+                 ld_library_path = 'DYLD_LIBRARY_PATH'
+             else:
+                 ld_library_path = 'LD_LIBRARY_PATH'
+-            fsock.write(open(pjoin(self.me_dir, 'MCatNLO', 'shower_template.sh')).read() \
++            script = open(pjoin(self.me_dir, 'MCatNLO', 'shower_template.sh')).read() \
+                 % {'ld_library_path': ld_library_path,
+-                   'extralibs': ':'.join(extrapaths)})
++                   'extralibs': ':'.join(extrapaths)}
++            if self.macnlops_continuation:
++                # Batch jobs must resolve the validated native backend and PDF
++                # data, independently of the environment on the worker node.
++                environment = self.macnlops_continuation['environment']
++                exports = ''.join('export %s=%s\n' % (key, shlex.quote(environment[key]))
++                    for key in ('LD_LIBRARY_PATH', 'LHAPDF_DATA_PATH'))
++                script = script.replace('\n', '\n' + exports, 1)
++            fsock.write(script)
+         subprocess.call(['chmod', '+x', pjoin(rundir, 'shower.sh')])
+ 
+         if event_files:
+@@ -5116,6 +5130,11 @@ RESTART = %(mint_mode)s
+         if continuation:
+             content += 'MACNLOPS_ISR_CUTOFF=%.17e\nMACNLOPS_FSR_CUTOFF=%.17e\n' % tuple(
+                 continuation['shower_cutoffs'])
++            physics_file = 'macnlops_continuation.cmnd'
++            continuation['environment'] = macnlops.write_continuation_settings(
++                self.me_dir, self.options['pythia8_path'], evt_file, continuation,
++                pjoin(self.me_dir, 'MCatNLO', physics_file))
++            content += 'MACNLOPS_PHYSICS_FILE=%s\n' % physics_file
+         if self.banner.get_detail('run_card', 'mcatnlo_delta') :
+             content += 'DELTA=ON\n'
+         else:
+diff --git a/madgraph/various/banner.py b/madgraph/various/banner.py
+index f1e2be200..20c5d4399 100755
+--- a/madgraph/various/banner.py
++++ b/madgraph/various/banner.py
+@@ -6182,6 +6182,9 @@ class RunCardNLO(RunCard):
+                 raise InvalidRunCard('MAcNLOPS requires unmerged PYTHIA8 MC@NLO generation')
+             if self['mcatnlo_delta'] and self['macnlops_resolved_source']:
+                 raise InvalidRunCard('MC@NLO-Delta requires macnlops_resolved_source=False')
++            if not self['store_hard_momenta']:
++                raise InvalidRunCard('MAcNLOPS requires store_hard_momenta=True to retain '
++                                     'momenta before shower-mass reshuffling')
+             if self['event_norm'] != 'sum' or self['pdlabel'].lower() != 'lhapdf':
+                 raise InvalidRunCard('MAcNLOPS requires event_norm=sum and pdlabel=lhapdf')
+             if len(self['lhaid']) != 1 or any(self['reweight_scale']) or any(self['reweight_pdf']):
+diff --git a/madgraph/various/macnlops.py b/madgraph/various/macnlops.py
+index 74fec32e1..c24c9a4c3 100644
+--- a/madgraph/various/macnlops.py
++++ b/madgraph/various/macnlops.py
+@@ -14,6 +14,7 @@ from collections import Counter
+ from dataclasses import dataclass
+ import gzip
+ import hashlib
++import html
+ import json
+ import math
+ import os
+@@ -383,7 +384,7 @@ class Continuation:
+         except (ValueError, OverflowError) as exc:
+             raise MatchingError('Invalid continuation scale') from exc
+         if (not all(math.isfinite(x) for x in values) or values[0] <= 0 or
+-                values[1] < 0 or min(values[2:]) <= 0):
++                (values[1] < 0 and values[1] != -1) or min(values[2:]) <= 0):
+             raise MatchingError('Invalid continuation scale or cutoff')
+         return cls(attributes['state'], *values)
+ 
+@@ -463,6 +464,12 @@ class Event:
+ 
+     def check_continuation(self):
+         continuation = self.require_continuation()
++        # Standard Delta H sources use SCALUP=-1: their dipole matrix
++        # supplies the physical starts. Keep that sentinel as provenance;
++        # the written endpoint still has strictly positive current scales.
++        if (continuation.source_scalup < 0 and
++                (self.kind != 'H' or self.hard is None or self.hard.source != 'delta')):
++            raise MatchingError('Negative source SCALUP requires a Delta H endpoint')
+         if ((self.kind == 'H') != (continuation.state == 'unshowered') or
+                 not math.isclose(self.scale, continuation.scale, rel_tol=2.e-14)):
+             raise MatchingError('Continuation state/SCALUP conflicts with the written endpoint')
+@@ -629,6 +636,10 @@ def continuation_contract(filename):
+         require_lhef_scales(stream.header)
+         if not matched_lhe_header(stream.header):
+             raise MatchingError('Continuation needs an accepted first-emission sample')
++        profile = read_shower_profile(stream.header)
++        if profile is None:
++            raise MatchingError('This older matched LHE lacks its measured shower profile; '
++                                'regenerate the first-emission sample')
+         for block in stream:
+             event = Event(block)
+             continuation = event.require_continuation()
+@@ -640,8 +651,165 @@ def continuation_contract(filename):
+             counts[continuation.state] += 1
+     if cutoffs is None:
+         raise MatchingError('The accepted first-emission sample is empty')
++    if list(cutoffs) != profile['support']['shower_cutoffs']:
++        raise MatchingError('Continuation scales and recorded shower profile have different cutoffs')
+     return dict(schema='macnlops-lhe-continuation-v1', events=counts['S'] + counts['H'],
+-                counts=dict(counts), shower_cutoffs=list(cutoffs))
++                counts=dict(counts), shower_cutoffs=list(cutoffs), shower_profile=profile)
++
++
++def shower_setting_key(key):
++    """Physics settings to carry between stages; exclude paths, seeds and I/O."""
++    return (key.startswith(('SpaceShower:', 'TimeShower:', 'PDF:')) or
++            key in ('StandardModel:alphaSnfmax', 'PartonShowers:model'))
++
++
++def continuation_physics(profile):
++    """Render the measured first-step physics independently of current Cards.
++
++    Pythia's settings dump rounds floating-point values. The validated profile
++    supplies the exact coupling, masses and cutoffs; stage-specific recoil and
++    scale-import choices are applied subsequently by the normal shower script.
++    """
++    try:
++        if (profile['schema'] != 'macnlops-generation-profile-v1' or
++                profile['construction'] not in (ORDINARY_SOURCE, RESOLVED_SOURCE, DELTA_SOURCE) or
++                profile['shower_backend'] != 'stock-pythia8'):
++            raise ValueError('profile identity')
++        support = profile['support']
++        settings = dict(profile['effective_shower_settings'])
++        for key, value in settings.items():
++            if (not shower_setting_key(key) or not isinstance(value, str) or
++                    not value or any(char in value for char in '\r\n!#')):
++                raise ValueError('physics setting')
++        required = ('SpaceShower:alphaSvalue', 'SpaceShower:alphaSorder',
++                    'TimeShower:alphaSvalue', 'TimeShower:alphaSorder',
++                    'SpaceShower:nQuarkIn', 'TimeShower:nGluonToQuark',
++                    'SpaceShower:pT0Ref', 'StandardModel:alphaSnfmax', 'PDF:pSet')
++        if any(key not in settings for key in required):
++            raise ValueError('incomplete effective settings')
++        if (settings['PDF:pSet'] != profile['pdf'] or
++                number(settings['SpaceShower:pT0Ref']) != 0.):
++            raise ValueError('PDF or ISR regularization')
++        alpha, order = profile['alpha_s_mz'], profile['alpha_s_order']
++        if not math.isfinite(alpha) or alpha <= 0 or type(order) is not int or order not in range(4):
++            raise ValueError('coupling')
++        for family in ('SpaceShower', 'TimeShower'):
++            # Check the rounded native dump before restoring the exact input.
++            if (abs(number(settings[family + ':alphaSvalue']) - alpha) > 1.e-5 or
++                    int(settings[family + ':alphaSorder']) != order):
++                raise ValueError('effective coupling differs from generation')
++            settings[family + ':alphaSvalue'] = '%.17e' % alpha
++            settings[family + ':alphaSorder'] = str(order)
++        for key, field in (('StandardModel:alphaSnfmax', 'alpha_s_nfmax'),
++                           ('SpaceShower:nQuarkIn', 'n_quark_in'),
++                           ('TimeShower:nGluonToQuark', 'n_gluon_to_quark')):
++            if int(settings[key]) != support[field]:
++                raise ValueError('flavour policy')
++        cutoffs = support['shower_cutoffs']
++        if len(cutoffs) != 2 or any(not math.isfinite(x) or x <= 0 for x in cutoffs):
++            raise ValueError('shower cutoffs')
++        settings['SpaceShower:pTmin'] = '%.17e' % cutoffs[0]
++        settings['TimeShower:pTmin'] = '%.17e' % cutoffs[1]
++        masses = support['particle_masses']
++        if not masses or any(int(pdg) <= 0 or not math.isfinite(mass) or mass < 0
++                             for pdg, mass in masses.items()):
++            raise ValueError('particle masses')
++        for key, value in support['qcd_only_off_switches'].items():
++            if not re.fullmatch(r'[A-Za-z0-9]+:[A-Za-z0-9]+', key) or value is not False:
++                raise ValueError('parton-level profile')
++            settings[key] = 'off'
++        if (not profile['shower_libraries'] or any(not re.fullmatch(r'[0-9a-f]{64}', value)
++                for value in list(profile['shower_libraries'].values()) +
++                [profile['pdf_info_sha256'], profile['pdf_member_sha256']])):
++            raise ValueError('library/PDF fingerprints')
++        backend = profile['lhapdf_library_sha256']
++        if backend is not None and not re.fullmatch(r'[0-9a-f]{64}', backend):
++            raise ValueError('LHAPDF backend fingerprint')
++    except (KeyError, TypeError, ValueError, OverflowError) as exc:
++        raise MatchingError('Invalid recorded MAcNLOPS shower profile: %s' % exc) from exc
++    # The native consumer uses forceParm: ordinary readString would clamp zero
++    # to the stock XML minimum, introducing an ISR damping absent at stage one.
++    del settings['SpaceShower:pT0Ref']
++    lines = ['! Physics measured for the accepted MAcNLOPS sample.',
++             '! SpaceShower:pT0Ref = 0 is restored by the native continuation consumer.']
++    lines.extend('%s = %s' % item for item in sorted(settings.items()))
++    lines.extend('%d:m0 = %.17e' % (int(pdg), mass)
++                 for pdg, mass in sorted(masses.items(), key=lambda item: int(item[0])))
++    return '\n'.join(lines) + '\n'
++
++
++def lhapdf_backend_hash(environment):
++    """Identify the shared backend selected by the native library search path."""
++    for folder in environment.get('LD_LIBRARY_PATH', '').split(os.pathsep):
++        if folder and (Path(folder) / 'libLHAPDF.so').is_file():
++            return sha256(Path(folder) / 'libLHAPDF.so')
++    return None
++
++
++def recorded_shower_profile(profile, effective_settings, environment=None):
++    """Make a portable physics packet from the validated run and native dump."""
++    record = {key: value for key, value in profile.items() if key != 'native_build'}
++    record['lhapdf_library_sha256'] = lhapdf_backend_hash(environment or {})
++    record['effective_shower_settings'] = {}
++    for line in Path(effective_settings).read_text().splitlines():
++        if '=' not in line or line.lstrip().startswith(('!', '#')):
++            continue
++        key, value = (item.strip() for item in line.split('=', 1))
++        if shower_setting_key(key):
++            record['effective_shower_settings'][key] = value
++    continuation_physics(record)
++    return record
++
++
++def with_shower_profile(header, profile):
++    if '<macnlops_shower_profile' in header:
++        raise MatchingError('Duplicate MAcNLOPS shower profile')
++    continuation_physics(profile)
++    payload = json.dumps(profile, sort_keys=True, separators=(',', ':'), allow_nan=False)
++    digest = hashlib.sha256(payload.encode('utf-8')).hexdigest()
++    packet = '<macnlops_shower_profile sha256="%s">%s</macnlops_shower_profile>\n' % (
++        digest, html.escape(payload, quote=False))
++    if '</header>' not in header:
++        raise MatchingError('Missing LHE header')
++    return header.replace('</header>', packet + '</header>', 1)
++
++
++def read_shower_profile(header):
++    packets = list(re.finditer(r'<macnlops_shower_profile\b([^>]*)>(.*?)'
++                              r'</macnlops_shower_profile>', header, re.S))
++    if not packets and '<macnlops_shower_profile' not in header:
++        return None
++    if len(packets) != 1 or header.count('<macnlops_shower_profile') != 1:
++        raise MatchingError('Malformed or duplicate MAcNLOPS shower profile')
++    payload = html.unescape(packets[0][2])
++    if xml_attributes(packets[0][1]).get('sha256') != hashlib.sha256(payload.encode('utf-8')).hexdigest():
++        raise MatchingError('MAcNLOPS shower profile fingerprint mismatch')
++    try:
++        profile = json.loads(payload)
++    except ValueError as exc:
++        raise MatchingError('Invalid MAcNLOPS shower profile JSON') from exc
++    continuation_physics(profile)
++    return profile
++
++
++def write_continuation_settings(process_dir, pythia8, filename, contract, output):
++    """Check installed physics inputs, then restore the accepted file's profile."""
++    profile = contract['shower_profile']
++    if shower_library_hashes(pythia8) != profile['shower_libraries']:
++        raise MatchingError('Continuation Pythia libraries differ from the first-emission run')
++    with LHEStream(filename) as stream:
++        source_card = re.search(r'<MGRunCard>(.*?)</MGRunCard>', stream.header, re.S | re.I)
++    if source_card is None:
++        raise MatchingError('Accepted LHE has no source run card for its PDF')
++    pdf, info = pdf_name(Path(process_dir), run_card_values(source_card[1]), with_info=True)
++    if (pdf != profile['pdf'] or sha256(info) != profile['pdf_info_sha256'] or
++            pdf_member_hash(pdf, info) != profile['pdf_member_sha256']):
++        raise MatchingError('Continuation PDF differs from the first-emission run')
++    environment = shower_environment(pythia8, info)
++    if lhapdf_backend_hash(environment) != profile['lhapdf_library_sha256']:
++        raise MatchingError('Continuation LHAPDF library differs from the first-emission run')
++    Path(output).write_text(continuation_physics(profile))
++    return environment
+ 
+ 
+ class NativeEvaluator:
+@@ -942,6 +1110,7 @@ def collect_matched_events(inputs, reports, output, seed):
+     process_rows = {}
+     beam_fields = None
+     header = None
++    shower_profiles = []
+     continuation_modes = set()
+     with tempfile.TemporaryDirectory(prefix='.macnlops_collect_', dir=output.parent) as temporary:
+         temporary = Path(temporary)
+@@ -957,6 +1126,9 @@ def collect_matched_events(inputs, reports, output, seed):
+             with LHEStream(plain) as source:
+                 if header is None:
+                     header = source.header
++                shower_profiles.append(read_shower_profile(source.header))
++                if shower_profiles[-1] != shower_profiles[0]:
++                    raise MatchingError('Cannot combine different first-emission shower profiles')
+                 init = re.search(r'<init>(.*?)</init>', source.header, re.S)
+                 try:
+                     rows = [line.split('#', 1)[0].split() for line in init[1].splitlines()
+@@ -1068,7 +1240,7 @@ def matching_scale(record, profile):
+ 
+ 
+ def reject_proposals(proposals, metadata, output, evaluator, seed=1, signed_residuals=False,
+-                     profile=None, require_continuation=False):
++                     profile=None, require_continuation=False, shower_profile=None):
+     """Make one decision per original event and preserve its absolute weight.
+ 
+     Output is published only after all density and synchronisation checks pass.
+@@ -1152,7 +1324,9 @@ def reject_proposals(proposals, metadata, output, evaluator, seed=1, signed_resi
+             continuation = require_continuation or continuation_modes == {True}
+             retained.seek(0)
+             with open_lhe(temporary, 'wt') as target:
+-                target.write(sample_header(source.header, counts, process_weights,
++                header = (with_shower_profile(source.header, shower_profile)
++                          if shower_profile is not None else source.header)
++                target.write(sample_header(header, counts, process_weights,
+                                            process_squares, process_maxima,
+                                            continuation=continuation))
+                 shutil.copyfileobj(retained, target)
+@@ -1725,10 +1899,12 @@ def run_file(filename, process_dir, job, driver, args, seed):
+             command.append('--mcatnlo-delta')
+         with open(job / 'shower.log', 'w') as log:
+             subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, check=True, env=environment)
++    shower_profile = recorded_shower_profile(profile, Path(str(metadata) + '.settings.cmnd'), environment)
+     with NativeEvaluator(process_dir, job, environment=environment, auxiliary_seed=seed) as evaluator:
+         report = reject_proposals(proposal, metadata, job / 'events.lhe.gz', evaluator,
+                                   seed=seed, profile=support,
+-                                  signed_residuals=signed_residuals, require_continuation=True)
++                                  signed_residuals=signed_residuals, require_continuation=True,
++                                  shower_profile=shower_profile)
+         report['shower_support'] = evaluator.configuration
+         if profile['construction'] == DELTA_SOURCE:
+             report['delta_auxiliary'] = dict(seed=seed,

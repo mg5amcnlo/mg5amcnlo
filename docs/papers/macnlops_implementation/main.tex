@@ -1,0 +1,121 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=24mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern,microtype}
+\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage{graphicx,booktabs,array,longtable,tabularx}
+\usepackage{placeins}
+\usepackage{pdfpages,eso-pic}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{xcolor}
+\usepackage[unicode,colorlinks=true,linkcolor=blue!45!black,citecolor=blue!45!black,urlcolor=blue!45!black]{hyperref}
+\usepackage{bookmark}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+\lstset{basicstyle=\ttfamily\footnotesize,breaklines=true,columns=fullflexible,keepspaces=true,frame=single}
+\hypersetup{pdftitle={MAcNLOPS from MC@NLO and MC@NLO-Delta events},pdfsubject={Source densities, colour sums, mass conventions and finite-shower validation}}
+\newcommand{\mcatnlo}{MC@NLO}
+\newcommand{\macnlops}{MAcNLOPS}
+\newcommand{\DeltaMC}{\ensuremath{\text{MC@NLO-}\Delta}}
+\newcommand{\pythia}{\textsc{Pythia}}
+\newcommand{\mg}{\textsc{MadGraph5\_aMC@NLO}}
+\newcommand{\dd}{\mathrm d}
+\newcommand{\as}{\alpha_s}
+\newcommand{\pt}{p_{\mathrm T}}
+\newcommand{\GeV}{\,\mathrm{GeV}}
+\newcommand{\pb}{\,\mathrm{pb}}
+\newcommand{\pos}[1]{\left[#1\right]_+}
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\HistoricalStamp}{\AddToShipoutPictureFG*{\AtPageUpperLeft{\raisebox{-4mm}[0pt][0pt]{\hspace{7mm}\colorbox{white}{\color{red!65!black}\scriptsize Historical: 20 October 2026, different patched runtime and 200k-event study}}}}}
+\setlength{\emergencystretch}{3em}
+\setlength{\parskip}{3pt}
+\setlength{\parindent}{1.2em}
+\setcounter{tocdepth}{2}
+\newif\ifallfigures
+\ifdefined\PaperOnly\allfiguresfalse\else\allfigurestrue\fi
+\title{\macnlops{} from \mcatnlo{} and \DeltaMC{} events:\\
+source densities, colour sums, mass conventions\\and finite-shower validation}
+\author{}
+\date{25 October 2026\\\small Implementation study; campaign completed 24 October 2026}
+\begin{document}
+\maketitle
+\begin{abstract}
+We document a common-source implementation of multiplicative--accumulative
+matching in which a qualified ordinary MC@NLO or MC@NLO-Delta sample is
+postprocessed after the first shower step. The negative hard-event density
+is removed only to the extent allowed by a nonnegative leading shower
+kernel; the required signed hard residual is retained otherwise. We
+derive the resulting finite-shower difference and distinguish it from an
+exact cancellation prescription. The account separates the source
+G-function completion, its artificial low-scale ``bogus Sudakov'', the
+physical shower Sudakov and the Delta source factor. It also separates
+outer FKS sampling, native emitter-history sums, Born-colour-flow sums
+and colour connections. Hard momenta before the Monte Carlo mass
+reshuffle, conditional Delta contexts, and a scale-preserving LHE handoff
+make these distinctions operational. A subsequent sampled fixed-flow
+mode retains native component labels and uses a Delta-free local veto
+with the full G completion. The numerical results here retain the earlier
+globally summed prescription. Ten common-source cohorts of one
+million events cover Drell--Yan, ZZ, top-pair, t-channel single-top and
+four-flavour Wbb production, with and without Delta matching. First-step
+and streamed full-parton-shower comparisons retain original signed
+weights. Matching changes their inclusive sample sums by between
+$-1.43\%$ and $+16.84\%$; Delta improves several comparisons but neither
+removes all hard residuals nor guarantees finite-shower equality. The complete edition provides all
+696 current validation plots, together with seven explicitly
+historical panels. The theoretical statements, measured results and
+remaining conditions for a stronger accuracy or positivity claim are
+kept distinct.
+\end{abstract}
+\clearpage
+\tableofcontents
+\clearpage
+\input{sections/introduction}
+\input{sections/source_colour}
+\input{sections/rejection}
+\input{sections/delta_masses}
+\input{sections/implementation}
+\input{sections/results}
+\input{sections/conclusions}
+\FloatBarrier
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+\clearpage
+\appendix
+\input{sections/notation}
+\ifallfigures
+\clearpage
+\section{Complete figure atlas}
+\label{sec:atlas}
+This appendix contains every plot PDF in the completed million-event
+campaign: 696 panels, including the unrestricted and zoomed ratio
+versions and all separate mechanism panels. The 20-page overview books
+are selections of these same panels and are not duplicated as additional
+datasets. Fifteen panels are also repeated in the main text to support
+the discussion. Each atlas panel retains its original vector-PDF size;
+the PDF bookmarks identify the process, source, shower level, observable
+and variant. In the 696 current panels, main and mechanism ratios are relative to the
+corresponding combined \macnlops{} result. The raw numerical histograms
+and covariance arrays remain in the validation directories.
+
+The final seven panels reproduce the earlier paper's archived figures
+from 20 October 2026. They are visibly marked historical. That study used
+200,000-event samples and a different, patched shower/runtime workflow;
+their original ratio conventions, including normalization to the
+unrejected source, are retained. Those panels are included for completeness, not combined with the
+million-event results or used as validation of the current restart.
+The list and SHA256 of every included PDF are in
+\code{\detokenize{figure_manifest.json}}.
+\clearpage
+\input{generated/all_figures}
+\else
+\section{Complete figure archive}
+The accompanying complete edition includes all 696 current validation
+panels and seven explicitly historical panels. This narrative edition
+contains the same equations, tables and discussion and the 15 selected
+current comparisons. The LaTeX source and figure manifest cover both
+editions.
+\fi
+\end{document}

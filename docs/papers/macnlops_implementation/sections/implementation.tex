@@ -1,0 +1,635 @@
+\section{Implementation and event-level contracts}
+\label{sec:impl-workflow}
+
+\subsection{A qualified source and a separate first-emission stage}
+\label{sec:impl-stages}
+
+The implementation follows the separation between hard-event generation and
+shower evolution already present in \mg{}~\cite{Alwall}.  The additional
+matching operation is performed on an existing, qualified source sample.
+It does not regenerate its hard events, replace its nominal weights, or
+fit a normalization to the surviving population.  Within each process
+and matching setting, the \mcatnlo{} reference and the \macnlops{}
+construction therefore share the same source event file.  Ordinary and
+\(\DeltaMC\) runs are separate source samples; common input does not mean
+that those two source prescriptions are identified with one another.
+
+There are three operational stages:
+\begin{enumerate}
+\item Generate an annotated \mcatnlo{} or \(\DeltaMC\) source, with its
+  original source prescription, scales, cuts, parameters and PDF.
+\item Produce the competing first QCD emission of each \(S\) event,
+  retain the real-emission endpoint of each \(H\) event, evaluate the
+  appropriate densities, and apply the event-level removal/veto
+  decisions.  Write one randomized accepted LHE file in the standard event-file syntax~\cite{LHEF}, with additional versioned provenance and continuation packets.
+\item If required, run an independent continuation shower on that
+  first-emission LHE file using its recorded scale and physics contract.
+\end{enumerate}
+The second stage is the supported production endpoint in this campaign.
+The full showers used for validation are a subsequent operation.  The
+earlier combined first-step/full-shower driver
+\code{\detokenize{MacNLOPSFull.cc}} is not part of this workflow.
+
+The main entry points are summarized in Table~\ref{tab:impl-components}.
+The native first-step program is linked to the selected \pythia{} 8.318
+installation~\cite{Pythia8}; it has no HepMC dependency.  The physical
+rejection is implemented in Python, while the generated Fortran
+evaluator reconstructs the source and leading shower densities from the
+same process implementation used in generation.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{p{.34\linewidth}p{.57\linewidth}}
+\toprule
+Component & Responsibility \\
+\midrule
+\code{\detokenize{amcatnlo_run_interface.py}} &
+Preparation before integration; source-manifest creation; dispatch to
+first-step processing or to continuation of an already matched file.\\
+\code{\detokenize{macnlops.py}} &
+Source qualification, profile checks, flavour routing, density-worker
+control, event decisions, collection and continuation contracts.\\
+\code{\detokenize{MacNLOPS.cc}} &
+Canonical hard-point import, one competing ISR/FSR step, native endpoint
+and scale export, and per-source-event shower metadata.\\
+\code{\detokenize{driver_macnlops.f}} &
+Global or selected native-component evaluation of \(R\), the reconstructed hard
+remainder and the scalar leading kernel in a common physical measure.\\
+\code{\detokenize{StreamHist.cc}} &
+Campaign-specific streamed first-emission and full-shower validation,
+with weights, selection masks, pairing and covariance accumulated in
+memory.\\
+\bottomrule
+\end{tabular}
+\caption{Principal components of the current implementation.  The first
+four components belong to the matching workflow; the last is the
+validation consumer in \code{\detokenize{validation_1M_20261023/src}}.}
+\label{tab:impl-components}
+\end{table}
+
+\subsection{What the run-card flag does}
+\label{sec:impl-flags}
+
+The flag \code{\detokenize{macnlops=True}} selects the additional
+preparation and postprocessing path.  It is not an instruction to
+reinterpret an arbitrary old LHE file as a fully specified
+\macnlops{} source.  A representative five-flavour configuration is
+\begin{verbatim}
+True     = macnlops
+False    = macnlops_resolved_source
+True     = store_hard_momenta
+False    = mcatnlo_delta
+PYTHIA8  = parton_shower
+sum      = event_norm
+lhapdf   = pdlabel
+21150    = lhaid
+False    = reweight_scale
+False    = reweight_pdf
+1000000  = nevents
+0        = ickkw
+3        = lhe_version
+5        = macnlops_flavour_count
+5        = maxjetflavor
+\end{verbatim}
+The \(\DeltaMC\) case changes
+\code{\detokenize{mcatnlo_delta}} to true; the four-flavour process uses
+the corresponding hard model, PDF and flavour count.  These choices must
+be made before generation.  In particular, the legacy
+\code{\detokenize{macnlops_resolved_source}} option is kept false in all
+samples discussed here.  It describes a different source construction
+and cannot be used as a substitute for postprocessing the unchanged
+ordinary source.
+The completed campaign forced the globally summed pair
+\code{\detokenize{MCExplicitKLSum=True}} and
+\code{\detokenize{MCSubtractionAtFixedFlow=False}}. The subsequent
+implementation honours the card and also supports the sampled pair
+given in Sec.~\ref{sec:delta-sampled}. Other combinations are rejected.
+\code{\detokenize{FKSExplicitSum}} remains independent; set it false
+explicitly to sample the outer contribution groups. Its general
+generator default has not been changed for unrelated calculations.
+The source grouping and Born-state consistency checks must pass in
+either case.
+
+Before integration, \code{\detokenize{prepare_generation}} builds and
+probes the first-step program.  It measures the actual beam bounds,
+ISR/FSR cutoffs, enabled splitting flavours and heavy-flavour thresholds,
+and records the PDF, coupling inputs and native-library fingerprints.
+The measured support is written into the generated calculation.  Thus
+the support used by the leading kernel is an input to generation and
+evaluation; it is not retrofitted from a desirable acceptance fraction.
+The interface rejects the \code{\detokenize{--nocompile}} shortcut for
+this workflow because it would bypass that preparation.
+
+The runner requires an unmerged, NLO-matched, \pythia{} source with
+sum-normalized weights and saved hard momenta.  The present validated
+profile concerns proton or antiproton beams and one central LHAPDF
+member~\cite{LHAPDF}.  Missing profiles, changed PDFs, incompatible
+parameters, incompatible source settings, and missing hard annotations
+are errors.  These restrictions delimit the implemented interface;
+they are not an assertion that the mathematical construction can never
+be extended to other beams, merged calculations or additional weights.
+
+For an exported process directory, the following commands illustrate
+the explicit multi-step use of its \code{\detokenize{bin/aMCatNLO}}
+interface, after the cards have been configured:
+\begin{verbatim}
+launch aMC@NLO --parton -f -n ordinary_1M
+shower ordinary_1M -f
+\end{verbatim}
+The first command produces the common source.  The second detects its
+\macnlops{} preparation and dispatches the first-step removal/veto
+stage.  An optional later continuation uses the nested matched-event
+directory:
+\begin{verbatim}
+shower ordinary_1M/macnlops -f
+\end{verbatim}
+That final command requests further showering, not another application
+of the matching veto.  The interface distinguishes the two cases from
+the matched-sample and continuation metadata in the LHE header.
+For a campaign with multiple source settings, each source must finish
+its first-step processing before the mutable process cards and raw
+channel files are changed to the next setting.  This is the ordering
+used by the production scripts.
+
+\subsection{Information retained beyond the ordinary LHE body}
+\label{sec:impl-provenance}
+
+An event file can retain ordinary source physics while carrying
+additional information required by a later calculation.  Here the
+\code{\detokenize{macnlops_hard_event}} block stores the external hard
+state before the Monte Carlo mass reshuffle, together with the source
+kind and partition metadata.  The normal LHE body remains the source
+transport representation.  The difference between these two
+representations is essential when assigning the coordinates in which a
+hard density is evaluated.
+
+The source qualification also records whether the hard sign refers to
+the complete physical flavour contribution.  A sampled sector, colour
+connection or colour flow is not automatically a certificate of the
+global sign.  The generated history registries, flavour-closure
+certificates and the dynamic contribution-group checks provide the
+information needed for the complete-source prescription discussed
+earlier.  The metadata are checked rather than trusted merely because a
+tag with the expected name is present.
+For sampled matching, an additional
+\code{\detokenize{macnlops_component}} packet stores the native sector,
+configuration, diagram, flow, registry identity and source auxiliary
+values. The sign certificate then refers to the complete physical
+flavour group \emph{within that component}, rather than the global sign.
+
+The source manifest
+\code{\detokenize{*.lhe[.gz].macnlops.json}} records a checksum of the
+uncompressed event stream and a defined set of source/card
+fingerprints.  The set includes the parameter and run cards, measured
+profile, shower settings, hard-process and subtraction sources,
+generated history registries, and Born-support implementation.
+\code{\detokenize{check_manifest}} verifies those records before
+postprocessing.  The dedicated evaluator driver is excluded from that
+source-file set, so the manifest should not be described as a checksum
+of every file in the process tree.  Native build records separately
+identify executables, libraries and selected inputs.
+
+This provenance has a practical consequence: changing a PDF,
+renormalization/factorization prescription, source construction, FKS
+setting or model after generation cannot silently change the density
+used for rejection.  Operational changes such as a run name or event
+target are distinguished from physics settings, while the source
+event checksum remains independently checked.  The accepted sample
+carries a portable, checksummed shower-profile packet for its later
+continuation.  The required local libraries and PDF data are verified
+against that packet when the continuation settings are written.
+
+These contracts support qualified samples produced by this branch.
+They do not recover information absent from a generic, anonymous
+pre-existing \mcatnlo{} file.  In particular, neither a guessed inverse
+mass shuffle nor an assumption about a lost colour/sector partition is
+silently substituted for the missing data.
+
+\subsection{Native density evaluation in a shared measure}
+\label{sec:impl-evaluator}
+
+For a globally summed event requiring a density, the Python evaluator first identifies
+a generated subprocess from the ordered incoming flavours and the
+multiset of final flavours.  It then constructs the explicit
+permutation into the relevant generated real-state ordering.
+The route is a statement about physical external flavours; it is not
+an estimate obtained by multiplying an unrelated channel by a flavour
+degeneracy.
+
+The generated Fortran worker enumerates the compatible native
+histories and recoil groups, applies their inverse maps, and evaluates
+the Born and real matrix elements with the associated source
+prefactors.  The corresponding routine is
+\code{\detokenize{macnlops_density}} in
+\code{\detokenize{driver_macnlops.f}}.  In the implementation, the
+positive real-radiation measure is assembled as
+\begin{equation}
+ {\cal M}_h
+ = {\cal N}_{\xi,h}\,\xi_h\,J_h\,s_h >0 .
+ \label{eq:impl-native-measure}
+\end{equation}
+The four factors correspond to the code fields
+\code{\detokenize{xinorm_ev}},
+\code{\detokenize{xi_i_fks_ev}},
+\code{\detokenize{jac}} and \code{\detokenize{sym}}.
+The native contributions are converted back to the common real-event
+measure before summation.  An integration-channel sampling weight is
+therefore not left in one term of a pointwise veto ratio while being
+absent from another.  The scalar kernel also retains its starting-scale
+probability and luminosity factors.  The returned effective subtraction
+density is reconstructed as \(D_{\rm eff}=R-H\), after the complete
+source hard remainder has been assembled.
+
+Round-trip checks verify that a native inverse followed by its forward
+map reconstructs the supplied physical point within the declared
+numerical tolerance.  The worker rejects unsupported maps, invalid
+Jacobians and nonfinite contributions.  The Python probability layer
+requires finite densities and nonnegative \(R\) and scalar kernel.
+A negative source event whose reconstructed complete hard density is
+not negative is an error.  Such checks protect the interpretation of a
+veto probability; they are not a proof that every possible negative
+PDF region, shower correction or new process satisfies the required
+leading-density correspondence.
+
+Sampled requests use \code{\detokenize{MACNLOPS_POINT_V3}} with
+\code{\detokenize{COMPONENT_LOCAL_V1}} selectors. S requests also carry
+the actual Born momenta, masses and oriented colours in
+\code{\detokenize{COMPONENT_BORN_V1}}. The exact source registry fixes
+the provider; the actual branching fixes the history, with certified
+diagram/flow transport when identical Born legs are permuted.
+Only that native history, diagram and flow are evaluated. Both
+component streams use the ratios in Sec.~\ref{sec:delta-sampled};
+globally summed V1/V2 requests retain the campaign prescription.
+The accepted LHE header and JSON report label these choices as
+\code{\detokenize{component-source-v1}},
+\code{\detokenize{component-undamped-delta-v1}}, or
+\code{\detokenize{global-source-v1}}. Collection rejects mixed
+prescriptions instead of combining them under an ambiguous header.
+
+\subsection{One competing emission and one decision per source event}
+\label{sec:impl-first-step}
+
+The first-step executable has two synchronized readers.  One preserves
+the complete source annotations and weights; the other supplies
+\pythia{} with the required hard presentation.  For an \(H\) event the
+reader is advanced once, but no new first shower emission is requested:
+the event already has real-emission multiplicity.  Its endpoint uses the
+qualified hard presentation, which need not be the mass-reshuffled
+ordinary transport body.  For an \(S\) event,
+the ISR and FSR showers compete.  A hook records the first accepted QCD
+branch and its hard-system endpoint, or records that both showers
+reached their cutoffs without an emission.
+
+The hook stops \pythia{} technically at that endpoint.  This use of the
+hook veto mechanism is separate from the physical \(S\)-event
+rejection.  In particular, an undesirable first emission is not
+discarded and replaced by a later shower attempt.  The physical
+decision is made only after the first-step endpoint and metadata have
+been written.  The reader count must increase by exactly one for each
+source event, and an unexpected \pythia{} failure is not hidden by
+resampling the hard event.
+
+The proposal stream contains every source event, including rejected
+candidates.  Its metadata identify the source kind, first-emission
+state and evolution scale, original and endpoint particle records,
+measured support and native continuation scales.
+\code{\detokenize{reject_proposals}} matches that stream and its metadata
+by sequence number and verifies their agreement.  Positive \(H\)
+events are retained.  Negative \(H\) events use the reconstructed hard
+acceptance, including the required signed residual.  Emitted \(S\)
+events in the eligible support use the \(S\) acceptance; exhausted
+\(S\) events and emissions below the matching boundary retain unit
+acceptance in the implemented prescription.
+
+The veto also acts on negative-weight \(S\) events.  Rejecting such an
+event removes a negative contribution and increases the signed sum.
+Consequently a count of vetoed \(S\) events alone is not the
+cross-section transferred by the veto.  Both signs and their original
+weights must enter every comparison.  The stored decision stream
+records the accepted/rejected outcome, reconstructed densities when
+used, probability and support diagnostics.  The probability generator
+has its own reproducible seed; subsequent continuation showers cannot
+change these decisions.
+
+\subsection{A standard, randomized accepted LHE sample}
+\label{sec:impl-collection}
+
+The survivors retain their nominal source weights.  The event
+normalization is not divided by the retained fraction, and the
+cross section is not reset to the pre-rejection value.  The accepted
+file contains normal LHE event records, supplemented by the
+hard-provenance, matching and continuation packets described above.
+Its header identifies it as a first-emission sample and states its
+retained event count and sum normalization.
+
+The collector reuses the ordinary
+\code{\detokenize{madgraph.various.collect_events.collect_events}}
+implementation.  It checks channel counts, weight sums, process
+tables, beam information and shower-profile compatibility; supplies a
+complete process table through a zero-event preamble; and shuffles all
+survivors into one file.  No event is reweighted by collection.  A
+channel retaining no events does not cause its process information to
+be silently lost from the combined initialization block.
+
+For a fresh source run the ordinary and accepted paths are, respectively,
+\begin{verbatim}
+Events/ordinary_1M/events.lhe.gz
+Events/ordinary_1M/macnlops/events.lhe.gz
+\end{verbatim}
+and analogously for \code{\detokenize{delta_1M}}.  Repeated first-step
+processing selects a new numbered matching directory rather than
+overwriting an existing output.  Temporary event and decision files
+are published only after their checks succeed.  A normal-looking
+filename is therefore not, by itself, a completion certificate;
+the reports and final collection status must also be complete.
+
+The matched initialization block reports finite-sample uncertainties
+using the original trial population, including rejected events as
+zero-weight outcomes.  For one independent channel this convention is
+\begin{equation}
+ V_{\rm ch}(\Sigma)
+ = \frac{N_{\rm trial}}{N_{\rm trial}-1}
+ \left[
+ \sum_{\rm accepted}w_n^2
+ -\frac{\left(\sum_{\rm accepted}w_n\right)^2}{N_{\rm trial}}
+ \right],
+ \label{eq:impl-collection-error}
+\end{equation}
+with independent channel variances added in quadrature.  This
+initialization-block convention should not be confused with the
+bin-wise \(\sum w^2\) convention used for the plotted spectra below,
+or with a calculation of missing-higher-order uncertainties.
+
+\section{Validation by streamed histograms}
+\label{sec:impl-validation}
+
+\subsection{Three controls and their different meanings}
+\label{sec:impl-controls}
+
+The first-emission and full-shower comparisons answer related but
+different questions.  At first emission, the black curve labelled
+\mcatnlo{} is operationally the entire canonical first-step proposal
+population before removal/veto.  The \macnlops{} curve is its frozen
+accepted subset.  Equality of the two inputs before selection is
+therefore exact by construction.  This control is not an independent
+demonstration that the first-step generator is identical to every
+ordinary default \pythia{} import and recoil prescription.
+
+In particular, the first-step program selects global recoil with
+\code{\detokenize{TimeShower:globalRecoilMode=0}},
+\code{\detokenize{nMaxGlobalRecoil=100000}} and
+\code{\detokenize{nMaxGlobalBranch=1}}.  The uninterrupted full-shower
+reference instead uses global-recoil mode~2, with one allowed global
+recoil and one global FSR branch.  Its
+\code{\detokenize{nPartonsInBorn}} is zero for the colour-singlet
+processes and two for \(t\bar t\), single top and \(Wb\bar b\).
+It reads the unchanged ordinary source body, including its transport
+mass presentation; \(\DeltaMC\) production scales are imported when
+present.
+
+The blue full-shower control restarts the entire unrejected first-step
+population with local recoil and the recorded endpoint scales.  The
+magenta curve selects the already accepted \macnlops{} subset of
+those same continuations.  Thus black--blue differences can contain
+changes in the first-stage recoil prescription, hard/transport mass
+presentation and restart state, as well as the information that is
+not serialized by an LHE handoff.  They cannot be assigned exclusively
+to restart effects.  Blue--magenta differences isolate the prescribed
+event selection within this fixed restarted ensemble.
+
+The remaining orange and green curves apply only the \(H\) removal
+or only the \(S\) veto.  They use the same endpoints and the same
+frozen decisions as the combined curve, not separately regenerated
+samples.  This makes them useful mechanism controls even when the
+uninterrupted reference and restarted control differ.
+
+\subsection{Parton-level evolution without event-record output}
+\label{sec:impl-streaming}
+
+The dedicated validation consumer
+\code{\detokenize{validation_1M_20261023/src/StreamHist.cc}} fills
+histograms while events are processed.  It writes no HepMC file and
+no additional full-shower LHE sample.  First-emission histograms read
+the saved proposal and decision streams directly, without regenerating
+either a shower step or a rejection decision.
+
+For full-shower validation, the consumer first showers every event
+from the original source and then every unrejected first-step
+endpoint.  The latter pass fills the unrejected restart, \(H\)-only,
+\(S\)-only and combined selections in a single evolution per endpoint.
+Continuing the accepted subset this way is statistically equivalent
+to showering the accepted randomized LHE file, since the selection was
+fixed before the continuation and cannot depend on its new radiation.
+Rejected endpoints are evolved here solely to form the control curves.
+
+Hadronisation, MPI, primordial transverse momentum, colour
+reconnection, resonance decays, resonance showers, QED and weak
+radiation are disabled.  The first-step hard-system evolution omits
+beam remnants; the complete parton showers retain beam-remnant
+construction for global momentum closure.  This distinction does not
+introduce MPI or hadronisation into the comparison.  The measured
+coupling, PDF, masses, flavour settings and cutoffs are restored from
+the recorded profile.  In particular,
+\code{\detokenize{SpaceShower:pT0Ref=0}} is restored with the native
+forced-parameter operation: an ordinary settings assignment would
+clamp zero to the tune-oriented XML range.
+
+Every input must be consumed exactly once.  The nominal LHA event
+weight, rather than an internal strategy-dependent sign, is used in
+the histogram sum.  The consumer checks input counts, retained counts,
+complete source/endpoint pairing, unchanged weights, continuation
+ceilings, exhausted-state behaviour, final momentum balance and final
+mass shells before publishing a complete output.  These event-level
+checks complement, but do not replace, the theoretical matching
+conditions.
+
+\subsection{Signed statistics, covariance and ratios}
+\label{sec:impl-statistics}
+
+For a bin \(b\), a selection \(A\), and original source weights \(w_n\),
+the stored sum and variance estimator are
+\begin{align}
+ X_{A,b}&=\sum_n w_n I_{A,b}(n),&
+ V_{A,b}&=\sum_n w_n^2 I_{A,b}(n).
+ \label{eq:impl-hist-sums}
+\end{align}
+The indicator includes both the selection and the bin assignment.
+Absolute-weight sums, counts, and separate underflow, overflow,
+missing-value and exact-zero counters are also retained.  A signed
+bin is not converted to its absolute value or normalized to the
+number of survivors.  Every displayed distribution retains the
+original cross-section normalization in pb.
+
+For selections made on the same continued endpoint, the cross
+covariance is accumulated from their shared events.  The direct-source
+and restarted samples require a separate pairing: their file order
+is generally different.  The consumer hashes the canonical,
+whitespace-independent original hard-annotation packet, keeps queues
+for repeated identities, and verifies matching weights.  It stores
+only the source bin indices and weights needed for the covariance,
+not a second complete event record.
+
+The corresponding per-bin covariance uses the Poisson-style Monte Carlo
+histogram convention, rather than a fixed-total-event covariance:
+\begin{equation}
+ C_{AB,b}
+ = \sum_n w_n^2 I_{A,b}(n)I_{B,b}(n),
+ \label{eq:impl-hist-cov}
+\end{equation}
+with the two indicators referring to the paired endpoint and
+direct-source evolutions when appropriate.  For \(r=A/B\), the
+plotted delta-method variance is
+\begin{equation}
+ V(r)=\frac{V_A}{B^2}
+       +\frac{A^2 V_B}{B^4}
+       -\frac{2A C_{AB}}{B^3}.
+ \label{eq:impl-ratio-var}
+\end{equation}
+Every ratio in the current figures uses the corresponding combined
+\macnlops{} curve as denominator, including the separate mechanism
+panels.  Its self-ratio is unity where defined, with zero paired
+variance.  Zero denominators remain undefined; a ratio is not supplied
+by arbitrary interpolation or forced to unity.
+
+The plotting code suppresses display-only floating cancellation
+residuals relative to the absolute-weight sum, while preserving the
+raw arrays.  Positive spectra can use a logarithmic axis; bins with
+negative contributions remain signed and use a symmetric logarithmic
+display where needed.  The unrestricted ratios have separate
+\(0.8\)--\(1.2\) zoom versions, with triangles marking values outside
+the zoom.  These graphical choices cannot substitute for the numerical
+covariance and flow records shipped with each plot.
+
+\subsection{Checks established by the completed calculation}
+\label{sec:impl-checks}
+
+The completed campaign contains ten independent one-million-event
+source cohorts and twenty first/full validation datasets.  The
+publication checks verify counts and signed normalization,
+conservation of bin plus flow totals, symmetric covariance matrices,
+their expected diagonal elements, positive semidefiniteness within
+floating-point tolerance, and the selection identity
+\begin{equation}
+ X_{\rm MAcNLOPS}
+ = X_{H\text{-only}}+X_{S\text{-only}}-X_{\rm unrejected}.
+ \label{eq:impl-selection-identity}
+\end{equation}
+At first emission, the reference and unrejected histograms agree
+exactly, as required by their construction.  Full-shower checks also
+verify complete evolution of both populations and compliance with the
+written continuation scale ceiling.  All ten entries in each of
+\code{\detokenize{first/checks.json}} and
+\code{\detokenize{full/checks.json}} report these checks as passed.
+
+There are additional focused comparisons.  The Wbb implementation
+was checked for 1,024 genuine events against an independent
+Python/NumPy observable and histogram calculation using the separate
+FastJet 3.4 library~\cite{FastJet,AntiKt}; all 21 observables, flows and
+cross covariances agreed.  A 128-event Wbb full-shower pilot used the
+exact corresponding original source events to test pairing,
+normalization, scale caps and momentum closure.  The previous
+256-event top-pair histogram regression remained exactly unchanged.
+These are targeted numerical checks, not substitutes for the complete
+one-million-event results.
+
+Two numerical failures were corrected during production, with their
+recovery provenance retained.  In ordinary single-top matching,
+22 of 102 chunks encountered the massive-top inverse map with a single
+massless spectator recoil.  An inherited boost residual could make
+that recoil slightly spacelike beyond a tolerance scaled only by the
+smaller partonic CM energy.  The native projection now uses the known
+zero one-particle recoil invariant consistently in its inverse and
+forward directions.  All 22 isolated points then evaluated
+successfully, and the recorded momentum-map regression reports all
+27 tests passing.  Removal/veto was reapplied to all saved ordinary
+proposal streams with their original seeds; the source and first
+emissions were preserved.
+
+A separate single-top \(\DeltaMC\) chunk stopped on an annotated hard
+point with a momentum-balance residual of about
+\(7\times10^{-6}\GeV\), although its legs were on shell.  The native
+import guard now admits the declared numerical precision of such
+pre-reshuffle annotations, using a relative balance tolerance
+\(10^{-7}\), while retaining the stricter \(10^{-9}\) check for plain
+unannotated input.  It does not change the event momenta.  The focused
+test retains rejection of larger inconsistencies and verifies
+unchanged hard coordinates.  Only the failed chunk was retried with
+the same seed; the other 101 completed chunks and the one-million-event
+source were kept.  Final count and weight checks passed after collection.
+
+The repair build records, source snapshots and archived attempts are
+part of the campaign evidence.  They should be distinguished from a
+patch to the \pythia{} library, which was not introduced.  Nor should
+these numerical recoveries be interpreted as an explanation of the
+finite distribution differences between the completed samples.
+Successful bookkeeping, finite probabilities and consistent event
+transport establish that the stated algorithm has been implemented;
+they do not establish an exact finite-shower cancellation or
+universality outside the declared source and shower contracts.
+
+\subsection{Subsequent computational optimizations}
+\label{sec:implementation-caching}
+The 25 October review identified repeated work in source qualification
+and native routing. A generated channel without a full run banner
+retrieves the collected source's banner and validates that source again.
+Repeatedly decompressing the same large LHE file for its checksum is
+unnecessary while its file identity and content metadata are unchanged.
+The Python driver now uses a bounded checksum cache keyed by the raw or
+gzip-decoded mode, device, inode, size, and nanosecond modification and
+change times. File descriptors and paths are checked before and after
+reading; a cache hit also rechecks the path. Rewrites, replacements,
+deletions and changes during hashing are covered by regressions.
+
+A second cache stores the generated flavour route and external-leg
+permutation. Its key includes the ordered external PDGs and, for
+$\Delta$ H replay, the exact source registry and owner. Each request
+still supplies its own momenta and obtains a fresh density evaluation;
+the auxiliary-law certification is retained. These changes reduce
+repeated I/O and discrete lookup work without altering the source,
+veto, residual, random-number prescription or measured distributions.
+The combined affected Python regression set passes 113 tests, including
+the ideal-Sudakov and nonfactorizing counterexamples of
+Section~\ref{sec:delta-undamped-audit}. No campaign rerun was performed
+to infer an end-to-end timing improvement.
+
+The subsequent sampled evaluator avoids the global history/flow loop
+and numerical source-$\Delta$ calculation. It also omits H-colour and
+H-starting-scale preparation that is unused by its local density;
+the needed Born starting-scale law is retained. Discrete certified
+diagram/flow transports are cached separately, never their kinematics
+or densities. These changes should not be confused with the change
+of finite veto prescription in Sec.~\ref{sec:delta-sampled}.
+
+\subsection{Focused checks of the sampled implementation}
+\label{sec:impl-sampled-checks}
+
+Subsequent tests used isolated small calculations and existing saved
+endpoints; the million-event sources and histograms were not rerun.
+Ten saved ISR/FSR endpoints cover DY, top-pair, Wbb and single-top,
+including massive top and bottom FSR. All passed the local inverse-Born
+flavour, colour, mass, invariant and incoming-fraction checks. A temporary
+native test object replaced the numerical Delta routine with an
+unconditional failure; every request still succeeded, directly checking
+that this path does not evaluate that routine. Omitting unused local H
+preparation left those ten density triples bitwise unchanged.
+
+A fresh real-only $gg\to gg$ export supplied a physical $ggg$ endpoint
+for the identical-gluon check. Both Born-emitter assignments and both
+daughter orientations passed native closure. A nontrivial diagram/flow
+permutation reproduced the same component densities. The sum of the two
+orientation kernels agreed with an independently unpartitioned native
+kernel control within $4.1\times10^{-16}$ relative precision. These are
+pointwise implementation checks, not a validation of a full gluon-jet
+production sample.
+
+Fresh ordinary and Delta $u\bar u\to e^+e^-$ sources also completed the
+whole source, first-emission, veto and randomized-LHE path. The ordinary
+64-event check contained five negative H events, removed all five and
+vetoed two S events. A 128-event Delta check contained three negative H
+events, removed all three and vetoed four S events. The integration used
+deliberately tiny fixed grids, with recorded envelope overshoots, so
+these counts establish exercised code paths rather than cross-section
+precision or a new cancellation measurement. A separate small source
+check passed with the explicit outer FKS sum enabled. The scripts,
+native-point reports and source-run evidence are retained under
+\code{\detokenize{docs/audits/}}.

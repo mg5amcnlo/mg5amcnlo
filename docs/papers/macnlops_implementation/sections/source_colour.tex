@@ -1,0 +1,539 @@
+\section{The source density, G completion and the distinct sums}
+\label{sec:source-colour}
+
+The object whose negative part is removed must be the signed density that
+actually generated the $H$ sample. This requirement is stronger than
+identifying a familiar splitting function. The source includes native
+inverse maps, luminosities, colour probabilities, regularized counterevents
+and low-scale redistributions. The scalar kernel used to describe a shower
+proposal is a separate object. The distinction is essential to applying the
+multiplicative--accumulative idea of Ref.~\cite{NasonSalam} to the present
+implementation.
+
+\subsection{A common measure and the \texorpdfstring{$S/H$}{S/H} decomposition}
+\label{sec:source-measures}
+
+Let $b$ denote a Born configuration and $q$ a labelled real configuration,
+including its physical external flavours. Densities below are defined with
+respect to positive measures $\dd\mu_B$ and $\dd\mu_R$. A compatible inverse
+history $h$ supplies a projection and radiation coordinates,
+\begin{equation}
+ q=M_h(b_h,r_h),\qquad
+ \dd\mu_R=J_h\,\dd\mu_B\,\dd r_h,\qquad J_h>0.
+ \label{eq:source-measure}
+\end{equation}
+Different histories generally have different $b_h$, different luminosities
+and different colour bases at the same $q$. The label $h$ will include a
+native emitter history and, where necessary, its recoil group. Additional
+colour labels will be kept explicit below. A statement that two numerical
+terms are equal is meaningful only after their phase-space measures,
+flavours and auxiliary sampling laws have also been identified.
+
+A schematic additive matching functional is
+\begin{equation}
+ \langle O\rangle_{\text{\mcatnlo}}
+ =\int\dd\mu_B\,\overline B_D(b)\,\mathcal U_B[O](b)
+ +\int\dd\mu_R\,H(q)\,\mathcal U_H[O](q).
+ \label{eq:source-functional}
+\end{equation}
+The $S$ coefficient $\overline B_D$ includes the Born term, the finite
+combination of virtual and integrated subtraction contributions, collinear
+remnants and the integrated matching redistribution. Writing it informally
+as $B+V+\int D$ suppresses the infrared regularization and the ordinary NLO
+subtraction terms. In a conventional local notation one would instead
+understand a regulated combination of the form
+$B+V+I_C+\int(D-C)$, with the appropriate Born projections and factorization
+terms. The generated $S$ integrand is not required to be positive. The
+standard MC@NLO and FKS references explain the additive and local-subtraction
+structures~\cite{FrixioneWebber,FKS,Alwall}; the numerical definitions in this
+branch are specified by its generated weights.
+
+For the ordinary, non-$\Delta$ source it is useful to write
+\begin{align}
+ H_{\rm ord}(q)
+ &=\sum_{h,c}P_{h,c}(q)
+       \bigl[R_{h,c}(q)-D_{G,h,c}(q)\bigr],
+ &\sum_{h,c}R_{h,c}(q)&=R(q),
+ \label{eq:source-hordinary}\\
+ D_{\rm eff}(q)&\equiv R(q)-H_{\rm ord}(q).
+ \label{eq:source-deff}
+\end{align}
+Here $c$ is a native Born colour flow; $R_{h,c}$ includes the real-emission
+partition and its flow/recoil assignments. The symbol $D_{G,h,c}$ denotes
+the complete MC contribution of that history, including the G replacements.
+Both terms have already been expressed in the common real measure.
+$P_{h,c}$ is the source no-emission multiplier. In the ordinary mode it
+reduces to the history's flow-independent artificial profile $P_h$
+described below. The stochastic
+conditional multiplier used by \DeltaMC{} requires a larger state space and
+is discussed separately in this paper.
+
+Here $P_{h,c}$ always means the multiplier actually used by the source
+routine. If the native Born counterevent fails generation cuts, the
+ordinary routine leaves this multiplier at one and does not evaluate a
+matching subtraction for that counterevent. Thus an arbitrary cut process
+must not be reconstructed by applying the low-scale profile indiscriminately
+to every real history. The source routines' cut decisions are part of
+Eq.~\eqref{eq:source-hordinary}; the formula is not a prescription to change
+them during postprocessing.
+
+Equation~\eqref{eq:source-deff} is an exact definition of the effective
+source subtraction, not an identification with a physical shower emission
+kernel. The statement $H=R-K$ is a special matching construction and must
+not be inserted into the present rejection formula without checking the
+actual source. Likewise, neither $R-H$ nor an individual signed
+colour-correlated counterterm is automatically a usable nonnegative
+probability denominator.
+
+\subsection{Four labels that must not be identified}
+\label{sec:source-labels}
+
+The implementation contains several different sums. Their roles are most
+transparent when the labels are separated as follows.
+\begin{center}
+\small
+\begin{tabular}{@{}p{0.20\linewidth}p{0.74\linewidth}@{}}
+\toprule
+Label & Meaning \\
+\midrule
+$a=(i,j)$ & The outer FKS sector or integration owner and its nonnegative
+partition $\mathcal S_a(q)$. It also provides the sampled event's stored
+owner information. \\
+$h=(k,l;\rho)$ & A native splitting history, consisting of the emitted and
+emitting FKS legs and, if needed, a native recoil group $\rho$. It supplies
+its own underlying Born state, map, kernels and counterevents. \\
+$c$ & A leading Born colour flow in the basis of that native Born process.
+It supplies a possible planar colour assignment and associated scales. \\
+$\ell$ & A colour or anticolour connection of the emitting Born parton
+within the selected flow. A gluon can have two connections. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+In particular, the $kl$ in
+\code{\detokenize{compute_MCsubtraction_kl(k_fks,l_fks,...)}} is a native
+emitter history. It is not itself the label of a Born colour flow, and is
+not the colour-partner index. The latter is found later by
+\code{\detokenize{find_color_connectors}}. The wording ``sum over colour
+dipoles'' is therefore insufficient to specify what
+\code{\detokenize{MCExplicitKLSum}} does in this branch.
+
+The outer $ij$ sum partitions the real matrix element through the FKS
+functions $\mathcal S_{ij}$. The inner $kl$ sum reconstructs the MC matching
+contribution using every compatible native projection at the same real
+point. A native contribution also contains its own identical-particle
+partition, implemented as \code{\detokenize{fks_Hij}} for the MC term; this
+must not be confused with the outer \code{\detokenize{fks_Sij}} multiplying
+the fully assembled hard remainder. Born colour flows and the connections
+inside them are additional sums, not alternative names for these two FKS
+labels.
+
+The routine \code{\detokenize{compute_native_NLOPS_weights}} first forms the
+real, raw MC and G-completion terms for one native history. The driver can
+then call \code{\detokenize{repartition_MC_H}} to replace its outer $H$
+records with
+\begin{equation}
+ \widehat H_a(q)=\mathcal S_a(q)\,
+       \sum_{h,c}P_{h,c}(q)
+       \bigl[R_{h,c}(q)-D_{G,h,c}(q)\bigr].
+ \label{eq:source-outerpartition}
+\end{equation}
+The nonnegative outer partition multiplies the \emph{whole} completed
+native sum. Applying it only to a raw MC kernel would not reconstruct
+Eq.~\eqref{eq:source-outerpartition}. Summing the outer partitions gives the
+global hard density on the qualified physical flavour space.
+
+\subsection{Sampling a colour flow and summing its contributions}
+\label{sec:source-colourflows}
+
+The Born flow selector uses nonnegative leading-flow weights $w_c(b)$ and
+probabilities
+\begin{equation}
+ p_c(b)=\frac{w_c(b)}{\sum_{c'}w_{c'}(b)},\qquad
+ \sum_cp_c=1.
+ \label{eq:source-colourprob}
+\end{equation}
+The implementation's \code{\detokenize{get_mbar}} calls this an Odagiri
+prescription~\cite{Odagiri}: a flow fraction partitions the full Born and
+spin-correlated Born amplitudes among planar flow assignments. Explicitly
+summing this chosen flow partition does not make the subsequent shower an
+exact quantum colour-density-matrix evolution. The hard matrix elements,
+the planar shower colour assignment, and exact soft colour correlations
+enter different parts of the construction.
+
+It is important to distinguish the physical fraction $p_c$ from the
+probability $q_c$ actually used to draw a flow. In the implemented sampler
+$q_c=p_c$, but they play different algebraic roles. At fixed underlying
+Born kinematics,
+\begin{equation}
+ \mathbb E_{c\sim q}\!\left[\frac{X_c}{q_c}\right]
+ =\sum_cX_c.
+ \label{eq:source-colourmc}
+\end{equation}
+This is a linear identity. It does not imply an identity after taking a
+negative part or an absolute value.
+
+The raw MC Born and spin-correlated Born terms returned by
+\code{\detokenize{get_mbar}} already include their flow fraction. The routine
+\code{\detokenize{include_born_flow_weight}} therefore supplies only
+$1/q_c$ to those raw MC prefactors, whereas the colour-summed real and G
+replacement terms receive $p_c/q_c$. Multiplying an additional $p_c$ into
+the raw MC term would count its colour fraction twice. For explicit colour
+summation the corresponding call uses the physical flow fraction and
+sampling probability one. The finite Born/virtual contributions are
+included once, rather than once per flow.
+
+Even the statement ``the flow probability'' can hide a scale dependence.
+The source selects the native flow at its native Born point and coupling
+scale. The raw MC Born fraction can be evaluated at the real-state coupling
+scale. In processes with mixed Born coupling orders the two fractions need
+not be interchangeable. A sampled probability must be retained with the
+draw; recomputing its denominator at a different projection or scale is not
+an equivalent operation. The summed-colour routine deliberately includes
+leading flows whose selected-point fraction is zero, since another
+contribution's coupling convention can give a different flow fraction.
+
+Each shower event retains one actual colour assignment. Setting
+\code{\detokenize{MCSubtractionAtFixedFlow}} to false does not mean that a
+shower event contains all colours simultaneously. The source evaluates and
+combines the subtraction weights over native Born flows, while retaining
+the sampled \emph{outer owner} flow and its event colour/scale information.
+Each inner history uses its own Born colour basis. Reusing the outer flow's
+integer label inside another native Born process would be invalid unless
+an explicit map between those bases had first been supplied.
+
+Within a fixed flow the connection loop must also preserve multiplicity.
+For a gluon connected by colour and anticolour to the same partner, the
+code restores two connections even though they share one partner index.
+Dropping one because the indices coincide would change the kernel.
+
+\subsection{The G function is an additive completion}
+\label{sec:source-gfunction}
+
+A scalar shower approximation has a useful collinear limit, but its soft
+colour structure, spin dependence and angular support need not coincide
+point by point with the limiting expressions required by a local FKS
+subtraction. The G construction interpolates between these expressions. In
+the present code it is not equivalent to multiplying the complete MC
+counterterm by a positive scalar damping factor.
+
+For one native history and flow, its algebraic structure can be represented
+as
+\begin{align}
+ D_{G,h,c}={}&\sum_{\ell}d_{h,c,\ell}\,g_{s,h}
+       \bigl(K^{\rm sc}_{h,c,\ell}
+             +g_{\phi,h}K^{\rm spin}_{h,c,\ell}\bigr)
+       \nonumber\\
+ &+(1-\widetilde g_{s,h,c})\,T_{s,h,c}
+       \nonumber\\
+ &+(1-\widetilde g_{s,h,c})(1-g_{c,h})
+       \bigl(T_{c,h,c}-T_{sc,h,c}\bigr),
+ \label{eq:source-gcompletion}\\
+ \widetilde g_{s,h,c}
+ ={}&1-(1-g_{s,h})\,\overline d_{h,c},
+ &\overline d_{h,c}
+ ={}&\frac{1}{n_{h,c}}\sum_{\ell=1}^{n_{h,c}}d_{h,c,\ell}.
+ \label{eq:source-effectiveg}
+\end{align}
+Here $d_{h,c,\ell}$ is the connection's starting-scale damping, and
+$K^{\rm sc}$ and $K^{\rm spin}$ denote the scalar and azimuthally
+spin-correlated raw MC terms. The symbols $T_s,T_c,T_{sc}$ stand for the
+soft, collinear and soft-collinear replacement templates, including their
+own measures, luminosities and prefactors. They are not the $S$ event class
+and they are not simple functions of the real momenta alone. Equation
+\eqref{eq:source-gcompletion} displays the source algebra, rather than
+replacing the native template definitions by a universal closed formula.
+
+There are two different soft factors in these equations. The raw kernels
+use $g_s$. Only after their connection loop does
+\code{\detokenize{compute_MCsubtraction_kl}} return the effective
+$\widetilde g_s$ used by the additive templates. The connection average in
+Eq.~\eqref{eq:source-effectiveg} includes connections outside angular
+shower support: the soft completion must still cover wide-angle points
+where an individual raw shower term vanishes. The raw connection sum and
+the average entering $\widetilde g_s$ must not be confused.
+
+In \code{\detokenize{compute_gfun}},
+\begin{equation}
+ g_s=G(1-\xi; a_s,b_s,2),\qquad
+ g_c=G(y;a_s,-0.1,1),\qquad
+ g_\phi=1-G(y;-a_\phi,b_\phi,\delta)
+ \label{eq:source-garguments}
+\end{equation}
+for the enabled azimuthal option. In this notation $\xi$ and $y$ are the
+native FKS variables, not laboratory observables. The routine comment
+identifies $g_s\to0$ in the soft limit and $g_c\to0$ in the collinear limit.
+The standalone evaluator initializes
+$(a_s,b_s,a_\phi,b_\phi)=(1,-0.1,-1,-0.1)$, matching the source driver's
+input defaults.
+
+For completeness, the function implemented by
+\code{\detokenize{gfunction}} has the following shape. For $a\leq0$ it is one.
+For $a>0$, define
+\begin{equation}
+ w_{\min}=\begin{cases}0,&b<0,\\\max(0,1-\delta),&b\geq0,\end{cases}
+ \quad w_g=\min\!\bigl(1-(1-w_{\min})|b|,1-10^{-5}\bigr),
+ \quad t=\frac{|w|-w_g}{1-w_g}.
+ \label{eq:source-gshape-vars}
+\end{equation}
+The code returns one below the transition, uses
+$(1-t)^{2a}/[t^{2a}+(1-t)^{2a}]$ in its transition interval, and sets the
+function to zero at $|w|\geq0.99$. The latter is an explicit endpoint
+cutoff in the numerical implementation. The word ``smooth'' refers to the
+interpolation function; it must not be taken as an assertion that this
+additional endpoint cutoff has been removed. These details matter when
+attempting to reproduce the counterterm numerically rather than only its
+singular limits.
+
+The implementation applies the scalar and spin G factors in
+\code{\detokenize{xmcsubt_connection}}. It then adds the templates once in
+\code{\detokenize{compute_native_NLOPS_weights}}, with coefficients
+$(1-\widetilde g_s)P$ for the soft term and
+$(1-g_c)(1-\widetilde g_s)P$ for the collinear and soft-collinear terms, with
+their appropriate relative signs. Native counter/real measure ratios are
+retained. One cannot reconstruct this density by multiplying a raw
+splitting function by $G$, or by evaluating a soft template at the wrong
+Born projection.
+
+This also explains why a positive shower denominator does not enforce an
+upper bound on the negative hard remainder. A G completion can survive
+where a raw scalar history is absent or small. Exact soft colour and spin
+terms need not have the same sign or size as the configured scalar shower.
+There is no general pointwise inequality $D_G\leq K$, and no guarantee that
+$\pos{D_G-R}\leq K$. A required veto ratio above one can therefore be a
+property of these different densities and their supports, even after
+numerical and bookkeeping errors have been corrected.
+
+\subsection{The artificial ordinary-source no-emission factor}
+\label{sec:source-bogus}
+
+For the ordinary non-$\Delta$ source,
+\code{\detokenize{bogus_probne_fun}} has mode two enabled and returns
+\begin{equation}
+ P_{\rm bog}(q_h)=
+ \begin{cases}
+  0,&q_h\leq0.5\GeV,\\[1mm]
+  \displaystyle\frac{u_h^4}{u_h^4+(1-u_h)^4},
+    &0.5\GeV<q_h<10\GeV,\\[2mm]
+  1,&q_h\geq10\GeV,
+ \end{cases}
+ \qquad u_h=\frac{q_h-0.5\GeV}{9.5\GeV}.
+ \label{eq:source-bogus}
+\end{equation}
+The argument is that history's \code{\detokenize{get_qMC}} scale. It is a
+relative splitting transverse scale and is not in general the measured
+jet $\pt$, the total-system recoil, or the same value in all inverse
+histories at one $q$. In particular, coloured final states can have
+competing ISR and FSR histories with very different values of this scale.
+
+The name ``bogus Sudakov'' distinguishes this fixed profile from a physical
+Sudakov no-emission probability. It is not obtained by exponentiating an
+integral of the configured shower kernel. Its transition scales are fixed
+in GeV, and it is not a factor that approaches one as
+$1+O(\as)$ at every fixed point when the coupling is sent to zero.
+
+For a single native component, its paired redistribution has the simple
+algebra
+\begin{equation}
+ H=P(R-D_G),\qquad
+ D_{\rm eff}=P D_G+(1-P)R,
+ \qquad H+D_{\rm eff}=R.
+ \label{eq:source-bogussplit}
+\end{equation}
+The ordinary $S$ stream contains both $P D_G$ and the transferred
+$(1-P)R$, in addition to the other NLO terms. The same $P$ is applied to the
+raw MC, real and G replacement pieces. Multiplying only the negative hard
+term, or only the post-shower veto denominator, does not implement
+Eq.~\eqref{eq:source-bogussplit}.
+
+For example, relative to a source with $P=1$, define the transferred native
+density $T_h=(1-P_h)(R_h-D_{G,h})$. Before showering its change of an
+observable has the form
+\begin{equation}
+ \delta_P\langle O\rangle
+ =\sum_h\int\dd\mu_R\,T_h(q)
+       \bigl[O(\pi_hq)-O(q)\bigr],
+ \label{eq:source-bogusobservable}
+\end{equation}
+where $\pi_h$ is the appropriate native Born projection, with the colour
+and other labels understood. This vanishes for $O=1$, but is not an exact
+identity for every differential distribution. It can produce low-scale
+power effects for suitable infrared-safe observables. In the present
+comparisons it is already part of the common ordinary source, so it must
+not be invoked as an input difference introduced only by \macnlops.
+
+Different histories have different $P_h$. Thus the hard negative density
+is
+\begin{equation}
+ H_-(q)=\pos{\sum_{h,c}P_{h,c}(q)
+                       [D_{G,h,c}(q)-R_{h,c}(q)]},
+ \label{eq:source-negativeglobal}
+\end{equation}
+with the sum taken before the positive part. Pulling out one event's
+outer $P_a$, applying a positive-part operation to individual histories,
+or multiplying the physical shower denominator by $P_a$ would in general
+change the prescription.
+
+Physical \DeltaMC{} uses \code{\detokenize{compute_delta}} in place of
+\code{\detokenize{bogus_probne_fun}}; it does not use a product of the two.
+The legacy option \code{\detokenize{macnlops_resolved_source=True}} is also
+a different source construction. It replaces the ordinary G/P source by
+an explicitly gated scalar construction. Restoring an artificial profile
+to that altered source would not by itself make it the ordinary MC@NLO
+source. The completed campaign uses
+\code{\detokenize{macnlops_resolved_source=False}} throughout.
+
+\subsection{Why the global sign must precede unweighting}
+\label{sec:source-sign}
+
+Linear summation and nonlinear sign classification do not commute:
+\begin{equation}
+ \sum_a\pos{-H_a(q)}\ne
+ \pos{-\sum_aH_a(q)}.
+ \label{eq:source-signnonlinear}
+\end{equation}
+For example, contributions $+3$ and $-2$ give a positive total $+1$.
+Sampling them separately produces negative events; unweighting their
+combined density does not. A postprocessor that receives the separately
+sampled $-2$ event cannot treat it as a draw from a globally negative
+density that is actually zero. Improving a numerical estimate of the
+global denominator does not repair that source-partition mismatch.
+
+The present source therefore forms the complete native $H$ sum and
+coalesces compatible physical-flavour contributions before signed $H$
+unweighting. This includes three distinct requirements. Every compatible
+native history must be available. Every native flow contribution must be
+included with its correct fraction. Contributions being combined must
+have the same physical event and compatible stored shower ownership,
+including colours, scales and, for Delta, conditional context. A sum over
+integer FKS labels alone does not establish any of these properties.
+
+The generated registry \code{\detokenize{mc_histories.json}} and the Born
+support metadata describe the native mappings and physical flavour rows.
+The static completeness certificates and the dynamic H-group test are
+both needed. The dynamic test in \code{\detokenize{add_write_info}} checks
+compatible H records at the same momenta, with the same colour and scale
+ownership and conditional context, before certifying the selected flavour
+group. Physical PDG rows are compared by their content rather than by an
+ordinal row number which can differ between generated subprocesses.
+
+The hard annotation then records
+\code{\detokenize{partition="global_sum"}} together with effective KL/flow
+flags, flavour coalescing and a positive group size. A positive group size
+by itself is not a proof of completeness. The importer
+\code{\detokenize{hard_source_contract}} checks every input event and
+requires a conditional Delta replay packet for a globally summed
+Delta $H$ event. Sampled inputs now require their separate qualified
+component packet and evaluator (Sec.~\ref{sec:delta-sampled}). The
+importer does not infer a global density from the mere presence
+of an \code{\detokenize{#aMCatNLO}} sector tag.
+
+In evaluating Eq.~\eqref{eq:source-outerpartition},
+\code{\detokenize{repartition_MC_H}} divides each \emph{complete native H
+weight} by its positive native real measure and inserts the outer real
+measure and $\mathcal S_a$. This conversion retains the counter/real
+measure ratios inside the G terms; adding a further Jacobian to a raw
+kernel would double count a transformation. Native recoil groups are
+also summed, with their partitions evaluated at the appropriate real or
+Born point. If a required map is numerically invalid, the generation
+routine rejects the complete folded integration point rather than
+keeping a partial native sum. Postprocessing a previously generated
+source instead stops on an unresolved input; it must not silently omit
+that event.
+
+\subsection{Effective FKS settings and the supported combinations}
+\label{sec:source-settings}
+
+Three controls have distinct purposes:
+\begin{itemize}
+ \item \code{\detokenize{MCExplicitKLSum}} enables the complete native
+       $kl$ reconstruction of the hard contribution before its outer
+       FKS partition is applied.
+ \item \code{\detokenize{MCSubtractionAtFixedFlow}} chooses sampled native
+       Born-flow subtraction when true, and explicit Born-flow summation
+       when false. This is independent of KL summation.
+ \item \code{\detokenize{FKSExplicitSum}} sums outer FKS configurations in
+       the Born-like evaluation, using a common Born chart where required,
+       instead of sampling an allowed configuration group. The Born
+       contribution is included once and compatible S terms are combined
+       before absolute values are used for unweighting.
+\end{itemize}
+The last choice can change negative-$S$ fractions and efficiency. It is
+not the switch that certifies a complete native hard density. Separate
+initial/final-state integration channels remain separate where the
+generator treats them separately.
+
+The current postprocessor has the following compatibility
+table for the \emph{effective source construction}. ``Either'' in the last
+column means true or false, subject to the phase-space and completeness
+conditions described here.
+\begin{center}
+\small
+\begin{tabular}{@{}cccp{0.49\linewidth}@{}}
+\toprule
+KL sum & Fixed flow & Outer FKS sum & \macnlops{} contract \\
+\midrule
+true  & false & either & Supported when native/flavour completeness and
+                         the annotation contract hold. \\
+true  & true  & either & Sampled colour source; its conditional negative
+                         measure is not implemented by this importer. \\
+false & false & either & Native-sector source; a global density cannot
+                         replace its sampled negative measure. \\
+false & true  & either & Supported by the new local component evaluator;
+                         qualified diagram/flow/sector provenance required. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+During the campaign, \code{\detokenize{driver_mintMC.f}} forced
+\begin{equation}
+ \text{\code{\detokenize{MCExplicitKLSum}}}=\mathrm{true},\qquad
+ \text{\code{\detokenize{MCSubtractionAtFixedFlow}}}=\mathrm{false}
+ \label{eq:source-forcedflags}
+\end{equation}
+for \macnlops{} generation. The new driver honours the supported card
+pairs above and rejects the other combinations. It does not force
+\code{\detokenize{FKSExplicitSum}}. Effective runtime values and the recorded
+annotation, rather than a template's comments or module initialization
+values, therefore determine compatibility. The campaign explicitly sets
+$(\mathrm{KL},\mathrm{fixed\ flow},\mathrm{outer\ sum})=(\mathrm{true},
+\mathrm{false},\mathrm{true})$. The outer-sum option requires the common
+Born/event-projection construction; it is not an option for UNLOPS in this
+implementation. The supported \macnlops{} workflow further requires an
+unmerged QCD source, \code{\detokenize{ickkw=0}}, and the declared
+\pythia{} setup. Generator support for other modes elsewhere in the branch
+is not a validation of \macnlops{} for those modes.
+
+One might expect a single colour flow to make the postprocessor simpler,
+because one event has only one colour tag. The difficulty is that this
+would require the \emph{conditional signed H density} for that tag, and a
+compatible conditional first-emission law from the S ensemble. Native
+inverse histories can land on different Born states and different colour
+bases. Their physical flow fractions and sampling probabilities must be
+retained, and one would need a map between source and proposal colour
+labels, with support established at every projection. An integer colour
+index from the outer event supplies none of this information.
+
+There are two legitimate constructions: reconstruct and coalesce the global
+source before sign classification, or formulate matching on the larger
+joint space of momenta, colour and source-owner variables using their
+actual conditional laws. Simply exchanging the two boolean settings, or
+applying a globally summed ratio to already sampled negative components,
+implements neither construction. Section~\ref{sec:delta-sampled}
+describes the new qualification and implementation on the joint space.
+Anonymous sampled events still lack the information required by that
+conditional evaluator, even when only one colour flow is possible.
+
+The principal source anchors lie in
+\code{\detokenize{Template/NLO/SubProcesses/}}:
+\begin{itemize}
+ \item \code{\detokenize{mc_matching_runtime.f}}: complete native H
+       repartition and flow summation;
+ \item \code{\detokenize{montecarlocounter.f}}: raw kernels, connections,
+       G factors and source no-emission multipliers;
+ \item \code{\detokenize{fks_singular.f}}: real/MC/G weight records and
+       flow prefactors;
+ \item \code{\detokenize{driver_mintMC.f}}: effective-generation settings;
+ \item \code{\detokenize{add_write_info.f}}: the global-partition
+       certificate.
+\end{itemize}

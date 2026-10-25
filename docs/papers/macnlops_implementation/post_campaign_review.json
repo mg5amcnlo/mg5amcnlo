@@ -1,0 +1,54 @@
+{
+  "review_date": "2026-10-25",
+  "campaign_preserved": "23-24 October 2026",
+  "decision": "No literal (1-R/K_g)+ substitution: common-Delta ideal holds, general G-completed history sum does not satisfy its prerequisites.",
+  "physics_prescription_changed": false,
+  "new_events_or_showers": false,
+  "tests": {
+    "command": "python3 -m unittest [10 affected macnlops Python modules]",
+    "count": 113,
+    "result": "passed",
+    "seconds": 1.578
+  },
+  "benchmarks": {
+    "checksums": {
+      "repeats": 25,
+      "uncompressed_bytes": 8388608,
+      "results": {
+        "raw": {
+          "uncached_seconds": 0.3759656590409577,
+          "cached_seconds": 0.0001287700142711401,
+          "stored_bytes": 8388608
+        },
+        "gzip_decoded": {
+          "uncached_seconds": 0.4348981399089098,
+          "cached_seconds": 0.00012910901568830013,
+          "stored_bytes": 24482
+        }
+      },
+      "cores": 1
+    },
+    "routing": {
+      "kind": "routing_microbenchmark",
+      "iterations": 20000,
+      "route_candidates": 101,
+      "uncached_seconds": 0.3922298571560532,
+      "cached_seconds": 0.01582743297331035,
+      "speedup": 24.781647018658468,
+      "scope": "Discrete route lookup only; not a full matching-run speedup",
+      "cores": 1
+    }
+  },
+  "benchmark_scope": "Microbenchmarks only; no end-to-end campaign speedup measured",
+  "reviewed_sources": [
+    "https://arxiv.org/pdf/2111.03553",
+    "https://arxiv.org/pdf/2002.12716",
+    "https://arxiv.org/pdf/2605.22108"
+  ],
+  "source_sha256": {
+    "madgraph/various/macnlops.py": "e06c48e646d58079e89361e17c0a23843768dd4cce3128228b66e1b8d818487b",
+    "tests/unit_tests/various/test_macnlops_delta.py": "ec78f78de3c4a7572c4fc0f1210721d26fd6e4014fef8677e655bc37ff447222",
+    "tests/unit_tests/various/test_macnlops_hash_cache.py": "ccb1a15295004775f86fe55c056903f750a3e61715759baa5f50d1dd6a10d56a",
+    "tests/unit_tests/various/test_macnlops_routing.py": "1342e1d3e7cc7437d0f172440a0b45182d7c0a8e887424136b1a415a671c9ab0"
+  }
+}

@@ -1,0 +1,111 @@
+\section{Purpose, scope and the meaning of the comparison}
+\label{sec:introduction}
+
+Negative weights in additive NLO matching carry cancellations between
+matrix elements, subtraction terms and shower approximations. Removing
+them is therefore a change of the matching calculation unless the removed
+signed measure is compensated elsewhere. The multiplicative--accumulative
+construction of Nason and Salam~\cite{NasonSalam} supplies a useful ideal
+limit: use the shower where its leading approximation exceeds the real
+matrix element, and retain an additive correction where the real
+contribution is larger. The colour-singlet implementation studies of
+Refs.~\cite{CheThesis,CheFrederix} motivate inspecting the first-emission
+compensation explicitly. Here the object under study is a more general
+implementation with signed residuals, ordinary source G/P terms, coloured
+Born processes, and an additional Delta source option.
+
+This document describes the branch and completed calculations as they
+stand on 24 October 2026. It supersedes neither the frozen earlier paper
+nor the cited matching prescriptions. It specifies which realization was
+actually used and what its present evidence establishes. In particular,
+the name \macnlops{} below refers to this bounded, signed-residual
+realization unless an ideal limiting formula is stated explicitly.
+The 25 October revision adds the acceptance comparison in
+Section~\ref{sec:delta-undamped-audit} and records subsequent computational
+optimizations. The numerical results retain the matching prescription
+used in the completed campaign.
+
+The conceptual chain is simple but each arrow has a contract:
+\begin{equation}
+ \begin{gathered}
+ \text{qualified common source}
+ \longrightarrow \text{first-step proposals}
+ \longrightarrow \text{removal/veto}\\
+ \longrightarrow \text{accepted LHE}
+ \longrightarrow \text{optional continuation}.
+ \end{gathered}
+ \label{eq:workflow}
+\end{equation}
+The first arrow uses a shower, the second uses both generated matrix
+elements and a leading scalar shower kernel, and the last arrow is a new
+shower invocation. They cannot be identified merely because they share a
+PDF set or an event filename.
+
+\subsection{Five distinctions that control the interpretation}
+First, the negative part of the \emph{generated} hard density is required.
+It is not, in general, the negative part of a bare real matrix element
+minus a single positive splitting function. The actual source contains
+G-function completion, low-scale factors, luminosities and a specific
+sampling partition.
+
+Second, the leading positive kernel $K_g$ in the veto denominator is not
+the physical Sudakov-suppressed first-emission density. It is also not a
+trial overestimate. Its agreement with the leading coefficient of the
+native shower is a substantive condition, not a consequence of naming
+both objects ``the MC counterterm''.
+
+Third, the first-step plots and full-shower plots have different
+operational references. At the first step the curve labelled \mcatnlo{}
+is the unrejected matching-driver proposal population, using the same
+canonical hard presentation and first-step profile as the accepted
+sample. At full shower the black reference is a separate uninterrupted
+shower from the original MC-mass LHE body. The blue control restarts the
+unrejected first-step endpoints. The comparison thus exposes effects of
+the first-step profile and presentation as well as of the restart.
+
+Fourth, an explicit sum over native emitter histories, an explicit sum
+over Born-colour flows, and an integration Monte Carlo over outer FKS
+sectors are different operations. A sign taken before one of these sums
+need not equal the sign taken afterwards. The source qualification is
+designed to prevent that distinction from being hidden in a veto ratio.
+
+Fifth, the hard-model and shower masses define different on-shell
+phase-space conventions linked by a transport. Keeping the ordinary remassed LHE file as
+the reference source does not make its body suitable for an inverse map
+derived for the pre-shuffle hard masses. The source annotation preserves
+the latter information without rewriting the original event.
+
+\subsection{What is common, and what is independently generated}
+Within each process and Delta setting, both methods use the exact same
+million-event source. The ordinary matching prescription retains the
+ordinary source G terms and bogus factor. The Delta source is a separate
+matching prescription with its own compensating contribution. There are
+therefore ten independent source cohorts, not one source shared across
+ordinary and Delta matching. No claim of event-by-event pairing is made
+between those two source settings.
+
+Preparing a source with \code{macnlops=True} adds hard-point/profile
+information and selects the supported complete source partition. It is
+not a promise to retrofit arbitrary anonymous older LHE files. Nor does
+it leave the generator's default stochastic colour/history sampling
+unchanged: a global hard-sign reconstruction requires the effective sums
+described below. The ordinary \emph{matching formula} is retained; the
+qualification and Monte Carlo organization make its signed density
+available to the postprocessor.
+
+The implementation uses no MAcNLOPS-specific \pythia{} library patches.
+The application interface and the generated density evaluator are
+modified. ``Stock'' in this document means the stock-interface runtime
+without the retired MAcNLOPS headroom/provider/nf4-coupling extensions; it
+does not certify an arbitrary locally installed library as byte-identical
+to an upstream release. The recorded library and PDF fingerprints define
+the actual calculation. An unrelated local QED modification mentioned in
+the development record is outside this algorithm, and QED evolution is
+disabled in the validation.
+
+The completed campaign checks finite samples, counts, kinematics,
+normalization and the observed distributions. It does not by itself prove
+universal positive weights, exact finite-coupling cancellation, a
+globally valid native trial envelope, or all-order/logarithmic accuracy.
+Those questions must be separated from successful execution of the
+declared event-level algorithm.

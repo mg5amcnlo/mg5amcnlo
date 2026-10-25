@@ -1,0 +1,1064 @@
+{
+  "base_git_revision": "e96e7f4eac0aa3b4dc6ab58049d729462b64d76e",
+  "compiled_parser_tests": {
+    "passed": 2,
+    "seconds": 9.535
+  },
+  "computational_optimizations": [
+    "Unit Delta replay avoids numerical source-Sudakov evaluation",
+    "Selected native history/diagram/flow only",
+    "Skip unused local H colour and scale construction",
+    "Cache certified discrete diagram/flow transports",
+    "Existing checksum and global route caches retained"
+  ],
+  "document_checks": {
+    "all_696_current_panels_included": true,
+    "all_703_figure_hashes_match": true,
+    "all_source_figures_single_page": true,
+    "all_twenty_completed_dataset_checks_pass": true,
+    "campaign_figures_unchanged": true,
+    "no_overfull_boxes": true,
+    "no_undefined_references_or_citations": true,
+    "numerical_tables_cross_checked_by_independent_review": true,
+    "outputs": {
+      "macnlops_complete.pdf": 762,
+      "macnlops_figures.pdf": 704,
+      "macnlops_paper.pdf": 58
+    },
+    "sampled_component_checks_separate_from_campaign": true,
+    "seven_historical_panels_separately_marked": true
+  },
+  "evidence": {
+    "docs/audits/macnlops_component_endpoints_20261025.json": {
+      "data": {
+        "closure_relative_tolerance": 1e-07,
+        "created_utc": "2026-10-25T06:02:56.090223+00:00",
+        "delta_calculation_trap": true,
+        "driver_sha256": "42087291a689d8cf90457e6f41f9addab31c70699788e089eb4666525804040f",
+        "passed": true,
+        "points": [
+          {
+            "born_flow": 1,
+            "born_permutation": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "config": 1,
+            "densities": [
+              11461895027.5604,
+              11763599112.62292,
+              11763599112.62292
+            ],
+            "diagnostics": [],
+            "emission_type": "ISR",
+            "endpoint_permutation": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "graph": 1,
+            "native_sector": 2,
+            "process": "DY_5FS",
+            "pt_evol": 0.8827944955247873,
+            "radiator_pdg": -1,
+            "registry_sha256": "0c5c932dfc2f08579c38b1bcbafa182883dece7e1cf082a2950b0c3c895d9612",
+            "request_sha256": "e6ae2fa4f8961abaf1e8d07ac5b06b004369cfa1b27e60ae0c017d20db244867",
+            "sequence": 1,
+            "sidecar": "DY_5FS/Events/delta_1M/macnlops/SubProcesses__P0_ddx_emep__GF1.0__events/shower.jsonl",
+            "sidecar_record_sha256": "ba1f47180f5890dfa1201e9cfcebb904c5c241bb8e6425cdf238ab745e633fe4",
+            "status": 0
+          },
+          {
+            "born_flow": 1,
+            "born_permutation": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "config": 1,
+            "densities": [
+              2037620.2734679973,
+              2293668.9642243953,
+              2293668.964224396
+            ],
+            "diagnostics": [],
+            "emission_type": "ISR",
+            "endpoint_permutation": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "graph": 1,
+            "native_sector": 4,
+            "process": "DY_5FS",
+            "pt_evol": 29.78867920503178,
+            "radiator_pdg": -1,
+            "registry_sha256": "0c5c932dfc2f08579c38b1bcbafa182883dece7e1cf082a2950b0c3c895d9612",
+            "request_sha256": "2d95ab2de596ffca9ab895f3b5ea4554d6a8bfc4a5fe36679816e7483b73f582",
+            "sequence": 2,
+            "sidecar": "DY_5FS/Events/delta_1M/macnlops/SubProcesses__P0_ddx_emep__GF1.0__events/shower.jsonl",
+            "sidecar_record_sha256": "b188e2e5da9a6a43fe2d36d3bc2373f517be6bbef34856fc75ed17d9f7c4fcce",
+            "status": 0
+          },
+          {
+            "born_flow": 2,
+            "born_permutation": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "config": 1,
+            "densities": [
+              345080944.57704926,
+              347429550.4458518,
+              338693169.44648933
+            ],
+            "diagnostics": [],
+            "emission_type": "ISR",
+            "endpoint_permutation": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "graph": 1,
+            "native_sector": 6,
+            "process": "TTbar_5FS",
+            "pt_evol": 15.78022836780882,
+            "radiator_pdg": 21,
+            "registry_sha256": "a09c4aa5d1d62edb38ec2e9ceefda4b5b9810a8a43f2b91e167a03aa55a3494d",
+            "request_sha256": "0d9f7de13a73f790d84c40c99e35cd8604c18cc7f88990761570c31f26be2cfc",
+            "sequence": 2,
+            "sidecar": "TTbar_5FS/Events/delta_1M/macnlops/SubProcesses__P0_gg_ttx__GF1.0_1__events/shower.jsonl",
+            "sidecar_record_sha256": "b9ee1b39d2e9f659b9cedcd840944a1d795f8401401fdbad75158c587acb9613",
+            "status": 0
+          },
+          {
+            "born_flow": 2,
+            "born_permutation": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "config": 1,
+            "densities": [
+              313149216.02154654,
+              303880217.87770295,
+              270966762.9258282
+            ],
+            "diagnostics": [],
+            "emission_type": "ISR",
+            "endpoint_permutation": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "graph": 1,
+            "native_sector": 2,
+            "process": "TTbar_5FS",
+            "pt_evol": 33.481720285121135,
+            "radiator_pdg": 21,
+            "registry_sha256": "a09c4aa5d1d62edb38ec2e9ceefda4b5b9810a8a43f2b91e167a03aa55a3494d",
+            "request_sha256": "f59a7c879796c908202bef75645ecb16f73cbc917c0d26a795f0c51072158d12",
+            "sequence": 3,
+            "sidecar": "TTbar_5FS/Events/delta_1M/macnlops/SubProcesses__P0_gg_ttx__GF1.0_1__events/shower.jsonl",
+            "sidecar_record_sha256": "de947b7bdb8c07224d26237010acd711a0306034ff7847b77140a89dc3fb272a",
+            "status": 0
+          },
+          {
+            "born_flow": 1,
+            "born_permutation": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "config": 1,
+            "densities": [
+              8106677.001409821,
+              12203764.227122976,
+              12203764.227122974
+            ],
+            "diagnostics": [],
+            "emission_type": "FSR",
+            "endpoint_permutation": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "graph": 1,
+            "native_sector": 3,
+            "process": "TTbar_5FS",
+            "pt_evol": 96.79863171474369,
+            "radiator_pdg": 6,
+            "registry_sha256": "a09c4aa5d1d62edb38ec2e9ceefda4b5b9810a8a43f2b91e167a03aa55a3494d",
+            "request_sha256": "9e757cd01acbb14978608ebf85d7c33e4b713fa5402875fc7833b339e2352d77",
+            "sequence": 8,
+            "sidecar": "TTbar_5FS/Events/delta_1M/macnlops/SubProcesses__P0_gg_ttx__GF1.0_1__events/shower.jsonl",
+            "sidecar_record_sha256": "f63dc4803515c02f8f93d04483dd2eda564ef456ed05baaac4169580a98937cd",
+            "status": 0
+          },
+          {
+            "born_flow": 2,
+            "born_permutation": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "config": 1,
+            "densities": [
+              6324458.890103961,
+              4055550.168223615,
+              4025204.5903694713
+            ],
+            "diagnostics": [],
+            "emission_type": "FSR",
+            "endpoint_permutation": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "graph": 1,
+            "native_sector": 4,
+            "process": "Wbb_4FS",
+            "pt_evol": 10.056517993044153,
+            "radiator_pdg": -5,
+            "registry_sha256": "39f8849c55b05962150dda11b539180df5f5eadac73d787da3edcc37bff8d8e9",
+            "request_sha256": "c871bee5162ed957d0b598882dccac52a7d2fcbecbcc36e9e4d2cede4e63010c",
+            "sequence": 1,
+            "sidecar": "Wbb_4FS/Events/delta_1M/macnlops/SubProcesses__P0_dxu_bbxwp__GF1.0_10__events/shower.jsonl",
+            "sidecar_record_sha256": "eeb29cf524827be087452da88c06899123b03941af3810b671b815adbc388864",
+            "status": 0
+          },
+          {
+            "born_flow": 2,
+            "born_permutation": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "config": 1,
+            "densities": [
+              49008031.86718889,
+              55026674.47764014,
+              55026674.47764014
+            ],
+            "diagnostics": [],
+            "emission_type": "FSR",
+            "endpoint_permutation": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "graph": 1,
+            "native_sector": 4,
+            "process": "Wbb_4FS",
+            "pt_evol": 5.995628253390171,
+            "radiator_pdg": -5,
+            "registry_sha256": "39f8849c55b05962150dda11b539180df5f5eadac73d787da3edcc37bff8d8e9",
+            "request_sha256": "d15c2ad610b989f8fbb443ae0f46dca4a37de402af7292ae17d7185fd3a350ea",
+            "sequence": 10,
+            "sidecar": "Wbb_4FS/Events/delta_1M/macnlops/SubProcesses__P0_dxu_bbxwp__GF1.0_10__events/shower.jsonl",
+            "sidecar_record_sha256": "281e294627adadd32190958b003e20a25723c71ea7646ae4e7b6031d5b15443f",
+            "status": 0
+          },
+          {
+            "born_flow": 1,
+            "born_permutation": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "config": 1,
+            "densities": [
+              5476025.175490352,
+              78066834.81127691,
+              78066834.81127693
+            ],
+            "diagnostics": [],
+            "emission_type": "FSR",
+            "endpoint_permutation": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "graph": 1,
+            "native_sector": 4,
+            "process": "SingleTop_5FS",
+            "pt_evol": 28.658047707210944,
+            "radiator_pdg": -2,
+            "registry_sha256": "0213d691bbe0de0ee376b872d75ab7a0201a2bfaaf0ba048b4ea4ee8f9cdca96",
+            "request_sha256": "7cfec1758b4a169967b8bb2ae6127e9eceb2d6152c8198ed17af2876a6ec9e54",
+            "sequence": 4,
+            "sidecar": "SingleTop_5FS/Events/delta_1M/macnlops/SubProcesses__P0_bdx_tux__GF1.0_1__events/shower.jsonl",
+            "sidecar_record_sha256": "cf7f0468f855e3e1295ed402e55cf37dc79270e51116cf8b28aaabb99d298b66",
+            "status": 0
+          },
+          {
+            "born_flow": 1,
+            "born_permutation": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "config": 1,
+            "densities": [
+              511427105.39647436,
+              1036130799.6478739,
+              1036130799.6478739
+            ],
+            "diagnostics": [],
+            "emission_type": "FSR",
+            "endpoint_permutation": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "graph": 1,
+            "native_sector": 4,
+            "process": "SingleTop_5FS",
+            "pt_evol": 12.374562242980408,
+            "radiator_pdg": -4,
+            "registry_sha256": "0213d691bbe0de0ee376b872d75ab7a0201a2bfaaf0ba048b4ea4ee8f9cdca96",
+            "request_sha256": "dd2d0f62877c592c7436c206414d4305c4de6fee6c6507200f0dba8a502c16b9",
+            "sequence": 5,
+            "sidecar": "SingleTop_5FS/Events/delta_1M/macnlops/SubProcesses__P0_bdx_tux__GF1.0_1__events/shower.jsonl",
+            "sidecar_record_sha256": "a782af6ede2d45333929c42870beffcd4969384658e4631319b4e3e429e5fd0a",
+            "status": 0
+          },
+          {
+            "born_flow": 1,
+            "born_permutation": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "config": 1,
+            "densities": [
+              42148999.406567566,
+              56020757.74588169,
+              56020757.7458817
+            ],
+            "diagnostics": [],
+            "emission_type": "FSR",
+            "endpoint_permutation": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "graph": 1,
+            "native_sector": 3,
+            "process": "SingleTop_5FS",
+            "pt_evol": 27.416000092606694,
+            "radiator_pdg": 6,
+            "registry_sha256": "0213d691bbe0de0ee376b872d75ab7a0201a2bfaaf0ba048b4ea4ee8f9cdca96",
+            "request_sha256": "8f5a90f9b38134ed0844619e8f4de33479eb62c504e7c75462542f69b0736732",
+            "sequence": 9,
+            "sidecar": "SingleTop_5FS/Events/delta_1M/macnlops/SubProcesses__P0_bdx_tux__GF1.0_1__events/shower.jsonl",
+            "sidecar_record_sha256": "c8fa902d6984260eb7942754d86500a932e6f37d5bf743324bf46b7a6f9653f1",
+            "status": 0
+          }
+        ],
+        "schema": "macnlops-component-endpoint-check-v1",
+        "scope": "saved first-ten-record prefixes; no event generation or showering"
+      },
+      "sha256": "37406a77c3cf8755aa8e86036d7a3f01954ea7e8d7243a58688d7010089fc95a"
+    },
+    "docs/audits/macnlops_component_gg_20261025.json": {
+      "data": {
+        "created_utc": "2026-10-25T06:07:29.086154+00:00",
+        "delta_calculation_trap": true,
+        "driver_sha256": "42087291a689d8cf90457e6f41f9addab31c70699788e089eb4666525804040f",
+        "emitters": [
+          {
+            "kernel_closure_relative_error": 4.07080656992245e-16,
+            "orientations": [
+              {
+                "born_permutation": [
+                  0,
+                  1,
+                  3,
+                  2
+                ],
+                "densities": [
+                  10004521.861980017,
+                  16365131.518479314,
+                  16365131.518479317
+                ],
+                "endpoint_permutation": [
+                  0,
+                  1,
+                  3,
+                  2,
+                  4
+                ],
+                "equivalent_emitters": 2,
+                "normalization": "3",
+                "orientation": "native",
+                "selector": [
+                  3,
+                  6,
+                  2
+                ],
+                "source_orbit": 6,
+                "unpartitioned_kernel": 18302467.7516568
+              },
+              {
+                "born_permutation": [
+                  0,
+                  1,
+                  3,
+                  2
+                ],
+                "densities": [
+                  1184354.8386362803,
+                  1937336.233177476,
+                  1937336.233177476
+                ],
+                "endpoint_permutation": [
+                  0,
+                  1,
+                  3,
+                  4,
+                  2
+                ],
+                "equivalent_emitters": 2,
+                "normalization": "3",
+                "orientation": "gg-swapped",
+                "selector": [
+                  3,
+                  6,
+                  2
+                ],
+                "source_orbit": 6,
+                "unpartitioned_kernel": 18302467.7516568
+              }
+            ],
+            "source_radiator": 3,
+            "unpartitioned_exchange_relative_error": 0.0
+          },
+          {
+            "kernel_closure_relative_error": 4.07080656992245e-16,
+            "orientations": [
+              {
+                "born_permutation": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "densities": [
+                  10004521.861980017,
+                  16365131.518479314,
+                  16365131.518479317
+                ],
+                "endpoint_permutation": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4
+                ],
+                "equivalent_emitters": 2,
+                "normalization": "3",
+                "orientation": "native",
+                "selector": [
+                  2,
+                  5,
+                  1
+                ],
+                "source_orbit": 6,
+                "unpartitioned_kernel": 18302467.7516568
+              },
+              {
+                "born_permutation": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "densities": [
+                  1184354.8386362803,
+                  1937336.233177476,
+                  1937336.233177476
+                ],
+                "endpoint_permutation": [
+                  0,
+                  1,
+                  2,
+                  4,
+                  3
+                ],
+                "equivalent_emitters": 2,
+                "normalization": "3",
+                "orientation": "gg-swapped",
+                "selector": [
+                  2,
+                  5,
+                  1
+                ],
+                "source_orbit": 6,
+                "unpartitioned_kernel": 18302467.7516568
+              }
+            ],
+            "source_radiator": 4,
+            "unpartitioned_exchange_relative_error": 0.0
+          }
+        ],
+        "passed": true,
+        "real_momenta": [
+          [
+            500.0,
+            0.0,
+            0.0,
+            500.0
+          ],
+          [
+            500.0,
+            0.0,
+            0.0,
+            -500.0
+          ],
+          [
+            425.0,
+            -75.0,
+            418.33001326703777,
+            0.0
+          ],
+          [
+            425.0,
+            -75.0,
+            -418.33001326703777,
+            0.0
+          ],
+          [
+            150.0,
+            150.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "registry_sha256": "7611cb2f262a9907434f165b7c5c31fa132d1203a314cf8a44f0627c68b130e1",
+        "schema": "macnlops-gg-component-point-v1",
+        "scope": "one synthetic real point; no integration or Pythia shower",
+        "source_selector": [
+          2,
+          5,
+          1
+        ]
+      },
+      "sha256": "e8475e4b520a4a1fce67aba5d1d3fc5bbd77df5a1691e84394fe73bc5af12c41"
+    },
+    "docs/audits/macnlops_component_scale_skip_20261025.json": {
+      "data": {
+        "cut_and_beam_K_zero": true,
+        "delta_calculation_trap": true,
+        "densities": [
+          [
+            516673137.40688443,
+            516673137.40688443,
+            516673158.0820367
+          ],
+          [
+            2296347.5849073804,
+            2298904.482429085,
+            2296368.376598666
+          ],
+          [
+            51689.14131141333,
+            53498.401494356745,
+            51710.66948355469
+          ],
+          [
+            51689.14131141333,
+            53498.401494356745,
+            0.0
+          ],
+          [
+            51689.14131141333,
+            53498.401494356745,
+            0.0
+          ]
+        ],
+        "driver_sha256": "42087291a689d8cf90457e6f41f9addab31c70699788e089eb4666525804040f",
+        "ordinary_bitwise_identical": true,
+        "passed": true,
+        "points": 5,
+        "schema": "macnlops-local-h-scale-skip-check-v1",
+        "scope": "temporary drivers and existing DY objects; no generation or shower",
+        "source_P_policy": "ordinary bogus P retained; scalar explicit support configuration",
+        "source_energy_GeV": [
+          0.2,
+          3.0,
+          20.0,
+          20.0,
+          20.0
+        ]
+      },
+      "sha256": "bbf059e07266ac7dea4b0e82a1ae11f5a55e6737c174f7028106b8b703a3f73f"
+    },
+    "docs/audits/sampled_source_smoke_20261025/results.json": {
+      "data": {
+        "commands_file": "commands.json",
+        "compile_seconds": 42.4584204161074,
+        "compile_status": 0,
+        "cores": 1,
+        "delta": {
+          "accepted_counts": {
+            "H": 9,
+            "S": 53
+          },
+          "accepted_events": 62,
+          "accepted_sumabsw": 21.04587582,
+          "accepted_sumw": 19.68807738,
+          "all_events_have_components": true,
+          "compile_seconds": 3.087905135937035,
+          "compile_status": 0,
+          "continuation_contract_passed": true,
+          "continuation_counts": {
+            "H": 9,
+            "S": 53,
+            "emitted": 53,
+            "unshowered": 9
+          },
+          "counts": {
+            "H": 9,
+            "S": 55,
+            "negative_H": 0,
+            "negative_S": 2
+          },
+          "decision_counts": {
+            "accepted_H": 9,
+            "accepted_S": 53,
+            "input_H": 9,
+            "input_S": 55,
+            "negative_accepted_S": 2,
+            "negative_input_S": 2,
+            "rejected_S": 2
+          },
+          "derived_export": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar",
+          "effective_source_flags": [
+            [
+              0,
+              1,
+              0,
+              1
+            ]
+          ],
+          "generation_upper_bound_failures": 9,
+          "has_source_run_card": true,
+          "job": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/SubProcesses/P0_uux_emep/smoke_delta",
+          "matched": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/Events/smoke_delta/macnlops/events.lhe.gz",
+          "matching_header_passed": true,
+          "matching_partition": "sampled",
+          "matching_seconds": 5.128513046074659,
+          "negative_h_source_factors": [],
+          "old_delta_context_count": 0,
+          "output_lhe_version": "3.0",
+          "output_sha256": "da252338f0051b28db9fb9bc0c3a4cf1949dae932bee4bf850acacf52018cd06",
+          "process": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta",
+          "source": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/Events/smoke_delta/events.lhe.gz",
+          "source_contract": {
+            "counts": {
+              "H": 9,
+              "S": 55
+            },
+            "partition": "sampled",
+            "schema": "macnlops-hard-source-contract-v1",
+            "source": "delta"
+          },
+          "source_lhe_version": "3.0",
+          "source_sha256": "caac5dd972fd628a71f54b52202dd4457f592651d3aca394024f5f985f0da33e",
+          "source_sumabsw": 21.72477504,
+          "source_sumw": 20.3669766,
+          "stages": [
+            {
+              "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/delta_mode0.in",
+              "mode": 0,
+              "seconds": 0.0925787768792361,
+              "status": 0
+            },
+            {
+              "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/delta_mode1.in",
+              "mode": 1,
+              "seconds": 0.08977831900119781,
+              "status": 0
+            },
+            {
+              "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/delta_mode2.in",
+              "mode": 2,
+              "seconds": 0.050298082176595926,
+              "status": 0
+            }
+          ],
+          "veto_prescription": "component-undamped-delta-v1",
+          "weight_sums": {
+            "accepted": 19.68807738000001,
+            "input": 20.366976600000008
+          },
+          "weights_are_unscaled_source_subset": true
+        },
+        "delta128": {
+          "accepted_counts": {
+            "H": 18,
+            "S": 103
+          },
+          "accepted_events": 121,
+          "accepted_sumabsw": 20.536700800000002,
+          "accepted_sumw": 20.1972512,
+          "all_events_have_components": true,
+          "continuation_contract_passed": true,
+          "continuation_counts": {
+            "H": 18,
+            "S": 103,
+            "emitted": 103,
+            "unshowered": 18
+          },
+          "counts": {
+            "H": 21,
+            "S": 107,
+            "negative_H": 3,
+            "negative_S": 1
+          },
+          "decision_counts": {
+            "accepted_H": 18,
+            "accepted_S": 103,
+            "input_H": 21,
+            "input_S": 107,
+            "negative_accepted_S": 1,
+            "negative_input_H": 3,
+            "negative_input_S": 1,
+            "rejected_H": 3,
+            "rejected_S": 4
+          },
+          "effective_source_flags": [
+            [
+              0,
+              1,
+              0,
+              1
+            ]
+          ],
+          "generation_seconds": 0.16605355590581894,
+          "generation_upper_bound_failures": 19,
+          "has_source_run_card": true,
+          "matched": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/Events/smoke_delta128/macnlops/events.lhe.gz",
+          "matching_header_passed": true,
+          "matching_partition": "sampled",
+          "matching_seconds": 4.475341700948775,
+          "negative_h_source_factors": [
+            0.15271413790676952,
+            0.9433069375738227,
+            0.7615419866646846
+          ],
+          "old_delta_context_count": 0,
+          "output_lhe_version": "3.0",
+          "output_sha256": "4f88e4f170b19e2751ab7ac0021023671967df88c38d0a4873a14db8379bf15b",
+          "seed": 975329,
+          "source": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_delta/Events/smoke_delta128/events.lhe.gz",
+          "source_contract": {
+            "counts": {
+              "H": 21,
+              "S": 107
+            },
+            "partition": "sampled",
+            "schema": "macnlops-hard-source-contract-v1",
+            "source": "delta"
+          },
+          "source_lhe_version": "3.0",
+          "source_sha256": "9055b2ddedca0715319581efdbb10eb92195821233aa75130f08f23c30fcd973",
+          "source_sumabsw": 21.7247744,
+          "source_sumw": 20.366976,
+          "veto_prescription": "component-undamped-delta-v1",
+          "weight_sums": {
+            "accepted": 20.197251200000064,
+            "input": 20.366976000000065
+          },
+          "weights_are_unscaled_source_subset": true
+        },
+        "explicit_outer_sum": {
+          "all_events_have_components": true,
+          "counts": {
+            "H": 11,
+            "S": 53,
+            "negative_H": 0,
+            "negative_S": 0
+          },
+          "effective_source_flags": [
+            [
+              0,
+              1,
+              1,
+              1
+            ]
+          ],
+          "flags": [
+            [
+              0,
+              1,
+              1,
+              1
+            ]
+          ],
+          "generation_upper_bound_failures": 11,
+          "has_source_run_card": true,
+          "job": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_explicitS/SubProcesses/P0_uux_emep/smoke_explicitS",
+          "negative_h_source_factors": [],
+          "old_delta_context_count": 0,
+          "process": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_explicitS",
+          "source": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar_explicitS/Events/smoke_explicitS/events.lhe.gz",
+          "source_contract": {
+            "counts": {
+              "H": 11,
+              "S": 53
+            },
+            "partition": "sampled",
+            "schema": "macnlops-hard-source-contract-v1",
+            "source": "ordinary"
+          },
+          "source_lhe_version": "3.0",
+          "source_sha256": "58d05eabfd366eb9f13833c1218cae6f9e92351210da887e5e151f90da524d4d",
+          "source_sumabsw": 21.37435904,
+          "source_sumw": 21.37435904,
+          "stages": [
+            {
+              "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/explicitS_mode0.in",
+              "mode": 0,
+              "seconds": 0.12729293201118708,
+              "status": 0
+            },
+            {
+              "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/explicitS_mode1.in",
+              "mode": 1,
+              "seconds": 0.1314351400360465,
+              "status": 0
+            },
+            {
+              "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/explicitS_mode2.in",
+              "mode": 2,
+              "seconds": 0.05560784600675106,
+              "status": 0
+            }
+          ]
+        },
+        "fresh_grid_iterations": 2,
+        "fresh_grid_points": 400,
+        "global_defaults_preserved": true,
+        "limitations": [
+          "Tiny fresh grids intentionally undersample the integrand and have unweighting-envelope overshoots; no cross-section or precision inference is made.",
+          "Single Born flavour and diagram/colour flow in the genuine DY checks; separate Fortran fixtures exercise nontrivial flow weights and reordered physical-flavour tables.",
+          "The Delta 64-event sample contains no negative H; its separately recorded 128-event follow-up exercises three genuinely generated negative H events."
+        ],
+        "ordinary": {
+          "accepted_counts": {
+            "H": 5,
+            "S": 52
+          },
+          "accepted_events": 57,
+          "accepted_sumabsw": 20.83429002,
+          "accepted_sumw": 18.64120686,
+          "all_events_have_components": true,
+          "continuation_contract_passed": true,
+          "continuation_counts": {
+            "H": 5,
+            "S": 52,
+            "emitted": 52,
+            "unshowered": 5
+          },
+          "counts": {
+            "H": 10,
+            "S": 54,
+            "negative_H": 5,
+            "negative_S": 3
+          },
+          "decision_counts": {
+            "accepted_H": 5,
+            "accepted_S": 52,
+            "input_H": 10,
+            "input_S": 54,
+            "negative_accepted_S": 3,
+            "negative_input_H": 5,
+            "negative_input_S": 3,
+            "rejected_H": 5,
+            "rejected_S": 2
+          },
+          "effective_source_flags": [
+            [
+              0,
+              1,
+              0,
+              1
+            ]
+          ],
+          "generation_upper_bound_failures": 8,
+          "has_source_run_card": true,
+          "job": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/SubProcesses/P0_uux_emep/smoke_ordinary",
+          "matched": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/Events/smoke_ordinary/macnlops/events.lhe.gz",
+          "matching_header_passed": true,
+          "matching_partition": "sampled",
+          "matching_seconds": 5.358733247034252,
+          "negative_h_source_factors": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "old_delta_context_count": 0,
+          "output_lhe_version": "3.0",
+          "output_sha256": "8a2114fb6bf72def7e8188a535ee6370858522f2f5f8d2c4b7d3787994679e47",
+          "source": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar/Events/smoke_ordinary/events.lhe.gz",
+          "source_contract": {
+            "counts": {
+              "H": 10,
+              "S": 54
+            },
+            "partition": "sampled",
+            "schema": "macnlops-hard-source-contract-v1",
+            "source": "ordinary"
+          },
+          "source_lhe_version": "3.0",
+          "source_sha256": "2f8e2ec78be67296c179de0d6762986c6dc9973612ed37e8fe757a6ddc090613",
+          "source_sumabsw": 23.39288704,
+          "source_sumw": 17.54466528,
+          "stages": [
+            {
+              "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/ordinary_mode0.in",
+              "mode": 0,
+              "seconds": 0.08869483112357557,
+              "status": 0
+            },
+            {
+              "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/ordinary_mode1.in",
+              "mode": 1,
+              "seconds": 0.08551424997858703,
+              "status": 0
+            },
+            {
+              "input": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/ordinary_mode2.in",
+              "mode": 2,
+              "seconds": 0.04460740811191499,
+              "status": 0
+            }
+          ],
+          "veto_prescription": "component-source-v1",
+          "weight_sums": {
+            "accepted": 18.64120686,
+            "input": 17.54466528
+          },
+          "weights_are_unscaled_source_subset": true
+        },
+        "process": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun_MacNLOPS/docs/audits/sampled_source_smoke_20261025/DY_uubar",
+        "purpose": "Bounded source/first-emission/selection plumbing checks; not a precision or distribution validation.",
+        "requested_source_events": 64,
+        "requested_source_switches": {
+          "FKSExplicitSum": false,
+          "MCExplicitKLSum": false,
+          "MCSubtractionAtFixedFlow": true
+        },
+        "schema": "macnlops-sampled-source-smoke-v1"
+      },
+      "sha256": "f6705b122338a47c6f84153a2c75f3bc21b83b45c4ed7c66ac9a25a9f168ef5a"
+    }
+  },
+  "existing_campaign_samples_and_figures_unchanged": true,
+  "global_generator_defaults_unchanged": true,
+  "identical_gluon_check": {
+    "born_emitters": 2,
+    "daughter_orientations": 2,
+    "kernel_closure_relative_error": 4.07080656992245e-16,
+    "physical_points": 1
+  },
+  "ordinary_profile_controls": {
+    "bitwise_unchanged": true,
+    "includes_zero_partial_full_bogus_P_and_support_edges": true,
+    "points": 5
+  },
+  "prescriptions": [
+    "component-source-v1",
+    "component-undamped-delta-v1",
+    "global-source-v1"
+  ],
+  "pythia_library_modified": false,
+  "review_date": "2026-10-25",
+  "saved_endpoint_checks": {
+    "born_closure_relative_tolerance": 1e-07,
+    "delta_calculation_abort_trap": true,
+    "passed": true,
+    "points": 10
+  },
+  "scope": "Sampled fixed-flow source, physical diagram/colour transport, Delta-free G-completed local veto and consistent H residual",
+  "source_hashes": {
+    "Template/NLO/MCatNLO/srcPythia8/MacNLOPS.cc": "a12c92b90079e0c7fab94887263308db9556f92ef8d080063c01218fd1161113",
+    "Template/NLO/SubProcesses/add_write_info.f": "937a84feaa68801b51a5c3ef57e6938f4747b757a75d1cbf8de92fdcde2c35ac",
+    "Template/NLO/SubProcesses/driver_macnlops.f": "42087291a689d8cf90457e6f41f9addab31c70699788e089eb4666525804040f",
+    "Template/NLO/SubProcesses/driver_mintMC.f": "8205b1d948205592686fcac8371c770f64b973691c90a3f0d2027c53900e8199",
+    "Template/NLO/SubProcesses/fks_singular.f": "806f22679de2a68c170fd082c93700fabb5acd041384afcfebdcbd49048b6839",
+    "Template/NLO/SubProcesses/handling_lhe_events.f": "f7742d4b7646c0e503e9765c4fd05ec4da393e472be6578639d4d427d74d68eb",
+    "Template/NLO/SubProcesses/mc_matching_runtime.f": "a423beb16bd14522289ee10491d311b2fa77a63968b039d82010cbe262924cd8",
+    "Template/NLO/SubProcesses/weight_lines.f": "cf23d897feec455c60e180f5ae629e32683a68372f5852a26e797b3f4d9e636d",
+    "madgraph/iolibs/born_support.py": "aca91c9cc80da5bd98d708ab2ef2061d6167588115e38fe3b895465c539d2eb1",
+    "madgraph/iolibs/export_fks.py": "b9e29ae7c8e1ebee386e42cd7a661cd29cdb6559eac8dfbfd5663ed5524fd363",
+    "madgraph/various/macnlops.py": "9ee780fca7c5c6895ccbbb8417399ed065c3fbb2a90143c8b2a0ff9e564a5a0b",
+    "madgraph/various/macnlops_components.py": "e18636ea54b1866588202d44b062ff25947993a091c5877bfc6155702e4d327a"
+  },
+  "source_smokes": {
+    "S_veto_exercised": true,
+    "caveat": "Deliberately coarse fixed grids with envelope overshoots; plumbing evidence, not precision distributions",
+    "delta_events": [
+      64,
+      128
+    ],
+    "negative_H_removal_exercised": true,
+    "ordinary_events": 64,
+    "precision_validation": false,
+    "randomized_LHE_collection": true,
+    "sidecar_binding_records": 256
+  },
+  "supported_sampled_settings": {
+    "FKSExplicitSum": "either; set False explicitly to sample outer groups",
+    "MCExplicitKLSum": false,
+    "MCSubtractionAtFixedFlow": true
+  },
+  "tests": {
+    "command": "python3 -m unittest tests.unit_tests.fks.test_born_flow_rejection tests.unit_tests.fks.test_fks_explicit_sum tests.unit_tests.fks.test_macnlops_component_evaluator tests.unit_tests.fks.test_macnlops_component_source tests.unit_tests.fks.test_macnlops_delta_context tests.unit_tests.fks.test_macnlops_evaluator tests.unit_tests.fks.test_macnlops_h_flavour_groups tests.unit_tests.fks.test_macnlops_hard_event tests.unit_tests.fks.test_macnlops_mass_shell tests.unit_tests.fks.test_macnlops_source_modes tests.unit_tests.fks.test_macnlops_weight_lines tests.unit_tests.iolibs.test_born_support tests.unit_tests.various.test_macnlops tests.unit_tests.various.test_macnlops_collection tests.unit_tests.various.test_macnlops_component_protocol tests.unit_tests.various.test_macnlops_components tests.unit_tests.various.test_macnlops_consumer_loop tests.unit_tests.various.test_macnlops_continuation tests.unit_tests.various.test_macnlops_delta tests.unit_tests.various.test_macnlops_delta_protocol tests.unit_tests.various.test_macnlops_delta_workflow tests.unit_tests.various.test_macnlops_derivation tests.unit_tests.various.test_macnlops_h_signs tests.unit_tests.various.test_macnlops_hard_presentation tests.unit_tests.various.test_macnlops_hash_cache tests.unit_tests.various.test_macnlops_histogram_audit tests.unit_tests.various.test_macnlops_native_environment tests.unit_tests.various.test_macnlops_packaging tests.unit_tests.various.test_macnlops_plots tests.unit_tests.various.test_macnlops_provenance tests.unit_tests.various.test_macnlops_routing tests.unit_tests.various.test_macnlops_shower tests.unit_tests.various.test_macnlops_source_density_cache",
+    "errors": 0,
+    "failures": 0,
+    "seconds": 119.8004571790807,
+    "skipped": 32,
+    "tests": 294
+  }
+}

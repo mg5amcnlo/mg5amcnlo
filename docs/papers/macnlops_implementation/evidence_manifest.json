@@ -1,0 +1,167 @@
+{
+  "base_commit": "e96e7f4eac0aa3b4dc6ab58049d729462b64d76e",
+  "checks": [
+    {
+      "cohort": "zz_ordinary",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "first",
+      "retained": 975657
+    },
+    {
+      "cohort": "zz_delta",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "first",
+      "retained": 989589
+    },
+    {
+      "cohort": "dy_ordinary",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "first",
+      "retained": 961679
+    },
+    {
+      "cohort": "dy_delta",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "first",
+      "retained": 983990
+    },
+    {
+      "cohort": "ttbar_ordinary",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "first",
+      "retained": 726454
+    },
+    {
+      "cohort": "ttbar_delta",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "first",
+      "retained": 954264
+    },
+    {
+      "cohort": "single_top_ordinary",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "first",
+      "retained": 571819
+    },
+    {
+      "cohort": "single_top_delta",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "first",
+      "retained": 697436
+    },
+    {
+      "cohort": "wbb_ordinary",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "first",
+      "retained": 828798
+    },
+    {
+      "cohort": "wbb_delta",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "first",
+      "retained": 896189
+    },
+    {
+      "cohort": "zz_ordinary",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "full",
+      "retained": 975657
+    },
+    {
+      "cohort": "zz_delta",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "full",
+      "retained": 989589
+    },
+    {
+      "cohort": "dy_ordinary",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "full",
+      "retained": 961679
+    },
+    {
+      "cohort": "dy_delta",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "full",
+      "retained": 983990
+    },
+    {
+      "cohort": "ttbar_ordinary",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "full",
+      "retained": 726454
+    },
+    {
+      "cohort": "ttbar_delta",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "full",
+      "retained": 954264
+    },
+    {
+      "cohort": "single_top_ordinary",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "full",
+      "retained": 571819
+    },
+    {
+      "cohort": "single_top_delta",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "full",
+      "retained": 697436
+    },
+    {
+      "cohort": "wbb_ordinary",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "full",
+      "retained": 828798
+    },
+    {
+      "cohort": "wbb_delta",
+      "count_weight_covariance_checks_passed": true,
+      "events": 1000000,
+      "level": "full",
+      "retained": 896189
+    }
+  ],
+  "current_figure_count": 696,
+  "figure_count": 703,
+  "historical_figure_count": 7,
+  "no_new_events_or_showers": true,
+  "prepared_utc": "2026-10-24T16:46:31.044781+00:00",
+  "scope": "Completed 23--24 October 2026 million-event campaign plus explicitly historical seven figure panels",
+  "source_hashes": {
+    "Template/NLO/MCatNLO/srcPythia8/MacNLOPS.cc": "62f23d9d7935625ca0986e6555617bb957a80a1743832d73007e389ab865919c",
+    "Template/NLO/SubProcesses/driver_macnlops.f": "963459de43d6720893d603f7b0ed422a981e998b54a8c02ab804ee49075452cd",
+    "Template/NLO/SubProcesses/genps_fks.f": "c4f3230196995e6c262bb9061638cb6c52dfd59a714eba848c528a9b9e8a14fe",
+    "Template/NLO/SubProcesses/genps_fks_radiation.f": "d205c659f433bb7b11c9bd2200f262e54d322925ebbaeb4ae17e53a24bf1e0b5",
+    "Template/NLO/SubProcesses/mc_matching_runtime.f": "bb70ffb5d53ff24fcdcd39a12827508febd8b4b4fa3ba38ebc29ae52ee8f3b1b",
+    "Template/NLO/SubProcesses/montecarlocounter.f": "94a953a3c6133d5e000d9e1151b4ef80576023273d203adde24ab46276bd98f7",
+    "madgraph/interface/amcatnlo_run_interface.py": "9757b0d847324eaf927498e40c91caf0c4af08e9067683b46a8521973203ef77",
+    "madgraph/various/banner.py": "06eeeec73352dd9fd29cd2af408b14927e8641522e287a090bd7ba2711e1d9cc",
+    "madgraph/various/macnlops.py": "2124af395cbb3ec0002e52f61fbc7b5f6679d858ed3828dafba6a8e676a8a947",
+    "production_1M_20261023/campaign.py": "26d1c6980a99406571c7d5e80e19fe701a80531868fb9dcff320470e80715034",
+    "validation_1M_20261023/analysis.py": "8a7c312a00aa6a0d4898181e9f9b1698f1838d800f0debc5d8b92df8d9f3b475",
+    "validation_1M_20261023/check_histograms.py": "4a242b1a5f68841ef4126386f8c37d92d6e26e56993fbddd77e6b82e0607cb34",
+    "validation_1M_20261023/src/StreamHist.cc": "ae1d3163076d6cedb254d2844b654282c6ebd6ee135573e5e6e57e3eeec5cab8"
+  },
+  "working_tree_is_modified": true
+}

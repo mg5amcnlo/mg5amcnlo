@@ -1,0 +1,59 @@
+\section{Notation and reproducibility record}
+\label{sec:notation}
+\begin{longtable}{p{.18\textwidth}p{.76\textwidth}}
+\toprule
+Symbol & Meaning\\\midrule\endhead
+$q,b_h,r_h$ & Labelled real point, the Born projection of history $h$, and its radiation coordinates.\\
+$J_h$ & Positive conversion of a native Born/radiation measure to the common real measure.\\
+$R,H,D_{\rm eff}$ & Real density, actual generated hard density, and effective transfer $R-H$.\\
+$H_-$ & Negative part $[-H]_+$ taken after the required physical source sum; not generally a sum of negative parts.\\
+$K_g$ & Eligible positive scalar leading shower density. It contains support and starting-scale marginals, not an actual emission Sudakov.\\
+$C$ & Bounded transfer $\min(H_-,K_g)$ in the ordinary scalar construction.\\
+$a_S,a_H^-$ & Acceptance of an eligible emitted S event and of a negative H event.\\
+$E_g$ & Actual signed cross-section density of eligible first S emissions, including the source S weights and native shower law.\\
+$E_g^+$ & Corresponding positive-weight S density, used only in the alternative exact-cancellation discussion.\\
+$G;g_s,g_c,g_\phi,\widetilde g_s$ & Source G-function controls and effective completion factors, distinct from event/history eligibility $g,g_h$; these are not branching probabilities.\\
+$P$ & Actual low-scale source multiplier, including the ordinary artificial bogus factor or its Delta replacement where appropriate.\\
+$\Delta_{\rm PS}$ & Physical conditional shower no-harder-emission probability.\\
+$\Delta_{\rm src}$ & Delta source factor/context; not the actual first-emission Sudakov of the vetoed S event.\\
+$ij$ & Outer FKS sector, with unresolved leg $i$ and sister $j$, in source organization.\\
+$kl$ & Native emitted/emitter-history label of the explicit MC-history sum; not a Born-colour-flow label.\\
+$c,\ell$ & Born-colour flow and the separate colour-connection label for a selected native history/flow.\\
+$p_c,q_c$ & Physical flow fraction and its Monte Carlo sampling probability; their roles must not be counted twice.\\
+$\zeta,\lambda,z$ & Actual S source/shower state, fresh Delta source-H auxiliary variables, and complete post-first-step state, respectively.\\
+\bottomrule
+\end{longtable}
+
+The base revision is
+\code{\detokenize{e96e7f4eac0aa3b4dc6ab58049d729462b64d76e}} with a
+modified working tree. It is not identified with an unmodified tagged
+release. \code{\detokenize{evidence_manifest.json}} records source hashes,
+the completed dataset checks and the data-collection time;
+\code{\detokenize{implementation_changes.patch}} records the tracked
+implementation differences. Runtime source manifests, archived
+per-source cards and the two single-top recovery records determine the
+actual production provenance, which is more specific than the base Git
+revision alone.
+
+\code{\detokenize{paper_data.json}} freezes the numerical records used
+for the tables. \code{\detokenize{figure_manifest.json}} identifies every
+included current and historical figure. The source archive contains all
+LaTeX files, the bibliography, generated tables and figure PDFs, so
+rebuilding the document needs neither the LHE files nor a new shower.
+It is a reproducible document bundle, not a substitute for distributing
+the much larger event-generation campaign and all installed libraries.
+
+To rebuild, use \code{make paper} for the narrative edition and
+\code{make complete} for the edition containing the full atlas.
+\code{make atlas} builds the standalone figure atlas. The optional
+\code{make refresh} reads the original completed campaign to regenerate
+the frozen tables and copies; it performs no event generation or
+showering and is unnecessary for an ordinary LaTeX rebuild.
+
+The document checks distinguish three levels of evidence: algebraic
+identities of the stated transfer, successful implementation/data
+consistency checks, and conditions still needed for an accuracy theorem.
+Counts and histogram identities cannot supply the missing native-density
+proof; an expected perturbative order cannot replace the observed
+finite differences. That distinction applies equally to the current
+plots and to the separately labelled historical material.

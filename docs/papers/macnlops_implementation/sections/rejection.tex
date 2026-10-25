@@ -1,0 +1,275 @@
+\section{The bounded removal and veto prescription}
+\label{sec:rejection}
+
+\subsection{The three densities and the eligible shower measure}
+For an ordinary source, define on a common labelled real phase space
+\begin{equation}
+ H(q)=R(q)-D_{\rm eff}(q),\qquad
+ H_-(q)=\pos{-H(q)}=\pos{D_{\rm eff}(q)-R(q)}.
+ \label{eq:hard-negative}
+\end{equation}
+Here $D_{\rm eff}=R-H$ is the effective source transfer defined by the
+generated hard density. Its name does not assert that it is a single
+nonnegative shower kernel. Delta conditioning will introduce additional
+labels without changing this principle.
+
+The scalar leading kernel, in the same measure, has the structure
+\begin{equation}
+ K_g(q)=\sum_h \frac{B_h(b_h)}{J_h}\,
+             \kappa_h^{(1)}(r_h)\,g_h(q).
+ \label{eq:leading-kernel}
+\end{equation}
+The sum includes the appropriate Born-flavour and leading-colour
+probabilities, luminosity/flux factors, recoil alternatives and the
+distribution of allowed starting scales. The indicator or marginal
+factor $g_h$ restricts the histories to the profiled matching support.
+It includes the implementation's beam bounds, cutoffs and protected
+heavy-flavour regions. It is not the source G function. No physical
+Sudakov factor is inserted into Eq.~\eqref{eq:leading-kernel}.
+
+For example, backward ISR uses the ratio of momentum-weighted PDFs,
+schematically
+\begin{equation}
+ \dd\kappa_h\ \sim\ \frac{\dd t}{t}\,
+ \frac{\as}{2\pi}P(z)\,
+ \frac{(x/z)f_a(x/z,\mu)}{xf_b(x,\mu)}\,
+ \dd z\,\frac{\dd\phi}{2\pi},\qquad t=\pt^2.
+ \label{eq:isr-ratio}
+\end{equation}
+The displayed $1/z$ cannot be discarded by replacing $xf$ with $f$.
+Equation~\eqref{eq:isr-ratio} is only schematic: the actual map, Jacobian,
+mass terms, support and scale convention must come from the selected
+kernel. In particular, the evaluator's leading coefficient at the
+fixed-order scales is not the complete running-$t$, Sudakov-weighted
+native branching law. A random starting scale contributes a marginal
+such as $\Pr(Q>\sqrt t)$; observing one source event with $Q>\sqrt t$
+does not make that marginal identically one.
+
+The probability construction requires $R\geq0$ and $K_g\geq0$ at the
+points where they are used; the implementation checks these conditions.
+They are not universal consequences of using NLO $\overline{\rm MS}$ PDF
+grids. Native positive-part, flavour-threshold and small-denominator
+policies also enter the relation between an analytic leading kernel and
+the actual accepted native law. Their equivalence must be checked, rather
+than assumed from a common grid name.
+
+\subsection{Removing only what a bounded leading veto can transfer}
+The desired full H removal would ask for the S veto probability
+$H_-/K_g$. To keep a physical probability without silently deleting an
+uncompensated part, define
+\begin{equation}
+ C(q)=\min\{H_-(q),K_g(q)\},\qquad
+ H_{-,\rm rem}(q)=H_-(q)-C(q).
+ \label{eq:bounded-transfer}
+\end{equation}
+The current acceptance for an eligible emitted S event is
+\begin{equation}
+ a_S(q)=1-\frac{C(q)}{K_g(q)}
+       =1-\min\!\left(1,\frac{H_-(q)}{K_g(q)}\right),
+ \quad K_g(q)>0.
+ \label{eq:s-acceptance}
+\end{equation}
+For a negative H event the acceptance is instead
+\begin{equation}
+ a_H^-(q)=\frac{H_-(q)-C(q)}{H_-(q)}
+ =\max\!\left(1-\frac{K_g(q)}{H_-(q)},0\right),
+ \quad H_-(q)>0.
+ \label{eq:h-acceptance}
+\end{equation}
+Positive H events survive. S events with no emission or with a protected
+first emission survive. If $K_g=0$ and $H_->0$, the signed-residual rule
+retains the negative H contribution and performs no S rejection. A
+negative H event whose reconstructed global density has no negative part
+is an inconsistency and causes a failure, rather than a convenient
+change of its classification.
+
+These are whole-event decisions. Rejecting a first branching and
+continuing from the original Born state would change the generated
+no-emission and subsequent-emission populations and is a different
+algorithm. The present procedure does not repeat an event until it
+passes, replace its weight by its absolute value, or rescale the retained
+sample to the input rate.
+
+If $D_{\rm eff}=K_g$ and the same support applies, then
+$a_S=\min(1,R/K_g)$, and Eq.~\eqref{eq:h-acceptance} removes all negative
+H events. This is the familiar ideal multiplicative--accumulative limit.
+The source and kernel in this implementation are more general, so that
+identity is a special case, not the definition imposed on the input.
+
+\subsection{Why the requested ratio can exceed one}
+The subtraction was designed to cancel singular expansions, not to be a
+pointwise upper bound on a separately profiled scalar shower kernel.
+There is no general inequality $H_-\leq K_g$. G/spin completion, the
+source low-scale prescription, different support, source luminosities,
+and conditional Delta histories can all matter. If a phase-space region
+has no eligible shower image, then $K_g=0$ while its source hard density
+may still be negative.
+
+As a local arithmetic example, take $R=1$, $D_{\rm eff}=4$ and $K_g=2$
+in a common density unit. Full H removal asks for a veto probability
+$3/2$. Clipping that probability to one while deleting all negative H
+events would discard the missing transfer. Equations
+\eqref{eq:bounded-transfer}--\eqref{eq:h-acceptance} transfer two units
+and retain one negative hard-density unit. This example illustrates the
+bound; it does not specify the actual physical S emission density.
+
+A strict-positive-H mode may stop when the bound fails. The campaign
+instead uses the signed-residual mode, which makes the missing transfer
+explicit in the accepted sample. Remaining negative H events are thus
+part of the declared prescription, not events accidentally bypassing the
+filter. Conversely, their small number in one process does not prove
+that the finite-coupling compensation is accurate in that process.
+
+\subsection{The exact finite-first-step difference}
+\label{sec:finite-difference}
+Let $\zeta$ collect the Born kinematics and all shower-relevant source
+labels: flavours, colour flow, starting scales and, when applicable,
+auxiliary source variables. The signed S source measure is
+$\dd\mu_S(\zeta)$. If $T_1(q\mid\zeta)$ is the actual native first
+emission law and $g(\zeta,q)$ marks eligible emissions, define
+\begin{equation}
+ E_g(q)=\int\dd\mu_S(\zeta)\,
+                  T_1(q\mid\zeta)\,g(\zeta,q).
+ \label{eq:actual-s-density}
+\end{equation}
+This is a signed cross-section density. It contains the NLO S weights,
+the physical no-harder-emission probability, the distribution of starting
+states, the actual PDF/coupling choices and every native sampling policy.
+It is not automatically $K_g(q)$.
+
+For the ordinary construction, removing negative H adds $C(q)$ to the
+signed endpoint density, while S rejection subtracts
+$C(q)E_g(q)/K_g(q)$. Thus
+\begin{equation}
+ \delta\rho_1(q)=C(q)\left[1-\frac{E_g(q)}{K_g(q)}\right],
+ \qquad K_g(q)>0.
+ \label{eq:finite-defect}
+\end{equation}
+At $K_g=0$ the transferred amount is zero and no division is used. With
+auxiliary conditioning the corresponding expression must be integrated
+over the \emph{same} joint conditional measure; one cannot replace
+conditional quantities by separately averaged factors. The Delta section
+specifies that extension.
+
+Equation~\eqref{eq:finite-defect} explains two logically independent
+limitations. The bounded transfer controls the part that cannot be
+removed with the chosen leading kernel; even where that bound permits
+full H removal, the actual S rejection need not compensate it exactly.
+For instance, with $H_-=1$, $K_g=4$ and $E_g=3$, full H removal adds one
+unit while the veto removes $3/4$ of a unit. The result differs by
+$1/4$, despite a perfectly valid probability $1/4$.
+
+Negative S weights are especially relevant. The same probability thins
+positive and negative S events in the current implementation. Rejecting
+a negative S event raises, rather than lowers, the signed rate. It is
+therefore the signed $E_g$, not the number of rejected S events or their
+absolute-weight density, that enters Eq.~\eqref{eq:finite-defect}.
+
+If the generated first emission has the required leading correspondence,
+then at fixed resolved kinematics
+\begin{equation}
+ E_g=K_g+\mathcal O(\as^{p+2}),\qquad
+ H_-,K_g=\mathcal O(\as^{p+1}),
+ \label{eq:leading-correspondence}
+\end{equation}
+where the Born process starts at $\as^p$. The change in
+Eq.~\eqref{eq:finite-defect} is then one order beyond NLO. This is a
+conditional fixed-order argument. Large logarithms at small transverse
+momentum do not make its expansion uniform, and a large finite numerical
+effect is not ruled out. More importantly, a mismatch of the leading
+accepted native law and the analytic kernel, for example from an
+unqualified map or clipped trial acceptance, does not acquire a
+higher-order label simply because it is observed after showering. The
+completed histograms are evidence for the specified implementation;
+they are not a proof of Eq.~\eqref{eq:leading-correspondence} everywhere.
+
+\subsection{Why multiplying by one Sudakov is insufficient}
+An actual emission law has a conditional no-harder-emission factor,
+schematically $\Delta_{\rm PS}(t,Q;\zeta)\kappa_h$. After projecting
+to the same $q$, different histories have different Born points,
+different $\overline B/B$ ratios, different start scales and potentially
+different colour states. In general
+\begin{equation}
+ \int\dd\zeta\,\overline B(\zeta)\,
+ \Delta_{\rm PS}(t,Q;\zeta)\kappa(\zeta,q)
+ \ne \Delta_{\rm common}(q)\,K_g(q).
+ \label{eq:no-common-sudakov}
+\end{equation}
+Even the average of exponentials over starting states is not the
+exponential of an averaged kernel. Adding the source bogus factor to a
+denominator, exponentiating its G completion, or inserting the Delta
+source factor as if it were the actual shower Sudakov therefore does
+not construct the exact finite S density.
+
+The artificial source factor, the physical shower no-emission
+probability and the Delta source modification have three separate jobs.
+They can have related limiting behaviour, but their equality is not an
+implementation identity.
+
+\subsection{What would make the cancellation exact?}
+\label{sec:exact-cancellation}
+If the actual signed eligible density $E_g(q)$ were known, a common
+probability acting on both signs could use
+\begin{equation}
+ 0\leq C_{\rm exact}(q)\leq\min\{H_-(q),E_g(q)\},\qquad
+ v_{\rm exact}(q)=\frac{C_{\rm exact}(q)}{E_g(q)},\quad E_g>0.
+ \label{eq:exact-veto}
+\end{equation}
+It would retain the corresponding hard residual
+$H_--C_{\rm exact}$. On $E_g\leq0$ this sign-independent rejection
+cannot provide a positive compensating transfer; it must set the
+transfer to zero or change the construction. Full H removal would require
+$E_g\geq H_-$ on its entire negative support.
+
+An additional option is to reject only positive-weight eligible S
+events. Let $E_g^+$ denote their positive cross-section density. Then
+\begin{equation}
+ 0\leq C_+(q)\leq\min\{H_-(q),E_g^+(q)\},\qquad
+ v_+(q)=C_+(q)/E_g^+(q)
+ \label{eq:positive-s-veto}
+\end{equation}
+would cancel the same removed H measure exactly at this endpoint, while
+retaining negative S events. This is an alternative mathematical
+construction, not an option implemented in the present campaign.
+
+Both proposals require information absent from the current scalar
+denominator: the signed or positive-weight NLO S population, the actual
+conditional first-emission law including Sudakovs and scale mixtures,
+all inverse histories and their Jacobians, and sufficient common
+support. An empirically fitted density ratio would introduce estimation
+and finite-sample errors; it would not establish exact equality by
+definition. Exact cancellation at finite statistics would additionally
+require a coupling or correlated event construction, not two independent
+Bernoulli counts expected merely to agree on average.
+
+Exact equality of first-emission momentum distributions is also weaker
+than equality after further showering. A sufficient construction matches
+the transfer on the full endpoint state $z$, including colours, masses,
+beams and imported scale limits, or on equivalence classes with identical
+continuation laws. More generally, the necessary condition is that the
+signed transfer have vanishing pushforward through the relevant shower;
+different endpoint labels can sometimes induce the same continuation.
+Momentum-only matching does not establish that condition. An LHE restart
+need not retain every internal state variable of an uninterrupted shower.
+These issues are not resolved by changing one numerator or denominator in
+Eq.~\eqref{eq:s-acceptance}.
+
+\subsection{A useful full-shower decomposition}
+Let $I$ be the source measure after its first-step proposal map, $M$ the
+same measure after decisions, and $U_{\rm rest}$ the supported restart
+continuation. With $U_{\rm direct}$ denoting the uninterrupted reference
+from the original source $F_0$, the measured difference is
+\begin{equation}
+ U_{\rm rest}M-U_{\rm direct}F_0
+ =U_{\rm rest}(M-I)
+  +\left[U_{\rm rest}I-U_{\rm direct}F_0\right].
+ \label{eq:full-decomposition}
+\end{equation}
+The first term is the removal/veto effect under a common continuation.
+The second is measured by the unrejected blue restart control and
+includes presentation, first-step profile and restart differences. It
+does not isolate restart alone. In particular, the matching profile uses
+global-recoil mode 0 for its first step, whereas the direct full reference
+uses mode 2 with its standard first-global-branch restrictions.
+Eliminating the first term alone would therefore not remove a nonzero
+black--blue control difference.

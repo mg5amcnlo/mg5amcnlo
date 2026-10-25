@@ -1,0 +1,34 @@
+\documentclass[a4paper]{article}
+\usepackage[margin=24mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,graphicx,pdfpages,xcolor,eso-pic}
+\usepackage[unicode,colorlinks=true,linkcolor=blue!45!black]{hyperref}
+\usepackage{bookmark}
+\hypersetup{pdftitle={MAcNLOPS complete figure atlas: 696 current and seven historical panels}}
+\newcommand{\HistoricalStamp}{\AddToShipoutPictureFG*{\AtPageUpperLeft{\raisebox{-4mm}[0pt][0pt]{\hspace{7mm}\colorbox{white}{\color{red!65!black}\scriptsize Historical: 20 October 2026, different patched runtime and 200k-event study}}}}}
+\begin{document}
+\title{MAcNLOPS: complete figure atlas}
+\author{}
+\date{24 October 2026}
+\maketitle
+This companion to the implementation paper includes all 696 current
+million-event validation plot PDFs. They cover five processes, ordinary
+and Delta sources, first-step and full-parton-shower endpoints, all
+observables, unrestricted and zoomed ratios, and the separate H-removal
+and S-veto mechanism panels. Every current-panel ratio uses the combined MAcNLOPS curve
+for its own source setting as denominator. Original signed weights are
+retained; there is no normalization to accepted counts or displayed range.
+
+Seven archived figure PDFs from the earlier 20 October 2026 patched-runtime,
+200,000-event study follow the current figures and are visibly marked
+historical. Their original ratio conventions are retained. They are not combined with the present results or used to
+validate the current restart.
+
+Each figure retains its original vector-PDF page size for readable axes.
+Use the PDF bookmarks to navigate the process/source/level groups and
+individual observables. The source bundle contains
+\texttt{figure\_manifest.json}, with the file and SHA256 of all 703 panels.
+Duplicate overview books are not counted as additional results.
+\clearpage
+\input{generated/all_figures}
+\end{document}

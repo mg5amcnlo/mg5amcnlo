@@ -1,0 +1,829 @@
+\section{Extending the construction to MC@NLO--\texorpdfstring{$\Delta$}{Delta}}
+\label{sec:delta-extension}
+
+The million-event campaign used the globally summed conditional
+prescription described first in this section. A subsequent sampled
+fixed-flow implementation is described in
+Sec.~\ref{sec:delta-sampled}; none of the campaign figures have been
+regenerated with that prescription.
+
+\subsection{A paired modification of the source}
+\label{sec:delta-paired}
+
+Fortran filenames in this section refer to
+\code{\detokenize{Template/NLO/SubProcesses/}}.
+The $\Delta$ extension changes the source before the removal/veto operation.
+It is a distinct starting sample, rather than an option applied only to
+an ordinary sample's veto denominator.
+For one native history, suppressing its colour, recoil and auxiliary labels,
+the paired structure is
+\begin{align}
+ H_\Delta(q)&=\Delta_{\rm src}(q)\,[R(q)-D_G(q)],
+ \label{eq:delta-paired-h}\\
+ D_{{\rm in},\Delta}(q)
+   &=\Delta_{\rm src}(q)D_G(q)
+       +[1-\Delta_{\rm src}(q)]R(q).
+ \label{eq:delta-paired-s}
+\end{align}
+Here $D_G$ denotes that history's complete G-restored MC subtraction,
+with the appropriate source measures understood.
+The second expression enters the Born-like coefficient together with
+the regulated virtual, FKS and factorization contributions.
+This is the source rearrangement underlying
+MC@NLO--$\Delta$~\cite{DeltaMatching}.
+Its infrared suppression of the hard remainder can reduce negative
+hard weights while preserving the NLO expansion when the paired
+construction is maintained.
+Multiplying only already-generated H weights by $\Delta_{\rm src}$
+would omit the compensating S contribution.
+
+The implemented $\Delta_{\rm src}$ replaces the ordinary artificial
+no-emission factor in this source prescription.
+The source does not multiply $\Delta_{\rm src}$ by the ordinary
+bogus-Sudakov factor as two independent dampings.
+The branch selecting these alternatives is
+\code{\detokenize{compute_MC_subt_term}} in
+\code{\detokenize{fks_singular.f}}:
+the $\Delta$ branch computes or replays \code{probne};
+the ordinary branch calls \code{\detokenize{bogus_probne_fun}}.
+The same factor enters the MC term, its G replacements, and the
+real-emission H/S split.
+
+The source $\Delta$ is built from probabilities associated with the
+underlying Born legs and their colour connections.
+\code{\detokenize{compute_delta}} in
+\code{\detokenize{montecarlocounter.f}}
+constructs starting and stopping scales, includes initial-state
+PDF factors, and multiplies the resulting leg probabilities.
+It also sets an H event's directed starting scales.
+This is more information than one scalar \code{SCALUP}.
+The product of source leg probabilities must not be identified
+without proof with the native shower's probability of no harder
+competing ISR/FSR emission at one observed evolution scale.
+
+\subsection{The negative part belongs to a conditional density}
+\label{sec:delta-conditional}
+
+The source is stochastic even at fixed real momenta.
+Let $\lambda$ collect its auxiliary variables: the required
+starting-scale draws and the colour-insertion variate, including
+their correlations. At a fixed physical point $q$, write
+\begin{equation}
+ H_\Delta(q,\lambda)=
+       \sum_\nu \Delta_\nu(q,\lambda)\,h_\nu(q),
+ \qquad
+ H_{-,\Delta}(q,\lambda)=\pos{-H_\Delta(q,\lambda)}.
+ \label{eq:delta-conditional-density}
+\end{equation}
+The signed terms $h_\nu$ include real and G-restored MC pieces,
+native measures, flow fractions and luminosities.
+The index $\nu$ labels contributions in the complete source sum.
+It does not prescribe taking a negative part separately for each term.
+All compatible terms are combined first.
+
+The subsequent auxiliary average has a different ordering:
+\begin{equation}
+ \mathbb E_{\lambda\mid q}
+       \!\left[\pos{-H_\Delta(q,\lambda)}\right]
+ \ \ne\
+ \pos{-\mathbb E_{\lambda\mid q}H_\Delta(q,\lambda)}
+ \quad\hbox{in general}.
+ \label{eq:delta-negative-average}
+\end{equation}
+Convexity gives the corresponding non-strict inequality, with the
+left-hand side greater than or equal to the right-hand side.
+Source unweighting samples the signed conditional source before
+the auxiliary state is forgotten.
+A density evaluator can therefore reproduce the auxiliary-averaged
+inclusive H density and still misidentify the negative measure
+represented by the actual event sample.
+
+The correlations in $\lambda$ matter.
+\code{\detokenize{compute_shower_scale_nbody}} in
+\code{\detokenize{scale_module.f90}}
+draws a scalar hard starting scale and constructs the directed Born
+matrix from it in the Pythia source path.
+A native history/recoil draw is shared across the explicit Born-flow
+sum. Drawing every matrix entry independently, or drawing a new scale
+for each colour flow, would define another joint source law.
+Comparable marginal distributions would not restore the required
+correlations.
+
+\subsection{Replay H; draw an independent source auxiliary for S}
+\label{sec:delta-replay}
+
+A qualified $\Delta$ H record carries a versioned
+\code{\detokenize{macnlops_delta_context}} packet.
+It contains an owner, the colour-insertion variate, a registry digest,
+and rows of the form
+\begin{equation}
+  (\hbox{native history},\ \hbox{recoil configuration},\
+             \hbox{Born colour flow},\ \hbox{probability}).
+ \label{eq:delta-replay-key}
+\end{equation}
+Source grouping retains this packet with the complete H sum;
+it must not overwrite it with the context of the last contribution.
+The registry binds the discrete labels to the generated process.
+Old numerical keys cannot safely be interpreted in a newly ordered
+history table just because their integer ranges still agree.
+
+The \code{\detokenize{delta_weight_context}} in
+\code{\detokenize{weight_lines.f}}
+records keyed probabilities, rejects duplicates or missing keys,
+and checks that each replay entry is consumed exactly once.
+The source writer preserves this information through collection.
+The Python \code{DeltaContext} parser checks the schema and registry
+format; H routing also requires the exact owner, registry and ordered
+external flavour assignment.
+The event's retained colour and its conditional density thus have
+related but distinct roles.
+
+An H density request uses \code{\detokenize{DELTA_REPLAY}}, restoring its recorded
+probabilities and insertion variate at the original hard point.
+An emitted S endpoint instead uses \code{\detokenize{DELTA_SAMPLE}}, drawing a
+new source-H auxiliary at $q$.
+It does not generate another shower emission or change the already
+observed first emission.
+These requests are implemented by
+\code{\detokenize{NativeEvaluator._request}} in
+\code{\detokenize{madgraph/various/macnlops.py}} and by
+\code{\detokenize{Template/NLO/SubProcesses/driver_macnlops.f}}.
+
+The S-side auxiliary is independent of the actual S shower start.
+Observing an emission has already conditioned the supporting Born
+state, colour, scale and shower history on producing that point.
+Reusing that observed scale as a fresh source-H draw would generally
+introduce selection bias.
+The implementation instead hashes a dedicated auxiliary seed, request
+identity, registry digest and momenta into a reproducible native seed.
+Reproducibility does not remove the independence requirement.
+$R$ and the eligible leading shower denominator $K_g$ are deterministic
+at fixed $q$ under the profile; reconstructed $H_\Delta$ also depends
+on the replayed or newly sampled auxiliary.
+
+If source owners $\alpha$ have positive partitions $w_\alpha(q)$
+but different auxiliary laws $\mu_\alpha(\dd\lambda\mid q)$,
+the cancellation measure is more generally
+\begin{equation}
+ \overline C(q)=
+   \sum_\alpha w_\alpha(q)
+       \int \mu_\alpha(\dd\lambda\mid q)\,C_{\alpha,\lambda}(q).
+ \label{eq:delta-owner-mixture}
+\end{equation}
+Choosing any one owner without sampling this mixture requires
+equivalence of the full joint laws, not just equal mean H weights.
+The current
+\code{\detokenize{NativeEvaluator._certify_delta_auxiliary_law}}
+conservatively compares mapped native histories, context/sector
+identities, flavours, process restrictions and coupling orders
+for compatible complete source owners.
+Different joint signatures are rejected.
+A generic unequal-owner mixture sampler is not implemented;
+an apparently equivalent permutation can be rejected rather than
+assumed to preserve the auxiliary law.
+The certificate digests are recorded in matching reports.
+
+The protocol retains its output fields $(R,D,K)$, with
+\begin{equation}
+ D_{\rm out}(q,\lambda)=R(q)-H_\Delta(q,\lambda),
+ \qquad K=K_g(q).
+ \label{eq:delta-protocol-subtraction}
+\end{equation}
+Thus $D_{\rm out}-R$ reconstructs the negative-H test in the common
+acceptance code.
+The field named $D$ is not merely $\Delta_{\rm src}D_G$:
+in the one-history notation it contains
+$(1-\Delta_{\rm src})R$.
+This operational definition does not turn it into a positive
+shower branching rate.
+
+Stored H probabilities do not by themselves qualify fresh S auxiliaries.
+Those new draws depend on the exported Sudakov interpolation code,
+its source mass inputs and the matching context.
+The generation manifest therefore also binds such inputs as
+\code{sudakov.f} and
+\code{\detokenize{MCmasses_PYTHIA8.inc}}.
+The hard-coordinate mass convention used for the first shower step
+does not authorize replacing the masses or tables that defined an
+existing source's $\Delta$ law.
+
+\subsection{What Delta changes in the removal/veto balance}
+\label{sec:delta-balance}
+
+The bounded rule is applied to the conditional source:
+\begin{align}
+ C_\lambda(q)&=\min\{H_{-,\Delta}(q,\lambda),K_g(q)\},
+ \label{eq:delta-cancellation}\\
+ a_{H^-}(q,\lambda)&=
+       1-\frac{C_\lambda(q)}{H_{-,\Delta}(q,\lambda)},
+       \qquad H_{-,\Delta}>0,
+ \label{eq:delta-h-accept}\\
+ a_{S,a}(q,\lambda)&=
+       1-g_a(q)\frac{C_\lambda(q)}{K_g(q)},
+       \qquad K_g>0 .
+ \label{eq:delta-s-accept}
+\end{align}
+$g_a$ indicates eligibility of the actual S history.
+Protected and no-emission S records are unchanged.
+Where $K_g=0$, there is no eligible S rejection capacity,
+so negative H is retained under the signed-residual policy.
+$K_g$ keeps its physical starting-scale marginal.
+It is not conditioned on the new source auxiliary and receives
+neither $\Delta_{\rm src}$ nor the bogus factor as an extra acceptance.
+
+Let $\mathcal E_{S,g}^{\Delta}(q)$ be the actual signed eligible
+first-S endpoint density from the $\Delta$ source and native shower.
+With equivalent owner laws and the independent S auxiliary,
+\begin{equation}
+ \delta\sigma_\Delta=
+   \int\dd\mu_R(q)\,
+      \overline C(q)
+      \left[1-\frac{\mathcal E_{S,g}^{\Delta}(q)}{K_g(q)}\right],
+ \qquad
+ \overline C=\mathbb E_{\lambda\mid q}C_\lambda .
+ \label{eq:delta-rate-defect}
+\end{equation}
+The source-H damping can reduce the required removal.
+It does not force the signed, Sudakov-weighted S density to equal
+the analytic leading denominator.
+The residual negative-H measure is
+\begin{equation}
+ \mathbb E_{\lambda\mid q}
+       \pos{H_{-,\Delta}(q,\lambda)-K_g(q)} .
+ \label{eq:delta-residual}
+\end{equation}
+Neither a positive-weight sample nor a monotonic reduction in the
+number of surviving negative H events is guaranteed.
+Negative S weights have their own source origin and are not removed
+by an H-specific prescription.
+
+In an idealized one-history example, suppose $D_G=K$ and the
+Born-like coefficient is positive, with
+\begin{equation}
+ \mathcal E_S^\Delta(q)=
+       \frac{\overline B_\Delta(b)}{B(b)}
+       \Delta_{\rm PS}(q)\,K(q).
+ \label{eq:delta-ideal-s}
+\end{equation}
+Exact complete removal would require
+\begin{equation}
+ v_{\rm exact}(q)=
+  \frac{\pos{K(q)-R(q)}}{K(q)}
+  \frac{B(b)}{\overline B_\Delta(b)}
+  \frac{\Delta_{\rm src}(q)}{\Delta_{\rm PS}(q)}.
+ \label{eq:delta-exact-ideal}
+\end{equation}
+If those Sudakov factors coincided, an inverse-shower-Sudakov
+enhancement would cancel in this expression.
+The implementation does not assume that identity.
+It uses the bounded leading-denominator rule above and source
+probabilities with their own history and colour-line structure.
+Signed Born-like coefficients, multiple inverse histories,
+different starting-scale averages and different continuations
+obstruct the idealization.
+$\Delta$ is a useful source reorganization, not a proof of exact
+finite-shower equality.
+
+The workflow combines \code{\detokenize{mcatnlo_delta=True}} with
+\code{\detokenize{macnlops_resolved_source=False}} and the hard-state annotation.
+Ordinary and $\Delta$ runs are independently generated;
+each is compared with its own unchanged source.
+An old $\Delta$ LHE lacking the registry and replay packet cannot be
+qualified by drawing replacement source probabilities.
+The importer fails explicitly on incompatible source-state information.
+
+\subsection{25 October audit: an undamped acceptance is a different prescription}
+\label{sec:delta-undamped-audit}
+
+The original multiplicative--accumulative formula uses the same kernel
+$K$ in the shower and in $H=R-K$, and rejects the emitted S event with
+$v_0=\pos{K-R}/K$~\cite[Eq.~(3.1)]{NasonSalam}.
+Its physical shower Sudakov already multiplies the emission density;
+it is not included again in $v_0$.
+The paired $\Delta$ source~\cite[Eqs.~(3.2)--(3.3)]{DeltaMatching}
+therefore raises a legitimate question about the finite prescription
+chosen in Eqs.~\eqref{eq:delta-cancellation}--\eqref{eq:delta-s-accept}.
+
+Consider first the one-history idealization of
+Eq.~\eqref{eq:delta-ideal-s}, with $D_G=K$, common support and
+$u=\pos{K-R}\leq K$.
+Complete negative-H removal adds $\Delta_{\rm src}u$.
+The campaign and original rejection probabilities are, respectively,
+\begin{equation}
+ v_{\rm impl}=\frac{\Delta_{\rm src}u}{K},
+ \qquad v_0=\frac{u}{K}.
+ \label{eq:delta-audit-veto}
+\end{equation}
+Writing $\beta=\overline B_\Delta/B$, their exact endpoint defects in
+this idealization are
+\begin{align}
+ \delta\rho_{\rm impl}
+   &=\Delta_{\rm src}u\,[1-\beta\Delta_{\rm PS}],\\
+ \delta\rho_0&=u\,[\Delta_{\rm src}-\beta\Delta_{\rm PS}].
+ \label{eq:delta-audit-defects}
+\end{align}
+If $\Delta_{\rm src}=\Delta_{\rm PS}$ and $\beta=1$, the undamped
+acceptance cancels exactly, whereas the implemented rule rejects too
+little S density. In this limit the latter has an extra source-Sudakov
+suppression relative to the original multiplier.
+This is a finite, potentially logarithmically enhanced difference,
+not by itself a demonstration of an NLO error.
+At fixed resolved kinematics, $\Delta_{\rm src}=1+\mathcal O(\as)$
+makes the difference higher order when the required leading native
+kernel correspondence holds~\cite[Eqs.~(3.6)--(3.8)]{DeltaMatching}.
+
+A bounded undamped prescription also requires its own hard residual.
+Suppose more generally that a \emph{common} factor can be extracted,
+$H_{-,\Delta}=\Delta_{\rm src}u$ with
+$u=\pos{D_G-R}$, and that the actual eligible S density is
+$\mathcal E_{S,g}^\Delta=\Delta_{\rm src}K_g$.
+Then the consistent pair, on positive denominators, is
+\begin{equation}
+ v_0=\min\!\left(\frac{u}{K_g},1\right),\qquad
+ a_{H^-}^{(0)}=\max\!\left(1-\frac{K_g}{u},0\right),\qquad
+ H_{-,\rm rem}^{(0)}=\Delta_{\rm src}\pos{u-K_g}.
+ \label{eq:delta-audit-cap}
+\end{equation}
+It transfers $\Delta_{\rm src}\min(u,K_g)$ exactly under these
+assumptions. Retaining the implemented residual
+$\pos{\Delta_{\rm src}u-K_g}$ while changing only the S veto would
+not implement this bounded pair.
+
+The literal substitution $v_0=\pos{K_g-R}/K_g$ is \emph{not adopted}
+for the general source. First, $D_G$ contains the native G/spin
+completion, measures and support, and is not identically $K_g$.
+Assuming leading native correspondence and $\Delta_\nu=1+\mathcal O(\as)$,
+changing only the S veto while retaining the current H cap would give
+the leading difference
+\begin{equation}
+ \delta\rho_{\rm literal}
+  =\min\{\pos{D_G-R},K_g\}-\pos{K_g-R}
+       +\mathcal O(\as^{p+2}).
+ \label{eq:delta-audit-leading}
+\end{equation}
+For complete H removal, omit the minimum in the first term.
+Equality of the removable negative parts at leading order is needed;
+otherwise this replacement can affect NLO terms.
+All densities here must use the same physical measure and eligibility
+support, including the protected-heavy-flavour gates.
+
+Second, history-dependent factors prevent extracting a common
+$\Delta_{\rm src}$ before taking the negative part.
+Even if $D_{G,\nu}=K_\nu$ term by term, the finite example
+$R_\nu=(2,6)$, $K_\nu=(6,1)$ and $\Delta_\nu=(1,0.2)$ gives
+$H_\Delta=-3$, while the globally summed $R=8$ and $K_g=7$ give
+$v_0=0$. This sign change obstructs that finite factorization;
+it does not establish a failure of its fixed-order expansion.
+
+An alternative at the globally summed level could retain the undamped density
+$H_0=\sum_\nu(R_\nu-D_{G,\nu})$ in the S numerator, preserving its
+G completion rather than replacing it by $R-K_g$.
+This global substitution is not implemented: the negative-part
+obstruction just exhibited remains. The sampled construction below
+instead retains component labels before sign selection, specifies both
+decisions, and avoids source-$\Delta$ evaluation at S emissions.
+The measured results in this paper use the original global conditional
+rule, not this subsequent implementation.
+
+\input{sections/sampled_components}
+
+\section{Mass conventions and preservation of the hard phase space}
+\label{sec:masses-contract}
+
+\subsection{The hard point and the written MC-mass event differ}
+\label{sec:masses-shuffle}
+
+The real matrix element, MC counterterm and analytic shower kernel
+are densities on specified phase spaces.
+Changing the external masses changes those phase spaces:
+\begin{equation}
+ \dd\Phi_R(m)=
+  (2\pi)^4\delta^{(4)}
+     \!\left(p_1+p_2-\sum_{\ell\in{\rm out}}p_\ell\right)
+  \prod_{\ell\in{\rm out}}
+     \frac{\dd^3p_\ell}{(2\pi)^3\,2E_\ell},
+ \qquad
+ E_\ell^2=\boldsymbol p_\ell^2+m_\ell^2 .
+ \label{eq:masses-phase-space}
+\end{equation}
+Incoming beam fractions, flux conventions and masses must also be
+specified in the hadronic measure.
+Evaluating a massless hard matrix element at a different massive
+MC shell does not define the required density ratio.
+
+The ordinary writer can transport $q_{\rm hard}$ to a written
+$q_{\rm MC}$ using \code{\detokenize{put_on_MC_mshell}} and related routines in
+\code{\detokenize{Template/NLO/SubProcesses/add_write_info.f}}.
+It changes momenta as well as declared masses.
+The operation includes phase-space regeneration and specialized
+initial- and final-state transports.
+It is not a universal replacement
+$E\mapsto\sqrt{\boldsymbol p^2+m_{\rm MC}^2}$ at fixed three-momentum:
+conservation and the selected kinematic chart constrain the change.
+
+The nominal writer inputs in
+\code{\detokenize{Template/NLO/SubProcesses/MCmasses_PYTHIA8.inc}}
+include
+\begin{center}
+\begin{tabular}{lrrrrrr}
+\toprule
+Species & $u,d$ & $s$ & $c$ & $b$ & $e$ & $g$\\
+\midrule
+MC mass [GeV] &
+ $0.33$ & $0.50$ & $1.50$ & $4.80$ &
+ $0.000510998928$ & $0$\\
+\bottomrule
+\end{tabular}
+\end{center}
+Special kinematic cases can modify how those inputs are applied.
+In the five-flavour hard model used here,
+$u,d,s,c,b,g$ are massless.
+The four-flavour Wbb hard model has a $4.7\GeV$ bottom and no
+incoming bottom PDF.
+Its writer mass $4.80\GeV$ is not interchangeable with $4.7\GeV$.
+The top is retained at $173\GeV$.
+
+Given an invertible transport $\Psi_{\rm MC}$ and its Jacobian,
+one could in principle pull the measures back to common coordinates:
+\begin{equation}
+ q_{\rm MC}=\Psi_{\rm MC}(q_{\rm hard}),\qquad
+ f_{\rm MC}(q_{\rm MC})=
+ f_{\rm hard}\!\left(\Psi_{\rm MC}^{-1}(q_{\rm MC})\right)
+ \left|\frac{\partial q_{\rm hard}}{\partial q_{\rm MC}}\right|.
+ \label{eq:masses-pullback}
+\end{equation}
+The determinant denotes independent phase-space coordinates and
+the specified induced measure; it is not a determinant of all
+constrained four-vector components.
+This would also require the source partitions, scales and
+history-specific Born projections.
+The equality of a few masses, or agreement of one inclusive rate,
+does not establish that inverse transport.
+The present implementation does not claim a general inverse
+mass-shuffle map for arbitrary older LHE files.
+
+\subsection{Preserve the original point before the transport}
+\label{sec:masses-annotation}
+
+With \code{\detokenize{store_hard_momenta=True}}, the writer captures the
+external hard momenta before the MC-mass transport changes its
+mass inputs and shared Born data.
+For H it stores the real configuration; for S it stores the
+underlying Born configuration.
+The ordinary body, nominal weight and source physics are unchanged.
+
+The versioned \code{\detokenize{macnlops_hard_event}} block records
+the lab-frame point with 17-digit momentum output, hard masses,
+flavours, statuses, ancestry and colours, together with the
+source and partition metadata.
+The native importer verifies external identities against the ordinary
+body and uses the preserved point as the first-step LHA presentation.
+The remassed body remains provenance.
+This extra information preserves ordinary source physics, but goes
+beyond the minimum content of an anonymous conventional LHE event.
+
+In \code{CountingReader}, the stock reader first reads and checks
+the ordinary record; the application then replaces its presentation
+with the qualified hard state, retaining the event header and weight.
+For $\Delta$, production scales are mapped to the external legs
+rather than assuming that auxiliary resonance entries have the same
+positions in both lists.
+The Python evaluator's
+\code{\detokenize{check_hard_mass_coordinates}} checks declared masses
+against the actual exported, restricted model.
+Conflicting masses fail rather than being silently projected.
+
+The phrase \emph{unchanged MC@NLO input} therefore has a precise scope:
+the source LHE and weights are unchanged during matching, and both
+branches can use the same qualified hard information.
+The workflow still requires that information, the source/card context,
+the measured profile and manifests.
+It does not implement arbitrary positive vetoes on any pre-existing
+unannotated MC@NLO file.
+Attaching current model masses to an old remassed body does not
+undo its transport or recover a lost conditional source partition.
+
+\subsection{Mass and flavour choices in the first-step shower}
+\label{sec:masses-shower}
+
+The native first-step profile gives active-flavour quarks and gluons
+their hard-model masses.
+The five-flavour samples use massless $u,d,s,c,b,g$; the four-flavour
+Wbb sample uses massless $u,d,s,c,g$ and $m_b=4.7\GeV$.
+The top stays massive.
+Resolved model parameters, rather than a handwritten default mass
+list, enter the matching settings.
+Contradictory supplied active-flavour masses are rejected.
+
+Zero values of \code{LesHouches:setQuarkMass} and
+\code{LesHouches:setLeptonMass} disable the corresponding import-time
+mass resetting. They do \emph{not} make every quark or lepton massless.
+The supplied bottom and top masses are preserved.
+Particle-data masses and imported record masses must be considered
+together.
+The first-emission hook also checks that Pythia process import has
+not changed the qualified hard configuration.
+
+Initialization can clamp parameters or apply mass-dependent bounds.
+The nominal settings file alone is thus insufficient evidence.
+Before generation, a probe measures the selected runtime's effective
+support, masses, coupling and flavour settings.
+The completed campaign has
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Effective quantity & five-flavour samples & Wbb four-flavour sample\\
+\midrule
+Incoming quark flavours & $5$ & $4$\\
+Allowed $g\to q\bar q$ flavours & $5$ & $4$\\
+Bottom hard/shower mass [GeV] & $0$ & $4.7$\\
+Maximum flavour in stock $\as$ running & $5$ & $5$\\
+Shower $\as(M_Z)$ & $0.120179$ & $0.1149$\\
+Shower $\as$ order & $2$ & $2$\\
+CMW option & off & off\\
+ISR cutoff [GeV] & $0.5$ & $0.5$\\
+FSR cutoff [GeV] & $0.5867333369950679$ & $0.5$\\
+\bottomrule
+\end{tabular}
+\end{center}
+The uninterrupted full-shower reference retains the masses in its
+ordinary event body. A particle-data bottom mass of $4.7\GeV$ in the
+profile does not mean that every imported conventional source-body
+bottom has that mass.
+The massless-bottom profile's measured FSR cutoff is not rounded
+back to the requested $0.5\GeV$.
+The cohort \code{profile.json} files retain these values for
+subsequent showering.
+
+Wbb is a four-flavour hard calculation with a four-flavour PDF,
+massive bottoms, four incoming shower flavours and four allowed
+gluon-splitting flavours.
+Nevertheless, the stock runtime has
+\code{StandardModel:alphaSnfmax=5}.
+These results do not use a patched, fully four-flavour
+running-coupling shower.
+At a common reference coupling, changing the running prescription
+changes perturbative evolution beyond the leading coupling and
+finite resummed predictions.
+The campaign uses the recorded stock prescription; it does not prove
+equivalence of all four-flavour shower conventions.
+
+\subsection{Heavy-flavour thresholds restrict matching support}
+\label{sec:masses-thresholds}
+
+Setting particle-data masses to zero does not remove every internal
+heavy-flavour mechanism.
+The stock forced-conversion treatment retains effective mass floors
+of at least $1.2\GeV$ for charm and $4\GeV$ for bottom.
+A conversion can thus produce a massive sister when that species
+is massless in the hard model.
+The resulting point lies on another mass-shell component.
+A scalar rejection probability does not supply its missing inverse map.
+
+The S eligibility boundary is computed from the \emph{original Born
+incoming flavours} before the first shower step:
+\begin{equation}
+ q_{\rm match}(b)=
+ \max\!\left\{
+ q_{\rm ISR,cut},q_{\rm FSR,cut},
+ \ \sqrt{2}\,m_{a,\rm floor}\ :
+ a\in I_b\cap\{c,b\}\right\}.
+ \label{eq:masses-protected-boundary}
+\end{equation}
+The final set imposes no condition if it is empty.
+An S record with $\pt^{\rm evol}\le q_{\rm match}(b)$ is protected
+from the removal/veto density call and retained.
+The base five-flavour boundary is approximately $0.586733\GeV$.
+Incoming charm or bottom can raise it to about $1.69706\GeV$
+or $5.65685\GeV$, respectively.
+Wbb has base cutoffs $0.5\GeV$, while incoming charm remains active.
+
+This history-dependent restriction, implemented by
+\code{\detokenize{matching_scale}} in \code{macnlops.py},
+is neither a jet-analysis cut nor an additional process-generation cut.
+The leading denominator and actual eligible S population must use
+compatible support. Protected events do not supply capacity to
+compensate H removal.
+Unsupported massive-sister points above the admitted boundary fail
+explicitly; their density is not approximated by a massless
+matrix element.
+Four allowed splitting flavours also prevent a later Wbb shower
+from creating additional bottom pairs by $g\to b\bar b$.
+That choice is part of the declared profile.
+
+\subsection{Numerical consistency checks are not mass transport}
+\label{sec:masses-numerics}
+
+The hard-input check accumulates invariant residuals in extended
+precision and uses a tolerance of order
+$4096\,\epsilon_{\rm mach}E_{\rm event}^2$.
+It distinguishes boost roundoff from a real physical mass change,
+and still rejects an actual charm/bottom mass on a declared
+massless hard shell.
+This consistency tolerance is not an inverse transport or Jacobian.
+
+The large single-top run exposed a massive-top FSR projection with
+one massless spectator.
+Its lab energy was about $4187.9\GeV$ and its computed invariant
+after the shower boost was about $-1.10\times10^{-6}\GeV^2$.
+At $\hat s\simeq2.54\times10^5\GeV^2$, the former clipping bound
+$10^{-12}\hat s$ was insufficient.
+The native forward and inverse projections now use the known
+zero invariant of this \emph{single massless recoil}.
+They do not zero a general physical multi-particle recoil mass
+or change the saved real point.
+The failing production points and the momentum-map regression
+suite were checked against this correction.
+
+A different $\Delta$ H annotation had a maximum momentum-balance
+residual of about $6.9\times10^{-6}\GeV$, or $1.9\times10^{-8}$
+relative to its event scale, with on-shell external legs.
+Annotated input now admits balance residuals up to
+$10^{-7}E_{\rm event}$; plain unannotated input retains the
+$10^{-9}E_{\rm event}$ check.
+The annotation and momenta are not repaired or projected.
+Only the affected chunk was retried, at its original seed;
+completed chunks and source bytes were preserved.
+Regressions still reject a larger defect and the small defect
+presented as plain unannotated input.
+These are numerical accommodations, not support for arbitrary
+nonconserving source events.
+
+\section{The first-emission LHE as a continuation boundary}
+\label{sec:masses-continuation}
+
+\subsection{Three endpoint states}
+\label{sec:masses-three-states}
+
+After an S emission at evolution scale $q_1$, the original shower
+start is not an admissible replacement for the current ceiling.
+Restarting the emitted state at that old scale could radiate in an
+interval already covered by the first-emission competition and its
+Sudakov factor.
+The handoff writes the current ceiling in the ordinary header
+and preserves remaining leg/dipole limits separately.
+
+The writer distinguishes three states:
+\begin{enumerate}
+\item An \emph{emitted S} endpoint has positive
+\code{SCALUP} $=q_1=\pt^{\rm evol}$.
+Its particles and colours are those of the captured native snapshot.
+\item An \emph{exhausted S} endpoint reaches the competing cutoffs
+without an emission. Its positive current scale is
+\begin{equation}
+ q_\epsilon=\tfrac12
+       \min(q_{\rm ISR,cut},q_{\rm FSR,cut}),
+ \label{eq:masses-exhausted-scale}
+\end{equation}
+below both cutoffs, preventing renewed resolved ISR/FSR.
+\item An \emph{unshowered H} endpoint already has real-emission
+multiplicity. It receives no additional matching shower step
+and retains its effective source starting conditions.
+\end{enumerate}
+\code{continuationState} in
+\code{\detokenize{Template/NLO/MCatNLO/srcPythia8/MacNLOPS.cc}}
+implements these distinctions.
+The technical stop that captures the first emission is separate
+from the subsequent physics rejection.
+It does not request another source record or begin another trial.
+
+A $\Delta$ H source can have scalar \code{SCALUP=-1} as an unused
+sentinel while its directed source matrix supplies the physical starts.
+\code{CountingReader} imports that matrix with the stock reader and
+obtains a positive effective global scale.
+The output H endpoint uses this positive current value;
+the old $-1$ is only source provenance.
+Other negative-scale inputs do not acquire that interpretation
+merely by entering the parser.
+
+\subsection{The global ceiling is not the complete dipole state}
+\label{sec:masses-dipole-caps}
+
+Native dipoles can have remaining ceilings smaller than $q_1$.
+Assigning $q_1$ to every dipole would reopen forbidden intervals
+despite a plausible event-header scale.
+The driver reads the post-emission native ISR/FSR caps and maps
+their radiator/recoiler indices onto the written external state.
+A represented native cap $q_d$ is stored as
+\begin{equation}
+ \widetilde q_d=
+ \max\!\left\{q_{\rm floor},\,\min(q_1,q_d)\right\},
+ \qquad q_{\rm floor}=\min(q_1,q_\epsilon).
+ \label{eq:masses-native-cap}
+\end{equation}
+The below-cutoff floor provides positive LHE anchors without opening
+an above-cutoff region.
+ISR anchors belong to incoming legs; FSR anchors belong to directed
+radiator--recoiler pairs.
+Conflicting native caps mapping to one serialized entry are rejected.
+The mapping is checked against the actual written momenta,
+flavours and colours.
+
+This exporter is tied to stock Pythia~8.318 and its public
+dipole-list interface.
+A precision-preserving formatter reads those listings; no
+MAcNLOPS-specific Pythia library patch exposes an additional object.
+Unexpected formats and unrepresentable caps fail explicitly.
+The export preserves relevant ceilings, not every piece of the
+internal shower state.
+It is a version-specific contract rather than a generic guarantee
+for every Pythia~8 release.
+
+For $\Delta$ H, positive leg anchors preserve the imported effective
+global maximum, while directed pair entries restore the associated
+production minima.
+A zero source pair remains zero, since the native directed lookup
+can interpret it as a genuine dipole stop.
+It is not replaced by a newly opened positive evolution interval.
+
+\subsection{Current scales and source provenance have separate roles}
+\label{sec:masses-current-packets}
+
+The emitted endpoint retains its pre-emission hard annotation as
+provenance. That saved Born point must not override the emitted
+$(n+1)$-parton body on reimport.
+An endpoint marker therefore identifies whether the current body
+comes from the shower or from the hard annotation.
+One active current \code{scales} packet contains
+\code{\detokenize{scalup_i}} and directed \code{\detokenize{scalup_i_j}} entries.
+The old source scale packet is renamed to inert
+\code{\detokenize{macnlops_source_scales}}.
+A continuation packet records the current state, scale, original
+source \code{SCALUP} and both cutoffs.
+
+In $\Delta$ mode, the original scale matrix and replay probabilities
+describe the source event.
+After radiation, the added parton's index, colour connections and
+current scales describe another state.
+Reusing old active indices could attach a valid scale to the wrong
+radiator. Recomputing the source $\Delta$ at that emitted point
+would likewise not continue the accepted source event.
+The parsers reject missing/duplicate handoff packets, scales above
+their global ceiling and invalid external-leg references.
+
+The accepted sample is a conventional LHE event list.
+Its single randomized output is
+\begin{center}
+\code{\detokenize{Events/<run>/macnlops/events.lhe.gz}}.
+\end{center} Its body and active scales are consumed by the supported
+continuation interface; extra packets preserve their interpretation.
+The collector retains the original surviving signed weights.
+A smaller survivor count does not trigger normalization back
+to the original number of events.
+
+\subsection{Separate showering and interpretation of the controls}
+\label{sec:masses-full-shower}
+
+The continuation uses a separate shower invocation.
+Its card enables production-scale and directed-dipole import:
+\begin{quote}
+\code{Beams:setProductionScalesFromLHEF = on},\\
+\code{Beams:setDipoleShowerStartingScalesFromLHEF = on}.
+\end{quote}
+It uses unit scale-fudge factors, \code{pTmaxMatch=1}, and local
+rather than global FSR recoil.
+The versioned profile restores exact coupling, mass and cutoff
+inputs, instead of relying only on a rounded settings dump.
+It checks selected Pythia/LHAPDF libraries and PDF data.
+The ISR parameter \code{SpaceShower:pT0Ref=0} is restored with the
+forced native setter: an ordinary card assignment would clamp it
+to a tune-oriented XML minimum and introduce another low-scale
+ISR density.
+
+The application continuation drivers consume retained inputs once.
+A failed shower or a skipped/repeated source record stops the run;
+it does not condition the population by silently selecting successful
+showers.
+They use the nominal LHA weight.
+With strategy $-3$, the sign in Pythia's event-information weight
+alone is not the absolute sum-normalized source weight.
+The MG--Pythia application wrappers are adapted for the handoff
+and this normalization.
+Such wrapper changes are distinct from MAcNLOPS-specific changes
+to the shower library.
+The former \code{MacNLOPSFull.cc} workflow is retired.
+
+The full-shower controls have different starting procedures.
+The uninterrupted reference showers the original collected body,
+including its ordinary MC-mass presentation, with global-recoil
+mode~2 and one allowed global FSR branching.
+The first-step proposal driver instead uses its scalar-matching
+profile: global recoil on, mode~0,
+\code{nMaxGlobalRecoil=100000},
+\code{nMaxGlobalBranch=1}, followed by its technical stop.
+The blue control continues all unrejected proposals with local
+recoil and their written current scales.
+The MAcNLOPS curve selects the already frozen accepted subset
+of those same endpoint continuations.
+
+Thus the black-to-blue difference includes the first-step profile,
+the original remassed versus hard-coordinate presentation, and
+the separate local restart.
+It must not be attributed exclusively to loss of hidden shower
+state or exclusively to H removal/S veto.
+The blue-to-MAcNLOPS difference isolates the recorded selection
+within a common continuation experiment.
+Scale ordering is a necessary handoff condition.
+Preserving scales alone does not prove equality of complete
+shower generating functionals, colour/recoil histories and internal
+state, which is why the separate controls remain necessary.

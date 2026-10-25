@@ -1,0 +1,98 @@
+\subsection{Sampled native components and a Delta-free veto}
+\label{sec:delta-sampled}
+
+Explicit summation is not required by MC@NLO. One may sample native
+history groups and Born colour flows, provided the same physical
+partitions and importance weights are used consistently in its source
+terms. The relevant settings are
+\begin{verbatim}
+#MCExplicitKLSum
+.false.
+#MCSubtractionAtFixedFlow
+.true.
+#FKSExplicitSum
+.false.
+\end{verbatim}
+These settings remove the mixture of differently damped histories from
+the sign of a single sampled H component. Changing the card alone does
+not supply the information needed for later matching. The new source
+writer retains a component $a=(h,d,c)$: native history/sector $h$,
+Born integration diagram $d$, and Born colour flow $c$. The source also
+samples starting-scale and colour-insertion auxiliaries $\lambda$.
+Its H real,
+MC and G rows are combined and certified within that component before
+unweighting. The S sample retains $d,c$, while its original integration
+owner is only provenance. Its actual first shower branching determines
+$h$; all eligible radiators can compete.
+
+The diagram label matters because the source's real and counterterm
+contributions use diagram fractions at their corresponding real-projected
+and underlying Born points. A globally summed evaluator that omits this
+partition is not a local component density. Likewise the physical Born
+flow fraction must remain, although the inverse probability used to
+sample that flow is not divided into the physical density a second time.
+Fixed gluon flow still has two colour connections.
+
+With all physical partitions understood, let
+\begin{equation}
+ H_{0,a}=R_a-D_{G,a},\qquad
+ H_{\Delta,a}(\lambda)=\Delta_a(\lambda) H_{0,a},\qquad
+ u_a=\pos{-H_{0,a}}.
+\end{equation}
+The implemented sampled-$\Delta$ pair is
+\begin{equation}
+ v_{S,a}=\min\!\left(\frac{u_a}{K_a},1\right),\qquad
+ a_{H^-,a}=\max\!\left(1-\frac{K_a}{u_a},0\right),\qquad
+ H_{-,\mathrm{rem},a}=\Delta_a\pos{u_a-K_a}.
+ \label{eq:sampled-delta-pair}
+\end{equation}
+The source event weights are unchanged. For $u_a=0$ there is no S
+rejection; for $K_a=0$ the operational rule keeps the S event and the
+negative H component, making no unsupported transfer. No-emission and
+protected-threshold S events retain their existing treatment.
+The local evaluator replays unit $\Delta$ in the selected component,
+preserving the complete G source algebra while avoiding a numerical
+source-Sudakov evaluation. Ordinary sources instead retain their
+bogus-Sudakov profile and use
+$u_a^{\rm ord}=\pos{P_a(D_{G,a}-R_a)}$ in both decisions.
+
+The S route uses the exact source Born provider and the saved shower
+ancestry. An exchange of identical Born legs requires transforming
+both the configured diagram and the oriented colour-flow basis.
+The generated registry contains interaction trees and colour topologies
+to certify that transformation. Multiple gluon daughter orientations
+are marked with probabilities $K_a/\sum_{a'}K_{a'}$, not with FKS
+partition functions. Native inverse-Born kinematics and incoming
+fractions are checked against the actual pre-shuffle S state.
+
+Identical-particle multiplicities require a common change of measure.
+After removing the reduced source's outer multiplicity
+$F=\mathrm{fac}_i\mathrm{fac}_j$, its native MC kernel still contains
+$I_B/I_R$. Multiplication of all local $R,D,K$ by $I_R/I_B$ gives the
+measure per actual Born emitter. The reduced source represents
+$O=F I_B/I_R$ equivalent emitters; the worker checks that $O$ is a
+positive integer. For $g\to gg$ with $m$ identical outgoing
+Born gluons, $I_R/I_B=m+1$, $F=m(m+1)$ and $O=m$.
+The common factor leaves the local ratios unchanged.
+
+This construction resolves the mixed-component negative-part problem,
+but not every finite-shower difference. In a positive single-component
+description with actual S emission density
+$\beta_a\Delta_{{\rm PS},a}K_a$, Eq.~\eqref{eq:sampled-delta-pair}
+changes the endpoint density by
+\begin{equation}
+ \delta\rho_a=
+ (\overline\Delta_a-\beta_a\Delta_{{\rm PS},a})\min(u_a,K_a),
+ \qquad
+ \overline\Delta_a=\mathbb E_{\lambda\mid q,a}[\Delta_a(\lambda)].
+\end{equation}
+The average uses the source auxiliary law before H unweighting; the
+algorithm does not need to evaluate it. The local undamped numerator
+and kernel are independent of those auxiliaries.
+Exact cancellation requires the corresponding equality of measures;
+equal source and shower factors and $\beta_a=1$ are sufficient in this
+idealization. They are not assumed. Signed S contributions, different
+starting-scale laws, kernel correspondence and later continuations
+still matter. The literal $(1-R_a/K_a)_+$ follows in the special case
+$D_{G,a}=K_a$; more generally the removable negative parts must agree.
+The G/spin completion need not satisfy that condition.

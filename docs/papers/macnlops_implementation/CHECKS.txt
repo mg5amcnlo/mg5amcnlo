@@ -1,0 +1,83 @@
+Document verification, updated 25 October 2026
+
+Scope and factual review
+  The source-density, colour/history-sum, rejection, Delta, mass and
+  continuation descriptions were checked against the branch implementation.
+  Independent reviews covered the rejection algebra, implementation and
+  source contracts, Delta/mass treatment, and numerical tables. Their
+  corrections were incorporated before the final build.
+
+  Tables were checked against completed production checkpoints and frozen
+  first/full-shower summaries for all ten process/source cohorts. All 20
+  completed dataset/level checks passed. Original signed weights and their
+  first/full-shower sums were checked. The paper reports measured differences
+  without attributing them to a uniquely established cause or claiming an
+  unconditional accuracy, positivity or finite-shower equality theorem.
+
+Figures
+  The manifest contains 696 current PDFs and seven historical PDFs, each
+  exactly one page. All 703 SHA256 hashes match the original copied assets.
+  Both complete editions include every asset; all seven historical pages
+  are visibly marked and their original ratio conventions are explained.
+  The selected narrative comparisons are repeated from this archive.
+
+Typesetting
+  The narrative, complete edition and standalone atlas compile successfully.
+  Final logs contain no undefined references or citations, multiply defined
+  labels, overfull boxes, LaTeX errors or hyperref warnings. Title, tables,
+  representative plots and the historical stamp were inspected visually.
+  Page counts are 58 (narrative), 762 (complete), and 704 (standalone atlas).
+
+Reproducibility
+  The source archive includes every figure, generated table, bibliography,
+  numerical evidence snapshot, provenance manifest and implementation patch.
+  Rebuilding the LaTeX does not require MadGraph, Pythia or event samples.
+  prepare_paper.py is an optional campaign refresh, not a build dependency.
+  document_checks.json records the automated checks on the final editions.
+  The ZIP passed its CRC check and contains all 703 figure assets. A fresh
+  extraction rebuilt the narrative with clean final LaTeX logs,
+  without reading project assets from the original source directory.
+
+Limits
+  Static and data checks do not establish an all-order shower theorem or a
+  universal native-trial envelope. The paper identifies those conditions
+  separately. The original document used only completed campaign data;
+  the subsequent sampled implementation adds the focused checks below.
+
+25 October initial review (before the sampled implementation)
+  The Delta subsection now compares the current source-damped transfer to
+  the original undamped veto and states precisely when that simplification
+  is valid. Four rational regression cases check the ideal cancellation,
+  consistent H residual, history-dependent signs and leading G mismatch.
+  The physics prescription used by the completed runs is unchanged.
+
+  Checksum and flavour-routing caches were added after the campaign. An
+  independent code review found no material issues. The combined affected
+  Python suite passes 113 tests; microbenchmarks and source hashes are in
+  post_campaign_review.json. No new events or showers were run.
+
+25 October sampled-component implementation
+  Added the qualified fixed-flow/native-component source, unit-Delta
+  numerator, consistent H residual, actual-emission routing and certified
+  Born diagram/flow transport. Ordinary bogus P is retained. The generator
+  defaults remain unchanged; disabling the outer FKS sum is explicit.
+  Independent reviews checked source/diagram/flow measures, stochastic
+  Delta averaging, identical-particle factors, and source/sidecar/output
+  provenance. The general literal (1-R/K)+ replacement remains unsupported.
+
+  Ten saved endpoints, a fresh physical gg->ggg point, and five ordinary
+  low-P/support controls pass. Temporary abort traps confirm no numerical
+  Delta call in local evaluation; unused H-scale preparation leaves tested
+  densities bitwise unchanged. Tiny new ordinary and Delta source runs
+  exercise genuine negative-H removal, S veto and accepted LHE collection.
+  Their deliberately coarse grids have envelope overshoots and are not
+  precision distribution validations. All campaign plots and tables retain
+  the globally summed prescription used when they were generated.
+
+  sampled_components_review.json records the new verification separately.
+  The final regression suite reports 294 tests: 262 passed and 32 optional
+  tests skipped, with no failures or errors. Two additional compiled
+  Pythia-interface parser tests pass. All 256 genuine sampled proposal
+  sidecars pass the strengthened binding to their written LHE records.
+  All 703 figure hashes still match and both updated paper editions build
+  with no undefined references, citations or overfull boxes.
