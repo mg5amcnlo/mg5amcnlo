@@ -18,7 +18,7 @@ pjoin = os.path.join
 
 class grid_information(object):
 
-    start, stop = -1,1 #original interval
+    start, stop = 0,1 #original interval (xgmin, xgmax of genps.inc)
 
 
     def __init__(self, mc_hel):
@@ -449,18 +449,18 @@ class grid_information(object):
 
         # special Dealing with first/last bin for handling endpoint.
         xmin, xmax = self.min_on_axis[var], self.max_on_axis[var]
-        if (xmin- (-1) > (self.original_grid[(1,var)] - self.original_grid[(0,var)])):
+        if (xmin - self.start > (self.original_grid[(1,var)] - self.original_grid[(0,var)])):
             start = 1
             start_bin = xmin - (self.original_grid[(1,var)] - self.original_grid[(0,var)])/5
             test_grid[0] = start_bin
         else:
-            xmin = -1
-        if (1- xmax) > (self.original_grid[(self.ng-1,var)] - self.original_grid[(self.ng-2, var)]):
+            xmin = self.start
+        if (self.stop - xmax) > (self.original_grid[(self.ng-1,var)] - self.original_grid[(self.ng-2, var)]):
             stop = self.ng -2
             xmax = xmax + (self.original_grid[(self.ng-1,var)] - self.original_grid[(self.ng-2, var)])/5
             test_grid[self.ng-1] = xmax
         else:
-            xmax = 1
+            xmax = self.stop
             test_grid[self.ng-1] = xmax
 
 

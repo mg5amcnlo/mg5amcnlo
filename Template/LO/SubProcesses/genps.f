@@ -757,7 +757,7 @@ c
       integer iopposite ! index for t-channel mapping for the part not handle by itree
 c     data nerr/0/
       double precision smin,smax,totmass,totmassin,xa2,xb2,wgt
-      double precision costh,phi,tmin,tmax,t,trange,srem
+      double precision costh,phi,tmin,tmax,t,trange,srem,tjac,tref
       double precision ma2,mb2,m12,mn2,s1, mi2
 c
 c     External
@@ -1047,13 +1047,26 @@ c     $        0d0, -tmin/stot)
 c         t = stot*(-x(-ibranch))
 
 c      else
-c     t is sampled relative to its range [tmin,tmax] such that both
-c     ends are at a fixed position of the grid (x=0: |t| minimal,
-c     x=1: |t| maximal, i.e. the other invariant u minimal)
-         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $        0d0, 1d0)
+c     The first t-channel invariant is sampled in units of stot: its
+c     pole region (cut at fixed |t|) is then at a fixed position of the
+c     grid. The next ones are sampled relative to their range
+c     [tmin,tmax], which moves with the invariant mass of the remaining
+c     system: both ends are then at a fixed position (x=1: |t| maximal,
+c     i.e. the other invariant u minimal)
          trange = tmax - tmin
-         t = tmax - trange*x(-ibranch)
+         if (ibranch.eq.-ns_channel-1) then
+c           (measured from max(tmax,0) to stay in [0,1] if tmax>0)
+            tref = max(tmax, 0d0)
+            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $           (tref-tmax)/stot, (tref-tmin)/stot)
+            t = tref - stot*x(-ibranch)
+            tjac = stot
+         else
+            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $           0d0, 1d0)
+            t = tmax - trange*x(-ibranch)
+            tjac = trange
+         endif
 c      endif
 
 c      call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin_temp,tmax_temp)
@@ -1064,7 +1077,7 @@ c      call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin_temp,tmax_temp)
          call sample_get_x(wgt,x(nbranch+(-ibranch-1)*2),
      &        nbranch+(-ibranch-1)*2,iconfig,0d0,1d0)
          phi = 2d0*pi*x(nbranch+(-ibranch-1)*2)
-         jac = jac*trange*2d0*pi
+         jac = jac*tjac*2d0*pi
 
          
 c
@@ -1241,13 +1254,26 @@ c            tmin = max(tmin,  -stot)
 c         endif
 
 
-c     t is sampled relative to its range [tmin,tmax] such that both
-c     ends are at a fixed position of the grid (x=0: |t| minimal,
-c     x=1: |t| maximal, i.e. the other invariant u minimal)
-         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $        0d0, 1d0)
+c     The first t-channel invariant is sampled in units of stot: its
+c     pole region (cut at fixed |t|) is then at a fixed position of the
+c     grid. The next ones are sampled relative to their range
+c     [tmin,tmax], which moves with the invariant mass of the remaining
+c     system: both ends are then at a fixed position (x=1: |t| maximal,
+c     i.e. the other invariant u minimal)
          trange = tmax - tmin
-         t = tmax - trange*x(-ibranch)
+         if (ibranch.eq.-ns_channel-1) then
+c           (measured from max(tmax,0) to stay in [0,1] if tmax>0)
+            tref = max(tmax, 0d0)
+            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $           (tref-tmax)/stot, (tref-tmin)/stot)
+            t = tref - stot*x(-ibranch)
+            tjac = stot
+         else
+            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $           0d0, 1d0)
+            t = tmax - trange*x(-ibranch)
+            tjac = trange
+         endif
          
 
 c         if ((tmax-tmin)/stot.gt.0.1)then
@@ -1279,7 +1305,7 @@ c      endif
          call sample_get_x(wgt,x(nbranch+(-ibranch-1)*2),
      &        nbranch+(-ibranch-1)*2,iconfig,0d0,1d0)
          phi = 2d0*pi*x(nbranch+(-ibranch-1)*2)
-         jac = jac*trange*2d0*pi
+         jac = jac*tjac*2d0*pi
 c
 c     Finally generate the momentum. The call is of the form
 c     pa+pb -> p1+ p2; t=(pa-p1)**2;   pr = pa-p1
