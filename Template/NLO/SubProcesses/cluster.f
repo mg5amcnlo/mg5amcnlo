@@ -475,7 +475,11 @@ c Set the cluster_scale of the final 2->1 process.
          ! 2->1 process, using the momenta from the 2->2 process.
          cluster_scales(0)=mT_2to2
       endif
-c Set the daughter momenta of the 2->1 process (do not need the mother)
+c Keep the complete core vertex. A coloured core mother (e.g. Wb->t)
+c enters the two-coloured-leg scale in update_cluster_scales, just as
+c the daughters do. Leaving its momentum unset makes that scale depend
+c on stack contents and spoils the equality of native S/H counterterms.
+      p_inter(:,0,0)=pcl(:,3)
       p_inter(:,1,0)=pcl(:,1)
       p_inter(:,2,0)=pcl(:,2)
 c Link the cluster_ij values to the ordering used in cluster_pdg (which
