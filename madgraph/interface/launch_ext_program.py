@@ -416,10 +416,8 @@ class MadLoopLauncher(ExtLauncher):
             rho_square = [[0. for o in range(n)] for _ in range(n)]
             for i in range(n):
                     for k in range(n):
-                            if k > i:
-                                    rho_square[i][k] = res['RMatrix'][i*n + k - i*(i + 1)//2].conjugate()
-                            elif k == i:
-                                    rho_square[i][k] = res['RMatrix'][i*n + k - i*(i + 1)//2] #this line is just here because the diagonal elements should not be conjugated (they are real anyway)
+                            if k >= i: #the line matrix is the upper triangle rho[i][k] = M_i M_k^*, see DensityMatrixObservables.square_matrix
+                                    rho_square[i][k] = res['RMatrix'][i*n + k - i*(i + 1)//2]
                             else:
                                     rho_square[i][k] = rho_square[k][i].conjugate()
                     str_lines.append(('|  ' + str(rho_square[i]), main_color))          
