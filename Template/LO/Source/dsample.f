@@ -225,16 +225,21 @@ c                 need to restore common block
                   cuts_orient(:) = all_cuts_orient(:, i)
                   call prepare_grouping_choice(all_p(1,i), all_wgt(i),i.eq.(iwarp-1)*WARP_SIZE+1)
                enddo
-               call select_grouping(imirror_vec(iwarp), iproc, iconf_vec(iwarp), all_wgt, iwarp)
+               call store_grouping_choice(iwarp)
+               if (ivec.lt.VECSIZE_USED)then
+                  cycle
+               endif
+c              all warps of the vector share the subprocess (iproc)
+c              while the configuration and orientation are chosen per warp
+               call select_grouping_vec(imirror_vec, iproc, iconf_vec, all_wgt, VECSIZE_USED)
 c              events failing the cuts in the selected beam orientation do not contribute
+               do iwarp=1, VECSIZE_USED/WARP_SIZE
                if (imirror_vec(iwarp).eq.1.or.imirror_vec(iwarp).eq.2) then
                   do i=(iwarp-1)*WARP_SIZE+1, iwarp*warp_size
                      if (.not.all_cuts_orient(imirror_vec(iwarp),i)) all_wgt(i)=0d0
                   enddo
                endif
-               if (ivec.lt.VECSIZE_USED)then
-                  cycle
-               endif
+               enddo
 c              reset variable for the next grid               
                ivec = 0
                ilock = 0

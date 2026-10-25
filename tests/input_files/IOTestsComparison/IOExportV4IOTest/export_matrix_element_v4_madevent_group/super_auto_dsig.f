@@ -233,6 +233,199 @@ C       We are using the grouped_processes grid and it is initialized.
       RETURN
       END
 
+      SUBROUTINE STORE_GROUPING_CHOICE(IWARP)
+      IMPLICIT NONE
+C     
+C     Keep a copy of SELPROC/SUMPROB (set by prepare_grouping_choice
+C     for the events of warp IWARP) such that the subprocess can be
+C     selected once the full vector is known (see select_grouping_vec)
+C     
+      INTEGER IWARP
+      INCLUDE 'genps.inc'
+      INCLUDE 'maxconfigs.inc'
+      INCLUDE 'nexternal.inc'
+      INCLUDE 'maxamps.inc'
+      INCLUDE 'vector.inc'
+      DOUBLE PRECISION SELPROC(2, MAXSPROC, LMAXCONFIGS)
+      DOUBLE PRECISION SUMPROB
+      COMMON /TO_GROUPING_SELECTION/SUMPROB,SELPROC
+      DOUBLE PRECISION SELPROC_WARP(2, MAXSPROC, LMAXCONFIGS, NB_WARP)
+      DOUBLE PRECISION SUMPROB_WARP(NB_WARP)
+      COMMON /TO_GROUPING_SELECTION_WARP/SELPROC_WARP, SUMPROB_WARP
+
+      SELPROC_WARP(:,:,:,IWARP) = SELPROC(:,:,:)
+      SUMPROB_WARP(IWARP) = SUMPROB
+      RETURN
+      END
+
+      SUBROUTINE SELECT_GROUPING_VEC(IMIRROR_VEC, IPROC, ICONF_VEC,
+     $  WGT,
+     &     VECSIZE_USED)
+      USE DISCRETESAMPLER
+      IMPLICIT NONE
+C     
+C     Select the subprocess (IPROC), the configuration and the beam
+C     orientation for all the warps of a vector.
+C     All the warps of a vector are evaluated with the same matrix
+C     element, so they must share IPROC, while ICONF/IMIRROR are per
+C      warp.
+C     With a single warp, this is the same as select_grouping.
+C     Otherwise IPROC is drawn according to the PDF weights of the
+C     subprocesses averaged over the warps:
+C     P(I) = 1/NWARP sum_w SUM_{J,K} SELPROC_w(K,I,J)/SUMPROB_w
+C     and (ICONF,IMIRROR) of warp w conditionally to IPROC:
+C     P_w(J,K|I) = SELPROC_w(K,I,J) / SUM_{J,K} SELPROC_w(K,I,J)
+C     the weights of warp w being divided by P(I)*P_w(J,K|I)
+C     
+C     INPUT (via common block): SELPROC_WARP, SUMPROB_WARP
+C     INPUT/OUTPUT: WGT(VECSIZE_USED) multiplied by the jacobian
+C     OUTPUT: IMIRROR_VEC(NB_WARP), IPROC, ICONF_VEC(NB_WARP)
+C     
+      INCLUDE 'genps.inc'
+      INCLUDE 'maxconfigs.inc'
+      INCLUDE 'nexternal.inc'
+      INCLUDE 'maxamps.inc'
+      INCLUDE 'vector.inc'
+      INCLUDE 'run.inc'
+      INTEGER VECSIZE_USED
+      INTEGER IMIRROR_VEC(NB_WARP), IPROC, ICONF_VEC(NB_WARP)
+      DOUBLE PRECISION WGT(*)
+
+      DOUBLE PRECISION SELPROC(2, MAXSPROC, LMAXCONFIGS)
+      DOUBLE PRECISION SUMPROB
+      COMMON /TO_GROUPING_SELECTION/SUMPROB,SELPROC
+      DOUBLE PRECISION SELPROC_WARP(2, MAXSPROC, LMAXCONFIGS, NB_WARP)
+      DOUBLE PRECISION SUMPROB_WARP(NB_WARP)
+      COMMON /TO_GROUPING_SELECTION_WARP/SELPROC_WARP, SUMPROB_WARP
+
+      INTEGER SYMCONF(0:LMAXCONFIGS)
+      COMMON /TO_SYMCONF/ SYMCONF
+      INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
+      INCLUDE 'config_subproc_map.inc'
+      LOGICAL INIT_MODE
+      COMMON/TO_DETERMINE_ZERO_HEL/INIT_MODE
+C     
+C     LOCAL
+C     
+      INTEGER I, J, K, IW, IVEC, NB_WARP_USED, NWARP_NONZERO
+      DOUBLE PRECISION R, TOTWGT, PROCPROB(MAXSPROC), SUMPROC, JAC
+
+      NB_WARP_USED = VECSIZE_USED / WARP_SIZE
+      IF (MAXSPROC.EQ.1.OR.NB_WARP_USED.EQ.1) THEN
+C       the subprocess choice of the warps cannot differ
+        DO IW=1, NB_WARP_USED
+          SELPROC(:,:,:) = SELPROC_WARP(:,:,:,IW)
+          SUMPROB = SUMPROB_WARP(IW)
+          CALL SELECT_GROUPING(IMIRROR_VEC(IW), IPROC, ICONF_VEC(IW),
+     &         WGT, IW)
+        ENDDO
+        RETURN
+      ENDIF
+
+      IF (MC_GROUPED_SUBPROC) THEN
+        WRITE(*,*) 'ERROR: MC over grouped subprocesses not '//
+     &       'supported with several warps'
+        STOP 1
+      ENDIF
+C     
+C     Probability to select each subprocess (averaged over the warps)
+C     
+      PROCPROB(:) = 0D0
+      NWARP_NONZERO = 0
+      DO IW=1, NB_WARP_USED
+        IF (SUMPROB_WARP(IW).EQ.0D0) CYCLE
+        NWARP_NONZERO = NWARP_NONZERO + 1
+        DO I=1,MAXSPROC
+          SUMPROC = 0D0
+          DO J=1,SYMCONF(0)
+            IF(INIT_MODE.OR.CONFSUB(I,SYMCONF(J)).NE.0) THEN
+              SUMPROC = SUMPROC + SELPROC_WARP(1,I,J,IW)
+     &             + SELPROC_WARP(2,I,J,IW)
+            ENDIF
+          ENDDO
+          PROCPROB(I) = PROCPROB(I) + SUMPROC/SUMPROB_WARP(IW)
+        ENDDO
+      ENDDO
+C     
+C     Select the subprocess
+C     
+      IPROC = 0
+      IF (NWARP_NONZERO.GT.0) THEN
+        PROCPROB(:) = PROCPROB(:) / NWARP_NONZERO
+        CALL RANMAR(R)
+        TOTWGT = 0D0
+        DO I=1,MAXSPROC
+          TOTWGT = TOTWGT + PROCPROB(I)
+          IF (R.LT.TOTWGT.AND.PROCPROB(I).GT.0D0) THEN
+            IPROC = I
+            EXIT
+          ENDIF
+        ENDDO
+C       protection against rounding (R close to 1)
+        IF (IPROC.EQ.0) THEN
+          DO I=MAXSPROC,1,-1
+            IF (PROCPROB(I).GT.0D0) THEN
+              IPROC = I
+              EXIT
+            ENDIF
+          ENDDO
+        ENDIF
+      ENDIF
+      IF (IPROC.EQ.0) IPROC = 1
+C     
+C     Select the configuration and orientation of each warp
+C     
+      DO IW=1, NB_WARP_USED
+        SUMPROC = 0D0
+        DO J=1,SYMCONF(0)
+          IF(INIT_MODE.OR.CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
+            SUMPROC = SUMPROC + SELPROC_WARP(1,IPROC,J,IW)
+     &           + SELPROC_WARP(2,IPROC,J,IW)
+          ENDIF
+        ENDDO
+        ICONF_VEC(IW) = 0
+        IF (SUMPROC.GT.0D0) THEN
+          CALL RANMAR(R)
+          R = R*SUMPROC
+          TOTWGT = 0D0
+          DO J=1,SYMCONF(0)
+            IF(INIT_MODE.OR.CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
+              DO K=1,2
+                TOTWGT = TOTWGT + SELPROC_WARP(K,IPROC,J,IW)
+                IF (R.LT.TOTWGT) THEN
+                  ICONF_VEC(IW) = J
+                  IMIRROR_VEC(IW) = K
+                  GOTO 60
+                ENDIF
+              ENDDO
+            ENDIF
+          ENDDO
+ 60       CONTINUE
+        ENDIF
+        IF (ICONF_VEC(IW).NE.0) THEN
+          JAC = SUMPROC / PROCPROB(IPROC)
+     &         / SELPROC_WARP(IMIRROR_VEC(IW),IPROC,ICONF_VEC(IW),IW)
+        ELSE
+C         this subprocess does not contribute for this warp: keep a
+C         valid configuration (needed for clustering) with zero weight
+          JAC = 0D0
+          IMIRROR_VEC(IW) = 1
+          DO J=1,SYMCONF(0)
+            IF(INIT_MODE.OR.CONFSUB(IPROC,SYMCONF(J)).NE.0) THEN
+              ICONF_VEC(IW) = J
+              EXIT
+            ENDIF
+          ENDDO
+          IF (ICONF_VEC(IW).EQ.0) ICONF_VEC(IW) = 1
+        ENDIF
+        DO I=1, WARP_SIZE
+          IVEC = (IW-1)*WARP_SIZE + I
+          WGT(IVEC) = WGT(IVEC)*JAC
+        ENDDO
+      ENDDO
+      RETURN
+      END
+
       SUBROUTINE DSIG_VEC(ALL_P,ALL_WGT,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP
      $ ,ICONF_VEC,IPROC,IMIRROR_VEC,ALL_OUT,VECSIZE_USED)
 C     ******************************************************
@@ -318,10 +511,8 @@ C     DO I=1,MAXSPROC
 C     SUBDIAG(I) = CONFSUB(I,SYMCONF(ICONF_VEC(1)))
 C     ENDDO
 
-C     set the running scale 
-C     and update the couplings accordingly
-      CALL UPDATE_SCALE_COUPLING_VEC(ALL_P, ALL_WGT, ALL_Q2FACT,
-     $  VECSIZE_USED)
+C     the running scale and the couplings are set in DSIGPROC_VEC
+C     (on the permuted/mirrored momenta seen by the matrix element)
 
       IF(GROUPED_MC_GRID_STATUS.EQ.0) THEN
 C       If we were in the initialization phase of the grid for MC over
@@ -911,8 +1102,10 @@ C     endif
 C     set the running scale 
 C     and update the couplings accordingly (but deactivate for
 C      discrete sampler(imode=5) and 
+C     use P1 (permuted/mirrored momenta) to be consistent with the
+C      matrix element
       IF (VECSIZE_MEMMAX.LE.1.AND.IMODE.NE.5) THEN  ! no-vector (NB not VECSIZE_USED!)
-        CALL UPDATE_SCALE_COUPLING(PP, WGT)
+        CALL UPDATE_SCALE_COUPLING(P1, WGT)
       ENDIF
 
 
@@ -1002,6 +1195,8 @@ C      called from elsewhere) and when set to 0, it resets the cache.
       DATA LAST_ICONF/-1/
       COMMON/TO_LAST_ICONF/LAST_ICONF
       INTEGER IVEC
+      INTEGER IMIRROR_GLOBAL, IPROC_GLOBAL
+      COMMON/TO_MIRROR/ IMIRROR_GLOBAL, IPROC_GLOBAL
 C     
 C     EXTERNAL FUNCTIONS
 C     
@@ -1075,6 +1270,23 @@ C           Flip beam identity -> moved to auto_dsigX (since depend of
 C            the warp)
           ENDDO
 
+        ENDIF
+C       set the running scale and update the couplings accordingly,
+C       using the momenta/config/mirror of this warp (as the matrix
+C        element)
+        IF (IMODE.NE.5) THEN
+          ICONFIG=SYMCONF(ICONF_VEC(CURR_WARP))
+          DO I=1,MAXSPROC
+            SUBDIAG(I) = CONFSUB(I,ICONFIG)
+          ENDDO
+          IMIRROR_GLOBAL = IMIRROR
+          IPROC_GLOBAL = IPROC
+          DO IVEC = (CURR_WARP-1)*WARP_SIZE+1,CURR_WARP*WARP_SIZE
+            XBK(:) = ALL_XBK(:,IVEC)
+            CM_RAP = ALL_CM_RAP(IVEC)
+            CALL UPDATE_SCALE_COUPLING_IVEC(ALL_P1(0,1,IVEC),
+     &              ALL_WGT(IVEC), ALL_Q2FACT(1,IVEC), IVEC)
+          ENDDO
         ENDIF
       ENDDO
 

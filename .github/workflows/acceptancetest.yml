@@ -898,10 +898,11 @@ jobs:
       - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
-      - name: test one of the test test_group_subprocess
+      - name: test grouped vs non-grouped output (test_group_subprocess*)
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_group_subprocess -pA -t0 -l INFO
+            ./tests/test_manager.py test_group_subprocess_permuted_scale -pA -t0 -l INFO
 
 
 

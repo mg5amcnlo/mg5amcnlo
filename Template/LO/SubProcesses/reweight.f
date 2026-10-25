@@ -1371,6 +1371,9 @@ c     q2bck holds the central q2fact scales
       real*8 q2bck(2)
       integer njets,iqjets(nexternal)
       common /to_rw/jlast,njetstore,iqjetstore,njets,iqjets,q2bck
+c     per-event copy of q2bck (set in update_scale_coupling_ivec)
+      double precision all_q2bck(2,VECSIZE_MEMMAX)
+      common /to_rw_vec/all_q2bck
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
@@ -1462,6 +1465,8 @@ c     Store pdf information for systematics studies (initial)
       endif
 
 
+c     restore q2bck of this event (set by the first call to setclscales)
+      q2bck(:) = all_q2bck(:,ivec)
       if(.not.setclscales(p,.true., ivec)) then ! assign the correct id information.(preserve q2bck)
 c         write(*,*) "Fail to cluster the events from the rewgt function"
 c         stop 1
@@ -1824,37 +1829,37 @@ c            s_rwfact=0d0
       end
 
       subroutine update_scale_coupling(p, wgt)
+c     Scalar version. P must be the momenta seen by the matrix element,
+c     i.e. after the symmetry permutation and mirroring of DSIGPROC.
       implicit none
-
-C
-C     PARAMETERS
-C
-      real*8 PI
-      parameter( PI = 3.14159265358979323846d0 )
-      
-      include 'genps.inc'
-
       include 'nexternal.inc'
-      include 'maxamps.inc'
-c     include 'vector.inc' ! defines VECSIZE_MEMMAX
-      include 'cluster.inc'     ! includes vector.inc that defines VECSIZE_MEMMAX
-      include 'run.inc'
-      include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
-C      include 'maxparticles.inc'
-      
-      double precision all_p(4*maxdim/3+14,1), all_wgt(1)
-      double precision p(4*maxdim/3+14), wgt
-      double precision all_q2fact(2,1)
-      all_p(:,1) = p(:)
-      all_wgt(1) = wgt
-      call update_scale_coupling_vec(all_p, all_wgt,all_q2fact, 1)
-      wgt = all_wgt(1)
+      double precision p(0:3,nexternal), wgt
+      double precision q2fact_dum(2)
+      call update_scale_coupling_ivec(p, wgt, q2fact_dum, 1)
       return
       end
 
       
       subroutine update_scale_coupling_vec(all_p, all_wgt,all_q2fact, VECSIZE_USED)
       implicit none
+      include 'genps.inc'
+      double precision all_p(4*maxdim/3+14,*), all_wgt(*)
+      double precision all_q2fact(2,*)
+      integer i, VECSIZE_USED
+
+      do i =1, VECSIZE_USED
+         call update_scale_coupling_ivec(all_p(1,i), all_wgt(i),
+     &        all_q2fact(1,i), i)
+      enddo
+      return
+      end
+
+
+      subroutine update_scale_coupling_ivec(p, wgt, q2fact_out, ivec)
+c     Set the scales (and the xqcut veto) of event IVEC and update the
+c     couplings accordingly. P must be the momenta seen by the matrix
+c     element, with ICONFIG and IPROC/IMIRROR set for that event.
+      implicit none
 
 C
 C     PARAMETERS
@@ -1871,9 +1876,9 @@ c     include 'vector.inc' ! defines VECSIZE_MEMMAX
       include 'coupl.inc' ! needs VECSIZE_MEMMAX (defined in vector.inc)
 C      include 'maxparticles.inc'
       
-      double precision all_p(4*maxdim/3+14,*), all_wgt(*)
-      double precision all_q2fact(2,*)
-      integer i,j,k, VECSIZE_USED
+      double precision p(0:3,nexternal), wgt
+      double precision q2fact_out(2)
+      integer ivec
 
       logical setclscales
       external setclscales
@@ -1883,54 +1888,49 @@ C      include 'maxparticles.inc'
 
       double precision all_scale(VECSIZE_MEMMAX)
       common/to_scale_vec/all_scale
+c     Common block for reweighting info
+c     q2bck holds the central q2fact scales
+      integer jlast(2)
+      integer njetstore(lmaxconfigs),iqjetstore(nexternal-2,lmaxconfigs)
+      real*8 q2bck(2)
+      integer njets,iqjets(nexternal)
+      common /to_rw/jlast,njetstore,iqjetstore,njets,iqjets,q2bck
+c     per-event copy of q2bck (restored in rewgt)
+      double precision all_q2bck(2,VECSIZE_MEMMAX)
+      common /to_rw_vec/all_q2bck
       
-c     integer firsttime
-c      data firsttime/.true./
-c      save firsttime
       if(.not.fixed_ren_scale) then
          scale = 0d0
+         call set_ren_scale(p,scale)
+         if(scale.gt.0)then
+            G = SQRT(4d0*PI*ALPHAS(scale))
+            all_scale(ivec) = scale
+         endif
       endif
-      do i =1, VECSIZE_USED
 
-         if(.not.fixed_ren_scale) then
-            call set_ren_scale(all_p(1,i),scale)
-            if(scale.gt.0)then
-               G = SQRT(4d0*PI*ALPHAS(scale))
-               all_scale(i) = scale
-            endif
-         endif
+      if(.not.fixed_fac_scale1.or..not.fixed_fac_scale2) then
+         call set_fac_scale(p,q2fact)
+      endif
 
-         if(.not.fixed_fac_scale1.or..not.fixed_fac_scale2) then
-            call set_fac_scale(all_p(1,i),q2fact)
-         endif
-
-         if(.not.setclscales(all_p(1,i) , .false., i))then
-            all_wgt(i) = 0d0
-         else
-            all_q2fact(1,i) = q2fact(1)
-            all_q2fact(2,i) = q2fact(2)
-            vec_igraph(i) = igraphs(1)
-         endif
-c         call save_cl_val_to(i)
-c      endif
+      if(.not.setclscales(p, .false., ivec))then
+         wgt = 0d0
+      else
+         q2fact_out(1) = q2fact(1)
+         q2fact_out(2) = q2fact(2)
+         vec_igraph(ivec) = igraphs(1)
+      endif
+      all_q2bck(:,ivec) = q2bck(:)
 
 c     Set couplings in model files
-        if(.not.fixed_ren_scale.or..not.fixed_couplings) then
-           if (.not.fixed_couplings)then
-              write(*,*) 'form factor with fixed_couplings not supported anymore'
-              write(*,*) ' please update model to use lorentz structure        '
-              stop 5
-c              pp(:)=all_p(:,i)
-           endif
-           call update_as_param(i)
-        endif
+      if(.not.fixed_ren_scale.or..not.fixed_couplings) then
+         if (.not.fixed_couplings)then
+            write(*,*) 'form factor with fixed_couplings not supported anymore'
+            write(*,*) ' please update model to use lorentz structure        '
+            stop 5
+         endif
+         call update_as_param(ivec)
+      endif
 
-c      IF (FIRSTTIME) THEN
-c        FIRSTTIME=.FALSE.
-c        write(6,*) 'alpha_s for scale ',scale,' is ', G**2/(16d0*atan(1d0))
-c      ENDIF
-
-      enddo
       return
       end
       
