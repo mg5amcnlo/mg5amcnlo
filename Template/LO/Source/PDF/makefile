@@ -44,15 +44,11 @@ ifdef lhapdf
   PDF         += pdfwrap_lhapdf.o pdg2pdf_lhapdf6.o
   ifeq ($(lhapdfversion),5)
     $(error Bad lhadpfversion version 6 is now required)
+  else ifneq (,$(filter 0 1,$(lhapdfsubversion))) # 6.0.X, 6.1.X
+    $(error LHAPDF 6.2 or later is required)
   else
-    ifeq ($(lhapdfsubversion),1) # 6.1.X
-	PDF         += pdf_lhapdf6.o
-        TOREMOVE += pdf_lhapdf62.o
-    else # 6.2.X
-        CXXFLAGS+=-std=c++11
-	PDF  += pdf_lhapdf62.o
-	TOREMOVE += pdf_lhapdf6.o
-    endif    
+    CXXFLAGS+=-std=c++11
+    PDF  += pdf_lhapdf62.o
   endif
 else
   TOREMOVE += pdfwrap_lhapdf.o
