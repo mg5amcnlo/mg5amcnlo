@@ -11,6 +11,18 @@
 #include "LHAPDF/Paths.h"
 #include "LHAPDF/Version.h"
 #include "LHAPDF/LHAGlue.h"
+
+// Optional metadata entries are read without exceptions: LHAPDF's
+// get_entry_as(key, fallback) throws and catches internally when the key is
+// missing from the member, the set and the global configuration, and that
+// catch is never reached in an executable linked by gfortran with some
+// toolchains (Homebrew GCC on macOS): the program aborts with
+// "MetadataError: Metadata for key: ... not found", e.g. for AlphaS_Lambda4
+// with PDF sets that give alpha_s as a table (NNPDF4.0 QED).
+template <typename T>
+static T lhapdf_entry_or(const LHAPDF::Info& info, const std::string& key, const T& fallback) {
+  return info.has_key(key) ? info.get_entry_as<T>(key) : fallback;
+}
 #include <boost/shared_ptr.hpp>
 #include <boost/foreach.hpp>
 #include <boost/algorithm/string.hpp>
@@ -732,17 +744,17 @@ extern "C" {
 
     // Extract parameters for common blocks (with sensible fallback values)
     lhapdf_amc::PDFPtr pdf = lhapdf_amc::ACTIVESETS[1].activemember();
-    w50513_.xmin = pdf->info().get_entry_as<double>("XMin", 0.0);
-    w50513_.xmax = pdf->info().get_entry_as<double>("XMax", 1.0);
-    w50513_.q2min = LHAPDF::sqr(pdf->info().get_entry_as<double>("QMin", 1.0));
-    w50513_.q2max = LHAPDF::sqr(pdf->info().get_entry_as<double>("QMax", 1.0e5));
-    w50512_.qcdl4 = pdf->info().get_entry_as<double>("AlphaS_Lambda4", 0.0);
-    w50512_.qcdl5 = pdf->info().get_entry_as<double>("AlphaS_Lambda5", 0.0);
-    lhapdfr_.qcdlha4 = pdf->info().get_entry_as<double>("AlphaS_Lambda4", 0.0);
-    lhapdfr_.qcdlha5 = pdf->info().get_entry_as<double>("AlphaS_Lambda5", 0.0);
+    w50513_.xmin = lhapdf_entry_or<double>(pdf->info(), "XMin", 0.0);
+    w50513_.xmax = lhapdf_entry_or<double>(pdf->info(), "XMax", 1.0);
+    w50513_.q2min = LHAPDF::sqr(lhapdf_entry_or<double>(pdf->info(), "QMin", 1.0));
+    w50513_.q2max = LHAPDF::sqr(lhapdf_entry_or<double>(pdf->info(), "QMax", 1.0e5));
+    w50512_.qcdl4 = lhapdf_entry_or<double>(pdf->info(), "AlphaS_Lambda4", 0.0);
+    w50512_.qcdl5 = lhapdf_entry_or<double>(pdf->info(), "AlphaS_Lambda5", 0.0);
+    lhapdfr_.qcdlha4 = lhapdf_entry_or<double>(pdf->info(), "AlphaS_Lambda4", 0.0);
+    lhapdfr_.qcdlha5 = lhapdf_entry_or<double>(pdf->info(), "AlphaS_Lambda5", 0.0);
     lhapdfr_.nfllha = 4;
     // Activate legacy/compatibility LHAPDF5-type behaviour re. broken Lambda values
-    if (pdf->info().get_entry_as<bool>("Pythia6LambdaV5Compat", true)) {
+    if (lhapdf_entry_or<bool>(pdf->info(), "Pythia6LambdaV5Compat", true)) {
       w50512_.qcdl4 = 0.192;
       w50512_.qcdl5 = 0.192;
       lhapdfr_.qcdlha4 = 0.192;
@@ -988,7 +1000,7 @@ int LHAPDF::getOrderAlphaS(int nset) {
     throw LHAPDF::UserError("Trying to use LHAGLUE set #" + LHAPDF::to_str(nset) + " but it is not initialised");
   CURRENTSET = nset;
   // return alphaS Order for the requested set
-  return ACTIVESETS[nset].activemember()->info().get_entry_as<int>("AlphaS_OrderQCD", -1);
+  return lhapdf_entry_or<int>(ACTIVESETS[nset].activemember()->info(), "AlphaS_OrderQCD", -1);
 }
 
 
@@ -1001,7 +1013,7 @@ int LHAPDF::getOrderPDF(int nset) {
     throw LHAPDF::UserError("Trying to use LHAGLUE set #" + LHAPDF::to_str(nset) + " but it is not initialised");
   CURRENTSET = nset;
   // return PDF order for the requested set
-  return ACTIVESETS[nset].activemember()->info().get_entry_as<int>("OrderQCD", -1);
+  return lhapdf_entry_or<int>(ACTIVESETS[nset].activemember()->info(), "OrderQCD", -1);
 }
 
 
@@ -1014,7 +1026,7 @@ double LHAPDF::getLam4(int nset, int nmem) {
     throw LHAPDF::UserError("Trying to use LHAGLUE set #" + LHAPDF::to_str(nset) + " but it is not initialised");
   CURRENTSET = nset;
   ACTIVESETS[nset].loadMember(nmem);
-  return ACTIVESETS[nset].activemember()->info().get_entry_as<double>("AlphaS_Lambda4", -1.0);
+  return lhapdf_entry_or<double>(ACTIVESETS[nset].activemember()->info(), "AlphaS_Lambda4", -1.0);
 }
 
 
@@ -1027,7 +1039,7 @@ double LHAPDF::getLam5(int nset, int nmem) {
     throw LHAPDF::UserError("Trying to use LHAGLUE set #" + LHAPDF::to_str(nset) + " but it is not initialised");
   CURRENTSET = nset;
   ACTIVESETS[nset].loadMember(nmem);
-  return ACTIVESETS[nset].activemember()->info().get_entry_as<double>("AlphaS_Lambda5", -1.0);
+  return lhapdf_entry_or<double>(ACTIVESETS[nset].activemember()->info(), "AlphaS_Lambda5", -1.0);
 }
 
 
