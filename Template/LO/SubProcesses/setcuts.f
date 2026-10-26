@@ -947,8 +947,8 @@ c**************************************************
                   foundpartner=.true.
                   if(iabs(idup(iforest(2,k,j),1,1)).le.maxjetflavor.or.
      $                 idup(iforest(2,k,j),1,1).eq.21.or.
-     $                 iabs(idup(iforest(2,k,j),1,1)).le.maxjetflavor.or.
-     $                 idup(iforest(2,k,j),1,1).eq.21)then
+     $                 iabs(idup(iforest(1,k,j),1,1)).le.maxjetflavor.or.
+     $                 idup(iforest(1,k,j),1,1).eq.21)then
                      if (do_cuts(iforest(2,k,j)).and. do_cuts(iforest(1,k,j)))then
                         xqcutij(iforest(2,k,j),iforest(1,k,j))=xqcut
                         xqcutij(iforest(1,k,j),iforest(2,k,j))=xqcut
