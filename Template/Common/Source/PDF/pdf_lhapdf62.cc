@@ -920,18 +920,21 @@ extern "C" {
 
   /// Get the nf'th quark threshold
   void getthresholdm_(const int& nset, const int& nf, double& Q) {
-    try {
-      if (ACTIVESETS.find(nset) == ACTIVESETS.end())
-        throw LHAPDF::UserError("Trying to use LHAGLUE set #" + LHAPDF::to_str(nset) + " but it is not initialised");
-      if      (nf*nf ==  1) Q = ACTIVESETS[nset].activeMember()->info().get_entry_as<double>("ThresholdDown");
-      else if (nf*nf ==  4) Q = ACTIVESETS[nset].activeMember()->info().get_entry_as<double>("ThresholdUp");
-      else if (nf*nf ==  9) Q = ACTIVESETS[nset].activeMember()->info().get_entry_as<double>("ThresholdStrange");
-      else if (nf*nf == 16) Q = ACTIVESETS[nset].activeMember()->info().get_entry_as<double>("ThresholdCharm");
-      else if (nf*nf == 25) Q = ACTIVESETS[nset].activeMember()->info().get_entry_as<double>("ThresholdBottom");
-      else if (nf*nf == 36) Q = ACTIVESETS[nset].activeMember()->info().get_entry_as<double>("ThresholdTop");
-      //else throw LHAPDF::UserError("Trying to get quark threshold for invalid quark ID #" + LHAPDF::to_str(nf));
-    } catch (...) {
-      getqmassm_(nset, nf, Q);
+    if (ACTIVESETS.find(nset) == ACTIVESETS.end())
+      throw LHAPDF::UserError("Trying to use LHAGLUE set #" + LHAPDF::to_str(nset) + " but it is not initialised");
+    const char* key = 0;
+    if      (nf*nf ==  1) key = "ThresholdDown";
+    else if (nf*nf ==  4) key = "ThresholdUp";
+    else if (nf*nf ==  9) key = "ThresholdStrange";
+    else if (nf*nf == 16) key = "ThresholdCharm";
+    else if (nf*nf == 25) key = "ThresholdBottom";
+    else if (nf*nf == 36) key = "ThresholdTop";
+    //else throw LHAPDF::UserError("Trying to get quark threshold for invalid quark ID #" + LHAPDF::to_str(nf));
+    if (key) {
+      // a missing threshold falls back to the quark mass (no exception, see lhapdf_entry_or)
+      const LHAPDF::Info& info = ACTIVESETS[nset].activeMember()->info();
+      if (info.has_key(key)) Q = info.get_entry_as<double>(key);
+      else getqmassm_(nset, nf, Q);
     }
     // Update current set focus
     CURRENTSET = nset;
