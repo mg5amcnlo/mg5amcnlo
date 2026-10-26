@@ -4423,6 +4423,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         lhapdf_version = self.get_lhapdf_version()
         logger.info('Using LHAPDF v%s interface for PDFs' % lhapdf_version)
+        if lhapdf_version.startswith(('6.0.', '6.1.')):
+            raise MadGraph5Error('LHAPDF %s is not supported anymore: ' % lhapdf_version +
+                'please use LHAPDF 6.2 or later (e.g. "install lhapdf6").')
         lhalibdir = subprocess.Popen([self.options['lhapdf'], '--libdir'],
                  stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
 
