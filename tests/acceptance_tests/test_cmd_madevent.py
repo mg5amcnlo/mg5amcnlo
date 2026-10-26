@@ -494,7 +494,7 @@ class TestMECmdShell(unittest.TestCase):
         self.assertLess(err1 / val1, 0.005)
 
     def test_group_subprocess_permuted_scale(self):
-        """check that grouped (scalar and vector) and non-grouped output agree
+        """check that grouped and non-grouped output (scalar and vector) agree
         when the grouped channels use a symmetry permutation of the momenta
         and the scales depend on the clustering (MLM). see issue #453"""
 
@@ -504,7 +504,8 @@ class TestMECmdShell(unittest.TestCase):
         results = {}
         for name, group, vector_size in [('grouped', True, 1),
                                          ('grouped_vec', True, 16),
-                                         ('nongrouped', False, 1)]:
+                                         ('nongrouped', False, 1),
+                                         ('nongrouped_vec', False, 16)]:
             self.run_dir = pjoin(self.path, 'MGPROC_%s' % name)
             mg_cmd = MGCmd.MasterCmd()
             mg_cmd.no_notification()
@@ -539,9 +540,10 @@ class TestMECmdShell(unittest.TestCase):
 
         val0, err0 = results['nongrouped']
         self.assertGreater(val0, 0)
-        for name in ['grouped', 'grouped_vec']:
+        for name in ['grouped', 'grouped_vec', 'nongrouped_vec']:
             val, err = results[name]
             # without the fix, grouped is ~3% low (about 8 sigma)
+            # and nongrouped_vec gave NaN / "No points passed cuts"
             self.assertLess(abs(val - val0) / math.hypot(err, err0), 4,
                             '%s: %s +- %s vs nongrouped %s +- %s' % (name, val, err, val0, err0))
         

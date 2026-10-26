@@ -112,10 +112,11 @@ C       Set up process information from file symfact
              NFACT=IFACT
           ENDIF
         ENDDO
-	DSIG%(proc_id)s = NFACT
  10     CLOSE(LUN)
+        DSIG%(proc_id)s = NFACT
         RETURN
  20     WRITE(*,*)'Error opening symfact.dat. No symmetry factor used.'
+        DSIG%(proc_id)s = NFACT
         RETURN
       ENDIF
 C     Continue only if IMODE is 0, 4 or 5
@@ -194,7 +195,12 @@ C
 
 ## }
 
+## if(nogrouping) {
+C     Without grouping, DSIG_VEC (called by dsample) is the wrapper defined below
+DOUBLE PRECISION FUNCTION DSIG_NOGROUP_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT, IMODE, ALL_OUT, SYMCONF, CONFSUB, ICONF_VEC, IMIRROR_VEC, VECSIZE_USED)
+## } else {
 DOUBLE PRECISION FUNCTION DSIG%(proc_id)s_VEC(ALL_PP, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT, IMODE, ALL_OUT, SYMCONF, CONFSUB, ICONF_VEC, IMIRROR_VEC, VECSIZE_USED)
+## }
 C ****************************************************
 C
 %(info_lines)s
@@ -447,6 +453,92 @@ C       Call UNWGT to unweight and store events
 
 
 
+
+## if(nogrouping) {
+      SUBROUTINE DSIG_VEC(ALL_P,ALL_WGT,ALL_XBK,ALL_Q2FACT,ALL_CM_RAP,ICONF_VEC,IPROC,IMIRROR_VEC,ALL_OUT,VECSIZE_USED)
+C ****************************************************
+C     Vector entry point called by dsample.f when the subprocesses
+C     are not grouped (same arguments as DSIG_VEC of the grouped output)
+C     No symmetry permutation and no mirror process here:
+C     all warps use ICONFIG and the momenta as generated.
+C     Set the scale and the couplings of each event (done in
+C     DSIGPROC_VEC for the grouped output) and call DSIG_NOGROUP_VEC
+C     INPUT: ALL_P(4*MAXDIM/3+14, VECSIZE_USED)
+C     INPUT/OUTPUT: ALL_WGT(VECSIZE_USED) (set to zero if the clustering fails)
+C     OUTPUT: ALL_OUT(VECSIZE_USED) (PDF*matrix element)
+C ****************************************************
+      IMPLICIT NONE
+      include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX
+      include 'genps.inc'
+      include 'nexternal.inc'
+      include 'maxconfigs.inc'
+      include 'maxamps.inc'
+      include 'run.inc'
+      DOUBLE PRECISION ALL_P(4*MAXDIM/3+14,VECSIZE_MEMMAX)
+      DOUBLE PRECISION ALL_WGT(VECSIZE_MEMMAX)
+      DOUBLE PRECISION ALL_XBK(2,VECSIZE_MEMMAX)
+      DOUBLE PRECISION ALL_Q2FACT(2,VECSIZE_MEMMAX)
+      DOUBLE PRECISION ALL_CM_RAP(VECSIZE_MEMMAX)
+      DOUBLE PRECISION ALL_OUT(VECSIZE_MEMMAX)
+      INTEGER ICONF_VEC(*), IPROC, IMIRROR_VEC(*)
+      INTEGER VECSIZE_USED
+C
+C     GLOBAL VARIABLES
+C
+      INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
+      COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
+      INTEGER IMIRROR_GLOBAL, IPROC_GLOBAL
+      COMMON/TO_MIRROR/ IMIRROR_GLOBAL, IPROC_GLOBAL
+      DOUBLE PRECISION CM_RAP
+      LOGICAL SET_CM_RAP
+      COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
+C
+C     LOCAL VARIABLES
+C
+      INTEGER IVEC, IW, I, J
+      DOUBLE PRECISION ALL_P1(0:3,NEXTERNAL,VECSIZE_MEMMAX)
+      SAVE ALL_P1
+      INTEGER SYMCONF(0:LMAXCONFIGS)
+      INTEGER CONFSUB(MAXSPROC,LMAXCONFIGS)
+      DOUBLE PRECISION XDUM
+      LOGICAL FIRST
+      DATA FIRST/.TRUE./
+      SAVE FIRST
+      DOUBLE PRECISION DSIG_NOGROUP_VEC
+
+C     momenta in the layout of the matrix element
+      DO IVEC=1, VECSIZE_USED
+        DO I=1, NEXTERNAL
+          DO J=0, 3
+            ALL_P1(J,I,IVEC) = ALL_P(4*(I-1)+J+1,IVEC)
+          ENDDO
+        ENDDO
+      ENDDO
+      IPROC = 1
+      DO IW=1, VECSIZE_USED/WARP_SIZE
+        ICONF_VEC(IW) = 1
+        IMIRROR_VEC(IW) = 1
+      ENDDO
+      SYMCONF(:) = ICONFIG
+      CONFSUB(:,:) = MAPCONFIG(ICONFIG)
+      IMIRROR_GLOBAL = 1
+      IPROC_GLOBAL = 1
+      IF (FIRST) THEN
+C       read the symmetry factor (as DSIG(PP,WGT,1) in the scalar mode)
+        XDUM = DSIG_NOGROUP_VEC(ALL_P1, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT, 1, ALL_OUT, SYMCONF, CONFSUB, ICONF_VEC, IMIRROR_VEC, VECSIZE_USED)
+        FIRST = .FALSE.
+      ENDIF
+C     set the running scale and update the couplings of each event
+      DO IVEC=1, VECSIZE_USED
+        XBK(:) = ALL_XBK(:,IVEC)
+        CM_RAP = ALL_CM_RAP(IVEC)
+        CALL UPDATE_SCALE_COUPLING_IVEC(ALL_P1(0,1,IVEC), ALL_WGT(IVEC), ALL_Q2FACT(1,IVEC), IVEC)
+      ENDDO
+      ALL_OUT(:) = 0D0
+      XDUM = DSIG_NOGROUP_VEC(ALL_P1, ALL_XBK, ALL_Q2FACT, ALL_CM_RAP, ALL_WGT, 0, ALL_OUT, SYMCONF, CONFSUB, ICONF_VEC, IMIRROR_VEC, VECSIZE_USED)
+      RETURN
+      END
+## }
 
      SUBROUTINE PRINT_ZERO_AMP%(proc_id)s()
 

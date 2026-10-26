@@ -6068,7 +6068,9 @@ c of an explicit polarisation in the process
             replace_dict['define_subdiag_lines'] = "INTEGER IB(2)"
             replace_dict['cutsdone'] = "      cutsdone=.false.\n       cutspassed=.false."
             replace_dict['get_channel'] = "MAPCONFIG(ICONFIG)"
-            replace_dict['get_channel_vec'] = " channel  = MAPCONFIG(ICONFIG)"
+            replace_dict['get_channel_vec'] = """
+            CHANNELS(IVEC) = MAPCONFIG(ICONFIG)
+            channel = CHANNELS(IVEC)"""
             # need to extract get_helicities/select color from the group template file
             text = open(pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files', 'super_auto_dsig_group_v4.inc')).read()
             color_hel_text = writers.FortranWriter.get_routine(text, ['select_color', 'get_helicities'])
@@ -6144,11 +6146,20 @@ c of an explicit polarisation in the process
         end
 
         SUBROUTINE SELECT_GROUPING_VEC(IMIRROR_VEC, IPROC, ICONF_VEC, WGT, VECSIZE_USED)
+        implicit none
+        include '../../Source/vector.inc'
         integer imirror_vec(*)
         integer iproc
         integer iconf_vec(*)
         double precision WGT(*)
         integer VECSIZE_USED
+        integer iw
+c       single process and no mirror (dsample uses imirror_vec for the cuts)
+        iproc = 1
+        do iw=1, VECSIZE_USED/WARP_SIZE
+           iconf_vec(iw) = 1
+           imirror_vec(iw) = 1
+        enddo
         return
         end
         
