@@ -444,7 +444,9 @@ class grid_information(object):
         
 
         start, stop = 0, self.ng-1
-        start_bin, end_bin = 0, 1 
+        # edges of the original bin being consumed: the first one starts at
+        # the lower end of the interval (xgmin in the fortran rebin)
+        start_bin, end_bin = self.start, self.start
         test_grid = [0]*self.ng   # a first attempt for the new grid
 
         # special Dealing with first/last bin for handling endpoint.
