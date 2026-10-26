@@ -4423,9 +4423,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         lhapdf_version = self.get_lhapdf_version()
         logger.info('Using LHAPDF v%s interface for PDFs' % lhapdf_version)
-        if lhapdf_version.startswith(('6.0.', '6.1.')):
-            raise MadGraph5Error('LHAPDF %s is not supported anymore: ' % lhapdf_version +
-                'please use LHAPDF 6.2 or later (e.g. "install lhapdf6").')
         lhalibdir = subprocess.Popen([self.options['lhapdf'], '--libdir'],
                  stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
 
@@ -4766,9 +4763,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 raise
                 
-        # this will be removed once some issues in lhapdf6 will be fixed
-        if lhapdf_version.startswith('6.0'):
-            raise MadGraph5Error('LHAPDF 6.0.x not supported. Please use v6.1 or later')
+        # the PDF glue (pdf_lhapdf62.cc) requires LHAPDF 6.2 or later
+        if lhapdf_version.startswith(('6.0.', '6.1.')):
+            raise MadGraph5Error('LHAPDF %s not supported. Please use v6.2 or later' % lhapdf_version)
         return lhapdf_version
 
 
