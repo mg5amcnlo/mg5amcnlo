@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 import unittest
+from unittest import mock
 import tempfile
 import madgraph.various.banner as bannermod
 import madgraph.various.misc as misc
@@ -1453,6 +1454,37 @@ c
                 import shutil
                 shutil.rmtree(me_dir)
 
+
+    def test_reset_simd_cleans_compiled_code(self):
+        """changing vector_size/nb_warp must remove the compiled code
+        (VECSIZE_MEMMAX is shared by Source and SubProcesses but not
+        tracked by the makefiles)"""
+
+        source_dir = tempfile.mkdtemp(prefix='mg_simd_')
+        try:
+            with open(pjoin(source_dir, 'makefile'), 'w') as fsock:
+                fsock.write('clean:\n\techo cleaned >> clean_calls\n')
+            marker = pjoin(source_dir, 'clean_calls')
+            run_card = bannermod.RunCardLO()
+            run_card.include_output_dir = source_dir
+            run_card.simd_reset_done = False
+
+            env = dict(os.environ)
+            env.pop('MAKELEVEL', None)
+            # called from make (run_card.inc rule): no clean
+            env_make = dict(env, MAKELEVEL='1')
+            with mock.patch.dict(os.environ, env_make, clear=True):
+                run_card.reset_simd(1, 16, 'vector_size')
+            self.assertFalse(os.path.exists(marker))
+
+            with mock.patch.dict(os.environ, env, clear=True):
+                run_card.reset_simd(1, 16, 'vector_size')
+                # nb_warp changed in the same write: a single clean
+                run_card.reset_simd(1, 2, 'nb_warp')
+            with open(marker) as fsock:
+                self.assertEqual(fsock.read().split(), ['cleaned'])
+        finally:
+            shutil.rmtree(source_dir)
 
 MadLoopParam = bannermod.MadLoopParam
 class TestMadLoopParam(unittest.TestCase):
