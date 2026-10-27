@@ -227,7 +227,7 @@ c
       double precision pole,width,y,xc
       double precision a,b
       double precision xgmin,xgmax       ! these should be identical 
-      parameter (xgmin=-1d0, xgmax=1d0)  ! to the ones in genps.inc
+      parameter (xgmin=0d0, xgmax=1d0)   ! to the ones in genps.inc
 c
 c     s-hat map with a knee (pole=-25), parameters set in set_peaks:
 c     lower end of the log region, fraction of the points in it and

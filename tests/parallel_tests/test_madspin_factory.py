@@ -431,6 +431,20 @@ NON_JOINT_MODES = tuple(m for m in UNWEIGHTING_MODES if m != 'joint')
 #   signal (see below)    0.2126      0.0334      0.0014
 #   signal / replica sd      8.2         1.2         0.1
 #
+# Recalibration: the 8 degrees of freedom above under-estimated the scatter (the
+# joint_replica control failed m(l+ vl) at 0.112 GeV against a 0.110 tolerance,
+# 2.6 sigma of the runs' own errors). Two campaigns of 16 joint replicas
+# (seeds 42-57) off one 5000-event production sample each, one with the code of
+# PR #466 and one with its base -- they agree within their errors, so the
+# three campaigns are pooled (38 degrees of freedom):
+#
+#                       m(l+ vl b)   m(l+ vl)   dphi(l+,l-)
+#   replica sd (PR #466)  0.0411      0.0495      0.0077
+#   replica sd (base)     0.0398      0.0416      0.0124
+#   replica sd (pooled)   0.0379      0.0425      0.0114
+#   naive per-run error   0.0318      0.0434      0.0128
+#   signal / replica sd      5.6         0.8         0.1
+#
 # The *signal* is the bias this test exists to catch. The PR #334 bug made the
 # offshell scheme sample the PA/Breit-Wigner lineshape instead of the offshell
 # one, so a PA run off the same production sample reproduces it: the row above
@@ -440,7 +454,7 @@ NON_JOINT_MODES = tuple(m for m in UNWEIGHTING_MODES if m != 'joint')
 # Three things fall out, and they are the whole design of the test:
 #
 # 1. **Only the lineshape can see it.** m(l+ vl) and dphi(l+,l-) have a
-#    signal-to-noise of 1.2 and 0.1 -- they would not have moved measurably had
+#    signal-to-noise of 0.8 and 0.1 -- they would not have moved measurably had
 #    the bug still been there. They are asserted below as no-regression checks
 #    and must not be read as standing in for the lineshape.
 #
@@ -455,19 +469,19 @@ NON_JOINT_MODES = tuple(m for m in UNWEIGHTING_MODES if m != 'joint')
 #    The plan document's two-replica estimate had joint scattering by 0.005
 #    against a naive error of 0.023, suggesting the runs were strongly
 #    correlated through the shared production events and the naive error was 4x
-#    too loose. Over nine replicas the ratio of replica sd to naive error is
-#    0.82 (lineshape), 0.65 (W mass) and 1.14 (dphi): mildly correlated at
-#    most. The 0.005 was a small-sample fluctuation. The tolerances below are
-#    therefore built on the measured replica sd, which is the thing the test
-#    actually has to survive.
+#    too loose. Over the 41 replicas the ratio of pooled replica sd to naive
+#    error is 1.19 (lineshape), 0.98 (W mass) and 0.89 (dphi): no sign of a
+#    correlation that would shrink it. The 0.005 was a small-sample
+#    fluctuation. The tolerances below are therefore built on the measured
+#    replica sd, which is the thing the test actually has to survive.
 LINESHAPE_CALIB_NEVENTS = 5000
-# Replica sd (GeV, GeV, rad) at LINESHAPE_CALIB_NEVENTS, from the table above.
-CALIB_SD = {'lineshape': 0.0261, 'w_mass': 0.0275, 'dphi': 0.0146}
+# Replica sd (GeV, GeV, rad) at LINESHAPE_CALIB_NEVENTS, pooled recalibration.
+CALIB_SD = {'lineshape': 0.0379, 'w_mass': 0.0425, 'dphi': 0.0114}
 # Two runs differ by sqrt(2) times a single run's scatter, and 4 sigma of that
 # leaves a per-comparison false-positive rate around 6e-5 -- with four
 # comparisons per test, a flake roughly once in four thousand runs. Even if the
-# sd above is underestimated by the ~25% its 8 degrees of freedom allow, that
-# only relaxes to 3.2 sigma.
+# sd above is underestimated by the ~12% its 38 degrees of freedom allow, that
+# only relaxes to 3.6 sigma.
 CALIB_NSIGMA = 4.0
 # Measured offshell-minus-PA on the lineshape: the size of the bias to catch.
 LINESHAPE_SIGNAL = 0.213
@@ -640,7 +654,7 @@ class MadSpinUnweightingTest(_MadSpinFactoryBase):
         **The reconstructed resonance lineshape is that observable.** ``m(l+ vl
         b)`` -- the top reconstructed from its decay products -- is what the
         original bug shifted by 0.25 GeV, and the calibration above measures its
-        signal-to-noise at 8.2 against 1.2 for ``m(l+ vl)`` and 0.1 for
+        signal-to-noise at 5.6 against 0.8 for ``m(l+ vl)`` and 0.1 for
         ``dphi(l+, l-)``. The other two are asserted as no-regression checks and
         nothing more: at those ratios they would not have moved measurably even
         with the bug still in place, so they must never be read as standing in
@@ -716,7 +730,7 @@ class MadSpinUnweightingTest(_MadSpinFactoryBase):
         assert_observable_consistent(
             self, lineshape, lineshape_tol, 'm(l+ vl b) [GeV]',
             reference='joint')
-        # No-regression only (S/N 1.2 and 0.1 against this class of bug).
+        # No-regression only (S/N 0.8 and 0.1 against this class of bug).
         assert_observable_consistent(
             self, w_mass, _consistency_tolerance('w_mass', NEVENTS),
             'm(l+ vl) [GeV] (no-regression only, blind to the lineshape bias)',

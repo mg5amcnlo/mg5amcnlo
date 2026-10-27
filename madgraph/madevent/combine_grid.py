@@ -18,7 +18,7 @@ pjoin = os.path.join
 
 class grid_information(object):
 
-    start, stop = -1,1 #original interval
+    start, stop = 0, 1 # grid interval: [xgmin, xgmax] of genps.inc
 
 
     def __init__(self, mc_hel):
@@ -31,8 +31,8 @@ class grid_information(object):
         self.ng =0
         self.maxinvar=0
         self.nonzero = 0
-        self.max_on_axis = collections.defaultdict(lambda: -1)
-        self.min_on_axis = collections.defaultdict(lambda: 1)
+        self.max_on_axis = collections.defaultdict(lambda: self.start)
+        self.min_on_axis = collections.defaultdict(lambda: self.stop)
         # information that we need to evaluate the cross-section/error
         self.sum_wgt = 0
         self.sum_abs_wgt = 0
@@ -443,32 +443,34 @@ class grid_information(object):
                 grid[(j,var)] = ((x0-1)/math.log(x0))**1.5
         
 
+        # special Dealing with first/last bin for handling endpoint
+        # (as in the rebinning of dsample.f). Grid point i is the upper
+        # edge of bin i: the last one is always self.stop.
         start, stop = 0, self.ng-1
-        start_bin, end_bin = 0, 1 
         test_grid = [0]*self.ng   # a first attempt for the new grid
-
-        # special Dealing with first/last bin for handling endpoint.
         xmin, xmax = self.min_on_axis[var], self.max_on_axis[var]
-        if (xmin- (-1) > (self.original_grid[(1,var)] - self.original_grid[(0,var)])):
+        width_first = self.original_grid[(1,var)] - self.original_grid[(0,var)]
+        width_last = self.original_grid[(self.ng-2,var)] - self.original_grid[(self.ng-3, var)]
+        if xmin - self.start > width_first:
             start = 1
-            start_bin = xmin - (self.original_grid[(1,var)] - self.original_grid[(0,var)])/5
-            test_grid[0] = start_bin
+            xmin = xmin - width_first/5
+            test_grid[0] = xmin
         else:
-            xmin = -1
-        if (1- xmax) > (self.original_grid[(self.ng-1,var)] - self.original_grid[(self.ng-2, var)]):
-            stop = self.ng -2
-            xmax = xmax + (self.original_grid[(self.ng-1,var)] - self.original_grid[(self.ng-2, var)])/5
-            test_grid[self.ng-1] = xmax
+            xmin = self.start
+        if self.stop - xmax > width_last:
+            stop = self.ng - 2
+            xmax = xmax + width_last/5
+            test_grid[self.ng-2] = xmax
         else:
-            xmax = 1
-            test_grid[self.ng-1] = xmax
-
+            xmax = self.stop
+        test_grid[self.ng-1] = self.stop
 
         #compute the value in order to have the same amount in each bin
         sum_var = sum([grid[(j,var)] for j in range(self.ng)])  
         avg = sum_var / (stop-start+1)
         cumulative = 0
         pos_in_original_grid = -1
+        end_bin = xmin
         for j in range(start,stop):
             while cumulative < avg and pos_in_original_grid < self.ng:
                 #the previous bin (if any) is fully belonging to one single bin
@@ -479,9 +481,6 @@ class grid_information(object):
                 start_bin = end_bin
                 end_bin = max(xmin,min(xmax,self.original_grid[(pos_in_original_grid, var)]))
             cumulative -= avg
-            #if pos_in_original_grid == 0:
-            #    print grid[(pos_in_original_grid,var)]
-            #    print cumulative
             if end_bin != start_bin and cumulative and grid[(pos_in_original_grid,var)]: 
                 test_grid[j] = end_bin - (end_bin-start_bin)*cumulative / \
                                                 grid[(pos_in_original_grid,var)]
@@ -493,14 +492,14 @@ class grid_information(object):
         for j in range(1, self.ng):
             if test_grid[j] - test_grid[j-1] < 1e-14:
                 test_grid[j] = test_grid[j-1] + 1e-14
-            if test_grid[j] > xmax:
+            if test_grid[j] > self.stop:
                 sanity = False
                 break
         # not in fortran double check of the sanity from the top.
         if not sanity:
             for j in range(1, self.ng):
-                if test_grid[-1*j] > xmax - j * 1e-14:
-                    test_grid[-1*j] = xmax - j * 1e-14
+                if test_grid[-1*j] > self.stop - (j-1) * 1e-14:
+                    test_grid[-1*j] = self.stop - (j-1) * 1e-14
                 
         # return the new grid
         return test_grid

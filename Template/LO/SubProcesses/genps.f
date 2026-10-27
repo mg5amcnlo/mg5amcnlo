@@ -757,7 +757,7 @@ c
       integer iopposite ! index for t-channel mapping for the part not handle by itree
 c     data nerr/0/
       double precision smin,smax,totmass,totmassin,xa2,xb2,wgt
-      double precision costh,phi,tmin,tmax,t
+      double precision costh,phi,tmin,tmax,t,trange,srem,tjac,tref
       double precision ma2,mb2,m12,mn2,s1, mi2
 c
 c     External
@@ -911,14 +911,22 @@ c
             return
          endif
          call sample_get_x(wgt,x(nbranch-1+(-ibranch)*2),
-     &        nbranch-1+(-ibranch)*2,iconfig,
-     &        smin/stot,smax/stot)
-
-         m(ibranch-1)=dsqrt(max(stot*x(nbranch-1+(-ibranch)*2), 0d0))
+     &        nbranch-1+(-ibranch)*2,iconfig,0d0,1d0)
+c        logarithmic in [smin,smax] (the range depends on the event, so
+c        the grid can not learn the 1/s behaviour in absolute units)
+         if (smin.gt.0d0) then
+            srem = smin*(smax/smin)**x(nbranch-1+(-ibranch)*2)
+            jac = jac*srem*log(smax/smin)/stot
+         else
+            srem = smax*x(nbranch-1+(-ibranch)*2)
+            jac = jac*smax/stot
+         endif
+c        avoid rounding outside [smin,smax] at the end-points
+         srem = min(max(srem, smin), smax)
+         m(ibranch-1)=dsqrt(srem)
 c         write(*,*) 'Using s',nbranch-1+(-ibranch)*2
 
-         if (m(ibranch-1)**2.lt.smin.or.m(ibranch-1)**2.gt.smax
-     $        .or.m(ibranch-1).ne.m(ibranch-1)) then
+         if (srem.ne.srem) then
             jac=-1d0
             return
          endif
@@ -1039,9 +1047,26 @@ c     $        0d0, -tmin/stot)
 c         t = stot*(-x(-ibranch))
 
 c      else
-         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $        -tmax/stot, -tmin/stot)
-         t = stot*(-x(-ibranch))
+c     The first t-channel invariant is sampled in units of stot: its
+c     pole region (cut at fixed |t|) is then at a fixed position of the
+c     grid. The next ones are sampled relative to their range
+c     [tmin,tmax], which moves with the invariant mass of the remaining
+c     system: both ends are then at a fixed position (x=1: |t| maximal,
+c     i.e. the other invariant u minimal)
+         trange = tmax - tmin
+         if (ibranch.eq.-ns_channel-1) then
+c           (measured from max(tmax,0) to stay in [0,1] if tmax>0)
+            tref = max(tmax, 0d0)
+            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $           (tref-tmax)/stot, (tref-tmin)/stot)
+            t = tref - stot*x(-ibranch)
+            tjac = stot
+         else
+            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $           0d0, 1d0)
+            t = tmax - trange*x(-ibranch)
+            tjac = trange
+         endif
 c      endif
 
 c      call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin_temp,tmax_temp)
@@ -1049,17 +1074,10 @@ c      call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin_temp,tmax_temp)
          jac=-3d0
          return
       endif
-c
-c     tmin and tmax set to -s,+s for jacobian because part of jacobian
-c     was determined from choosing the point x from the grid based on
-c     tmin and tmax.  (ie wgt contains some of the jacobian)
-c
-         tmin=-stot
-         tmax= stot
          call sample_get_x(wgt,x(nbranch+(-ibranch-1)*2),
      &        nbranch+(-ibranch-1)*2,iconfig,0d0,1d0)
          phi = 2d0*pi*x(nbranch+(-ibranch-1)*2)
-         jac = jac*(tmax-tmin)*2d0*pi /2d0 ! I need /2d0 if -1<x<1
+         jac = jac*tjac*2d0*pi
 
          
 c
@@ -1236,9 +1254,26 @@ c            tmin = max(tmin,  -stot)
 c         endif
 
 
-         call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $        -tmax/stot, -tmin/stot)
-         t = stot*(-x(-ibranch))
+c     The first t-channel invariant is sampled in units of stot: its
+c     pole region (cut at fixed |t|) is then at a fixed position of the
+c     grid. The next ones are sampled relative to their range
+c     [tmin,tmax], which moves with the invariant mass of the remaining
+c     system: both ends are then at a fixed position (x=1: |t| maximal,
+c     i.e. the other invariant u minimal)
+         trange = tmax - tmin
+         if (ibranch.eq.-ns_channel-1) then
+c           (measured from max(tmax,0) to stay in [0,1] if tmax>0)
+            tref = max(tmax, 0d0)
+            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $           (tref-tmax)/stot, (tref-tmin)/stot)
+            t = tref - stot*x(-ibranch)
+            tjac = stot
+         else
+            call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
+     $           0d0, 1d0)
+            t = tmax - trange*x(-ibranch)
+            tjac = trange
+         endif
          
 
 c         if ((tmax-tmin)/stot.gt.0.1)then
@@ -1267,17 +1302,10 @@ c      endif
             jac=-3d0
             return
          endif
-c
-c     tmin and tmax set to -s,+s for jacobian because part of jacobian
-c     was determined from choosing the point x from the grid based on
-c     tmin and tmax.  (ie wgt contains some of the jacobian)
-c
-         tmin=-stot
-         tmax= stot
          call sample_get_x(wgt,x(nbranch+(-ibranch-1)*2),
      &        nbranch+(-ibranch-1)*2,iconfig,0d0,1d0)
          phi = 2d0*pi*x(nbranch+(-ibranch-1)*2)
-         jac = jac*(tmax-tmin)*2d0*pi /2d0              ! I need /2d0 if -1<x<1
+         jac = jac*tjac*2d0*pi
 c
 c     Finally generate the momentum. The call is of the form
 c     pa+pb -> p1+ p2; t=(pa-p1)**2;   pr = pa-p1

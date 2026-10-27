@@ -1792,7 +1792,10 @@ set boost_choice [6, -6]
 
         for i in range(len(rho_avg)):
             for j in range(len(rho_avg[0])):
-                self.assertAlmostEqual(rho_avg[i][j].real, rho_avg_ref[i][j].real, places=3) #we ask 3 digits because we only use 50k events
+                # 50k events: the statistical uncertainty on the diagonal
+                # elements is O(1e-3), places=3 (5e-4) only held for one
+                # given sequence of events
+                self.assertAlmostEqual(rho_avg[i][j].real, rho_avg_ref[i][j].real, delta=3e-3)
                 self.assertAlmostEqual(rho_avg[i][j].imag, rho_avg_ref[i][j].imag, places=3)
 
 

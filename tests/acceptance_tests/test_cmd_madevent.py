@@ -545,6 +545,65 @@ class TestMECmdShell(unittest.TestCase):
             self.assertLess(abs(val - val0) / math.hypot(err, err0), 4,
                             '%s: %s +- %s vs nongrouped %s +- %s' % (name, val, err, val0, err0))
         
+    def test_t_channel_survey_grid(self):
+        """check that refining on the survey grid is not biased for
+        u q > z u q (all channels pure t-channel chains). With the t-channel
+        invariants sampled in units of the hadronic s and the grid defined
+        on [-1,1], the survey grid starved the regions close to the
+        kinematic end-points (u -> 0, and below the lowest x seen): the
+        rare huge weights from there biased the refine ~2-3% low.
+        Reference from high statistics (8 iterations up to 2.5M points per
+        channel), grouped and non-grouped agreeing: 111.61 +- 0.03 pb"""
+
+        from unittest import mock
+        gen_ximprove = MECmd.gen_ximprove
+
+        target = 111.61
+        results = {}
+        for name, group in [('grouped', True), ('nongrouped', False)]:
+            self.run_dir = pjoin(self.path, 'MGPROC_%s' % name)
+            mg_cmd = MGCmd.MasterCmd()
+            mg_cmd.no_notification()
+            mg_cmd.exec_cmd('set automatic_html_opening False --no_save')
+            mg_cmd.exec_cmd('set group_subprocesses %s' % group)
+            mg_cmd.exec_cmd('define q = u d')
+            mg_cmd.exec_cmd('generate u q > z u q')
+            mg_cmd.exec_cmd('output %s' % self.run_dir)
+
+            run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards', 'run_card.dat'))
+            run_card.set('nevents', 10000, user=True)
+            run_card.set('iseed', 21, user=True)
+            run_card.set('use_syst', False, user=True)
+            run_card.write(pjoin(self.run_dir, 'Cards', 'run_card.dat'))
+
+            self.cmd_line = MECmd.MadEventCmdShell(me_dir=self.run_dir)
+            self.cmd_line.no_notification()
+            self.cmd_line.exec_cmd('set automatic_html_opening False')
+            # never split the refine jobs: they then restart from the
+            # survey grid (with a fixed grid)
+            with mock.patch.object(gen_ximprove.gen_ximprove_v4, 'max_request_event', 10**9):
+                self.do('generate_events -f')
+            results[name] = (self.cmd_line.results.current['cross'],
+                             self.cmd_line.results.current['error'])
+            # the preset grid (setgrid) must stay inside [xgmin, xgmax]:
+            # a bin below xgmin has a negative width, which gives negative
+            # weights in the first survey iteration (barely visible in the
+            # cross-section) and this warning in the channel logs
+            logs = misc.glob(pjoin('P*', 'G*', '*.log'),
+                             pjoin(self.run_dir, 'SubProcesses'))
+            self.assertTrue(logs, 'no survey log found for %s' % name)
+            for log in logs:
+                self.assertFalse('xbin not returning correct x' in open(log).read(),
+                                 '%s: negative width bin in %s' % (name, log))
+
+        val0, err0 = results['nongrouped']
+        val1, err1 = results['grouped']
+        self.assertLess(abs(val1 - val0) / math.hypot(err1, err0), 4,
+                        'grouped %s +- %s vs nongrouped %s +- %s' % (val1, err1, val0, err0))
+        for name, (val, err) in results.items():
+            self.assertLess(abs(val - target) / target, 0.012,
+                            '%s: %s +- %s vs %s' % (name, val, err, target))
+
     def test_e_p_collision(self):
         """check that e p > e j gives the correct result"""
         
