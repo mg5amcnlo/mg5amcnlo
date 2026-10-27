@@ -194,6 +194,28 @@ class TestComponentProtocol(unittest.TestCase):
             with self.assertRaisesRegex(mc.MatchingError, 'exceeds shower density'):
                 density.acceptance()
 
+    def test_signed_pdf_orientation_mark_keeps_physical_signs(self):
+        with tempfile.TemporaryDirectory() as temp:
+            evaluator, digest = self.evaluator(Path(temp))
+            parsed = mc.Event(annotated(registry=digest))
+            candidates = [(Path(temp), 'first', {'sector': 1}),
+                          (Path(temp), 'second', {'sector': 2})]
+            values = [mc.Densities(-1., -2., 0.), mc.Densities(-2., -1., -3.)]
+            with patch.object(evaluator, '_component_requests', return_value=candidates), \
+                    patch.object(evaluator, '_query', side_effect=values):
+                density = evaluator._evaluate_component(parsed, 1)
+            self.assertEqual(density, values[1])
+            self.assertEqual(density.acceptance(signed_residuals=True), 1.)
+            self.assertEqual(density.hard_acceptance(signed_residuals=True), 1.)
+            self.assertEqual(parsed.matching_component['kernel_sign'], -1)
+            self.assertEqual(parsed.matching_component['marking_probability'], 1.)
+            self.assertEqual(parsed.matching_component['candidate_kernels'], [0., -3.])
+            mixed = [mc.Densities(1., 2., 1.), mc.Densities(-2., -1., -3.)]
+            with patch.object(evaluator, '_component_requests', return_value=candidates), \
+                    patch.object(evaluator, '_query', side_effect=mixed), \
+                    self.assertRaisesRegex(mc.MatchingError, 'incompatible PDF signs'):
+                evaluator._evaluate_component(parsed, 2)
+
 
 if __name__ == '__main__':
     unittest.main()

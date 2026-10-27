@@ -6,25 +6,31 @@ Symbol & Meaning\\\midrule\endhead
 $q,b_h,r_h$ & Labelled real point, the Born projection of history $h$, and its radiation coordinates.\\
 $J_h$ & Positive conversion of a native Born/radiation measure to the common real measure.\\
 $R,H,D_{\rm eff}$ & Real density, actual generated hard density, and effective transfer $R-H$.\\
-$H_-$ & Negative part $[-H]_+$ taken after the required physical source sum; not generally a sum of negative parts.\\
+$H_-$ & Negative part $[-H]_+$ in the source partition actually unweighted; a sampled component sign and a global sign differ.\\
 $K_g$ & Eligible positive scalar leading shower density. It contains support and starting-scale marginals, not an actual emission Sudakov.\\
-$C$ & Bounded transfer $\min(H_-,K_g)$ in the ordinary scalar construction.\\
+$C,C_{{\rm ord},a}$ & Bounded transfer $\min(H_-,K_g)$ in the source-density construction, or $\min(P_au_a,K_a)$ for sampled ordinary matching.\\
 $a_S,a_H^-$ & Acceptance of an eligible emitted S event and of a negative H event.\\
 $E_g$ & Actual signed cross-section density of eligible first S emissions, including the source S weights and native shower law.\\
 $E_g^+$ & Corresponding positive-weight S density, used only in the alternative exact-cancellation discussion.\\
 $G;g_s,g_c,g_\phi,\widetilde g_s$ & Source G-function controls and effective completion factors, distinct from event/history eligibility $g,g_h$; these are not branching probabilities.\\
-$P$ & Actual low-scale source multiplier, including the ordinary artificial bogus factor or its Delta replacement where appropriate.\\
+$P_a$ & Ordinary source multiplier, including the bogus profile and its cut convention; distinct from the Delta replacement.\\
 $\Delta_{\rm PS}$ & Physical conditional shower no-harder-emission probability.\\
 $\Delta_{\rm src}$ & Delta source factor/context; not the actual first-emission Sudakov of the vetoed S event.\\
-$ij$ & Outer FKS sector, with unresolved leg $i$ and sister $j$, in source organization.\\
+$\alpha=(i,j)$ & Outer FKS sector/integration owner, with unresolved leg $i$ and sister $j$.\\
 $kl$ & Native emitted/emitter-history label of the explicit MC-history sum; not a Born-colour-flow label.\\
 $c,\ell$ & Born-colour flow and the separate colour-connection label for a selected native history/flow.\\
 $p_c,q_c$ & Physical flow fraction and its Monte Carlo sampling probability; their roles must not be counted twice.\\
-$\zeta,\lambda,z$ & Actual S source/shower state, fresh Delta source-H auxiliary variables, and complete post-first-step state, respectively.\\
+$\zeta,\lambda,z$ & Actual S source/shower state, source scale/insertion auxiliaries (fresh S-side draws only in global compatibility mode), and complete post-first-step state.\\
+$a=(h,d,c)$ & Retained native history, Born configuration/graph, and Born colour flow within the exact source provider.\\
+$H_{0,a},u_a$ & Undamped G-completed local hard density $R_a-D_{G,a}$ and its negative part.\\
+$H_{\rm eval},D_{\rm out}$ & Density used in the probability routine and its output field $R-H_{\rm eval}$; $H_{\rm eval}=H_{0,a}$ for sampled Delta.\\
+$C_{0,a},T_{\Delta,a}$ & Bounded undamped transfer $\min(u_a,K_a)$ and actual removed negative-H measure $\Delta_a C_{0,a}$ at fixed source auxiliary.\\
+$\overline\Delta_a$ & Source-auxiliary mean Delta before H unweighting; the implementation need not evaluate it.\\
+$d_s,F,N,O$ & Original source diagram/channel factor, reduced source multiplicity, $I_R/I_B$ measure conversion, and equivalent-emitter orbit $F/N$.\\
 \bottomrule
 \end{longtable}
 
-The base revision is
+The completed campaign's base revision is
 \code{\detokenize{e96e7f4eac0aa3b4dc6ab58049d729462b64d76e}} with a
 modified working tree. It is not identified with an unmodified tagged
 release. \code{\detokenize{evidence_manifest.json}} records source hashes,
@@ -34,6 +40,15 @@ implementation differences. Runtime source manifests, archived
 per-source cards and the two single-top recovery records determine the
 actual production provenance, which is more specific than the base Git
 revision alone.
+
+The current implementation is commit \code{dd9475234}; the following
+paper/figure archive was committed as \code{2276a707e}. The document
+revision does not change that runtime code. The separate
+\code{\detokenize{current_implementation_manifest.json}} records its
+full revision identities, relevant source hashes, document checks and
+the distinction between the new component prescription and the frozen
+campaign. Earlier review and evidence manifests retain their original
+hashes and scope; they are not rewritten to imply a new campaign.
 
 \code{\detokenize{paper_data.json}} freezes the numerical records used
 for the tables. \code{\detokenize{figure_manifest.json}} identifies every

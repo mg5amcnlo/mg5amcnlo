@@ -49,12 +49,18 @@ first-step processing or to continuation of an already matched file.\\
 \code{\detokenize{macnlops.py}} &
 Source qualification, profile checks, flavour routing, density-worker
 control, event decisions, collection and continuation contracts.\\
+\code{\detokenize{macnlops_components.py}} &
+Actual-branch ancestry, native component candidates and certified
+Born diagram/flow transport.\\
 \code{\detokenize{MacNLOPS.cc}} &
 Canonical hard-point import, one competing ISR/FSR step, native endpoint
 and scale export, and per-source-event shower metadata.\\
 \code{\detokenize{driver_macnlops.f}} &
 Global or selected native-component evaluation of \(R\), the reconstructed hard
 remainder and the scalar leading kernel in a common physical measure.\\
+\code{\detokenize{born_support.py}} &
+Exported provider identities, labelled interaction trees, colour bases
+and native history registries.\\
 \code{\detokenize{StreamHist.cc}} &
 Campaign-specific streamed first-emission and full-shower validation,
 with weights, selection masks, pairing and covariance accumulated in
@@ -62,7 +68,7 @@ memory.\\
 \bottomrule
 \end{tabular}
 \caption{Principal components of the current implementation.  The first
-four components belong to the matching workflow; the last is the
+six components belong to the matching workflow; the last is the
 validation consumer in \code{\detokenize{validation_1M_20261023/src}}.}
 \label{tab:impl-components}
 \end{table}
@@ -99,6 +105,11 @@ be made before generation.  In particular, the legacy
 samples discussed here.  It describes a different source construction
 and cannot be used as a substitute for postprocessing the unchanged
 ordinary source.
+For current sampled runs, configure the FKS card separately as in
+Sec.~\ref{sec:delta-sampled}. The run card selects source physics and
+postprocessing; the FKS card determines the retained source partition.
+These settings are part of source generation, not switches to change
+after a common source has already been generated.
 The completed campaign forced the globally summed pair
 \code{\detokenize{MCExplicitKLSum=True}} and
 \code{\detokenize{MCSubtractionAtFixedFlow=False}}. The subsequent
@@ -176,6 +187,11 @@ For sampled matching, an additional
 configuration, diagram, flow, registry identity and source auxiliary
 values. The sign certificate then refers to the complete physical
 flavour group \emph{within that component}, rather than the global sign.
+The source owner and flow must agree with the hard annotation; both
+S and H require the group certificate. H also requires agreement with
+its native sector. Separate source components cannot be coalesced by
+matching their momenta alone. The S packet's unit source factor is
+checked independently of the H damping provenance.
 
 The source manifest
 \code{\detokenize{*.lhe[.gz].macnlops.json}} records a checksum of the
@@ -244,12 +260,28 @@ Round-trip checks verify that a native inverse followed by its forward
 map reconstructs the supplied physical point within the declared
 numerical tolerance.  The worker rejects unsupported maps, invalid
 Jacobians and nonfinite contributions.  The Python probability layer
-requires finite densities and nonnegative \(R\) and scalar kernel.
+requires finite densities and a finite reconstructed hard remainder.
+Its signed-residual mode uses only the positive part of the signed
+leading kernel for transfers; nonpositive kernels retain S and any
+negative-H residual. The strict API continues to require nonnegative
+\(R\) and scalar kernel.
 A negative source event whose reconstructed complete hard density is
 not negative is an error.  Such checks protect the interpretation of a
 veto probability; they are not a proof that every possible negative
 PDF region, shower correction or new process satisfies the required
 leading-density correspondence.
+
+The massive-FSR second solution may have a valid Born point but no soft
+counterevent. The incoming-fraction check therefore uses the immutable
+projected Born snapshot, not an empty counterevent slot. For a single
+physical spectator the MC kernel uses its explicit momentum and on-shell
+model mass. This prevents boost cancellation from turning a massless
+recoil spacelike and spuriously deleting the counterterm. Annotated
+pre-shuffle hard coordinates receive an event-scale allowance for
+accumulated boost roundoff; plain LHE and endpoint checks stay tighter.
+Local unit-Delta replay records are created only when the source MC
+contribution has a nonzero FKS partition, avoiding unused records at
+zero support.
 
 Sampled requests use \code{\detokenize{MACNLOPS_POINT_V3}} with
 \code{\detokenize{COMPONENT_LOCAL_V1}} selectors. S requests also carry
@@ -257,7 +289,7 @@ the actual Born momenta, masses and oriented colours in
 \code{\detokenize{COMPONENT_BORN_V1}}. The exact source registry fixes
 the provider; the actual branching fixes the history, with certified
 diagram/flow transport when identical Born legs are permuted.
-Only that native history, diagram and flow are evaluated. Both
+Each request evaluates only its selected native history, diagram and flow. Both
 component streams use the ratios in Sec.~\ref{sec:delta-sampled};
 globally summed V1/V2 requests retain the campaign prescription.
 The accepted LHE header and JSON report label these choices as
@@ -265,6 +297,48 @@ The accepted LHE header and JSON report label these choices as
 \code{\detokenize{component-undamped-delta-v1}}, or
 \code{\detokenize{global-source-v1}}. Collection rejects mixed
 prescriptions instead of combining them under an ambiguous header.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{p{.48\linewidth}p{.43\linewidth}}
+\toprule
+Recorded prescription & Density used in the probability \\
+\midrule
+\code{component-source-v1} & Sampled ordinary $P_aH_{0,a}$.\\
+\code{component-undamped-delta-v1} & Sampled Delta $H_{0,a}$; original
+Delta remains in the source event weights.\\
+\code{global-source-v1} & Complete source H, including source damping;
+the prescription of all campaign figures.\\
+\bottomrule
+\end{tabular}
+\caption{The three explicit matching policies. A common output protocol
+does not give its $D_{\rm out}$ field the same physics interpretation
+in every policy.}
+\label{tab:matching-policies}
+\end{table}
+
+\noindent\begin{minipage}{\linewidth}
+The V3 input, shown schematically, is
+\begin{lstlisting}
+MACNLOPS_POINT_V3 request_id sector nlegs
+pdg E px py pz
+... one row per real external leg ...
+COMPONENT_LOCAL_V1 config graph flow damping_mode diagram_symmetry
+COMPONENT_BORN_V1 nBorn
+pdg colour anticolour E px py pz mass
+... one row per actual source Born leg ...
+END_POINT
+\end{lstlisting}
+\end{minipage}
+\par\smallskip
+The Born packet is supplied for S and may be omitted for an original
+H point. Damping mode zero retains the ordinary source; one selects
+the unit-Delta component calculation. The returned record remains
+\code{MACNLOPS\_DENSITY\_V1}, followed by request identity, status and
+$R,D_{\rm out},K$. Equation~\eqref{eq:component-evaluator-output}
+specifies what its subtraction field means in each sampled mode.
+Nonzero status stops the veto; it is not replaced by a guessed density.
+Workers are built as needed and remain alive for successive points.
 
 \subsection{One competing emission and one decision per source event}
 \label{sec:impl-first-step}
@@ -294,7 +368,17 @@ candidates.  Its metadata identify the source kind, first-emission
 state and evolution scale, original and endpoint particle records,
 measured support and native continuation scales.
 \code{\detokenize{reject_proposals}} matches that stream and its metadata
-by sequence number and verifies their agreement.  Positive \(H\)
+by sequence number and verifies their agreement. For a sampled proposal,
+agreement includes the
+written endpoint, original hard point and showered source point: PDGs,
+statuses, oriented colours, masses and all momentum components are
+compared with round-trip numerical tolerance. Source partition fields,
+weights, beam bounds and every continuation cap must also agree.
+These checks precede the no-emission and protected-boundary decisions,
+so a stale sidecar cannot silently change even an otherwise unvetoed
+event. The coordinate comparison tolerance is $5\times10^{-14}$ at
+the relevant momentum scale; it is distinct from inverse-map closure.
+Positive \(H\)
 events are retained.  Negative \(H\) events use the reconstructed hard
 acceptance, including the required signed residual.  Emitted \(S\)
 events in the eligible support use the \(S\) acceptance; exhausted
@@ -587,7 +671,7 @@ still supplies its own momenta and obtains a fresh density evaluation;
 the auxiliary-law certification is retained. These changes reduce
 repeated I/O and discrete lookup work without altering the source,
 veto, residual, random-number prescription or measured distributions.
-The combined affected Python regression set passes 113 tests, including
+The initial cache/audit Python regression set passed 113 tests, including
 the ideal-Sudakov and nonfactorizing counterexamples of
 Section~\ref{sec:delta-undamped-audit}. No campaign rerun was performed
 to infer an end-to-end timing improvement.
@@ -599,6 +683,18 @@ the needed Born starting-scale law is retained. Discrete certified
 diagram/flow transports are cached separately, never their kinematics
 or densities. These changes should not be confused with the change
 of finite veto prescription in Sec.~\ref{sec:delta-sampled}.
+
+The subsequent cleanup shares XML packet validation, the hard metadata
+schema, flavour permutations and canonical momentum serialization.
+The same serialization still seeds the auxiliary draws. Native component
+creation now requires an explicit configuration, graph, flow and diagram
+factor, and a Born-state check always receives both momenta and incoming
+fractions. The former fallback graph/configuration defaults and separate
+fraction-validity flag are removed. These are internal interface changes;
+the LHE packet versions and probability formulas are unchanged. The
+focused cleanup checks passed 135 Python and 20 compiled Fortran tests,
+with one optional Python test skipped; four affected Fortran units also
+compiled against generated process includes.
 
 \subsection{Focused checks of the sampled implementation}
 \label{sec:impl-sampled-checks}

@@ -501,7 +501,11 @@ void validateHardInput(const InputEvent& input, const Pythia& engine) {
   for (const auto& p : input.particles)
     eventScale = std::max(eventScale, std::max(std::abs(p.e),
       std::max(std::abs(p.px), std::max(std::abs(p.py), std::abs(p.pz)))));
-  const long double tolerance = 4096.L * std::numeric_limits<double>::epsilon() *
+  // Pre-shuffle FKS coordinates can have chained boosts before annotation.
+  // Allow their accumulated roundoff at the event scale; keep the tighter
+  // plain-LHE/endpoint check. This is far below a physical c/b mass shift.
+  const long double shellBudget = input.hasHard && input.hardUsed ? 16384.L : 4096.L;
+  const long double tolerance = shellBudget * std::numeric_limits<double>::epsilon() *
     eventScale * eventScale;
   long double balance[4] = {0., 0., 0., 0.};
   int incoming = 0, outgoing = 0;

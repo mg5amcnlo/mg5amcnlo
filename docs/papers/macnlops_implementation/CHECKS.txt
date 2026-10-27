@@ -26,7 +26,7 @@ Typesetting
   Final logs contain no undefined references or citations, multiply defined
   labels, overfull boxes, LaTeX errors or hyperref warnings. Title, tables,
   representative plots and the historical stamp were inspected visually.
-  Page counts are 58 (narrative), 762 (complete), and 704 (standalone atlas).
+  Page counts are 62 (narrative), 766 (complete), and 704 (standalone atlas).
 
 Reproducibility
   The source archive includes every figure, generated table, bibliography,
@@ -81,3 +81,51 @@ Limits
   sidecars pass the strengthened binding to their written LHE records.
   All 703 figure hashes still match and both updated paper editions build
   with no undefined references, citations or overfull boxes.
+
+Document rewrite for the committed sampled implementation
+  The abstract, introduction, source-sign discussion, bounded-rule scope,
+  Delta chapter, implementation, conclusions and notation now consistently
+  describe sampled matching as well as the global compatibility path.
+  The current sampled derivation precedes the global replay explanation.
+  It distinguishes the undamped ratio, physical Delta-weighted H transfer,
+  averaged source auxiliaries, ordinary P dependence, diagram/flow basis
+  transport, emitter orbits, support limits and finite continuation effects.
+
+  The paired source definitions and original multiplicative-accumulative
+  rejection were cross-checked against the primary matching papers. The
+  stated sampled probabilities, residuals and signed finite-defect formulas
+  agree with the committed probability routine across 648 mode/parameter
+  cases. Source-auxiliary marginalization also passes an exact rational
+  identity. This revision performs no event generation or showering.
+
+  The code reference is dd947523498d5dc90239fc1d68103521b3111fbc;
+  the initial paper archive is 2276a707ee08ac6840b1e3c9eb689ed70296f4b7.
+  current_implementation_manifest.json records current runtime source hashes
+  and separates them from the frozen campaign and earlier review records.
+  All 703 original figure assets and the numerical tables remain unchanged.
+  Fifteen comparison captions, all three rate/count tables, and all 696
+  campaign atlas pages now explicitly identify the global-sum prescription.
+  The seven earlier historical stamps remain distinct. The native protocol
+  listing is kept on one page. Equations, policy table and an atlas overlay
+  were inspected visually. Final TeX and figure-inventory checks pass.
+
+  A fresh extraction of the updated source ZIP rebuilds the 62-page
+  narrative with clean final TeX logs and exactly the same extracted PDF
+  text as the local edition. The archive CRC and all 703 bundled figure
+  hashes pass. At that revision the runtime sources were identical to
+  commit dd9475234.
+
+Matching-failure corrections, 25 October
+  Reproduced and corrected all 133 saved density failures: DY 1, ttbar 65,
+  Wbb 2, single top 42, W+jet 23. Temporary native builds trap every
+  numerical Delta evaluation. Two further saved W+jet inputs pass a
+  standalone C++ hard-preflight check; unannotated inputs and physical
+  off-shell/mass changes still fail. The negative-H sign check remains.
+  The affected suites report 85 tests, 26 support/kernel tests, and 24
+  final targeted checks, all passing (some tests overlap).
+  No new source events, shower histories or histograms were generated.
+  Failed full campaign samples have not been rematched or relabelled.
+  The narrative and complete PDFs were rebuilt; their logs and the full
+  703-figure inventory pass check_document.py. All figure/table data stay
+  frozen. numerical_fix_review.json and the separate numerical patch record
+  this revision alongside the prior archived checks.

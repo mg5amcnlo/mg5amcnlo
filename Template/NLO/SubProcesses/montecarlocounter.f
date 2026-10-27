@@ -18,6 +18,9 @@ c remain in fks_phase_space_helpers, independent of subtraction and matching.
      $     xij,betad,betas,kn,knbar,kn0,shat_n1,gfactsf,gfactcl,gfactazi
       double precision :: xp1(0:3),xp2(0:3),xk1(0:3),xk2(0:3),
      $     xk3(0:3),pp_rec(0:3),jmass
+c A one-particle recoil has its model mass, independently of the
+c cancellation error of boosted four-vectors. Negative means composite.
+      double precision :: single_recoil_mass2=-1d0
       double precision,parameter :: tiny=1d-5
 
       include 'nexternal.inc'
@@ -3447,6 +3450,7 @@ c azimuth = irrelevant (hence set = 0)
         implicit none
         xm12=jmass**2
         xm22=dot(pp_rec,pp_rec)
+        if(single_recoil_mass2.ge.0d0)xm22=single_recoil_mass2
         xtk=-2d0*dot(xp1,xk3)
         xuk=-2d0*dot(xp2,xk3)
         xq1q=-2d0*dot(xp1,xk1)+xm12
@@ -3459,6 +3463,7 @@ c azimuth = irrelevant (hence set = 0)
         implicit none
         double precision :: xi_i_fks,y_ij_fks
         xm12=dot(pp_rec,pp_rec)
+        if(single_recoil_mass2.ge.0d0)xm12=single_recoil_mass2
         xm22=0d0
         xtk=-2d0*dot(xp1,xk3)
         xuk=-2d0*dot(xp2,xk3)
@@ -3500,7 +3505,9 @@ c kernels where pmass(fksfather) != jmass are non-singular
       subroutine get_momenta_emitter_recoiler(pp,i_fks,j_fks)
         implicit none
         double precision,dimension(0:3,next_n1) :: pp
-        integer :: i_fks,j_fks
+        integer :: i_fks,j_fks,i,nrecoil,last_recoil
+        double precision pmass(nexternal)
+        common/to_mass/pmass
 c Determine and assign momenta:
 c xp1 = incoming left parton  (emitter (recoiler) if ileg = 1 (2))
 c xp2 = incoming right parton (emitter (recoiler) if ileg = 2 (1))
@@ -3511,7 +3518,26 @@ c (xk1 and xk2 are never used for ISR)
         xp1(0:3)=pp(0:3,1)
         xp2(0:3)=pp(0:3,2)
         xk3(0:3)=pp(0:3,i_fks)
+        single_recoil_mass2=-1d0
         if(ileg.gt.2)pp_rec(0:3)=pp(0:3,1)+pp(0:3,2)-pp(0:3,i_fks)-pp(0:3,j_fks)
+        if(ileg.gt.2)then
+c In e.g. ub -> tdg the only spectator is an on-shell light quark.
+c Reconstructing it by subtraction, then squaring, can create a false
+c spacelike mass and remove the entire MC kernel after a large boost.
+c Use the actual spectator and its declared on-shell mass. Zero-energy
+c legs lie outside a selected resonance subsystem and are not recoilers.
+           nrecoil=0
+           last_recoil=0
+           do i=nincoming+1,nexternal
+              if(i.eq.i_fks.or.i.eq.j_fks.or.pp(0,i).le.0d0)cycle
+              nrecoil=nrecoil+1
+              last_recoil=i
+           enddo
+           if(nrecoil.eq.1)then
+              pp_rec=pp(:,last_recoil)
+              single_recoil_mass2=pmass(last_recoil)**2
+           endif
+        endif
         if(ileg.eq.3)then
            xk1(0:3)=pp(0:3,j_fks)
            xk2(0:3)=pp_rec(0:3)

@@ -28,6 +28,7 @@
 \newcommand{\pb}{\,\mathrm{pb}}
 \newcommand{\pos}[1]{\left[#1\right]_+}
 \newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\CampaignStamp}{\AddToShipoutPictureFG*{\AtPageUpperLeft{\raisebox{-4mm}[0pt][0pt]{\hspace{7mm}\colorbox{white}{\color{black!70}\scriptsize Global-sum campaign, 23--24 October 2026; Delta veto includes source damping}}}}}
 \newcommand{\HistoricalStamp}{\AddToShipoutPictureFG*{\AtPageUpperLeft{\raisebox{-4mm}[0pt][0pt]{\hspace{7mm}\colorbox{white}{\color{red!65!black}\scriptsize Historical: 20 October 2026, different patched runtime and 200k-event study}}}}}
 \setlength{\emergencystretch}{3em}
 \setlength{\parskip}{3pt}
@@ -38,15 +39,18 @@
 \title{\macnlops{} from \mcatnlo{} and \DeltaMC{} events:\\
 source densities, colour sums, mass conventions\\and finite-shower validation}
 \author{}
-\date{25 October 2026\\\small Implementation study; campaign completed 24 October 2026}
+\date{25 October 2026\\\small Revised for sampled component matching; campaign completed 24 October 2026}
 \begin{document}
 \maketitle
 \begin{abstract}
 We document a common-source implementation of multiplicative--accumulative
 matching in which a qualified ordinary MC@NLO or MC@NLO-Delta sample is
-postprocessed after the first shower step. The negative hard-event density
-is removed only to the extent allowed by a nonnegative leading shower
-kernel; the required signed hard residual is retained otherwise. We
+postprocessed after the first shower step. The current sampled realization
+retains the native sector, Born diagram and colour flow before sign
+classification, and identifies each S emission from its actual ancestry.
+Ordinary matching retains its bogus Sudakov; Delta matching uses an
+undamped G-completed component in the veto while preserving the source
+Delta in the event weight and hard residual. We
 derive the resulting finite-shower difference and distinguish it from an
 exact cancellation prescription. The account separates the source
 G-function completion, its artificial low-scale ``bogus Sudakov'', the
@@ -54,9 +58,7 @@ physical shower Sudakov and the Delta source factor. It also separates
 outer FKS sampling, native emitter-history sums, Born-colour-flow sums
 and colour connections. Hard momenta before the Monte Carlo mass
 reshuffle, conditional Delta contexts, and a scale-preserving LHE handoff
-make these distinctions operational. A subsequent sampled fixed-flow
-mode retains native component labels and uses a Delta-free local veto
-with the full G completion. The numerical results here retain the earlier
+make these distinctions operational. The numerical results retain the earlier
 globally summed prescription. Ten common-source cohorts of one
 million events cover Drell--Yan, ZZ, top-pair, t-channel single-top and
 four-flavour Wbb production, with and without Delta matching. First-step
@@ -64,7 +66,7 @@ and streamed full-parton-shower comparisons retain original signed
 weights. Matching changes their inclusive sample sums by between
 $-1.43\%$ and $+16.84\%$; Delta improves several comparisons but neither
 removes all hard residuals nor guarantees finite-shower equality. The complete edition provides all
-696 current validation plots, together with seven explicitly
+696 campaign validation plots, together with seven explicitly
 historical panels. The theoretical statements, measured results and
 remaining conditions for a stronger accuracy or positivity claim are
 kept distinct.
@@ -89,7 +91,8 @@ kept distinct.
 \clearpage
 \section{Complete figure atlas}
 \label{sec:atlas}
-This appendix contains every plot PDF in the completed million-event
+This appendix contains every plot PDF in the completed \emph{global-sum}
+million-event
 campaign: 696 panels, including the unrestricted and zoomed ratio
 versions and all separate mechanism panels. The 20-page overview books
 are selections of these same panels and are not duplicated as additional
@@ -97,7 +100,11 @@ datasets. Fifteen panels are also repeated in the main text to support
 the discussion. Each atlas panel retains its original vector-PDF size;
 the PDF bookmarks identify the process, source, shower level, observable
 and variant. In the 696 current panels, main and mechanism ratios are relative to the
-corresponding combined \macnlops{} result. The raw numerical histograms
+corresponding combined \macnlops{} result. These runs used
+\code{global-source-v1}; the Delta veto included the source damping.
+They do not measure the new \code{component-undamped-delta-v1}
+prescription. Each campaign panel is labelled accordingly.
+The raw numerical histograms
 and covariance arrays remain in the validation directories.
 
 The final seven panels reproduce the earlier paper's archived figures

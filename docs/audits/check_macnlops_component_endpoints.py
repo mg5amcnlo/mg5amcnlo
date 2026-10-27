@@ -100,7 +100,7 @@ def request_for_point(root, folder, directory, path, record):
 
 
 def build_driver(root, folder, directory, stack, trap_delta=False, source_text=None,
-                 delta_matching=True):
+                 delta_matching=True, counter_source_text=None):
     process = root / folder / 'SubProcesses' / directory
     # The existing PDF bridge finds lib/PDFsets relative to the executable.
     # A temporary child of P* keeps that search valid without adding symlinks
@@ -126,8 +126,10 @@ def build_driver(root, folder, directory, stack, trap_delta=False, source_text=N
     link = shlex.split(links[0])
     link[link.index('-o') + 1] = str(binary)
     link[link.index('driver_macnlops.o')] = str(obj)
+    if trap_delta or counter_source_text is not None:
+        counter = (counter_source_text if counter_source_text is not None else
+                   (ROOT / 'Template/NLO/SubProcesses/montecarlocounter.f').read_text())
     if trap_delta:
-        counter = (ROOT / 'Template/NLO/SubProcesses/montecarlocounter.f').read_text()
         start = counter.index('      subroutine compute_delta(p,probne)')
         end = counter.index('      end subroutine compute_delta', start)
         end += len('      end subroutine compute_delta')
@@ -136,7 +138,8 @@ def build_driver(root, folder, directory, stack, trap_delta=False, source_text=N
       double precision p(0:3,nexternal),probne
       error stop 'Unexpected numerical Delta evaluation in V3'
       end subroutine compute_delta''' + counter[end:]
-        trapped_source, trapped_obj = work / 'counter_trap.f', work / 'counter_trap.o'
+    if trap_delta or counter_source_text is not None:
+        trapped_source, trapped_obj = work / 'counter_check.f', work / 'counter_check.o'
         trapped_source.write_text(counter)
         command(['gfortran', '-O0', '-c', '-ffixed-line-length-132',
                  '-I' + str(process), '-I' + str(root / folder / 'lib'),

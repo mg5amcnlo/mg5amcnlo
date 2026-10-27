@@ -2164,6 +2164,35 @@ bound. The pure Python `Densities` acceptance API retains its strict
 default unless `signed_residuals=True` is passed. A failed strict bound
 is not permission to switch the requested policy silently.
 
+### Signed PDF luminosities and numerical source coordinates
+
+The signed-residual runtime also admits finite signed `R` and `K`. Define
+`u=max(D-R,0)` and `Kplus=max(K,0)`. The transferable amount is
+`C=min(u,Kplus)`: S acceptance is `1-C/K` for `K>0` and one otherwise,
+while negative-H acceptance is `1-C/u` for `u>0`. For sampled Delta, `u`
+is still the undamped local negative part and the source Delta stays in
+the original H weight. A nonpositive `K` leaves the S event and negative-H
+residual unchanged. Neither physical densities nor event weights are
+replaced by absolute values. In particular a negative nominal S weight
+from virtual corrections alone does not trigger this rule; it is the
+reconstructed signed leading kernel that matters. The strict API mode
+continues to reject negative densities. Equivalent daughter orientations
+must share a common nonzero kernel sign, which cancels in their auxiliary
+marking probabilities; incompatible signs remain an explicit error.
+
+The massive-FSR second solution can have a valid projected Born but no
+soft counterevent. Born identity checks therefore use the inverse map's
+Born snapshot, including its incoming fractions, rather than the invalid
+counterevent slot. For a single physical recoil particle the MC kernel
+uses its on-shell model mass and explicit momentum, avoiding a false
+spacelike invariant from subtracting boosted vectors. Annotated hard-input
+preflight allows accumulated boost roundoff at the event scale while
+retaining the tighter plain-LHE/endpoint check. Local unit-Delta replay
+is created only when the MC contribution's FKS partitions are nonzero.
+
+The saved failure-point checks and their limits are documented in
+[`audits/macnlops_matching_fixes_20261025.md`](audits/macnlops_matching_fixes_20261025.md).
+
 ### One collected MAcNLOPS event file
 
 After successful automatic matching from `launch aMC@NLO -f` or

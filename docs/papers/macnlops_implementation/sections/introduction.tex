@@ -14,16 +14,19 @@ compensation explicitly. Here the object under study is a more general
 implementation with signed residuals, ordinary source G/P terms, coloured
 Born processes, and an additional Delta source option.
 
-This document describes the branch and completed calculations as they
-stand on 24 October 2026. It supersedes neither the frozen earlier paper
-nor the cited matching prescriptions. It specifies which realization was
-actually used and what its present evidence establishes. In particular,
-the name \macnlops{} below refers to this bounded, signed-residual
-realization unless an ideal limiting formula is stated explicitly.
-The 25 October revision adds the acceptance comparison in
-Section~\ref{sec:delta-undamped-audit} and records subsequent computational
-optimizations. The numerical results retain the matching prescription
-used in the completed campaign.
+This document describes the sampled component implementation committed
+on 25 October 2026 and the separate global-sum campaign completed on
+24 October. In the current sampled mode, the H sign belongs to a native
+history, Born integration diagram and Born colour flow. Ordinary
+matching uses that component's generated hard density. Delta matching
+uses its undamped G-completed remainder in the ratio and keeps the source
+Delta through the original event weight and corresponding H residual.
+Section~\ref{sec:delta-sampled} gives the complete construction.
+The global-sum evaluator remains supported and is described explicitly
+where it explains the existing results. Every large-sample plot and rate
+table in this document uses that earlier prescription. The later native
+point and small-source checks establish implementation consistency of
+the sampled mode; they supply no replacement million-event distributions.
 
 The conceptual chain is simple but each arrow has a contract:
 \begin{equation}
@@ -42,11 +45,15 @@ shower invocation. They cannot be identified merely because they share a
 PDF set or an event filename.
 
 \subsection{Five distinctions that control the interpretation}
-First, the negative part of the \emph{generated} hard density is required.
+First, the sign and removal law must refer to the \emph{generated}
+conditional hard density.
 It is not, in general, the negative part of a bare real matrix element
 minus a single positive splitting function. The actual source contains
 G-function completion, low-scale factors, luminosities and a specific
-sampling partition.
+sampling partition. A nonnegative source factor may be separated within
+a retained component, as in the Delta veto. That factor remains in the
+measure removed from H events; removing it from the probability ratio
+does not authorize discarding it from the event weights.
 
 Second, the leading positive kernel $K_g$ in the veto denominator is not
 the physical Sudakov-suppressed first-emission density. It is also not a
@@ -85,13 +92,14 @@ ordinary and Delta matching. No claim of event-by-event pairing is made
 between those two source settings.
 
 Preparing a source with \code{macnlops=True} adds hard-point/profile
-information and selects the supported complete source partition. It is
+information and records the supported partition selected in the FKS card. It is
 not a promise to retrofit arbitrary anonymous older LHE files. Nor does
-it leave the generator's default stochastic colour/history sampling
-unchanged: a global hard-sign reconstruction requires the effective sums
-described below. The ordinary \emph{matching formula} is retained; the
-qualification and Monte Carlo organization make its signed density
-available to the postprocessor.
+it silently force global history or colour sums. The sampled mode uses
+the native component law; global reconstruction requires the corresponding
+explicit sums and certificates. The ordinary \emph{matching formula}
+is retained in both organizations. The qualified source and reference
+must use the same organization: changing the source partition is not a
+way to relabel a previously generated sample.
 
 The implementation uses no MAcNLOPS-specific \pythia{} library patches.
 The application interface and the generated density evaluator are

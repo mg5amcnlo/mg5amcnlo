@@ -1,6 +1,14 @@
 \section{The bounded removal and veto prescription}
 \label{sec:rejection}
 
+This section first states the bounded rule when the reconstructed hard
+density is the generated source density. It applies to ordinary matching
+and to the global-sum campaign. The sampled Delta rule reconstructs the
+\emph{undamped} local hard density instead, with the source factor
+retained in the amount removed. Its different physical transfer is
+given in Sec.~\ref{sec:delta-sampled}; the common implementation of the
+probabilities must not obscure that distinction.
+
 \subsection{The three densities and the eligible shower measure}
 For an ordinary source, define on a common labelled real phase space
 \begin{equation}
@@ -45,10 +53,14 @@ native branching law. A random starting scale contributes a marginal
 such as $\Pr(Q>\sqrt t)$; observing one source event with $Q>\sqrt t$
 does not make that marginal identically one.
 
-The probability construction requires $R\geq0$ and $K_g\geq0$ at the
-points where they are used; the implementation checks these conditions.
-They are not universal consequences of using NLO $\overline{\rm MS}$ PDF
-grids. Native positive-part, flavour-threshold and small-denominator
+The strict API requires nonnegative $R$ and $K_g$. The supported
+signed-residual mode also admits finite signed PDF luminosities and uses
+only $K_g^+=\pos{K_g}$ as transferable support. For $K_g\leq0$ it keeps
+both S and any negative-H residual: rejecting a negative leading S
+measure cannot compensate negative-H removal. It never replaces the
+physical densities by absolute values. A negative nominal S weight
+from virtual corrections alone does not determine the sign of $K_g$.
+Native positive-part, flavour-threshold and small-denominator
 policies also enter the relation between an analytic leading kernel and
 the actual accepted native law. Their equivalence must be checked, rather
 than assumed from a common grid name.
@@ -58,11 +70,11 @@ The desired full H removal would ask for the S veto probability
 $H_-/K_g$. To keep a physical probability without silently deleting an
 uncompensated part, define
 \begin{equation}
- C(q)=\min\{H_-(q),K_g(q)\},\qquad
+ C(q)=\min\{H_-(q),K_g^+(q)\},\qquad
  H_{-,\rm rem}(q)=H_-(q)-C(q).
  \label{eq:bounded-transfer}
 \end{equation}
-The current acceptance for an eligible emitted S event is
+The acceptance in this source-density construction is
 \begin{equation}
  a_S(q)=1-\frac{C(q)}{K_g(q)}
        =1-\min\!\left(1,\frac{H_-(q)}{K_g(q)}\right),
@@ -72,14 +84,14 @@ The current acceptance for an eligible emitted S event is
 For a negative H event the acceptance is instead
 \begin{equation}
  a_H^-(q)=\frac{H_-(q)-C(q)}{H_-(q)}
- =\max\!\left(1-\frac{K_g(q)}{H_-(q)},0\right),
+ =\max\!\left(1-\frac{K_g^+(q)}{H_-(q)},0\right),
  \quad H_-(q)>0.
  \label{eq:h-acceptance}
 \end{equation}
 Positive H events survive. S events with no emission or with a protected
-first emission survive. If $K_g=0$ and $H_->0$, the signed-residual rule
+first emission survive. If $K_g\leq0$ and $H_->0$, the signed-residual rule
 retains the negative H contribution and performs no S rejection. A
-negative H event whose reconstructed global density has no negative part
+negative H event whose reconstructed density in its qualified partition has no negative part
 is an inconsistency and causes a failure, rather than a convenient
 change of its classification.
 
@@ -137,7 +149,7 @@ the physical no-harder-emission probability, the distribution of starting
 states, the actual PDF/coupling choices and every native sampling policy.
 It is not automatically $K_g(q)$.
 
-For the ordinary construction, removing negative H adds $C(q)$ to the
+For the ordinary or source-density construction, removing negative H adds $C(q)$ to the
 signed endpoint density, while S rejection subtracts
 $C(q)E_g(q)/K_g(q)$. Thus
 \begin{equation}
@@ -145,11 +157,25 @@ $C(q)E_g(q)/K_g(q)$. Thus
  \qquad K_g(q)>0.
  \label{eq:finite-defect}
 \end{equation}
-At $K_g=0$ the transferred amount is zero and no division is used. With
+At $K_g\leq0$ the transferred amount is zero and no division is used. With
 auxiliary conditioning the corresponding expression must be integrated
 over the \emph{same} joint conditional measure; one cannot replace
 conditional quantities by separately averaged factors. The Delta section
 specifies that extension.
+
+More generally, let $T(q,a)$ be the positive signed-measure increment
+from removing negative H events, and let $v(q,a)$ reject eligible S
+events on the same retained state. The master identity is
+\begin{equation}
+ \delta\rho_1(q,a)=T(q,a)-v(q,a)E_g(q,a).
+ \label{eq:master-defect}
+\end{equation}
+The scalar rule above has $T=C$ and $v=C/K_g$. In sampled Delta mode,
+$T=\overline\Delta_a C_{0,a}$ and $v=C_{0,a}/K_a$, with
+$C_{0,a}=\min\{[-H_{0,a}]_+,K_a\}$. Thus its finite defect is different
+even though the same bounded probability routine is used. Unobserved
+auxiliaries must be integrated with the corresponding source law;
+Sec.~\ref{sec:delta-sampled} makes that average explicit.
 
 Equation~\eqref{eq:finite-defect} explains two logically independent
 limitations. The bounded transfer controls the part that cannot be
@@ -252,7 +278,10 @@ different endpoint labels can sometimes induce the same continuation.
 Momentum-only matching does not establish that condition. An LHE restart
 need not retain every internal state variable of an uninterrupted shower.
 These issues are not resolved by changing one numerator or denominator in
-Eq.~\eqref{eq:s-acceptance}.
+Eq.~\eqref{eq:s-acceptance}. For the sampled prescription, use the
+actual source negative measure on its component space in
+Eqs.~\eqref{eq:exact-veto}--\eqref{eq:positive-s-veto}, including the
+source Delta average when its auxiliary is marginalized.
 
 \subsection{A useful full-shower decomposition}
 Let $I$ be the source measure after its first-step proposal map, $M$ the

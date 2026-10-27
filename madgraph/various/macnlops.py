@@ -157,16 +157,26 @@ class Densities:
     shower: float
 
     def acceptance(self, signed_residuals=False):
-        """Acceptance for an emitted S event; no Sudakov in the denominator."""
+        """Bounded S acceptance, using only positive signed shower support.
+
+        Signed-residual mode admits signed PDF luminosities. A nonpositive
+        K transfers no negative H measure; no absolute-valued veto is used.
+        There is no Sudakov in the denominator.
+        """
         if not all(math.isfinite(x) for x in
                    (self.real, self.subtraction, self.shower)):
             raise MatchingError('Nonfinite real, subtraction or shower density')
-        if self.real < 0 or self.shower < 0:
+        if not signed_residuals and (self.real < 0 or self.shower < 0):
             raise MatchingError('Real and shower densities must be nonnegative')
+        if not math.isfinite(self.subtraction - self.real):
+            raise MatchingError('Nonfinite reconstructed hard density')
         negative_hard = max(self.subtraction - self.real, 0.0)
         if negative_hard == 0:
             return 1.0
-        if self.shower == 0:
+        if self.shower <= 0:
+            # A signed PDF luminosity can make K negative. Rejecting that S
+            # measure cannot compensate removal of a negative H measure.
+            # Leave both unchanged, just as when no shower support exists.
             if signed_residuals:
                 return 1.0
             raise MatchingError('Negative hard density outside shower support')
@@ -186,7 +196,7 @@ class Densities:
         if negative_hard == 0:
             raise MatchingError('Negative H event disagrees with reconstructed hard density')
         if signed_residuals:
-            return max(1.0 - self.shower / negative_hard, 0.0)
+            return max(1.0 - max(self.shower, 0.0) / negative_hard, 0.0)
         return 0.0
 
 
@@ -1220,8 +1230,18 @@ class NativeEvaluator:
         total_kernel = math.fsum(density.shower for density in densities)
         if not math.isfinite(total_kernel):
             raise MatchingError('Nonfinite sum of component shower kernels')
+        # Equivalent daughter orientations share a signed luminosity. Their
+        # common sign cancels in the auxiliary marking law, but never in the
+        # physical veto: a nonpositive K transfers no negative H weight.
+        positive = any(density.shower > 0. for density in densities)
+        negative = any(density.shower < 0. for density in densities)
+        if positive and negative:
+            raise MatchingError('Equivalent shower orientations have incompatible PDF signs')
+        kernel_sign = -1. if negative else 1.
+        marking_kernels = [kernel_sign * density.shower for density in densities]
+        marking_total = kernel_sign * total_kernel
         selected, marking = 0, 1.
-        if len(candidates) > 1 and total_kernel > 0.:
+        if len(candidates) > 1 and marking_total > 0.:
             # This auxiliary labels equivalent daughter orientations only.
             # It is separate from both the native shower and the event veto.
             identity = '%d:%d:%s' % (self.auxiliary_seed, request_id,
@@ -1230,20 +1250,20 @@ class NativeEvaluator:
             # float can round to one and select a zero-kernel first entry.
             uniform = (int.from_bytes(hashlib.sha256(identity.encode('ascii')).digest()[:8],
                                       'big') >> 11) * 2.**-53
-            threshold, cumulative = uniform * total_kernel, 0.
-            selected = max(index for index, density in enumerate(densities)
-                           if density.shower > 0.)
-            for index, density in enumerate(densities):
-                cumulative += density.shower
+            threshold, cumulative = uniform * marking_total, 0.
+            selected = max(index for index, kernel in enumerate(marking_kernels)
+                           if kernel > 0.)
+            for index, kernel in enumerate(marking_kernels):
+                cumulative += kernel
                 if threshold < cumulative:
                     selected = index
                     break
-            marking = densities[selected].shower / total_kernel
+            marking = marking_kernels[selected] / marking_total
         # If every component has K=0, the bounded veto retains S for every
         # possible mark. Keep one evaluated density and expose zero support.
         event.matching_component = dict(candidates[selected][2],
             candidates=len(candidates), marking_probability=marking,
-            total_kernel=total_kernel,
+            total_kernel=total_kernel, kernel_sign=int(kernel_sign),
             candidate_kernels=[density.shower for density in densities])
         return densities[selected]
 

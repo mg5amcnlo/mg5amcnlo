@@ -208,6 +208,39 @@ class TestMatchingAlgebra(unittest.TestCase):
         with self.assertRaises(MatchingError):
             Densities(0, 1.000000001, 1).acceptance()
 
+    def test_signed_pdf_luminosities_leave_nonpositive_shower_measure_unchanged(self):
+        # The saved DY Delta event has a negative high-x anti-strange PDF.
+        dy = Densities(-180137.16691678748, -186101.79956101454,
+                       -186101.79956101452)
+        self.assertEqual(dy.acceptance(signed_residuals=True), 1.)
+        for density in (Densities(-3., -2., -1.), Densities(1., 3., -2.)):
+            self.assertEqual(density.acceptance(signed_residuals=True), 1.)
+            self.assertEqual(density.hard_acceptance(signed_residuals=True), 1.)
+        for density in (dy, Densities(-3., -2., -1.)):
+            with self.assertRaises(MatchingError):
+                density.acceptance()
+
+    def test_signed_pdf_transfer_is_bounded_by_positive_signed_shower_support(self):
+        for real, subtraction, shower in ((-1., 1., 1.), (-1., 0., 0.),
+                                         (-3., -2., -1.), (1., 3., -2.)):
+            with self.subTest(densities=(real, subtraction, shower)):
+                density = Densities(real, subtraction, shower)
+                negative_hard = subtraction - real
+                transfer = min(negative_hard, max(shower, 0.))
+                s_accept = density.acceptance(signed_residuals=True)
+                h_accept = density.hard_acceptance(signed_residuals=True)
+                self.assertAlmostEqual(shower * (1. - s_accept), transfer)
+                self.assertAlmostEqual(negative_hard * (1. - h_accept), transfer)
+                self.assertGreaterEqual(s_accept, 0.)
+                self.assertLessEqual(s_accept, 1.)
+                self.assertGreaterEqual(h_accept, 0.)
+                self.assertLessEqual(h_accept, 1.)
+        for density in (Densities(float('nan'), 1., -1.),
+                        Densities(-1., 1., float('-inf')),
+                        Densities(-1.e308, 1.e308, 1.)):
+            with self.assertRaises(MatchingError):
+                density.acceptance(signed_residuals=True)
+
 
 class TableEvaluator:
     def __init__(self, densities):

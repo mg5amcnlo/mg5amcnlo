@@ -1,8 +1,10 @@
 \section{The source density, G completion and the distinct sums}
 \label{sec:source-colour}
 
-The object whose negative part is removed must be the signed density that
-actually generated the $H$ sample. This requirement is stronger than
+The removed signed measure must correspond to the density that actually
+generated the H sample, on its retained component space. A known
+nonnegative multiplier may be separated when constructing a ratio, but
+must remain in the physical amount removed. This requirement is stronger than
 identifying a familiar splitting function. The source includes native
 inverse maps, luminosities, colour probabilities, regularized counterevents
 and low-scale redistributions. The scalar kernel used to describe a shower
@@ -66,7 +68,11 @@ $P_{h,c}$ is the source no-emission multiplier. In the ordinary mode it
 reduces to the history's flow-independent artificial profile $P_h$
 described below. The stochastic
 conditional multiplier used by \DeltaMC{} requires a larger state space and
-is discussed separately in this paper.
+is discussed separately in this paper. Equation~\eqref{eq:source-hordinary}
+is a marginal sum: the current sampled implementation retains the Born
+diagram $d$ as well as $h,c$ when classifying and processing H events.
+It does not substitute the negative part of this marginal for the
+negative part of a sampled component.
 
 Here $P_{h,c}$ always means the multiplier actually used by the source
 routine. If the native Born counterevent fails generation cuts, the
@@ -85,7 +91,7 @@ actual source. Likewise, neither $R-H$ nor an individual signed
 colour-correlated counterterm is automatically a usable nonnegative
 probability denominator.
 
-\subsection{Four labels that must not be identified}
+\subsection{The distinct sector, history, diagram and colour labels}
 \label{sec:source-labels}
 
 The implementation contains several different sums. Their roles are most
@@ -96,12 +102,14 @@ transparent when the labels are separated as follows.
 \toprule
 Label & Meaning \\
 \midrule
-$a=(i,j)$ & The outer FKS sector or integration owner and its nonnegative
-partition $\mathcal S_a(q)$. It also provides the sampled event's stored
+$\alpha=(i,j)$ & The outer FKS sector or integration owner and its nonnegative
+partition $\mathcal S_\alpha(q)$. It also provides the sampled event's stored
 owner information. \\
 $h=(k,l;\rho)$ & A native splitting history, consisting of the emitted and
 emitting FKS legs and, if needed, a native recoil group $\rho$. It supplies
 its own underlying Born state, map, kernels and counterevents. \\
+$d$ & Born integration configuration and associated amplitude/graph.
+Its real and Born projection weights are retained separately. \\
 $c$ & A leading Born colour flow in the basis of that native Born process.
 It supplies a possible planar colour assignment and associated scales. \\
 $\ell$ & A colour or anticolour connection of the emitting Born parton
@@ -133,7 +141,7 @@ real, raw MC and G-completion terms for one native history. The driver can
 then call \code{\detokenize{repartition_MC_H}} to replace its outer $H$
 records with
 \begin{equation}
- \widehat H_a(q)=\mathcal S_a(q)\,
+ \widehat H_\alpha(q)=\mathcal S_\alpha(q)\,
        \sum_{h,c}P_{h,c}(q)
        \bigl[R_{h,c}(q)-D_{G,h,c}(q)\bigr].
  \label{eq:source-outerpartition}
@@ -141,7 +149,11 @@ records with
 The nonnegative outer partition multiplies the \emph{whole} completed
 native sum. Applying it only to a raw MC kernel would not reconstruct
 Eq.~\eqref{eq:source-outerpartition}. Summing the outer partitions gives the
-global hard density on the qualified physical flavour space.
+global hard density on the qualified physical flavour space. In sampled
+mode, $a=(h,d,c)$ below denotes the retained native component; it is not
+the outer integration owner $\alpha$. An S event's original $ij$ owner
+is provenance, while its actual shower branch identifies the native
+history used in the veto.
 
 \subsection{Sampling a colour flow and summing its contributions}
 \label{sec:source-colourflows}
@@ -383,7 +395,7 @@ to that altered source would not by itself make it the ordinary MC@NLO
 source. The completed campaign uses
 \code{\detokenize{macnlops_resolved_source=False}} throughout.
 
-\subsection{Why the global sign must precede unweighting}
+\subsection{Source partition and sign classification before unweighting}
 \label{sec:source-sign}
 
 Linear summation and nonlinear sign classification do not commute:
@@ -399,7 +411,7 @@ sampled $-2$ event cannot treat it as a draw from a globally negative
 density that is actually zero. Improving a numerical estimate of the
 global denominator does not repair that source-partition mismatch.
 
-The present source therefore forms the complete native $H$ sum and
+The global-source realization therefore forms the complete native $H$ sum and
 coalesces compatible physical-flavour contributions before signed $H$
 unweighting. This includes three distinct requirements. Every compatible
 native history must be available. Every native flow contribution must be
@@ -416,6 +428,10 @@ compatible H records at the same momenta, with the same colour and scale
 ownership and conditional context, before certifying the selected flavour
 group. Physical PDG rows are compared by their content rather than by an
 ordinal row number which can differ between generated subprocesses.
+In the sampled realization the corresponding group is complete only
+within one retained native component. Distinct component draws cannot
+be merged merely because their momenta coincide. This certifies its
+conditional sign, without claiming the sign of the global sum.
 
 The hard annotation then records
 \code{\detokenize{partition="global_sum"}} together with effective KL/flow
@@ -473,17 +489,25 @@ conditions described here.
 \toprule
 KL sum & Fixed flow & Outer FKS sum & \macnlops{} contract \\
 \midrule
+false & true  & either & Sampled component evaluator; complete
+                         diagram/flow/sector provenance required. \\
 true  & false & either & Supported when native/flavour completeness and
                          the annotation contract hold. \\
 true  & true  & either & Sampled colour source; its conditional negative
                          measure is not implemented by this importer. \\
 false & false & either & Native-sector source; a global density cannot
                          replace its sampled negative measure. \\
-false & true  & either & Supported by the new local component evaluator;
-                         qualified diagram/flow/sector provenance required. \\
 \bottomrule
 \end{tabular}
 \end{center}
+
+The shipped FKS card has KL sum false, fixed flow true and outer FKS
+sum true. Thus the first two choices already select the sampled
+component organization; set the third explicitly to false to sample
+the outer groups as well. That setting samples allowed contribution
+groups, which may contain associated nonsingular sectors, rather than
+guaranteeing a single $ij$ term in every function call. None of these
+general generator defaults was changed by the MAcNLOPS implementation.
 
 During the campaign, \code{\detokenize{driver_mintMC.f}} forced
 \begin{equation}
@@ -504,15 +528,15 @@ unmerged QCD source, \code{\detokenize{ickkw=0}}, and the declared
 \pythia{} setup. Generator support for other modes elsewhere in the branch
 is not a validation of \macnlops{} for those modes.
 
-One might expect a single colour flow to make the postprocessor simpler,
-because one event has only one colour tag. The difficulty is that this
-would require the \emph{conditional signed H density} for that tag, and a
-compatible conditional first-emission law from the S ensemble. Native
-inverse histories can land on different Born states and different colour
-bases. Their physical flow fractions and sampling probabilities must be
-retained, and one would need a map between source and proposal colour
-labels, with support established at every projection. An integer colour
-index from the outer event supplies none of this information.
+A single flow reduces the local work, once its conditional measure is
+specified. The current component evaluator supplies that measure by
+keeping the source diagram and flow and identifying the actual shower
+history. It stays within the exact source Born provider and transports
+diagram and flow indices under certified identical-leg permutations.
+An outer event's colour integer alone would not establish this map:
+different native Born contexts can use different bases. Retaining the
+joint component information is what makes the simpler local evaluation
+valid. The colour/anticolour connection sum inside a gluon flow remains.
 
 There are two legitimate constructions: reconstruct and coalesce the global
 source before sign classification, or formulate matching on the larger
@@ -527,13 +551,15 @@ conditional evaluator, even when only one colour flow is possible.
 The principal source anchors lie in
 \code{\detokenize{Template/NLO/SubProcesses/}}:
 \begin{itemize}
- \item \code{\detokenize{mc_matching_runtime.f}}: complete native H
-       repartition and flow summation;
+ \item \code{\detokenize{mc_matching_runtime.f}}: sampled component
+       capture or complete native H repartition;
  \item \code{\detokenize{montecarlocounter.f}}: raw kernels, connections,
        G factors and source no-emission multipliers;
  \item \code{\detokenize{fks_singular.f}}: real/MC/G weight records and
        flow prefactors;
  \item \code{\detokenize{driver_mintMC.f}}: effective-generation settings;
- \item \code{\detokenize{add_write_info.f}}: the global-partition
-       certificate.
+ \item \code{\detokenize{weight_lines.f}}: component contexts,
+       contribution grouping and common Born-state checks;
+ \item \code{\detokenize{add_write_info.f}}: physical flavour
+       certificates and hard/component packet writing.
 \end{itemize}

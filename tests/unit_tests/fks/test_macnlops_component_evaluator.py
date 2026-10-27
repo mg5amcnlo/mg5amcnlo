@@ -70,7 +70,7 @@ end module
  integer ids(4),colours(2,4),status,i,j,emitters
  integer ring(2,3),opposite(2,3)
  real(8) lab(0:3,4),saved_lab(0:3,4),masses(4),p(0:3,5),boost
- real(8) normalization,expected(5),before,after,r,d,k
+ real(8) normalization,expected(5),before,after,r,d,k,projected_x(2)
  integer expected_emitters(5)
  logical macnlops_same_colour_topology
  external macnlops_same_colour_topology
@@ -90,32 +90,33 @@ end module
   lab(1:2,i)=p_born(1:2,i)
   lab(3,i)=sinh(boost)*p_born(0,i)+cosh(boost)*p_born(3,i)
  enddo
- xbjrk_cnt=0d0;xbjrk_cnt(:,0)=lab(0,1:2)/ebeam
+ ! The massive-FSR second solution has no counterevents.
+ xbjrk_cnt=0d0;projected_x=lab(0,1:2)/ebeam
  saved_lab=lab
- call macnlops_validate_component_born(1,ids,colours,lab,masses,status)
+ call macnlops_validate_component_born(1,ids,colours,lab,masses,projected_x,status)
  if(status/=0)stop 1
  ! Same undirected neighbours do not identify an oriented gluon flow.
  ring=reshape([1,2,2,3,3,1],[2,3])
  opposite=reshape([2,1,3,2,1,3],[2,3])
  if(macnlops_same_colour_topology(3,ring,opposite))stop 2
  colours=icolup(:,:,2)
- call macnlops_validate_component_born(1,ids,colours,lab,masses,status)
+ call macnlops_validate_component_born(1,ids,colours,lab,masses,projected_x,status)
  if(status/=36)stop 3
  colours=icolup(:,:,1);ids(3)=-2;ids(4)=2
- call macnlops_validate_component_born(1,ids,colours,lab,masses,status)
+ call macnlops_validate_component_born(1,ids,colours,lab,masses,projected_x,status)
  if(status/=36)stop 4
  ids=idup(:,1);masses(3)=1d0
- call macnlops_validate_component_born(1,ids,colours,lab,masses,status)
+ call macnlops_validate_component_born(1,ids,colours,lab,masses,projected_x,status)
  if(status/=37)stop 5
  masses=0d0
  ! A different polar Born geometry has the same external masses but
  ! different ordered Gram invariants with the incoming beams.
  lab(1,3)=sqrt(24d0);lab(3,3)=1d0;lab(0,3)=5d0
  lab(1,4)=-sqrt(24d0);lab(3,4)=-1d0;lab(0,4)=5d0
- call macnlops_validate_component_born(1,ids,colours,lab,masses,status)
+ call macnlops_validate_component_born(1,ids,colours,lab,masses,projected_x,status)
  if(status/=38)stop 6
- lab=saved_lab;xbjrk_cnt(1,0)=xbjrk_cnt(1,0)*1.01d0
- call macnlops_validate_component_born(1,ids,colours,lab,masses,status)
+ lab=saved_lab;projected_x(1)=projected_x(1)*1.01d0
+ call macnlops_validate_component_born(1,ids,colours,lab,masses,projected_x,status)
  if(status/=38)stop 7
  ! Physical real and Born diagram partitions are distinct. Their
  ! source symmetry factor multiplies every contribution once.

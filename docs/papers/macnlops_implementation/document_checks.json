@@ -1,7 +1,7 @@
 {
   "outputs": {
-    "macnlops_paper.pdf": 58,
-    "macnlops_complete.pdf": 762,
+    "macnlops_paper.pdf": 62,
+    "macnlops_complete.pdf": 766,
     "macnlops_figures.pdf": 704
   },
   "all_703_figure_hashes_match": true,
@@ -13,5 +13,8 @@
   "no_overfull_boxes": true,
   "numerical_tables_cross_checked_by_independent_review": true,
   "campaign_figures_unchanged": true,
-  "sampled_component_checks_separate_from_campaign": true
+  "sampled_component_checks_separate_from_campaign": true,
+  "all_campaign_panels_labelled_global_source": true,
+  "all_selected_captions_identify_campaign": true,
+  "native_protocol_listing_kept_on_one_page": true
 }

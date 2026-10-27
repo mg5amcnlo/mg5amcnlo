@@ -1,0 +1,177 @@
+{
+  "document_checks": {
+    "all_696_current_panels_included": true,
+    "all_703_figure_hashes_match": true,
+    "all_campaign_panels_labelled_global_source": true,
+    "all_selected_captions_identify_campaign": true,
+    "all_source_figures_single_page": true,
+    "all_twenty_completed_dataset_checks_pass": true,
+    "campaign_figures_unchanged": true,
+    "native_protocol_listing_kept_on_one_page": true,
+    "no_overfull_boxes": true,
+    "no_undefined_references_or_citations": true,
+    "numerical_tables_cross_checked_by_independent_review": true,
+    "outputs": {
+      "macnlops_complete.pdf": 766,
+      "macnlops_figures.pdf": 704,
+      "macnlops_paper.pdf": 62
+    },
+    "sampled_component_checks_separate_from_campaign": true,
+    "seven_historical_panels_separately_marked": true
+  },
+  "document_source_hashes": {
+    "CHECKS.txt": "3e05dc640d918c36b839830403a3394274ee666ade122426df545090c8d18812",
+    "README.txt": "4b068530afb21cfb120782184b27e6d95fccedc5a6c93caf9099417304646b1c",
+    "atlas.tex": "a7c68ad2b1da295a26936bf0d78af822f0a83a58bb89cd87c076705aa8314093",
+    "generated/all_figures.tex": "2267bfd6cdb2a874ce5f8d88be8a09e2a11c8264dc732a84f1b235f1f89fed25",
+    "generated/effects.tex": "d9538225bb9afe34cb3e0c956cd5b130cc2ee4a73ef94ab8c86bdd4f2b92556b",
+    "generated/figure_dy_delta_full.tex": "51607e52a7744702bb25c659ac5bb4c9cdbdd3bfab1417ec2d082c3ac26db550",
+    "generated/figure_dy_ordinary_first.tex": "d53c3a1ff816257111afb383f786b79950a88e5edba7282f6959a785e3ee6f05",
+    "generated/figure_dy_ordinary_full.tex": "785b36dc289a69b6cdae611c9fb58ea221f85e942516f7a266a1ad48753dd30e",
+    "generated/figure_single_top_delta_full.tex": "ef028a7655e929d6378b987cbcbf699b079b8e41da66a87b61cf8c66c668c938",
+    "generated/figure_single_top_ordinary_first.tex": "32bf6a0aec513ced6e09279747b1639a87345874081ed524a93294ce1691f3b3",
+    "generated/figure_single_top_ordinary_full.tex": "158f2aa5a032defcb6517eeac62e4d1d2e666488ae2630a21f77643fb0f35e3f",
+    "generated/figure_ttbar_delta_full.tex": "002e1cc78414c22546769aab51a0545a855ffbeccddb54332f0ec10b68cccfc7",
+    "generated/figure_ttbar_ordinary_first.tex": "9dc509c72a88170d6b7458ef48e7fca10424b77ab78e9a2566413488c3be6cb8",
+    "generated/figure_ttbar_ordinary_full.tex": "fd22587190fd58ffbe5bd8e00f6be84b5657797b75e9acd93747c4c5b33ddba7",
+    "generated/figure_wbb_delta_full.tex": "030c4ae4ef68e08a34ed62a69b11b193b139c22bbbb626bef6b591d13f9cfb41",
+    "generated/figure_wbb_ordinary_first.tex": "570bd9c59431d8efab8d30a9425b54bad506f5b96ec511d8e0d82ecaed1f4db1",
+    "generated/figure_wbb_ordinary_full.tex": "31bd34d0219bda38c502853de626c2b4c29966727dffc0ab807ad3de7c46284a",
+    "generated/figure_zz_delta_full.tex": "4749f78795b954f419717f2aeeeb2f252ce031e9809b65b1458b92f6da482908",
+    "generated/figure_zz_ordinary_first.tex": "12fcecc5c48f8477569757d82f4025916ecb74e6879922a3c8cac3ba725d7c2c",
+    "generated/figure_zz_ordinary_full.tex": "bad5591971508ba0b1fd5c7e5af072b76645b8f05408339ac0025041977939ac",
+    "generated/negatives.tex": "c5cc7ec91c8c256f4cf19b2c2d5d5f2c611164c48b1b3252d0a771d9c4981c96",
+    "generated/rates.tex": "1baafb9bc5b7a18531d3293bc357a5ac706bd415de22b78415385c5d0cd41c8a",
+    "main.tex": "bfcebd14dbcb864eceeba8b9e9297534b154f0d76adb718393ab07df7095a958",
+    "numerical_fix_review.json": "d162cdd9f0460fe0b6beaa8d30a36ffb35a5e5bbe5c8d74495793b9794ec3de6",
+    "numerical_implementation_changes.patch": "f58ca285a5f421206c90bb6a4317f6ad8e2cde18e7c8e31161f821b13ba1ac0c",
+    "paper.tex": "88c26adddfe58d2d08d2b41293cdc5538435d999b8435303a6e0f3670a5bc0e6",
+    "references.bib": "afa83ebe354ef1e0cda4858b8fd57839be20f09e0102686b0ba80d1e4e1a2812",
+    "sections/conclusions.tex": "2c1e1c47805b408e4e0d45a062e48c69ee2dac8be82b67393a88bf51540bc678",
+    "sections/delta_masses.tex": "98bc2a387fa038bdfde45f3dc623b88b2488b315687621a41a62c44edd6acdac",
+    "sections/implementation.tex": "d0da69d65a1dd17ee7a2c4be1a4afa7c3e76e29ae5718fdeab1b92515b7cac95",
+    "sections/introduction.tex": "d836c70dd8c12337b27f3f77b2eb3c7d8f943aa1a330b69b7bc0c18c4292362d",
+    "sections/notation.tex": "c57465ecf5280f5e7a5886427b91888822db198d3c912c4a5a29d7f38d856060",
+    "sections/rejection.tex": "6ebf7bea6d706cb84f137191192266b11c03d644ed71098f9847c136f4ed9291",
+    "sections/results.tex": "5ed2e61f96c10b8f1cdd4b3773e4e349c39a4d097a5a34bcec07bdf9396ad4b9",
+    "sections/sampled_components.tex": "ddebdd2226432d3ab02dbede98b3612d7b29efc64fbdb55a876f846db12ffdba",
+    "sections/source_colour.tex": "ed89bf132e243043c358eed6e8ea914baac33dfcc85186d14e4109b01aae4578"
+  },
+  "figure_manifest_sha256": "b86df6b46b17f6dfaab23fb1b6c12b86dbe6c8db061d5a66aefa35389988f516",
+  "frozen_numerical_data_sha256": "066a4e1f39d4d317e76a6ab724571c1113ddd9afdcaaa2957bb4be38638394a0",
+  "initial_paper_archive_commit": "2276a707ee08ac6840b1e3c9eb689ed70296f4b7",
+  "matching_failure_review": {
+    "file": "numerical_fix_review.json",
+    "hard_preflight_points": 2,
+    "passed": true,
+    "saved_density_points": 133,
+    "scope": "bounded native and standalone input checks; no campaign rematching",
+    "sha256": "d162cdd9f0460fe0b6beaa8d30a36ffb35a5e5bbe5c8d74495793b9794ec3de6"
+  },
+  "mathematical_checks": {
+    "cases": 648,
+    "passed": true,
+    "scope": "Document formulas checked against the committed probability routine; no generation or showering",
+    "source_delta_marginalization": "exact rational identity"
+  },
+  "new_events_or_showers": false,
+  "new_histograms": false,
+  "outputs": {
+    "macnlops_complete.pdf": {
+      "bytes": 23147901,
+      "pages": 766,
+      "sha256": "7546e5eee096e715235c748ca140c195db929df80c02d493fe3e4fc19f08fd85"
+    },
+    "macnlops_figures.pdf": {
+      "bytes": 22009862,
+      "pages": 704,
+      "sha256": "eb642e0296dd5dbcb97fd4868a41368e04e917f20fbc2481322c8c00ff668c13"
+    },
+    "macnlops_paper.pdf": {
+      "bytes": 1282616,
+      "pages": 62,
+      "sha256": "655944069705ee4e8fbfd7e3e51ac77d48c40de6762331e5518255745beae1ad"
+    }
+  },
+  "portable_rebuild_check": {
+    "all_703_figure_hashes_match": true,
+    "clean_final_tex_log": true,
+    "extracted_pdf_text_matches_local_pdf": true,
+    "no_project_external_assets_needed": true,
+    "pages": 62,
+    "passed": true,
+    "source": "fresh extraction of updated portable LaTeX ZIP",
+    "target": "narrative paper"
+  },
+  "portable_rebuild_check_previous_revision": {
+    "clean_final_tex_log": true,
+    "extracted_pdf_text_matches_local_pdf": true,
+    "no_project_external_assets_needed": true,
+    "pages": 62,
+    "passed": true,
+    "source": "fresh extraction of portable LaTeX ZIP",
+    "target": "narrative paper"
+  },
+  "previous_evidence_preserved": {
+    "evidence_manifest.json": "0e05ed168dddc66cc9e92b15d2b9412312258853ff24173da22aa541ea5b459e",
+    "implementation_changes.patch": "26154664e04087a1835198539d6eb661b59311647977b1c9efa032d9ea090f13",
+    "post_campaign_review.json": "4e2d30136891a3b2c4e13568418e14d91a389c0be67d3ea315667cb3c740c286",
+    "sampled_components_review.json": "1038954ebb952e772403d70c6c188b67280175888af05400469b8fbc0c0d61e4"
+  },
+  "primary_definitions_cross_checked": [
+    {
+      "reference": "DeltaMatching",
+      "scope": "Paired source rearrangement and Delta perturbative expansion",
+      "url": "https://arxiv.org/html/2002.12716v2"
+    },
+    {
+      "reference": "NasonSalam",
+      "scope": "Original rejection special case and physical shower Sudakov",
+      "url": "https://arxiv.org/html/2111.03553v1"
+    }
+  ],
+  "revised_utc": "2026-10-25T13:53:17.442549+00:00",
+  "runtime_commit": "dd947523498d5dc90239fc1d68103521b3111fbc",
+  "runtime_sources_unchanged": false,
+  "schema": "macnlops-current-document-implementation-v1",
+  "scope": "Sampled implementation with signed-PDF and numerical matching fixes; campaign figures remain frozen",
+  "source_hashes": {
+    "Template/NLO/Cards/FKS_params.dat": "41f9a0f6c75c25a7e87dd37251ec5f7025352ebd70e256fb68483f0d5414b695",
+    "Template/NLO/MCatNLO/srcPythia8/MacNLOPS.cc": "3e0ba57694e9da82cb3d760a88744c4e7cde32b735d307dff43f77f332bccf8a",
+    "Template/NLO/MCatNLO/srcPythia8/Pythia8.cc": "77f5543b2b6635fbf2ead567669570e5236b43b1353259debfa904f5b456539a",
+    "Template/NLO/MCatNLO/srcPythia8/Pythia82.cc": "8a25f47e7a3ece4aec9d62626e1fc63d6c102842a6ed0346ad06ea4d06dfc23f",
+    "Template/NLO/MCatNLO/srcPythia8/Pythia82_hep.cc": "ca20a43ed1ea01b3d72d97f4ab7f257098d365a35b1de753225138c5188d863e",
+    "Template/NLO/MCatNLO/srcPythia8/Pythia83.cc": "315fcac2eb3d239ae39076a014836ddb1bd233d55124990d7241a208677f0770",
+    "Template/NLO/MCatNLO/srcPythia8/Pythia83_hep.cc": "d82d38ede417438df04c12541b40b90ea2772c5d11d8345fe4b836cd48e1b94f",
+    "Template/NLO/MCatNLO/srcPythia8/Pythia8_hep.cc": "eaa2b9b1ff8b22ca45a03c5f2b1e77ec72500e51d469727c3dfd96984994d6a8",
+    "Template/NLO/SubProcesses/FKSParams.f90": "8ba9fa59a6d99d5106869f911727a3975887f57986fe6644f8f95099f31c50cb",
+    "Template/NLO/SubProcesses/add_write_info.f": "2d0511615d153e8263504dc72b395a4dc8719e113c15e3c46b452e68f0e09ad0",
+    "Template/NLO/SubProcesses/driver_macnlops.f": "98f6d2482fbecf3f187092a3a06c1fb57ab474457d0770abbcecba17be8e223a",
+    "Template/NLO/SubProcesses/driver_mintMC.f": "8205b1d948205592686fcac8371c770f64b973691c90a3f0d2027c53900e8199",
+    "Template/NLO/SubProcesses/fks_singular.f": "806f22679de2a68c170fd082c93700fabb5acd041384afcfebdcbd49048b6839",
+    "Template/NLO/SubProcesses/genps_fks.f": "c4f3230196995e6c262bb9061638cb6c52dfd59a714eba848c528a9b9e8a14fe",
+    "Template/NLO/SubProcesses/genps_fks_radiation.f": "d205c659f433bb7b11c9bd2200f262e54d322925ebbaeb4ae17e53a24bf1e0b5",
+    "Template/NLO/SubProcesses/handling_lhe_events.f": "f7742d4b7646c0e503e9765c4fd05ec4da393e472be6578639d4d427d74d68eb",
+    "Template/NLO/SubProcesses/mc_matching_runtime.f": "21b579bbfdd30d55cbe766a6b37995d753b65348aed326d58df22995443ee3b2",
+    "Template/NLO/SubProcesses/montecarlocounter.f": "c81d51d881586b757cbd40068ceeaa7adf49442394c897a70e02badabf027214",
+    "Template/NLO/SubProcesses/weight_lines.f": "89f20e67e25b7639e50f805009a5fddc7c6a7beed769722f724ae6144b5105ad",
+    "docs/audits/check_macnlops_component_endpoints.py": "374c118e2e40e75821c8eed415dacd09816214a21da915471f5bc2508dcc5e8a",
+    "docs/audits/check_macnlops_matching_failures.py": "797d6e0f1988aa818148e0486b056c91195fe77df48a229a450a342aae45d7a4",
+    "madgraph/interface/amcatnlo_run_interface.py": "9757b0d847324eaf927498e40c91caf0c4af08e9067683b46a8521973203ef77",
+    "madgraph/iolibs/born_support.py": "aca91c9cc80da5bd98d708ab2ef2061d6167588115e38fe3b895465c539d2eb1",
+    "madgraph/iolibs/export_fks.py": "b9e29ae7c8e1ebee386e42cd7a661cd29cdb6559eac8dfbfd5663ed5524fd363",
+    "madgraph/various/banner.py": "06eeeec73352dd9fd29cd2af408b14927e8641522e287a090bd7ba2711e1d9cc",
+    "madgraph/various/macnlops.py": "fd2d612220d7c0afed2dbb6f00f4b9238844f7e9ff15c248b691ed5c20b7925e",
+    "madgraph/various/macnlops_components.py": "e18636ea54b1866588202d44b062ff25947993a091c5877bfc6155702e4d327a",
+    "tests/input_files/check_mc_dead_zones.f90": "efe3a4bb870e3cf4fbe528450be619aa32f3ccc9e6bdaeca49ae180e6142a0b9",
+    "tests/unit_tests/fks/test_macnlops_component_evaluator.py": "a8a13886627b479b0496b39d59957d9eb1c2bea53d9b6e7d70ca56e2a7c4bc77",
+    "tests/unit_tests/fks/test_mc_dead_zones.py": "1b257203472427dd3a0404b4a1fa985e2b2158f3aea1471fb057d2393c8fa4f0",
+    "tests/unit_tests/various/test_macnlops.py": "71ba4ca4a2938ef8cef512caeb0c935e4df299b521e02169e4513830626ae5e8",
+    "tests/unit_tests/various/test_macnlops_component_protocol.py": "02f3c3ae9e8802ad61a0c9a07326b9ca5cb99587392a9157eb5a21dcc8565454"
+  },
+  "visual_review": [
+    "component definitions and ordinary/Delta probabilities",
+    "policy table and unsplit V3 listing",
+    "campaign atlas overlay clear of plot content"
+  ]
+}

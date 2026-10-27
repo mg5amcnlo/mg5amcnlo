@@ -89,11 +89,11 @@ def main():
                 f"{s['counts'].get('negative_S',0):,}",f"{m['counts'].get('negative_S',0):,}"))
             effects.append('%s & %s & %+.5g & %+.5g & %+.5g'%(name,mode_tex,t['h_only']['sumw']-t['input']['sumw'],t['s_only']['sumw']-t['input']['sumw'],t['macnlops']['sumw']-t['input']['sumw']))
     table(generated/'rates.tex','llrrrr',r'Process & Source & Retained & $\sigma_{\rm MC}$ [pb] & $\sigma_{\rm MAc}$ [pb] & Change [\%]',rate_rows,
-        r'Completed million-event common-source samples. Every source has $10^6$ events; retained events keep their original signed weights. Cross sections are the sums of the event weights, rather than a renormalization to the accepted count. The first-emission and full-shower sums agree to numerical precision.','tab:rates')
+        r'Global-sum campaign. Completed million-event common-source samples. Every source has $10^6$ events; retained events keep their original signed weights. Cross sections are the sums of the event weights, rather than a renormalization to the accepted count. The first-emission and full-shower sums agree to numerical precision.','tab:rates')
     table(generated/'negatives.tex','llrrrr',r'Process & Source & $N^-_{H,\rm source}$ & $N^-_{H,\rm retained}$ & $N^-_{S,\rm source}$ & $N^-_{S,\rm retained}$',negative_rows,
-        r'Negative H and S event counts before and after the frozen decisions. These are counts, not integrals of negative densities. A zero in this finite sample does not prove that the residual vanishes throughout phase space.','tab:negatives')
+        r'Global-sum campaign. Negative H and S event counts before and after the frozen decisions. These are counts, not integrals of negative densities. A zero in this finite sample does not prove that the residual vanishes throughout phase space.','tab:negatives')
     table(generated/'effects.tex','llrrr',r'Process & Source & H removal [pb] & S veto [pb] & Combined [pb]',effects,
-        r'Changes of the signed cross section from H removal alone, S rejection alone, and their combination. The first two columns add to the last; rejected negative S weights contribute with the opposite sign to rejected positive S weights. No events are rescaled.','tab:effects')
+        r'Global-sum campaign. Changes of the signed cross section from H removal alone, S rejection alone, and their combination. The first two columns add to the last; rejected negative S weights contribute with the opposite sign to rejected positive S weights. No events are rescaled.','tab:effects')
     # Catalog every source figure once; overview PDFs are duplicates of these panels.
     atlas=[];last_group=None
     for i,item in enumerate(figures,1):
@@ -103,7 +103,7 @@ def main():
             group=('First emission' if item['level']=='first' else 'Full parton shower')+' / '+NAMES[item['process']]+' / '+item['mode']
             title=item['observable'].replace('_',' ')+' / '+item['variant']
         commands=[r'\thispagestyle{empty}']
-        if item['historical']:commands.append(r'\HistoricalStamp')
+        commands.append(r'\HistoricalStamp' if item['historical'] else r'\CampaignStamp')
         if group!=last_group:commands.append(r'\pdfbookmark[1]{'+tex(group)+'}{atlas-group-'+str(i)+'}');last_group=group
         commands.append(r'\pdfbookmark[2]{'+tex(title)+'}{atlas-figure-'+str(i)+'}')
         atlas.append(r'\includepdf[pages=1,fitpaper=true,pagecommand={'+''.join(commands)+r'}]{'+item['file']+'}')
@@ -115,7 +115,7 @@ def main():
     for process,mode,level,observable in selections:
         name=observable+'_ratio_zoom' if process=='ttbar' else observable
         relative='figures/'+level+'/'+process+'_'+mode+'/'+name+'.pdf'
-        caption=(NAMES[process]+', '+('ordinary MC@NLO' if mode=='ordinary' else r'MC@NLO-$\Delta$')+', '+
+        caption=('Global-sum campaign. '+NAMES[process]+', '+('ordinary MC@NLO' if mode=='ordinary' else r'MC@NLO-$\Delta$')+', '+
             ('first-emission proposal endpoint' if level=='first' else 'full parton shower')+'. ')
         if process=='wbb':caption+=r'The radiation jets exclude stable bottom partons before clustering. '
         if process=='single_top':caption+=r'The second inclusive jet is shown; the leading jet is the spectator proxy. '

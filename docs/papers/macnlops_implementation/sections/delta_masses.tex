@@ -1,11 +1,13 @@
-\section{Extending the construction to MC@NLO--\texorpdfstring{$\Delta$}{Delta}}
+\section{MC@NLO--\texorpdfstring{$\Delta$}{Delta}: sampled matching and global compatibility}
 \label{sec:delta-extension}
 
-The million-event campaign used the globally summed conditional
-prescription described first in this section. A subsequent sampled
-fixed-flow implementation is described in
-Sec.~\ref{sec:delta-sampled}; none of the campaign figures have been
-regenerated with that prescription.
+The paired source rearrangement is common to both supported source
+organizations. The current sampled fixed-flow prescription is developed
+first, in Sec.~\ref{sec:delta-sampled}. The later global-sum discussion
+describes the compatibility path and the prescription used for every
+million-event figure. Its fresh S-side Delta draws are not part of
+sampled matching. No campaign figure has been regenerated with the new
+probabilities.
 
 \subsection{A paired modification of the source}
 \label{sec:delta-paired}
@@ -61,7 +63,9 @@ The product of source leg probabilities must not be identified
 without proof with the native shower's probability of no harder
 competing ISR/FSR emission at one observed evolution scale.
 
-\subsection{The negative part belongs to a conditional density}
+\input{sections/sampled_components}
+
+\subsection{Why a globally summed sign remains conditional}
 \label{sec:delta-conditional}
 
 The source is stochastic even at fixed real momenta.
@@ -109,10 +113,14 @@ for each colour flow, would define another joint source law.
 Comparable marginal distributions would not restore the required
 correlations.
 
-\subsection{Replay H; draw an independent source auxiliary for S}
+\subsection{Compatibility mode: replay H and draw a fresh S-side auxiliary}
 \label{sec:delta-replay}
 
-A qualified $\Delta$ H record carries a versioned
+This subsection concerns \code{global-source-v1}. Sampled V3 requests
+instead use the component and unit-Delta prescription just described;
+they require neither of the numerical Delta request types below.
+
+A qualified globally summed $\Delta$ H record carries a versioned
 \code{\detokenize{macnlops_delta_context}} packet.
 It contains an owner, the colour-insertion variate, a registry digest,
 and rows of the form
@@ -207,7 +215,7 @@ The hard-coordinate mass convention used for the first shower step
 does not authorize replacing the masses or tables that defined an
 existing source's $\Delta$ law.
 
-\subsection{What Delta changes in the removal/veto balance}
+\subsection{Global-sum campaign: source-damped transfer and residual}
 \label{sec:delta-balance}
 
 The bounded rule is applied to the conditional source:
@@ -288,11 +296,14 @@ The workflow combines \code{\detokenize{mcatnlo_delta=True}} with
 \code{\detokenize{macnlops_resolved_source=False}} and the hard-state annotation.
 Ordinary and $\Delta$ runs are independently generated;
 each is compared with its own unchanged source.
-An old $\Delta$ LHE lacking the registry and replay packet cannot be
+An old globally summed $\Delta$ LHE lacking the registry and replay packet cannot be
 qualified by drawing replacement source probabilities.
 The importer fails explicitly on incompatible source-state information.
+A sampled source instead requires its qualified component packet;
+neither scheme can recover the required information by relabelling an
+anonymous source.
 
-\subsection{25 October audit: an undamped acceptance is a different prescription}
+\subsection{Comparing the global campaign and undamped prescriptions}
 \label{sec:delta-undamped-audit}
 
 The original multiplicative--accumulative formula uses the same kernel
@@ -384,8 +395,6 @@ instead retains component labels before sign selection, specifies both
 decisions, and avoids source-$\Delta$ evaluation at S emissions.
 The measured results in this paper use the original global conditional
 rule, not this subsequent implementation.
-
-\input{sections/sampled_components}
 
 \section{Mass conventions and preservation of the hard phase space}
 \label{sec:masses-contract}
@@ -751,8 +760,9 @@ The old source scale packet is renamed to inert
 A continuation packet records the current state, scale, original
 source \code{SCALUP} and both cutoffs.
 
-In $\Delta$ mode, the original scale matrix and replay probabilities
-describe the source event.
+In $\Delta$ mode, the original scale matrix and any recorded probabilities
+describe the source event. Sampled matching does not numerically replay
+those probabilities; it uses the unit-Delta component calculation.
 After radiation, the added parton's index, colour connections and
 current scales describe another state.
 Reusing old active indices could attach a valid scale to the wrong

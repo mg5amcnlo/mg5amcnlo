@@ -7,7 +7,9 @@ end module controlled_connections
 
 program check_mc_dead_zones
   use mc_counterterms, only: compute_MCsubtraction_kl,get_dead_zone, &
-       ileg,fksfather,xm12,xm22,w1,w2,shat_n1,gfactsf,gfactcl,gfactazi
+       ileg,fksfather,xm12,xm22,w1,w2,shat_n1,gfactsf,gfactcl,gfactazi, &
+       get_momenta_emitter_recoiler,fill_father_and_ileg, &
+       fill_invariants_ileg3,fill_invariants_ileg4,pp_rec,single_recoil_mass2
   use process_module
   use fks_phase_space_helpers, only: dot,sumdot
   use scale_module
@@ -56,6 +58,41 @@ program check_mc_dead_zones
   pb=0d0
 
   select case (trim(name))
+  case ('single_recoil')
+    ! A single on-shell spectator may acquire a spacelike dot product
+    ! after boosts. Its physical invariant remains its model mass.
+    p=0d0
+    p(:,1)=[500d0,0d0,0d0,500d0]
+    p(:,2)=[500d0,0d0,0d0,-500d0]
+    p(:,3)=[200d0,10d0,0d0,100d0]
+    p(:,4)=[100d0,100d0+1d-10,0d0,0d0]
+    p(:,5)=[10d0,0d0,10d0,0d0]
+    pmass(3)=173d0
+    shat_n1=1d6
+    call require(dot(p(:,4),p(:,4)).lt.-64d0*epsilon(1d0)*shat_n1, &
+         'fixture exceeds the spacelike roundoff guard')
+    call fill_father_and_ileg(5,3,pmass(3))
+    call get_momenta_emitter_recoiler(p,5,3)
+    call fill_invariants_ileg3()
+    call require(all(pp_rec.eq.p(:,4)),'use the explicit spectator momentum')
+    call require(xm22.eq.0d0,'massless spectator keeps its on-shell mass')
+    ! Keep genuine masses, and cover the massless-emitter convention too.
+    pmass(4)=10d0;p(0,4)=sqrt(100d0**2+pmass(4)**2)
+    call get_momenta_emitter_recoiler(p,5,3)
+    call fill_invariants_ileg3()
+    call require(xm22.eq.100d0,'massive spectator mass is retained')
+    call fill_father_and_ileg(5,3,0d0)
+    call get_momenta_emitter_recoiler(p,5,3)
+    call fill_invariants_ileg4(.1d0,.2d0)
+    call require(xm12.eq.100d0,'massless-emitter recoil convention')
+    ! No state from the one-particle case may leak into a composite recoil.
+    p(:,6)=[20d0,0d0,-20d0,0d0]
+    call get_momenta_emitter_recoiler(p,5,3)
+    call require(single_recoil_mass2.lt.0d0,'composite recoil clears the exact mass')
+    call fill_father_and_ileg(5,1,0d0)
+    call get_momenta_emitter_recoiler(p,5,1)
+    call require(single_recoil_mass2.lt.0d0,'ISR clears the exact recoil mass')
+
   case ('herwig')
     shower_mc_mod='HERWIG7'
     connected=.true.

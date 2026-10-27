@@ -291,7 +291,8 @@ c H before its physical Delta multiplier, without evaluating a Delta.
      $     damping_mode,diagram_symmetry,has_component_born,born_ids,
      $     born_colours,born_lab,born_masses,r,d,k,status)
       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
-      use fks_phase_space, only: generate_native_momenta
+      use fks_phase_space, only: generate_native_momenta,
+     $     fks_phase_space_point
       use fks_phase_space_data, only: p_born,p1_cnt,xinorm_ev,
      $     xi_i_fks_ev,y_ij_fks_ev
       use fks_phase_space_helpers, only: apply_momentum_permutation
@@ -324,11 +325,12 @@ c H before its physical Delta multiplier, without evaluating a Delta.
      $     plab(0:3,nexternal),pcms(0:3,nexternal),jac,measure,
      $     born,flows(max_bcol),total,probne,rwgt,reference,
      $     value,macnlops_flavour_sum,model_mass,mass2,tolerance,
-     $     get_mass_from_id,hard_scale2,diagram_symmetry
+     $     get_mass_from_id,hard_scale2,diagram_symmetry,
+     $     fks_Sij,fks_Hij
       double precision component_normalization
       double precision born_lab(0:3,nexternal-1),
      $     born_masses(nexternal-1)
-      external macnlops_flavour_sum,get_mass_from_id
+      external macnlops_flavour_sum,get_mass_from_id,fks_Sij,fks_Hij
       double precision factors(9),mc_factors(8),pdf_factors(3),
      $     factors_save(9),mc_save(8),pdf_save(3)
       common/factor_n1body/factors
@@ -346,6 +348,7 @@ c H before its physical Delta multiplier, without evaluating a Delta.
       integer this_config
       common/to_mconfigs/this_config
       external passcuts,passcuts_native_born
+      type(fks_phase_space_point) native_point
 
       status=1
       r=0d0
@@ -466,8 +469,13 @@ c Cross-provider component transport needs an explicit certified map.
             if(local_component)iconfig=component_config
             delta_recoil=iconfig
             call select_native_recoil(iconfig)
-            call generate_native_momenta(flipped,p,plab,pcms,
-     $           jac,valid)
+            if(local_component.and.has_component_born)then
+               call generate_native_momenta(flipped,p,plab,pcms,
+     $              jac,valid,native_point)
+            else
+               call generate_native_momenta(flipped,p,plab,pcms,
+     $              jac,valid)
+            endif
             if(.not.valid)then
                status=4
                goto 900
@@ -475,7 +483,8 @@ c Cross-provider component transport needs an explicit certified map.
             this_config=iconfig
             if(local_component.and.has_component_born)then
                call macnlops_validate_component_born(component_flow,
-     $              born_ids,born_colours,born_lab,born_masses,status)
+     $              born_ids,born_colours,born_lab,born_masses,
+     $              native_point%born%xbjrk,status)
                if(status.ne.0)goto 900
             endif
             measure=xinorm_ev*xi_i_fks_ev*jac*sym
@@ -539,11 +548,17 @@ c local H uses only its scalar bogus P. Avoid unused H clustering.
      $            cuts_born)then
 c A unit replay removes only Delta. Switching to ordinary matching
 c here would incorrectly introduce its separate bogus Sudakov P.
-                  call begin_delta_context(owner,0.5d0)
-                  delta_history=hist
-                  delta_recoil=iconfig
-                  call append_delta_probability(flow,1d0)
-                  delta_replay=.true.
+c compute_MC_subt_term returns before reading Delta when both FKS
+c partitions vanish. Do not invent an unused replay row in that case.
+                  if(fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,
+     $                 y_ij_fks_ev).ne.0d0.or.
+     $                 fks_Hij(p,i_fks,j_fks).ne.0d0)then
+                     call begin_delta_context(owner,0.5d0)
+                     delta_history=hist
+                     delta_recoil=iconfig
+                     call append_delta_probability(flow,1d0)
+                     delta_replay=.true.
+                  endif
                endif
                call compute_native_NLOPS_weights(p,pcms,
      $              cuts_born,cuts_real,probne)
@@ -633,12 +648,12 @@ c densities: neither the veto nor the H-residual ratio changes.
 
 
       subroutine macnlops_validate_component_born(flow,ids,colours,
-     $     lab,masses,status)
+     $     lab,masses,projected_x,status)
 c The supplied point is the actual pre-emission S Born, with inherited
 c leg identities in native Born order. An inverse endpoint projection
 c may not silently substitute a different Born geometry or colour flow.
       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
-      use fks_phase_space_data, only: p_born,xbjrk_cnt
+      use fks_phase_space_data, only: p_born
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
@@ -649,6 +664,7 @@ c may not silently substitute a different Born geometry or colour flow.
      $     icolup(2,nexternal-1,max_bcol),i,j
       include 'born_leshouche.inc'
       double precision lab(0:3,nexternal-1),masses(nexternal-1),
+     $     projected_x(2),
      $     model_mass,get_mass_from_id,mass2,native_dot,supplied_dot,
      $     scale2,tolerance,fraction
       double precision,parameter :: closure_rtol=1d-7
@@ -693,10 +709,15 @@ c may not silently substitute a different Born geometry or colour flow.
       enddo
       do i=1,nincoming
          fraction=lab(0,i)/ebeam(i)
-         if(abs(fraction-xbjrk_cnt(i,0)).gt.closure_rtol*
-     $      max(1d-12,abs(fraction),abs(xbjrk_cnt(i,0))))then
+c The massive-FSR second solution has no soft counterevent. Its slot
+c is invalid and xbjrk_cnt(:,0)=0, while the projected Born is valid.
+c Validate against the immutable Born returned by the inverse map.
+         if(.not.ieee_is_finite(projected_x(i)).or.
+     $      projected_x(i).le.0d0)return
+         if(abs(fraction-projected_x(i)).gt.closure_rtol*
+     $      max(1d-12,abs(fraction),abs(projected_x(i))))then
             write(*,'(a,1x,i6,2(1x,es26.17e3))')
-     $           'MACNLOPS_BORN_FRACTION_V1',i,xbjrk_cnt(i,0),fraction
+     $           'MACNLOPS_BORN_FRACTION_V1',i,projected_x(i),fraction
             return
          endif
       enddo
