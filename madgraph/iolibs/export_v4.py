@@ -2229,13 +2229,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if vector:
             pdf_definition_lines_vec = ""
             pdf_data_lines_vec = ""
-            pdf_lines = """ NB_WARP_USED = VECSIZE_USED / WARP_SIZE
+            nb_warp_lines = """ NB_WARP_USED = VECSIZE_USED / WARP_SIZE
         IF( NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED ) THEN
         WRITE(*,*) 'ERROR: NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED',
      &    NB_WARP_USED, WARP_SIZE, VECSIZE_USED
         STOP
         ENDIF
-
+"""
+            pdf_lines = nb_warp_lines + """
         DO CURR_WARP=1, NB_WARP_USED
         IF(IMIRROR_VEC(CURR_WARP).EQ.1)THEN
           IB(1) = 1
@@ -2250,7 +2251,15 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
 
 
-        if ninitial == 1:
+        if ninitial == 1 and vector:
+            # no PDF: same weight for all the events of the vector
+            pdf_lines = nb_warp_lines + "ALL_PD(0,:) = 0d0\nIPROC = 0\n"
+            for i, proc in enumerate(processes):
+                process_line = proc.base_string()
+                pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
+                pdf_lines = pdf_lines + "\nALL_PD(IPROC,:)=1d0\n"
+                pdf_lines = pdf_lines + "ALL_PD(0,:)=ALL_PD(0,:)+ALL_PD(IPROC,:)\n"
+        elif ninitial == 1:
             pdf_lines = "PD(0) = 0d0\nIPROC = 0\n"
             for i, proc in enumerate(processes):
                 process_line = proc.base_string()
