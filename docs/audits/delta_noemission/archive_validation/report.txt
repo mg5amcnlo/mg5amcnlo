@@ -1,0 +1,41 @@
+Archived-table substitution on the existing Simple-shower sample
+
+Same 871 Born states, 52,185 real probes, and independent 240 reference showers/Born.
+Only the table changes; the production caller and PDF ratios are unchanged.
+No normalization corrections or new shower runs.
+The original Pythia8.313 Simple-shower settings are not matched to the archive-generation settings.
+
+Ratios of mean Delta to mean conditional Simple-shower CDF:
+Table        evolution-pT bin [GeV]       ratio          Born-cluster SE
+default          10-20                     0.381161        0.036592
+default          20-30                     0.222539        0.020544
+default          30-50                     0.208908        0.012178
+default          50-75                     0.314072        0.008824
+default          75-100                    0.471213        0.008719
+default         100-150                    0.627414        0.009557
+PDFmode0         10-20                     0.930489        0.016654
+PDFmode0         20-30                     0.849603        0.008983
+PDFmode0         30-50                     0.865420        0.004729
+PDFmode0         50-75                     0.901014        0.003750
+PDFmode0         75-100                    0.925126        0.003136
+PDFmode0        100-150                    0.941469        0.003113
+PDFmode1         10-20                     0.748855        0.019121
+PDFmode1         20-30                     0.695710        0.009561
+PDFmode1         30-50                     0.742205        0.004954
+PDFmode1         50-75                     0.808801        0.004068
+PDFmode1         75-100                    0.856608        0.003606
+PDFmode1        100-150                    0.892285        0.003375
+PDFmode2         10-20                     0.801655        0.018388
+PDFmode2         20-30                     0.749779        0.009215
+PDFmode2         30-50                     0.792615        0.004744
+PDFmode2         50-75                     0.854532        0.003878
+PDFmode2         75-100                    0.896954        0.003371
+PDFmode2        100-150                    0.924383        0.003235
+
+The common-cutoff comparison is auxiliary; real_emission.csv uses native
+real-dependent stopping scales. Full channel splits, nonfinite counts, and
+clipping diagnostics are in the CSV files. Errors use 500 paired Born-cluster
+bootstrap resamples; different scale bins remain correlated.
+
+Reproduce:
+python tests/validation/delta_noemission/archive_real_validation.py STUDY_DIR OUTPUT_DIR --workers 8

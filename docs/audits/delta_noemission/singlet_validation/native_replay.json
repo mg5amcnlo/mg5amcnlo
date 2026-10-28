@@ -1,0 +1,187 @@
+{
+  "samples": {
+    "dy_fixed": {
+      "born": 10,
+      "repeats": 300,
+      "trials_per_reader": 3000,
+      "seed": 10289900,
+      "different_trials": 0,
+      "maximum_absolute_pt_difference": 0,
+      "process_audits": {
+        "replay": {
+          "process_checks": 3000,
+          "max_relative_Born_difference": 8.915090887740007e-14,
+          "emitted": 2849,
+          "trials": 3000
+        },
+        "native": {
+          "process_checks": 3000,
+          "max_relative_Born_difference": 8.915090887740007e-14,
+          "emitted": 2849,
+          "trials": 3000
+        }
+      },
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_native_replay",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_dy_fixed",
+        "10",
+        "300",
+        "10289900"
+      ],
+      "sha256": {
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed.lhe": "1dbf41f75b751049166e4dc8d41eba95e85ec0a4e274f46f9dc37f3d70626e04",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_dy_fixed.expanded.lhe": "82b8ce5f0391722d64e148891ba7ceed01f4da1edd1e3b2c7a8195c1512f38cb",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_dy_fixed.replay.trials.jsonl": "a48d074a2763fa87701bc317f04563442eeec58edcf9d59d973de63ffa5ec160",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_dy_fixed.native.trials.jsonl": "a48d074a2763fa87701bc317f04563442eeec58edcf9d59d973de63ffa5ec160",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_dy_fixed.replay.settings.cmnd": "44fe75ee3ef38c9e8d58b1d3a300cfe742835cc3e5d8399865cb1eb207df4dc6",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_dy_fixed.native.settings.cmnd": "11375083646a8749f4eaa84ac5ffc7187d23493363fdb9cc5ce50ed6df8802c7",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_dy_fixed.log": "3374ee6256d91d964d6b5975501f0a9b27c03087fabe45ef1cc54fe4ab0dfd95"
+      }
+    },
+    "dy_damped": {
+      "born": 10,
+      "repeats": 300,
+      "trials_per_reader": 3000,
+      "seed": 10289901,
+      "different_trials": 0,
+      "maximum_absolute_pt_difference": 0,
+      "process_audits": {
+        "replay": {
+          "process_checks": 3000,
+          "max_relative_Born_difference": 8.915090887740007e-14,
+          "emitted": 2837,
+          "trials": 3000
+        },
+        "native": {
+          "process_checks": 3000,
+          "max_relative_Born_difference": 8.915090887740007e-14,
+          "emitted": 2837,
+          "trials": 3000
+        }
+      },
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_native_replay",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_dy_damped",
+        "10",
+        "300",
+        "10289901"
+      ],
+      "sha256": {
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped.lhe": "cfbbfa14bd2146514f4a7d7634432767e3fc42359b7a174dedfcd132cd314a48",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_dy_damped.expanded.lhe": "42d0538e6bbbf35d7e7f10b6aa2083a528f95e3a35d1979fb16f13f04f99e9d4",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_dy_damped.replay.trials.jsonl": "0113ece90a9bfcd1d9d5e9690a9868a31c219ade40ce97c7e7b16530b4d90799",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_dy_damped.native.trials.jsonl": "0113ece90a9bfcd1d9d5e9690a9868a31c219ade40ce97c7e7b16530b4d90799",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_dy_damped.replay.settings.cmnd": "6775ae20d2e4d712022d9a75147cd6cf9fcd61e29c8d26abfa60b8240f36ed5d",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_dy_damped.native.settings.cmnd": "5bd4d8573a715f51b3029263f1a40c1e0a95ff481c53ec4ee96f7d2737446371",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_dy_damped.log": "22d81398200fbc387b0f623924894a142e8bbf6978005379c55952687631b7a3"
+      }
+    },
+    "higgs_fixed": {
+      "born": 10,
+      "repeats": 300,
+      "trials_per_reader": 3000,
+      "seed": 10289902,
+      "different_trials": 0,
+      "maximum_absolute_pt_difference": 0,
+      "process_audits": {
+        "replay": {
+          "process_checks": 3000,
+          "max_relative_Born_difference": 1.1421344552075723e-14,
+          "emitted": 3000,
+          "trials": 3000
+        },
+        "native": {
+          "process_checks": 3000,
+          "max_relative_Born_difference": 1.1421344552075723e-14,
+          "emitted": 3000,
+          "trials": 3000
+        }
+      },
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_native_replay",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_higgs_fixed",
+        "10",
+        "300",
+        "10289902"
+      ],
+      "sha256": {
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed.lhe": "08fadbd504e33e48026cee9182aafdd1682e3eb00f9b98ff89437297a9b77485",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_higgs_fixed.expanded.lhe": "9f4de9183178e406ec4841c951e641fbe283724d942df030277bf7f0fdbd7d68",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_higgs_fixed.replay.trials.jsonl": "6fd3e234a4a4b6213eeeaa0fdb10344f14e48ed39460a734e104c6fa3f50a497",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_higgs_fixed.native.trials.jsonl": "6fd3e234a4a4b6213eeeaa0fdb10344f14e48ed39460a734e104c6fa3f50a497",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_higgs_fixed.replay.settings.cmnd": "7a7792fd2889f6aea1520951cf7911367f7da30e6b66bc7d5bb4a947049cca9e",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_higgs_fixed.native.settings.cmnd": "d8f74df50b389f3156bab4ea27db79aff981ae4164d606fcd4383be059cd89cc",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_higgs_fixed.log": "ef88b358d3da87b7787939f87d09e53398a71f07107b1325def7d84dfe2a1f9c"
+      }
+    },
+    "higgs_damped": {
+      "born": 10,
+      "repeats": 300,
+      "trials_per_reader": 3000,
+      "seed": 10289903,
+      "different_trials": 0,
+      "maximum_absolute_pt_difference": 0,
+      "process_audits": {
+        "replay": {
+          "process_checks": 3000,
+          "max_relative_Born_difference": 1.1421344552075723e-14,
+          "emitted": 3000,
+          "trials": 3000
+        },
+        "native": {
+          "process_checks": 3000,
+          "max_relative_Born_difference": 1.1421344552075723e-14,
+          "emitted": 3000,
+          "trials": 3000
+        }
+      },
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_native_replay",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_higgs_damped",
+        "10",
+        "300",
+        "10289903"
+      ],
+      "sha256": {
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped.lhe": "f2569b7a5dffeb9aff5397d9207a436b85229e0a4281aac5a86d0ad6d3eeef7f",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_higgs_damped.expanded.lhe": "d36ed588de9e8a7eeedf3816672264314027aec60fe06f3111d66ce6746fb1b1",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_higgs_damped.replay.trials.jsonl": "796e672c0dae9e3103bdc936dda3c93e7670e437c094494e6a95df9cbd067e68",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_higgs_damped.native.trials.jsonl": "796e672c0dae9e3103bdc936dda3c93e7670e437c094494e6a95df9cbd067e68",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_higgs_damped.replay.settings.cmnd": "d811f1d01a60cd95c2dce1ef711d7c46613dbc938554c626a3a471fc31886aea",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_higgs_damped.native.settings.cmnd": "a0f82bebb2b04ca15ec76f5673bf50bf9088349bf59681da62ec20efe36048b0",
+        "/export/tmp/rikkert/delta_singlets_20261028/native_check_higgs_damped.log": "e30a6b62281470ff72fa1188761fa14d785ff12bf137d47ffedf31a34387db5c"
+      }
+    }
+  },
+  "paired_trials": 12000,
+  "successful_full_shower_runs": 24000,
+  "all_first_emission_pt_and_type_bitwise_equal": true,
+  "all_serialized_trial_files_byte_equal": true,
+  "scope": "Native Pythia LHEF reader (frameType4) versus custom in-memory Replay (frameType5), identical Born momenta/colours/starts and RNG seeds/settings. Four samples:10Bornx300repetitions each. This validates input replay, not the tables or shower physics approximation.",
+  "sha256": {
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/singlet_native_replay.cc": "4f9d00c55776195d089e0f3a4b1376d60367167c59b9e0ae960733039cef6f7b",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/singlet_shower_probe.cc": "24133ab833d969b98e216d5eff3e3bd486e0995656745632b2aa278614496a90",
+    "/export/tmp/rikkert/delta_singlets_20261028/singlet_native_replay": "a0b958a842a56dda853dbc923711dfa538dfbef8af7a213213f1c244ed60fccc",
+    "/export/tmp/rikkert/Pythia/pythia8313/lib/libpythia8.so": "18e9aec234ec594b6e0193cb24d0d4100fc5eb3fa68fbc9362e9f4c3c8bf636c"
+  },
+  "build": [
+    "c++",
+    "-O2",
+    "-std=c++17",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/singlet_native_replay.cc",
+    "-I/export/tmp/rikkert/Pythia/pythia8313/include",
+    "-L/export/tmp/rikkert/Pythia/pythia8313/lib",
+    "-Wl,-rpath,/export/tmp/rikkert/Pythia/pythia8313/lib",
+    "-lpythia8",
+    "-o",
+    "/export/tmp/rikkert/delta_singlets_20261028/singlet_native_replay"
+  ]
+}

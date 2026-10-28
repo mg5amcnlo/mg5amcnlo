@@ -1,0 +1,30 @@
+{
+  "source_commit": "801a3417c98335f33894376df6e1005221ec53a6",
+  "process": "p p > t t~ [QCD]",
+  "model": "loop_sm-no_b_mass",
+  "sqrt_s_GeV": 13000,
+  "top_mass_GeV": 173,
+  "pdf": "nn23nlo",
+  "renormalization_scale_GeV": 173,
+  "factorization_scale_GeV": 173,
+  "nevents_requested": 1000,
+  "req_acc": 0.03,
+  "seed": 102701,
+  "cores": 4,
+  "matching": "MC@NLO-Delta",
+  "shower": "not run",
+  "FKS": {
+    "MCExplicitKLSum": false,
+    "FKSExplicitSum": false,
+    "MCSubtractionAtFixedFlow": true
+  },
+  "files": {
+    "TT/Cards/run_card.dat": "684c2db2a04f03d9a3bc2c14041dfca3662c008ac85ca7a3b7c490d3cfb0c766",
+    "TT/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+    "TT/Cards/FKS_params.dat": "e135705980a9560d2db4ca8da051b2ffa45ddc4cd85ee79bbdd0074fc9e9934c",
+    "TT/Cards/proc_card_mg5.dat": "14031c8aeb82e7faeb1f304236282246fb61de8e099b5478a3f130b42f07b11c",
+    "export.cmd": "1286b842e7bcef00499d5de2e7fb10cc50d4727c49f19f89af7b3ce864bd9cf1",
+    "launch.cmd": "518b4a153dfad85d284fe3a378e3a6036d5fc0f86cf3cdada56a60dcc1a51d34"
+  },
+  "note": "Param_card reflects automatic stable top width=0 for external on-shell top production."
+}

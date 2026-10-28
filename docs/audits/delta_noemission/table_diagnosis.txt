@@ -1,0 +1,146 @@
+Follow-up diagnosis: shipped table versus runtime caller
+27 October 2026, branch801a3417c; Simple Shower numerical tests only
+
+Conclusion
+==========
+The dominant discrepancy is in the shipped table/generation chain, not a
+reversed ratio, wrong GeV/GeV-squared argument or duplicated PDF ratio in
+the current runtime caller. The caller implements the intended per-colour-
+line formula. However, the present generator does NOT return that convention
+consistently, so simply regenerating and substituting its output is unsafe.
+There is also a separate small runtime 0/0 edge case.
+
+All fresh numerical checks use Pythia8.313 SimpleSpaceShower and
+SimpleTimeShower. Runtime assertions confirm model1, SimpleShowerModel, SimpleSpaceShower
+and SimpleTimeShower; rerun probabilities agree bit-for-bit. No Dire
+numerical generation was used. Historical source
+inspection below concerns the origin of the stored table only.
+
+Fresh Simple Shower checks
+==========================
+At Q=200 GeV, q=20 GeV, mDip=500 GeV, calling the unmodified current
+vendor/SudGen/pythia_interface_for_sudgen.cc initializer:
+
+ quantity                  shipped ratio    fresh per-colour-line factor
+ incoming gluon, II          0.010684          0.612011 +/-0.000559
+ incoming up quark, II       0.659100          0.661092 +/-0.000669
+ top-ID dummy, FI            1.000000          0.6533   +/-0.0048
+ top-ID dummy, FF            0.627753          0.6588   +/-0.0038
+
+500000 trials for each ISR point;10000 for each FSR point. The generator's
+current defaults are alphaS_ISR=.130, alphaS_FSR=.1365, ISRpdfMode=2.
+The full set includes q=10,20,50 GeV and controls with both shower couplings
+set to.118, one-loop, CMWoff and ISRpdfMode1 or2. The gluon discrepancy
+persists: at.118/pdfMode2 the normalized gluon line is about.6455.
+
+IMPORTANT: the current API builds massless dummy event entries even for
+ID6. These FSR numbers diagnose the generator/table contract, and are NOT
+massive-top physical no-emission probabilities. The earlier full ttbar
+showers, which use massive stable tops, supply the physical comparison.
+The quark/gluon difference and native direct-table evaluations demonstrate
+that a universal units or argument-order error is not the explanation.
+
+Runtime caller contract
+=======================
+montecarlocounter.f:delta_leg_probability uses table(stop,mass)/table(start,mass),
+multiplies the required colour-line factors, and inserts one PDF ratio per
+incoming-leg term. get_delta_connections uses II for incoming emitters,
+FI or FF for outgoing emitters according to the partner. Native scale units
+and all these argument mappings have been checked independently.
+
+The paper's eq3.17 defines Delta* with exponent divided by the number of
+colour lines (two for gluons). AppendixA explicitly describes the gluon
+pretabulation as one colour line. Thus multiplying two gluon line factors
+is correct IF the table actually stores that quantity.
+https://arxiv.org/pdf/2002.12716 (eqs3.14--3.17,3.34,AppendixA)
+
+Present Simple Shower regeneration mismatch
+==========================================
+In Pythia8.313 the exposed Sudakov API returns:
+ - ISR: one FULL incoming radiator; its gluon kernel is full C_A.
+ - FI: one full final radiator.
+ - FF: all dipole ends of BOTH dummy final particles.
+For these symmetric dummy configurations, per-colour-line factors therefore
+require powers1/2 for incoming/FI gluons,1/2 for FF quarks,1/4 for FF gluons.
+Example: incoming gluon API=.374558, while the required line factor is
+sqrt(.374558)=.612011. Fresh gluon FF=.1392 and FI=.3747 independently
+confirm sqrt(FF) approximately equals the full-gluon FI result.
+
+The current Fortran grid generators store the returned API probability
+directly, without these conversions. Therefore changing the caller's gluon
+product would conceal a producer/consumer convention mismatch; it would
+not implement the prescribed Delta* definition consistently. A robust fix
+must make the producer generate exactly one intended colour-line factor,
+with correct massive-radiator kinematics and the chosen Simple Shower
+coupling/settings, then validate before regenerating the full table.
+Do not blindly take roots of the old shipped numbers or swap FI to FF.
+
+Stored-table history (read-only source evidence)
+===============================================
+The current table is byte-identical (SHA256dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9)
+to its introduction on19 March2019, commit16e0bf768. The Pythia-specific
+interface was added14 May2019,99771294d; later kernel/PDF fixes did not
+replace the table. The contemporaneous generation sources used a different
+shower. This establishes stale provenance, not an archived generation log.
+
+The old generation wrapper passes s=7000,x1=.1, while its exact historical
+API uses s as squared energy and x2=mDip^2/(s*x1). Its FI phase-space test
+requires x2<=xCS<=1, so radiation is impossible for mDip>sqrt(700)=26.4575GeV.
+This predicts the observed FI-grid fingerprint: last nontrivial mass node
+25.851455GeV, next node30.971082GeV and all higher nodes identically1.
+The source proves a generation-side energy-input bug; the missing original
+run log limits a claim of complete historical reconstruction. This energy
+argument bug is absent from the current Pythia wrapper, which passes7000^2.
+The exact historical source of the unusually small gluon values remains
+unisolated; the normalization mismatch and strong fresh-trial discrepancy
+are established independently with the Simple Shower.
+
+Same-caller content swap
+========================
+Changing ONLY the table, holding the871 Born states/native PDFs/scales and
+runtime caller fixed, gives at common cutoff50GeV:
+ shipped .127727; archivedPDF2 .379396; actual Pythia .562763.
+At20GeV: shipped .040799; archive .049432; Pythia .178511.
+Other archives show similar partial improvement. They are not validated
+replacements: convention/settings and massive-emitter issues remain.
+
+Separate runtime issue
+======================
+montecarlocounter.f:1592 divides by sum(gl). If both gluon line ratios are1,
+gl=(0,0), causing0/0. It occurred for40/52185 real probes in the preceding
+study. It deserves a limit-safe treatment, but excluding these points
+changes the20--75GeV ratios by less than.0001, so it does not explain the
+main suppression.
+
+Evidence and reproduction
+=========================
+table_diagnosis/ contains fresh CSV/logs/hashes, historical source provenance
+and fixed-caller table-swap results. The reusable Simple Shower driver is
+tests/validation/delta_noemission/table_fresh_probe.cc, linked with the
+unchanged vendor/SudGen/pythia_interface_for_sudgen.cc. table_compare_fresh.py
+converts outputs into per-line comparisons; it documents each root/power.
+Full builds/logs are at /export/tmp/rikkert/delta_noemission_20261027/table_diagnosis.
+Original historical source snapshots are at /export/tmp/rikkert/delta_table_origin.
+No production source or table has been modified for this diagnosis.
+
+Coupling/CMW follow-up (Simple Shower only)
+=========================================
+24 points,12 million ISR trials at q20,Q200,mDip500 GeV. Runtime model
+assertions require SimpleShowerModel, SimpleSpaceShower, SimpleTimeShower.
+Alpha_s(MZ)=.118,.130,.1365; CMWoff/on; forwardPDFmode1/2. All gluon per-line
+probabilities lie in [.5433,.6446], versus shipped .0106836. At .130/noCMW/
+pdfMode2 the quark value .66073 nearly equals shipped .65910, while the
+gluon value .61320 is far from shipped. The required integrated-exponent
+multipliers are1.006 for quarks and9.281 for gluons. Ordinary universal
+alpha_s/CMW settings cannot explain this flavour-specific difference.
+Detailed settings, statistical errors and coupling values are archived in
+coupling_scan/. No statement excludes arbitrary unrecorded nonstandard
+kernel or phase-space changes; those are a different generation contract.
+
+Terminology clarification: a per-colour-line table entry is ONE EMITTER
+along ONE directed connection i|j. A physical colour connection i-j has
+two emitting endpoints. A full quark leg has one such factor; a full gluon
+leg has two. The FF API showers the whole two-particle dummy system: two
+endpoints for qqbar, four for a colour-singlet gg system. Equal-endpoint
+roots only hold for symmetric kinematics/scales. They are not prescriptions
+for taking roots of arbitrary stored or event-dependent probabilities.

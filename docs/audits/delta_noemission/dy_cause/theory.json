@@ -1,0 +1,127 @@
+{
+  "status": "Finite phase-space/PDF-evolution mismatch is quantitatively validated for a central u-ubar DY point; full-ensemble and heavy-flavour attribution remains incomplete.",
+  "expected_relation": {
+    "formula": "P_backward(q,Q;x,a) approximately [f_a(x,q)/f_a(x,Q)]*Delta_forward(q,Q;a)",
+    "derivation": "If dlog(f_a)/dlog(t)=R_backward(t)-V_a(t), then integrating gives this relation. It requires common real/virtual kernels, scale arguments, regulator and phase-space bounds.",
+    "failure": "Ordinary DGLAP PDFs include real evolution up to z=1, whereas a finite-mass kT-ordered shower has z<Z(t)<1. Multiplying by the ordinary PDF ratio does not undo this mismatch."
+  },
+  "primary_sources": [
+    {
+      "title": "MC@NLO-Delta paper",
+      "url": "https://arxiv.org/pdf/2002.12716",
+      "anchors": [
+        "Appendix A, footnote 28 explicitly references Nagy/Soper PDF-property concerns",
+        "Eqs.A.10-A.17 show forward prescriptions equal through logarithm and constant, differing in O(epsilon)",
+        "epsilon is roughly pT/mdip, and an interval q->Q near the hard scale need not have small epsilon throughout"
+      ]
+    },
+    {
+      "title": "Nagy and Soper, Evolution of parton showers and parton distribution functions",
+      "url": "https://arxiv.org/pdf/2002.04125",
+      "anchors": [
+        "Eq.4-7 derive the PDF property while neglecting finite z bounds",
+        "Section IV tests Pythia DY and explains why the upper z bound matters",
+        "The published example uses high-mass large-x DY; it is evidence for the mechanism, not a numerical prediction for this low-mass sample"
+      ]
+    }
+  ],
+  "code_source": {
+    "path": "/export/tmp/rikkert/Pythia/pythia8313/src/SimpleSpaceShower.cc",
+    "sha256": "fe74d843e7725497558fec97a6f1a7394b51ea1d853e4f0ea6dc1fcb238f2d73",
+    "anchors": {
+      "948-950": "Mode1 sets zmin=1e-5 and removes valence assignment; mode2 sets zmin=.5",
+      "1074-1082": "Finite kinematic z upper bound",
+      "1188-1203": "Replace backward g->q branch channel with forward q->g kernel",
+      "1404-1424": "Forward off-diagonal kernel and z tagging for mode1",
+      "1438-1458": "Backward x restriction and positive corrected transverse momentum",
+      "1516-1520": "Backward PDF ratio evaluated only for pdfMode0"
+    }
+  },
+  "massless_light_quark_formulae": {
+    "forward_kernel": "V1(zmax)=CF*(-2*log(1-zmax)-1.5*zmax^2)",
+    "forward_probability": "exp(-integral dlog(t)*alphaS(t)/(2*pi)*V1(t))",
+    "backward_kernel": "integral_x^zmax dz [Pqq(z)*xfq(x/z,t)+Pqg(z)*xfg(x/z,t)]/xfq(x,t)",
+    "quark_kernel": "Pqq=CF*(1+z^2)/(1-z)",
+    "gluon_to_quark_kernel": "Pqg=TR*(z^2+(1-z)^2)",
+    "phase_space": "zmax=1-r/2*(sqrt(1+4/r)-1), r=t/mdip^2"
+  },
+  "boundary_identity": "Dlog(f)/Dlog(t)+alphaS*V1/(2*pi)-R_backward = alphaS/(2*pi)*{CF*Z*(1-Z) + integral_Z^1 dz Pqq(z)[xfq(x/z)/xfq(x)-1] + integral_Z^1 dz Pqg(z)*xfg(x/z)/xfq(x)}, Z=zmax; assuming LO DGLAP evolution",
+  "representative_point": {
+    "mass_GeV": 91.1876,
+    "hard_scale_GeV": 91.1876,
+    "q_GeV": 20,
+    "x": 0.00701443076923077,
+    "PDF": "Pythia13",
+    "alphaS_MZ": 0.13,
+    "pT0_GeV": 0,
+    "zmax_at_q": 0.8034094337298332,
+    "zmax_at_hard": 0.3819660112501051,
+    "u_ubar_event": {
+      "backward_kernel_probability": 0.7139945119911716,
+      "forward_times_pdf_probability": 0.5567755157936846,
+      "archive_times_pdf_probability": 0.5485486680146,
+      "fresh_ratio_to_backward": 0.7798036349620695,
+      "archive_ratio_to_backward": 0.7682813506294607,
+      "boundary_correction_terms": {
+        "virtual_prescription": 0.041955361801535425,
+        "omitted_diagonal_real_minus_virtual": -0.04463481506814191,
+        "omitted_gluon_to_quark_real": 0.2514110537100567
+      },
+      "boundary_correction_sum": 0.24873160044345016
+    },
+    "independent_shower_check": {
+      "trials": 100000,
+      "noemission_at_q20": 0.71249,
+      "sampling_standard_error": 0.00143125,
+      "quadrature_pull_sigma": 1.051187417412493,
+      "archive_delta_over_actual_shower": 0.769903673054499,
+      "source": "Parent-agent independently generated exact central Born point with all matched historical settings; result file recorded separately in the same audit directory."
+    },
+    "s_sbar_event": {
+      "backward_kernel_probability": 0.655020890517694,
+      "forward_times_pdf_probability": 0.4359071680004138,
+      "archive_times_pdf_probability": 0.42946625633094293,
+      "fresh_ratio_to_backward": 0.6654859017639816,
+      "archive_ratio_to_backward": 0.6556527624508517,
+      "boundary_correction_terms": {
+        "virtual_prescription": 0.041955361801535425,
+        "omitted_diagonal_real_minus_virtual": -0.07167526915278635,
+        "omitted_gluon_to_quark_real": 0.43695978031254246
+      },
+      "boundary_correction_sum": 0.40723987296129155
+    }
+  },
+  "kernel_implementation_findings": [
+    "No obvious missing half or doubled colour factor was found for light incoming quarks.",
+    "Forward mode1 correctly combines Pqq and Pgq with z weighting. For a massless quark this gives integrand CF*(2/(1-z)-3*z).",
+    "The code retains a random forward off-diagonal sister flavour, which can introduce heavy sister masses; this is omitted in the illustrative integral. Fresh API agreement bounds its importance at the chosen point.",
+    "The quark forward logic is already present in the historical8.225 tree; no new8.313 coefficient discrepancy was identified."
+  ],
+  "ranked_causes": [
+    {
+      "rank": 1,
+      "cause": "Finite-z mismatch between full PDF scale evolution and phase-space-limited backward shower",
+      "evidence": "Independent kernel quadrature reproduces the observed central-light-quark deficit curve very closely; omitted g->q feed dominates the exponent.",
+      "confidence": "Strong: an independent100000-trial exact-point shower agrees with the truncated-kernel prediction at allsix testedcuts within1.9sigma."
+    },
+    {
+      "rank": 2,
+      "cause": "Stored-grid interpolation/old-generator differences",
+      "evidence": "Fresh-forward rate .8689985 versus stored .8625544 per quark at q20 contributes about1.5% to a two-leg probability, much smaller than the main discrepancy.",
+      "confidence": "Measured small contribution at this point"
+    },
+    {
+      "rank": 3,
+      "cause": "Heavy-flavour thresholds, valence/sea PDF handling, PDF interpolation/QED evolution",
+      "evidence": "They can explain flavour-dependent residuals and differences from the massless total-PDF rate; not needed for the centralu/d deficit.",
+      "confidence": "Subleading candidates not separately quantified across the ensemble"
+    }
+  ],
+  "what_is_not_proven": [
+    "The finite-boundary integral is an illustrative single Born point, not an integration over all1000 Born states.",
+    "A precise separation of every remaining percent among sister-mass effects, valence/sea selection and interpolation is not done.",
+    "Numerically successful mode0/mode2 replacements do not by themselves fix the forward-table plus PDF contract."
+  ],
+  "reproduction_script": "tests/validation/delta_noemission/dy_phase_space_quadrature.py",
+  "quadrature_file": "docs/audits/delta_noemission/dy_cause/phase_space_quadrature.json"
+}

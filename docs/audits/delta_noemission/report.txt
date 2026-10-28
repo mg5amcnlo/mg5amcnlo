@@ -1,0 +1,220 @@
+MC@NLO-Delta versus Pythia first-QCD-emission no-emission probability
+27 October 2026; branch MCcntRefactor_Sfun, commit 801a3417c98335f33894376df6e1005221ec53a6
+
+Result
+======
+The shipped Delta construction is not a close numerical approximation to
+Pythia's first-emission survival probability for this ttbar sample. In the
+20--75 GeV first-emission range its mean is roughly 3--5 times smaller.
+The gg channel drives the deficit. The qqbar channel behaves differently;
+its excess can mask the gg deficit at low pT. Changing the shower PDF from
+the branch's built-in fallback PDF13 to the matching hard-PDF family PDF15
+does not explain the discrepancy. No production physics source was changed.
+
+Actual real-emission comparison (main result)
+============================================
+ pT bin [GeV]    mean Delta    mean Pythia     Delta/Pythia (1 sigma)
+  10--20           0.05738        0.15055         0.381 +/- 0.037
+  20--30           0.06241        0.28045         0.223 +/- 0.021
+  30--50           0.09655        0.46215         0.209 +/- 0.012
+  50--75           0.20581        0.65529         0.314 +/- 0.009
+  75--100          0.36973        0.78463         0.471 +/- 0.009
+ 100--150          0.54285        0.86522         0.627 +/- 0.010
+ 150--200          0.64613        0.90391         0.715 +/- 0.019
+
+The pT is the shower evolution pT after the first ACCEPTED QCD branching,
+not the lab transverse momentum of its emitted parton or pT(ttbar).
+Each row compares the means on the SAME emission-selected ensemble. For
+Born state B (momenta, colour, starting scales), independently shower it
+240 times to estimate F_B(q)=Pr(pT_first<=q | B). No-emission showers have
+pT_first=0. Use 60 further independent showers to supply real configurations
+R and q; evaluate Delta(B,R) with native branch stopping scales, then bin
+Delta(B,R) and F_B(q) together. There are 52185 emitting probes; 75 of 52260
+probe showers had no emission. All 300 repetitions per Born were accepted.
+Ratios are ratios of the binned means, not means of individual ratios.
+Uncertainties use 500 bootstrap resamples of the 871 Born clusters, keeping
+all probes and references belonging to a Born together. Bins are correlated.
+The CSV contains every bin and separate gg/qqbar results. Very sparse
+bootstrap bins with zero reference denominators have an unavailable ratio
+error (empty CSV field), rather than an invented finite uncertainty.
+
+Common-cutoff baseline (a different average)
+============================================
+ cutoff [GeV]   Delta(common)   Pythia CDF   ratio
+     5          0.004630        0.016131    0.2870
+    10          0.017320        0.057798    0.2997
+    20          0.040799        0.178511    0.2285
+    50          0.127727        0.562763    0.2270
+   100          0.604395        0.890499    0.6787
+   200          0.978534        0.994384    0.9841
+
+Here every live stopping scale is replaced by a common q on the Born
+configuration, with soft-limit dipole masses. Starting scales, native PDF
+ratios, gluon line combination, table calls and probability clipping remain
+those of the branch. Compare the equal-Born average to the independently
+measured F_B(q). This auxiliary curve is not Delta on real kinematics.
+Its approach to 1 at large fixed q is compatible with the real-bin ratio
+remaining below1: high-pT real bins select different Born/starting scales.
+
+ISR, FSR and PDF controls
+========================
+ q [GeV]   Delta ISR   Pythia ISR   Delta FSR   Pythia FSR   Pythia PDF15
+    10     0.017320    0.083639     1.000000    0.636424     0.058611
+    20     0.040799    0.239747     1.000000    0.709811     0.181142
+    50     0.127727    0.618502     1.000000    0.893657     0.567916
+   100     0.604395    0.904168     1.000000    0.981429     0.891722
+
+Each control has 871 x 200 = 174200 accepted showers, independent seeds. All
+52185 real probes have a Delta FSR product of 1. The FSR-only Pythia curve
+shows substantial top radiation nevertheless. The incoming gg suppression
+is sufficiently strong that it dominates this omitted FSR suppression.
+The PDF15 full-shower real-emission comparison is retained in matched_pdf15/;
+its common-cutoff CDF differs from PDF13 by about 1.4% at 10--20 GeV and less
+than 1% above 50 GeV. The large Delta deficits remain.
+
+Direct checks on the unchanged shipped table
+===========================================
+Independent direct Fortran evaluation, without the Python evaluator, at
+start 200 GeV and dipole mass 500 GeV gives incoming-gluon line ratios:
+ q=10: 0.0005249125; q=20: 0.01068364; q=50: 0.17903986.
+For two incoming gluons with two identical lines each, the corresponding
+products before PDFs are 7.59e-14,1.30e-8,0.00102754. These tiny values are
+present in the shipped table; the arguments are correctly in GeV.
+At q=10,mDip=1000 the table returns literal zero. Source data contain zero
+plateaux; this is not floating-point underflow from our analysis.
+
+The top FI table has 4777 of 5000 nodes exactly 1. Its nontrivial support is
+restricted to mDip=1.435--25.851 GeV and q=1--8.554 GeV. Consequently the
+sampled ttbar-scale FI factors give unity. Table metadata m_top=0 alone is
+not proof of massless top kernels: the generator skips top mass assignment,
+while current Pythia's dummy FSR API builds massless trial particles. The
+historical generation settings of the shipped table are not recorded.
+We do not infer a unique historical cause, alpha_s, or PDF mode from the
+current generator. No regenerated table was substituted in this test.
+
+The production gluon weighted average also has an edge case when both
+line ratios are 1: gl1=gl2=0 and the raw normalized combination is 0/0.
+This occurred for 40/52185 real probes, and no common-cut points. The
+compiled gfortran-O2 min/max returned 0 there; that value is compiler-
+dependent, not a well-defined probability. The CSV flags these cases and
+also reports the result excluding them. In the quoted20--75 GeV bins the
+exclusion changes the ratio by less than 0.0001 and cannot explain the
+large discrepancy. At 150--200 the ratio changes 0.715 -> 0.728. Finite
+production probability clipping is retained and separately counted.
+
+Physics setup and exact FKS switches
+===================================
+Fresh p p > t t~ [QCD], loop_sm-no_b_mass,13 TeV, mt=173 GeV, stable tops,
+fixed muR=muF=173 GeV, native nn23nlo hard PDF. Generation seed 102701;
+1000 total NLO-Delta events, accuracy request 0.03, four workers. Matrix-
+element/MC tests and all subprocess pole checks pass. Integral 754.0 +/- 4.1 pb.
+FKS_params.dat:
+  MCExplicitKLSum = .false.          (sum-kl false)
+  FKSExplicitSum = .false.           (sum-ij false)
+  MCSubtractionAtFixedFlow = .true.  (single-colour-flow true)
+The retained Born ensemble is 871 S events: 785 gg, 86 qqbar, 55 negative weights.
+All |weights| are identical. The reported averages use the ABSOLUTE S-event
+measure, equally weighted, to test conditional probabilities. They are not
+signed NLO cross sections or probabilities extracted from signed weights.
+Written sampled starting scales and directed dipole tags are preserved.
+The pure ttbar Born reference scale is mT(top), damped over [0.1,1] mT.
+
+Pythia8.313: actual shower with branch QCD settings: alpha_s(MZ)=.118,
+one-loop running, CMW off; pTmaxMatch=1 and fudge=1; globalRecoil on,
+globalRecoilMode=2, nMaxGlobalRecoil=1, nMaxGlobalBranch=1,limitPTmaxGlobal on;
+rapidity ordering off. Main shower PDF13 (NNPDF2.3 LO alpha_s=.130 PDF);
+PDF15 control uses NNPDF2.3 NLO alpha_s=.119. These PDF alpha_s labels
+are not the shower alpha_s, which remains .118. Shower u,d,s,c,b masses
+are .33, .33, .5, 1.5, 4.8 GeV. Hard-model c,b masses used by native stopping
+scale reconstruction are 0. QED, MPI, hadronization, primordial kT and top
+decays are off, isolating production QCD radiation. MECs are off, as in
+the matching prescription. With the default MEextended=false, top
+production in this 2->2 process also has MEtype=0 when MECs are enabled.
+
+Scope and interpretation
+========================
+The real-emission diagnostic evaluates the branch's Delta formula on
+Pythia first-emission momenta, using that shower's Born preimage/colour
+and the saved branch starting scales. It does not reevaluate the full
+FKS integrand or all alternative native-history Born maps. Real shower
+light-parton masses are retained; native reconstruction uses the hard
+model's masses. This distinction can matter near the low-pT cutoff.
+The common-cutoff test separately removes the unequal-real-stop ambiguity.
+Both are probability validations on a stated ensemble, not a proof or
+failure of NLO accuracy, nor a comparison of final jet distributions.
+History-dependent Delta is not required to equal a one-dimensional CDF.
+The results quantify how close it is in the requested first-emission test.
+
+Validation and provenance
+=========================
+- Native scale matrices and production get_delta_connections,
+  delta_leg_probability, gl_safe,pysudakov_safe and helpers are compiled
+  from this branch, with the unchanged vendor/SudGen/sudakov.f table.
+- Production grouped PDF flavour sums are retained: all five light
+  flavours for qqbar groups, with representative +/-up table IDs.
+- Native NN23nlo PDF driver agrees exactly with 400 values from the
+  generated libpdf.a. Pythia PDF interpolation is not used for Delta.
+- Stored starting scales reproduce native formulae within 4.84e-8 after
+  undoing incoming LHE shower-mass reshuffling; all 5054 scales audited.
+- Replay agrees bit-for-bit with Pythia's native LHE reader for 4000
+  first-emission pT/type pairs (2000 gg and 2000 qqbar).
+- The main 261300 and three 174200-event controls have no failed showers,
+  only QCD first emissions, complete repetitions and conserved momenta.
+  Main maximum relative momentum residual 5.89e-14; scaled mass2 residual
+  2.39e-13. Main Pythia reports 15 existing ISR 'weight above unity'
+  warnings, 0 errors/failures; this is the actual executable behaviour.
+- Standalone selfcheck passes native ABI/remapping, direct table-product,
+  PDF-flavour-sum, endpoint and 100 randomized connection-selector checks.
+- All 16 production tests in tests.unit_tests.fks.test_mcatnlo_delta_scales
+  pass. The validation changes leave production code/cards untouched;
+  requested FKS switches are confined to the fresh export.
+
+Artifacts
+=========
+comparison.pdf/png: common-cut and actual-real curves, gg/qqbar separated.
+controls.pdf/png: ISR-only,FSR-only and PDF sensitivity.
+common_cut.csv, real_emission.csv, controls.csv, summary.json: numerical data.
+matched_pdf15/: independent matched-PDF real-emission comparison.
+cards/: exact run/parameter/FKS/process cards and full Pythia settings.
+ttbar_S.lhe.gz: exact 871-event Born input for replay.
+*_audit.json,*provenance.json,analysis_provenance.json: checks and hashes.
+The complete NLO export, raw trial JSONL files, compiled libraries,
+per-Born/probe analysis NPZ files and logs are retained at:
+  /export/tmp/rikkert/delta_noemission_20261027
+Primary raw inputs:branch_exact.born.jsonl,branch_exact.trials.jsonl.
+Old pilot/massless-light studies there are sensitivity/debug artifacts;
+they are not substituted for the final primary result.
+
+Reproduction
+============
+The exact source and cards are retained; no external services are needed.
+Build a fresh NLO export of the process above with this branch (bin/mg5_aMC),
+copy cards/ into its Cards directory (the four *_card.dat/FKS_params.dat
+files), and generate the parton-only tt_delta run. The archived export.cmd
+and launch.cmd show the original commands/paths; replace paths as needed.
+To reproduce this SAME finite ensemble, decompress ttbar_S.lhe.gz and run:
+
+bash tests/validation/delta_noemission/reproduce.sh \
+  /export/tmp/rikkert/Pythia/pythia8313 \
+  /export/tmp/rikkert/delta_noemission_20261027/TT \
+  /export/tmp/rikkert/delta_noemission_20261027/ttbar_S.lhe \
+  /path/to/new/output
+
+The script compiles the probe and exact Delta/PDF libraries, showers the
+fixed input with all four saved seeds, audits records, evaluates probabilities
+and produces the plots/CSVs. It requires gfortran,C++17,NumPy,Matplotlib.
+PDF/grid and source/library hashes are in the provenance files. Large raw
+trial files can be replayed in analyse.py with --reuse to regenerate plots
+from the saved analysis.npz without further showers.
+
+Primary references
+==================
+MC@NLO-Delta definition, eqs. 3.31--3.37 and Appendix A:
+https://arxiv.org/abs/2002.12716
+Pythia MC@NLO QCD shower settings:
+https://pythia.org/latest-manual/aMCatNLOMatching.html
+Local code, archived input and measured execution are authoritative for
+this numerical comparison; the online manual may describe newer releases.
+
+Follow-up: see table_diagnosis.txt for fresh Simple Shower comparisons,
+producer/caller normalization checks and the stored-table history.

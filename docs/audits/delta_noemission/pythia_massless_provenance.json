@@ -1,0 +1,35 @@
+{
+  "pythia_version": "8.313",
+  "pdf_set": "15: NNPDF2.3 QCD+QED NLO alpha_s(MZ)=0.119",
+  "shower_alphaS_MZ": 0.118,
+  "shower_alphaS_order": 1,
+  "shower_alphaS_CMW": false,
+  "branch_commit": "801a3417c98335f33894376df6e1005221ec53a6",
+  "commands": [
+    "/export/tmp/rikkert/delta_noemission_20261027/pythia_probe /export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc shower /export/tmp/rikkert/delta_noemission_20261027/ttbar_S.lhe /export/tmp/rikkert/delta_noemission_20261027/branch 500 72873 15",
+    "/export/tmp/rikkert/delta_noemission_20261027/pythia_probe /export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc shower /export/tmp/rikkert/delta_noemission_20261027/ttbar_S.lhe /export/tmp/rikkert/delta_noemission_20261027/branch_isr 200 72875 15 isr",
+    "/export/tmp/rikkert/delta_noemission_20261027/pythia_probe /export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc shower /export/tmp/rikkert/delta_noemission_20261027/ttbar_S.lhe /export/tmp/rikkert/delta_noemission_20261027/branch_fsr 200 72876 15 fsr",
+    "/export/tmp/rikkert/delta_noemission_20261027/pythia_probe /export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc shower /export/tmp/rikkert/delta_noemission_20261027/ttbar_S.lhe /export/tmp/rikkert/delta_noemission_20261027/branch_pdf13 200 72877 13"
+  ],
+  "sha256": {
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/pythia_pdf.cc": "fad00150d4049dcd2775b3a2aa191f221bcd908122017681296628fc936599cc",
+    "/export/tmp/rikkert/delta_noemission_20261027/pythia_probe": "ba55adb8d683221e404914f5e77141e5e755db7c347586cfa51026fd18421350",
+    "/export/tmp/rikkert/delta_noemission_20261027/libpythia_pdf.so": "88c210fbc18613f76bfdc2f41d524e6401473eb9596e29ef0594e97290f6cb12",
+    "/export/tmp/rikkert/Pythia/pythia8313/lib/libpythia8.so": "18e9aec234ec594b6e0193cb24d0d4100fc5eb3fa68fbc9362e9f4c3c8bf636c",
+    "/export/tmp/rikkert/Pythia/pythia8313/src/PartonLevel.cc": "42567975fd84d86c2c12b2c6d2caf0ce3da45813dd413a061e543c95546cd809",
+    "/export/tmp/rikkert/Pythia/pythia8313/src/SimpleTimeShower.cc": "6925aa2d2a6b86e8a3037a3554f5dbb399d2259d167f8b935ec0cfab947fc4ca",
+    "/export/tmp/rikkert/Pythia/pythia8313/src/SimpleSpaceShower.cc": "fe74d843e7725497558fec97a6f1a7394b51ea1d853e4f0ea6dc1fcb238f2d73",
+    "/export/tmp/rikkert/delta_noemission_20261027/ttbar_S.lhe": "09992482fbb1d263310cc3c1d4375316904bf84003e3fb49db801252ae2a45b3",
+    "/export/tmp/rikkert/delta_noemission_20261027/pythia_probe_massless.cc": "be4b5e3641bbbf9ed4a482879dc12d98fbe671034213ea679bf3fb28cc6d82b9"
+  },
+  "first_emission_definition": "infoPtr->pTnow() in doVetoStep after successful branch; records nISR+nFSR=1, type2 ISR/type3 FSR; no veto",
+  "replay": "Exact LHE four vectors/colors/SCALUP; directed scales copied to Info::scales and minimal per-particle production scales. Stable top and antitop, all QED/MPI/hadronization/primordialKT disabled; beam remnants retained for Pythia event checks.",
+  "sensitivity_pdf_set": "13: NNPDF2.3 QCD+QED LO alpha_s(MZ)=0.130; shower coupling remains0.118",
+  "light_shower_masses_GeV": {
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0,
+    "4": 1.5,
+    "5": 4.8
+  }
+}

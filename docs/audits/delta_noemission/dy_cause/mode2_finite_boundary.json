@@ -1,0 +1,25 @@
+{
+  "M": 91.1876,
+  "Q": 91.1876,
+  "q": 20,
+  "pdf": 13,
+  "alphaS": 0.13,
+  "formulas": {
+    "K": "Pqq+Pgq=CF*(2/(1-z)+2/z-3); K(z)=K(1-z)",
+    "V2": "integral_.5^Z K = .5*integral_(1-Z)^Z K forZ>.5; zero otherwise",
+    "V1": "integral_0^Z z*K = V2 + integral_0^(1-Z) z*K forZ>.5",
+    "V1_minus_V2": "CF*(-2*log(Z)-1.5*(1-Z)^2) forZ>.5"
+  },
+  "mode1_forward_times_PDF": 0.5567755157936846,
+  "mode2_forward_times_PDF": 0.6349495278711911,
+  "actual_shower": 0.71249,
+  "actual_shower_se": 0.0014312512005235142,
+  "backward_quadrature": 0.7139945119911716,
+  "mode1_extra_suppression_exponent": 0.24873160044345016,
+  "mode2_reduction_of_extra_exponent": 0.13138337708460318,
+  "interpretation": "Mode2 implements the symmetric finite-daughter interval and partly compensates the forward/PDF boundary mismatch. It does not supply the full x/PDF-dependent missing g-to-q tail.",
+  "limitations": "Massless light-quark forward integrals at one central Born point; not a new full-shower run.",
+  "input_sha256": {
+    "docs/audits/delta_noemission/dy_cause/phase_space_quadrature.json": "73190fe837778d1b7733dc6153737c234ba66a44d26fe7a9e881ab25d11c0a9d"
+  }
+}

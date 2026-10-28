@@ -1,0 +1,26 @@
+{
+  "born_events": 871,
+  "emission_types": {
+    "0": 244,
+    "2": 145286,
+    "3": 28670
+  },
+  "emitted_ids": {
+    "-5": 382,
+    "-4": 607,
+    "-3": 793,
+    "-2": 1437,
+    "-1": 1713,
+    "1": 6685,
+    "2": 12887,
+    "3": 847,
+    "4": 608,
+    "5": 354,
+    "21": 147643
+  },
+  "maximum_relative_momentum_residual": 7.119426319948083e-13,
+  "maximum_scaled_mass_squared_residual": 2.3864193038345297e-13,
+  "negative_born_weights": 55,
+  "repeats": 200,
+  "trials": 174200
+}

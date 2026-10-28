@@ -1,0 +1,67 @@
+
+ *------------------------------------------------------------------------------------* 
+ |                                                                                    | 
+ |  *------------------------------------------------------------------------------*  | 
+ |  |                                                                              |  | 
+ |  |                                                                              |  | 
+ |  |   PPP   Y   Y  TTTTT  H   H  III    A      Welcome to the Lund Monte Carlo!  |  | 
+ |  |   P  P   Y Y     T    H   H   I    A A     This is PYTHIA version 8.313      |  | 
+ |  |   PPP     Y      T    HHHHH   I   AAAAA    Last date of change: 10 Jan 2025  |  | 
+ |  |   P       Y      T    H   H   I   A   A                                      |  | 
+ |  |   P       Y      T    H   H  III  A   A    Now is 27 Oct 2026 at 20:55:58    |  | 
+ |  |                                                                              |  | 
+ |  |   Program documentation and an archive of historic versions is found on:     |  | 
+ |  |                                                                              |  | 
+ |  |                               https://pythia.org/                            |  | 
+ |  |                                                                              |  | 
+ |  |   PYTHIA is authored by a collaboration consisting of:                       |  | 
+ |  |                                                                              |  | 
+ |  |   Javira Altmann, Christian Bierlich, Naomi Cooke, Nishita Desai,            |  | 
+ |  |   Ilkka Helenius, Philip Ilten, Leif Lonnblad, Stephen Mrenna,               |  | 
+ |  |   Christian Preuss, Torbjorn Sjostrand, and Peter Skands.                    |  | 
+ |  |                                                                              |  | 
+ |  |   The complete list of authors, including contact information and            |  | 
+ |  |   affiliations, can be found on https://pythia.org/.                         |  | 
+ |  |   Problems or bugs should be reported on email at authors@pythia.org.        |  | 
+ |  |                                                                              |  | 
+ |  |   The main program reference is C. Bierlich et al,                           |  | 
+ |  |   'A comprehensive guide to the physics and usage of Pythia 8.3',            |  | 
+ |  |   SciPost Phys. Codebases 8-r8.3 (2022) [arXiv:2203.11601 [hep-ph]]          |  | 
+ |  |                                                                              |  | 
+ |  |   PYTHIA is released under the GNU General Public Licence version 2          |  | 
+ |  |   or later. Please respect the MCnet Guidelines for Generator Authors        |  | 
+ |  |   and Users.                                                                 |  | 
+ |  |                                                                              |  | 
+ |  |   Disclaimer: this program comes without any guarantees.                     |  | 
+ |  |   Beware of errors and use common sense when interpreting results.           |  | 
+ |  |                                                                              |  | 
+ |  |   Copyright (C) 2025 Torbjorn Sjostrand                                      |  | 
+ |  |                                                                              |  | 
+ |  |                                                                              |  | 
+ |  *------------------------------------------------------------------------------*  | 
+ |                                                                                    | 
+ *------------------------------------------------------------------------------------* 
+
+Using default initialization of Pythia8.
+
+ *------------------ MEPS Merging Initialization  ------------------*
+ |                                                                  |
+ | CKKW-L merge                                                     |
+ |                             pp>jj  with up to1000 additional jets |
+ | Merging scale is defined by Lund pT, with value tMS =   -1.0 GeV |
+ |                                                                  |
+ *-------------- END MEPS Merging Initialization  ------------------*
+
+
+ *------------------ MEPS Merging Initialization  ------------------*
+ |                                                                  |
+ | CKKW-L merge                                                     |
+ |                             pp>jj  with up to1000 additional jets |
+ | Merging scale is defined by Lund pT, with value tMS =   -1.0 GeV |
+ |                                                                  |
+ *-------------- END MEPS Merging Initialization  ------------------*
+
+SIMPLE_TYPES_CONFIRMED 1 1 1
+COUPLING 0.1365000000000000 0 1 6 0.1826567694588215 0.1209524156544279 1.0000000000000000
+RESULT 0.1365000000000000 0 1 2 0.6220160000000000 0.0006857289489937 0.6220160000000000 0.0006857289489937
+RESULT 0.1365000000000000 0 1 21 0.3272480000000000 0.0006635612202292 0.5720559413204271 0.0005799793099758

@@ -1,0 +1,128 @@
+{
+  "samples": {
+    "13": {
+      "dy_fixed": {
+        "trials": 300000,
+        "emitting": 300000,
+        "no_emission": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::init: pTmin too low": 8,
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 378
+        },
+        "all_events_successful": true
+      },
+      "dy_damped": {
+        "trials": 300000,
+        "emitting": 300000,
+        "no_emission": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::init: pTmin too low": 8,
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 332
+        },
+        "all_events_successful": true
+      },
+      "higgs_fixed": {
+        "trials": 300000,
+        "emitting": 300000,
+        "no_emission": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::init: pTmin too low": 8,
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 41
+        },
+        "all_events_successful": true
+      },
+      "higgs_damped": {
+        "trials": 300000,
+        "emitting": 300000,
+        "no_emission": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::init: pTmin too low": 8,
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 45
+        },
+        "all_events_successful": true
+      }
+    },
+    "15": {
+      "dy_fixed": {
+        "trials": 300000,
+        "emitting": 300000,
+        "no_emission": 0,
+        "messages": {
+          "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 24,
+          "Warning in SimpleSpaceShower::init: pTmin too low": 8,
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 6225,
+          "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 9
+        },
+        "all_events_successful": true
+      },
+      "dy_damped": {
+        "trials": 300000,
+        "emitting": 300000,
+        "no_emission": 0,
+        "messages": {
+          "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 36,
+          "Warning in SimpleSpaceShower::init: pTmin too low": 8,
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 6650,
+          "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 10
+        },
+        "all_events_successful": true
+      },
+      "higgs_fixed": {
+        "trials": 300000,
+        "emitting": 300000,
+        "no_emission": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::init: pTmin too low": 8,
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 926
+        },
+        "all_events_successful": true
+      },
+      "higgs_damped": {
+        "trials": 300000,
+        "emitting": 300000,
+        "no_emission": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::init: pTmin too low": 8,
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1182,
+          "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 7
+        },
+        "all_events_successful": true
+      }
+    }
+  },
+  "source": "/export/tmp/rikkert/Pythia/pythia8313/src/SimpleSpaceShower.cc",
+  "source_sha256": "fe74d843e7725497558fec97a6f1a7394b51ea1d853e4f0ea6dc1fcb238f2d73",
+  "source_evidence": {
+    "threshold_constants_lines": [
+      32,
+      33
+    ],
+    "threshold_definition_lines": [
+      977,
+      978
+    ],
+    "QCD_call_below_threshold_lines": [
+      1251,
+      1263
+    ],
+    "error_location_lines": [
+      1571,
+      1574
+    ]
+  },
+  "physical_thresholds_GeV": {
+    "charm": 1.2,
+    "bottom": 4.8
+  },
+  "maximum_affected_evolution_scale_GeV": {
+    "charm": 1.697056274847714,
+    "bottom": 6.788225099390856
+  },
+  "qualification": "These Error diagnostics are retained, not suppressed. The source reaches this routine from QCD evolution only below its heavy-flavour threshold. Thus 10GeV and higher first-emission CDF cuts lie above the error region. Lowercuts are qualified conservatively; no per-error instrumentation identifies flavour or timing. All trials returned success, and the PDF13 primary has no Error/Abort diagnostics.",
+  "warning_scope": "Message counts are over complete showers, not necessarily before the measured first emission.",
+  "initial_driver_log": "/export/tmp/rikkert/delta_singlets_matched_20261028_driver.log",
+  "initial_driver_log_sha256": "87403bea71d81480b70abda3f266e0d476a4fe9b80ea2cbbbc33431e1b662340",
+  "aggregation_log": "/export/tmp/rikkert/delta_singlets_matched_20261028_aggregate.log",
+  "aggregation_log_sha256": "a429b5a231cffe135eb4352a92edfa2b0e2314316bd8427c7b02d4115c66bf90",
+  "aggregation_note": "The initial driver rejected logged PDF15 errors after all tasks had already been queued; the executor completed every physics job. Reaggregation reused these unchanged trials, retained exact known diagnostics with explicit qualifications, and independently verified85 recovered settings in every shard. No physics configuration was altered to remove diagnostics."
+}

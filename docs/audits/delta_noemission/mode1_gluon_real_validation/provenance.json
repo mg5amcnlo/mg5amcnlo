@@ -1,0 +1,146 @@
+{
+  "baseline": {
+    "born": 871,
+    "emitting_probes": 52185,
+    "trials": 261300,
+    "independent_references_per_born": 240,
+    "undefined_raw": 0,
+    "clipped": 684,
+    "incoming_sudakov_types": [
+      1
+    ],
+    "final_sudakov_types": [
+      4
+    ],
+    "input_sha256": {
+      "/export/tmp/rikkert/delta_noemission_20261027/branch_exact.born.jsonl": "0fbbb8def7d8c9812314530f2864df79376453261b0d21c23ac6a9fb11359aa1",
+      "/export/tmp/rikkert/delta_noemission_20261027/branch_exact.trials.jsonl": "1b338c1d19a77638fdf18b1611903d7ef12096f5b9c4a753519fb1bda28f5cb1",
+      "/export/tmp/rikkert/delta_noemission_20261027/branch_exact.settings.cmnd": "b4b97ae14cd53b71309c898e848d6193e7e00fb655f4c6d2b893998dd5ef111a"
+    }
+  },
+  "matched_pdf13": {
+    "born": 871,
+    "emitting_probes": 52232,
+    "trials": 261300,
+    "independent_references_per_born": 240,
+    "undefined_raw": 0,
+    "clipped": 664,
+    "incoming_sudakov_types": [
+      1
+    ],
+    "final_sudakov_types": [
+      4
+    ],
+    "input_sha256": {
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13.born.jsonl": "72e6e0f82eeeed14ea0e00370b2a84e552ef3946064824a1c43f7ddd0d412913",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13.trials.jsonl": "614fbea0cb5958a28d103bbfcbb40a9d91f645501f4edf3762c9024b3de72313",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13.settings.cmnd": "11b5af4467687645a01aa369713d1379aea45c48c53f6fe3ac218e7e2a961dd5"
+    }
+  },
+  "matched_pdf15": {
+    "born": 871,
+    "emitting_probes": 52224,
+    "trials": 261300,
+    "independent_references_per_born": 240,
+    "undefined_raw": 0,
+    "clipped": 733,
+    "incoming_sudakov_types": [
+      1
+    ],
+    "final_sudakov_types": [
+      4
+    ],
+    "input_sha256": {
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15.born.jsonl": "72e6e0f82eeeed14ea0e00370b2a84e552ef3946064824a1c43f7ddd0d412913",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15.trials.jsonl": "a74b3e1880b3a542e9b70c6987e266d4c5f0f3a425134457bf952569295b65dc",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15.settings.cmnd": "bdc5f093535186d8e475869393256b5e792bcd87586bc371fb20d36f1f262aac"
+    }
+  },
+  "evaluator": {
+    "table": "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/mode1_incoming_gluon_root.f",
+    "table_sha256": "53196f39bd9a08155ce8bc8d6166a722fb218bc5f352ca518316e72d21bbc3ee",
+    "source_sha256": {
+      "Template/NLO/SubProcesses/montecarlocounter.f": "554432b7b09075c21a8484e5d7d34b261d345af1849d23c2402659bd9a14071f",
+      "Template/NLO/SubProcesses/mcatnlo_delta_scales.f90": "a010072c50e8e2ee2777e0a2116f7f06f8b4cff88a8417a88923eb1e4cd85124",
+      "Template/NLO/SubProcesses/MCmasses_PYTHIA8.inc": "0374ba4b1855d0dc1de74f8f68ecc990ffe93d289cda0e01041f3274c04aae94"
+    },
+    "extracted_routines": [
+      "delta_leg_probability",
+      "gl_safe",
+      "pysudakov_safe",
+      "get_parton_id",
+      "setSudType",
+      "get_to_zero",
+      "emscafun",
+      "get_delta_connections"
+    ],
+    "compile_command": [
+      "gfortran",
+      "-O2",
+      "-std=legacy",
+      "-shared",
+      "-fPIC",
+      "-ffixed-line-length-none",
+      "-I/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses",
+      "-J/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/delta",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses/mcatnlo_delta_scales.f90",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/delta/delta_production.f",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/delta/delta_wrapper.f90",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/delta/sudakov.f",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/dfint.f",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/kerset.f",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/abend.f",
+      "-o",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/delta/delta.so"
+    ]
+  },
+  "native_pdf": {
+    "pdf": "nn23nlo",
+    "convention": "x*f; x cancels in Delta PDF ratios",
+    "command": [
+      "gfortran",
+      "-O2",
+      "-std=legacy",
+      "-shared",
+      "-fPIC",
+      "-ffixed-line-length-none",
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/Source/PDF/NNPDFDriver.f",
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/Source/PDF/opendata.f",
+      "-o",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/native_pdf/native_pdf.so"
+    ],
+    "sha256": {
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/Source/PDF/NNPDFDriver.f": "569c080439879972784ada0d6e0b040e8a7a93a0cf363cf99fa3bead12abae14",
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/Source/PDF/opendata.f": "bfaa0cd1c1d12b64785d833ae35e6dad093d80c45a5d26613e9fb6fc4e90b1c2",
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/lib/Pdfdata/NNPDF23nlo_as_0119_qed_mem0.grid": "e1ad3115d9bc36f4cdf43268138ab6c2efb9a4803bff376f493c85260181213e"
+    }
+  },
+  "checks": [
+    "All Born records identical including starts, colours and order",
+    "Every independent reference CDF reconstructed bitwise from raw successful trials",
+    "Prior three-cut square-root diagnostic reproduced bitwise",
+    "First eight probes agree bitwise in serial and parallel evaluation for each sample",
+    "All common and actual-real FSR factors unchanged bitwise",
+    "All common and actual-real qqbar probabilities unchanged bitwise",
+    "All actual-real incoming table calls are II; final calls are FI, with no FF calls",
+    "All final probabilities finite and bounded"
+  ],
+  "script_sha256": "bfb51e557ffce60b3a0e7531f1383cfc3216f567755408326d63bffc3879bcc8",
+  "archive_sha256": "a59f3a7ad1396d74175120c957fa564991d614f064d482e07839b4b1969463a6",
+  "corrected_table_sha256": "53196f39bd9a08155ce8bc8d6166a722fb218bc5f352ca518316e72d21bbc3ee",
+  "input_npz_sha256": {
+    "/export/tmp/rikkert/delta_noemission_20261027/archive_validation/PDFmode1.npz": "f466c1fae3e3e49269f60c353251844eaaa64961f6d0b165bded4c0845b85742",
+    "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13.mode1.npz": "a606c165ebbc483a63452a73452ae18f4e552cb0c01b73031dbe4607bea543e8",
+    "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15.mode1.npz": "8fd5852889d25ec6f86da21b1a96d5e1092ca048f69b12f273a1e3c44aedfe75"
+  },
+  "output_npz_sha256": {
+    "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/baseline.npz": "60f65990f27475c51cc3d062d3d57f5af7d8b5f9ce4c018e13dd6f86ab8fd29b",
+    "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/matched_pdf13.npz": "e88cc4c4e87a55fcd4280d96efac554820f4a9318324b020fad4477344831de3",
+    "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/matched_pdf15.npz": "85205debad4746bc26fc50c1d5f6dbf20ec1a1cad5148b48ff8e7b297a90cce0"
+  },
+  "modification": "      pysudakov=tmp\n      if(abs(id).eq.21.and.(itype.eq.1.or.itype.eq.3))then\n        pysudakov=sqrt(max(tmp,0d0))\n      endif\n",
+  "no_production_changes": true,
+  "bootstrap_seed": 102727,
+  "bootstrap_replicas": 500,
+  "definition": "Square root only of incoming-gluon table return; caller PDF ratios untouched. Ratios of means, independent 240-shower CDF per Born, actual native real stopping scales."
+}

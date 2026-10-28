@@ -1,0 +1,1929 @@
+{
+  "rows": [
+    {
+      "variant": "raw",
+      "topology": "II",
+      "pdg": 2,
+      "raw_dummy_probability": 0.623040481233679,
+      "quantity": "event_delta",
+      "measured": 0.3881794412558944,
+      "expected": 0.3881794412558944,
+      "raw_dummy_power": 2,
+      "connections": [
+        [
+          {
+            "partner": 2,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [
+          {
+            "partner": 1,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        []
+      ],
+      "counts": [
+        1,
+        1,
+        0
+      ],
+      "legs": [
+        0.623040481233679,
+        0.623040481233679,
+        1.0
+      ],
+      "total_delta": 0.3881794412558944,
+      "nontrivial_PDF_total_delta": 0.12275311752201586,
+      "expected_external_PDF_factor": 0.31622776601683794
+    },
+    {
+      "variant": "raw",
+      "topology": "II",
+      "pdg": 21,
+      "raw_dummy_probability": 0.328108502606547,
+      "quantity": "event_delta",
+      "measured": 0.011589639822558295,
+      "expected": 0.011589639822558293,
+      "raw_dummy_power": 4,
+      "connections": [
+        [
+          {
+            "partner": 2,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 2,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [
+          {
+            "partner": 1,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 1,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        []
+      ],
+      "counts": [
+        2,
+        2,
+        0
+      ],
+      "legs": [
+        0.10765518948271047,
+        0.10765518948271047,
+        1.0
+      ],
+      "total_delta": 0.011589639822558295,
+      "nontrivial_PDF_total_delta": 0.0036649659100273916,
+      "expected_external_PDF_factor": 0.31622776601683794
+    },
+    {
+      "variant": "raw",
+      "topology": "FI",
+      "pdg": 2,
+      "raw_dummy_probability": 0.6563998679854741,
+      "quantity": "fsr",
+      "measured": 0.6563998679854741,
+      "expected": 0.6563998679854741,
+      "raw_dummy_power": 1,
+      "connections": [
+        [
+          {
+            "partner": 3,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [],
+        [
+          {
+            "partner": 1,
+            "type": 4,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        []
+      ],
+      "counts": [
+        1,
+        0,
+        1,
+        0
+      ],
+      "legs": [
+        0.623040481233679,
+        1.0,
+        0.6563998679854741,
+        1.0
+      ],
+      "total_delta": 0.4089636896313932,
+      "nontrivial_PDF_total_delta": 0.2299771831820523,
+      "expected_external_PDF_factor": 0.5623413251903491
+    },
+    {
+      "variant": "raw",
+      "topology": "FI",
+      "pdg": 21,
+      "raw_dummy_probability": 0.3782769305547322,
+      "quantity": "fsr",
+      "measured": 0.1430934361899097,
+      "expected": 0.1430934361899097,
+      "raw_dummy_power": 2,
+      "connections": [
+        [
+          {
+            "partner": 3,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 3,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [],
+        [
+          {
+            "partner": 1,
+            "type": 4,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 1,
+            "type": 4,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        []
+      ],
+      "counts": [
+        2,
+        0,
+        2,
+        0
+      ],
+      "legs": [
+        0.10765518948271047,
+        1.0,
+        0.1430934361899097,
+        1.0
+      ],
+      "total_delta": 0.015404750986756867,
+      "nontrivial_PDF_total_delta": 0.008662728084120195,
+      "expected_external_PDF_factor": 0.5623413251903491
+    },
+    {
+      "variant": "raw",
+      "topology": "FF",
+      "pdg": 2,
+      "raw_dummy_probability": 0.4280159343383754,
+      "quantity": "event_delta",
+      "measured": 0.1831976400475525,
+      "expected": 0.1831976400475525,
+      "raw_dummy_power": 2,
+      "connections": [
+        [],
+        [],
+        [
+          {
+            "partner": 4,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [
+          {
+            "partner": 3,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ]
+      ],
+      "counts": [
+        0,
+        0,
+        1,
+        1
+      ],
+      "legs": [
+        1.0,
+        1.0,
+        0.4280159343383754,
+        0.4280159343383754
+      ],
+      "total_delta": 0.1831976400475525,
+      "nontrivial_PDF_total_delta": 0.1831976400475525,
+      "expected_external_PDF_factor": 1.0
+    },
+    {
+      "variant": "raw",
+      "topology": "FF",
+      "pdg": 21,
+      "raw_dummy_probability": 0.1438677056307468,
+      "quantity": "event_delta",
+      "measured": 0.0004284037566910871,
+      "expected": 0.00042840375669108707,
+      "raw_dummy_power": 4,
+      "connections": [
+        [],
+        [],
+        [
+          {
+            "partner": 4,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 4,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [
+          {
+            "partner": 3,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 3,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ]
+      ],
+      "counts": [
+        0,
+        0,
+        2,
+        2
+      ],
+      "legs": [
+        1.0,
+        1.0,
+        0.020697916723455216,
+        0.020697916723455216
+      ],
+      "total_delta": 0.0004284037566910871,
+      "nontrivial_PDF_total_delta": 0.0004284037566910871,
+      "expected_external_PDF_factor": 1.0
+    },
+    {
+      "variant": "raw",
+      "topology": "IF",
+      "pdg": 2,
+      "raw_dummy_probability": 0.6230398745324142,
+      "quantity": "explicit_native_leg",
+      "measured": 0.6230398745324142,
+      "expected": 0.6230398745324142,
+      "raw_dummy_power": 1,
+      "count": 1,
+      "note": "Production selector uses typeII for incoming IF; this calls the native leg with typeIF explicitly."
+    },
+    {
+      "variant": "raw",
+      "topology": "IF",
+      "pdg": 21,
+      "raw_dummy_probability": 0.3281085154674152,
+      "quantity": "explicit_native_leg",
+      "measured": 0.10765519792223105,
+      "expected": 0.10765519792223105,
+      "raw_dummy_power": 2,
+      "count": 2,
+      "note": "Production selector uses typeII for incoming IF; this calls the native leg with typeIF explicitly."
+    },
+    {
+      "variant": "gluon_sqrt_all",
+      "topology": "II",
+      "pdg": 2,
+      "raw_dummy_probability": 0.623040481233679,
+      "quantity": "event_delta",
+      "measured": 0.3881794412558944,
+      "expected": 0.3881794412558944,
+      "raw_dummy_power": 2,
+      "connections": [
+        [
+          {
+            "partner": 2,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [
+          {
+            "partner": 1,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        []
+      ],
+      "counts": [
+        1,
+        1,
+        0
+      ],
+      "legs": [
+        0.623040481233679,
+        0.623040481233679,
+        1.0
+      ],
+      "total_delta": 0.3881794412558944,
+      "nontrivial_PDF_total_delta": 0.12275311752201586,
+      "expected_external_PDF_factor": 0.31622776601683794
+    },
+    {
+      "variant": "gluon_sqrt_all",
+      "topology": "II",
+      "pdg": 21,
+      "raw_dummy_probability": 0.328108502606547,
+      "quantity": "event_delta",
+      "measured": 0.1076551894827105,
+      "expected": 0.10765518948271047,
+      "raw_dummy_power": 2,
+      "connections": [
+        [
+          {
+            "partner": 2,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 2,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [
+          {
+            "partner": 1,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 1,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        []
+      ],
+      "counts": [
+        2,
+        2,
+        0
+      ],
+      "legs": [
+        0.32810850260654706,
+        0.32810850260654706,
+        1.0
+      ],
+      "total_delta": 0.1076551894827105,
+      "nontrivial_PDF_total_delta": 0.03404356007023693,
+      "expected_external_PDF_factor": 0.31622776601683794
+    },
+    {
+      "variant": "gluon_sqrt_all",
+      "topology": "FI",
+      "pdg": 2,
+      "raw_dummy_probability": 0.6563998679854741,
+      "quantity": "fsr",
+      "measured": 0.6563998679854741,
+      "expected": 0.6563998679854741,
+      "raw_dummy_power": 1,
+      "connections": [
+        [
+          {
+            "partner": 3,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [],
+        [
+          {
+            "partner": 1,
+            "type": 4,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        []
+      ],
+      "counts": [
+        1,
+        0,
+        1,
+        0
+      ],
+      "legs": [
+        0.623040481233679,
+        1.0,
+        0.6563998679854741,
+        1.0
+      ],
+      "total_delta": 0.4089636896313932,
+      "nontrivial_PDF_total_delta": 0.2299771831820523,
+      "expected_external_PDF_factor": 0.5623413251903491
+    },
+    {
+      "variant": "gluon_sqrt_all",
+      "topology": "FI",
+      "pdg": 21,
+      "raw_dummy_probability": 0.3782769305547322,
+      "quantity": "fsr",
+      "measured": 0.37827693055473216,
+      "expected": 0.3782769305547322,
+      "raw_dummy_power": 1,
+      "connections": [
+        [
+          {
+            "partner": 3,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 3,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [],
+        [
+          {
+            "partner": 1,
+            "type": 4,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 1,
+            "type": 4,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        []
+      ],
+      "counts": [
+        2,
+        0,
+        2,
+        0
+      ],
+      "legs": [
+        0.32810850260654706,
+        1.0,
+        0.37827693055473216,
+        1.0
+      ],
+      "total_delta": 0.12411587725491396,
+      "nontrivial_PDF_total_delta": 0.06979548689269102,
+      "expected_external_PDF_factor": 0.5623413251903491
+    },
+    {
+      "variant": "gluon_sqrt_all",
+      "topology": "FF",
+      "pdg": 2,
+      "raw_dummy_probability": 0.4280159343383754,
+      "quantity": "event_delta",
+      "measured": 0.1831976400475525,
+      "expected": 0.1831976400475525,
+      "raw_dummy_power": 2,
+      "connections": [
+        [],
+        [],
+        [
+          {
+            "partner": 4,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [
+          {
+            "partner": 3,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ]
+      ],
+      "counts": [
+        0,
+        0,
+        1,
+        1
+      ],
+      "legs": [
+        1.0,
+        1.0,
+        0.4280159343383754,
+        0.4280159343383754
+      ],
+      "total_delta": 0.1831976400475525,
+      "nontrivial_PDF_total_delta": 0.1831976400475525,
+      "expected_external_PDF_factor": 1.0
+    },
+    {
+      "variant": "gluon_sqrt_all",
+      "topology": "FF",
+      "pdg": 21,
+      "raw_dummy_probability": 0.1438677056307468,
+      "quantity": "event_delta",
+      "measured": 0.020697916723455216,
+      "expected": 0.020697916723455216,
+      "raw_dummy_power": 2,
+      "connections": [
+        [],
+        [],
+        [
+          {
+            "partner": 4,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 4,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [
+          {
+            "partner": 3,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 3,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ]
+      ],
+      "counts": [
+        0,
+        0,
+        2,
+        2
+      ],
+      "legs": [
+        1.0,
+        1.0,
+        0.1438677056307468,
+        0.1438677056307468
+      ],
+      "total_delta": 0.020697916723455216,
+      "nontrivial_PDF_total_delta": 0.020697916723455216,
+      "expected_external_PDF_factor": 1.0
+    },
+    {
+      "variant": "gluon_sqrt_all",
+      "topology": "IF",
+      "pdg": 2,
+      "raw_dummy_probability": 0.6230398745324142,
+      "quantity": "explicit_native_leg",
+      "measured": 0.6230398745324142,
+      "expected": 0.6230398745324142,
+      "raw_dummy_power": 1,
+      "count": 1,
+      "note": "Production selector uses typeII for incoming IF; this calls the native leg with typeIF explicitly."
+    },
+    {
+      "variant": "gluon_sqrt_all",
+      "topology": "IF",
+      "pdg": 21,
+      "raw_dummy_probability": 0.3281085154674152,
+      "quantity": "explicit_native_leg",
+      "measured": 0.32810851546741526,
+      "expected": 0.3281085154674152,
+      "raw_dummy_power": 1,
+      "count": 2,
+      "note": "Production selector uses typeII for incoming IF; this calls the native leg with typeIF explicitly."
+    },
+    {
+      "variant": "per_colour_line",
+      "topology": "II",
+      "pdg": 2,
+      "raw_dummy_probability": 0.623040481233679,
+      "quantity": "event_delta",
+      "measured": 0.3881794412558944,
+      "expected": 0.3881794412558944,
+      "raw_dummy_power": 2,
+      "connections": [
+        [
+          {
+            "partner": 2,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [
+          {
+            "partner": 1,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        []
+      ],
+      "counts": [
+        1,
+        1,
+        0
+      ],
+      "legs": [
+        0.623040481233679,
+        0.623040481233679,
+        1.0
+      ],
+      "total_delta": 0.3881794412558944,
+      "nontrivial_PDF_total_delta": 0.12275311752201586,
+      "expected_external_PDF_factor": 0.31622776601683794
+    },
+    {
+      "variant": "per_colour_line",
+      "topology": "II",
+      "pdg": 21,
+      "raw_dummy_probability": 0.328108502606547,
+      "quantity": "event_delta",
+      "measured": 0.1076551894827105,
+      "expected": 0.10765518948271047,
+      "raw_dummy_power": 2,
+      "connections": [
+        [
+          {
+            "partner": 2,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 2,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [
+          {
+            "partner": 1,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 1,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        []
+      ],
+      "counts": [
+        2,
+        2,
+        0
+      ],
+      "legs": [
+        0.32810850260654706,
+        0.32810850260654706,
+        1.0
+      ],
+      "total_delta": 0.1076551894827105,
+      "nontrivial_PDF_total_delta": 0.03404356007023693,
+      "expected_external_PDF_factor": 0.31622776601683794
+    },
+    {
+      "variant": "per_colour_line",
+      "topology": "FI",
+      "pdg": 2,
+      "raw_dummy_probability": 0.6563998679854741,
+      "quantity": "fsr",
+      "measured": 0.6563998679854741,
+      "expected": 0.6563998679854741,
+      "raw_dummy_power": 1,
+      "connections": [
+        [
+          {
+            "partner": 3,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [],
+        [
+          {
+            "partner": 1,
+            "type": 4,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        []
+      ],
+      "counts": [
+        1,
+        0,
+        1,
+        0
+      ],
+      "legs": [
+        0.623040481233679,
+        1.0,
+        0.6563998679854741,
+        1.0
+      ],
+      "total_delta": 0.4089636896313932,
+      "nontrivial_PDF_total_delta": 0.2299771831820523,
+      "expected_external_PDF_factor": 0.5623413251903491
+    },
+    {
+      "variant": "per_colour_line",
+      "topology": "FI",
+      "pdg": 21,
+      "raw_dummy_probability": 0.3782769305547322,
+      "quantity": "fsr",
+      "measured": 0.37827693055473216,
+      "expected": 0.3782769305547322,
+      "raw_dummy_power": 1,
+      "connections": [
+        [
+          {
+            "partner": 3,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 3,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [],
+        [
+          {
+            "partner": 1,
+            "type": 4,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 1,
+            "type": 4,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        []
+      ],
+      "counts": [
+        2,
+        0,
+        2,
+        0
+      ],
+      "legs": [
+        0.32810850260654706,
+        1.0,
+        0.37827693055473216,
+        1.0
+      ],
+      "total_delta": 0.12411587725491396,
+      "nontrivial_PDF_total_delta": 0.06979548689269102,
+      "expected_external_PDF_factor": 0.5623413251903491
+    },
+    {
+      "variant": "per_colour_line",
+      "topology": "FF",
+      "pdg": 2,
+      "raw_dummy_probability": 0.4280159343383754,
+      "quantity": "event_delta",
+      "measured": 0.4280159343383754,
+      "expected": 0.4280159343383754,
+      "raw_dummy_power": 1,
+      "connections": [
+        [],
+        [],
+        [
+          {
+            "partner": 4,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [
+          {
+            "partner": 3,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ]
+      ],
+      "counts": [
+        0,
+        0,
+        1,
+        1
+      ],
+      "legs": [
+        1.0,
+        1.0,
+        0.654229267411949,
+        0.654229267411949
+      ],
+      "total_delta": 0.4280159343383754,
+      "nontrivial_PDF_total_delta": 0.4280159343383754,
+      "expected_external_PDF_factor": 1.0
+    },
+    {
+      "variant": "per_colour_line",
+      "topology": "FF",
+      "pdg": 21,
+      "raw_dummy_probability": 0.1438677056307468,
+      "quantity": "event_delta",
+      "measured": 0.1438677056307468,
+      "expected": 0.1438677056307468,
+      "raw_dummy_power": 1,
+      "connections": [
+        [],
+        [],
+        [
+          {
+            "partner": 4,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 4,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [
+          {
+            "partner": 3,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 3,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ]
+      ],
+      "counts": [
+        0,
+        0,
+        2,
+        2
+      ],
+      "legs": [
+        1.0,
+        1.0,
+        0.37929896602910323,
+        0.37929896602910323
+      ],
+      "total_delta": 0.1438677056307468,
+      "nontrivial_PDF_total_delta": 0.1438677056307468,
+      "expected_external_PDF_factor": 1.0
+    },
+    {
+      "variant": "per_colour_line",
+      "topology": "IF",
+      "pdg": 2,
+      "raw_dummy_probability": 0.6230398745324142,
+      "quantity": "explicit_native_leg",
+      "measured": 0.6230398745324142,
+      "expected": 0.6230398745324142,
+      "raw_dummy_power": 1,
+      "count": 1,
+      "note": "Production selector uses typeII for incoming IF; this calls the native leg with typeIF explicitly."
+    },
+    {
+      "variant": "per_colour_line",
+      "topology": "IF",
+      "pdg": 21,
+      "raw_dummy_probability": 0.3281085154674152,
+      "quantity": "explicit_native_leg",
+      "measured": 0.32810851546741526,
+      "expected": 0.3281085154674152,
+      "raw_dummy_power": 1,
+      "count": 2,
+      "note": "Production selector uses typeII for incoming IF; this calls the native leg with typeIF explicitly."
+    },
+    {
+      "variant": "selected_default",
+      "topology": "II",
+      "pdg": 2,
+      "raw_dummy_probability": 0.623040481233679,
+      "quantity": "event_delta",
+      "measured": 0.3881794412558944,
+      "expected": 0.3881794412558944,
+      "raw_dummy_power": 2,
+      "connections": [
+        [
+          {
+            "partner": 2,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [
+          {
+            "partner": 1,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        []
+      ],
+      "counts": [
+        1,
+        1,
+        0
+      ],
+      "legs": [
+        0.623040481233679,
+        0.623040481233679,
+        1.0
+      ],
+      "total_delta": 0.3881794412558944,
+      "nontrivial_PDF_total_delta": 0.12275311752201586,
+      "expected_external_PDF_factor": 0.31622776601683794
+    },
+    {
+      "variant": "selected_default",
+      "topology": "II",
+      "pdg": 21,
+      "raw_dummy_probability": 0.328108502606547,
+      "quantity": "event_delta",
+      "measured": 0.1076551894827105,
+      "expected": 0.10765518948271047,
+      "raw_dummy_power": 2,
+      "connections": [
+        [
+          {
+            "partner": 2,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 2,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [
+          {
+            "partner": 1,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 1,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        []
+      ],
+      "counts": [
+        2,
+        2,
+        0
+      ],
+      "legs": [
+        0.32810850260654706,
+        0.32810850260654706,
+        1.0
+      ],
+      "total_delta": 0.1076551894827105,
+      "nontrivial_PDF_total_delta": 0.03404356007023693,
+      "expected_external_PDF_factor": 0.31622776601683794
+    },
+    {
+      "variant": "selected_default",
+      "topology": "FI",
+      "pdg": 2,
+      "raw_dummy_probability": 0.6563998679854741,
+      "quantity": "fsr",
+      "measured": 0.6563998679854741,
+      "expected": 0.6563998679854741,
+      "raw_dummy_power": 1,
+      "connections": [
+        [
+          {
+            "partner": 3,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [],
+        [
+          {
+            "partner": 1,
+            "type": 4,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        []
+      ],
+      "counts": [
+        1,
+        0,
+        1,
+        0
+      ],
+      "legs": [
+        0.623040481233679,
+        1.0,
+        0.6563998679854741,
+        1.0
+      ],
+      "total_delta": 0.4089636896313932,
+      "nontrivial_PDF_total_delta": 0.2299771831820523,
+      "expected_external_PDF_factor": 0.5623413251903491
+    },
+    {
+      "variant": "selected_default",
+      "topology": "FI",
+      "pdg": 21,
+      "raw_dummy_probability": 0.3782769305547322,
+      "quantity": "fsr",
+      "measured": 0.37827693055473216,
+      "expected": 0.3782769305547322,
+      "raw_dummy_power": 1,
+      "connections": [
+        [
+          {
+            "partner": 3,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 3,
+            "type": 1,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [],
+        [
+          {
+            "partner": 1,
+            "type": 4,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 1,
+            "type": 4,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        []
+      ],
+      "counts": [
+        2,
+        0,
+        2,
+        0
+      ],
+      "legs": [
+        0.32810850260654706,
+        1.0,
+        0.37827693055473216,
+        1.0
+      ],
+      "total_delta": 0.12411587725491396,
+      "nontrivial_PDF_total_delta": 0.06979548689269102,
+      "expected_external_PDF_factor": 0.5623413251903491
+    },
+    {
+      "variant": "selected_default",
+      "topology": "FF",
+      "pdg": 2,
+      "raw_dummy_probability": 0.4280159343383754,
+      "quantity": "event_delta",
+      "measured": 0.4280159343383754,
+      "expected": 0.4280159343383754,
+      "raw_dummy_power": 1,
+      "connections": [
+        [],
+        [],
+        [
+          {
+            "partner": 4,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [
+          {
+            "partner": 3,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ]
+      ],
+      "counts": [
+        0,
+        0,
+        1,
+        1
+      ],
+      "legs": [
+        1.0,
+        1.0,
+        0.654229267411949,
+        0.654229267411949
+      ],
+      "total_delta": 0.4280159343383754,
+      "nontrivial_PDF_total_delta": 0.4280159343383754,
+      "expected_external_PDF_factor": 1.0
+    },
+    {
+      "variant": "selected_default",
+      "topology": "FF",
+      "pdg": 21,
+      "raw_dummy_probability": 0.1438677056307468,
+      "quantity": "event_delta",
+      "measured": 0.1438677056307468,
+      "expected": 0.1438677056307468,
+      "raw_dummy_power": 1,
+      "connections": [
+        [],
+        [],
+        [
+          {
+            "partner": 4,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 4,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ],
+        [
+          {
+            "partner": 3,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          },
+          {
+            "partner": 3,
+            "type": 2,
+            "start": 200.0,
+            "stop": 20.0,
+            "mass": 500.0
+          }
+        ]
+      ],
+      "counts": [
+        0,
+        0,
+        2,
+        2
+      ],
+      "legs": [
+        1.0,
+        1.0,
+        0.37929896602910323,
+        0.37929896602910323
+      ],
+      "total_delta": 0.1438677056307468,
+      "nontrivial_PDF_total_delta": 0.1438677056307468,
+      "expected_external_PDF_factor": 1.0
+    },
+    {
+      "variant": "selected_default",
+      "topology": "IF",
+      "pdg": 2,
+      "raw_dummy_probability": 0.6230398745324142,
+      "quantity": "explicit_native_leg",
+      "measured": 0.6230398745324142,
+      "expected": 0.6230398745324142,
+      "raw_dummy_power": 1,
+      "count": 1,
+      "note": "Production selector uses typeII for incoming IF; this calls the native leg with typeIF explicitly."
+    },
+    {
+      "variant": "selected_default",
+      "topology": "IF",
+      "pdg": 21,
+      "raw_dummy_probability": 0.3281085154674152,
+      "quantity": "explicit_native_leg",
+      "measured": 0.32810851546741526,
+      "expected": 0.3281085154674152,
+      "raw_dummy_power": 1,
+      "count": 2,
+      "note": "Production selector uses typeII for incoming IF; this calls the native leg with typeIF explicitly."
+    }
+  ],
+  "raw_table_ratios": {
+    "1": {
+      "2": 0.623040481233679,
+      "21": 0.328108502606547
+    },
+    "2": {
+      "2": 0.4280159343383754,
+      "21": 0.1438677056307468
+    },
+    "3": {
+      "2": 0.6230398745324142,
+      "21": 0.3281085154674152
+    },
+    "4": {
+      "2": 0.6563998679854741,
+      "21": 0.3782769305547322
+    }
+  },
+  "patches": {
+    "raw": "",
+    "gluon_sqrt_all": "      if(abs(id).eq.21)pysudakov=sqrt(max(tmp,0d0))\n",
+    "per_colour_line": "      if(itype.eq.2)then\n        pysudakov=sqrt(max(tmp,0d0))\n        if(abs(id).eq.21)pysudakov=sqrt(pysudakov)\n      elseif(abs(id).eq.21)then\n        pysudakov=sqrt(max(tmp,0d0))\n      endif\n",
+    "selected_default": null
+  },
+  "fixtures": {
+    "II_2": {
+      "ids": [
+        2,
+        -2,
+        25
+      ],
+      "colors": [
+        [
+          501,
+          0
+        ],
+        [
+          0,
+          501
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "p": [
+        [
+          250,
+          0,
+          0,
+          250
+        ],
+        [
+          250,
+          0,
+          0,
+          -250
+        ],
+        [
+          500,
+          0,
+          0,
+          0
+        ]
+      ],
+      "masses": [
+        0,
+        0,
+        500
+      ],
+      "starts": [
+        [
+          200.0,
+          200.0,
+          200.0
+        ],
+        [
+          200.0,
+          200.0,
+          200.0
+        ],
+        [
+          200.0,
+          200.0,
+          200.0
+        ]
+      ],
+      "scalup": 200.0,
+      "x": [
+        0.1,
+        0.1
+      ]
+    },
+    "II_21": {
+      "ids": [
+        21,
+        21,
+        25
+      ],
+      "colors": [
+        [
+          501,
+          502
+        ],
+        [
+          502,
+          501
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "p": [
+        [
+          250,
+          0,
+          0,
+          250
+        ],
+        [
+          250,
+          0,
+          0,
+          -250
+        ],
+        [
+          500,
+          0,
+          0,
+          0
+        ]
+      ],
+      "masses": [
+        0,
+        0,
+        500
+      ],
+      "starts": [
+        [
+          200.0,
+          200.0,
+          200.0
+        ],
+        [
+          200.0,
+          200.0,
+          200.0
+        ],
+        [
+          200.0,
+          200.0,
+          200.0
+        ]
+      ],
+      "scalup": 200.0,
+      "x": [
+        0.1,
+        0.1
+      ]
+    },
+    "FI_2": {
+      "ids": [
+        2,
+        22,
+        2,
+        22
+      ],
+      "colors": [
+        [
+          501,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          501,
+          0
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "p": [
+        [
+          250,
+          0,
+          0,
+          250
+        ],
+        [
+          250,
+          0,
+          0,
+          -250
+        ],
+        [
+          250,
+          0,
+          0,
+          -250
+        ],
+        [
+          250,
+          0,
+          0,
+          250
+        ]
+      ],
+      "masses": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "starts": [
+        [
+          200.0,
+          200.0,
+          200.0,
+          200.0
+        ],
+        [
+          200.0,
+          200.0,
+          200.0,
+          200.0
+        ],
+        [
+          200.0,
+          200.0,
+          200.0,
+          200.0
+        ],
+        [
+          200.0,
+          200.0,
+          200.0,
+          200.0
+        ]
+      ],
+      "scalup": 200.0,
+      "x": [
+        0.1,
+        0.1
+      ]
+    },
+    "FI_21": {
+      "ids": [
+        21,
+        22,
+        21,
+        22
+      ],
+      "colors": [
+        [
+          501,
+          502
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          501,
+          502
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "p": [
+        [
+          250,
+          0,
+          0,
+          250
+        ],
+        [
+          250,
+          0,
+          0,
+          -250
+        ],
+        [
+          250,
+          0,
+          0,
+          -250
+        ],
+        [
+          250,
+          0,
+          0,
+          250
+        ]
+      ],
+      "masses": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "starts": [
+        [
+          200.0,
+          200.0,
+          200.0,
+          200.0
+        ],
+        [
+          200.0,
+          200.0,
+          200.0,
+          200.0
+        ],
+        [
+          200.0,
+          200.0,
+          200.0,
+          200.0
+        ],
+        [
+          200.0,
+          200.0,
+          200.0,
+          200.0
+        ]
+      ],
+      "scalup": 200.0,
+      "x": [
+        0.1,
+        0.1
+      ]
+    },
+    "FF_2": {
+      "ids": [
+        11,
+        -11,
+        2,
+        -2
+      ],
+      "colors": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          501,
+          0
+        ],
+        [
+          0,
+          501
+        ]
+      ],
+      "p": [
+        [
+          250,
+          0,
+          0,
+          250
+        ],
+        [
+          250,
+          0,
+          0,
+          -250
+        ],
+        [
+          250,
+          250,
+          0,
+          0
+        ],
+        [
+          250,
+          -250,
+          0,
+          0
+        ]
+      ],
+      "masses": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "starts": [
+        [
+          200.0,
+          200.0,
+          200.0,
+          200.0
+        ],
+        [
+          200.0,
+          200.0,
+          200.0,
+          200.0
+        ],
+        [
+          200.0,
+          200.0,
+          200.0,
+          200.0
+        ],
+        [
+          200.0,
+          200.0,
+          200.0,
+          200.0
+        ]
+      ],
+      "scalup": 200.0,
+      "x": [
+        0.1,
+        0.1
+      ]
+    },
+    "FF_21": {
+      "ids": [
+        11,
+        -11,
+        21,
+        21
+      ],
+      "colors": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          501,
+          502
+        ],
+        [
+          502,
+          501
+        ]
+      ],
+      "p": [
+        [
+          250,
+          0,
+          0,
+          250
+        ],
+        [
+          250,
+          0,
+          0,
+          -250
+        ],
+        [
+          250,
+          250,
+          0,
+          0
+        ],
+        [
+          250,
+          -250,
+          0,
+          0
+        ]
+      ],
+      "masses": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "starts": [
+        [
+          200.0,
+          200.0,
+          200.0,
+          200.0
+        ],
+        [
+          200.0,
+          200.0,
+          200.0,
+          200.0
+        ],
+        [
+          200.0,
+          200.0,
+          200.0,
+          200.0
+        ],
+        [
+          200.0,
+          200.0,
+          200.0,
+          200.0
+        ]
+      ],
+      "scalup": 200.0,
+      "x": [
+        0.1,
+        0.1
+      ]
+    }
+  },
+  "transformed_source_sha256": {
+    "raw": "16e07784f53f347f64b3fb5168100c2b6ca0747c8dd2dd0f97370f0d27b5e435",
+    "gluon_sqrt_all": "903f4af289c3bd790012e08dcb1bbf5a5b6116ee749af5b26055ef542c709b51",
+    "per_colour_line": "833f1015294eb7b3bc429698a384857537f805ff092f5fd179cf039928d61089",
+    "selected_default": "020c561c3d09fee13ea93c2faae4052206ac64bb2f1250b0ba552af7da63f10a"
+  },
+  "native_source_sha256": {
+    "Template/NLO/SubProcesses/montecarlocounter.f": "554432b7b09075c21a8484e5d7d34b261d345af1849d23c2402659bd9a14071f",
+    "Template/NLO/SubProcesses/mcatnlo_delta_scales.f90": "a010072c50e8e2ee2777e0a2116f7f06f8b4cff88a8417a88923eb1e4cd85124",
+    "Template/NLO/SubProcesses/MCmasses_PYTHIA8.inc": "0374ba4b1855d0dc1de74f8f68ecc990ffe93d289cda0e01041f3274c04aae94"
+  },
+  "selected_default": {
+    "path": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/sudakov.f",
+    "resolved_path": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/sudakov_pdfmode1.f",
+    "symlink_target": "sudakov_pdfmode1.f",
+    "sha256": "020c561c3d09fee13ea93c2faae4052206ac64bb2f1250b0ba552af7da63f10a"
+  },
+  "input_sha256": {
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/sudakov_r515_PDFmode1.f.gz": "a59f3a7ad1396d74175120c957fa564991d614f064d482e07839b4b1969463a6",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/dipole_consumer_check.py": "ca97841cdd7a77cbb66062b239e4cdb38a25667ac937ce055234c157f8464405",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/sudakov.f": "020c561c3d09fee13ea93c2faae4052206ac64bb2f1250b0ba552af7da63f10a"
+  },
+  "definition": "q20GeV,Q200GeV,mdip500GeV; unit beam PDFs; rawmode1archive. Unmodified native get_delta_connections and delta_leg_probability compiled directly. Only isolated table copies are patched. Every final factor is consumed per directed colour line.",
+  "checks": [
+    "FFgg selects two colour lines per gluon even when both connect to the same partner",
+    "Raw FFgg dummy probability P becomes event P^4; a gluon square root alone gives P^2; fourth root restores P",
+    "Raw FFqqbar dummy probability P becomes event P^2; square root restores P",
+    "FI gluon raw probability P becomes FSR P^2; square root restores P",
+    "II gluon raw single-radiator P becomes two-gluon event P^4; square root restores P^2",
+    "Incoming IF is mapped onto typeII by production selector; explicit typeIF native-leg contract checked separately",
+    "Actual selected default agrees bitwise with independently patched per-colour-line archive in all8fixtures",
+    "Nontrivial scale-dependent PDFs enter once per incoming leg for quarks and gluons in every table variant",
+    "All quark and gluon fixture results agree with their expected powers within1e-12"
+  ],
+  "limitations": [
+    "Colour and kinematic fixtures only; no matrix elements or fresh showers",
+    "Common scales and symmetric massless dummy-end interpretation",
+    "Actual unequal scales and geometries retain the native weighted prescription"
+  ]
+}

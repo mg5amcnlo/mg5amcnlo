@@ -1,0 +1,15 @@
+{
+  "trials": 300,
+  "bitwise_json_numbers_identical": true,
+  "command": [
+    "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+    "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+    "shower",
+    "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/baseline_check.lhe",
+    "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/baseline_check",
+    "300",
+    "72883",
+    "13",
+    "both"
+  ]
+}

@@ -1,0 +1,332 @@
+{
+  "provenance": {
+    "table": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/sudakov_template.f",
+    "table_sha256": "dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9",
+    "source_sha256": {
+      "Template/NLO/SubProcesses/montecarlocounter.f": "554432b7b09075c21a8484e5d7d34b261d345af1849d23c2402659bd9a14071f",
+      "Template/NLO/SubProcesses/mcatnlo_delta_scales.f90": "a010072c50e8e2ee2777e0a2116f7f06f8b4cff88a8417a88923eb1e4cd85124",
+      "Template/NLO/SubProcesses/MCmasses_PYTHIA8.inc": "0374ba4b1855d0dc1de74f8f68ecc990ffe93d289cda0e01041f3274c04aae94"
+    },
+    "extracted_routines": [
+      "delta_leg_probability",
+      "gl_safe",
+      "pysudakov_safe",
+      "get_parton_id",
+      "setSudType",
+      "get_to_zero",
+      "emscafun",
+      "get_delta_connections"
+    ],
+    "compile_command": [
+      "gfortran",
+      "-O2",
+      "-std=legacy",
+      "-shared",
+      "-fPIC",
+      "-ffixed-line-length-none",
+      "-I/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses",
+      "-J/tmp/delta_evaluator_0mbjeghd",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses/mcatnlo_delta_scales.f90",
+      "/tmp/delta_evaluator_0mbjeghd/delta_production.f",
+      "/tmp/delta_evaluator_0mbjeghd/delta_wrapper.f90",
+      "/tmp/delta_evaluator_0mbjeghd/sudakov.f",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/dfint.f",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/kerset.f",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/abend.f",
+      "-o",
+      "/tmp/delta_evaluator_0mbjeghd/delta.so"
+    ]
+  },
+  "grid_statistics": [
+    {
+      "pdg": 1,
+      "type": 1,
+      "nodes": 5000,
+      "unity_nodes": 3146,
+      "min_value": 0.00022794385,
+      "min_at": {
+        "q": 1.0,
+        "mass": 7000.0
+      },
+      "active_q_range": [
+        1.0,
+        1673.6631
+      ],
+      "active_mass_range": [
+        2.468067,
+        7000.0
+      ]
+    },
+    {
+      "pdg": 1,
+      "type": 2,
+      "nodes": 5000,
+      "unity_nodes": 3069,
+      "min_value": 0.00020296387,
+      "min_at": {
+        "q": 1.0,
+        "mass": 7000.0
+      },
+      "active_q_range": [
+        1.0,
+        2188.6997
+      ],
+      "active_mass_range": [
+        2.468067,
+        7000.0
+      ]
+    },
+    {
+      "pdg": 1,
+      "type": 4,
+      "nodes": 5000,
+      "unity_nodes": 4779,
+      "min_value": 0.27453385,
+      "min_at": {
+        "q": 1.0,
+        "mass": 21.57812
+      },
+      "active_q_range": [
+        1.0,
+        8.5535221
+      ],
+      "active_mass_range": [
+        1.4353003,
+        25.851455
+      ]
+    },
+    {
+      "pdg": 6,
+      "type": 1,
+      "nodes": 5000,
+      "unity_nodes": 3146,
+      "min_value": 0.00021836547,
+      "min_at": {
+        "q": 1.0,
+        "mass": 7000.0
+      },
+      "active_q_range": [
+        1.0,
+        2617.3688
+      ],
+      "active_mass_range": [
+        2.468067,
+        7000.0
+      ]
+    },
+    {
+      "pdg": 6,
+      "type": 2,
+      "nodes": 5000,
+      "unity_nodes": 3063,
+      "min_value": 0.0001894292,
+      "min_at": {
+        "q": 1.0,
+        "mass": 7000.0
+      },
+      "active_q_range": [
+        1.0,
+        2188.6997
+      ],
+      "active_mass_range": [
+        2.468067,
+        7000.0
+      ]
+    },
+    {
+      "pdg": 6,
+      "type": 4,
+      "nodes": 5000,
+      "unity_nodes": 4777,
+      "min_value": 0.27425146,
+      "min_at": {
+        "q": 1.0,
+        "mass": 21.57812
+      },
+      "active_q_range": [
+        1.0,
+        8.5535221
+      ],
+      "active_mass_range": [
+        1.4353003,
+        25.851455
+      ]
+    },
+    {
+      "pdg": 21,
+      "type": 1,
+      "nodes": 5000,
+      "unity_nodes": 2968,
+      "min_value": 0.0,
+      "min_at": {
+        "q": 1.0,
+        "mass": 25.851455
+      },
+      "active_q_range": [
+        1.0,
+        2862.2285
+      ],
+      "active_mass_range": [
+        2.468067,
+        7000.0
+      ]
+    },
+    {
+      "pdg": 21,
+      "type": 2,
+      "nodes": 5000,
+      "unity_nodes": 2983,
+      "min_value": 0.0,
+      "min_at": {
+        "q": 1.0,
+        "mass": 270.77779
+      },
+      "active_q_range": [
+        1.0,
+        3129.9952
+      ],
+      "active_mass_range": [
+        2.468067,
+        7000.0
+      ]
+    },
+    {
+      "pdg": 21,
+      "type": 4,
+      "nodes": 5000,
+      "unity_nodes": 4696,
+      "min_value": 0.053264749,
+      "min_at": {
+        "q": 1.0,
+        "mass": 21.57812
+      },
+      "active_q_range": [
+        1.0,
+        11.185698
+      ],
+      "active_mass_range": [
+        1.1980402,
+        25.851455
+      ]
+    }
+  ],
+  "top_table_scan": [
+    {
+      "q": 10,
+      "mass": 100,
+      "pdg": 6,
+      "type": 2,
+      "table_value": 0.7843844639564965
+    },
+    {
+      "q": 10,
+      "mass": 100,
+      "pdg": 6,
+      "type": 4,
+      "table_value": 1.0
+    },
+    {
+      "q": 10,
+      "mass": 200,
+      "pdg": 6,
+      "type": 2,
+      "table_value": 0.6253765110125088
+    },
+    {
+      "q": 10,
+      "mass": 200,
+      "pdg": 6,
+      "type": 4,
+      "table_value": 1.0
+    },
+    {
+      "q": 10,
+      "mass": 300,
+      "pdg": 6,
+      "type": 2,
+      "table_value": 0.536331234857132
+    },
+    {
+      "q": 10,
+      "mass": 300,
+      "pdg": 6,
+      "type": 4,
+      "table_value": 1.0
+    },
+    {
+      "q": 10,
+      "mass": 400,
+      "pdg": 6,
+      "type": 2,
+      "table_value": 0.47383017863960286
+    },
+    {
+      "q": 10,
+      "mass": 400,
+      "pdg": 6,
+      "type": 4,
+      "table_value": 1.0
+    },
+    {
+      "q": 10,
+      "mass": 500,
+      "pdg": 6,
+      "type": 2,
+      "table_value": 0.4299051644587013
+    },
+    {
+      "q": 10,
+      "mass": 500,
+      "pdg": 6,
+      "type": 4,
+      "table_value": 0.9999999999999999
+    },
+    {
+      "q": 10,
+      "mass": 700,
+      "pdg": 6,
+      "type": 2,
+      "table_value": 0.3628293706774389
+    },
+    {
+      "q": 10,
+      "mass": 700,
+      "pdg": 6,
+      "type": 4,
+      "table_value": 1.0
+    },
+    {
+      "q": 10,
+      "mass": 1000,
+      "pdg": 6,
+      "type": 2,
+      "table_value": 0.30135037243127794
+    },
+    {
+      "q": 10,
+      "mass": 1000,
+      "pdg": 6,
+      "type": 4,
+      "table_value": 1.0
+    },
+    {
+      "q": 10,
+      "mass": 2000,
+      "pdg": 6,
+      "type": 2,
+      "table_value": 0.2035820658303033
+    },
+    {
+      "q": 10,
+      "mass": 2000,
+      "pdg": 6,
+      "type": 4,
+      "table_value": 1.0
+    }
+  ],
+  "notes": [
+    "These are raw shipped-table values, not a measured shower probability.",
+    "Type4 FI is unity above its very low-scale support for tested top masses.",
+    "mcmass top metadata0 does not establish physical top mass settings for archived generation."
+  ]
+}

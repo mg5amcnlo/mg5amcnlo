@@ -1,0 +1,47 @@
+{
+  "pythia_version": "8.313",
+  "pdf_set": "13: NNPDF2.3 QCD+QED LO alpha_s(MZ)=0.130; default branch fallback for built-in hard PDFs",
+  "shower_alphaS_MZ": 0.118,
+  "shower_alphaS_order": 1,
+  "shower_alphaS_CMW": false,
+  "branch_commit": "801a3417c98335f33894376df6e1005221ec53a6",
+  "commands": [
+    "/export/tmp/rikkert/delta_noemission_20261027/pythia_probe_production /export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc shower /export/tmp/rikkert/delta_noemission_20261027/ttbar_S.lhe /export/tmp/rikkert/delta_noemission_20261027/branch_exact 300 72883 13",
+    "/export/tmp/rikkert/delta_noemission_20261027/pythia_probe_production /export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc shower /export/tmp/rikkert/delta_noemission_20261027/ttbar_S.lhe /export/tmp/rikkert/delta_noemission_20261027/branch_exact_pdf15 200 72884 15",
+    "/export/tmp/rikkert/delta_noemission_20261027/pythia_probe_production /export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc shower /export/tmp/rikkert/delta_noemission_20261027/ttbar_S.lhe /export/tmp/rikkert/delta_noemission_20261027/branch_exact_isr 200 72885 13 isr",
+    "/export/tmp/rikkert/delta_noemission_20261027/pythia_probe_production /export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc shower /export/tmp/rikkert/delta_noemission_20261027/ttbar_S.lhe /export/tmp/rikkert/delta_noemission_20261027/branch_exact_fsr 200 72886 13 fsr"
+  ],
+  "sha256": {
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/pythia_probe.cc": "2771327cf80031b5087da17ffae6330ee8f491c807b5d5396e02291215b813f6",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/pythia_pdf.cc": "fad00150d4049dcd2775b3a2aa191f221bcd908122017681296628fc936599cc",
+    "/export/tmp/rikkert/delta_noemission_20261027/pythia_probe": "ba55adb8d683221e404914f5e77141e5e755db7c347586cfa51026fd18421350",
+    "/export/tmp/rikkert/delta_noemission_20261027/libpythia_pdf.so": "88c210fbc18613f76bfdc2f41d524e6401473eb9596e29ef0594e97290f6cb12",
+    "/export/tmp/rikkert/Pythia/pythia8313/lib/libpythia8.so": "18e9aec234ec594b6e0193cb24d0d4100fc5eb3fa68fbc9362e9f4c3c8bf636c",
+    "/export/tmp/rikkert/Pythia/pythia8313/src/PartonLevel.cc": "42567975fd84d86c2c12b2c6d2caf0ce3da45813dd413a061e543c95546cd809",
+    "/export/tmp/rikkert/Pythia/pythia8313/src/SimpleTimeShower.cc": "6925aa2d2a6b86e8a3037a3554f5dbb399d2259d167f8b935ec0cfab947fc4ca",
+    "/export/tmp/rikkert/Pythia/pythia8313/src/SimpleSpaceShower.cc": "fe74d843e7725497558fec97a6f1a7394b51ea1d853e4f0ea6dc1fcb238f2d73",
+    "/export/tmp/rikkert/delta_noemission_20261027/ttbar_S.lhe": "09992482fbb1d263310cc3c1d4375316904bf84003e3fb49db801252ae2a45b3",
+    "/export/tmp/rikkert/delta_noemission_20261027/pythia_probe_production": "4cf867a8e9ed4d65c7dcaf37557a0bfc131a5e2bb4c77b471b3d013672b74314",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "43526fd87f6217dd12b5b702d56eaea86c88dcebf9b36a8915944242640f8795",
+    "/export/tmp/rikkert/delta_noemission_20261027/TT/SubProcesses/MCmasses_PYTHIA8.inc": "0374ba4b1855d0dc1de74f8f68ecc990ffe93d289cda0e01041f3274c04aae94"
+  },
+  "first_emission_definition": "infoPtr->pTnow() in doVetoStep after successful branch; records nISR+nFSR=1, type2 ISR/type3 FSR; no veto",
+  "replay": "Exact LHE four vectors/colors/SCALUP; directed scales copied to Info::scales and minimal per-particle production scales. Stable top and antitop, all QED/MPI/hadronization/primordialKT disabled; beam remnants retained for Pythia event checks.",
+  "sensitivity_pdf_set": "15: NNPDF2.3 QCD+QED NLO alpha_s(MZ)=0.119",
+  "light_shower_masses_GeV": {
+    "1": 0.33,
+    "2": 0.33,
+    "3": 0.5,
+    "4": 1.5,
+    "5": 4.8
+  },
+  "deliberate_comparison_controls": [
+    "Stable on-shell tops, width0",
+    "QEDshowerByQ/ByL/ByOther/ByGamma all off",
+    "ISR and FSR MEcorrections off",
+    "HadronLevel all off; MPI and primordialKT off; beam remnants on"
+  ],
+  "mass_source": "Exported TT/SubProcesses/MCmasses_PYTHIA8.inc, passed to generated steering by amcatnlo_run_interface.py lines4734-4738",
+  "MEC_equivalence_for_first_production_emission": "Pythia SimpleTimeShower::findMEtype with default MEextended=false disables MEC in2->n (mother1!=mother2) and incoming recoilers; our MECoff therefore uses same first ttbar production kernel.",
+  "event_checks": "Enabled, standard pp beam remnants retained to conserve charge and momentum; no failed shower events accepted silently."
+}

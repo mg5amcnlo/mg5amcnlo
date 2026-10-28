@@ -1,0 +1,10 @@
+! Couplings from the historical SudGen wrapper and Pythia8.225 defaults.
+SpaceShower:alphaSvalue = 0.130
+TimeShower:alphaSvalue = 0.1365
+SpaceShower:alphaSorder = 1
+TimeShower:alphaSorder = 1
+SpaceShower:alphaSuseCMW = off
+TimeShower:alphaSuseCMW = off
+PartonShowers:model = 1
+SpaceShower:pdfMode = 0
+TimeShower:pdfMode = 0

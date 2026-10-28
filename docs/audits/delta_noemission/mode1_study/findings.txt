@@ -1,0 +1,40 @@
+Mode 1 investigation: conclusions
+
+The unchanged PDFmode1 archive is much closer than the default, but it does
+not reproduce the present Simple shower to a few percent. With the known
+historical couplings (ISR 0.130, FSR 0.1365, one-loop running, CMW off), the
+ratio of mean Delta to mean conditional shower no-emission probability on
+actual first-emission configurations is about 0.79 in the 20-50 GeV bins,
+rising to 0.91 at 100-150 GeV. Changing the shower PDF from 13 to 15 does
+not resolve the deficit. With both couplings at 0.118, the ratios are
+0.70-0.74 at 20-50 GeV. Detailed values and errors are in report.txt.
+
+The deficit is mainly in gg. At 30-50 GeV with the increased couplings and
+PDF13, the ratio is 0.770 +/- 0.005 for gg, versus 0.972 +/- 0.016 for
+qqbar. A control retaining the original probes and changing only the
+reference shower confirms that the coupling increase helps, but does not
+explain the full deficit.
+
+The auxiliary common-cutoff test assigns the same stopping scale to every
+live colour line. At 20, 50 and 100 GeV, unchanged mode 1 gives 0.308,
+0.656 and 0.916 times the new PDF13 reference. These numbers describe a
+different test from the actual first-emission bins.
+
+An isolated diagnostic takes the square root of only the incoming-gluon
+table factors, leaving quarks, FSR and the production caller unchanged.
+For the common-cutoff test against the new PDF13 reference, the ratios
+become 0.934, 1.043 and 1.016 at 20, 50 and 100 GeV. With PDF15 they are
+0.923, 1.035 and 1.010. This strengthens the full-radiator versus
+per-colour-line normalization hypothesis. It is not a validated general
+replacement prescription. See gluon_normalization*.json/txt.
+
+The new references comprise 522,600 successful Simple Pythia 8.313 showers
+on the same 871 stable-ttbar Born states at 13 TeV. Runtime checks confirm
+Simple shower classes. Every new Born record exactly matches the baseline;
+common-cut Delta is bitwise unchanged. The original 300-trial replay and
+serial/parallel Delta checks pass. Actual showers use ordinary backward
+PDFmode0; mode 1 labels only the lookup table.
+
+The couplings match historical source, not an exact archived-generation
+log. Version, table-mass and other generation differences remain. No
+production source or selected production table was changed.

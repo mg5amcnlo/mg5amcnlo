@@ -1,0 +1,15 @@
+{
+  "baseline_npz": "/export/tmp/rikkert/delta_noemission_20261027/archive_validation/PDFmode1.npz",
+  "baseline_sha256": "f466c1fae3e3e49269f60c353251844eaaa64961f6d0b165bded4c0845b85742",
+  "script_sha256": "8a93083fb2844cbe87c745789a7fa5ee85c2f55587aabf3343b0f7159d8d12a2",
+  "table_sha256": "a59f3a7ad1396d74175120c957fa564991d614f064d482e07839b4b1969463a6",
+  "samples": [
+    "baseline",
+    "matched_pdf13",
+    "matched_pdf15"
+  ],
+  "bootstrap_seed": 102727,
+  "bootstrap_replicas": 500,
+  "quantity": "Ratio of mean production Delta to mean conditional Simple-shower no-emission probability",
+  "no_production_changes": true
+}

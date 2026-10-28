@@ -1,0 +1,23 @@
+{
+  "baseline": {
+    "born": 871,
+    "probes": 52185,
+    "undefined_raw_count": 0,
+    "clipped_count": 652,
+    "first_fsr_fraction": 0.16152151001245568
+  },
+  "matched_pdf13": {
+    "born": 871,
+    "probes": 52232,
+    "undefined_raw_count": 0,
+    "clipped_count": 628,
+    "first_fsr_fraction": 0.17161893092357175
+  },
+  "matched_pdf15": {
+    "born": 871,
+    "probes": 52224,
+    "undefined_raw_count": 0,
+    "clipped_count": 693,
+    "first_fsr_fraction": 0.17620251225490197
+  }
+}

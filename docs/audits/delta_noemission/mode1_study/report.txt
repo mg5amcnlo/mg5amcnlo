@@ -1,0 +1,58 @@
+Archived PDFmode1 versus actual Simple-shower ttbar no-emission probabilities
+
+Same871 S-event Born configurations and colour flows, pp13TeV, stable top mass173GeV.
+Every sample uses60 probe showers and240 independent reference showers per Born.
+Only vendor/SudGen/sudakov_r515_PDFmode1.f.gz is used, without normalization changes.
+Production Delta caller, native real-dependent scales, and native nn23nlo beam-PDF ratios are unchanged.
+The sampled conditional no-emission probability is F_B(q)=P(first accepted shower pT<=q | Born B).
+Each Delta is evaluated on an actual first-emission configuration and its shower Born preimage.
+Reported ratios are ratios of means in shower-evolution-pT bins, not means of eventwise ratios.
+This is an absolute-S-weight conditional study, not a signed NLO cross section or the full FKS integrand.
+
+Samples:
+baseline: Simple8.313, ISR/FSR alphaS(mZ)=.118, one loop, CMWoff, PDF13.
+matched_pdf13: ISRalphaS=.130, FSRalphaS=.1365, one loop, CMWoff, PDF13.
+matched_pdf15: same increased couplings, PDF15 (NNPDF2.3NLO .119).
+Actual shower PDFmode remains0 (ordinary backwards evolution); mode1 labels the lookup table.
+The increased couplings match the recorded historical wrapper/defaults, not a proven archived-generation log.
+The old archive likely used patched8.225; the present shower uses8.313. ID6 table mass is zero.
+Therefore the coupling controls do not constitute an exact recreation of the historical generation setup.
+
+Actual-real comparison, all channels:
+sample             pTbin[GeV]       Delta          Pythia         Delta/Pythia   ratioSE
+baseline              10-20         0.112737      0.150545      0.748855   0.019121
+baseline              20-30         0.195113      0.280452      0.695710   0.009561
+baseline              30-50         0.343009      0.462148      0.742205   0.004954
+baseline              50-75         0.530000      0.655291      0.808801   0.004068
+baseline              75-100        0.672121      0.784631      0.856608   0.003606
+baseline             100-150        0.772026      0.865224      0.892285   0.003375
+matched_pdf13         10-20         0.123454      0.128775      0.958680   0.024727
+matched_pdf13         20-30         0.198545      0.250519      0.792534   0.010128
+matched_pdf13         30-50         0.344783      0.434404      0.793691   0.005025
+matched_pdf13         50-75         0.528523      0.632108      0.836127   0.003671
+matched_pdf13         75-100        0.684632      0.768870      0.890440   0.003692
+matched_pdf13        100-150        0.778995      0.856595      0.909409   0.003522
+matched_pdf15         10-20         0.117441      0.130439      0.900350   0.023538
+matched_pdf15         20-30         0.194166      0.252195      0.769906   0.009318
+matched_pdf15         30-50         0.339076      0.433934      0.781400   0.005321
+matched_pdf15         50-75         0.533088      0.638000      0.835561   0.003619
+matched_pdf15         75-100        0.672190      0.772325      0.870346   0.003317
+matched_pdf15        100-150        0.779859      0.865396      0.901159   0.003558
+
+Diagnostics:
+baseline: 52185 probes, 0 undefined raw Delta values, 652 probes with finite clipping, first-FSR fraction=0.161522.
+matched_pdf13: 52232 probes, 0 undefined raw Delta values, 628 probes with finite clipping, first-FSR fraction=0.171619.
+matched_pdf15: 52224 probes, 0 undefined raw Delta values, 693 probes with finite clipping, first-FSR fraction=0.176203.
+
+Uncertainties:500 Born-cluster bootstrap resamples with common resamples across samples.
+Bins and sample differences are correlated. The uncertainty is statistical, not a modelling error.
+common_cut.csv is the auxiliary common-cutoff comparison on Born states.
+fixed_probe_reference_change.csv keeps the original52185 probe configurations and Delta values fixed,
+changing only the independent reference-shower CDF. It isolates reference-setting effects.
+real_emission.csv also contains gg/qqbar and first-emission ISR/FSR splits plus Delta components.
+
+Checks: new Born records and common-cut Delta values agree exactly with the baseline;
+first Born calculations agree bitwise between serial and parallel evaluation; all trials succeeded.
+
+Reproduce:
+python tests/validation/delta_noemission/mode1_analysis.py STUDY_DIR OUTPUT_DIR --prefix matched_pdf13 --prefix matched_pdf15

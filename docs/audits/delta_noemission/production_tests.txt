@@ -1,0 +1,34 @@
+/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/models/check_param_card.py:336: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/models/loop_sm/restrict_c_mass.dat' mode='r' encoding='UTF-8'>
+  self.read(input_path)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/madgraph/iolibs/export_fks.py:1480: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/madgraph/iolibs/template_files/get_mass_width_fcts.inc' mode='r' encoding='UTF-8'>
+  'iolibs/template_files/get_mass_width_fcts.inc')).read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/madgraph/iolibs/export_fks.py:1487: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_s7y5ji4s/makeinc.inc' mode='r' encoding='UTF-8'>
+  makeinc_content = open(makeinc).read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/madgraph/iolibs/export_fks.py:1489: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_s7y5ji4s/makeinc.inc' mode='w' encoding='UTF-8'>
+  open(makeinc, 'w').write(makeinc_content)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/models/check_param_card.py:336: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/models/loop_sm/restrict_default.dat' mode='r' encoding='UTF-8'>
+  self.read(input_path)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/madgraph/iolibs/export_fks.py:1487: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_vx1fya6l/makeinc.inc' mode='r' encoding='UTF-8'>
+  makeinc_content = open(makeinc).read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/madgraph/iolibs/export_fks.py:1489: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_vx1fya6l/makeinc.inc' mode='w' encoding='UTF-8'>
+  open(makeinc, 'w').write(makeinc_content)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/models/check_param_card.py:336: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/models/loop_sm/restrict_no_b_mass.dat' mode='r' encoding='UTF-8'>
+  self.read(input_path)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/madgraph/iolibs/export_fks.py:1487: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_eb01ijt9/makeinc.inc' mode='r' encoding='UTF-8'>
+  makeinc_content = open(makeinc).read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/madgraph/iolibs/export_fks.py:1489: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_eb01ijt9/makeinc.inc' mode='w' encoding='UTF-8'>
+  open(makeinc, 'w').write(makeinc_content)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+----------------------------------------------------------------------
+Ran 16 tests in 6.164s
+
+OK

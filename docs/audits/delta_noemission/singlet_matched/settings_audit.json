@@ -1,0 +1,1946 @@
+{
+  "scope": "DY and gluon-fusion Higgs first accepted QCD-emission CDF; no new showers run by this settings audit",
+  "historical_commit": "df4187461e8d10f05e78987dd8de5f02fe4e719a",
+  "provenance_limit": "Contemporaneous source and XML/tune defaults; no archived producing-run log or binary hash certifies that this exact configuration produced the tables.",
+  "historical_pythia_version": "8.225",
+  "rerun_pythia_version": "8.313 (user allowed)",
+  "source_sha256": {
+    "SudGen/pythia_interface_for_sudgen.cc": "e151dd458e4b979341f4095707cb4c0cc66f60b8ef1d9d9ac1eaaba1533dd576",
+    "Pythia/Pythia/pythia-src/share/Pythia8/xmldoc/SpacelikeShowers.xml": "66008847443b3dcff3f889e3d07bf6c025b91d8e280e64a6ab93ec977dcfc086",
+    "Pythia/Pythia/pythia-src/share/Pythia8/xmldoc/TimelikeShowers.xml": "c39150f910d345e30ac17f622b310f4be8c090dc78b75f994f3ca43478bf7741",
+    "Pythia/Pythia/pythia-src/share/Pythia8/xmldoc/StandardModelParameters.xml": "00028d930e2808a3d00de4fab561adba61737fd5bb68b035939a2a971a50d999",
+    "Pythia/Pythia/pythia-src/share/Pythia8/xmldoc/PDFSelection.xml": "30786a3ae4919dc917eefbc91dab296ef83f1f0ee5eb9b27a4396a1bb79f02ab",
+    "Pythia/Pythia/pythia-src/share/Pythia8/xmldoc/Tunes.xml": "1dfc91dcd5f5cec80b48271b359228aeb5782111b9330423cf60bbaee6e39bc4",
+    "Pythia/Pythia/pythia-src/src/SpaceShower.cc": "5167e467e734a4aefdbc5053a7d5783146c7737fd2165e4c3af4f5d1360c6f0d",
+    "Pythia/Pythia/pythia-src/src/TimeShower.cc": "41363e9cb9050be2f9f0b5d34f2d2fc0982e9a780fa2fc31923bb11f7deb257e",
+    "Pythia/Pythia/pythia-src/src/StandardModel.cc": "fb295815b0c012306f595628dfd3d683777272dc0974eb4732e179fe48906866",
+    "Pythia/Pythia/pythia-src/src/Settings.cc": "47bfdfa20b7d36c570b31d1a4b6b612e5639c3fbcd3effc2158b0857c780d973"
+  },
+  "historical_wrapper_active_literal_settings": {
+    "HardQCD:all": "on",
+    "Check:epTolErr": "1.000000e-02",
+    "merging:doptlundmerging": "on",
+    "merging:process": "pp>jj",
+    "merging:tms": "-1.0",
+    "merging:includeWeightInXSection": "off",
+    "merging:njetmax": "1000",
+    "merging:applyveto": "off",
+    "Merging:useShowerPlugin": "on",
+    "PartonLevel:MPI": "off",
+    "Print:quiet": "on",
+    "Merging:nRequested": "0",
+    "Beams:setProductionScalesFromLHEF": "off",
+    "TimeShower:QEDshowerByQ": "off",
+    "TimeShower:QEDshowerByL": "off",
+    "TimeShower:QEDshowerByOther": "off",
+    "Check:abortIfVeto": "on",
+    "Merging:mayRemoveDecayProducts": "on",
+    "1:m0": "0.0",
+    "2:m0": "0.0",
+    "3:m0": "0.0",
+    "4:m0": "0.0",
+    "TimeShower:MEcorrections": "off",
+    "TimeShower:PhiPolAsym": "off",
+    "TimeShower:PhiPolAsymHard": "off",
+    "SpaceShower:MEcorrections": "off",
+    "SpaceShower:PhiPolAsym": "off",
+    "SpaceShower:PhiPolAsymHard": "off",
+    "SpaceShower:PhiIntAsym": "off",
+    "SpaceShower:RapidityOrder": "off",
+    "SpaceShower:nQuarkin": "5",
+    "SpaceShower:alphaSvalue": "0.130",
+    "SpaceShower:pdfMode": "2",
+    "Random:setSeed": "on"
+  },
+  "historical_wrapper_forced_settings": {
+    "SpaceShower:pT0Ref": 0
+  },
+  "historical_effective_shared_shower_settings": {
+    "SpaceShower:pTmaxMatch": "0",
+    "SpaceShower:pTmaxFudge": "1.0",
+    "SpaceShower:pTmaxFudgeMPI": "1.0",
+    "SpaceShower:pTdampMatch": "3",
+    "SpaceShower:pTdampFudge": "1.0",
+    "SpaceShower:alphaSvalue": "0.130",
+    "SpaceShower:alphaSorder": "1",
+    "SpaceShower:alphaSuseCMW": "off",
+    "SpaceShower:alphaEMorder": "1",
+    "SpaceShower:renormMultFac": "1.",
+    "SpaceShower:factorMultFac": "1.",
+    "SpaceShower:samePTasMPI": "off",
+    "SpaceShower:pT0Ref": "0.0",
+    "SpaceShower:ecmRef": "7000.0",
+    "SpaceShower:ecmPow": "0.0",
+    "SpaceShower:pTmin": "0.2",
+    "SpaceShower:pTminChgQ": "0.5",
+    "SpaceShower:pTminChgL": "0.0005",
+    "SpaceShower:rapidityOrder": "off",
+    "SpaceShower:rapidityOrderMPI": "on",
+    "SpaceShower:weakShower": "off",
+    "SpaceShower:weakShowerMode": "0",
+    "SpaceShower:pTminWeak": "1.0",
+    "SpaceShower:QCDshower": "on",
+    "SpaceShower:QEDshowerByQ": "on",
+    "SpaceShower:QEDshowerByL": "on",
+    "SpaceShower:MEcorrections": "off",
+    "SpaceShower:MEafterFirst": "on",
+    "SpaceShower:phiPolAsym": "off",
+    "SpaceShower:phiPolAsymHard": "off",
+    "SpaceShower:phiIntAsym": "off",
+    "SpaceShower:strengthIntAsym": "0.7",
+    "SpaceShower:nQuarkIn": "5",
+    "SpaceShower:useFixedFacScale": "off",
+    "SpaceShower:fixedFacScale": "100.",
+    "SpaceShower:pdfMode": "2",
+    "TimeShower:pTmaxMatch": "1",
+    "TimeShower:pTmaxFudge": "1.0",
+    "TimeShower:pTmaxFudgeMPI": "1.0",
+    "TimeShower:pTdampMatch": "0",
+    "TimeShower:pTdampFudge": "1.0",
+    "TimeShower:alphaSvalue": "0.1365",
+    "TimeShower:alphaSorder": "1",
+    "TimeShower:alphaSuseCMW": "off",
+    "TimeShower:alphaEMorder": "1",
+    "TimeShower:renormMultFac": "1.",
+    "TimeShower:factorMultFac": "1.",
+    "TimeShower:pTmin": "0.5",
+    "TimeShower:pTminChgQ": "0.5",
+    "TimeShower:pTminChgL": "1e-6",
+    "TimeShower:mMaxGamma": "10.0",
+    "TimeShower:interleave": "on",
+    "TimeShower:allowBeamRecoil": "on",
+    "TimeShower:dampenBeamRecoil": "on",
+    "TimeShower:allowMPIdipole": "off",
+    "TimeShower:globalRecoil": "off",
+    "TimeShower:nMaxGlobalRecoil": "2",
+    "TimeShower:globalRecoilMode": "0",
+    "TimeShower:nMaxGlobalBranch": "-1",
+    "TimeShower:nPartonsInBorn": "-1",
+    "TimeShower:limitPTmaxGlobal": "off",
+    "TimeShower:octetOniumFraction": "1.",
+    "TimeShower:octetOniumColFac": "2.",
+    "TimeShower:weakShower": "off",
+    "TimeShower:weakShowerMode": "0",
+    "TimeShower:pTminWeak": "1.0",
+    "TimeShower:QCDshower": "on",
+    "TimeShower:nGluonToQuark": "5",
+    "TimeShower:weightGluonToQuark": "4",
+    "TimeShower:scaleGluonToQuark": "1.0",
+    "TimeShower:recoilDeadCone": "on",
+    "TimeShower:QEDshowerByQ": "off",
+    "TimeShower:QEDshowerByL": "off",
+    "TimeShower:QEDshowerByOther": "off",
+    "TimeShower:QEDshowerByGamma": "on",
+    "TimeShower:nGammaToQuark": "5",
+    "TimeShower:nGammaToLepton": "3",
+    "TimeShower:MEcorrections": "off",
+    "TimeShower:MEextended": "on",
+    "TimeShower:MEafterFirst": "on",
+    "TimeShower:phiPolAsym": "off",
+    "TimeShower:phiPolAsymHard": "off",
+    "TimeShower:recoilToColoured": "on",
+    "TimeShower:useFixedFacScale": "off",
+    "TimeShower:fixedFacScale": "100.",
+    "TimeShower:pdfMode": "0",
+    "StandardModel:alphaSnfmax": "6"
+  },
+  "previous_test_settings_path": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed.settings.cmnd",
+  "previous_test_settings_sha256": "9a9bdc597d88ffa690a25e945f65c8a4a338212a5e8fc0829290994040898d0d",
+  "previous_test_differences": {
+    "SpaceShower:pTmaxMatch": {
+      "historical_effective": "0",
+      "previous_test": "1"
+    },
+    "SpaceShower:pT0Ref": {
+      "historical_effective": "0.0",
+      "previous_test": "2."
+    },
+    "SpaceShower:QEDshowerByQ": {
+      "historical_effective": "on",
+      "previous_test": "off"
+    },
+    "SpaceShower:QEDshowerByL": {
+      "historical_effective": "on",
+      "previous_test": "off"
+    },
+    "SpaceShower:phiPolAsym": {
+      "historical_effective": "off",
+      "previous_test": "on"
+    },
+    "SpaceShower:phiPolAsymHard": {
+      "historical_effective": "off",
+      "previous_test": "on"
+    },
+    "SpaceShower:phiIntAsym": {
+      "historical_effective": "off",
+      "previous_test": "on"
+    },
+    "SpaceShower:pdfMode": {
+      "historical_effective": "2",
+      "previous_test": "0"
+    },
+    "TimeShower:dampenBeamRecoil": {
+      "historical_effective": "on",
+      "previous_test": "off"
+    },
+    "TimeShower:globalRecoil": {
+      "historical_effective": "off",
+      "previous_test": "on"
+    },
+    "TimeShower:nMaxGlobalRecoil": {
+      "historical_effective": "2",
+      "previous_test": "1"
+    },
+    "TimeShower:globalRecoilMode": {
+      "historical_effective": "0",
+      "previous_test": "2"
+    },
+    "TimeShower:nMaxGlobalBranch": {
+      "historical_effective": "-1",
+      "previous_test": "1"
+    },
+    "TimeShower:limitPTmaxGlobal": {
+      "historical_effective": "off",
+      "previous_test": "on"
+    },
+    "TimeShower:octetOniumFraction": {
+      "historical_effective": "1.",
+      "previous_test": null
+    },
+    "TimeShower:octetOniumColFac": {
+      "historical_effective": "2.",
+      "previous_test": null
+    },
+    "TimeShower:weightGluonToQuark": {
+      "historical_effective": "4",
+      "previous_test": "1"
+    },
+    "TimeShower:QEDshowerByGamma": {
+      "historical_effective": "on",
+      "previous_test": "off"
+    },
+    "TimeShower:phiPolAsym": {
+      "historical_effective": "off",
+      "previous_test": "on"
+    },
+    "TimeShower:phiPolAsymHard": {
+      "historical_effective": "off",
+      "previous_test": "on"
+    }
+  },
+  "rerun_expected_shared_settings": {
+    "SpaceShower:pTmaxMatch": "1",
+    "SpaceShower:pTmaxFudge": "1.0",
+    "SpaceShower:pTmaxFudgeMPI": "1.0",
+    "SpaceShower:pTdampMatch": "3",
+    "SpaceShower:pTdampFudge": "1.0",
+    "SpaceShower:alphaSvalue": "0.130",
+    "SpaceShower:alphaSorder": "1",
+    "SpaceShower:alphaSuseCMW": "off",
+    "SpaceShower:alphaEMorder": "1",
+    "SpaceShower:renormMultFac": "1.",
+    "SpaceShower:factorMultFac": "1.",
+    "SpaceShower:samePTasMPI": "off",
+    "SpaceShower:pT0Ref": "0.0",
+    "SpaceShower:ecmRef": "7000.0",
+    "SpaceShower:ecmPow": "0.0",
+    "SpaceShower:pTmin": "0.2",
+    "SpaceShower:pTminChgQ": "0.5",
+    "SpaceShower:pTminChgL": "0.0005",
+    "SpaceShower:rapidityOrder": "off",
+    "SpaceShower:rapidityOrderMPI": "on",
+    "SpaceShower:weakShower": "off",
+    "SpaceShower:weakShowerMode": "0",
+    "SpaceShower:pTminWeak": "1.0",
+    "SpaceShower:QCDshower": "on",
+    "SpaceShower:QEDshowerByQ": "off",
+    "SpaceShower:QEDshowerByL": "off",
+    "SpaceShower:MEcorrections": "off",
+    "SpaceShower:MEafterFirst": "on",
+    "SpaceShower:phiPolAsym": "off",
+    "SpaceShower:phiPolAsymHard": "off",
+    "SpaceShower:phiIntAsym": "off",
+    "SpaceShower:strengthIntAsym": "0.7",
+    "SpaceShower:nQuarkIn": "5",
+    "SpaceShower:useFixedFacScale": "off",
+    "SpaceShower:fixedFacScale": "100.",
+    "SpaceShower:pdfMode": "0",
+    "TimeShower:pTmaxMatch": "1",
+    "TimeShower:pTmaxFudge": "1.0",
+    "TimeShower:pTmaxFudgeMPI": "1.0",
+    "TimeShower:pTdampMatch": "0",
+    "TimeShower:pTdampFudge": "1.0",
+    "TimeShower:alphaSvalue": "0.1365",
+    "TimeShower:alphaSorder": "1",
+    "TimeShower:alphaSuseCMW": "off",
+    "TimeShower:alphaEMorder": "1",
+    "TimeShower:renormMultFac": "1.",
+    "TimeShower:factorMultFac": "1.",
+    "TimeShower:pTmin": "0.5",
+    "TimeShower:pTminChgQ": "0.5",
+    "TimeShower:pTminChgL": "1e-6",
+    "TimeShower:mMaxGamma": "10.0",
+    "TimeShower:interleave": "on",
+    "TimeShower:allowBeamRecoil": "on",
+    "TimeShower:dampenBeamRecoil": "on",
+    "TimeShower:allowMPIdipole": "off",
+    "TimeShower:globalRecoil": "off",
+    "TimeShower:nMaxGlobalRecoil": "2",
+    "TimeShower:globalRecoilMode": "0",
+    "TimeShower:nMaxGlobalBranch": "-1",
+    "TimeShower:nPartonsInBorn": "-1",
+    "TimeShower:limitPTmaxGlobal": "off",
+    "TimeShower:weakShower": "off",
+    "TimeShower:weakShowerMode": "0",
+    "TimeShower:pTminWeak": "1.0",
+    "TimeShower:QCDshower": "on",
+    "TimeShower:nGluonToQuark": "5",
+    "TimeShower:weightGluonToQuark": "4",
+    "TimeShower:scaleGluonToQuark": "1.0",
+    "TimeShower:recoilDeadCone": "on",
+    "TimeShower:QEDshowerByQ": "off",
+    "TimeShower:QEDshowerByL": "off",
+    "TimeShower:QEDshowerByOther": "off",
+    "TimeShower:QEDshowerByGamma": "off",
+    "TimeShower:nGammaToQuark": "5",
+    "TimeShower:nGammaToLepton": "3",
+    "TimeShower:MEcorrections": "off",
+    "TimeShower:MEextended": "on",
+    "TimeShower:MEafterFirst": "on",
+    "TimeShower:phiPolAsym": "off",
+    "TimeShower:phiPolAsymHard": "off",
+    "TimeShower:recoilToColoured": "on",
+    "TimeShower:useFixedFacScale": "off",
+    "TimeShower:fixedFacScale": "100.",
+    "TimeShower:pdfMode": "0",
+    "StandardModel:alphaSnfmax": "6"
+  },
+  "particle_masses": {
+    "table_call_metadata_u_d_s_c_b": [
+      0.33,
+      0.33,
+      0.5,
+      1.5,
+      4.8
+    ],
+    "effective_historical_and_rerun_Pythia_u_d_s_c_b": [
+      0,
+      0,
+      0,
+      0,
+      4.8
+    ],
+    "explanation": "The wrapper loads metadata masses, then overrides particle IDs 1-4 to zero. Preserve the original metadata in the Fortran interpolation call."
+  },
+  "effective_ISR_particle_mass_thresholds_GeV": {
+    "historical_and_rerun": {
+      "charm": 1.2,
+      "bottom": 4.8
+    },
+    "previous": {
+      "charm": 1.5,
+      "bottom": 4.8
+    },
+    "source": "SpaceShower.cc and SimpleSpaceShower.cc: MCMIN=1.2, MBMIN=4.0; mc=max(MCMIN,m0(4)), mb=max(MBMIN,m0(5))."
+  },
+  "alphaStrong_internal_thresholds_GeV": {
+    "charm": 1.5,
+    "bottom": 4.8,
+    "top": 171.0,
+    "explanation": "Both old and new AlphaStrong::init default to these values. Distinct from the shower particle thresholds."
+  },
+  "intentionally_distinct": [
+    {
+      "setting": "SpaceShower:pdfMode",
+      "table": "Archive modes 1/2; contemporaneous wrapper literal 2",
+      "rerun": "0",
+      "reason": "Measure physical backward evolution against forward PDF-free tables multiplied by event PDF ratios."
+    },
+    {
+      "setting": "SpaceShower:pTmaxMatch",
+      "historical_default": "0",
+      "rerun": "1",
+      "reason": "The table API directly calls prepare(iSys,state,true) and evolves from explicit pTbegAll. Replay sets SCALUP to the same chosen Q, requiring explicit limiting."
+    },
+    {
+      "setting": "ISR/FSR QED",
+      "historical": "ISR literal defaults on; FSR quark/lepton/other off; gamma default on",
+      "rerun": "All off",
+      "reason": "Both historical custom pTnext overloads call only pT2nextQCD, irrespective of QED dipoles prepared."
+    },
+    {
+      "setting": "PDF:pSet",
+      "historical_default": "13",
+      "rerun": "13 primary, 15 control",
+      "reason": "PDF-free mode 1/2 ISR tables do not encode a beam PDF; shower and Delta use the same provider for each control."
+    },
+    {
+      "setting": "Pythia version",
+      "historical": "Nearby source 8.225",
+      "rerun": "8.313",
+      "reason": "Explicitly allowed by user; code and kinematic differences remain."
+    },
+    {
+      "setting": "Beam energy/x and system",
+      "historical": "Auxiliary s=(7000 GeV)^2, x=.1, dummy massless radiator/recoiler",
+      "rerun": "Physical 13 TeV Born states, event x, common starting Q",
+      "reason": "Forward tables are reused as functions of dipole mass and cuts; no claim of identical auxiliary trial kinematics."
+    },
+    {
+      "setting": "Beams:setProductionScalesFromLHEF",
+      "historical": "off",
+      "rerun": "on",
+      "reason": "Preserve existing Born replay and scales. All incoming production scales and SCALUP equal the chosen Q; source API uses explicit Q."
+    }
+  ],
+  "API_observation": {
+    "ISR": "SpaceShower::noEmissionProbability sets doTrialNow=true and prepares dummy ends. Its custom pTnext evolves only side A and calls pT2nextQCD; it does not construct branch kinematics.",
+    "FSR": "The TimeShower custom pTnext overload calls only pT2nextQCD.",
+    "reference": "A full-event shower hook records the first accepted QCD emission, including branch construction. Exact equality to the auxiliary table is not guaranteed."
+  },
+  "first_emission_relevance": {
+    "pT0": "Must force zero via Settings::forceParm; readString zero violates the XML minimum. Both the coupling argument and regularizing denominator change.",
+    "pTdampMatch3": "Inactive: replay pTmaxMatch=1 sets dopTlimit1=true; singlets also have no heavy coloured final legs.",
+    "FSR_recoil_and_gToQQ": "Reset to historical defaults for consistency; cannot affect the first QCD emission because Born final legs are colourless.",
+    "azimuth": "Reset all Space/Time flags off. Gluon-polarization findAsymPol also returns when there is no coloured Born final leg."
+  },
+  "nominal_variations": "UncertaintyBands:doVariations remains off. The full reference showers do not use merging trial machinery, so the unchanged Merging variation defaults do not activate shower variations.",
+  "technical_settings": "Historical Check:epTolErr=.01 and abortIfVeto=on are technical controls, not kernel parameters; the reference retains its original event checks. Beams:setProductionScalesFromLHEF=on is retained as explicitly documented above.",
+  "settings_without_historical_counterpart": {
+    "SpaceShower:dipoleRecoil": "off (global ISR recoil, corresponding to the old implementation)",
+    "SpaceShower:pT0parametrization": "0 (same power-law parametrization as historical source)",
+    "TimeShower additions": "Only FSR settings; cannot affect first QCD emission for these colourless Born final states."
+  },
+  "historical_settings_removed_in_8313": [
+    "TimeShower:octetOniumFraction",
+    "TimeShower:octetOniumColFac"
+  ],
+  "actual_dump_verification": [
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_damped_shard00.settings.cmnd",
+      "sha256": "55792ad8bf03489ba2731d5de9dc609e1457b94c5ff505ba32a32a04734a8bfc",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_damped_shard01.settings.cmnd",
+      "sha256": "fec660d23c9ef3ee832a8e1a1e1ed1eddbb65da4bd0222473a5291d40a382f67",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_damped_shard02.settings.cmnd",
+      "sha256": "04e91b84b25e9f3d3fd37bc8aeed327dabc8e567510af64ac60ecdfa92af65b9",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_damped_shard03.settings.cmnd",
+      "sha256": "fae06e725b545aff733791a625bcecca545e0456eb88930eabce3c6d540885a7",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_damped_shard04.settings.cmnd",
+      "sha256": "95d681b6457b9df041a4582151669a5a097cd2954a89def38688d157b9ff0e23",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_damped_shard05.settings.cmnd",
+      "sha256": "f4807e62094fa72f3499d1863d776136b83a979d1e2e52ff92b0e34ec8a246fe",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_damped_shard06.settings.cmnd",
+      "sha256": "99a417ca77ffbfbc997bcd5f0f6ba334b5d97efc0430293000bca5c878dbf36c",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_damped_shard07.settings.cmnd",
+      "sha256": "f834055c0a38310520cdfb29c8f5707bb082ce841ba52eb8e09e91aa78a77f80",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_fixed_pilot.settings.cmnd",
+      "sha256": "6c63bc834cb070dcfc1f2911890a79a6a706c24b32a47f1155ee8a3a99431947",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_fixed_shard00.settings.cmnd",
+      "sha256": "6c63bc834cb070dcfc1f2911890a79a6a706c24b32a47f1155ee8a3a99431947",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_fixed_shard01.settings.cmnd",
+      "sha256": "6f9e2d35e021bcdc4380d883b05b72ad1b2374f9de6998915f2fd46c85bbe3ae",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_fixed_shard02.settings.cmnd",
+      "sha256": "f527aeb2c963e010e28525002e3271d836cf7cd20883ab72482851794f31b17e",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_fixed_shard03.settings.cmnd",
+      "sha256": "02d3ccf6d359f43ee998d90f851dab9d2b6c386400c5fbc74a100fc8691ee59b",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_fixed_shard04.settings.cmnd",
+      "sha256": "1af2eae8821145525419b7c9e0a62c4a7ea1ba7bab32b5fb0711b22958b4cc79",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_fixed_shard05.settings.cmnd",
+      "sha256": "fa126779ea53660707bec740719ab65edcf9bc3a60e3c940729a1dc8dca9bfb7",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_fixed_shard06.settings.cmnd",
+      "sha256": "4890dd6ccd9f056b1f49bdf18d3ad9647cb48869855df0b9c1af2b2642147823",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_fixed_shard07.settings.cmnd",
+      "sha256": "9ec39933ef2f317fd5cdc6b746d4e70fb0f179bc0636d619fd805a76c0a87b65",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_damped_shard00.settings.cmnd",
+      "sha256": "413cd316d959505ce14db8a241beab0fd1a368b9e0fbee86834f7b7ddf4203d1",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_damped_shard01.settings.cmnd",
+      "sha256": "bb534a371aaf5a326dc863d91150687cab9e6e2ba8afeb5c1ca55a07d78494dc",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_damped_shard02.settings.cmnd",
+      "sha256": "a0219e46a64f6f731f699fb7a43c2ba975ffabcb857e153d576a42064f3ae1f9",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_damped_shard03.settings.cmnd",
+      "sha256": "cfafd4cc5e986a80690b6e3684c4de570d71e4b57aa626fc230df44e2726337b",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_damped_shard04.settings.cmnd",
+      "sha256": "4f5d12145614f7c334d3f4f36af7585ba98e894fa3960fc660c5a9a94baae1d3",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_damped_shard05.settings.cmnd",
+      "sha256": "56ee97d39f80ccbd49f9924dc8645819d424364f6247c0ea7c5a18f9b7b7bec8",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_damped_shard06.settings.cmnd",
+      "sha256": "2ce96644c229c21956bff087dcf75f677586444a34ac9e05d1ac9e8d029f8396",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_damped_shard07.settings.cmnd",
+      "sha256": "f19470e8b13cc2c4e03ffa78aa35659349cd453f3dc2018ea4fbfe67112ac6d4",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_fixed_pilot.settings.cmnd",
+      "sha256": "9d386f7296a1bfeaa02fd51f69dd76968fd527045994754de569025cbfcb1d1f",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_fixed_shard00.settings.cmnd",
+      "sha256": "9d386f7296a1bfeaa02fd51f69dd76968fd527045994754de569025cbfcb1d1f",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_fixed_shard01.settings.cmnd",
+      "sha256": "0edbfd348f6f1dbb708d25d70f36cec94b7605a4a2044ee7ad7b466200dec4f5",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_fixed_shard02.settings.cmnd",
+      "sha256": "089ff0df3478975b52add4634a1fd8f26a87a28f3edf0afd057f17b86b90cb39",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_fixed_shard03.settings.cmnd",
+      "sha256": "02517d815cdd5473489cd85e10d5d78b3790fc2d36eb268b3028e739f06659f9",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_fixed_shard04.settings.cmnd",
+      "sha256": "dbec5a049d915f1576109417d1b0ceb5c353f15156f8abd113e13bfd886414ec",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_fixed_shard05.settings.cmnd",
+      "sha256": "e2e0586bafb50ea3aac5436031726ffbb4d21f2aa4594ddae03a761cf098b612",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_fixed_shard06.settings.cmnd",
+      "sha256": "d76f846e9991e2d3cb5ca473754854cffc31e2a8042ccb52e47af3e78f3bfc69",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_fixed_shard07.settings.cmnd",
+      "sha256": "8a4c1bfbe1ec1dc6bfe2bb9802b66b658c97337c47f9ad0adbf4fe4e8a00d204",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "13",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_damped_shard00.settings.cmnd",
+      "sha256": "4d7ed74e2771da02b3ed89ede265a4908dee5dde8f1579d797580fe7fd10b081",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_damped_shard01.settings.cmnd",
+      "sha256": "613173f4a23cbc1fb28cb6a6aa273a62db871ca59a48a8af51ea54ab56670d60",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_damped_shard02.settings.cmnd",
+      "sha256": "cea5e494eed3491b485417d20bda1281fdd7f4e11f38cf1174b74de352c32166",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_damped_shard03.settings.cmnd",
+      "sha256": "a595eac1c7b97acea19bb62b61e6359f5b9beaa4711cd54577af7f260eee0f78",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_damped_shard04.settings.cmnd",
+      "sha256": "f84e63b7a700661600e5ef3381ed6dea240fdca5369f7a751602cde7dc348bd9",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_damped_shard05.settings.cmnd",
+      "sha256": "e93c0b930c34ec70e9a53af15cc41867d1694730095a292117d78fbe6f5553f5",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_damped_shard06.settings.cmnd",
+      "sha256": "019540f014a7b562bc5a22a4eaa0d1da83211e3fb8039d0584489e704b0349f9",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_damped_shard07.settings.cmnd",
+      "sha256": "101a1b5fc72f93c093e7990a19c539bb91364fa8a2a433f2c5c9303d70f83f60",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_fixed_pilot.settings.cmnd",
+      "sha256": "2634162b441ea5c6c2b74eb13046ee794f07e1767bd89d28eb6b73e80e309100",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_fixed_shard00.settings.cmnd",
+      "sha256": "2634162b441ea5c6c2b74eb13046ee794f07e1767bd89d28eb6b73e80e309100",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_fixed_shard01.settings.cmnd",
+      "sha256": "dc684c35f093de38f4b6ab3b7da7fc8dcedcea7c0237a3145dd0cc308d79d5db",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_fixed_shard02.settings.cmnd",
+      "sha256": "7e416143196eb61dbb67132ac4521d070aa31b68da6b5671fa1ec4ded0b775a9",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_fixed_shard03.settings.cmnd",
+      "sha256": "c3db4c61e01879c4ffda4d3b8422b1e4e75b4d96664b4f14e361b197a073589c",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_fixed_shard04.settings.cmnd",
+      "sha256": "f6efbb67b37c2075c56bd2adb8d8f8dc440e9bf62af7eeeb9825c143153395a9",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_fixed_shard05.settings.cmnd",
+      "sha256": "c6acb5252d791602b2dd0c3a740c28e915fee9dcdc54a9aac60396de0e43d58d",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_fixed_shard06.settings.cmnd",
+      "sha256": "ec19383a326e07c901430d954870fa563962fa5ccbd51d5efa24e3fcc4fef529",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_fixed_shard07.settings.cmnd",
+      "sha256": "1fad0f2e9efc598017b4f7ca2f7657dbd2622c1843e055db5c988d17e284a82c",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_damped_shard00.settings.cmnd",
+      "sha256": "ae4298618ff2cd7e9b308eaf41387b99e25112e1077bec0944fa2001c7ee04d3",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_damped_shard01.settings.cmnd",
+      "sha256": "8ee8a8e9c1786eecaa2547138647724c0b77e5bb9f8cc2943561ca3fa269fc03",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_damped_shard02.settings.cmnd",
+      "sha256": "f1f1b9d13ce50d3971d689807bc1455f6eb943335864b1a10e2edc9101612b6e",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_damped_shard03.settings.cmnd",
+      "sha256": "23a63535029648ca8c05b4db5df81c48e82a269e0a6034be1d5ec3eb504f5e82",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_damped_shard04.settings.cmnd",
+      "sha256": "f2b3f845c7f8bde31202105d53ca477c2787abb1b79b445146385e1aa6df05da",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_damped_shard05.settings.cmnd",
+      "sha256": "28776e7541de1c5f0bb2fd37d168b292bdbbfb491288a81dc1ec8b5541d6bd72",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_damped_shard06.settings.cmnd",
+      "sha256": "2b1068448de3dcfebd9d49a5f47ffa194a4270994aebaf47d39f1bc9c39e3cc9",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_damped_shard07.settings.cmnd",
+      "sha256": "bbbeae67426241cc65beb00b355f2a6153c7ef0ea2a4096689fcd3940e951f76",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_fixed_pilot.settings.cmnd",
+      "sha256": "a40aba376ce383a796135ceb4259edb086934f316a5aeb36fa0811d2eba4cc89",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_fixed_shard00.settings.cmnd",
+      "sha256": "a40aba376ce383a796135ceb4259edb086934f316a5aeb36fa0811d2eba4cc89",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_fixed_shard01.settings.cmnd",
+      "sha256": "c93e97e6250f74d9709ae285cc62e5dcb8c1b529727f7e2d28834a0cccd876b8",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_fixed_shard02.settings.cmnd",
+      "sha256": "7bceb2577ab0258ae0fded4fa29af299f034b15740030a6714cffa73f6815267",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_fixed_shard03.settings.cmnd",
+      "sha256": "3fbe6674b417b6f99f5688e68a7cf4fc4c35ea70e9ca8fec05f9d752be948e7d",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_fixed_shard04.settings.cmnd",
+      "sha256": "296b9f002e43c96a4ff19299c29988c10036ac2983570e026b314bc94bc905fa",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_fixed_shard05.settings.cmnd",
+      "sha256": "01ab87652943822ccded38a32213f7c579b45dd678d7f0839441e61796bbc6bf",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_fixed_shard06.settings.cmnd",
+      "sha256": "d37c0134d4a5054f1f7f785ab5c60d8c0cdbcb4a47b687d72dcd4b949dfd3d20",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    },
+    {
+      "path": "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_fixed_shard07.settings.cmnd",
+      "sha256": "64a28e99670efc9641d20164b1042d0638cd3f06cb29a97848e4bb5c5f3da4de",
+      "shared_settings_checked": 85,
+      "mismatches": {},
+      "particle_masses": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 4.8,
+        "6": 173
+      },
+      "particle_masses_sha256": "5599622ca1caeca3ed1b3adb41244b2f4cced1c0d8c5c8b1f46459c135f34831",
+      "additional_checks": {
+        "Simple_model": "1",
+        "uncertainty_variations": "off",
+        "PDF": "15",
+        "dipole_recoil": "off",
+        "pT0_parametrization": "0"
+      }
+    }
+  ],
+  "internal_ISR_cutoff": {
+    "configured_GeV": 0.2,
+    "effective_GeV": 0.2768267637972258,
+    "Lambda3_GeV": 0.2516606943611144,
+    "method": "Independent arithmetic using the common historical/current AlphaStrong one-loop formulas, MZ=91.188, alphaS(MZ)=.130, thresholds mb=4.8,mc=1.5. Both SpaceShower versions have LAMBDA3MARGIN=1.1. At pT0=0, pTmin=max(configured,1.1*Lambda3).",
+    "interpretation": "This common automatic infrared floor is not a mismatch. It is below every analysis cutoff."
+  },
+  "reviewed_runner": "tests/validation/delta_noemission/singlet_matched_showers.py",
+  "reviewed_runner_sha256": "96a83fecb2589e1f03033725814ca29a348bc22466c80179e8413bd8a0869915",
+  "final_runner_review": {
+    "physics_changes_since_initial_review": false,
+    "changes_reviewed": [
+      "Optional PDF selection for aggregation",
+      "All 85 shared settings checked against independent audit after initialization",
+      "Explicit configured versus effective ISR cutoff labeling",
+      "Source equality required when reusing completed trials",
+      "Known PDF15 heavy-threshold errors retained, counted and qualified; primary PDF13 must remain free of Error/Abort diagnostics"
+    ],
+    "retained_diagnostics": {
+      "PDF13_all_samples": {},
+      "PDF15_DY_fixed": {
+        "pT2nearThreshold_xPDF_zero": 24
+      },
+      "PDF15_DY_damped": {
+        "pT2nearThreshold_xPDF_zero": 36
+      },
+      "PDF15_Higgs_both_samples": {}
+    },
+    "diagnostic_source_check": "SimpleSpaceShower.cc has CTHRESHOLD=BTHRESHOLD=2 and calls pT2nearThreshold only when pT2 < m2Threshold <= 2*mQ^2. The xPDF=0 diagnostic returns from that routine. The corresponding upper scales are sqrt(2)*1.2=1.6971 GeV and sqrt(2)*4.8=6.7883 GeV. Preserve qualification of lower-cutoff results; these errors do not establish a defect in higher-scale evolution."
+  }
+}

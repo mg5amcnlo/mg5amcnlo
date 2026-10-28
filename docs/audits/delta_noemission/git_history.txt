@@ -1,0 +1,46 @@
+Git history of the selected MC@NLO-Delta table
+27 October 2026
+
+No numeric update of the default table is recorded in the available Git history.
+The current table and its initial March2019 version are byte-identical.
+
+Chronology:
+2019-03-19 16e0bf768: original SudGen/sudakov_template.f added.
+2019-08-08 df4187461: three different Pythia PDF-mode archives added alongside it.
+2020-02-27 bb1841842: sudakov.f -> sudakov_template.f symlink added.
+2020-11-05 9fb59956b: moved SudGen/ to vendor/SudGen/; R100 identical rename.
+2023-05-12 26a54b50c: same files imported by 3.5.0 squash; no numeric change.
+
+The 2019/2020 development commits survive on other local refs, but are not
+ancestors of current HEAD. Thus git log --follow on the current branch stops
+at the 2023 squash. Its parent has no default table. Searching all refs
+recovers the original 2019 introduction and proves byte identity.
+
+There is exactly one reachable blob for either historical default-table path:
+67544032eab0740ae9fe885ffe51e3e7e12d2302
+SHA256: dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9
+
+The symlink has always targeted sudakov_template.f. No version switching it
+to a PDF-mode archive is recorded. The three archives have also remained
+unchanged since their separate introduction in August2019.
+
+Benchmark values: T(20 GeV,500 GeV)/T(200 GeV,500 GeV), as stored;
+no normalization conversion, no beam PDF factors:
+table                         gluon II         up II            top FI
+shipped                  0.010683638      0.659100397      1.000000000
+archive_pdf0             0.396636132      0.679099590      0.656293711
+archive_pdf1             0.328108503      0.623040481      0.656293711
+archive_pdf2             0.356004390      0.645792585      0.656293711
+
+The shipped row is identical for 2019,2020,2023 and current HEAD.
+The archive rows are alternatives, not earlier versions of the selected default.
+Their different values do not by themselves validate them as replacements.
+
+Reproduce the history checks:
+git log --all --full-history -- vendor/SudGen/sudakov_template.f SudGen/sudakov_template.f
+git rev-list --objects --all -- vendor/SudGen/sudakov_template.f SudGen/sudakov_template.f
+git rev-parse HEAD:vendor/SudGen/sudakov_template.f
+git rev-parse 16e0bf768:SudGen/sudakov_template.f
+git show df4187461 --stat --oneline
+
+git_history.json records complete commits, dates, ancestry, hashes and values.

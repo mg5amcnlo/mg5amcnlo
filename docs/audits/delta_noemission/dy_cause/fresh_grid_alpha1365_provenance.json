@@ -1,0 +1,46 @@
+{
+  "build": [
+    "c++",
+    "-O2",
+    "-std=c++17",
+    "/export/tmp/rikkert/delta_dy_cause_20261028/dy_fresh_grid_probe_alpha1365.cc",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/pythia_interface_for_sudgen.cc",
+    "-I/export/tmp/rikkert/Pythia/pythia8313/include",
+    "-L/export/tmp/rikkert/Pythia/pythia8313/lib",
+    "-Wl,-rpath,/export/tmp/rikkert/Pythia/pythia8313/lib",
+    "-lpythia8",
+    "-o",
+    "/export/tmp/rikkert/delta_dy_cause_20261028/dy_fresh_grid_probe_alpha1365"
+  ],
+  "definition": "Only ISRalphaSvalue changes .130->.1365 relative to fresh_grid.json",
+  "reference_sha256": "2c56876b5a4f3ded1aae4deb4799d75f38001dd865dedd7582807d1add6420d8",
+  "source_sha256": {
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/dy_fresh_grid_alpha_control.py": "d39f5cb61bdb46e407873545f4946e845bfb27c637953d47aa0255edf4db3769",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/dy_fresh_grid_probe.cc": "3494bbf03beab2cca172e154b485cbd3a288aa84b44924dfbac1ef193fc03e1a",
+    "/export/tmp/rikkert/delta_dy_cause_20261028/dy_fresh_grid_probe_alpha1365.cc": "4da0a6622042c967abddb1b5385dfde78939859ea2ddd112b0be3138d35f442b",
+    "/export/tmp/rikkert/delta_dy_cause_20261028/dy_fresh_grid_probe_alpha1365": "42929b8af067efa6807752fd6cb8fabd945066f1ea9ae77eb5ab6934864c1370",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/pythia_interface_for_sudgen.cc": "904f6eb4cd08e48d2fff72c5f3fe23d10c241736e59e332700f95b7a69a291fb",
+    "/export/tmp/rikkert/delta_dy_cause_20261028/points.txt": "192622d4fff74b062669e4d39de60a32bdfde017a77d48b367ae3884362a5155",
+    "/export/tmp/rikkert/Pythia/pythia8313/lib/libpythia8.so": "18e9aec234ec594b6e0193cb24d0d4100fc5eb3fa68fbc9362e9f4c3c8bf636c"
+  },
+  "modes": {
+    "1": {
+      "command": [
+        "/export/tmp/rikkert/delta_dy_cause_20261028/dy_fresh_grid_probe_alpha1365",
+        "1",
+        "/export/tmp/rikkert/delta_dy_cause_20261028/alpha1365_mode1"
+      ],
+      "log_sha256": "9d5641ece3d99b5d25c43fb9704ca7b994a2a10bb5161ead3c7d3c70239379df",
+      "settings_sha256": "e099fb800c5d3b23abe06e45b26afc0b49f977830c696f49c2ddde273694605e"
+    },
+    "2": {
+      "command": [
+        "/export/tmp/rikkert/delta_dy_cause_20261028/dy_fresh_grid_probe_alpha1365",
+        "2",
+        "/export/tmp/rikkert/delta_dy_cause_20261028/alpha1365_mode2"
+      ],
+      "log_sha256": "4cfc335947ff5aab7782f172ce2f78aec0d2bcf7ae864ce19d7c738ae0c7eb08",
+      "settings_sha256": "9b325680bdf01eb6b3b9d897eccc66794d9beef1a112d6e2738daa27b27239a4"
+    }
+  }
+}

@@ -1,0 +1,986 @@
+{
+  "pythia_version": "8.313",
+  "samples": {
+    "dy_fixed": {
+      "born": 1000,
+      "trials": 300000,
+      "emitting": 285755,
+      "no_emission": 14245,
+      "files": {
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed.born.jsonl": "0084ae185071a2fac82cbd9754741ecfbfa6799d671bfc614f1e279611b1bfde",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed.trials.jsonl": "699d6e3f8a99bc8da51bf1aa45caccd10ff895be14db8f220de6cc9c40694d58",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed.settings.cmnd": "9a9bdc597d88ffa690a25e945f65c8a4a338212a5e8fc0829290994040898d0d"
+      },
+      "maximum_relative_Born_replay_difference": 3.810285420513537e-13
+    },
+    "dy_damped": {
+      "born": 1000,
+      "trials": 300000,
+      "emitting": 284506,
+      "no_emission": 15494,
+      "files": {
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped.born.jsonl": "7993cc57a7753ff049d2c865c780dea6851bcb4a7918ae2b6beea1ff01114d06",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped.trials.jsonl": "169ea4fb56df70126111997aabcd65adb6c5779eaa18a730e0b5e0d65a319561",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped.settings.cmnd": "0cdbc9a939125f1be2b27ae337793949f41fef5ebc3b29c00b1020fce06bb05f"
+      },
+      "maximum_relative_Born_replay_difference": 3.810285420513537e-13
+    },
+    "higgs_fixed": {
+      "born": 1000,
+      "trials": 300000,
+      "emitting": 299983,
+      "no_emission": 17,
+      "files": {
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed.born.jsonl": "81eed994c86ecd989739a35052e36cb02a809abfc59b02df69fa4b9e20056741",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed.trials.jsonl": "0649dc5076ef57d45343a247db77fef13d370bbde27ab386d708bdbeb4955743",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed.settings.cmnd": "5bb31a99083fd5c6e4ae1f425acb30d8bdcd14682e7592420dca320e0d610c97"
+      },
+      "maximum_relative_Born_replay_difference": 5.419429206396266e-14
+    },
+    "higgs_damped": {
+      "born": 1000,
+      "trials": 300000,
+      "emitting": 299980,
+      "no_emission": 20,
+      "files": {
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped.born.jsonl": "65c408573f3927cdd5add35dc3c18dd522996d2c0a3b3f64a8c84bd89967038f",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped.trials.jsonl": "a6dc9d44956469973f48218194c5c809d6e6de4aecdf3731573af8f9a1e3afdf",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped.settings.cmnd": "579149697c743fe0802d71cb7483d66edb08bfada95ae9e8e8d52705c33ad35a"
+      },
+      "maximum_relative_Born_replay_difference": 5.419429206396266e-14
+    }
+  },
+  "generation": {
+    "dy": {
+      "seed": 10281001,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "generate",
+        "dy",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy",
+        "1000",
+        "10281001"
+      ],
+      "files": {
+        "/export/tmp/rikkert/delta_singlets_20261028/dy.generation.log": "48f6d0a7a29b7bca937726e1e626a4ab280a1ea8967a0c763a518db25b78d294",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy.generation.settings.cmnd": "31421d5246bb9cd2e9891c6d789870291106f0feed2a2f71d7f4c3b5865aa366",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed.lhe": "1dbf41f75b751049166e4dc8d41eba95e85ec0a4e274f46f9dc37f3d70626e04",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped.lhe": "cfbbfa14bd2146514f4a7d7634432767e3fc42359b7a174dedfcd132cd314a48"
+      }
+    },
+    "higgs": {
+      "seed": 10281002,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "generate",
+        "higgs",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs",
+        "1000",
+        "10281002"
+      ],
+      "files": {
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs.generation.log": "1878dc90261f9b879bd779e0e713c8330a041b1526032130ee1b6702d4b47594",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs.generation.settings.cmnd": "e4fb63b35167c43662b59385d5d85fe03d91aaaa01204b820fa33ca108519505",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed.lhe": "08fadbd504e33e48026cee9182aafdd1682e3eb00f9b98ff89437297a9b77485",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped.lhe": "f2569b7a5dffeb9aff5397d9207a436b85229e0a4281aac5a86d0ad6d3eeef7f"
+      }
+    }
+  },
+  "jobs": [
+    {
+      "sample": "dy_fixed",
+      "shard": 0,
+      "first": 0,
+      "last": 125,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard00",
+      "seed": 10282000,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard00.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard00",
+        "300",
+        "10282000"
+      ],
+      "input_lhe_sha256": "a66d4739563c395eb5f6139359cb29c58c32b742e0dce345ae7557a0bb4e2c00",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.743361093848762e-13,
+        "emitted": 35653,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "a47554c71662ad495c736c2d74065f80e7b3ec9df43bc669d4a138af614f2351"
+      }
+    },
+    {
+      "sample": "dy_fixed",
+      "shard": 1,
+      "first": 125,
+      "last": 250,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard01",
+      "seed": 10282001,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard01.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard01",
+        "300",
+        "10282001"
+      ],
+      "input_lhe_sha256": "3d6cc87420ac5bd25616a4bd494fa92f7056ddd0c3fbad493445e404a7c524d7",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 1.921796055626146e-13,
+        "emitted": 35634,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "7aacefecc9c21855686d09374685a408eb835e1ed5d00b55a085919b233e3c80"
+      }
+    },
+    {
+      "sample": "dy_fixed",
+      "shard": 2,
+      "first": 250,
+      "last": 375,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard02",
+      "seed": 10282002,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard02.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard02",
+        "300",
+        "10282002"
+      ],
+      "input_lhe_sha256": "0226981358108f93e45b933cc6465ae38c191d2b6e9f786af591e860b0cb5b33",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 3.4228175849193576e-13,
+        "emitted": 35734,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "03788102bac6c0e9153eb567e5eca3f90c255ac207432e78c4cce0ca344adc21"
+      }
+    },
+    {
+      "sample": "dy_fixed",
+      "shard": 3,
+      "first": 375,
+      "last": 500,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard03",
+      "seed": 10282003,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard03.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard03",
+        "300",
+        "10282003"
+      ],
+      "input_lhe_sha256": "de47f113bf6df5c89898b30be181624354cec5113ad547c9cc91de6deb1ce7aa",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 1.8141044222375058e-13,
+        "emitted": 35886,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "acd411fb0ea86a1f5ea852f87bd90c0cd1801c505f46cb8687f7d2af7eca9d4d"
+      }
+    },
+    {
+      "sample": "dy_fixed",
+      "shard": 4,
+      "first": 500,
+      "last": 625,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard04",
+      "seed": 10282004,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard04.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard04",
+        "300",
+        "10282004"
+      ],
+      "input_lhe_sha256": "173175e59de3e71cbd9c5660e8a7afc0a3be312c9d679904d6c703cdd4fe20f1",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.3991919562149633e-13,
+        "emitted": 35834,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "488aab4148409a6940a9c9196f010c62df2ae4f719cc3067711078a4d16c26d4"
+      }
+    },
+    {
+      "sample": "dy_fixed",
+      "shard": 5,
+      "first": 625,
+      "last": 750,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard05",
+      "seed": 10282005,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard05.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard05",
+        "300",
+        "10282005"
+      ],
+      "input_lhe_sha256": "61367ce7671715aeda5c7000bcec014b532fcae56e99f96f1c84b635d9988201",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 3.810285420513537e-13,
+        "emitted": 35571,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "b56a2a3fafa49e9664e251b10b59e62f71885445b7a8963bcae0f4e3eff628e5"
+      }
+    },
+    {
+      "sample": "dy_fixed",
+      "shard": 6,
+      "first": 750,
+      "last": 875,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard06",
+      "seed": 10282006,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard06.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard06",
+        "300",
+        "10282006"
+      ],
+      "input_lhe_sha256": "3c48decd16de7aa71ddcef26ad1f0dae3bd042cce4bd5aa601e128b222a99dae",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.1038726316646716e-13,
+        "emitted": 35747,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "734d62a43c1c782e9c0520a36ba4b4392dadae336952f4c43363694d22e27874"
+      }
+    },
+    {
+      "sample": "dy_fixed",
+      "shard": 7,
+      "first": 875,
+      "last": 1000,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard07",
+      "seed": 10282007,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard07.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard07",
+        "300",
+        "10282007"
+      ],
+      "input_lhe_sha256": "9fa614472075377c2fd143c3762ac2327cb1f8ec13f2f09526be035d44948bea",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 1.9817480989559044e-13,
+        "emitted": 35696,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "94baa62152cb93c7587c8ca38df7b7800c392c9964843c017f2a1164c37a8dc3"
+      }
+    },
+    {
+      "sample": "dy_damped",
+      "shard": 0,
+      "first": 0,
+      "last": 125,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard00",
+      "seed": 10282100,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard00.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard00",
+        "300",
+        "10282100"
+      ],
+      "input_lhe_sha256": "31625e70fafbbc05a316df7cbfe9f9b2d69bb613d2e33cc1c563af28c664322e",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.743361093848762e-13,
+        "emitted": 35457,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "593d7642d76384a894deebc4f313e66f29d7fb823fc77d5c9509dfd740195cde"
+      }
+    },
+    {
+      "sample": "dy_damped",
+      "shard": 1,
+      "first": 125,
+      "last": 250,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard01",
+      "seed": 10282101,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard01.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard01",
+        "300",
+        "10282101"
+      ],
+      "input_lhe_sha256": "09ae93916bbc184efefc8b6d38df3c0c8c2ec8a3e309769fd3a35b5a1f439081",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 1.921796055626146e-13,
+        "emitted": 35444,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "2ee924c75b761cec6e5849a3f17f9977e8c973f7c17b6c228b53178c96281819"
+      }
+    },
+    {
+      "sample": "dy_damped",
+      "shard": 2,
+      "first": 250,
+      "last": 375,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard02",
+      "seed": 10282102,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard02.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard02",
+        "300",
+        "10282102"
+      ],
+      "input_lhe_sha256": "4bded65f51bb572b65e7416fccb9256a26865e72e7ae5b19189bd519b96c4fdd",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 3.4228175849193576e-13,
+        "emitted": 35573,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "95a154f4c5427d37ea87d0a11830dd26d8ee030de0267f7c2fe2b021aa56d692"
+      }
+    },
+    {
+      "sample": "dy_damped",
+      "shard": 3,
+      "first": 375,
+      "last": 500,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard03",
+      "seed": 10282103,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard03.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard03",
+        "300",
+        "10282103"
+      ],
+      "input_lhe_sha256": "ac4b764f1d66cddfdee7f1ec34dbf8584c1ecdabf128434bde44214b07efb414",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 1.8141044222375058e-13,
+        "emitted": 35705,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "c7905a43b1e93eb276554e32507ccbcd23376659bd0fe82af01f4e2b0cc26323"
+      }
+    },
+    {
+      "sample": "dy_damped",
+      "shard": 4,
+      "first": 500,
+      "last": 625,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard04",
+      "seed": 10282104,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard04.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard04",
+        "300",
+        "10282104"
+      ],
+      "input_lhe_sha256": "6d05003d914b4d63cb7f7c9bbfd23fd3b1d2f32c29ee10786e3dbfe19f8e1217",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.3991919562149633e-13,
+        "emitted": 35712,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "f0bcee97bb73186fc44ca4365bbb76edf8466311597eafd812a1b873e8ecc286"
+      }
+    },
+    {
+      "sample": "dy_damped",
+      "shard": 5,
+      "first": 625,
+      "last": 750,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard05",
+      "seed": 10282105,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard05.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard05",
+        "300",
+        "10282105"
+      ],
+      "input_lhe_sha256": "76671bd46d6cf08e9cb4eae6ef4031c2d5b1186354e712d694a6e9734de8eade",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 3.810285420513537e-13,
+        "emitted": 35424,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "bd869d7b5fa71802dc7d8ff81a46c08eaf9bdeee29afd7db207deb984a38ad72"
+      }
+    },
+    {
+      "sample": "dy_damped",
+      "shard": 6,
+      "first": 750,
+      "last": 875,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard06",
+      "seed": 10282106,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard06.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard06",
+        "300",
+        "10282106"
+      ],
+      "input_lhe_sha256": "80bce85d4ffa4a33c4bf48773d8b8e0271f0690ed15656e2ac0d008b3ef07999",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.1038726316646716e-13,
+        "emitted": 35583,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "ca029e6bd5bbc778e5d72f0851790b330fe799e10f258732c8db6f0b9aaa0464"
+      }
+    },
+    {
+      "sample": "dy_damped",
+      "shard": 7,
+      "first": 875,
+      "last": 1000,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard07",
+      "seed": 10282107,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard07.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard07",
+        "300",
+        "10282107"
+      ],
+      "input_lhe_sha256": "30a2c1b9cb5eff9e65e2567fa98502b7703c3b0609127fddefe7affdfa15840e",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 1.9817480989559044e-13,
+        "emitted": 35608,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "3adc108d319d7d93aeb26ac386d932e20f117c5152afffc2b48052e20ff98d96"
+      }
+    },
+    {
+      "sample": "higgs_fixed",
+      "shard": 0,
+      "first": 0,
+      "last": 125,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard00",
+      "seed": 10283000,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard00.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard00",
+        "300",
+        "10283000"
+      ],
+      "input_lhe_sha256": "8d3575c3aa59377ffb06c3842da2b6ea1da2c0263b41cbb8b0ea51bce5016e38",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 1.3158453220262902e-14,
+        "emitted": 37498,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "13388c7bb25a3d016b964e66894bc62f20422f8de0537fd3f97951313ba669be"
+      }
+    },
+    {
+      "sample": "higgs_fixed",
+      "shard": 1,
+      "first": 125,
+      "last": 250,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard01",
+      "seed": 10283001,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard01.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard01",
+        "300",
+        "10283001"
+      ],
+      "input_lhe_sha256": "b37ab6bb2527ff2248510f887570cf74fc3ad51c05c90d79df024fea560cb291",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.1406102328960234e-14,
+        "emitted": 37499,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "d8da0230b16fc6e58f5d3f493fda3969ecbe533b5dfc894e24ca631384264be9"
+      }
+    },
+    {
+      "sample": "higgs_fixed",
+      "shard": 2,
+      "first": 250,
+      "last": 375,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard02",
+      "seed": 10283002,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard02.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard02",
+        "300",
+        "10283002"
+      ],
+      "input_lhe_sha256": "5a6acb7e497652ee1fec42627b17604df5246e9aedf69356f77974090e2ed630",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 4.366034419679141e-14,
+        "emitted": 37498,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "574ebdb6b98e462a35365e53bff7b2e7172b41dd72629cf9b24b9eb32b79a874"
+      }
+    },
+    {
+      "sample": "higgs_fixed",
+      "shard": 3,
+      "first": 375,
+      "last": 500,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard03",
+      "seed": 10283003,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard03.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard03",
+        "300",
+        "10283003"
+      ],
+      "input_lhe_sha256": "6d3fbb085fbf0ddb3c8b77a452361badf166cff35c2c44c17ea688cea6408020",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.035159088107529e-14,
+        "emitted": 37499,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "fbe948e3c36824f61c59c822977e1cb2d061440c1d65c520c7913c41b3103304"
+      }
+    },
+    {
+      "sample": "higgs_fixed",
+      "shard": 4,
+      "first": 500,
+      "last": 625,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard04",
+      "seed": 10283004,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard04.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard04",
+        "300",
+        "10283004"
+      ],
+      "input_lhe_sha256": "8fbf58138091a4778ccb1aa9e35cff0e96c71e470272be542d26a37f5b09851a",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 5.419429206396266e-14,
+        "emitted": 37494,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "1ec68c60e5734fa3a68be67cbd74ac6b6524160e26da76d29dd3573d8706d567"
+      }
+    },
+    {
+      "sample": "higgs_fixed",
+      "shard": 5,
+      "first": 625,
+      "last": 750,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard05",
+      "seed": 10283005,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard05.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard05",
+        "300",
+        "10283005"
+      ],
+      "input_lhe_sha256": "b3efd2190cf69908c7fc5d27c421246f29bd0afc5467f30dfb81ef2f23cbf551",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.696845981263836e-14,
+        "emitted": 37497,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "398b783f4da0ceb8db98455b4f0dfabd59a1b9ae278961756d7863d900fbe7de"
+      }
+    },
+    {
+      "sample": "higgs_fixed",
+      "shard": 6,
+      "first": 750,
+      "last": 875,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard06",
+      "seed": 10283006,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard06.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard06",
+        "300",
+        "10283006"
+      ],
+      "input_lhe_sha256": "9b7b7ab423ab531922825259095a9543226594c90c7ce67ab6df0085bb58d8ff",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.2814019122967283e-14,
+        "emitted": 37499,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "4b62c3bbbe7f34e9821c916680cd3f2d9beaca7d1190b7bebc35590512ea6de9"
+      }
+    },
+    {
+      "sample": "higgs_fixed",
+      "shard": 7,
+      "first": 875,
+      "last": 1000,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard07",
+      "seed": 10283007,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard07.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard07",
+        "300",
+        "10283007"
+      ],
+      "input_lhe_sha256": "ad7af3c44198aa6890586f8308602bb8c34e8812166e5d75d2962a6d552ae3b0",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.6052245578786482e-14,
+        "emitted": 37499,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "c7f39acc93c29698a30144696d7bd6ce97851686856eb78c4abdd929641b8977"
+      }
+    },
+    {
+      "sample": "higgs_damped",
+      "shard": 0,
+      "first": 0,
+      "last": 125,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard00",
+      "seed": 10283100,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard00.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard00",
+        "300",
+        "10283100"
+      ],
+      "input_lhe_sha256": "ce0b85f32eb3233ba061611c20ad0b8a3c1af257665105a9b78bd9fdf682e9fa",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 1.3158453220262902e-14,
+        "emitted": 37495,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "e13a25ab6268b0b260134f0cac950af00782af751281501a04fdc974c257c6e9"
+      }
+    },
+    {
+      "sample": "higgs_damped",
+      "shard": 1,
+      "first": 125,
+      "last": 250,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard01",
+      "seed": 10283101,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard01.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard01",
+        "300",
+        "10283101"
+      ],
+      "input_lhe_sha256": "4c3bb0cebb1bd403ac3d1fe6ab9a6a37af1c3ae1cee2454bf99eaf0a1e411488",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.1406102328960234e-14,
+        "emitted": 37498,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "107d76c004b3d6c6a6c008a88dcb38949f77d1d119945ec86dd4921bf7e432c2"
+      }
+    },
+    {
+      "sample": "higgs_damped",
+      "shard": 2,
+      "first": 250,
+      "last": 375,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard02",
+      "seed": 10283102,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard02.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard02",
+        "300",
+        "10283102"
+      ],
+      "input_lhe_sha256": "bc78b84b613b3a7d39456cf46fd6cfaccf8ee273de8881b892f7c5850dff1ca8",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 4.366034419679141e-14,
+        "emitted": 37500,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "7c713a8b4975023624ed9f43f884e87b4602176fb513b0a7314b51ebd8d97b1e"
+      }
+    },
+    {
+      "sample": "higgs_damped",
+      "shard": 3,
+      "first": 375,
+      "last": 500,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard03",
+      "seed": 10283103,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard03.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard03",
+        "300",
+        "10283103"
+      ],
+      "input_lhe_sha256": "ef2d8a16e263e295a9125e1edc3709b4ae4703389c1cc1fe01a789ba4521c1b0",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.035159088107529e-14,
+        "emitted": 37498,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "4a60e05501801836cd0e21010eafc9580bef6ca63b4e0f7a33639e4c2937278a"
+      }
+    },
+    {
+      "sample": "higgs_damped",
+      "shard": 4,
+      "first": 500,
+      "last": 625,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard04",
+      "seed": 10283104,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard04.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard04",
+        "300",
+        "10283104"
+      ],
+      "input_lhe_sha256": "f02d136183f0f99f612d57c7238a918040d786eb09195a5e8dc149566e9f0452",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 5.419429206396266e-14,
+        "emitted": 37498,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "6be63cabe0b77f1c0c91662389b354595e53c838ec290901f6c62964d8457993"
+      }
+    },
+    {
+      "sample": "higgs_damped",
+      "shard": 5,
+      "first": 625,
+      "last": 750,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard05",
+      "seed": 10283105,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard05.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard05",
+        "300",
+        "10283105"
+      ],
+      "input_lhe_sha256": "0c9bd9a826d9d23eb46297e8de2b8d33688fa75c1239973c4ea16b059e474df0",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.696845981263836e-14,
+        "emitted": 37495,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "8c73d071fb77dfad700a8cc6f06f854623e23d8cbecee707fd7bcafbc8353b33"
+      }
+    },
+    {
+      "sample": "higgs_damped",
+      "shard": 6,
+      "first": 750,
+      "last": 875,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard06",
+      "seed": 10283106,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard06.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard06",
+        "300",
+        "10283106"
+      ],
+      "input_lhe_sha256": "95df28292f1d65a18159fbb593d54b57fc4e44ec20cacf1e3add98b13e2a566a",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.2814019122967283e-14,
+        "emitted": 37498,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "abc259368a7ae018b364c4a2e9d29cafae8d4bef440d6eb9635ded0c09ba06a3"
+      }
+    },
+    {
+      "sample": "higgs_damped",
+      "shard": 7,
+      "first": 875,
+      "last": 1000,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard07",
+      "seed": 10283107,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard07.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard07",
+        "300",
+        "10283107"
+      ],
+      "input_lhe_sha256": "0eb6059fc17a8514ee271de48749613c1ef5ba890136fae8ede6387a471e2f07",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.6052245578786482e-14,
+        "emitted": 37498,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "log_sha256": "52a0ec80f66e495ee70761b5585466b3e98c037975c2ca8a70c8b4255ac99d54"
+      }
+    }
+  ],
+  "build": [
+    "c++",
+    "-O2",
+    "-std=c++17",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/singlet_shower_probe.cc",
+    "-I/export/tmp/rikkert/Pythia/pythia8313/include",
+    "-L/export/tmp/rikkert/Pythia/pythia8313/lib",
+    "-Wl,-rpath,/export/tmp/rikkert/Pythia/pythia8313/lib",
+    "-lpythia8",
+    "-o",
+    "/export/tmp/rikkert/delta_singlets_20261028/singlet_probe"
+  ],
+  "source_sha256": "24133ab833d969b98e216d5eff3e3bd486e0995656745632b2aa278614496a90",
+  "driver_sha256": "f6efc0afdd14e6b4a24ca6f36ef12b3e8f208b5156d41be55058a129bc7fbfe3",
+  "executable_sha256": "ecd6101308683fdcb4b2715c1b25c6b3ab9b940a79556c9ff0763e7bf249e0a3",
+  "library_sha256": "18e9aec234ec594b6e0193cb24d0d4100fc5eb3fa68fbc9362e9f4c3c8bf636c",
+  "pdf_grid_sha256": "8315541674b604fe82ba900436255551fda350c98fdd4d1190b398ed2423accc",
+  "elapsed_seconds": 161.06719561107457,
+  "setup": "13TeV internal LO Born samples, pure qqbar->gamma*/Z->e-e+ with66<mll<116GeV; puregg->H withnominal125GeV andphysicalSMwidth, Hdecaysdisabled; no signed NLO event weighting.",
+  "starting_scales": "fixed:Q=eventsingletmass; damped:Q=M*(.1+.9*u), u=sqrt(r)/(sqrt(r)+sqrt(1-r)),uniformr.",
+  "reference": "All300independent successful shower repetitions perBorn are common-cutCDF references; no probe selection.",
+  "checks": [
+    "RuntimeSimpleShower/SpaceShower/TimeShower classes verified",
+    "Ordinary backwardpdfMode0 in actual showers; PDF15,ISRalphaS=.130,FSR=.1365,one-loop,CMWoff",
+    "No QED,MPI,hadronization,primordialKT; stableHiggs; firstQCDemissionISR",
+    "Every replayed Born identity,colour andmomentum checked before shower",
+    "AllfirstemissionpT<=SCALUP; nofailedshowers; event/trialorderingcomplete",
+    "Fixed/damped shareexactBornrecords exceptstarts/scalup"
+  ]
+}

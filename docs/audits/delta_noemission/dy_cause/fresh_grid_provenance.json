@@ -1,0 +1,128 @@
+{
+  "build": [
+    "c++",
+    "-O2",
+    "-std=c++17",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/dy_fresh_grid_probe.cc",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/pythia_interface_for_sudgen.cc",
+    "-I/export/tmp/rikkert/Pythia/pythia8313/include",
+    "-L/export/tmp/rikkert/Pythia/pythia8313/lib",
+    "-Wl,-rpath,/export/tmp/rikkert/Pythia/pythia8313/lib",
+    "-lpythia8",
+    "-o",
+    "/export/tmp/rikkert/delta_dy_cause_20261028/dy_fresh_grid_probe"
+  ],
+  "pythia_version": "8.313",
+  "topology": "II, one incoming up-quark end",
+  "definition": "Fresh direct probability P(q,Q,m) versus archive ratio T(q,m)/T(Q,m). No external PDFs or gluon roots. Each direct API call uses 500000 Bernoulli trials.",
+  "settings": "Recovered wrapper/defaults: ISRalphaS=.130, one-loop, CMWoff,pT0=0, masses1-4zero,b4.8,PDF13,nQuark5,unitrenorm/factor,ME/phi/rapidityoff. The current wrapper is linked unchanged; overrides are explicit in the driver.",
+  "source_sha256": {
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/dy_fresh_grid.py": "af0368a6f3e749910b475aaeb60c09af4c5e702d32505b5cbae3e2b92eaaf8f7",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/dy_fresh_grid_probe.cc": "3494bbf03beab2cca172e154b485cbd3a288aa84b44924dfbac1ef193fc03e1a",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/pythia_interface_for_sudgen.cc": "904f6eb4cd08e48d2fff72c5f3fe23d10c241736e59e332700f95b7a69a291fb",
+    "/export/tmp/rikkert/Pythia/pythia8313/src/SimpleSpaceShower.cc": "fe74d843e7725497558fec97a6f1a7394b51ea1d853e4f0ea6dc1fcb238f2d73",
+    "/export/tmp/rikkert/Pythia/pythia8313/lib/libpythia8.so": "18e9aec234ec594b6e0193cb24d0d4100fc5eb3fa68fbc9362e9f4c3c8bf636c",
+    "/export/tmp/rikkert/delta_dy_cause_20261028/points.txt": "192622d4fff74b062669e4d39de60a32bdfde017a77d48b367ae3884362a5155",
+    "/export/tmp/rikkert/delta_dy_cause_20261028/dy_fresh_grid_probe": "9e985029eac6e1ba217c783c5b756c88f0812a1f342b7f5518f79036f2133d2b"
+  },
+  "modes": {
+    "1": {
+      "run": {
+        "command": [
+          "/export/tmp/rikkert/delta_dy_cause_20261028/dy_fresh_grid_probe",
+          "1",
+          "/export/tmp/rikkert/delta_dy_cause_20261028/mode1"
+        ],
+        "log_sha256": "b603d623ed9e4d91b74576933a25b71cecdd8f43f692d7aa7b17e1971d016642",
+        "settings_sha256": "ed1bb7a5cb75b54dc8ba87832c14ed8822e39e05fcced7a6180bdf33e3654156"
+      },
+      "table": {
+        "table": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/sudakov_r515_PDFmode1.f.gz",
+        "table_sha256": "16e07784f53f347f64b3fb5168100c2b6ca0747c8dd2dd0f97370f0d27b5e435",
+        "source_sha256": {
+          "Template/NLO/SubProcesses/montecarlocounter.f": "554432b7b09075c21a8484e5d7d34b261d345af1849d23c2402659bd9a14071f",
+          "Template/NLO/SubProcesses/mcatnlo_delta_scales.f90": "a010072c50e8e2ee2777e0a2116f7f06f8b4cff88a8417a88923eb1e4cd85124",
+          "Template/NLO/SubProcesses/MCmasses_PYTHIA8.inc": "0374ba4b1855d0dc1de74f8f68ecc990ffe93d289cda0e01041f3274c04aae94"
+        },
+        "extracted_routines": [
+          "delta_leg_probability",
+          "gl_safe",
+          "pysudakov_safe",
+          "get_parton_id",
+          "setSudType",
+          "get_to_zero",
+          "emscafun",
+          "get_delta_connections"
+        ],
+        "compile_command": [
+          "gfortran",
+          "-O2",
+          "-std=legacy",
+          "-shared",
+          "-fPIC",
+          "-ffixed-line-length-none",
+          "-I/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses",
+          "-J/export/tmp/rikkert/delta_dy_cause_20261028/table_mode1",
+          "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses/mcatnlo_delta_scales.f90",
+          "/export/tmp/rikkert/delta_dy_cause_20261028/table_mode1/delta_production.f",
+          "/export/tmp/rikkert/delta_dy_cause_20261028/table_mode1/delta_wrapper.f90",
+          "/export/tmp/rikkert/delta_dy_cause_20261028/table_mode1/sudakov.f",
+          "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/dfint.f",
+          "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/kerset.f",
+          "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/abend.f",
+          "-o",
+          "/export/tmp/rikkert/delta_dy_cause_20261028/table_mode1/delta.so"
+        ]
+      }
+    },
+    "2": {
+      "run": {
+        "command": [
+          "/export/tmp/rikkert/delta_dy_cause_20261028/dy_fresh_grid_probe",
+          "2",
+          "/export/tmp/rikkert/delta_dy_cause_20261028/mode2"
+        ],
+        "log_sha256": "5c96d24b0345887147579842d88be3f2113e724176584bbbe7581d819196f3ca",
+        "settings_sha256": "c236b991922eb3a27e3ee8a3cbf66e1f79d7ad820e139c25184daef996b8fa06"
+      },
+      "table": {
+        "table": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/sudakov_r515_PDFmode2.f.gz",
+        "table_sha256": "84c4fef64348eb3ba10985f3921f88cabe8889a3ec0238bda520034bcaea9208",
+        "source_sha256": {
+          "Template/NLO/SubProcesses/montecarlocounter.f": "554432b7b09075c21a8484e5d7d34b261d345af1849d23c2402659bd9a14071f",
+          "Template/NLO/SubProcesses/mcatnlo_delta_scales.f90": "a010072c50e8e2ee2777e0a2116f7f06f8b4cff88a8417a88923eb1e4cd85124",
+          "Template/NLO/SubProcesses/MCmasses_PYTHIA8.inc": "0374ba4b1855d0dc1de74f8f68ecc990ffe93d289cda0e01041f3274c04aae94"
+        },
+        "extracted_routines": [
+          "delta_leg_probability",
+          "gl_safe",
+          "pysudakov_safe",
+          "get_parton_id",
+          "setSudType",
+          "get_to_zero",
+          "emscafun",
+          "get_delta_connections"
+        ],
+        "compile_command": [
+          "gfortran",
+          "-O2",
+          "-std=legacy",
+          "-shared",
+          "-fPIC",
+          "-ffixed-line-length-none",
+          "-I/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses",
+          "-J/export/tmp/rikkert/delta_dy_cause_20261028/table_mode2",
+          "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses/mcatnlo_delta_scales.f90",
+          "/export/tmp/rikkert/delta_dy_cause_20261028/table_mode2/delta_production.f",
+          "/export/tmp/rikkert/delta_dy_cause_20261028/table_mode2/delta_wrapper.f90",
+          "/export/tmp/rikkert/delta_dy_cause_20261028/table_mode2/sudakov.f",
+          "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/dfint.f",
+          "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/kerset.f",
+          "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/abend.f",
+          "-o",
+          "/export/tmp/rikkert/delta_dy_cause_20261028/table_mode2/delta.so"
+        ]
+      }
+    }
+  }
+}

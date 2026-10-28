@@ -1,0 +1,695 @@
+{
+  "samples": {
+    "dy_fixed_pdf13": {
+      "born": 1000,
+      "trials": 300000,
+      "emitting": 288824,
+      "no_emission": 11176,
+      "original_born_equal_bitwise": true,
+      "messages": {
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 117
+      },
+      "files": {
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13.born.jsonl": "0084ae185071a2fac82cbd9754741ecfbfa6799d671bfc614f1e279611b1bfde",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13.trials.jsonl": "3538e3d727bfc149be245a61904523473d13136a7ba78d141bc8e0c70b681e58",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13.settings.cmnd": "fa276f6c9bd8d06cf76ddc90528563d70f9f03a11d743c5b3bde3b37cca9691a"
+      },
+      "maximum_relative_Born_replay_difference": 3.810285420513537e-13
+    },
+    "higgs_fixed_pdf13": {
+      "born": 1000,
+      "trials": 300000,
+      "emitting": 299935,
+      "no_emission": 65,
+      "original_born_equal_bitwise": true,
+      "messages": {
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 11
+      },
+      "files": {
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13.born.jsonl": "81eed994c86ecd989739a35052e36cb02a809abfc59b02df69fa4b9e20056741",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13.trials.jsonl": "2af9d131607ed5127be28217e7b4a07be672c39dbbca7586f9983bbf2ef9a0e3",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13.settings.cmnd": "c6733bd09f2ccd906ff935b21e41b147750ced1b84e00a8c3684fcb95a8649ee"
+      },
+      "maximum_relative_Born_replay_difference": 5.419429206396266e-14
+    }
+  },
+  "jobs": [
+    {
+      "sample": "dy_fixed_pdf13",
+      "original_sample": "dy_fixed",
+      "shard": 0,
+      "first": 0,
+      "last": 125,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13_shard00",
+      "original_prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard00",
+      "seed": 10282000,
+      "repeats": 300,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_pdf13_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard00.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13_shard00",
+        "300",
+        "10282000"
+      ],
+      "input_lhe_sha256": "a66d4739563c395eb5f6139359cb29c58c32b742e0dce345ae7557a0bb4e2c00",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.743361093848762e-13,
+        "emitted": 36072,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 53
+        },
+        "settings_differences": {
+          "PDF:pSet": [
+            "15",
+            "13"
+          ]
+        },
+        "log_sha256": "a3b2cee4d08dd2f73952d8491f0c3c9df9983de3f9697ab93b1ce48d27e836ae"
+      }
+    },
+    {
+      "sample": "dy_fixed_pdf13",
+      "original_sample": "dy_fixed",
+      "shard": 1,
+      "first": 125,
+      "last": 250,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13_shard01",
+      "original_prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard01",
+      "seed": 10282001,
+      "repeats": 300,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_pdf13_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard01.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13_shard01",
+        "300",
+        "10282001"
+      ],
+      "input_lhe_sha256": "3d6cc87420ac5bd25616a4bd494fa92f7056ddd0c3fbad493445e404a7c524d7",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 1.921796055626146e-13,
+        "emitted": 36098,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 7
+        },
+        "settings_differences": {
+          "PDF:pSet": [
+            "15",
+            "13"
+          ]
+        },
+        "log_sha256": "8b268d8318976629398710662fe7b5a76397525becef2372db3a31efb4cced45"
+      }
+    },
+    {
+      "sample": "dy_fixed_pdf13",
+      "original_sample": "dy_fixed",
+      "shard": 2,
+      "first": 250,
+      "last": 375,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13_shard02",
+      "original_prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard02",
+      "seed": 10282002,
+      "repeats": 300,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_pdf13_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard02.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13_shard02",
+        "300",
+        "10282002"
+      ],
+      "input_lhe_sha256": "0226981358108f93e45b933cc6465ae38c191d2b6e9f786af591e860b0cb5b33",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 3.4228175849193576e-13,
+        "emitted": 36200,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 13
+        },
+        "settings_differences": {
+          "PDF:pSet": [
+            "15",
+            "13"
+          ]
+        },
+        "log_sha256": "66388360803a202f68fcf0cb80d0862f7e98ae0a4e7ea9332ccdfe9e1a33a8c3"
+      }
+    },
+    {
+      "sample": "dy_fixed_pdf13",
+      "original_sample": "dy_fixed",
+      "shard": 3,
+      "first": 375,
+      "last": 500,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13_shard03",
+      "original_prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard03",
+      "seed": 10282003,
+      "repeats": 300,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_pdf13_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard03.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13_shard03",
+        "300",
+        "10282003"
+      ],
+      "input_lhe_sha256": "de47f113bf6df5c89898b30be181624354cec5113ad547c9cc91de6deb1ce7aa",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 1.8141044222375058e-13,
+        "emitted": 36192,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 9
+        },
+        "settings_differences": {
+          "PDF:pSet": [
+            "15",
+            "13"
+          ]
+        },
+        "log_sha256": "ac4c319345877611b1e538735d282658421e28365780f6ba9c39d336d64e6ad9"
+      }
+    },
+    {
+      "sample": "dy_fixed_pdf13",
+      "original_sample": "dy_fixed",
+      "shard": 4,
+      "first": 500,
+      "last": 625,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13_shard04",
+      "original_prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard04",
+      "seed": 10282004,
+      "repeats": 300,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_pdf13_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard04.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13_shard04",
+        "300",
+        "10282004"
+      ],
+      "input_lhe_sha256": "173175e59de3e71cbd9c5660e8a7afc0a3be312c9d679904d6c703cdd4fe20f1",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.3991919562149633e-13,
+        "emitted": 36166,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 11
+        },
+        "settings_differences": {
+          "PDF:pSet": [
+            "15",
+            "13"
+          ]
+        },
+        "log_sha256": "25e50b5617b99d4d30c0194f4cb881a1a059e7b937d750abb6fe1bf16ad0bf02"
+      }
+    },
+    {
+      "sample": "dy_fixed_pdf13",
+      "original_sample": "dy_fixed",
+      "shard": 5,
+      "first": 625,
+      "last": 750,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13_shard05",
+      "original_prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard05",
+      "seed": 10282005,
+      "repeats": 300,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_pdf13_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard05.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13_shard05",
+        "300",
+        "10282005"
+      ],
+      "input_lhe_sha256": "61367ce7671715aeda5c7000bcec014b532fcae56e99f96f1c84b635d9988201",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 3.810285420513537e-13,
+        "emitted": 35948,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 5
+        },
+        "settings_differences": {
+          "PDF:pSet": [
+            "15",
+            "13"
+          ]
+        },
+        "log_sha256": "a298b2f2c51f459259e25275767a857bda47d1f345e999391fde621d3f74fc6c"
+      }
+    },
+    {
+      "sample": "dy_fixed_pdf13",
+      "original_sample": "dy_fixed",
+      "shard": 6,
+      "first": 750,
+      "last": 875,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13_shard06",
+      "original_prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard06",
+      "seed": 10282006,
+      "repeats": 300,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_pdf13_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard06.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13_shard06",
+        "300",
+        "10282006"
+      ],
+      "input_lhe_sha256": "3c48decd16de7aa71ddcef26ad1f0dae3bd042cce4bd5aa601e128b222a99dae",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.1038726316646716e-13,
+        "emitted": 36078,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 7
+        },
+        "settings_differences": {
+          "PDF:pSet": [
+            "15",
+            "13"
+          ]
+        },
+        "log_sha256": "56118be153891e033809647db129b79afe12bd684d2cfb2c10023db707615390"
+      }
+    },
+    {
+      "sample": "dy_fixed_pdf13",
+      "original_sample": "dy_fixed",
+      "shard": 7,
+      "first": 875,
+      "last": 1000,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13_shard07",
+      "original_prefix": "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard07",
+      "seed": 10282007,
+      "repeats": 300,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_pdf13_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard07.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_pdf13_shard07",
+        "300",
+        "10282007"
+      ],
+      "input_lhe_sha256": "9fa614472075377c2fd143c3762ac2327cb1f8ec13f2f09526be035d44948bea",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 1.9817480989559044e-13,
+        "emitted": 36070,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 12
+        },
+        "settings_differences": {
+          "PDF:pSet": [
+            "15",
+            "13"
+          ]
+        },
+        "log_sha256": "6ab464662698debbb3486bb99c698a99079b4b2316309b88a0cb514b0e1e23f3"
+      }
+    },
+    {
+      "sample": "higgs_fixed_pdf13",
+      "original_sample": "higgs_fixed",
+      "shard": 0,
+      "first": 0,
+      "last": 125,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13_shard00",
+      "original_prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard00",
+      "seed": 10283000,
+      "repeats": 300,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_pdf13_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard00.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13_shard00",
+        "300",
+        "10283000"
+      ],
+      "input_lhe_sha256": "8d3575c3aa59377ffb06c3842da2b6ea1da2c0263b41cbb8b0ea51bce5016e38",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 1.3158453220262902e-14,
+        "emitted": 37495,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "messages": {},
+        "settings_differences": {
+          "PDF:pSet": [
+            "15",
+            "13"
+          ]
+        },
+        "log_sha256": "e328820a5257c2763b13454470a427477a7df099725eda736951358a73c402b3"
+      }
+    },
+    {
+      "sample": "higgs_fixed_pdf13",
+      "original_sample": "higgs_fixed",
+      "shard": 1,
+      "first": 125,
+      "last": 250,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13_shard01",
+      "original_prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard01",
+      "seed": 10283001,
+      "repeats": 300,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_pdf13_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard01.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13_shard01",
+        "300",
+        "10283001"
+      ],
+      "input_lhe_sha256": "b37ab6bb2527ff2248510f887570cf74fc3ad51c05c90d79df024fea560cb291",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.1406102328960234e-14,
+        "emitted": 37496,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 3
+        },
+        "settings_differences": {
+          "PDF:pSet": [
+            "15",
+            "13"
+          ]
+        },
+        "log_sha256": "0cde0daa612090eece95b17452366294cf33ab06aca2d74b243388ff81be4e65"
+      }
+    },
+    {
+      "sample": "higgs_fixed_pdf13",
+      "original_sample": "higgs_fixed",
+      "shard": 2,
+      "first": 250,
+      "last": 375,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13_shard02",
+      "original_prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard02",
+      "seed": 10283002,
+      "repeats": 300,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_pdf13_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard02.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13_shard02",
+        "300",
+        "10283002"
+      ],
+      "input_lhe_sha256": "5a6acb7e497652ee1fec42627b17604df5246e9aedf69356f77974090e2ed630",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 4.366034419679141e-14,
+        "emitted": 37489,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 3
+        },
+        "settings_differences": {
+          "PDF:pSet": [
+            "15",
+            "13"
+          ]
+        },
+        "log_sha256": "dc5f83c667931b07e3403086bccc951b04b99c6629924f463c440d6e3cf1e939"
+      }
+    },
+    {
+      "sample": "higgs_fixed_pdf13",
+      "original_sample": "higgs_fixed",
+      "shard": 3,
+      "first": 375,
+      "last": 500,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13_shard03",
+      "original_prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard03",
+      "seed": 10283003,
+      "repeats": 300,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_pdf13_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard03.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13_shard03",
+        "300",
+        "10283003"
+      ],
+      "input_lhe_sha256": "6d3fbb085fbf0ddb3c8b77a452361badf166cff35c2c44c17ea688cea6408020",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.035159088107529e-14,
+        "emitted": 37490,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "settings_differences": {
+          "PDF:pSet": [
+            "15",
+            "13"
+          ]
+        },
+        "log_sha256": "5c978a94c508055e9e20c3aabe4164340a398f66fc66a40c2a80470d151aea1a"
+      }
+    },
+    {
+      "sample": "higgs_fixed_pdf13",
+      "original_sample": "higgs_fixed",
+      "shard": 4,
+      "first": 500,
+      "last": 625,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13_shard04",
+      "original_prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard04",
+      "seed": 10283004,
+      "repeats": 300,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_pdf13_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard04.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13_shard04",
+        "300",
+        "10283004"
+      ],
+      "input_lhe_sha256": "8fbf58138091a4778ccb1aa9e35cff0e96c71e470272be542d26a37f5b09851a",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 5.419429206396266e-14,
+        "emitted": 37491,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "settings_differences": {
+          "PDF:pSet": [
+            "15",
+            "13"
+          ]
+        },
+        "log_sha256": "8dba68c73374d3fa213ce905a10a03b31e0cf2634ecc0987cf6f71140a0ef558"
+      }
+    },
+    {
+      "sample": "higgs_fixed_pdf13",
+      "original_sample": "higgs_fixed",
+      "shard": 5,
+      "first": 625,
+      "last": 750,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13_shard05",
+      "original_prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard05",
+      "seed": 10283005,
+      "repeats": 300,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_pdf13_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard05.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13_shard05",
+        "300",
+        "10283005"
+      ],
+      "input_lhe_sha256": "b3efd2190cf69908c7fc5d27c421246f29bd0afc5467f30dfb81ef2f23cbf551",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.696845981263836e-14,
+        "emitted": 37492,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "settings_differences": {
+          "PDF:pSet": [
+            "15",
+            "13"
+          ]
+        },
+        "log_sha256": "5654bdd88b1215cdab72a37dddbe19c3b4c7215771b65c5b02fcb825c0b8b03d"
+      }
+    },
+    {
+      "sample": "higgs_fixed_pdf13",
+      "original_sample": "higgs_fixed",
+      "shard": 6,
+      "first": 750,
+      "last": 875,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13_shard06",
+      "original_prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard06",
+      "seed": 10283006,
+      "repeats": 300,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_pdf13_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard06.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13_shard06",
+        "300",
+        "10283006"
+      ],
+      "input_lhe_sha256": "9b7b7ab423ab531922825259095a9543226594c90c7ce67ab6df0085bb58d8ff",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.2814019122967283e-14,
+        "emitted": 37493,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "messages": {},
+        "settings_differences": {
+          "PDF:pSet": [
+            "15",
+            "13"
+          ]
+        },
+        "log_sha256": "92c7550c1186c93f9cae20251b161c7d6295fd4c38cd0c31e414edfe2b02a0b2"
+      }
+    },
+    {
+      "sample": "higgs_fixed_pdf13",
+      "original_sample": "higgs_fixed",
+      "shard": 7,
+      "first": 875,
+      "last": 1000,
+      "prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13_shard07",
+      "original_prefix": "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard07",
+      "seed": 10283007,
+      "repeats": 300,
+      "command": [
+        "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_pdf13_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard07.lhe",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_pdf13_shard07",
+        "300",
+        "10283007"
+      ],
+      "input_lhe_sha256": "ad7af3c44198aa6890586f8308602bb8c34e8812166e5d75d2962a6d552ae3b0",
+      "audit": {
+        "process_checks": 37500,
+        "maximum_relative_Born_replay_difference": 2.6052245578786482e-14,
+        "emitted": 37489,
+        "born": 125,
+        "repeats": 300,
+        "failures": 0,
+        "messages": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "settings_differences": {
+          "PDF:pSet": [
+            "15",
+            "13"
+          ]
+        },
+        "log_sha256": "d1d279fb6f24bfb023ed30e8c4744980c3e18e8936f988b09dbd76d88bed89c5"
+      }
+    }
+  ],
+  "build": [
+    "c++",
+    "-O2",
+    "-std=c++17",
+    "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_shower_probe_pdf13.cc",
+    "-I/export/tmp/rikkert/Pythia/pythia8313/include",
+    "-L/export/tmp/rikkert/Pythia/pythia8313/lib",
+    "-Wl,-rpath,/export/tmp/rikkert/Pythia/pythia8313/lib",
+    "-lpythia8",
+    "-o",
+    "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_pdf13_probe"
+  ],
+  "pythia_version": "8.313",
+  "definition": "Existing PDF15 hard Born ensemble and fixed starts replayed with PDF13; no new Born generation. Same per-shard RNG seeds as PDF15. All other settings unchanged.",
+  "replacement": [
+    "\"PDF:pSet = 15\"",
+    "\"PDF:pSet = 13\""
+  ],
+  "source_sha256": {
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/singlet_shower_probe.cc": "24133ab833d969b98e216d5eff3e3bd486e0995656745632b2aa278614496a90",
+    "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_shower_probe_original.cc": "24133ab833d969b98e216d5eff3e3bd486e0995656745632b2aa278614496a90",
+    "/export/tmp/rikkert/delta_singlets_20261028/pdf13_control/singlet_shower_probe_pdf13.cc": "7a042fb539a80de2696140d99cda55d1676ebc3f6779e99a31a4994dd4d7a71e",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/singlet_pdf13_control.py": "24b7ee9f3da9485cf1548d51aaabb2289ff679214d0d64aa4a680d38ad2785c9"
+  },
+  "executable_sha256": "e84bc04624f4af14368ad27956e2ae4b46d7b5f4557e9b00c0ac478240ceda7b",
+  "library_sha256": "18e9aec234ec594b6e0193cb24d0d4100fc5eb3fa68fbc9362e9f4c3c8bf636c",
+  "pdf_grid_sha256": "5ac9499dcf7f6fe0a363f89f9320782f412eb91732725f7c435f0e2c119e2bf0",
+  "prior_provenance_sha256": "28c8ce4975aad5b523b9fd221468b1b7420830a0fe4ea28489cc4bdcf08d8e1b",
+  "elapsed_seconds": 87.78768384596333,
+  "checks": [
+    "All Born JSON files match original PDF15 Born files byte for byte",
+    "Every shard settings comparison differs only in PDF:pSet 15->13",
+    "Every trial successful; first accepted QCD emission ISR and below start",
+    "All process-level Born replay audits pass",
+    "Simple shower classes checked at runtime",
+    "All repetitions included in the reference CDF; no emission-conditioned selection"
+  ]
+}

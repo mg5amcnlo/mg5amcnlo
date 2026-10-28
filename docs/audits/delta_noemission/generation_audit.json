@@ -1,0 +1,38 @@
+{
+  "events": 1000,
+  "multiplicities": {
+    "4": 871,
+    "5": 129
+  },
+  "weight_signs": {
+    "(4, 'positive')": 816,
+    "(4, 'negative')": 55,
+    "(5, 'positive')": 104,
+    "(5, 'negative')": 25
+  },
+  "S_channels": {
+    "(21, 21)": 785,
+    "(2, -2)": 16,
+    "(-1, 1)": 18,
+    "(-2, 2)": 27,
+    "(1, -1)": 18,
+    "(-5, 5)": 1,
+    "(3, -3)": 1,
+    "(-4, 4)": 2,
+    "(-3, 3)": 1,
+    "(5, -5)": 1,
+    "(4, -4)": 1
+  },
+  "S_SCALUP_over_mt_min": 0.12402627305885289,
+  "S_SCALUP_over_mt_max": 0.9733189477401732,
+  "S_SCALUP_over_mt_mean": 0.5557656905021168,
+  "events_sha256": "36c15e42f5189a2d532174d159ff0494552a7121c1cbb51a1c64bab2f6c28168",
+  "table_matches_branch": true,
+  "S_directed_scales_checked": 5054,
+  "S_scale_invalid": 0,
+  "max_relative_momentum_residual": 8.872144260608309e-16,
+  "S_written_kinematics_scale_max_relative_error": 0.005787608690317513,
+  "S_restored_massless_hard_scale_max_relative_error": 4.839136798883491e-08,
+  "S_restored_massless_hard_dipoles_mismatching_1e6": 0,
+  "S_scale_note": "Written incoming quark momenta have shower masses. Replacing the two initial momenta by massless pz=\u00b1(Etotal\u00b1Pztotal)/2 preserves the hard system and restores pre-reshuffling scale geometry."
+}

@@ -1,0 +1,172 @@
+{
+  "note": "Same isolated incoming-gluon sqrt diagnostic as gluon_normalization.json; only reference changes to new historical-coupling Simple samples. Common-cutoff only.",
+  "rows": [
+    {
+      "sample": "matched_pdf13",
+      "channel": "all",
+      "q": 20.0,
+      "diagnostic": 0.13672423549008741,
+      "raw": 0.04509972486102187,
+      "reference": 0.1464026023727516,
+      "diagnostic_ratio": 0.9338921117124519
+    },
+    {
+      "sample": "matched_pdf13",
+      "channel": "gg",
+      "q": 20.0,
+      "diagnostic": 0.12338592433831357,
+      "raw": 0.02172356923268801,
+      "reference": 0.12548832271762206,
+      "diagnostic_ratio": 0.9832462628093342
+    },
+    {
+      "sample": "matched_pdf13",
+      "channel": "qqbar",
+      "q": 20.0,
+      "diagnostic": 0.25847509891034853,
+      "raw": 0.25847509891034853,
+      "reference": 0.3373062015503876,
+      "diagnostic_ratio": 0.7662921633883358
+    },
+    {
+      "sample": "matched_pdf13",
+      "channel": "all",
+      "q": 50.0,
+      "diagnostic": 0.5545252226307114,
+      "raw": 0.34873183449465694,
+      "reference": 0.531855147340222,
+      "diagnostic_ratio": 1.0426245292611365
+    },
+    {
+      "sample": "matched_pdf13",
+      "channel": "gg",
+      "q": 50.0,
+      "diagnostic": 0.5415606428987756,
+      "raw": 0.3132217370815738,
+      "reference": 0.5119745222929936,
+      "diagnostic_ratio": 1.0577882674186088
+    },
+    {
+      "sample": "matched_pdf13",
+      "channel": "qqbar",
+      "q": 50.0,
+      "diagnostic": 0.6728647004164041,
+      "raw": 0.6728647004164041,
+      "reference": 0.7133236434108527,
+      "diagnostic_ratio": 0.9432810851453223
+    },
+    {
+      "sample": "matched_pdf13",
+      "channel": "all",
+      "q": 100.0,
+      "diagnostic": 0.8927882632253539,
+      "raw": 0.8051030783581202,
+      "reference": 0.8789466130884042,
+      "diagnostic_ratio": 1.0157479987189593
+    },
+    {
+      "sample": "matched_pdf13",
+      "channel": "gg",
+      "q": 100.0,
+      "diagnostic": 0.8896736452723167,
+      "raw": 0.7923821853750423,
+      "reference": 0.8732006369426752,
+      "diagnostic_ratio": 1.0188650896858231
+    },
+    {
+      "sample": "matched_pdf13",
+      "channel": "qqbar",
+      "q": 100.0,
+      "diagnostic": 0.9212182061687731,
+      "raw": 0.9212182061687731,
+      "reference": 0.9313953488372091,
+      "diagnostic_ratio": 0.9890732300938141
+    },
+    {
+      "sample": "matched_pdf15",
+      "channel": "all",
+      "q": 20.0,
+      "diagnostic": 0.13672423549008741,
+      "raw": 0.04509972486102187,
+      "reference": 0.1481917336394948,
+      "diagnostic_ratio": 0.9226171536848046
+    },
+    {
+      "sample": "matched_pdf15",
+      "channel": "gg",
+      "q": 20.0,
+      "diagnostic": 0.12338592433831357,
+      "raw": 0.02172356923268801,
+      "reference": 0.12733545647558386,
+      "diagnostic_ratio": 0.9689832490762099
+    },
+    {
+      "sample": "matched_pdf15",
+      "channel": "qqbar",
+      "q": 20.0,
+      "diagnostic": 0.25847509891034853,
+      "raw": 0.25847509891034853,
+      "reference": 0.3385658914728682,
+      "diagnostic_ratio": 0.7634410477260438
+    },
+    {
+      "sample": "matched_pdf15",
+      "channel": "all",
+      "q": 50.0,
+      "diagnostic": 0.5545252226307114,
+      "raw": 0.34873183449465694,
+      "reference": 0.5356391121316494,
+      "diagnostic_ratio": 1.0352590206191294
+    },
+    {
+      "sample": "matched_pdf15",
+      "channel": "gg",
+      "q": 50.0,
+      "diagnostic": 0.5415606428987756,
+      "raw": 0.3132217370815738,
+      "reference": 0.5158174097664543,
+      "diagnostic_ratio": 1.049907646862825
+    },
+    {
+      "sample": "matched_pdf15",
+      "channel": "qqbar",
+      "q": 50.0,
+      "diagnostic": 0.6728647004164041,
+      "raw": 0.6728647004164041,
+      "reference": 0.7165697674418605,
+      "diagnostic_ratio": 0.9390079389178215
+    },
+    {
+      "sample": "matched_pdf15",
+      "channel": "all",
+      "q": 100.0,
+      "diagnostic": 0.8927882632253539,
+      "raw": 0.8051030783581202,
+      "reference": 0.8838834672789896,
+      "diagnostic_ratio": 1.0100746266629212
+    },
+    {
+      "sample": "matched_pdf15",
+      "channel": "gg",
+      "q": 100.0,
+      "diagnostic": 0.8896736452723167,
+      "raw": 0.7923821853750423,
+      "reference": 0.8783067940552016,
+      "diagnostic_ratio": 1.012941777627193
+    },
+    {
+      "sample": "matched_pdf15",
+      "channel": "qqbar",
+      "q": 100.0,
+      "diagnostic": 0.9212182061687731,
+      "raw": 0.9212182061687731,
+      "reference": 0.9347868217054264,
+      "diagnostic_ratio": 0.9854848022869015
+    }
+  ],
+  "input_sha256": {
+    "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/gluon_normalization/common_cut.npz": "7613854091f73d4311b5efa625b4d528a7475322344e82ce61e9b0a369ae00a5",
+    "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13.mode1.npz": "a606c165ebbc483a63452a73452ae18f4e552cb0c01b73031dbe4607bea543e8",
+    "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15.mode1.npz": "8fd5852889d25ec6f86da21b1a96d5e1092ca048f69b12f273a1e3c44aedfe75"
+  }
+}

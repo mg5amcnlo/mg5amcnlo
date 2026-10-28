@@ -1,0 +1,95 @@
+Historical meanings of SpaceShower:pdfMode and the archived tables
+27 October 2026
+
+Historical source snapshot: df4187461e8d10f05e78987dd8de5f02fe4e719a,
+the commit adding sudakov_r515_PDFmode[012].f.gz on 8 August 2019.
+All historical source paths below are relative to that commit. The Pythia
+source prefix is Pythia/Pythia/pythia-src/ (locally modified Pythia8.225).
+
+The numbers label evolution prescriptions, not three choices of PDF set.
+
+PDFmode 0: ordinary backward-evolution no-emission probability.
+  The ISR branching kernels retain mother/daughter PDF ratios and Bjorken-x
+  restrictions. See src/SpaceShower.cc:919,1060-1062,1096-1097,1169-1170,
+  1392,1461-1468. It consequently depends on the PDF set and Bjorken x.
+  SudGen/pythia_interface_for_sudgen.cc:92-93 supplies x=0.1 to the standard
+  table-generation call (the separate _x wrapper accepts an explicit x).
+  This is not a generic PDF-free Sudakov to which the current caller can
+  simply attach its own event-dependent PDF ratio.
+
+PDFmode 1: PDF-free forward Sudakov, momentum-sum-rule prescription.
+  The source changes the non-diagonal kernels from backward to forward
+  evolution and replaces PDF values/ratios by1. It sets zMinAbs=1e-5,
+  xMaxAbs=1 and isValence=false, then multiplies the accepted splitting
+  weight by z. See src/SpaceShower.cc:926,928,1080-1084,1151-1166,
+  1287-1294,1352-1365,1379,1461-1468.
+  Schematically its z integral is integral dz z sum_b P_ba(z), with the
+  stated numerical lower cutoff and the shower's actual kinematic limits.
+
+PDFmode 2: PDF-free forward Sudakov, restricted-z prescription.
+  It uses the same forward-kernel/PDF-removal changes, but sets
+  zMinAbs=0.5 (src/SpaceShower.cc:927) and applies no extra factor z.
+  Schematically its z integral is integral_(1/2)^(zmax) dz sum_b P_ba(z).
+
+These meanings are documented explicitly in
+share/Pythia8/xmldoc/SpacelikeShowers.xml:421-424. The historical wrapper
+selects SpaceShower:pdfMode=2 at SudGen/pythia_interface_for_sudgen.cc:76.
+The wrapper changes only SpaceShower:pdfMode; TimeShower:pdfMode remains
+at its default0. The physical FI initial-recoiler PDF-weight block exists,
+but the dedicated dummy API recoiler has mother1=0 and its prepared ends
+have isrType=0; that block is therefore bypassed for these table trials.
+This was verified subsequently from both historical/current source and
+actual prepared ends (see dipole_normalization/source_audit.json and
+all_dipole_normalization/fsr_colour_line_trials.json in the audit).
+All FSR grids in the three archives are exactly identical.
+
+Mapping to the published prescription:
+The paper's AppendixA has three strategies, whose numbering is NOT the
+PDFmode numbering. Strategy1 is the symmetric z interval with an explicit
+one-half factor. Strategy2, eqs.A.14-A.15, is the restricted-z integral,
+matching PDFmode2. Strategy3, eqs.A.16-A.17, is the z-weighted integral,
+matching PDFmode1. The paper explicitly selects strategy3 for its
+pre-tabulation because it agreed most closely with backward showering.
+Thus PDFmode1 matches the documented paper choice, although this archived
+wrapper selects PDFmode2. The paper treats their differences as O(epsilon).
+Sources: https://arxiv.org/pdf/2002.12716#page=42 (printed page41)
+         https://arxiv.org/pdf/2002.12716#page=43 (printed page42).
+
+Two separate factors must not be confused: Na=2 in eq.3.19 compensates
+the symmetric sum over daughter labels. The separate N_l(a) in eq.3.17
+counts the emitter's colour lines:1 for a quark,2 for a gluon. Strategies2
+and3 remove the need for the Na symmetry factor; they do not remove the
+gluon colour-line factor. See also the explicit one-line statement in
+AppendixA, printed page40, and eqs.3.17-3.19, printed pages12-13.
+
+Independent normalization evidence in the historical implementation:
+ISR prepare creates one SpaceDipoleEnd per incoming radiator
+(src/SpaceShower.cc:380-385). The trial pTnext uses only beamA, once
+(842-844). However its gluon kernel retains full-radiator strength:
+g2gInt has coefficient6 (1070-1071), and the acceptance weight is
+[1-z(1-z)]^2 (1246-1248). The resulting kernel is
+6[1-z(1-z)]^2/[z(1-z)], with soft coefficient2CA=6. The quark soft
+coefficient is2CF=8/3 (1122-1123,1313). No extra factor1/2 for a gluon's
+colour lines appears. Restricting z>0.5 does not halve that coefficient.
+
+For FSR, the dummy event contains two final radiators in FF and one in FI
+(src/TimeShower.cc:1917,1949-1979). Preparation includes all final entries
+(644-649), and trial evolution loops over all dipole ends (2122-2171).
+The local colour coefficients are CF for quarks and CA/2 for each gluon
+colour end (2379). Thus the returned FF probability covers the entire
+two-radiator system; the returned FI probability covers one full radiator.
+src/Merging.cc:416-438 returns these probabilities directly, and
+SudGen/gridsudgen.f:605-607 stores them without roots or other conversion.
+The present caller instead multiplies table factors over the emitter's
+colour connections and applies one external ISR PDF ratio:
+Template/NLO/SubProcesses/montecarlocounter.f:1514-1597.
+
+Scope of the conclusion:
+PDFmode1 is the prescription described for the paper's pre-tabulation;
+PDFmode2 is the choice in the inspected historical generation wrapper.
+Neither fact proves that an archived table has the per-colour-line
+normalization required by the present caller. No committed generation log
+identifies the exact executable that produced the archives. The historical
+source and numerical FF/full-radiator comparisons indicate a separate
+normalization issue that a PDFmode selection alone cannot resolve.
+This audit inspected source and existing results; no shower was run.

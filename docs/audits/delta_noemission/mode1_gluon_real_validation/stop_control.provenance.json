@@ -1,0 +1,148 @@
+{
+  "matched_pdf13": {
+    "probes": 52232,
+    "born": 871,
+    "input_sha256": {
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/matched_pdf13.npz": "e88cc4c4e87a55fcd4280d96efac554820f4a9318324b020fad4477344831de3",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13.born.jsonl": "72e6e0f82eeeed14ea0e00370b2a84e552ef3946064824a1c43f7ddd0d412913",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13.trials.jsonl": "614fbea0cb5958a28d103bbfcbb40a9d91f645501f4edf3762c9024b3de72313",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13.settings.cmnd": "11b5af4467687645a01aa369713d1379aea45c48c53f6fe3ac218e7e2a961dd5"
+    },
+    "diagnostics": {
+      "native": {
+        "undefined_raw": 0,
+        "clipped": 664
+      },
+      "uniform_real_keep_dead": {
+        "undefined_raw": 0,
+        "clipped": 407
+      },
+      "uniform_real": {
+        "undefined_raw": 0,
+        "clipped": 664
+      },
+      "uniform_born": {
+        "undefined_raw": 0,
+        "clipped": 888
+      },
+      "isr_uniform": {
+        "undefined_raw": 0,
+        "clipped": 717
+      }
+    }
+  },
+  "matched_pdf15": {
+    "probes": 52224,
+    "born": 871,
+    "input_sha256": {
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/matched_pdf15.npz": "85205debad4746bc26fc50c1d5f6dbf20ec1a1cad5148b48ff8e7b297a90cce0",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15.born.jsonl": "72e6e0f82eeeed14ea0e00370b2a84e552ef3946064824a1c43f7ddd0d412913",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15.trials.jsonl": "a74b3e1880b3a542e9b70c6987e266d4c5f0f3a425134457bf952569295b65dc",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15.settings.cmnd": "bdc5f093535186d8e475869393256b5e792bcd87586bc371fb20d36f1f262aac"
+    },
+    "diagnostics": {
+      "native": {
+        "undefined_raw": 0,
+        "clipped": 733
+      },
+      "uniform_real_keep_dead": {
+        "undefined_raw": 0,
+        "clipped": 409
+      },
+      "uniform_real": {
+        "undefined_raw": 0,
+        "clipped": 642
+      },
+      "uniform_born": {
+        "undefined_raw": 0,
+        "clipped": 831
+      },
+      "isr_uniform": {
+        "undefined_raw": 0,
+        "clipped": 754
+      }
+    }
+  },
+  "evaluator": {
+    "table": "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/mode1_incoming_gluon_root.f",
+    "table_sha256": "53196f39bd9a08155ce8bc8d6166a722fb218bc5f352ca518316e72d21bbc3ee",
+    "source_sha256": {
+      "Template/NLO/SubProcesses/montecarlocounter.f": "554432b7b09075c21a8484e5d7d34b261d345af1849d23c2402659bd9a14071f",
+      "Template/NLO/SubProcesses/mcatnlo_delta_scales.f90": "a010072c50e8e2ee2777e0a2116f7f06f8b4cff88a8417a88923eb1e4cd85124",
+      "Template/NLO/SubProcesses/MCmasses_PYTHIA8.inc": "0374ba4b1855d0dc1de74f8f68ecc990ffe93d289cda0e01041f3274c04aae94"
+    },
+    "extracted_routines": [
+      "delta_leg_probability",
+      "gl_safe",
+      "pysudakov_safe",
+      "get_parton_id",
+      "setSudType",
+      "get_to_zero",
+      "emscafun",
+      "get_delta_connections"
+    ],
+    "compile_command": [
+      "gfortran",
+      "-O2",
+      "-std=legacy",
+      "-shared",
+      "-fPIC",
+      "-ffixed-line-length-none",
+      "-I/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses",
+      "-J/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/stop_control/delta",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses/mcatnlo_delta_scales.f90",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/stop_control/delta/delta_production.f",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/stop_control/delta/delta_wrapper.f90",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/stop_control/delta/sudakov.f",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/dfint.f",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/kerset.f",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/abend.f",
+      "-o",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/stop_control/delta/delta.so"
+    ]
+  },
+  "native_pdf": {
+    "pdf": "nn23nlo",
+    "convention": "x*f; x cancels in Delta PDF ratios",
+    "command": [
+      "gfortran",
+      "-O2",
+      "-std=legacy",
+      "-shared",
+      "-fPIC",
+      "-ffixed-line-length-none",
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/Source/PDF/NNPDFDriver.f",
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/Source/PDF/opendata.f",
+      "-o",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/stop_control/native_pdf/native_pdf.so"
+    ],
+    "sha256": {
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/Source/PDF/NNPDFDriver.f": "569c080439879972784ada0d6e0b040e8a7a93a0cf363cf99fa3bead12abae14",
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/Source/PDF/opendata.f": "bfaa0cd1c1d12b64785d833ae35e6dad093d80c45a5d26613e9fb6fc4e90b1c2",
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/lib/Pdfdata/NNPDF23nlo_as_0119_qed_mem0.grid": "e1ad3115d9bc36f4cdf43268138ab6c2efb9a4803bff376f493c85260181213e"
+    }
+  },
+  "checks": [
+    "All Born input records identical",
+    "Independent reference CDFs reconstructed bitwise from 240 raw showers per Born",
+    "First eight probes for every variant agree bitwise in serial and parallel",
+    "Native probabilities and individual leg factors reproduce saved corrected results bitwise",
+    "Incoming-only replacement retains native FSR bitwise and matches uniform-real ISR bitwise",
+    "All returned probabilities finite and bounded"
+  ],
+  "script_sha256": "6c33ab17a5ad1095eb872620b7fb564f99c1d84cdb0e19efa3ff70ca534f582c",
+  "variants": {
+    "native": "Native real stopping scales, real masses, native kinematic dead zones and start veto.",
+    "uniform_real_keep_dead": "Every stopping scale is actual shower pT; real masses and native kinematic dead zones retained; start veto recomputed.",
+    "uniform_real": "Every stopping scale is actual shower pT; real masses; only q>=start veto.",
+    "uniform_born": "Every stopping scale is actual shower pT; Born soft-limit masses; only q>=start veto (evaluator.evaluate).",
+    "isr_uniform": "Incoming stopping scales are actual shower pT with only q>=start veto; final stopping scales/dead zones remain native; real masses."
+  },
+  "no_production_changes": true,
+  "output_npz_sha256": {
+    "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/stop_control/matched_pdf13.npz": "c3ceb189c324130ea4d622ab67e3539cd02b13ac09e2908f6d1660dfcf25dcac",
+    "/export/tmp/rikkert/delta_noemission_20261027/mode1_gluon_real_validation/stop_control/matched_pdf15.npz": "fcfe0f396e02b1838b40df990e32e0b057085aafd8c584b3ab16f572909fc976"
+  },
+  "bootstrap_seed": 102727,
+  "bootstrap_replicas": 500
+}

@@ -1,0 +1,164 @@
+{
+  "definition": "T(q,m)/T(Q,m); Q=200 GeV; no roots or external beam-PDF factors",
+  "topology": {
+    "1": "II",
+    "2": "FF",
+    "3": "IF",
+    "4": "FI"
+  },
+  "top_note": "ID 6 in these tables has zero mass; this is not a physical massive-top calculation",
+  "tables": {
+    "default": {
+      "table": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/sudakov_template.f",
+      "table_sha256": "dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9",
+      "source_sha256": {
+        "Template/NLO/SubProcesses/montecarlocounter.f": "554432b7b09075c21a8484e5d7d34b261d345af1849d23c2402659bd9a14071f",
+        "Template/NLO/SubProcesses/mcatnlo_delta_scales.f90": "a010072c50e8e2ee2777e0a2116f7f06f8b4cff88a8417a88923eb1e4cd85124",
+        "Template/NLO/SubProcesses/MCmasses_PYTHIA8.inc": "0374ba4b1855d0dc1de74f8f68ecc990ffe93d289cda0e01041f3274c04aae94"
+      },
+      "extracted_routines": [
+        "delta_leg_probability",
+        "gl_safe",
+        "pysudakov_safe",
+        "get_parton_id",
+        "setSudType",
+        "get_to_zero",
+        "emscafun",
+        "get_delta_connections"
+      ],
+      "compile_command": [
+        "gfortran",
+        "-O2",
+        "-std=legacy",
+        "-shared",
+        "-fPIC",
+        "-ffixed-line-length-none",
+        "-I/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses",
+        "-J/export/tmp/rikkert/delta_table_origin/archive_build/default",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses/mcatnlo_delta_scales.f90",
+        "/export/tmp/rikkert/delta_table_origin/archive_build/default/delta_production.f",
+        "/export/tmp/rikkert/delta_table_origin/archive_build/default/delta_wrapper.f90",
+        "/export/tmp/rikkert/delta_table_origin/archive_build/default/sudakov.f",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/dfint.f",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/kerset.f",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/abend.f",
+        "-o",
+        "/export/tmp/rikkert/delta_table_origin/archive_build/default/delta.so"
+      ]
+    },
+    "PDFmode0": {
+      "table": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/sudakov_r515_PDFmode0.f.gz",
+      "table_sha256": "327fc37e60ef9d4e40e03d544ae6a981b08acffeea339606e4e10a7044cf1a9b",
+      "source_sha256": {
+        "Template/NLO/SubProcesses/montecarlocounter.f": "554432b7b09075c21a8484e5d7d34b261d345af1849d23c2402659bd9a14071f",
+        "Template/NLO/SubProcesses/mcatnlo_delta_scales.f90": "a010072c50e8e2ee2777e0a2116f7f06f8b4cff88a8417a88923eb1e4cd85124",
+        "Template/NLO/SubProcesses/MCmasses_PYTHIA8.inc": "0374ba4b1855d0dc1de74f8f68ecc990ffe93d289cda0e01041f3274c04aae94"
+      },
+      "extracted_routines": [
+        "delta_leg_probability",
+        "gl_safe",
+        "pysudakov_safe",
+        "get_parton_id",
+        "setSudType",
+        "get_to_zero",
+        "emscafun",
+        "get_delta_connections"
+      ],
+      "compile_command": [
+        "gfortran",
+        "-O2",
+        "-std=legacy",
+        "-shared",
+        "-fPIC",
+        "-ffixed-line-length-none",
+        "-I/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses",
+        "-J/export/tmp/rikkert/delta_table_origin/archive_build/PDFmode0",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses/mcatnlo_delta_scales.f90",
+        "/export/tmp/rikkert/delta_table_origin/archive_build/PDFmode0/delta_production.f",
+        "/export/tmp/rikkert/delta_table_origin/archive_build/PDFmode0/delta_wrapper.f90",
+        "/export/tmp/rikkert/delta_table_origin/archive_build/PDFmode0/sudakov.f",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/dfint.f",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/kerset.f",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/abend.f",
+        "-o",
+        "/export/tmp/rikkert/delta_table_origin/archive_build/PDFmode0/delta.so"
+      ]
+    },
+    "PDFmode1": {
+      "table": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/sudakov_r515_PDFmode1.f.gz",
+      "table_sha256": "16e07784f53f347f64b3fb5168100c2b6ca0747c8dd2dd0f97370f0d27b5e435",
+      "source_sha256": {
+        "Template/NLO/SubProcesses/montecarlocounter.f": "554432b7b09075c21a8484e5d7d34b261d345af1849d23c2402659bd9a14071f",
+        "Template/NLO/SubProcesses/mcatnlo_delta_scales.f90": "a010072c50e8e2ee2777e0a2116f7f06f8b4cff88a8417a88923eb1e4cd85124",
+        "Template/NLO/SubProcesses/MCmasses_PYTHIA8.inc": "0374ba4b1855d0dc1de74f8f68ecc990ffe93d289cda0e01041f3274c04aae94"
+      },
+      "extracted_routines": [
+        "delta_leg_probability",
+        "gl_safe",
+        "pysudakov_safe",
+        "get_parton_id",
+        "setSudType",
+        "get_to_zero",
+        "emscafun",
+        "get_delta_connections"
+      ],
+      "compile_command": [
+        "gfortran",
+        "-O2",
+        "-std=legacy",
+        "-shared",
+        "-fPIC",
+        "-ffixed-line-length-none",
+        "-I/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses",
+        "-J/export/tmp/rikkert/delta_table_origin/archive_build/PDFmode1",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses/mcatnlo_delta_scales.f90",
+        "/export/tmp/rikkert/delta_table_origin/archive_build/PDFmode1/delta_production.f",
+        "/export/tmp/rikkert/delta_table_origin/archive_build/PDFmode1/delta_wrapper.f90",
+        "/export/tmp/rikkert/delta_table_origin/archive_build/PDFmode1/sudakov.f",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/dfint.f",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/kerset.f",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/abend.f",
+        "-o",
+        "/export/tmp/rikkert/delta_table_origin/archive_build/PDFmode1/delta.so"
+      ]
+    },
+    "PDFmode2": {
+      "table": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/sudakov_r515_PDFmode2.f.gz",
+      "table_sha256": "84c4fef64348eb3ba10985f3921f88cabe8889a3ec0238bda520034bcaea9208",
+      "source_sha256": {
+        "Template/NLO/SubProcesses/montecarlocounter.f": "554432b7b09075c21a8484e5d7d34b261d345af1849d23c2402659bd9a14071f",
+        "Template/NLO/SubProcesses/mcatnlo_delta_scales.f90": "a010072c50e8e2ee2777e0a2116f7f06f8b4cff88a8417a88923eb1e4cd85124",
+        "Template/NLO/SubProcesses/MCmasses_PYTHIA8.inc": "0374ba4b1855d0dc1de74f8f68ecc990ffe93d289cda0e01041f3274c04aae94"
+      },
+      "extracted_routines": [
+        "delta_leg_probability",
+        "gl_safe",
+        "pysudakov_safe",
+        "get_parton_id",
+        "setSudType",
+        "get_to_zero",
+        "emscafun",
+        "get_delta_connections"
+      ],
+      "compile_command": [
+        "gfortran",
+        "-O2",
+        "-std=legacy",
+        "-shared",
+        "-fPIC",
+        "-ffixed-line-length-none",
+        "-I/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses",
+        "-J/export/tmp/rikkert/delta_table_origin/archive_build/PDFmode2",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses/mcatnlo_delta_scales.f90",
+        "/export/tmp/rikkert/delta_table_origin/archive_build/PDFmode2/delta_production.f",
+        "/export/tmp/rikkert/delta_table_origin/archive_build/PDFmode2/delta_wrapper.f90",
+        "/export/tmp/rikkert/delta_table_origin/archive_build/PDFmode2/sudakov.f",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/dfint.f",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/kerset.f",
+        "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/abend.f",
+        "-o",
+        "/export/tmp/rikkert/delta_table_origin/archive_build/PDFmode2/delta.so"
+      ]
+    }
+  }
+}

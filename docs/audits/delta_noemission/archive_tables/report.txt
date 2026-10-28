@@ -1,0 +1,40 @@
+Comparison of the shipped default and three PDF-mode archives
+
+Definition: T(q,m)/T(Q,m), evaluated with each table's own unchanged
+Fortran interpolator. No roots, external PDF ratios or shower runs.
+Q=200 GeV, q=20 GeV, m=500 GeV:
+                         Default        PDFmode0       PDFmode1       PDFmode2
+Incoming gluon II        0.010683638    0.396636132    0.328108503    0.356004390
+Incoming up II           0.659100397    0.679099590    0.623040481    0.645792585
+Final ID6 FI             1.000000000    0.656293711    0.656293711    0.656293711
+Final ID6 FF             0.627753341    0.428163492    0.428163492    0.428163492
+ID6 has zero mass in all these tables; it is not a physical massive-top test.
+
+Relative to default, the gluon factors are larger by 37.13,30.71,33.32;
+up factors change by +3.03%,-5.47%,-2.02%; FI ID6 decreases34.37%;
+FF ID6 decreases31.79%. The PDFmode0/1 gluon spread at this point is20.89%.
+
+All tables have the same 100x50 nodes in each of28 flavour/topology blocks.
+All14 FSR blocks (FF and FI for7 flavours) are exactly numerically identical
+among the three archives. Every ISR block differs among archives.
+Every default block differs from archives. The changes therefore extend
+beyond a PDF-mode change alone.
+
+Default FI equals1 for every q and flavour at all31 mass nodes>=30.971082GeV;
+archive FI remains nontrivial through the maximum mass7000GeV.
+
+Earlier same-caller table-swap test, same871 ttbar Born events and absolute
+weights, common stopping scale q50GeV, event-dependent starts/dipole masses:
+mean Delta default=.12772660; PDF0=.41645715; PDF1=.34873183; PDF2=.37939556.
+At q20GeV the values are .04079860,.06129824,.04509972,.04943157 respectively.
+At q100GeV: .60439458,.84517975,.80510308,.83156345.
+These are a controlled table substitution, not validation against a shower.
+See ../table_diagnosis/same_caller_table_swap.json.
+
+The newly compiled benchmark reproduces all overlapping earlier benchmark
+values exactly. Ratios.csv extends the comparison to q5-200GeV and
+m100/500/1000GeV. The plot uses m500GeV. Full raw-grid comparisons are in
+grid_compare.json. Generation-version evidence is in version_provenance.txt.
+
+Reproduce:
+python tests/validation/delta_noemission/table_archive_compare.py OUTPUT_DIR BUILD_DIR

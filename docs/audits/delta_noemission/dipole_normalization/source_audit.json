@@ -1,0 +1,105 @@
+{
+  "rows": [
+    {
+      "type": 1,
+      "topology": "II",
+      "raw_system": "one active incoming radiator; other incoming end is skipped",
+      "quark_active_colour_ends": 1,
+      "gluon_active_colour_ends": 2,
+      "quark_power": 1.0,
+      "gluon_power": 0.5
+    },
+    {
+      "type": 3,
+      "topology": "IF",
+      "raw_system": "one active incoming radiator; final recoiler is not showered by SpaceShower",
+      "quark_active_colour_ends": 1,
+      "gluon_active_colour_ends": 2,
+      "quark_power": 1.0,
+      "gluon_power": 0.5
+    },
+    {
+      "type": 4,
+      "topology": "FI",
+      "raw_system": "one active final radiator; incoming recoiler is not a final radiator",
+      "quark_active_colour_ends": 1,
+      "gluon_active_colour_ends": 2,
+      "quark_power": 1.0,
+      "gluon_power": 0.5
+    },
+    {
+      "type": 2,
+      "topology": "FF",
+      "raw_system": "two final radiators, q+qbar or g+g; every colour and anticolour end evolves",
+      "quark_active_colour_ends": 2,
+      "gluon_active_colour_ends": 4,
+      "quark_power": 0.5,
+      "gluon_power": 0.25
+    }
+  ],
+  "scope": "Read-only source audit of raw noEmissionProbability dummy systems and native colour-line consumer; symmetric massless dummy ends",
+  "historical_commit": "df4187461e8d10f05e78987dd8de5f02fe4e719a",
+  "current_sources_sha256": {
+    "/export/tmp/rikkert/Pythia/pythia8313/src/SimpleSpaceShower.cc": "fe74d843e7725497558fec97a6f1a7394b51ea1d853e4f0ea6dc1fcb238f2d73",
+    "/export/tmp/rikkert/Pythia/pythia8313/src/SimpleTimeShower.cc": "6925aa2d2a6b86e8a3037a3554f5dbb399d2259d167f8b935ec0cfab947fc4ca",
+    "/export/tmp/rikkert/Pythia/pythia8313/src/Merging.cc": "9ab73cdd1eac54cdcd234e2693b7b56c9079edec2f047e6150b82883c0a52158"
+  },
+  "historical_sources": {
+    "SpaceShower.cc": {
+      "git_path": "Pythia/Pythia/pythia-src/src/SpaceShower.cc",
+      "sha256": "5167e467e734a4aefdbc5053a7d5783146c7737fd2165e4c3af4f5d1360c6f0d"
+    },
+    "TimeShower.cc": {
+      "git_path": "Pythia/Pythia/pythia-src/src/TimeShower.cc",
+      "sha256": "41363e9cb9050be2f9f0b5d34f2d2fc0982e9a780fa2fc31923bb11f7deb257e"
+    },
+    "Merging.cc": {
+      "git_path": "Pythia/Pythia/pythia-src/src/Merging.cc",
+      "sha256": "b9b6c53c9d041a3250efddebe85d7ee7c2373e1b823b87fc5342f12e2106d3f4"
+    }
+  },
+  "current_anchors": {
+    "dispatch": "Merging.cc:414-438 maps types1/2/3/4 to SpaceII/TimeFF/SpaceIF/TimeFI",
+    "ISR_dummy": "SimpleSpaceShower.cc:685-775, massless dummy particle entries; idB=21 for gluon, otherwise antiquarkII/samequarkIF",
+    "ISR_count": "SimpleSpaceShower.cc:417-436 books one SpaceDipoleEnd per incoming radiator; custompTnext:884-886 selects beamA once",
+    "FSR_dummy": "SimpleTimeShower.cc:2405-2499; typeFF creates idA and conjugate idB both final, typeFI only idA final; both m=0 even id6",
+    "FSR_count": "SimpleTimeShower.cc:783-799 final-only loop books colour and anticolour separately; custompTnext:2585-2627 competes all ends",
+    "FSR_kernel": "SimpleTimeShower.cc:2661-2669 has CF per quark end and CA/2 per gluon colour end; both g->gg and g->qqbar split on two sides"
+  },
+  "historical_anchors": {
+    "ISR_count": "SpaceShower.cc:380-385 and842-844",
+    "FSR_dummy": "TimeShower.cc:1910-1979",
+    "FSR_count": "TimeShower.cc:651-669 and2122-2171",
+    "FSR_kernel": "TimeShower.cc:2379"
+  },
+  "FI_PDF_correction": {
+    "previous_claim_corrected": "TimeShower:pdfMode=0 does not imply the dummy FI grids include initial-recoiler PDF weighting.",
+    "dummy_mother1": 0,
+    "derived_isrType": 0,
+    "historical_chain": [
+      "TimeShower.cc:1973 appends incoming recoiler with mother1=0",
+      "TimeShower.cc:1399 sets isrType from recoiler mother1",
+      "TimeShower.cc:2612 requires isrType!=0 for recoil-PDF block"
+    ],
+    "current_chain": [
+      "SimpleTimeShower.cc:2464 appends incoming recoiler with mother1=0",
+      "SimpleTimeShower.cc:1615 sets isrType from recoiler mother1",
+      "SimpleTimeShower.cc:2915 requires isrType!=0 for recoil-PDF block"
+    ],
+    "consequence": "The inspected dummy FI APIs skip the initial-recoiler PDF block despite the default pdfMode=0. Actual shower FI recoilers generally carry beam mother1=1/2 and can execute that block. These roots establish dummy-system normalization, not complete real-FI fidelity."
+  },
+  "consumer_chain": [
+    "compute_delta:1213-1229 gets Born IDs, selected flow and directed starting scales",
+    "get_delta_connections:1452-1513 selects live directed connections;1497-1509 duplicates both lines to the same partner in special gluon flows",
+    "delta_leg_probability:1530-1596 constructs one PDF factor per incoming outer term and products over all inner colour connections",
+    "compute_delta:1314-1338 multiplies leg probabilities for incoming and final legs",
+    "pysudakov_safe:1616-1636 only handles low-scale continuation; no hidden root",
+    "setSudType:1654-1665 maps incoming toII, final-final toFF, final-initial toFI; nofactor",
+    "fks_singular.f:1034 receives compute_delta probability and1051 multiplies it once; no extra end root"
+  ],
+  "limitations": [
+    "All formal root counts refer to symmetric raw dummy systems; retain native unequal-stop weighted expression in physical events.",
+    "Dummy FSR radiators and recoilers are massless even for ID6; physical massive-top fidelity is not established by these counts.",
+    "Historical producing-run logs are unavailable; the source audit characterizes the contemporaneous implementation."
+  ]
+}

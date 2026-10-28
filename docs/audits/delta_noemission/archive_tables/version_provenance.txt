@@ -1,0 +1,47 @@
+Pythia-version provenance of shipped Sudakov tables
+27 October 2026
+
+Best-supported contemporary version: locally patched Pythia 8.225.
+No generation log or producing executable hash was found for these tables.
+
+At both table-introduction commits:
+  default: 16e0bf7683bf7342401e43a0f344e98267222125 (19 March 2019)
+  PDF-mode archives: df4187461e8d10f05e78987dd8de5f02fe4e719a (8 August 2019)
+Pythia/Pythia/pythia-src/include/Pythia8/Pythia.h lines13-14 contain:
+  #define PYTHIA_VERSION 8.225
+  #define PYTHIA_VERSION_INTEGER 8225
+Header blob: b6e934fdc1645feefe69789004c586a2fa10929f
+
+Pythia/Pythia/pythia-src/share/Pythia8/xmldoc/Version.xml also records
+8.225 and version date 20170420.
+Version.xml blob: 4a0332538b64d5e0b7fdcc0893351bf82e834a98
+The bundled Pythia/pythia8.tar.gz likewise contains version8.225.
+Tarball blob: 9f9fac7af5a866fd596c5f28c5a8a78d6b18ea23
+Pythia/install.sh builds this local source and writes its include/library
+paths to SudGen/makefile.inc.
+
+This was a patched development tree. It was introduced by a511f9427
+(3 July 2017), 'Added Pythia/Dire development versions', and modified
+thereafter, including quark PDFmode2 fixes dad69e3f2 and a6c31ac8b,
+and threshold fix e35eee2e5 before the archive introduction.
+
+Generator distinction:
+At 16e0bf768, SudGen/gridsudgen.f calls dire_init at line73 and
+actively calls dire_get_no_emission_prob at line601.
+At df4187461, both initializers occur at lines73-74, but the probability
+call is pythia_get_no_emission_prob at line605; the Dire probability
+call at line603 is commented out.
+Thus the default cannot be certified as a Simple-Pythia table from this
+history. These are read-only historical observations; no Dire runs made.
+
+The tables themselves contain no generator/version metadata. The archive
+introduction message identifies them as Pythia8 tables, but supplies no
+release/build version. No available commit message explains/maps the
+filename label r515. It must not be interpreted as Pythia8.515.
+
+Reproduce version evidence:
+  git show 16e0bf768:Pythia/Pythia/pythia-src/include/Pythia8/Pythia.h
+  git show df4187461:Pythia/Pythia/pythia-src/share/Pythia8/xmldoc/Version.xml
+  git show df4187461:Pythia/install.sh
+  git show 16e0bf768:SudGen/gridsudgen.f
+  git show df4187461:SudGen/gridsudgen.f

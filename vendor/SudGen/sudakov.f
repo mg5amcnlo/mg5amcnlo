@@ -1,1 +1,1 @@
-sudakov_template.f
+sudakov_pdfmode1.f

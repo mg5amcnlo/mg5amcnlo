@@ -1,0 +1,45 @@
+PDFmode1 component diagnosis, existing alphaS=.118 Simple-shower reference
+
+Born ensemble: 871 states (785 gg,86 qqbar), equal absolute weights.
+Both component controls use exactly the same Born records and200 independent repetitions per Born.
+The full-shower reference uses240 independent repetitions per Born.
+
+Common-cutoff ratios (mean Delta component / mean component-only shower CDF):
+channel   q[GeV]   total        ISR           FSR
+all          20  0.252644+/-0.011846   0.271934+/-0.013235   0.989383+/-0.007665
+all          50  0.619678+/-0.007196   0.596877+/-0.007531   1.041070+/-0.003058
+all         100  0.904103+/-0.003408   0.896309+/-0.003764   1.008722+/-0.000810
+gg           20  0.139085+/-0.005706   0.137453+/-0.004886   1.003572+/-0.008976
+gg           50  0.575925+/-0.007655   0.549233+/-0.007497   1.046220+/-0.003388
+gg          100  0.895004+/-0.003867   0.886770+/-0.004325   1.009386+/-0.000855
+qqbar        20  0.676163+/-0.016513   0.780809+/-0.010798   0.864839+/-0.016435
+qqbar        50  0.915064+/-0.008439   0.918774+/-0.005403   0.994594+/-0.007188
+qqbar       100  0.982531+/-0.003267   0.978065+/-0.002813   1.002653+/-0.002123
+
+The remaining baseline suppression is chiefly associated with incoming gg.
+At q50GeV, ISR is .549 times the ISR-only gg CDF, whereas FSR is1.046
+times the FSR-only gg CDF. For qqbar the corresponding ratios are .919
+and .995. At q20GeV the qqbar FSR agreement is poorer (.865), so the
+inclusive FSR agreement should not be mistaken for pointwise validation.
+
+On actual first-emission configurations, in the30-50GeV bin, the mode1
+Delta/shower ratio is .716375+/- .004752 for gg and .934545+/- .015038
+for qqbar; the combined result is .742205+/- .004954. These must be kept
+distinct from the common-cutoff numbers above.
+
+Interpretation:
+The stronger gluon deficit is consistent with the independently identified
+full-radiator versus per-colour-line issue, but these averages do not isolate
+its cause. The reference uses alphaS=.118 while historicalgeneration settings
+suggest larger couplings; PDFs, version and massive-top treatment also differ.
+Increasing the shower couplings generally lowers fixed-cut no-emission
+probabilities and hence increases a fixed Delta/reference ratio. Actual-real
+bins change their sampled configurations too, so monotonic improvement of
+every binned ratio is not guaranteed.
+
+The Delta construction is an approximation to the shower probability, using
+particular scales, colour flow and PDF treatment. Exact equality of all these
+averages is not a theorem; changes should be assessed with matched settings
+and topology-sensitive checks rather than choosing the table closest to1.
+No assumption that the old default is valid enters this comparison.
+No new shower, production-code change, or table transformation was made.
