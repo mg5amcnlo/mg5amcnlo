@@ -65,6 +65,8 @@ class TestMCHistoryWeights(unittest.TestCase):
                 str(ROOT / 'tests/input_files/check_mc_history_weights.f90'),
                 '-o', str(executable)], cwd=work, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            result = subprocess.run([str(executable)], capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertIn('PASS native H and S weights', result.stdout)
+            for matching in ('ordinary', 'fxfx'):
+                with self.subTest(matching=matching):
+                    result = subprocess.run([str(executable), matching], capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertIn('PASS native H and S weights', result.stdout)

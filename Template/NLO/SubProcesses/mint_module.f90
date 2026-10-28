@@ -68,6 +68,8 @@ module mint_module
   ! Keep IEEE imports local to the procedures using them. Module-level
   ! imports make gfortran save/restore FPU state in unrelated module users.
   use FKSParams ! contains use_poly_virtual
+  use virt_surrogate, only: vs_begin_point,vs_vcomp,vs_ratio_set,vs_ratio, &
+       vs_reset,vs_solve,vs_write_grids,vs_read_grids
   implicit none
   integer, parameter, private :: nintervals=32    ! max number of intervals in the integration grids
   integer, parameter, public  :: ndimmax=60       ! max number of dimensions of the integral
@@ -1041,6 +1043,11 @@ contains
           call regrid_ave_virt(k_ord_virt)
        enddo
     endif
+    if (VirtTrickSurrogate.ge.1) then
+       do kchan=1,nchans
+          call vs_solve(kchan,.not.fixed_order)
+       enddo
+    endif
 ! Regrid the MC over integers (used for the MC over FKS dirs)
     call regrid_MC_integer
   end subroutine update_integration_grids
@@ -1375,7 +1382,7 @@ contains
     implicit none
     integer :: kdim,k_ord_virt,ithree,isix
     double precision, dimension(ndimmax) :: x
-    double precision :: virtual,born
+    double precision :: virtual,born,ratio
 ! accumulate the function in xacc(icell(kdim),kdim) to adjust the grid later
     do kdim=1,ndim
        xacc(icell(kdim),kdim,ichan) = xacc(icell(kdim),kdim,ichan) + f(1)
@@ -1391,17 +1398,22 @@ contains
           ithree=2*k_ord_virt+5
           isix=2*k_ord_virt+6
        endif
-       if (f(ithree).ne.0d0) then
+       if (f(ithree).ne.0d0.or.(vs_vcomp.and.f(isix).ne.0d0)) then
           born=f(isix)
-          ! virt_wgt_mint=(virtual-average_virtual*born)/virtual_fraction. Compensate:
+          ! Undo the actual surrogate used for this point so the fallback
+          ! continues learning the exact virtual alongside the fit.
+          if (vs_ratio_set) then
+             ratio=vs_ratio
+          elseif (use_poly_virtual) then
+             ratio=polyfit(k_ord_virt)
+          else
+             ratio=average_virtual(k_ord_virt,ichan)
+          endif
+          virtual=f(ithree)*virtual_fraction(ichan)+ratio*born
           if (use_poly_virtual) then
-             virtual=f(ithree)*virtual_fraction(ichan)+ &
-                  polyfit(k_ord_virt)*f(isix)
              call add_point_polyfit(ichan,k_ord_virt,x(1:ndim-3), &
                   virtual/born,born/wgt_mult)
           else
-             virtual=f(ithree)*virtual_fraction(ichan)+ &
-                  average_virtual(k_ord_virt,ichan)*f(isix)
              call fill_ave_virt(x,k_ord_virt,virtual,born)
           endif
        else
@@ -1757,6 +1769,7 @@ contains
   subroutine reset_mint_grids
     implicit none
     integer :: kint
+    call vs_reset
     do kint=0,nint_used
        xgrid(kint,1:ndim,1:nchans)=dble(kint)/nint_used
     enddo
@@ -1831,16 +1844,32 @@ contains
        write (12,*) 'AVE',virtual_fraction(kchan),average_virtual(0,kchan)
     enddo
     if (use_poly_virtual) call save_polyfit(12)
+    if (VirtTrickSurrogate.ge.1) call vs_write_grids(12,nchans)
     close (12)
   end subroutine write_grids_to_file
   
   subroutine read_grids_from_file
 ! Read the MINT integration grids from file
     implicit none
-    integer :: i,j,k,kchan,idum
+    integer :: i,j,k,kchan,idum,ios
     integer,dimension(maxchannels) :: points
     character(len=3) :: dummy
+    character(len=4096) :: marker
+    logical :: saved_surrogate
     open (unit=12, file='mint_grids',status='old')
+    saved_surrogate=.false.
+    call vs_reset
+    do
+       read(12,'(a)',iostat=ios) marker
+       if (ios.lt.0) exit
+       if (ios.ne.0) then
+          write(*,*) 'ERROR: cannot inspect mint_grids.'
+          stop 1
+       endif
+       marker=adjustl(marker)
+       if (marker(1:3).eq.'VSU') saved_surrogate=.true.
+    enddo
+    rewind(12)
     ans(1,0)=0d0
     unc(1,0)=0d0
     do kchan=1,nchans
@@ -1882,6 +1911,9 @@ contains
        call restore_polyfit(12)
        call do_polyfit()
     endif
+    ! Older grids have no VSU rows and keep the grid/polynomial fallback.
+    ! Consume saved rows even when the fitted surrogate has been disabled.
+    if (saved_surrogate) call vs_read_grids(12,nchans,VirtTrickSurrogate.ge.1)
     close (12)
 ! check for zero cross-section: if restoring grids corresponding to
 ! sigma=0, just terminate the run

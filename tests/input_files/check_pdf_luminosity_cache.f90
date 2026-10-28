@@ -21,6 +21,7 @@ program check_pdf_luminosity_cache
   use weight_lines
   use FKSParams
   use pdf_test_state
+  use mint_module, only: vs_vcomp,born_wgt_mint,virt_wgt_mint
   implicit none
   include 'run.inc'
   double precision QES2
@@ -95,7 +96,29 @@ program check_pdf_luminosity_cache
   call include_PDF_and_alphas()
   if(icontr.ne.2.or.calls.ne.1.or.set_calls.ne.1) &
        error stop 'appended flavour records were not reused safely'
+  if(any(amppos(1:icontr).ne.73))error stop 'split flavour lost amplitude order'
   call check_weights()
+  ! A perfect native surrogate has no residual/type-14 contribution.
+  ! Its Born observation still takes exactly one n-body luminosity.
+  call prepare(3)
+  lpp=1
+  itype(1:3)=[1,15,2]
+  H_event(2:3)=.false.
+  vs_vcomp=.true.
+  virt_wgt_mint=0d0
+  born_wgt_mint=1d0
+  call include_PDF_and_alphas()
+  if(.not.vs_vcomp)error stop 'missing native approximation carrier'
+  if(any(born_wgt_mint.ne.wgts(1,2)/(wgt(1,2)*4d0))) &
+       error stop 'zero residual Born observation lost its luminosity'
+  if(any(virt_wgt_mint.ne.0d0))error stop 'zero residual changed'
+  ! An event with only H contributions cannot supply the n-body weight.
+  call prepare(1)
+  vs_vcomp=.true.
+  born_wgt_mint=1d0
+  call include_PDF_and_alphas()
+  if(vs_vcomp.or.any(born_wgt_mint.ne.1d0)) &
+       error stop 'trained an observation without a native carrier'
   call deallocate_weight_lines()
   write(*,*)'PASS PDF luminosity cache'
 contains
@@ -126,6 +149,7 @@ contains
     pdg=21
     y_bst=0d0
     orderstag=1
+    amppos=73
     momenta=1d0
     momenta_m=1d0
   end subroutine

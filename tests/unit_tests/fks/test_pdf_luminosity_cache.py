@@ -1,6 +1,7 @@
 """Reuse central luminosities without losing native flavour or PDF state."""
 
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
@@ -31,12 +32,15 @@ class TestPDFLuminosityCache(unittest.TestCase):
                 shutil.copyfile(TEMPLATE / name, work / name)
             (work / 'modules.f90').write_text(
                 'module mint_module\n'
+                'logical :: vs_vcomp=.false.\n'
                 'double precision :: virt_wgt_mint(0:1)=0d0,born_wgt_mint(0:1)=0d0\n'
                 'end module\n'
                 'module FKSParams\nlogical :: separate_flavour_configs=.false.\nend module\n')
             (work / 'weights.f').write_text('\n'.join(
                 fortran_routine(TEMPLATE / 'fks_singular.f', name)
-                for name in ('include_PDF_and_alphas', 'separate_flavour_config')))
+                for name in ('include_PDF_and_alphas', 'separate_flavour_config')) + '\n' +
+                re.search(r'^      integer function find_virtual_mint_carrier\b.*?^      end\s*$',
+                          (TEMPLATE / 'fks_singular.f').read_text(), re.M | re.S).group(0))
             executable = work / 'check_pdf_cache'
             result = subprocess.run([
                 shutil.which('gfortran'), str(TEMPLATE.parent / 'Source/timing.f'), '-O2', '-std=legacy', '-fcheck=all',

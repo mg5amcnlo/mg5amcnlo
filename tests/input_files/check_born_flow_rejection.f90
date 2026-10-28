@@ -7,6 +7,7 @@ program check_born_flow_rejection
   character(16) :: mode
   double precision :: factor,nan,inf,answer(6),dummy,x(5),sigintF,virtual_over_born
   integer :: flow,i,old_draws,old_calls,fold,ifold_counter,nndim,ickkw,ifks,jfks
+  integer :: phase,old_rejections
   logical :: leading(3),mcatnlo_delta
   integer :: nleading
   common/c_leading_cflows/leading,nleading
@@ -57,6 +58,67 @@ program check_born_flow_rejection
     enddo
     if(draws.ne.old_draws)error stop 'sampled an invalid colour distribution'
     if(rejected_born_flow_points.ne.6)error stop 'incorrect rejection count'
+  elseif(index(mode,'calib').eq.1)then
+    nndim=5
+    ickkw=0
+    mcatnlo_delta=.true.
+    ifks=5
+    jfks=3
+    abrv='all'
+    x=0.5d0
+    FKSExplicitSum=.true.
+    call weight_lines_allocated(5,32,1,1)
+    do flow=0,1
+      MCExplicitKLSum=flow.eq.1
+      do phase=1,2
+        born_spread_phase=phase
+        nlo_calls=0
+        s_only_calls=0
+        native_calls=0
+        old_draws=draws
+        old_rejections=rejected_nonfinite_points
+        ! H-only map failures are irrelevant to the fitted S objective.
+        fail_native_fold=2
+        fail_kinematics=.true.
+        if(trim(mode).eq.'calib_reject')then
+          fail_weight_fold=2
+          fail_weight_stage=6
+        endif
+        dummy=sigintF(x,1d0,0,answer)
+        dummy=sigintF(x,1d0,1,answer)
+        dummy=sigintF(x,1d0,1,answer)
+        dummy=sigintF(x,1d0,2,answer)
+        if(native_calls.ne.0)error stop 'calibration reconstructed H histories'
+        if(s_only_calls.ne.nlo_calls)error stop 'calibration evaluated H weights'
+        if(draws-old_draws.ne.1)error stop 'calibration sampled an inner colour flow'
+        if(real_point_active.or.mc_S_only.or.mc_H_only)error stop 'calibration retained evaluation state'
+        if(trim(mode).eq.'calib_reject')then
+          if(icontr.ne.0.or.any(answer.ne.0d0).or.last_grid_weight.ne.0d0) &
+               error stop 'calibration retained a rejected S fold'
+          if(nlo_calls.ne.2.or.rejected_nonfinite_points.ne.old_rejections+1) &
+               error stop 'calibration S rejection did not stop later folds'
+        else
+          if(icontr.ne.9.or.any(answer.ne.18d0).or.last_grid_weight.ne.18d0) &
+               error stop 'calibration changed S weights'
+        endif
+        ! The next production point must recover the complete H/S path.
+        born_spread_phase=3
+        fail_native_fold=0
+        fail_weight_fold=0
+        fail_weight_stage=0
+        native_calls=0
+        s_only_calls=0
+        dummy=sigintF(x,1d0,0,answer)
+        dummy=sigintF(x,1d0,1,answer)
+        dummy=sigintF(x,1d0,1,answer)
+        dummy=sigintF(x,1d0,2,answer)
+        if(native_calls.ne.3*flow.or.s_only_calls.ne.3*flow) &
+             error stop 'production path did not recover after calibration'
+        if(icontr.ne.3*(3+flow).or.any(answer.ne.18d0+12d0*flow)) &
+             error stop 'production weights changed after calibration'
+      enddo
+    enddo
+    call deallocate_weight_lines()
   elseif(index(mode,'massive').eq.1)then
     nndim=5
     ickkw=0
@@ -260,8 +322,16 @@ subroutine compute_NLOPS_flow_weights(p,pc,cb,cr,probne,valid)
   use flow_fixture
   double precision :: p(0:3,5),pc(0:3,5),probne
   logical :: cb,cr,valid
+  integer :: fold,ifold_counter
+  common/cfl/fold,ifold_counter
   valid=.true.
+  nlo_calls=nlo_calls+1
+  if(mc_S_only)s_only_calls=s_only_calls+1
   call add_record(3d0)
+  if(fail_weight_stage.eq.6.and.ifold_counter.eq.fail_weight_fold)then
+    nonfinite_contribution=.true.
+    valid=.false.
+  endif
 end subroutine
 subroutine repartition_MC_H(first,p,pl,pc,jac,vw,sw,bf,point,valid)
   use, intrinsic :: ieee_arithmetic
@@ -273,6 +343,7 @@ subroutine repartition_MC_H(first,p,pl,pc,jac,vw,sw,bf,point,valid)
   double precision :: p(0:3,5),pl(0:3,5),pc(0:3,5),jac,vw,sw,bf,factor
   type(fks_phase_space_point),intent(in) :: point
   logical,intent(out) :: valid
+  native_calls=native_calls+1
   call add_record(4d0)
   if(ifold_counter.eq.fail_weight_fold)then
     if(fail_weight_stage.eq.1)nonfinite_contribution=.true.

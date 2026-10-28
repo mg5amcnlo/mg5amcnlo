@@ -28,7 +28,8 @@ program check_fks_explicit_sum
     if(FKSExplicitSum)error stop 'default reset'
     call get_command_argument(2,arg)
     call FKSParamReader(trim(arg),.true.,.true.)
-    if(FKSExplicitSum)error stop 'template default'
+    if(.not.FKSExplicitSum)error stop 'template default'
+    if(MCExplicitKLSum)error stop 'template matching default'
     write(*,*) 'PASS card'
   case('map')
     call get_command_argument(2,arg)

@@ -159,6 +159,23 @@
 .False.
 ! Default :: .True.
 !
+! Surrogate of the virtual used by the virt-trick, which computes the
+! virtual only at a fraction of the points and reweights the difference.
+! 0 = the grid (or the polynomial fit above) in the Born phase space.
+! 1 = colour-dipole surrogate fitted per integration channel during the
+!     grid setup: A = t1 B + t2 sum B_kl L_kl + t3 sum B_kl L_kl^2
+!     + t4 sum B_kk, with B_kl the colour-linked Borns and
+!     L_kl = log(|2 p_k.p_l|/Q_ES^2).
+! 2 = 1 plus B L_kl and B L_kl^2 for every pair of Born particles,
+!     coloured or not.
+! For 1 and 2 a channel keeps the grid when the fit does worse: in event
+! generation the fit is kept if its residual makes fewer negative virtual
+! events, in fixed order if its residual variance is smaller. Exact for
+! any choice.
+#VirtTrickSurrogate
+2
+! Default :: 2
+!
 ! ==========================================================================
 ! Combination of matrix elements
 ! ==========================================================================
@@ -226,8 +243,8 @@
 ! H-event subtraction terms by the outer S_ij function.
 ! Set .false. to use the standard native-sector MC@NLO matching.
 #MCExplicitKLSum
-.true.
-! Default :: .true.
+.false.
+! Default :: .false.
 !
 ! Choose how Born colour flows enter the MC@NLO subtraction in both
 ! H and S events. With .true., evaluate at a sampled Born flow and apply
@@ -256,8 +273,8 @@
 ! UNLOPS (ickkw=4).
 ! Rerun integration/grid setup after changing this setting.
 #FKSExplicitSum
-.false.
-! Default :: .false.
+.true.
+! Default :: .true.
 !
 ! ==========================================================================
 ! FxFx analytic Sudakov finite terms (ickkw=3 only).
