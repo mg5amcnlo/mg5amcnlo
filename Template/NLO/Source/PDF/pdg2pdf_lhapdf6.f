@@ -140,6 +140,7 @@ c     be saved
       xlast(i_replace)=x
       xmulast(i_replace)=xmu
       ihlast(i_replace)=ih
+      ipartlast(i_replace)=ipart
       imemlast(i_replace)=imem
       isetlast(i_replace)=iset
 c
