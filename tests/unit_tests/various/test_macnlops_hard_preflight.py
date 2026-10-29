@@ -17,7 +17,7 @@ class TestHardPreflight(unittest.TestCase):
         cls.temporary = tempfile.TemporaryDirectory(prefix='macnlops-preflight-')
         cls.addClassCleanup(cls.temporary.cleanup)
         work = Path(cls.temporary.name)
-        text = (ROOT / 'Template/NLO/MCatNLO/srcPythia8/MacNLOPS.cc').read_text()
+        text = (ROOT / 'Template/NLO/MCatNLO/srcPythia8/MacNLOPS.h').read_text()
         particles = text[text.index('struct LHEParticle {'):text.index('std::vector<std::string> fields(')]
         check = text[text.index('void validateHardInput('):text.index('// A second reader preserves')]
         source = work / 'check.cc'

@@ -7,8 +7,9 @@ Key behavior
 ------------
 - Events are copied verbatim.
 - The output header is built from a separate template file.
-- The <initrwgt> and <scalesfunctionalform> blocks are extracted from the
-  first input file and inserted into the final <header> block.
+- The <initrwgt>, <scalesfunctionalform>, <MonteCarloMasses> and
+  <macnlops_first_emission> blocks are extracted from the first input file
+  and inserted into the final <header> block.
 - The <init> block is taken from the first input file.
 - Template lines containing only <![CDATA[ or ]]> are removed.
 - The template iseed line is rewritten from the requested seed.
@@ -201,7 +202,8 @@ def _extract_special_header_blocks(blob: bytes) -> bytes:
 
     region = bytes(blob[m_open.end():m_header.start()])
     pieces: List[bytes] = []
-    for tag in ("initrwgt", "scalesfunctionalform", "MonteCarloMasses"):
+    for tag in ("initrwgt", "scalesfunctionalform", "MonteCarloMasses",
+                "macnlops_first_emission"):
         pieces.extend(_extract_tag_blocks(region, tag))
     return b"".join(pieces)
 

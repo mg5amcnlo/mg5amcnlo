@@ -5889,6 +5889,8 @@ class RunCardNLO(RunCard):
                        comment='Prepare a common MC@NLO input for matching and preserve hard-event momenta')
         self.add_param('macnlops_resolved_source', False, hidden=True,
                        comment='Use the legacy scalar/gated source instead of ordinary MC@NLO counterterms')
+        self.add_param('macnlops_keep_rejected', True, hidden=True, include=False,
+                       comment="Keep vetoed and removed events with a zero 'macnlops' weight (False: drop them)")
         self.add_param('macnlops_flavour_count', 5, hidden=True, include=False,
                        allowed=[4, 5], comment='Incoming and gluon-splitting flavours (match the hard PDF scheme)')
         self.add_param('macnlops_nquark_in', 5, system=True)

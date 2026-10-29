@@ -48,6 +48,7 @@ PROCESSES = [
 PHYSICS_FILES = [
     'madgraph/various/macnlops.py', 'madgraph/interface/amcatnlo_run_interface.py',
     'madgraph/iolibs/export_fks.py', 'Template/NLO/MCatNLO/srcPythia8/MacNLOPS.cc',
+    'Template/NLO/MCatNLO/srcPythia8/MacNLOPS.h',
     'Template/NLO/SubProcesses/driver_macnlops.f',
     'Template/NLO/SubProcesses/handling_lhe_events.f',
     'Template/NLO/SubProcesses/montecarlocounter.f',

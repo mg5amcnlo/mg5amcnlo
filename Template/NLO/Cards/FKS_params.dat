@@ -292,14 +292,15 @@
 ! Shower alpha_s(MZ) and running order for DeltaBackwardISR, as PYTHIA8's
 ! AlphaStrong (CMW off, alphaSnfmax = 5, thresholds 1.5 and 4.8 GeV). They
 ! must equal SpaceShower:alphaSvalue and SpaceShower:alphaSorder (1 or 2).
-! The archived Sudakov table corresponds to 0.1365 at first order.
+! The archived Sudakov table, and so the MAcNLOPS one-step shower,
+! correspond to 0.1365 at first order.
 #DeltaBackwardAlphaS
-0.118d0
-! Default :: 0.118d0
+0.1365d0
+! Default :: 0.1365d0
 !
 #DeltaBackwardAlphaSOrder
-2
-! Default :: 2
+1
+! Default :: 1
 !
 ! ==========================================================================
 ! FxFx analytic Sudakov finite terms (ickkw=3 only).

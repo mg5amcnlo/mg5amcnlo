@@ -1,5 +1,12 @@
 # Sampled-component MAcNLOPS campaign
 
+Since 29 October a `macnlops = True` launch matches every channel right
+after generation and collects the result as `Events/<run>/events.lhe.gz`;
+`shower <run>` then runs the full shower (`docs/macnlops_derivation.md`,
+first section). The runner described here predates that: it expects the
+source from `launch` and the matching from `shower`, so it needs updating
+before new samples are produced with it.
+
 The production entry point is `docs/audits/run_macnlops_campaign.py`. The local
 `production_1M_20261023/campaign.py` delegates to it. Its default output is the
 fresh `production_1M_sampled/` directory: the completed global-sum production

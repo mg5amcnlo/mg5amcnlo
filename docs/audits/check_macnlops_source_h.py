@@ -93,9 +93,23 @@ def points_ttbar():
     return records
 
 
+def evaluator_source(folder=ROOT/'Template/NLO/SubProcesses'):
+    """The evaluator program and its densities as one compilable text."""
+    folder = Path(folder)
+    return ((folder/'macnlops_evaluator.f').read_text() + '\n\n' +
+            (folder/'driver_macnlops.f').read_text())
+
+
+def link_audit_object(command, obj):
+    """Link one audit object in place of the evaluator's program and densities."""
+    command[command.index('driver_macnlops.o')] = str(obj)
+    if 'macnlops_evaluator.o' in command:
+        command.remove('macnlops_evaluator.o')
+
+
 def check_source_h(subprocess_dir, point_records=None):
     directory = Path(subprocess_dir).resolve()
-    original = (directory/'driver_macnlops.f').read_text()
+    original = evaluator_source(directory)
     # Reuse the evaluator's initialization and communication protocol;
     # evaluate the source generation path separately at every same real point.
     source = original.replace('program macnlops_evaluator',
@@ -131,7 +145,7 @@ def check_source_h(subprocess_dir, point_records=None):
             '-I.','-I../../lib','-c',str(src),'-o',str(obj)],cwd=directory,
             check=True,capture_output=True,text=True)
         command[command.index('-o')+1] = str(executable)
-        command[command.index('driver_macnlops.o')] = str(obj)
+        link_audit_object(command, obj)
         command += ['-Wl,-rpath,' + str(directory.parent.parent/'lib')]
         subprocess.run(command,cwd=directory,check=True,capture_output=True,text=True)
         result = subprocess.run([str(executable)],cwd=directory,

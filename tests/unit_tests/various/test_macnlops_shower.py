@@ -358,7 +358,8 @@ class TestMacNLOPSShower(unittest.TestCase):
             '"weight above unity (injected warning control)");'))
         executable = self.work / 'warning_driver.exe'
         built = subprocess.run([os.environ.get('CXX', 'g++'), '-std=c++11', '-O1',
-            '-I' + str(self.prefix / 'include'), str(injected), '-o', str(executable),
+            '-I' + str(self.prefix / 'include'), '-I' + str(SOURCE.parent),
+            str(injected), '-o', str(executable),
             '-L' + str(self.prefix / 'lib'), '-Wl,-rpath,' + str(self.prefix / 'lib'),
             '-lpythia8'], capture_output=True, text=True)
         self.assertEqual(built.returncode, 0, built.stdout + built.stderr)

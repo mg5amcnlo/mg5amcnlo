@@ -145,7 +145,7 @@ class TestNativeContinuationFormatting(unittest.TestCase):
         compiler = shutil.which(os.environ.get('CXX', 'g++'))
         if not compiler:
             raise unittest.SkipTest('A C++ compiler is needed for parser/format controls')
-        text = (SOURCE / 'MacNLOPS.cc').read_text()
+        text = (SOURCE / 'MacNLOPS.h').read_text()
         begin = '// BEGIN MACNLOPS NATIVE SCALE LISTING HELPERS'
         end = '// END MACNLOPS NATIVE SCALE LISTING HELPERS'
         helpers = text.split(begin, 1)[1].split(end, 1)[0]

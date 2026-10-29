@@ -826,26 +826,32 @@ done
 
 if [ "${MACNLOPS_CONTINUATION:-OFF}" = "ON" ]
 then
-  # Apply the accepted endpoint's continuation contract after user overrides.
-  # The same scale import applies to ordinary and Delta source matching.
+  # Apply the endpoint's continuation contract after user overrides. The
+  # first emission is already generated: (almost) every event is showered
+  # like an H event, from its recorded scales and with local recoil.
   if ! grep -q 'name="Beams:setDipoleShowerStartingScalesFromLHEF"' \
       "$thisdir/xmldoc/BeamParameters.xml"
   then
     echo "MAcNLOPS continuation requires per-dipole LHE starting-scale support" >&2
     exit 1
   fi
-  if [ -z "${MACNLOPS_PHYSICS_FILE:-}" ] || [ ! -f "$thisdir/$MACNLOPS_PHYSICS_FILE" ]
+  if [ -n "${MACNLOPS_PHYSICS_FILE:-}" ]
   then
-    echo "MAcNLOPS continuation requires the accepted LHE's recorded shower profile" >&2
-    exit 1
+    # Older accepted samples restore their recorded first-stage physics.
+    if [ ! -f "$thisdir/$MACNLOPS_PHYSICS_FILE" ]
+    then
+      echo "MAcNLOPS continuation requires the accepted LHE's recorded shower profile" >&2
+      exit 1
+    fi
+    cat "$thisdir/$MACNLOPS_PHYSICS_FILE" >> "$ifile"
   fi
-  cat "$thisdir/$MACNLOPS_PHYSICS_FILE" >> "$ifile"
   cat <<EOF >> "$ifile"
 
-! Consume each accepted LHE input once; stop on a failed shower.
+! Consume each first-emission LHE input once; stop on a failed shower.
 Main:spareFlag1 = on
 
 ! Continue from the written endpoint and its remaining scale limits.
+! Exhausted S events start below these one-step cutoffs.
 Beams:setProductionScalesFromLHEF = on
 Beams:setDipoleShowerStartingScalesFromLHEF = on
 TimeShower:globalRecoil = off
@@ -858,12 +864,18 @@ TimeShower:pTmin = $MACNLOPS_FSR_CUTOFF
 SpaceShower:pTmin = $MACNLOPS_ISR_CUTOFF
 LesHouches:setQuarkMass = 0
 LesHouches:setLeptonMass = 0
-
-! Preserve the first-emission matching and the parton-level QCD setup.
 TimeShower:MEcorrections = off
 SpaceShower:MEcorrections = off
 TimeShower:MEafterFirst = off
 SpaceShower:MEafterFirst = off
+EOF
+fi
+
+# Older accepted samples also keep the parton-level QCD setup of their first
+# emission; first-emission samples use the shower card as it stands.
+if [ "${MACNLOPS_CONTINUATION:-OFF}" = "ON" ] && [ -n "${MACNLOPS_PHYSICS_FILE:-}" ]
+then
+  cat <<EOF >> "$ifile"
 PartonLevel:MPI = off
 PartonLevel:Remnants = on
 HadronLevel:all = off

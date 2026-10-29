@@ -26,6 +26,7 @@ import run_macnlops_campaign as campaign
 ROOT = campaign.ROOT
 sys.path.insert(0, str(ROOT))
 from madgraph.various import macnlops as mc
+from docs.audits.check_macnlops_source_h import evaluator_source, link_audit_object
 
 MODULUS = 1 << 256
 PACKETS = re.compile(r'<(macnlops_hard_event|macnlops_component|macnlops_delta_context)\b[^>]*>.*?</\1>', re.S)
@@ -106,13 +107,13 @@ def native_build(directory, mode, revision):
         receipt = work / 'build.json'
         binary = work / 'macnlops_evaluator'
         pins = {name: campaign.sha(ROOT / 'Template/NLO/SubProcesses' / name)
-                for name in ('driver_macnlops.f', 'montecarlocounter.f')}
+                for name in ('macnlops_evaluator.f', 'driver_macnlops.f', 'montecarlocounter.f')}
         if receipt.exists():
             saved = json.loads(receipt.read_text())
             if saved['sources'] != pins or campaign.sha(binary) != saved['binary_sha256']:
                 raise RuntimeError('Rematch evaluator build changed: ' + str(work))
             return binary
-        driver = (ROOT / 'Template/NLO/SubProcesses/driver_macnlops.f').read_text()
+        driver = evaluator_source()
         if driver.count('      call setrun\n') != 1:
             raise RuntimeError('Cannot freeze the native source matching mode')
         driver = driver.replace('      call setrun\n',
@@ -135,7 +136,7 @@ def native_build(directory, mode, revision):
                 raise RuntimeError('Cannot isolate native evaluator link command')
             link = shlex.split(links[0])
             link[link.index('-o') + 1] = str(binary)
-            link[link.index('driver_macnlops.o')] = str(work / 'driver.o')
+            link_audit_object(link, work / 'driver.o')
             link[link.index('montecarlocounter.o')] = str(work / 'counter.o')
             objects = {token: campaign.sha(directory / token) for token in link
                        if token.endswith('.o') and (directory / token).is_file()}
@@ -319,15 +320,16 @@ def install_for_remaining_generation(base, p, config):
     backup.mkdir(parents=True, exist_ok=True)
     files = [('Template/NLO/SubProcesses/' + name, 'SubProcesses/' + name)
              for name in ('driver_macnlops.f', 'montecarlocounter.f')]
-    files += [('Template/NLO/MCatNLO/srcPythia8/MacNLOPS.cc', 'MCatNLO/srcPythia8/MacNLOPS.cc'),
-              ('madgraph/various/macnlops.py', 'bin/internal/macnlops.py')]
+    files += [('Template/NLO/MCatNLO/srcPythia8/' + name, 'MCatNLO/srcPythia8/' + name)
+              for name in ('MacNLOPS.cc', 'MacNLOPS.h')]
+    files += [('madgraph/various/macnlops.py', 'bin/internal/macnlops.py')]
     for source, target in files:
         target = process / target
         saved = backup / target.relative_to(process)
         saved.parent.mkdir(parents=True, exist_ok=True)
-        if not saved.exists():
+        if not saved.exists() and target.exists():
             shutil.copy2(target, saved)
-        if campaign.sha(target) != campaign.sha(ROOT / source):
+        if not target.exists() or campaign.sha(target) != campaign.sha(ROOT / source):
             shutil.copyfile(ROOT / source, target)
     marker = process / 'campaign_export.json'
     campaign.dump(marker, dict(contract=campaign.contract_id(config, p),
@@ -385,7 +387,7 @@ def worker(base, config, key, cpus):
                 if incomplete and driver is None:
                     build = root / 'shower_build'
                     (build / 'MCatNLO/srcPythia8').mkdir(parents=True, exist_ok=True)
-                    for name2 in ('MacNLOPS.cc', 'Makefile'):
+                    for name2 in ('MacNLOPS.cc', 'MacNLOPS.h', 'Makefile'):
                         shutil.copy2(ROOT / 'Template/NLO/MCatNLO/srcPythia8' / name2,
                                      build / 'MCatNLO/srcPythia8' / name2)
                     driver = mc.build_shower(build, config['pythia8'], root / 'shower_build.log')

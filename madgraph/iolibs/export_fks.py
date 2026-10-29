@@ -705,6 +705,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'pythia_unlops.f',
                      'driver_mintMC.f',
                      'driver_macnlops.f',
+                     'macnlops_evaluator.f',
+                     'macnlops_capi.f',
                      'mc_matching_runtime.f',
                      'mc_pythia8_kernel.f90',
                      'driver_mintFO.f',

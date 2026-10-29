@@ -66,10 +66,15 @@ Pythia83: $(FORFILE) $(PYTHIA8_LIB)
 	  -lHepMCfio $(LIBGFORTRAN) $(HEPMCINCLIB) $(EXTRAPATHS) $(EXTRALIBS) \
 
 # Standalone stock-Pythia first-emission driver; no provider, HepMC or Fortran analysis.
-MacNLOPS: MacNLOPS.cc $(PYTHIA8_LIB)
+MacNLOPS: MacNLOPS.cc MacNLOPS.h $(PYTHIA8_LIB)
 	$(CXX) $(CXXFLAGS) -std=c++11 -I$(PYTHIA8LOCATION)/$(INCDIR) \
 	  $< -o MacNLOPS.exe -L$(PYTHIA8LOCATION)/$(LIBDIR) \
 	  -Wl,-rpath,$(PYTHIA8LOCATION)/$(LIBDIR) -lpythia8 $(LIBGZIP)
+
+# In-process per-channel matching; each SubProcesses/P* directory links it
+# with its own densities (make macnlops_onestep).
+MacNLOPSMatch.o: MacNLOPSMatch.cc MacNLOPS.h $(PYTHIA8_LIB)
+	$(CXX) $(CXXFLAGS) -std=c++11 -I$(PYTHIA8LOCATION)/$(INCDIR) -c $< -o $@
 
 .PHONY: clean MacNLOPS
 clean:

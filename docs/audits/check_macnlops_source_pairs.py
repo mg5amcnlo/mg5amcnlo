@@ -19,13 +19,13 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from docs.audits.check_macnlops_source_h import ROOT, points
+from docs.audits.check_macnlops_source_h import ROOT, evaluator_source, link_audit_object, points
 
 
 def check_source_pairs(subprocess_dir, point_records=None, profile=None,
                        resolved_source=False):
     directory = Path(subprocess_dir).resolve()
-    source = (directory / 'driver_macnlops.f').read_text().replace(
+    source = evaluator_source(directory).replace(
         'program macnlops_evaluator', 'program macnlops_source_pairs_audit', 1)
     initialize = '      call setrun\n'
     profile_code = ('      macnlops_resolved_source=%s\n' %
@@ -74,7 +74,7 @@ def check_source_pairs(subprocess_dir, point_records=None, profile=None,
                         '-o', str(obj)], cwd=directory, check=True,
                        capture_output=True, text=True)
         command[command.index('-o') + 1] = str(executable)
-        command[command.index('driver_macnlops.o')] = str(obj)
+        link_audit_object(command, obj)
         command += ['-Wl,-rpath,' + str(directory.parent.parent / 'lib')]
         subprocess.run(command, cwd=directory, check=True, capture_output=True, text=True)
         result = subprocess.run([str(executable)], cwd=directory,

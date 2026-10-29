@@ -27,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from madgraph.various.macnlops_components import branch_candidates
+from docs.audits.check_macnlops_source_h import evaluator_source, link_audit_object
 
 
 CASES = (
@@ -107,8 +108,7 @@ def build_driver(root, folder, directory, stack, trap_delta=False, source_text=N
     # to, or rebuilding objects in, the completed generated process.
     work = Path(stack.enter_context(tempfile.TemporaryDirectory(
         prefix='.macnlops-v3-endpoints-', dir=process)))
-    source = source_text if source_text is not None else (
-        ROOT / 'Template/NLO/SubProcesses/driver_macnlops.f').read_text()
+    source = source_text if source_text is not None else evaluator_source()
     # Freeze the matching mode to the saved source. No generation cards change.
     source = source.replace('      call setrun\n',
                             '      call setrun\n      mcatnlo_delta=%s\n' %
@@ -125,7 +125,7 @@ def build_driver(root, folder, directory, stack, trap_delta=False, source_text=N
         raise RuntimeError('Cannot isolate the existing evaluator link command')
     link = shlex.split(links[0])
     link[link.index('-o') + 1] = str(binary)
-    link[link.index('driver_macnlops.o')] = str(obj)
+    link_audit_object(link, obj)
     if trap_delta or counter_source_text is not None:
         counter = (counter_source_text if counter_source_text is not None else
                    (ROOT / 'Template/NLO/SubProcesses/montecarlocounter.f').read_text())
@@ -204,7 +204,7 @@ def check(root, trap_delta=False):
 
 def check_ordinary_scale_skip(root):
     """Compare the old/new H-scale preparation at low P and support edges."""
-    source = (ROOT / 'Template/NLO/SubProcesses/driver_macnlops.f').read_text()
+    source = evaluator_source()
     # Ordinary G/P is unchanged by this flag. The density-only support mode
     # makes the explicit CONFIG bounds authoritative for these edge checks.
     source = source.replace('      call setrun\n',

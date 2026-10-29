@@ -21,6 +21,7 @@ from __future__ import absolute_import
 import atexit
 import collections
 import glob
+import json
 import logging
 import math
 import optparse
@@ -3970,12 +3971,14 @@ RESTART = %(mint_mode)s
                 lines = file.read().split('\n')
             evt_files = [pjoin(self.me_dir,'SubProcesses',line.split()[0]) for line in lines[:-1] if line.split()[1] != '0']
 
-        self.update_status('Collecting events', level='parton', update_results=True)
-
         evt_file=pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
         banner=pjoin(self.me_dir, 'Events', self.run_name, 
                           '%s_%s_banner.txt' % (self.run_name, self.run_tag))
-        
+        source_files = evt_files
+        if self.run_card['macnlops']:
+            evt_files, banner = self.run_macnlops_first_emission(source_files, banner)
+
+        self.update_status('Collecting events', level='parton', update_results=True)
         collect_events.collect_events(
             output=evt_file,
             header_template=banner,
@@ -3990,8 +3993,8 @@ RESTART = %(mint_mode)s
             verbose=False,
         )
         if self.run_card['macnlops']:
-            macnlops.write_source_manifest(self.me_dir, self.run_name,
-                                          evt_files + [evt_file])
+            # The channel sources stay in SubProcesses as matching provenance.
+            macnlops.write_source_manifest(self.me_dir, self.run_name, source_files)
         
         if not options['reweightonly']:
             self.print_summary(options, 2, mode, scale_pdf_info)
@@ -4005,6 +4008,36 @@ RESTART = %(mint_mode)s
         return evt_file[:-3]
 
 
+    def run_macnlops_first_emission(self, evt_files, banner):
+        """MAcNLOPS step 2: in every channel, in parallel, shower one step and
+        apply the H removal and S veto (MacNLOPSMatch.cc). Returns the event
+        files and header template to collect."""
+        self.update_status('MAcNLOPS first emission', level='parton')
+        jobs = macnlops.prepare_first_emission(self.me_dir, self.run_card,
+            self.options['pythia8_path'], evt_files, self.get_randinit_seed(),
+            keep_rejected=self.run_card['macnlops_keep_rejected'], workers=self.nb_core)
+        run_type = 'MAcNLOPS first emission'
+        self.ijob = 0
+        self.njobs = len(jobs)
+        for job in jobs:
+            self.run_exe(job['exe'], job['args'], run_type, cwd=job['cwd'])
+        if self.cluster_mode == 2:
+            time.sleep(1)
+        if self.njobs:
+            self.wait_for_complete(run_type)
+        summaries, report = macnlops.check_first_emission(jobs)
+        counts, weights = report['counts'], report['weight_sums']
+        with open(pjoin(self.me_dir, 'Events', self.run_name, 'macnlops_first_emission.json'), 'w') as stream:
+            json.dump(dict(report, channels=summaries), stream, indent=2, sort_keys=True)
+        logger.info('MAcNLOPS first emission (%s): %d of %d S events vetoed, %d of %d H events '
+                    'removed; sum of weights %.6g (MC@NLO-Delta %.6g); rejected events %s',
+                    report['prescription'], counts.get('rejected_S', 0), counts.get('input_S', 0),
+                    counts.get('rejected_H', 0), counts.get('input_H', 0),
+                    weights.get('macnlops', 0.), weights.get('input', 0.), report['rejected_events'])
+        return macnlops.first_emission_collection(jobs, summaries, banner,
+            pjoin(self.me_dir, 'Events', self.run_name))
+
+
     def run_mcatnlo(self, evt_file, options):
         """runs mcatnlo on the generated event file, to produce showered-events
         """
@@ -4012,10 +4045,18 @@ RESTART = %(mint_mode)s
         with macnlops.LHEStream(source_file) as source:
             source_card = re.search(r'<MGRunCard>(.*?)</MGRunCard>', source.header, re.S | re.I)
             matched_sample = macnlops.matched_lhe_header(source.header)
-        self.macnlops_continuation = (macnlops.continuation_contract(source_file)
-                                      if matched_sample else None)
+            first_emission = macnlops.first_emission_header(source.header) is not None
+        # A first-emission sample (step 2 after generation) is showered with
+        # the normal settings from its recorded scales; an older accepted
+        # sample also restores its recorded first-stage physics.
+        if first_emission:
+            self.macnlops_continuation = macnlops.first_emission_contract(source_file)
+        else:
+            self.macnlops_continuation = (macnlops.continuation_contract(source_file)
+                                          if matched_sample else None)
+        legacy_continuation = bool(self.macnlops_continuation) and not first_emission
         source_macnlops = source_card and macnlops.run_card_values(source_card[1]).get('macnlops')
-        if source_macnlops in ('true', '.true.', 't') and not matched_sample:
+        if source_macnlops in ('true', '.true.', 't') and not matched_sample and not first_emission:
             output = macnlops.run_generated_sample(self.me_dir, evt_file,
                 self.options['pythia8_path'], self.get_randinit_seed())
             logger.info('Collected MAcNLOPS first-emission events: %s', output)
@@ -4032,13 +4073,17 @@ RESTART = %(mint_mode)s
             if shower != 'PYTHIA8':
                 raise aMCatNLOError('MAcNLOPS LHE continuation requires PYTHIA8')
             self.banner.run_card['nevents'] = self.macnlops_continuation['events']
-            # Source-run split files are a different event population. The
-            # collected matched file is already randomized and sum-normalized.
-            self.shower_card['nsplit_jobs'] = 1
-            # The accepted file pins its source PDF; a mutable shower card may
-            # not replace it with the normal internal-PDF default.
-            self.shower_card['pdfcode'] = 1
-            logger.info('Continuing the accepted MAcNLOPS LHE with local recoil and saved shower bounds')
+            if legacy_continuation:
+                # Source-run split files are a different event population. The
+                # collected matched file is already randomized and sum-normalized.
+                self.shower_card['nsplit_jobs'] = 1
+                # The accepted file pins its source PDF; a mutable shower card may
+                # not replace it with the normal internal-PDF default.
+                self.shower_card['pdfcode'] = 1
+                logger.info('Continuing the accepted MAcNLOPS LHE with local recoil and saved shower bounds')
+            else:
+                logger.info('Showering the MAcNLOPS first-emission events from their recorded '
+                            'scales with local recoil')
 
         #check that the number of split event files divides the number of
         # events, otherwise set it to 1
@@ -4207,10 +4252,10 @@ RESTART = %(mint_mode)s
         os.mkdir(rundir)
         files.cp(shower_card_path, rundir)
 
-        # The accepted continuation is one collected file. Only ordinary
-        # source samples may reuse or regenerate the source run's split files.
+        # An older accepted continuation is one collected file. Other samples,
+        # first-emission ones included, may reuse or regenerate split files.
         event_files = []
-        if not self.macnlops_continuation:
+        if not legacy_continuation:
             event_directory = pjoin(self.me_dir, 'Events', self.run_name)
             event_files = misc.glob('events.lhe_*', event_directory)
             if max(len(event_files), 1) != self.shower_card['nsplit_jobs']:
@@ -4275,7 +4320,7 @@ RESTART = %(mint_mode)s
             script = open(pjoin(self.me_dir, 'MCatNLO', 'shower_template.sh')).read() \
                 % {'ld_library_path': ld_library_path,
                    'extralibs': ':'.join(extrapaths)}
-            if self.macnlops_continuation:
+            if legacy_continuation:
                 # Batch jobs must resolve the validated native backend and PDF
                 # data, independently of the environment on the worker node.
                 environment = self.macnlops_continuation['environment']
@@ -4908,11 +4953,12 @@ RESTART = %(mint_mode)s
         if continuation:
             content += 'MACNLOPS_ISR_CUTOFF=%.17e\nMACNLOPS_FSR_CUTOFF=%.17e\n' % tuple(
                 continuation['shower_cutoffs'])
-            physics_file = 'macnlops_continuation.cmnd'
-            continuation['environment'] = macnlops.write_continuation_settings(
-                self.me_dir, self.options['pythia8_path'], evt_file, continuation,
-                pjoin(self.me_dir, 'MCatNLO', physics_file))
-            content += 'MACNLOPS_PHYSICS_FILE=%s\n' % physics_file
+            if continuation['schema'] != 'macnlops-first-emission-v1':
+                physics_file = 'macnlops_continuation.cmnd'
+                continuation['environment'] = macnlops.write_continuation_settings(
+                    self.me_dir, self.options['pythia8_path'], evt_file, continuation,
+                    pjoin(self.me_dir, 'MCatNLO', physics_file))
+                content += 'MACNLOPS_PHYSICS_FILE=%s\n' % physics_file
         if self.banner.get_detail('run_card', 'mcatnlo_delta') :
             content += 'DELTA=ON\n'
         else:
@@ -5201,6 +5247,11 @@ RESTART = %(mint_mode)s
             return self.cluster.submit2(exe, args, cwd=cwd, 
                              input_files=input_files, output_files=output_files,
                              required_output=output_files) 
+
+        elif 'macnlops_onestep' in exe:
+            # A MAcNLOPS first-emission job reads its channel and P* directories
+            # in place (shared disk); submit2 resolves the wrapper in cwd.
+            return self.cluster.submit2(exe, args, cwd=cwd)
 
         elif 'ajob' in exe:
             # the 'standard' amcatnlo job
@@ -5638,6 +5689,9 @@ RESTART = %(mint_mode)s
         if self.run_card['macnlops']:
             if mode not in ('aMC@NLO', 'noshower'):
                 raise aMCatNLOError('MAcNLOPS requires full NLO matched event generation')
+            if not self.run_card['mcatnlo_delta']:
+                raise aMCatNLOError('MAcNLOPS matches MC@NLO-Delta sources: set '
+                                    'MCatNLO_DELTA = True in the run card')
             macnlops.prepare_generation(self.me_dir, self.run_card,
                                         self.options['pythia8_path'])
 

@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from docs.audits.check_macnlops_component_endpoints import build_driver, command
+from docs.audits.check_macnlops_source_h import evaluator_source
 from madgraph.various.macnlops_components import (
     branch_candidates, component_orbit_factors, transport_component_basis)
 
@@ -113,7 +114,7 @@ def check(process):
     source_selector = (2, 5, 1)
     if not any(g['config'] == 2 and g['graph'] == 5 for g in basis['graphs']):
         raise RuntimeError('Unexpected pure-QCD gg Born diagram convention')
-    source = (ROOT / 'Template/NLO/SubProcesses/driver_macnlops.f').read_text()
+    source = evaluator_source()
     # Only this temporary audit driver prints its inverse Born. The physical
     # endpoint is fixed first; these rows construct two ancestry interpretations
     # of that same real point, not a second independent phase-space point.

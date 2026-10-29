@@ -1,5 +1,91 @@
 # MAcNLOPS from the generated measures
 
+## Per-channel first emission: 29 October (`component-undamped-delta-v3`)
+
+With `macnlops = True`, which requires `MCatNLO_DELTA = True`, a matched
+`launch` runs four stages:
+
+1. Integration and event generation of the sampled MC@NLO-Delta source,
+   unchanged. Every event carries its hard annotation and component
+   packet, and every channel's `res_1` its S and Born integrals.
+2. Before collection, every channel file is processed by its directory's
+   `SubProcesses/P*/macnlops_onestep`, all in parallel through the usual
+   cluster or multicore submission. This program is
+   `MCatNLO/srcPythia8/MacNLOPSMatch.cc` linked with the directory's
+   densities (`driver_macnlops.f`, called through `macnlops_capi.f`). It
+   reads each event once: one stock Pythia 8.318 step for S, then R, D and
+   K in process, the S veto or negative-H removal, and the endpoint with
+   its continuation scales. Pythia and the Fortran state live for the
+   whole channel; nothing is restarted per event.
+3. The channel outputs `events_macnlops.lhe` are ordinary LHE files, which
+   `collect_events` combines into `Events/RUN/events.lhe.gz`. By default
+   (`macnlops_keep_rejected = True`) every event is kept with its nominal
+   weight, and `<wgt id='macnlops'>` carries the MAcNLOPS weight: the
+   nominal weight, or zero for a vetoed S or removed H event. Each event's
+   `<macnlops_decision>` records the acceptance probability and its inputs
+   (R, D, K, pT, beta K_sh/K and its factors). With
+   `macnlops_keep_rejected = False` rejected events are dropped and the
+   `<init>` block gives the retained cross sections.
+   `Events/RUN/macnlops_first_emission.json` collects the channel summaries.
+4. The shower stage recognises `<macnlops_first_emission>` and showers with
+   the normal Pythia8 interface and shower card, from the recorded scales
+   and with local recoil: almost every event already has its first
+   emission and is showered like an H event. Only the hand-off is imposed
+   (scale import, pT ceilings, endpoint masses, no ME corrections, and the
+   one-step ISR/FSR cutoffs, below which exhausted S events start). The
+   analysis receives `macnlops` as an additional weight.
+
+The one-step shower uses the coupling of the Sudakov tables, which are
+never regenerated: alpha_s(MZ) = 0.1365 at one loop, no CMW, pT0Ref = 0
+(`docs/macnlops_parameter_consistency.md`). It is hard-coded in
+`MacNLOPSMatch.cc` and `macnlops.TABLE_ALPHA_S`, the profile probe before
+generation uses it (both cutoffs become 0.5 GeV), and
+`#DeltaBackwardAlphaS`/`Order` default to it.
+
+The S veto now uses the shower's emission density in full,
+
+\[
+ v_3=\min\left\{1,\frac{\min(u,K)}{\beta_c\,K_{\rm sh}}\right\},\qquad
+ K_{\rm sh}=K\,\frac{\alpha_s^{\rm PS}(p_{T,\rm evol})}{\alpha_s^{K}}\,
+ \frac{R_{\rm PS}}{R_K},\qquad
+ R(\mu^2)=\frac{x' f_{a'}(x',\mu^2)}{x\,f_a(x,\mu^2)} .
+\]
+
+For ISR, R is the emission's PDF ratio on the radiating beam (Born flavour
+a at x, emitting flavour a' at x'): R_PS at the shower's scale pT^2 with
+the shower's PDF, R_K at the counterterm's factorisation scale, which the
+evaluator now reports with K's coupling. FSR has R_PS/R_K = 1. beta_c =
+sigma_S/sigma_B of the channel; the H removal is unchanged. Couplings and
+luminosity of the S Born at Born rather than real-point scales are not
+corrected: like beta_c they are 1+O(alpha_s), and beta_c averages them.
+
+Run with `--s-veto v2` and the same seed, the program reproduces the
+earlier Python chain (MacNLOPS.exe proposals, the `macnlops_evaluator`
+line protocol and `reject_proposals`) event by event on the same channel
+files: identical endpoints, and R, D, K and the acceptance probabilities
+agree to 1e-12. Fresh NNPDF4.0 samples at 13 TeV:
+
+| Sample | Events | Evaluated | Several orientations | Differences | v3/v2 - 1 in sum w p_keep | median R_PS/R_K (range) |
+| --- | --- | --- | --- | --- | --- | --- |
+| DY | 20000 | 17328 | 0 | 0 | +0.06% | 1.019 (0.21-24) |
+| ttbar | 10000 | 9063 | 0 | 0 | +0.16% | 1.019 (0.36-3.0) |
+| W+jet | 10000 | 7802 | 590 | 0 | +0.27% | 1.021 (0.14-21) |
+| dijets (pT > 50 GeV) | 5000 | 4631 | 1059 | 0 | +0.90% | 1.007 (0.64-3.3) |
+
+In 447 dijet S events the selected component exchanges the two identical
+Born gluons, so its diagram and flow use the exported Born transport.
+Where the two chains marked different equivalent orientations (102 W+jet
+and 211 dijet events), the selected kernel is one of the earlier chain's
+candidates and the total kernels agree. The dijet sample is statistically
+poor (negative total), which does not affect this comparison. Showering the collected DY sample with the
+generated `Pythia8.cmd` and MG's Pythia 8.3 driver logic (without HepMC
+output) consumed all 20000 events once; the analysis received the nominal
+and `macnlops` weights with sums equal to the file's.
+
+The sections below describe the earlier chain, which the explicit CLI
+(`bin/internal/macnlops.py`) and the audit scripts still use for older
+samples.
+
 ## S-veto normalisation for sampled Delta: 27 October (`component-undamped-delta-v2`)
 
 The undamped Delta rule removes `T = Delta_src*min(u,K)` from negative H

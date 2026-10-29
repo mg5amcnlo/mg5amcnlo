@@ -37,14 +37,14 @@ the Sudakov table. Numbers refer to the DY and ttbar checks in
 | Hard process | B, V, R and the MC counterterms (`K`, dead zones, `D(mu)` starting scales) | `alpha_s^ME(mu_R)`, hard PDFs at `mu_F`, model masses, MC kernels and maps |
 | Source `Delta_src` | no-emission probability between `D(mu)` start and the reconstructed stopping scale, per Born leg | table (`alpha_s^tab`, its running, `pT0`, masses, recoil and z bounds, forward PDF mode) times the PDF ratio of the hard PDF; optional backward correction |
 | One-step shower | first emission, or its absence, of each S event | `alpha_s^PS`, running, CMW, `pT0Ref`, `pTmin`, shower PDF, recoil, masses, nfmax |
-| S veto | `v = min(u,K)/(beta_c K_sh)`, `K_sh = K alpha_s^PS(pT_evol)/alpha_s^K` | `alpha_s^K` = `alpha_s^ME` at the real point's `mu_R`; `alpha_s^PS` recorded at the emission; `beta_c = sigma_S/sigma_B` |
+| S veto | `v = min(u,K)/(beta_c K_sh)`, `K_sh = K (alpha_s^PS(pT_evol)/alpha_s^K) (R_PS/R_K)` | `alpha_s^K` = `alpha_s^ME` at the real point's `mu_R`; `alpha_s^PS` at the emission; for ISR the emission's PDF ratio at `pT^2` (shower) and at K's `mu_F` (v3, 29 October); `beta_c = sigma_S/sigma_B` |
 | Continuation | the rest of the shower from the handoff | anything, within the handoff constraints below |
 
 ## Current values
 
 | Input | Hard process | Table (archive) | One-step shower |
 | --- | --- | --- | --- |
-| alpha_s(MZ), order | PDF value 0.1180024, NLO | 0.1365, one loop | PDF `AlphaS_MZ`, `AlphaS_OrderQCD`+1: 0.118, two loops |
+| alpha_s(MZ), order | PDF value 0.1180024, NLO | 0.1365, one loop | 0.1365, one loop (since 29 October; before: the PDF's 0.118 at two loops) |
 | CMW | - | off | off |
 | ISR `pT0Ref` | - | 0 (forced by the generation wrapper) | 0 (forced) |
 | `StandardModel:alphaSnfmax` | - | 6 (default) | 5 (forced) |
@@ -135,8 +135,9 @@ SpaceShower:alphaSuseCMW = off       TimeShower:alphaSuseCMW = off
 SpaceShower:pT0Ref = 0
 ```
 
-Today the coupling comes from the PDF metadata (`shower_parameters()`) and
-would need a profile entry for the table-aligned choice. CMW, `pT0Ref`, ME
+Since 29 October the one-step shower uses these values, hard-coded in
+`MacNLOPSMatch.cc` and `macnlops.TABLE_ALPHA_S` and used by the profile
+probe before generation; they no longer come from the PDF. CMW, `pT0Ref`, ME
 corrections, rapidity ordering, azimuthal asymmetries and ISR recoil
 already agree. The remaining generation differences are accepted or cannot
 be changed: the archive's `alphaSnfmax = 6` (the one-step shower forces 5;
@@ -248,23 +249,22 @@ earlier quark-only prototype by less than 1e-4. In DY at 0.118 (second
 order) the quark correction brings X/Y from 1.75 to 1.41 (net -1.09% to
 -0.66%) without measurable cost.
 
-With an aligned one-step shower, set `#DeltaBackwardAlphaS 0.1365d0` and
-`#DeltaBackwardAlphaSOrder 1`. F then equals the table entries (within
-1%, 0.3% above 10 GeV), and C is evaluated at the shower's coupling.
-Both values must equal the one-step shower's; reading them from the same
-profile as the shower is still to be done.
+With the aligned one-step shower, `#DeltaBackwardAlphaS 0.1365d0` and
+`#DeltaBackwardAlphaSOrder 1` are the defaults. F then equals the table
+entries (within 1%, 0.3% above 10 GeV), and C is evaluated at the shower's
+coupling. A unit test checks that the card defaults, `MacNLOPSMatch.cc`
+and `macnlops.py` agree.
 
 ## Decisions
 
-1. Choose the one-step coupling policy: tied to the PDF (now), aligned to
-   the table, or regenerated tables at the PDF coupling. Alignment needs
-   only shower settings (every table entry fits 0.1365 at one loop); the
-   continuation is unaffected.
-2. Make `alpha_s^PS` a single recorded profile value that the shower, the
-   backward correction and the provenance all read.
-3. Keep `alpha_s^K` as the hard coupling at the real point, and add the
-   PDF factor to `K_sh` if the one-step shower ever uses a different PDF
-   set.
-4. Decide how to treat the grouped flavour sums of quark legs, which cost
+1. One-step coupling: aligned to the table and hard-coded (29 October).
+   The continuation uses the normal shower card.
+2. `alpha_s^PS`: one value, 0.1365 at one loop, shared by the one-step
+   program, the profile probe and the `DeltaBackwardISR` defaults
+   (checked by a unit test rather than read from one profile).
+3. `alpha_s^K` stays the hard coupling at the real point. `K_sh` now also
+   replaces K's PDF ratio of the emission by the shower's (v3), which
+   covers the scale difference as well as any set difference.
+4. Open: how to treat the grouped flavour sums of quark legs, which cost
    4-9% at 10-20 GeV in DY. The backward correction itself now covers
    every incoming quark and gluon.

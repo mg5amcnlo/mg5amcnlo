@@ -8,6 +8,11 @@ leading kernel at the shower's own emission coupling. Legacy globally summed
 Delta sources still use conditional damping replay.
 Any part that cannot be transferred with a bounded probability remains a
 signed H residual. The scalar/gated source is an explicit legacy option.
+
+A macnlops=True launch matches each channel right after generation with
+MacNLOPSMatch.cc (prepare_first_emission and the functions after it). The
+Python chain below (run_files, NativeEvaluator, reject_proposals) remains
+for older samples and audits.
 """
 
 from __future__ import annotations
@@ -51,6 +56,16 @@ SOURCE_CONSTRUCTIONS = {name: construction for construction, name in SOURCE_NAME
 # v2 normalises the S veto to beta*K_sh; v1 divided by the bare K.
 UNDAMPED_DELTA_POLICY = 'component-undamped-delta-v2'
 LEGACY_UNDAMPED_DELTA_POLICY = 'component-undamped-delta-v1'
+# v3 (MacNLOPSMatch.cc) also gives K_sh the shower's PDF ratio for ISR.
+FIRST_EMISSION_POLICY = 'component-undamped-delta-v3'
+# The archived MC@NLO-Delta Sudakov tables behave as Pythia's default shower
+# coupling: alpha_s(MZ) = 0.1365 at one loop, no CMW, pT0Ref = 0
+# (docs/macnlops_parameter_consistency.md). They are never regenerated, so
+# the one-step shower uses it too. MacNLOPSMatch.cc hard-codes the same values.
+TABLE_ALPHA_S = 0.1365
+TABLE_ALPHA_S_ORDER = 1
+# Matching-side sources: their changes do not alter the generated density.
+MATCHING_ONLY_SOURCES = ('driver_macnlops.f', 'macnlops_evaluator.f', 'macnlops_capi.f')
 HARD_METADATA_FIELDS = (
     'nup', 'kind', 'owner', 'native_sector', 'native_provider',
     'native_context', 'native_history', 'born_flow', 'mc_kl_sum',
@@ -1833,7 +1848,7 @@ def source_files(process_dir):
     """Files defining the generated hard density and its subtraction."""
     patterns = ('Cards/run_card.dat', 'Cards/param_card.dat',
                 'Cards/macnlops_profile.json', 'Cards/macnlops_shower.cmnd',
-                'MCatNLO/srcPythia8/MacNLOPS.cc',
+                'MCatNLO/srcPythia8/MacNLOPS.cc', 'MCatNLO/srcPythia8/MacNLOPS.h',
                 'SubProcesses/FKS_params.dat', 'SubProcesses/*.f',
                 'SubProcesses/*.f90', 'SubProcesses/*.inc',
                 'SubProcesses/P*/*.f', 'SubProcesses/P*/*.f90',
@@ -1843,7 +1858,7 @@ def source_files(process_dir):
                 'Source/MODEL/*.f', 'Source/MODEL/*.inc')
     return {str(path.relative_to(process_dir)): sha256(path)
             for pattern in patterns for path in sorted(process_dir.glob(pattern))
-            if path.is_file() and path.name != 'driver_macnlops.f'}
+            if path.is_file() and path.name not in MATCHING_ONLY_SOURCES}
 
 
 def write_source_manifest(process_dir, run_name, inputs):
@@ -1869,7 +1884,7 @@ def check_manifest(filename, process_dir):
     if manifest.get('schema') != 'macnlops-source-v2' or manifest.get('lhe_sha256') != lhe_sha256(filename):
         raise MatchingError('Generation manifest does not describe the input event file')
     mismatch = [name for name, digest in manifest['sources'].items()
-                if Path(name).name != 'driver_macnlops.f' and
+                if Path(name).name not in MATCHING_ONLY_SOURCES and
                 (not (process_dir / name).is_file() or sha256(process_dir / name) != digest)]
     if mismatch:
         raise MatchingError('Generation sources/cards changed since event generation: ' + ', '.join(mismatch[:8]))
@@ -1992,13 +2007,11 @@ def pdf_name(process_dir, card, with_info=False):
     raise MatchingError('Cannot resolve LHAPDF ID %d in the configured data directories' % pdf_id)
 
 
-def shower_parameters(process_dir, pdf_info, output, custom=None):
-    """Use the hard model's external masses and the PDF's coupling input."""
-    text = pdf_info.read_text()
-    alpha = re.search(r'^AlphaS_MZ:\s*([\d.Ee+-]+)', text, re.M)
-    order = re.search(r'^AlphaS_OrderQCD:\s*(\d+)', text, re.M)
-    if not alpha or not order:
-        raise MatchingError('PDF metadata must specify AlphaS_MZ and AlphaS_OrderQCD')
+def shower_parameters(process_dir, output, custom=None):
+    """Write the hard model's external masses; return the tables' coupling.
+
+    The one-step coupling is TABLE_ALPHA_S at one loop, whatever the PDF's.
+    """
     lines = []
     if custom:
         lines.append(custom.read_text())
@@ -2008,7 +2021,7 @@ def shower_parameters(process_dir, pdf_info, output, custom=None):
     # User overrides are applied first; the matching profile is checked in C++.
     lines += ['SpaceShower:pTmin = 0.5', 'TimeShower:pTmin = 0.5']
     output.write_text('\n'.join(lines) + '\n')
-    return number(alpha[1]), int(order[1]) + 1
+    return TABLE_ALPHA_S, TABLE_ALPHA_S_ORDER
 
 
 def native_library_environment(pythia8):
@@ -2101,7 +2114,7 @@ def build_shower(process_dir, pythia8, log, pdf=None):
                        stderr=subprocess.STDOUT, check=True, env=environment)
     driver = directory / (target + '.exe')
     pins = {name: sha256(directory / name) for name in
-            ('MacNLOPS.cc', 'Makefile') if (directory / name).is_file()}
+            ('MacNLOPS.cc', 'MacNLOPS.h', 'Makefile') if (directory / name).is_file()}
     libraries = shower_library_hashes(prefix)
     linked = subprocess.run(['ldd', str(driver)], capture_output=True, text=True,
                             check=True, env=environment).stdout
@@ -2166,7 +2179,7 @@ def prepare_generation(process_dir, run_card, pythia8):
         raise MatchingError('PDF flavour count differs from macnlops_flavour_count')
     settings = process_dir / 'Cards/macnlops_shower.cmnd'
     custom = process_dir / 'Cards/macnlops_custom.cmnd'
-    alpha, order = shower_parameters(process_dir, info, settings,
+    alpha, order = shower_parameters(process_dir, settings,
                                      custom if custom.exists() else None)
     driver = build_shower(process_dir, pythia8, process_dir / 'macnlops_build.log', pdf=pdf)
     native_build = Path(str(process_dir / 'macnlops_build.log') + '.build.json')
@@ -2241,6 +2254,251 @@ def run_generated_sample(process_dir, filename, pythia8, seed):
           *(str(path) for path in inputs)])
     return output / 'events.lhe.gz'
 
+
+
+# In-process first emission for MC@NLO-Delta (MacNLOPSMatch.cc). Each
+# channel's events are showered one step and matched right after generation,
+# in parallel, and collected as the run's ordinary events file.
+
+def write_route_table(directory):
+    """Export one P* registry's discrete branching routes for MacNLOPSMatch.cc.
+
+    Identical-Born transports are certified once, here, with
+    macnlops_components.transport_component_basis; the program looks them up.
+    """
+    directory = Path(directory)
+    try:
+        record = json.loads((directory / 'mc_histories.json').read_text())
+        registry = record['registry']
+        fingerprint = hashlib.sha256(json.dumps(registry, sort_keys=True,
+            separators=(',', ':')).encode('utf-8')).hexdigest()
+        outer = registry['outer']
+        basis = outer['component_basis']
+        if (record.get('schema') != 'macnlops-history-registry-v1' or
+                record.get('sha256') != fingerprint or outer['directory'] != directory.name or
+                basis.get('schema') != 'macnlops-component-basis-v1'):
+            raise ValueError('registry identity, directory or component basis')
+        nexternal = outer['nexternal']
+        states = [macnlops_components._freeze(state) for state in basis['external_states']]
+        if len(states) != nexternal - 1:
+            raise ValueError('Born external states')
+        classes = [states.index(state) for state in states]
+        lines = ['MACNLOPS_ROUTES_V1 %s %s %d %d' % (fingerprint, outer['directory'],
+                                                    nexternal, nexternal - 1),
+                 'BORN_PDGS %d' % len(outer['born_pdgs'])]
+        lines += [' '.join(map(str, row)) for row in outer['born_pdgs']]
+        lines.append('STATE_CLASSES ' + ' '.join(map(str, classes)))
+        lines.append('SECTORS %d' % len(outer['sectors']))
+        for sector in outer['sectors']:
+            fks = sector['fks']
+            rows = sorted(macnlops_components._process_pdgs(sector))
+            lines.append('SECTOR %d %d %d %d %d %d' % (sector['sector'], fks['i'], fks['j'],
+                         fks['ij'], 'QCD' in fks['splitting_type'], len(rows)))
+            lines += [' '.join(map(str, row)) for row in rows]
+        transport = []
+        for a in range(2, nexternal - 1):
+            for b in range(a + 1, nexternal - 1):
+                if classes[a] != classes[b]:
+                    continue
+                permutation = list(range(nexternal - 1))
+                permutation[a], permutation[b] = b, a
+                for graph in basis['graphs']:
+                    for flow in range(1, len(basis['flows']) + 1):
+                        try:
+                            image = macnlops_components.transport_component_basis(
+                                registry, permutation, graph['config'], graph['graph'], flow)
+                        except macnlops_components.MappingError:
+                            continue
+                        transport.append('%d %d %d %d %d %d %d %d' % (
+                            a, b, graph['config'], graph['graph'], flow, *image))
+        lines += ['TRANSPORT %d' % len(transport)] + transport + ['END']
+    except (OSError, KeyError, IndexError, TypeError, ValueError,
+            macnlops_components.MappingError) as exc:
+        raise MatchingError('Cannot export the branching routes of %s (export a fresh '
+                            'process): %s' % (directory, exc)) from exc
+    target = directory / 'macnlops_routes.dat'
+    staged = directory / 'macnlops_routes.dat.tmp'
+    staged.write_text('\n'.join(lines) + '\n')
+    os.replace(staged, target)
+    return target
+
+
+def prepare_first_emission(process_dir, run_card, pythia8, inputs, seed,
+                           keep_rejected=True, workers=1):
+    """Build every channel directory's first-emission program; one job per input.
+
+    Jobs run macnlops_onestep.sh in the channel directory and write
+    events_macnlops.lhe with its events_macnlops.json summary there.
+    """
+    import concurrent.futures
+    import shlex
+    process_dir = Path(process_dir).resolve()
+    if not pythia8:
+        raise MatchingError('macnlops=True requires pythia8_path')
+    if source_construction(run_card) != DELTA_SOURCE:
+        raise MatchingError('The MAcNLOPS first emission matches MC@NLO-Delta sources')
+    ids = run_card['lhaid']
+    ids = ids if isinstance(ids, (list, tuple)) else [ids]
+    if len(ids) != 1:
+        raise MatchingError('A single central LHAPDF member is required')
+    pdf, info = pdf_name(process_dir, dict(pdlabel=run_card['pdlabel'], lhaid=str(ids[0])),
+                         with_info=True)
+    settings = process_dir / 'Cards/macnlops_shower.cmnd'
+    if not settings.is_file():
+        raise MatchingError('Missing measured shower settings; generate a fresh macnlops=True sample')
+    prefix = Path(pythia8).resolve()
+    build_environment = native_library_environment(prefix)
+    source = process_dir / 'MCatNLO/srcPythia8'
+    with open(source / 'MacNLOPSMatch.build.log', 'w') as log:
+        if subprocess.run(['make', 'MacNLOPSMatch.o', 'PYTHIA8LOCATION=' + str(prefix)],
+                          cwd=source, stdout=log, stderr=subprocess.STDOUT,
+                          env=build_environment).returncode:
+            raise MatchingError('Building MacNLOPSMatch.o failed; see %s' % log.name)
+    inputs = [Path(filename).resolve() for filename in inputs]
+    directories = sorted({filename.parent.parent for filename in inputs})
+
+    def build(directory):
+        write_route_table(directory)
+        with open(directory / 'macnlops_onestep.build.log', 'w') as log:
+            if subprocess.run(['make', 'macnlops_onestep', 'PYTHIA8LOCATION=' + str(prefix)],
+                              cwd=directory, stdout=log, stderr=subprocess.STDOUT,
+                              env=build_environment).returncode:
+                raise MatchingError('Building %s/macnlops_onestep failed; see %s' %
+                                    (directory.name, log.name))
+
+    with concurrent.futures.ThreadPoolExecutor(max(1, int(workers))) as pool:
+        for future in [pool.submit(build, directory) for directory in directories]:
+            future.result()
+    environment = shower_environment(prefix, info)
+    wrapper = process_dir / 'SubProcesses/macnlops_onestep.sh'
+    wrapper.write_text('#!/usr/bin/env bash\n'
+                       '# MAcNLOPS first emission of the channel in the current directory.\n' +
+                       ''.join('export %s=%s\n' % (key, shlex.quote(environment[key]))
+                               for key in ('LD_LIBRARY_PATH', 'LHAPDF_DATA_PATH', 'PYTHIA8DATA')) +
+                       'exec ../macnlops_onestep "$@" > macnlops_onestep.log 2>&1\n')
+    wrapper.chmod(0o755)
+    jobs = []
+    for index, filename in enumerate(inputs):
+        channel = filename.parent
+        link = channel / wrapper.name
+        if link.is_symlink() or link.exists():
+            link.unlink()
+        link.symlink_to(os.path.relpath(wrapper, channel))
+        output, summary = channel / 'events_macnlops.lhe', channel / 'events_macnlops.json'
+        for stale in (output, summary):
+            stale.unlink(missing_ok=True)
+        args = ['--input', filename.name, '--output', output.name, '--summary', summary.name,
+                '--routes', '../macnlops_routes.dat', '--settings', str(settings),
+                '--pdf', pdf, '--seed', str(1 + (int(seed) + index) % 899999999)]
+        if not keep_rejected:
+            args.append('--drop-rejected')
+        jobs.append(dict(cwd=str(channel), exe=wrapper.name, args=args, input=str(filename),
+                         output=str(output), summary=str(summary)))
+    return jobs
+
+
+def check_first_emission(jobs):
+    """Read every channel summary; fail with the logs of incomplete channels."""
+    summaries, failures = [], []
+    for job in jobs:
+        try:
+            record = json.loads(Path(job['summary']).read_text())
+        except (OSError, ValueError):
+            record = dict(status='missing summary')
+        complete = record.get('status') == 'complete'
+        if complete:
+            with open(job['output'], 'rb') as output:
+                output.seek(max(0, Path(job['output']).stat().st_size - 64))
+                complete = output.read().strip().endswith(b'</LesHouchesEvents>')
+        if not complete:
+            failures.append('%s: %s (see %s)' % (job['input'], record.get('error') or
+                            record.get('status') or 'truncated output',
+                            Path(job['cwd']) / 'macnlops_onestep.log'))
+        record['directory'] = job['cwd']
+        summaries.append(record)
+    if failures:
+        raise MatchingError('MAcNLOPS first emission failed in %d of %d channels:\n  %s' %
+                            (len(failures), len(jobs), '\n  '.join(failures[:10])))
+    counts, weights = Counter(), Counter()
+    for record in summaries:
+        counts.update(record['counts'])
+        weights.update(record['weight_sums'])
+    modes = {(record['prescription'], record['rejected_events']) for record in summaries}
+    if len(modes) != 1:
+        raise MatchingError('Channels used different MAcNLOPS prescriptions')
+    prescription, rejected = modes.pop()
+    return summaries, dict(counts=dict(counts), weight_sums=dict(weights),
+                           prescription=prescription, rejected_events=rejected)
+
+
+def first_emission_collection(jobs, summaries, header_template, directory):
+    """Inputs and header template for collect_events.
+
+    With kept rejections the channel files carry everything. Dropped ones
+    need a leading zero-event input with the retained cross sections (the
+    collector takes <init> from its first input) and the retained count.
+    """
+    outputs = [job['output'] for job in jobs]
+    if summaries[0]['rejected_events'] == 'kept':
+        return outputs, header_template
+    kept, squares, maxima, variances, retained = Counter(), Counter(), Counter(), Counter(), 0
+    for record in summaries:
+        trials = sum(item['events'] for item in record['processes'].values())
+        for process, item in record['processes'].items():
+            kept[int(process)] += item['macnlops']
+            squares[int(process)] += item['macnlops_squares']
+            maxima[int(process)] = max(maxima[int(process)], item['macnlops_max'])
+            variances[int(process)] += sample_sum_variance(trials, item['macnlops'],
+                                                           item['macnlops_squares'])
+        retained += record['counts'].get('accepted_S', 0) + record['counts'].get('accepted_H', 0)
+    with LHEStream(outputs[0]) as stream:
+        header = stream.header
+    match = re.search(r'(<init>)(.*?)(</init>)', header, re.S)
+    rows = [line.split() for line in match[2].splitlines() if line.strip()]
+    for row in rows[1:]:
+        process = int(row[3])
+        row[:3] = ['%.17e' % kept[process], '%.17e' % math.sqrt(variances[process]),
+                   '%.17e' % maxima[process]]
+    header = (header[:match.start()] + '<init>\n' + '\n'.join(' '.join(row) for row in rows) +
+              '\n</init>' + header[match.end():])
+    preamble = Path(directory) / 'macnlops_collection_preamble.lhe'
+    preamble.write_text(header + '</LesHouchesEvents>\n')
+    template = Path(directory) / 'macnlops_collection_banner.txt'
+    template.write_text(re.sub(r'(?m)^(\s*)\d+(\s*=\s*nevents\b)', r'\g<1>%d\2' % retained,
+                               Path(header_template).read_text(), count=1))
+    return [str(preamble)] + outputs, str(template)
+
+
+def first_emission_header(header):
+    """Attributes of a collected sample's <macnlops_first_emission/>, or None."""
+    markers = re.findall(r'<macnlops_first_emission\b([^<>]*?)/>', header)
+    if not markers:
+        return None
+    attributes = xml_attributes(markers[0], 'first-emission marker')
+    try:
+        cutoffs = [number(attributes['cutoff_isr']), number(attributes['cutoff_fsr'])]
+        if (len(markers) != 1 or attributes['version'] != '1' or
+                attributes['weight'] != 'macnlops' or
+                attributes['rejected'] not in ('kept', 'dropped') or
+                not all(math.isfinite(x) and x > 0 for x in cutoffs)):
+            raise ValueError('marker')
+    except (KeyError, ValueError) as exc:
+        raise MatchingError('Invalid MAcNLOPS first-emission marker') from exc
+    attributes['shower_cutoffs'] = cutoffs
+    return attributes
+
+
+def first_emission_contract(filename):
+    """Hand-off of a collected first-emission sample to the normal shower."""
+    with LHEStream(filename) as stream:
+        require_lhef_scales(stream.header)
+        marker = first_emission_header(stream.header)
+        card = re.search(r'<MGRunCard>(.*?)</MGRunCard>', stream.header, re.S | re.I)
+    if marker is None or card is None:
+        raise MatchingError('Not a collected MAcNLOPS first-emission sample: %s' % filename)
+    return dict(schema='macnlops-first-emission-v1', events=int(run_card_values(card[1])['nevents']),
+                shower_cutoffs=marker['shower_cutoffs'], rejected=marker['rejected'],
+                prescription=marker['prescription'], environment=None)
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
@@ -2336,7 +2594,7 @@ def run_file(filename, process_dir, job, driver, args, seed):
     environment = shower_environment(args.pythia8, pdf_info)
     settings = job / 'shower_input.cmnd'
     if args.settings:
-        shower_parameters(process_dir, pdf_info, settings, args.settings)
+        shower_parameters(process_dir, settings, args.settings)
     else:
         shutil.copyfile(process_dir / 'Cards/macnlops_shower.cmnd', settings)
     if sha256(settings) != profile['settings_sha256']:

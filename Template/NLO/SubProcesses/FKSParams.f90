@@ -27,8 +27,8 @@ module FKSParams
   ! quarks and gluons, with the shower's alpha_s(MZ) and its running order
   ! (1 or 2).
   logical :: delta_backward_isr=.false.
-  real*8 :: delta_backward_alphas=0.118d0
-  integer :: delta_backward_alphas_order=2
+  real*8 :: delta_backward_alphas=0.1365d0
+  integer :: delta_backward_alphas_order=1
   logical, private :: FxFxPythia8Matching=.false.
   integer :: FKSFinalRecoil=0
   integer :: FKSISRMapping=0
@@ -314,8 +314,8 @@ contains
     FKSExplicitSum=.false.
     FxFxPythia8FiniteTerms=.false.
     delta_backward_isr=.false.
-    delta_backward_alphas=0.118d0
-    delta_backward_alphas_order=2
+    delta_backward_alphas=0.1365d0
+    delta_backward_alphas_order=1
     IncludeBornContributions=.true.
     SelectedContributionTypes(0)=0
     VetoedContributionTypes(0)=0
