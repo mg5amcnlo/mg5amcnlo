@@ -216,7 +216,7 @@ class TestMECmdShell(unittest.TestCase):
         (bbj: 340^2) and ptj1min charged to a decay jet on top of ptj for the
         production jets (wjj: 460^2). Allowed configurations exist at
         sqrt(shat) ~ 320 GeV (bbj: j=160, b+b~=160) and ~ 390 GeV (wjj: jets
-        160+150, W at rest), the new bounds are 300^2 and 310^2."""
+        160+150, W at rest), the new bounds are 300^2 (ihtmin) and 310^2."""
 
         try:
             shutil.rmtree(self.run_dir)
@@ -249,13 +249,16 @@ class TestMECmdShell(unittest.TestCase):
                 for name in files_in:
                     if not name.endswith('.log'):
                         continue
-                    for line in open(pjoin(root, name)):
-                        if 'Define smin to' in line:
-                            smin.setdefault(pdir, set()).add(float(line.split()[-1]))
+                    with open(pjoin(root, name)) as fsock:
+                        for line in fsock:
+                            if 'Define smin to' in line:
+                                smin.setdefault(pdir, set()).add(float(line.split()[-1]))
         self.assertTrue(smin)
         for pdir, values in smin.items():
             for value in values:
+                # upper: below the allowed minimum; lower: ihtmin bound kept
                 self.assertLessEqual(value, 100000., '%s: smin=%s' % (pdir, value))
+                self.assertGreaterEqual(value, 89999., '%s: smin=%s' % (pdir, value))
 
     def test_madspin_gridpack(self):
 
