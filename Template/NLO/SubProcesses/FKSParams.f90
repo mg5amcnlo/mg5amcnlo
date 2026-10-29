@@ -24,7 +24,8 @@ module FKSParams
   logical :: FKSExplicitSum=.false.
   logical :: FxFxPythia8FiniteTerms=.false.
   ! MC@NLO-Delta prototype: backward no-emission probability for incoming
-  ! quarks, with the shower's alpha_s(MZ) and its running order (1 or 2).
+  ! quarks and gluons, with the shower's alpha_s(MZ) and its running order
+  ! (1 or 2).
   logical :: delta_backward_isr=.false.
   real*8 :: delta_backward_alphas=0.118d0
   integer :: delta_backward_alphas_order=2

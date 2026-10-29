@@ -95,6 +95,8 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
                          'get_delta_connections', 'delta_leg_probability',
                          'gl_safe', 'get_parton_id',
                          'setSudType', 'delta_backward_leg', 'delta_group_xf',
+                         'delta_line_exponents', 'delta_backward_ratios',
+                         'delta_quark_xf', 'delta_active_quarks',
                          'delta_backward_omz', 'delta_alphas_lambdas',
                          'delta_shower_alphas', 'delta_alphas_nf',
                          'delta_alphas_lambda'),

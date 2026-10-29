@@ -1,4 +1,4 @@
-"""MC@NLO-Delta backward-ISR prototype: PYTHIA8 alpha_s and the quark leg probability."""
+"""MC@NLO-Delta backward-ISR prototype: PYTHIA8 alpha_s and incoming quark and gluon legs."""
 
 import math
 from pathlib import Path
@@ -12,9 +12,10 @@ from tests.unit_tests.fks.test_momentum_maps import fortran_routine
 
 ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE = ROOT / 'Template/NLO/SubProcesses'
-ROUTINES = ('delta_backward_leg', 'delta_group_xf', 'delta_backward_omz',
+ROUTINES = ('delta_backward_leg', 'delta_line_exponents', 'delta_backward_ratios',
+            'delta_group_xf', 'delta_quark_xf', 'delta_active_quarks', 'delta_backward_omz',
             'delta_alphas_lambdas', 'delta_shower_alphas', 'delta_alphas_nf',
-            'delta_alphas_lambda', 'get_parton_id')
+            'delta_alphas_lambda', 'gl_safe', 'get_parton_id')
 # PYTHIA 8.318 AlphaStrong (CMW off, nfmax 5), including the freezing below
 # 1.33 (second order) or 1.07 (first order) Lambda_3. Second order with 0.118
 # as in the NNPDF4.0 NLO profile; first order with 0.1365, the archived table's.
@@ -27,10 +28,12 @@ PYTHIA_ALPHAS = {
                  (1.51, 0.45464154807199286), (3.0, 0.32153954080968622),
                  (4.81, 0.26767035945864026), (10.0, 0.21603034203324506),
                  (91.188, 0.1365), (500.0, 0.10635602188389676))}
-CF, TR, MC, MB = 4. / 3., .5, 1.5, 4.8
+CA, CF, TR, MC, MB = 3., 4. / 3., .5, 1.5, 4.8
+QUARKS = tuple(q for q in range(-5, 6) if q)
 
 # Toy x*f(x, mu), rising with scale at small x. Flavour 4 starts at 2 GeV, so a
-# grouped (2, 4) leg also changes its gluon-feed multiplicity there.
+# grouped (2, 4) leg changes its gluon-feed multiplicity there, and a gluon has
+# five active quarks only above 2 GeV.
 TOY_PDF = '''
       double precision function pdg2pdf(ih,ipdg,ibeam,x,xmu)
       implicit none
@@ -55,12 +58,10 @@ DRIVER = '''
       use backward_test
       implicit none
       character(1) mode
-      integer n,flav(3),beam,order
+      integer n,flav(3),beam,order,k
       double precision x,alpha,lambda(3:5)
       type(delta_connections) leg
-      leg%count=1
-      leg%partner(1)=2
-      leg%sudakov_type(1)=1
+      leg%sudakov_type=1
       do
          read(*,*,end=10) mode
          if (mode.eq.'c') then
@@ -70,8 +71,12 @@ DRIVER = '''
             read(*,*) x
             write(*,'(es24.16)') delta_shower_alphas(x,lambda,order)
          else
-            read(*,*) n,flav(1:n),beam,x,leg%stop(1),leg%start(1),
-     $           leg%mass(1)
+c     Each colour line: stopping and starting scale, mass and partner.
+            read(*,*) n,flav(1:n),beam,x,leg%count
+            do k=1,leg%count
+               read(*,*) leg%stop(k),leg%start(k),leg%mass(k),
+     $              leg%partner(k)
+            enddo
             write(*,'(es24.16)') delta_backward_leg(flav(1),flav(1:n),
      $           beam,x,leg,lambda,order)
          endif
@@ -128,36 +133,84 @@ def integrate(f, edges, panels):
     return total
 
 
-def reference_leg(flavs, x, q, start, mass, alpha_mz=.118, order=2):
-    """F*R*exp(C) on fine grids, split at the coupling and toy-flavour thresholds."""
+def reference_lines(flavs, x, lines, alpha_mz=.118, order=2):
+    """F*R*exp(C) on fine grids for (stop, start, mass) colour lines, combined as
+    eq.3.34 (delta_leg_probability): forward factors from every line's start to
+    each stopping line's scale, weighted by the lines' emission exponents."""
+    gluon = flavs[0] == 21
     a = lambda t: pythia_alphas(math.sqrt(t), alpha_mz, order) / (2. * math.pi)
-    omz = lambda t: .5 * t / mass**2 * (math.sqrt(1. + 4. * mass**2 / t) - 1.)
-    lo, hi = 2. * math.log(q), 2. * math.log(start)
-    edges = [lo] + [2. * math.log(c) for c in (MC, 2., MB) if lo < 2. * math.log(c) < hi] + [hi]
+    nfmax = sum(1 for q in range(1, 6) if toy_xf(q, x, max(l[1] for l in lines)) > 0.)
 
-    def forward(u):
-        o = omz(math.exp(u))
-        return a(math.exp(u)) * CF * (-2. * math.log(o) - 1.5 * (1. - o)**2)
+    def nf(t):
+        return min(nfmax, 3 if t <= MC**2 else 4 if t <= MB**2 else 5)
 
-    def boundary(u):
-        t = math.exp(u)
-        pt, o0 = math.sqrt(t), omz(t)
-        den = sum(toy_xf(f, x, pt) for f in flavs)
-        nact = sum(1 for f in flavs if toy_xf(f, x, pt) > 0.)
-        ol = min(1. - x, o0)
-        val = CF * (1. - o0) * o0
-        if o0 > 1. - x:
-            val -= CF * (2. * math.log(o0 / ol) - (o0 - ol) - .5 * ((1. - ol)**2 - (1. - o0)**2))
+    def zmax(t, mass):
+        return 1. - .5 * t / mass**2 * (math.sqrt(1. + 4. * mass**2 / t) - 1.)
 
-        def inner(o):
-            z = 1. - o
-            y = x / z
-            fq = sum(toy_xf(f, y, pt) for f in flavs)
-            return CF * (1. + z * z) / o * (fq / den - 1.) + nact * TR * (z * z + o * o) * toy_xf(21, y, pt) / den
-        return a(t) * (val + integrate(inner, [0., ol], 16))
+    def grid(lo, hi):
+        return [lo] + [2. * math.log(c) for c in (MC, 2., MB) if lo < 2. * math.log(c) < hi] + [hi]
 
-    ratio = sum(toy_xf(f, x, q) for f in flavs) / sum(toy_xf(f, x, start) for f in flavs)
-    return math.exp(integrate(boundary, edges, 12) - integrate(forward, edges, 12)) * ratio
+    def forward(lo, hi, mass):
+        """Signed exponent of one colour line from lo up to hi."""
+        def rate(u):
+            t = math.exp(u)
+            z = zmax(t, mass)
+            if gluon:  # half of the full gluon kernel per line
+                v = .5 * (2. * CA * (-math.log(1. - z) - z**2 + z**3 / 3. - z**4 / 4.)
+                          + 2. * nf(t) * TR * (z**2 / 2. - 2. * z**3 / 3. + z**4 / 2.))
+            else:
+                v = CF * (-2. * math.log(1. - z) - 1.5 * z * z)
+            return a(t) * v
+        a0, b0 = sorted((2. * math.log(lo), 2. * math.log(hi)))
+        value = integrate(rate, grid(a0, b0), 12)
+        return value if hi >= lo else -value
+
+    def boundary(stop, start, mass):
+        def rate(u):
+            t = math.exp(u)
+            pt, z0 = math.sqrt(t), zmax(t, mass)
+            zl = max(x, z0)
+            if gluon:
+                den = toy_xf(21, x, pt)
+                val = (2. * CA * (-math.log(z0) - 2. * (1. - z0) + 1.5 * (1. - z0**2)
+                                  - 2. / 3. * (1. - z0**3) + .25 * (1. - z0**4))
+                       - 2. * nf(t) * TR * (1. / 3. - z0**2 / 2. + 2. * z0**3 / 3. - z0**4 / 2.))
+                pgg = lambda z: 2. * CA * (1. - z + z * z)**2 / (z * (1. - z))
+                if z0 < x:
+                    val -= integrate(pgg, [z0, x], 16)
+
+                def inner(z):
+                    y = x / z
+                    return (pgg(z) * (toy_xf(21, y, pt) / den - 1.)
+                            + CF * (1. + (1. - z)**2) / z * sum(toy_xf(f, y, pt) for f in QUARKS) / den)
+            else:
+                den = sum(toy_xf(f, x, pt) for f in flavs)
+                nact = sum(1 for f in flavs if toy_xf(f, x, pt) > 0.)
+                val = CF * z0 * (1. - z0)
+                if z0 < x:
+                    val -= integrate(lambda z: CF * (1. + z * z) / (1. - z), [z0, x], 16)
+
+                def inner(z):
+                    y = x / z
+                    fq = sum(toy_xf(f, y, pt) for f in flavs)
+                    return (CF * (1. + z * z) / (1. - z) * (fq / den - 1.)
+                            + nact * TR * (z * z + (1. - z)**2) * toy_xf(21, y, pt) / den)
+            return a(t) * (val + integrate(inner, [zl, 1.], 16))
+        return integrate(rate, grid(2. * math.log(stop), 2. * math.log(start)), 12)
+
+    def gl(exponent):  # gl_safe(exp(-exponent), 1)
+        return 0. if exponent <= 0. else 1e8 if exponent >= -math.log(1e-20) else 2. * exponent
+
+    xfg = lambda mu: sum(toy_xf(f, x, mu) for f in flavs)
+    weights = [1.] if len(lines) == 1 else [gl(forward(q, s, m)) for q, s, m in lines]
+    total = sum(weights)
+    return sum(w / total * xfg(q) / xfg(s) * math.exp(boundary(q, s, m) - sum(
+        forward(q, s2, m2) for _, s2, m2 in lines)) for w, (q, s, m) in zip(weights, lines))
+
+
+def reference_leg(flavs, x, q, start, mass, alpha_mz=.118, order=2):
+    """One colour line from start down to q."""
+    return reference_lines(flavs, x, [(q, start, mass)], alpha_mz, order)
 
 
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
@@ -193,10 +246,16 @@ class TestDeltaBackwardISR(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return [float(v) for v in result.stdout.split()]
 
-    def leg(self, flavs, x, q, start, mass, coupling=(.118, 2)):
+    def lines(self, flavs, x, lines, coupling=(.118, 2), beam=1):
+        """Leg probability for colour lines (stop, start, mass[, partner])."""
+        rows = ''.join('%.17g %.17g %.17g %d\n' % (tuple(l[:3]) + (l[3] if len(l) > 3 else 2,))
+                       for l in lines)
         return self.run_lines(['c\n%r %d\n' % coupling,
-                               'b\n%d %s 1 %.17g %.17g %.17g %.17g\n' % (
-                                   len(flavs), ' '.join(map(str, flavs)), x, q, start, mass)])[0]
+                               'b\n%d %s %d %.17g %d\n' % (len(flavs), ' '.join(map(str, flavs)), beam,
+                                                         x, len(lines)) + rows])[0]
+
+    def leg(self, flavs, x, q, start, mass, coupling=(.118, 2)):
+        return self.lines(flavs, x, [(q, start, mass)], coupling)
 
     def test_alpha_s_reproduces_pythia(self):
         for coupling, references in PYTHIA_ALPHAS.items():
@@ -220,9 +279,33 @@ class TestDeltaBackwardISR(unittest.TestCase):
                 self.assertAlmostEqual(value / expected, 1., delta=2e-4)
                 self.assertGreater(value, 0.)
 
+    def test_gluon_lines(self):
+        # One line takes half the gluon exponent; two equal lines the full one,
+        # and unequal stopping scales are weighted as in the table's eq.3.34.
+        for x, lines in ((.01, [(10., 60., 125.)]), (.03, [(5., 200., 400.)] * 2),
+                         (.0015, [(2.5, 80., 150.)] * 2), (.25, [(4., 250., 1000.)] * 2),
+                         (.6, [(3., 40., 7000.)] * 2), (.02, [(3., 60., 125.), (12., 60., 125.)]),
+                         (.05, [(8., 90., 300.), (8., 40., 300.)])):
+            with self.subTest(x=x, lines=lines):
+                value = self.lines((21,), x, lines)
+                self.assertAlmostEqual(value / min(reference_lines((21,), x, lines), 1.), 1.,
+                                       delta=2e-4)
+                self.assertGreater(value, 0.)
+        one = self.lines((21,), .03, [(5., 200., 400.)])
+        self.assertLess(self.lines((21,), .03, [(5., 200., 400.)] * 2), one)
+
+    def test_if_connections_use_the_ii_dipole(self):
+        # PYTHIA's ISR recoils against the other beam: the partner type is irrelevant.
+        for flavs, lines in (((2,), [(7., 70., 160.)]), ((21,), [(7., 70., 160.)] * 2)):
+            with self.subTest(flavs=flavs):
+                ii = self.lines(flavs, .02, [l + (2,) for l in lines])
+                self.assertEqual(self.lines(flavs, .02, [l + (3,) for l in lines]), ii)
+                self.assertNotEqual(ii, -1.)
+
     def test_first_order_running(self):
         for flavs, x, q, start, mass in (((2,), .007, 20., 60., 91.19),
-                                         ((2, 4), .007, 3., 50., 91.19)):
+                                         ((2, 4), .007, 3., 50., 91.19),
+                                         ((21,), .02, 5., 80., 200.)):
             with self.subTest(flavs=flavs, q=q):
                 value = self.leg(flavs, x, q, start, mass, coupling=(.1365, 1))
                 self.assertAlmostEqual(
@@ -232,11 +315,18 @@ class TestDeltaBackwardISR(unittest.TestCase):
 
     def test_no_evolution_and_table_fallbacks(self):
         self.assertEqual(self.leg((2,), .01, 30., 30., 91.19), 1.)
+        self.assertEqual(self.lines((21,), .01, [(30., 30., 91.19)] * 2), 1.)
         # The lowest ln(t) node lies at 1.44 GeV, where this flavour has no PDF.
         self.assertEqual(self.leg((4,), .01, 1.2, 6., 91.19), -1.)
-        # Gluons, and quarks below the table's 1.01 GeV continuation, keep the table.
-        self.assertEqual(self.leg((21,), .01, 10., 30., 91.19), -1.)
+        # A vanishing starting PDF, lines below the table's 1.01 GeV continuation,
+        # groups mixing quarks and gluons and non-hadron beams keep the table.
+        self.assertEqual(self.leg((4,), .01, 1.5, 1.8, 91.19), -1.)
         self.assertEqual(self.leg((2,), .01, 1., 30., 91.19), -1.)
+        self.assertEqual(self.lines((21,), .01, [(10., 30., 91.19), (1., 30., 91.19)]), -1.)
+        self.assertEqual(self.leg((21, 2), .01, 10., 30., 91.19), -1.)
+        for beam in (0, 2, -2):
+            self.assertEqual(self.lines((2,), .01, [(10., 30., 91.19)], beam=beam), -1.)
+        self.assertNotEqual(self.lines((2,), .01, [(10., 30., 91.19)], beam=-1), -1.)
 
 
 if __name__ == '__main__':

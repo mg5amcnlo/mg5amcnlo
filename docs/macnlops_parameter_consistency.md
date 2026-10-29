@@ -201,22 +201,56 @@ FSR from tops (ttbar FI/FF dipoles) involves no PDFs, so alignment makes
 those table entries consistent with the one-step coupling, within the 1-2%
 node noise above.
 
-## Backward correction for incoming quarks (prototype)
+## Backward correction for incoming partons (prototype)
 
-`#DeltaBackwardISR` (default off, `FKS_params.dat`) changes the factor of
-an incoming quark connected to the other incoming parton to `F R exp(C)`.
-F replaces the table by the analytic mode-1 forward kernel at
-`#DeltaBackwardAlphaS` with PYTHIA's running of order
-`#DeltaBackwardAlphaSOrder` (1 or 2, matching PYTHIA's `AlphaStrong` to
-2e-9); R is the caller's grouped PDF ratio; C is the boundary term from
-three ln(t) by two z Gauss nodes (`delta_backward_quark` in
-`montecarlocounter.f`). In DY at 0.118 (second order) it brings X/Y from
-1.75 to 1.41 (net -1.09% to -0.66%) without measurable cost. Gluons and
-quarks connected to final-state partons keep the table.
+`#DeltaBackwardISR` (default off, `FKS_params.dat`) gives every incoming
+quark and gluon the factor `F R exp(C)`, in the colour-line form of
+`delta_leg_probability` (eqs. 3.31 and 3.34) and on every live
+connection. PYTHIA's ISR recoils against the other incoming parton, so a
+connection to a final-state parton has the same scales and II dipole mass
+as one to the other beam. F replaces each table ratio by the analytic
+mode-1 forward kernel at `#DeltaBackwardAlphaS` with PYTHIA's running of
+order `#DeltaBackwardAlphaSOrder` (1 or 2, matching PYTHIA's `AlphaStrong`
+to 2e-9): the full exponent for a quark, half the gluon's for each gluon
+line, like the table entries. R is the caller's grouped PDF ratio, and C
+the boundary term of the leg's flavour (`delta_backward_leg` and its
+helpers in `montecarlocounter.f`). Final-state legs keep the table.
+
+For a gluon, mode 1 integrates `z [P_gg + 2 n_f T_R (z^2 + (1-z)^2)]` up
+to Z(t), with n_f the quarks active both in alpha_s and in the PDF. C
+restores `P_gg (R_g - 1) + P_gq sum_q R_q` over `max(x, Z) < z < 1`, less
+that region's share of the mode-1 kernel. At one loop and 0.1365 (n_f = 5)
+F reproduces the archived gluon and quark entries within 1% (0.3% above
+10 GeV). With PYTHIA's LO PDF13 at one loop and 0.130, where the LO
+identity holds up to the PDF's own evolution, `F R e^C / B` is
+1.0002-1.0010 for gluons (x = 0.002-0.3, m = 125-500 GeV), as for quarks.
+
+The one-step shower itself (NNPDF4.0, 0.118 at two loops) confirms this
+for fixed colour-singlet Borns, showered 1e5 times from m/2. D_PS is the
+fraction with no emission above q, B PYTHIA's backward probability by
+quadrature, `F R e^C` the prototype and `T R` the archived table times
+the PDF ratio, all for both legs:
+
+| Born | q [GeV] | D_PS | B / D_PS | F R e^C / D_PS | T R / D_PS |
+| --- | --- | --- | --- | --- | --- |
+| gg, m = 125 GeV, y = 0 | 5 / 10 / 20 / 50 | 0.036 / 0.166 / 0.435 / 0.894 | 1.026 / 1.008 / 0.998 / 1.000 | 1.061 / 1.026 / 1.006 / 1.001 | 0.64 / 0.81 / 0.92 / 0.99 |
+| gg, m = 400 GeV, y = 0.5 | 5 / 10 / 20 / 50 | 0.009 / 0.054 / 0.185 / 0.505 | 0.985 / 1.004 / 1.005 / 0.999 | 0.992 / 1.008 / 1.008 / 1.001 | 0.42 / 0.63 / 0.80 / 0.94 |
+| uubar, m = 400 GeV, y = 0.5 | 5 / 10 / 20 / 50 | 0.117 / 0.273 / 0.482 / 0.759 | 1.002 / 1.002 / 1.001 / 1.001 | 0.960 / 0.979 / 0.988 / 0.996 | 0.57 / 0.70 / 0.79 / 0.89 |
+
+The statistical errors on D_PS are 0.9-3.4% at 5 GeV, 0.5-1.3% at
+10 GeV and below 0.7% above. The table's deficit is mostly its 0.1365 coupling, which a gluon
+leg feels with C_A. The remaining deviation of `F R e^C` is the
+difference between NNPDF4.0's evolution and LO DGLAP with the shower's
+coupling: a slight excess for small-x gluons, a deficit for quarks.
+The fixed Gauss rules agree with adaptive quadrature within 0.06% for
+gluons (140 NNPDF4.0 cases at 1.5-50 GeV), and quark legs differ from the
+earlier quark-only prototype by less than 1e-4. In DY at 0.118 (second
+order) the quark correction brings X/Y from 1.75 to 1.41 (net -1.09% to
+-0.66%) without measurable cost.
 
 With an aligned one-step shower, set `#DeltaBackwardAlphaS 0.1365d0` and
-`#DeltaBackwardAlphaSOrder 1`. F then equals the table's quark entries
-(within 0.2% above 5 GeV), and C is evaluated at the shower's coupling.
+`#DeltaBackwardAlphaSOrder 1`. F then equals the table entries (within
+1%, 0.3% above 10 GeV), and C is evaluated at the shower's coupling.
 Both values must equal the one-step shower's; reading them from the same
 profile as the shower is still to be done.
 
@@ -231,5 +265,6 @@ profile as the shower is still to be done.
 3. Keep `alpha_s^K` as the hard coupling at the real point, and add the
    PDF factor to `K_sh` if the one-step shower ever uses a different PDF
    set.
-4. Extend the backward correction to gluons, and decide how to treat the
-   grouped flavour sums, which cost 4-9% at 10-20 GeV in DY.
+4. Decide how to treat the grouped flavour sums of quark legs, which cost
+   4-9% at 10-20 GeV in DY. The backward correction itself now covers
+   every incoming quark and gluon.

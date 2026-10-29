@@ -1341,8 +1341,8 @@ c     Ellis-Stirling-Webber
       wgt_sudakov=1d0
 c     Each Born leg contributes one probability, including its live
 c     colour connections. Only incoming legs have beam PDF inputs. With
-c     DeltaBackwardISR, eligible quark legs take the backward probability;
-c     -1 keeps the forward table.
+c     DeltaBackwardISR, incoming quarks and gluons take the backward
+c     probability; -1 keeps the forward table.
       do i=1,nincoming
          if (leg_connections(i)%count.eq.0) cycle
          leg_probability=-1d0
@@ -1630,95 +1630,258 @@ c     to interpret it as a probability at the accuracy used here.
 
       double precision function delta_backward_leg(pdg,flavours,
      $     beam_type,bjorken,connections,lambda,order)
-c     DeltaBackwardISR prototype for an incoming quark whose colour
-c     partner is the other incoming parton: the PYTHIA8 backward
-c     no-emission probability from the LO identity B = F*R*exp(C).
-c     F = exp(-int a V1) is the PDF-free mode-1 forward kernel with the
-c     shower's alpha_s, V1 = int_0^Z z(Pqq+Pgq) dz; R is the grouped PDF
-c     ratio of the forward prescription; C restores the PDF evolution from
-c     Z(t) < z < 1, outside the massless II bound Z = 1-r/2(sqrt(1+4/r)-1),
-c     r = t/mdip^2 (see "Cheap PDF boundary correction prototype" in
-c     docs/audits/delta_noemission). F uses four Gauss nodes per alpha_s
-c     flavour interval; C uses three in ln(t) and two in
-c     (1-z)/(1-max(x,Z)), within about 0.1% in exp(C) down to 2 GeV.
-c     Returns -1 for other legs, below the table's 1.01 GeV continuation
-c     or if a PDF vanishes; the caller then keeps the forward table.
+c     DeltaBackwardISR prototype for an incoming quark or gluon: the
+c     PYTHIA8 backward no-emission probability from the LO identity
+c     B = F*R*exp(C), in the colour-line form of delta_leg_probability.
+c     The analytic mode-1 forward factor F with the shower's alpha_s
+c     replaces each table ratio: the full exponent for a quark line and
+c     half the gluon's for each gluon line, as the table's entries. The
+c     PDF ratio R of each stopping line gains exp(C), which restores the
+c     PDF evolution from Z(t) < z < 1, outside the massless II bound
+c     Z = 1-r/2(sqrt(1+4/r)-1), r = t/mdip^2 (see "Cheap PDF boundary
+c     correction prototype" in docs/audits/delta_noemission). PYTHIA's
+c     ISR recoils against the other incoming parton, so IF connections
+c     carry the same scales and II mass as II ones. Returns -1 below the
+c     table's 1.01 GeV continuation, for other than (anti)proton beams,
+c     for a group mixing quarks and gluons or if a PDF vanishes at the
+c     start; the caller then keeps the forward table.
       implicit none
       integer, intent(in) :: pdg,flavours(:),beam_type,order
       double precision, intent(in) :: bjorken,lambda(3:5)
       type(delta_connections), intent(in) :: connections
-      double precision, parameter :: CF=4d0/3d0,TR=0.5d0,
-     $     pi=3.14159265358979323846d0,backward_min=1.01d0
+      double precision, parameter :: backward_min=1.01d0
+      logical gluon,ok,vanishing(2)
+      integer nl,out,in,ih,lp,nfmax
+      double precision expo(2,2),gl(2),ratios(2),logfk(2),virtual,num,
+     $     den,total,pik
+
+      delta_backward_leg=-1d0
+      nl=connections%count
+      gluon=pdg.eq.21
+      if (nl.lt.1.or.abs(beam_type).ne.1) return
+      if (gluon) then
+         if (any(flavours.ne.21)) return
+      elseif (any(abs(flavours).lt.1.or.abs(flavours).gt.5)) then
+         return
+      endif
+      if (any(connections%stop(1:nl).le.backward_min).or.
+     $     any(connections%mass(1:nl).le.0d0)) return
+      ih=abs(beam_type)
+      lp=sign(1,beam_type)
+c     A gluon splits into the quarks that its PDF evolves.
+      nfmax=5
+      if (gluon) nfmax=delta_active_quarks(ih,lp,bjorken,
+     $     maxval(connections%start(1:nl)))
+      do out=1,nl
+         den=delta_group_xf(ih,lp,flavours,bjorken,
+     $        connections%start(out))
+         if (den.le.0d0) return
+         num=delta_group_xf(ih,lp,flavours,bjorken,
+     $        connections%stop(out))
+         vanishing(out)=num.le.0d0
+         if (out.eq.2.and.connections%start(2).eq.connections%start(1)
+     $        .and.connections%stop(2).eq.connections%stop(1).and.
+     $        connections%mass(2).eq.connections%mass(1)) then
+            ratios(2)=ratios(1)
+         else
+            ratios(out)=delta_backward_ratios(gluon,flavours,ih,lp,
+     $           bjorken,connections%stop(out),connections%start(out),
+     $           connections%mass(out),lambda,order,ok)
+            if (.not.ok) return
+         endif
+c     Every live line evolves from its own start to this stopping scale.
+         do in=1,nl
+            call delta_line_exponents(gluon,bjorken,
+     $           connections%stop(out),connections%start(in),
+     $           connections%mass(in),nfmax,lambda,order,expo(out,in),
+     $           virtual)
+            if (in.eq.out.and..not.vanishing(out))
+     $           logfk(out)=ratios(out)+virtual+log(num/den)
+         enddo
+         gl(out)=1d0
+         if (nl.eq.2) gl(out)=gl_safe(exp(-expo(out,out)),1d0)
+      enddo
+      total=sum(gl(1:nl))
+      if (total.le.0d0) then
+c     No line evolves: weigh the stopping lines equally.
+         gl=1d0
+         total=nl
+      endif
+      pik=0d0
+      do out=1,nl
+         if (vanishing(out)) cycle
+         pik=pik+gl(out)/total*exp(min(logfk(out)-
+     $        sum(expo(out,1:nl)),300d0))
+      enddo
+      delta_backward_leg=min(max(pik,0d0),1d0)
+      end function delta_backward_leg
+
+      subroutine delta_line_exponents(gluon,x,lo,hi,mass,nfmax,lambda,
+     $     order,forward,virtual)
+c     Integrals over ln(t) from lo**2 to hi**2 (negative if hi < lo) of
+c     a/(2pi) times PDF-free kernels, with four Gauss nodes per alpha_s
+c     flavour interval. forward is one colour line's mode-1 exponent,
+c     V1 = int_0^Z z sum_b P(z) dz:
+c       quark        CF(-2ln(1-Z)-3Z**2/2),
+c       gluon line   half of 2CA(-ln(1-Z)-Z**2+Z**3/3-Z**4/4)
+c                    + 2nf TR(Z**2/2-2Z**3/3+Z**4/2),
+c     with nf quarks active both in alpha_s and in the PDF. virtual is
+c     the whole leg's PDF-free part of the boundary exponent C: the
+c     region Z(t) < z < 1 of that kernel less P where z < x has no PDF
+c     support,
+c       quark   CF Z(1-Z) - int_Z^x Pqq dz,
+c       gluon   int_Z^1 (1-z)Pgg dz - 2nf TR int_Z^1 z(z**2+(1-z)**2) dz
+c               - int_Z^x Pgg dz.
+c     delta_backward_ratios adds the PDF ratios.
+      implicit none
+      logical, intent(in) :: gluon
+      integer, intent(in) :: nfmax,order
+      double precision, intent(in) :: x,lo,hi,mass,lambda(3:5)
+      double precision, intent(out) :: forward,virtual
+      double precision, parameter :: CA=3d0,CF=4d0/3d0,TR=0.5d0,
+     $     pi=3.14159265358979323846d0
+      double precision, parameter :: x4(4)=(/-0.8611363115940526d0,
+     $     -0.3399810435848563d0,0.3399810435848563d0,
+     $     0.8611363115940526d0/),
+     $     w4(4)=(/0.3478548451374538d0,0.6521451548625461d0,
+     $     0.6521451548625461d0,0.3478548451374538d0/)
+      integer i,k,nf
+      double precision a,b,edges(4),t,omz,omzl,z,v,c,weight
+
+      a=2d0*log(min(lo,hi))
+      b=2d0*log(max(lo,hi))
+c     Split at the alpha_s flavour thresholds.
+      edges=(/a,min(max(2d0*log(delta_alphas_mc),a),b),
+     $     min(max(2d0*log(delta_alphas_mb),a),b),b/)
+      forward=0d0
+      virtual=0d0
+      do i=1,3
+         if (edges(i+1).eq.edges(i)) cycle
+         nf=min(i+2,nfmax)
+         do k=1,4
+            t=exp(edges(i)+0.5d0*(x4(k)+1d0)*(edges(i+1)-edges(i)))
+            omz=delta_backward_omz(t,mass)
+            z=1d0-omz
+            omzl=min(1d0-x,omz)
+            if (gluon) then
+               v=CA*(-log(omz)-z**2+z**3/3d0-z**4/4d0)+
+     $              nf*TR*(z**2/2d0-2d0*z**3/3d0+z**4/2d0)
+               c=2d0*CA*(-log(z)-omz**2+omz**3/3d0-omz**4/4d0)-
+     $              2d0*nf*TR*(omz-1.5d0*omz**2+4d0*omz**3/3d0-
+     $              0.5d0*omz**4)
+               if (omz.gt.1d0-x) c=c-2d0*CA*(log(omz/omzl)+log(x/z)-
+     $              2d0*(x-z)+0.5d0*(x**2-z**2)-(x**3-z**3)/3d0)
+            else
+               v=CF*(-2d0*log(omz)-1.5d0*(1d0-omz)**2)
+               c=CF*(1d0-omz)*omz
+               if (omz.gt.1d0-x) c=c-CF*(2d0*log(omz/omzl)
+     $              -(omz-omzl)-0.5d0*((1d0-omzl)**2-(1d0-omz)**2))
+            endif
+            weight=0.5d0*w4(k)*(edges(i+1)-edges(i))*
+     $           delta_shower_alphas(sqrt(t),lambda,order)/(2d0*pi)
+            forward=forward+weight*v
+            virtual=virtual+weight*c
+         enddo
+      enddo
+      if (hi.lt.lo) then
+         forward=-forward
+         virtual=-virtual
+      endif
+      end subroutine delta_line_exponents
+
+      double precision function delta_backward_ratios(gluon,flavours,
+     $     ih,lp,x,lo,hi,mass,lambda,order,ok)
+c     The PDF ratios R (x/z over x) of the boundary exponent C from lo
+c     to hi, over max(x,Z(t)) < z < 1:
+c       quark group  int [Pqq(z)(Rq-1) + nact Pqg(z) Rg] dz,
+c       gluon        int [Pgg(z)(Rg-1) + Pgq(z) sum_q Rq] dz,
+c     with nact the group's flavours with PDF support. Three Gauss nodes
+c     in ln(t) and two in (1-z)/(1-max(x,Z)), within about 0.1% in
+c     exp(C) down to 2 GeV. ok is false if a PDF vanishes at a node.
+      implicit none
+      logical, intent(in) :: gluon
+      integer, intent(in) :: flavours(:),ih,lp,order
+      double precision, intent(in) :: x,lo,hi,mass,lambda(3:5)
+      logical, intent(out) :: ok
+      double precision, parameter :: CA=3d0,CF=4d0/3d0,TR=0.5d0,
+     $     pi=3.14159265358979323846d0
       double precision, parameter :: x2(2)=(/-0.5773502691896258d0,
      $     0.5773502691896258d0/),
      $     x3(3)=(/-0.7745966692414834d0,0d0,0.7745966692414834d0/),
      $     w3(3)=(/0.5555555555555556d0,0.8888888888888889d0,
-     $     0.5555555555555556d0/),
-     $     x4(4)=(/-0.8611363115940526d0,-0.3399810435848563d0,
-     $     0.3399810435848563d0,0.8611363115940526d0/),
-     $     w4(4)=(/0.3478548451374538d0,0.6521451548625461d0,
-     $     0.6521451548625461d0,0.3478548451374538d0/)
-      integer ih,lp,i,k,nact,idg
-      double precision lo,hi,edges(4),t,pt,mdip,omz0,omzl,omz,z,y,val,
-     $     den,forward,boundary,ratio_den
+     $     0.5555555555555556d0/)
+      integer i,k,nact,idg
+      double precision a,b,t,pt,omzl,omz,z,y,val,den
       double precision pdg2pdf
       external pdg2pdf
 
-      delta_backward_leg=-1d0
-      if (abs(pdg).lt.1.or.abs(pdg).gt.5.or.connections%count.ne.1.or.
-     $     connections%partner(1).gt.nincoming.or.
-     $     connections%stop(1).le.backward_min.or.
-     $     connections%mass(1).le.0d0) return
-      mdip=connections%mass(1)
-      ih=abs(beam_type)
-      lp=sign(1,beam_type)
+      ok=.false.
+      delta_backward_ratios=0d0
       idg=get_parton_id(21,lp)
-      ratio_den=delta_group_xf(ih,lp,flavours,bjorken,
-     $     connections%start(1))
-      if (ratio_den.le.0d0) return
-      lo=2d0*log(connections%stop(1))
-      hi=2d0*log(connections%start(1))
-c     Forward kernel, split at the alpha_s flavour thresholds.
-      edges=(/lo,min(max(2d0*log(delta_alphas_mc),lo),hi),
-     $     min(max(2d0*log(delta_alphas_mb),lo),hi),hi/)
-      forward=0d0
+      a=2d0*log(lo)
+      b=2d0*log(hi)
       do i=1,3
-         if (edges(i+1).eq.edges(i)) cycle
-         do k=1,4
-            t=exp(edges(i)+0.5d0*(x4(k)+1d0)*(edges(i+1)-edges(i)))
-            omz0=delta_backward_omz(t,mdip)
-            forward=forward+0.5d0*w4(k)*(edges(i+1)-edges(i))*
-     $           delta_shower_alphas(sqrt(t),lambda,order)/(2d0*pi)*
-     $           CF*(-2d0*log(omz0)-1.5d0*(1d0-omz0)**2)
-         enddo
-      enddo
-c     Boundary exponent C.
-      boundary=0d0
-      do i=1,3
-         t=exp(lo+0.5d0*(x3(i)+1d0)*(hi-lo))
+         t=exp(a+0.5d0*(x3(i)+1d0)*(b-a))
          pt=sqrt(t)
-         omz0=delta_backward_omz(t,mdip)
-         den=delta_group_xf(ih,lp,flavours,bjorken,pt,nact)
+         omzl=min(1d0-x,delta_backward_omz(t,mass))
+         if (gluon) then
+            den=x*pdg2pdf(ih,idg,lp,x,pt)
+         else
+            den=delta_group_xf(ih,lp,flavours,x,pt,nact)
+         endif
          if (den.le.0d0) return
-         val=CF*(1d0-omz0)*omz0
-         omzl=min(1d0-bjorken,omz0)
-c     There is no PDF support for Z < z < x: only -Pqq remains there.
-         if (omz0.gt.1d0-bjorken) val=val-CF*(2d0*log(omz0/omzl)
-     $        -(omz0-omzl)-0.5d0*((1d0-omzl)**2-(1d0-omz0)**2))
+         val=0d0
          do k=1,2
             omz=omzl*0.5d0*(1d0+x2(k))
             z=1d0-omz
-            y=bjorken/z
-            val=val+0.5d0*omzl*(CF*(1d0+z**2)/omz*
-     $           (delta_group_xf(ih,lp,flavours,y,pt)/den-1d0)
-     $           +nact*TR*(z**2+omz**2)*y*pdg2pdf(ih,idg,lp,y,pt)/den)
+            y=x/z
+            if (gluon) then
+               val=val+2d0*CA*(1d0-z*omz)**2/(z*omz)*
+     $              (y*pdg2pdf(ih,idg,lp,y,pt)/den-1d0)+
+     $              CF*(1d0+omz**2)/z*delta_quark_xf(ih,lp,y,pt)/den
+            else
+               val=val+CF*(1d0+z**2)/omz*
+     $              (delta_group_xf(ih,lp,flavours,y,pt)/den-1d0)+
+     $              nact*TR*(z**2+omz**2)*y*pdg2pdf(ih,idg,lp,y,pt)/den
+            endif
          enddo
-         boundary=boundary+0.5d0*w3(i)*(hi-lo)*
-     $        delta_shower_alphas(pt,lambda,order)/(2d0*pi)*val
+         delta_backward_ratios=delta_backward_ratios+0.25d0*w3(i)*
+     $        (b-a)*omzl*delta_shower_alphas(pt,lambda,order)/(2d0*pi)*
+     $        val
       enddo
-      delta_backward_leg=min(exp(boundary-forward)*delta_group_xf(ih,lp,
-     $     flavours,bjorken,connections%stop(1))/ratio_den,1d0)
-      end function delta_backward_leg
+      ok=.true.
+      end function delta_backward_ratios
+
+      double precision function delta_quark_xf(ih,lp,x,mu)
+c     x times the PDF summed over the five quarks and antiquarks.
+      implicit none
+      integer, intent(in) :: ih,lp
+      double precision, intent(in) :: x,mu
+      integer iq
+      double precision pdg2pdf
+      external pdg2pdf
+      delta_quark_xf=0d0
+      do iq=1,5
+         delta_quark_xf=delta_quark_xf+x*(pdg2pdf(ih,iq,lp,x,mu)+
+     $        pdg2pdf(ih,-iq,lp,x,mu))
+      enddo
+      end function delta_quark_xf
+
+      integer function delta_active_quarks(ih,lp,x,mu)
+c     Quark flavours with PDF support at (x,mu), at most five.
+      implicit none
+      integer, intent(in) :: ih,lp
+      double precision, intent(in) :: x,mu
+      integer iq
+      double precision pdg2pdf
+      external pdg2pdf
+      delta_active_quarks=0
+      do iq=1,5
+         if (pdg2pdf(ih,iq,lp,x,mu).gt.0d0.or.
+     $        pdg2pdf(ih,-iq,lp,x,mu).gt.0d0)
+     $        delta_active_quarks=delta_active_quarks+1
+      enddo
+      end function delta_active_quarks
 
       double precision function delta_group_xf(ih,lp,flavours,x,mu,
      $     nact)
