@@ -2187,15 +2187,9 @@ def prepare_generation(process_dir, run_card, pythia8):
         profile['native_build'] = dict(path=str(native_build), sha256=sha256(native_build))
     (process_dir / 'Cards/macnlops_profile.json').write_text(
         json.dumps(profile, indent=2, sort_keys=True) + '\n')
-    values = dict(macnlops_nquark_in=support['n_quark_in'],
-                  macnlops_ngluon_to_quark=support['n_gluon_to_quark'],
-                  macnlops_isr_cutoff=support['shower_cutoffs'][0],
-                  macnlops_fsr_cutoff=support['shower_cutoffs'][1],
-                  macnlops_charm_mass=support['heavy_mass_floors']['4'],
-                  macnlops_bottom_mass=support['heavy_mass_floors']['5'],
-                  macnlops_beam_xmax1=support['beam_xmax'][0],
-                  macnlops_beam_xmax2=support['beam_xmax'][1])
-    for key, value in values.items():
+    # RunCardNLO also restores these from the profile when Source/makefile
+    # rewrites run_card.inc from the card on disk.
+    for key, value in run_card.macnlops_profile_values(support).items():
         run_card.set(key, value, user=False)
     return profile
 

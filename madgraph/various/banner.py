@@ -6265,6 +6265,30 @@ class RunCardNLO(RunCard):
             self['mxxmin4pdg'] = [0.]
             self['mxxpart_antipart'] = [False]
 
+        # The measured MAcNLOPS shower profile is a generation input that the
+        # card file does not hold. Restore it when the include is rewritten
+        # from the card on disk, e.g. by Source/makefile after the card changed.
+        if self['macnlops'] and self['macnlops_isr_cutoff'] < 0 and self.path:
+            profile = os.path.join(os.path.dirname(str(self.path)), 'macnlops_profile.json')
+            if os.path.isfile(profile):
+                import json
+                with open(profile) as stream:
+                    support = json.load(stream)['support']
+                for name, value in self.macnlops_profile_values(support).items():
+                    self.set(name, value, user=False)
+
+    @staticmethod
+    def macnlops_profile_values(support):
+        """Run-card system parameters of a measured MAcNLOPS shower profile."""
+        return dict(macnlops_nquark_in=support['n_quark_in'],
+                    macnlops_ngluon_to_quark=support['n_gluon_to_quark'],
+                    macnlops_isr_cutoff=support['shower_cutoffs'][0],
+                    macnlops_fsr_cutoff=support['shower_cutoffs'][1],
+                    macnlops_charm_mass=support['heavy_mass_floors']['4'],
+                    macnlops_bottom_mass=support['heavy_mass_floors']['5'],
+                    macnlops_beam_xmax1=support['beam_xmax'][0],
+                    macnlops_beam_xmax2=support['beam_xmax'][1])
+
     def write(self, output_file, template=None, python_template=False, **opt):
         """Write the run_card in output_file according to template 
            (a path to a valid run_card)"""
