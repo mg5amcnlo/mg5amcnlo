@@ -11,7 +11,8 @@ c partition and Born-flow fraction instead of summing components.
       use extra_weights
       use weight_lines, only: reset_delta_contexts,begin_delta_context,
      $     delta_contexts,delta_context_active,delta_history,
-     $     delta_recoil,delta_replay,append_delta_probability
+     $     delta_recoil,delta_replay,append_delta_probability,
+     $     macnlops_kernel_alphas
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
@@ -222,6 +223,7 @@ c production runner supplies actual shower beam bounds and cutoffs.
          real_density=0d0
          subtraction_density=0d0
          shower_density=0d0
+         macnlops_kernel_alphas=0d0
          if(owner.ge.1.and.owner.le.fks_configs.and.
      $        all(ieee_is_finite(lab))) then
             if(component_request)then
@@ -236,6 +238,9 @@ c production runner supplies actual shower beam bounds and cutoffs.
      $              subtraction_density,shower_density,status)
             endif
          endif
+c Precedes its density record; zero when no kernel was evaluated.
+         write(*,'(a,1x,i12,1x,es26.17e3)')
+     $        'MACNLOPS_KERNEL_COUPLING_V1',request,macnlops_kernel_alphas
          write(*,'(a,2(1x,i12),3(1x,es26.17e3))')
      $        'MACNLOPS_DENSITY_V1',request,status,real_density,
      $        subtraction_density,shower_density
@@ -836,7 +841,8 @@ c including their tags and helicities, rather than a PDG-only factorial.
      $     y_ij_fks_ev,xbjrk_cnt
       use extra_weights
       use weight_lines, only: macnlops_gate_active,
-     $     macnlops_current_z,macnlops_proposal_active
+     $     macnlops_current_z,macnlops_proposal_active,
+     $     macnlops_kernel_alphas
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
@@ -850,6 +856,8 @@ c including their tags and helicities, rather than a PDG-only factorial.
       double precision beam_xmax(2),ptmin_isr,ptmin_fsr
       common/macnlops_shower_config/beam_xmax,ptmin_isr,ptmin_fsr
       common/factor_n1body_NLOPS/mc_factors
+      double precision pi
+      parameter (pi=3.1415926535897932385d0)
       integer i,j,nconnect,orders(nsplitorders),i_fks,j_fks,
      $     get_orders_tag,ids(nexternal),status,daughter,mother,sister
       common/fks_indices/i_fks,j_fks
@@ -861,6 +869,9 @@ c including their tags and helicities, rather than a PDG-only factorial.
       y=y_ij_fks_ev
       call set_cms_stuff(-100)
       call set_alphaS(p)
+c Every type-13 record of this real point takes its couplings at this
+c scale. The S veto replaces one power by the shower's emission alpha_s.
+      macnlops_kernel_alphas=g**2/(4d0*pi)
       sevmc=fks_Hij(p,i_fks,j_fks)
       call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p,pcms,
      $     p_born,.false.,z,nconnect,amps,.true.)

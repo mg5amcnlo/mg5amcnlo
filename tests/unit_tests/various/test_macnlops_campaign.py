@@ -191,7 +191,7 @@ class TestAnalysisPreparation(unittest.TestCase):
                                               counts=dict(events=n), sumw=1., sumabs=3.)
                 checkpoint = dict(contract=campaign.contract_id(config, p),
                     source=sample(source, 7), macnlops=sample(accepted, 4), settings=dict(iseed=12),
-                    veto_prescription='component-undamped-delta-v1' if mode == 'delta' else 'component-source-v1')
+                    veto_prescription=campaign.veto_policy(mode))
                 campaign.dump(base / ('Wj_' + mode + '_complete.json'), checkpoint)
             with mock.patch.multiple(analysis, BASE=base / 'validation', PRODUCTION=base, CONFIG=config), \
                     mock.patch.object(analysis.mc, 'LHEStream', Source), \

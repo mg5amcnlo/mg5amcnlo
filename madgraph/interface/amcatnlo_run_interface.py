@@ -2850,6 +2850,12 @@ RESTART = %(mint_mode)s
             job['niters_done']=int(results[4])
             job['npoints_done']=int(results[5])
             job['time_spend']=float(results[6])
+            # MC@NLO jobs also report the S-event part and the Born cross section.
+            if len(results) >= 11:
+                job['resultS']=float(results[7])
+                job['errorS']=float(results[8])
+                job['resultBorn']=float(results[9])
+                job['errorBorn']=float(results[10])
             if job['resultABS'] != 0:
                 job['err_percABS'] = job['errorABS']/job['resultABS']*100.
                 job['err_perc'] = job['error']/job['result']*100.
@@ -2955,6 +2961,11 @@ RESTART = %(mint_mode)s
             cross_sect_dict['xseca'] += job['resultABS']*job['wgt_frac']
             cross_sect_dict['errt'] += math.pow(job['error'],2)*job['wgt_frac']
             cross_sect_dict['erra'] += math.pow(job['errorABS'],2)*job['wgt_frac']
+            if 'resultBorn' in job:
+                cross_sect_dict['xsecs'] += job['resultS']*job['wgt_frac']
+                cross_sect_dict['errs'] += math.pow(job['errorS'],2)*job['wgt_frac']
+                cross_sect_dict['xsecb'] += job['resultBorn']*job['wgt_frac']
+                cross_sect_dict['errb'] += math.pow(job['errorBorn'],2)*job['wgt_frac']
             # individual p_label results
             if job['p_label'] not in cross_sect_dict:
                 cross_sect_dict[job['p_label']] = collections.defaultdict(float)
@@ -2968,6 +2979,8 @@ RESTART = %(mint_mode)s
         # combine the results correctly
         cross_sect_dict['erra'] = math.sqrt(cross_sect_dict['erra'])
         cross_sect_dict['errt'] = math.sqrt(cross_sect_dict['errt'])
+        cross_sect_dict['errs'] = math.sqrt(cross_sect_dict['errs'])
+        cross_sect_dict['errb'] = math.sqrt(cross_sect_dict['errb'])
         cross_sect_dict['fraca'] = (cross_sect_dict['erra']/cross_sect_dict['xseca']*100. if cross_sect_dict['xseca'] != 0. else 100.)
         cross_sect_dict['fract'] = (cross_sect_dict['errt']/cross_sect_dict['xsect']*100. if cross_sect_dict['xsect'] != 0. else 100.)
         for p_label in cross_sect_dict['p_labels']:
@@ -2976,6 +2989,8 @@ RESTART = %(mint_mode)s
 
         if jobs:
             content.append('\nTotal ABS and \nTotal: \n                      %(xseca)10.8e +- %(erra)6.4e  (%(fraca)6.4e%%)\n                      %(xsect)10.8e +- %(errt)6.4e  (%(fract)6.4e%%) \n' % cross_sect_dict)
+            if cross_sect_dict['xsecb']:
+                content.append('\nS events and Born: \n                      %(xsecs)10.8e +- %(errs)6.4e\n                      %(xsecb)10.8e +- %(errb)6.4e \n' % cross_sect_dict)
         with open(pjoin(self.me_dir,'SubProcesses','res_%s.txt' % integration_step),'w') as res_file:
             res_file.write('\n'.join(content))
         randinit=self.get_randinit_seed()
@@ -3377,6 +3392,9 @@ RESTART = %(mint_mode)s
                        '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' + \
                        '\n      %(axsec_string)s: %(xseca)8.3e +- %(erra)6.1e %(unit)s \n') \
                       % self.cross_sect_dict
+            if self.cross_sect_dict.get('xsecb'):
+                message += ('      Born cross section:       %(xsecb)8.3e +- %(errb)6.1e %(unit)s \n'
+                            % self.cross_sect_dict)
         elif mode in ['NLO','LO'] and not done:
             if step == 0:
                 message = '\n      ' + status[0] + \
@@ -3396,6 +3414,10 @@ RESTART = %(mint_mode)s
                       '\n      Number of events generated: %s' % self.run_card['nevents'] 
             message = message + \
                       '\n      %(xsec_string)s: %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
+                      self.cross_sect_dict
+            if mode not in ['LO', 'NLO'] and self.cross_sect_dict.get('xsecb'):
+                message = message + \
+                      '\n      Born cross section: %(xsecb)8.3e +- %(errb)6.1e %(unit)s' % \
                       self.cross_sect_dict
             message = message + \
                       '\n   --------------------------------------------------------------'

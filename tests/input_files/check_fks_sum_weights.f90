@@ -10,6 +10,7 @@ program check_fks_sum_weights
   double precision :: virtual_over_born
   common/c_vob/virtual_over_born
   double precision :: f(nintegrals),n1body,mc_signed,mc_abs,prob(2),negative_mc,negative_sum
+  double precision :: mc_s_events,mc_born
   integer :: sector,mode
 
   ndim=1
@@ -34,6 +35,8 @@ program check_fks_sum_weights
   prob=[0.25d0,0.75d0]
   mc_signed=0d0
   mc_abs=0d0
+  mc_s_events=0d0
+  mc_born=0d0
   do sector=1,2
     icontr=3
     H_event(1:3)=[.false.,.false.,.true.]
@@ -47,9 +50,11 @@ program check_fks_sum_weights
     call sum_identical_contributions()
     f=ieee_value(0d0,ieee_quiet_nan)
     call fill_mint_function_NLOPS(f,n1body)
-    if(any(f(9:).ne.0d0))error stop 'unused MC integration components'
+    if(any(f(9:26).ne.0d0))error stop 'unused MC integration components'
     mc_abs=mc_abs+prob(sector)*f(1)
     mc_signed=mc_signed+prob(sector)*f(2)
+    mc_s_events=mc_s_events+prob(sector)*f(int_s_events)
+    mc_born=mc_born+prob(sector)*f(int_born_xsec)
   enddo
 
   icontr=5
@@ -70,6 +75,11 @@ program check_fks_sum_weights
     error stop 'signed integral changed'
   if(abs(mc_abs-10d0).gt.1d-12.or.abs(f(1)-4d0).gt.1d-12) &
     error stop 'absolute integral'
+  ! The S-event part (2+3-4) and the one full Born, sampled or summed.
+  if(abs(mc_s_events-1d0).gt.1d-12.or.abs(f(int_s_events)-1d0).gt.1d-12) &
+    error stop 'S-event integral changed'
+  if(abs(mc_born-2d0).gt.1d-12.or.abs(f(int_born_xsec)-2d0).gt.1d-12) &
+    error stop 'Born integral changed'
   negative_mc=(mc_abs-mc_signed)/(2d0*mc_abs)
   negative_sum=(f(1)-f(2))/(2d0*f(1))
   if(abs(negative_mc-0.4d0).gt.1d-12.or.abs(negative_sum-0.25d0).gt.1d-12) &

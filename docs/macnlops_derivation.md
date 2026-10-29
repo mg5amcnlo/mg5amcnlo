@@ -1,5 +1,40 @@
 # MAcNLOPS from the generated measures
 
+## S-veto normalisation for sampled Delta: 27 October (`component-undamped-delta-v2`)
+
+The undamped Delta rule removes `T = Delta_src*min(u,K)` from negative H
+and rejected eligible S with `v = min(u,K)/K`. The removed S weight is
+`v*E_g` with `E_g ~ beta*Delta_PS*K_sh`, so balance needs
+`beta*Delta_PS*K_sh = Delta_src*K`. Measured on fresh 1e5-event DY and
+ttbar sources (NNPDF4.0), v1 removed 2.3 (DY) and 6.2 (ttbar) times the
+added H weight. The source and shower Sudakovs agree for DY, while the
+two factors that v1 ignores do not: `beta = sigma_S/sigma_B` (1.18, 1.36)
+and the coupling of `K`, taken at the fixed-order scale, against the
+shower's `alpha_s(pT_evol)` (Pythia's two-loop value is 0.53 at 1 GeV).
+
+v2 keeps the H decision and divides the S denominator by both:
+
+\[
+ v_2=\min\left\{1,\frac{\min(u,K)}{\beta_c\,K_{\rm sh}}\right\},\qquad
+ K_{\rm sh}=K\,\frac{\alpha_s^{\rm PS}(p_{T,\rm evol})}{\alpha_s^{K}},\qquad
+ \beta_c=\frac{\sigma_{S,c}}{\sigma_{B,c}}.
+\]
+
+`beta_c` is constant over the Born phase space of each integration
+channel `c`; its Born-point dependence is beyond NLO, like both factors,
+which are `1+O(alpha_s)`. MINT integrates the S-event part of the cross
+section (records not marked H) and the Born records (`itype=2`) as
+integrals 27 and 28, alongside the NLO result. Each channel's `res_1`
+lists them as `Final result [S]` and `[Born]`, and every split
+event-generation job links that file; `res.dat` and the run summary also
+report the Born cross section. The Pythia driver records the simple
+showers' coupling at the first emission as `alpha_s_emission`, and the
+native evaluator prints the coupling of K's emission vertex in a
+`MACNLOPS_KERNEL_COUPLING_V1` line before each density record. The
+replayed DY vetoes with this denominator balance (X/Y = 1.00) above
+10 GeV; below 10 GeV, and in ttbar, residual mismatches remain (see
+`docs/audits/check_macnlops_delta_sudakov.py`).
+
 ## Sampled fixed-flow matching: 25 October implementation
 
 Fresh MAcNLOPS sources can now use `MCExplicitKLSum=False` and

@@ -894,6 +894,9 @@ public:
       outgoing.push_back(partonSystemsPtr->getOut(0, i));
     seen = finished = true; type = pos; nISR = isr; nFSR = fsr;
     pt = infoPtr->pTnow();
+    // The simple showers' coupling at this emission: pT0Ref is forced to
+    // zero and renormMultFac to one, so ISR and FSR evaluate alpha_s at pT2.
+    emissionAlphaS = (pos == 2 ? isrAlphaS : fsrAlphaS).alphaS(pt * pt);
     if (!engine) throw std::runtime_error("Missing native shower for continuation export");
     continuationISR = nativeDipoleScales(*engine, true);
     continuationFSR = nativeDipoleScales(*engine, false);
@@ -903,7 +906,7 @@ public:
   }
 
   void reset() {
-    seen = finished = false; type = nISR = nFSR = 0; pt = 0.;
+    seen = finished = false; type = nISR = nFSR = 0; pt = emissionAlphaS = 0.;
     incoming.clear(); outgoing.clear();
     nativeTrialWarnings.clear();
     continuationISR.clear(); continuationFSR.clear();
@@ -913,7 +916,8 @@ public:
   Event snapshot;
   bool seen, finished;
   int type, nISR, nFSR;
-  double pt;
+  double pt, emissionAlphaS = 0.;
+  AlphaStrong isrAlphaS, fsrAlphaS;
   double beamXMaxA, beamXMaxB, cutoffISR, cutoffFSR;
   int flavourCount = 5;
   int alphaSNfmax = 5;
@@ -1229,7 +1233,8 @@ void recordJSON(std::ostream& out, std::size_t sequence, int kind,
       << "\",\"emitted\":" << (hook.seen ? "true" : "false")
       << ",\"emission_type\":\"" << (hook.type == 2 ? "ISR" :
                                          hook.type == 3 ? "FSR" : "none")
-      << "\",\"pt_evol\":" << hook.pt << ",\"source_scalup\":" << input.scale
+      << "\",\"pt_evol\":" << hook.pt << ",\"alpha_s_emission\":" << hook.emissionAlphaS
+      << ",\"source_scalup\":" << input.scale
       << ",\"shower_scalup\":" << input.showerScale
       << ",\"continuation_state\":\"" << continuation.state << '"'
       << ",\"continuation_scalup\":" << continuation.scale
@@ -1657,7 +1662,9 @@ void setEffectiveCutoffs(Pythia& p, FirstEmission& hook) {
   // do not update Settings. Reproduce their initialization with the same
   // public AlphaStrong implementation (Simple{Space,Time}Shower.cc, 8.318),
   // then expose the effective values in both Settings and event metadata.
-  AlphaStrong isr, fsr;
+  // The same couplings later give the alpha_s of each first emission.
+  AlphaStrong& isr = hook.isrAlphaS;
+  AlphaStrong& fsr = hook.fsrAlphaS;
   const int nf = p.mode("StandardModel:alphaSnfmax");
   isr.init(p.parm("SpaceShower:alphaSvalue"), p.mode("SpaceShower:alphaSorder"),
            nf, p.flag("SpaceShower:alphaSuseCMW"));

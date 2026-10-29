@@ -61,7 +61,10 @@
 ! points for which we include the virtual.
 ! nintegrals=5 : abs of 3
 ! nintegrals=6 : born
-! nintegrals>6 : virtual and born order by order
+! nintegrals=7-26 : virtual and born order by order
+! nintegrals=27 : the S-event part of 2 (all records not marked as H)
+! nintegrals=28 : the Born records (itype 2) of 2, i.e. the Born cross
+! section with the same PDFs, scales, cuts and phase space
 !
 
 module mint_module
@@ -74,7 +77,8 @@ module mint_module
   integer, parameter, private :: nintervals=32    ! max number of intervals in the integration grids
   integer, parameter, public  :: ndimmax=60       ! max number of dimensions of the integral
   integer, parameter, public  :: n_ave_virt=10    ! max number of grids to set up to approx virtual
-  integer, parameter, public  :: nintegrals=26    ! number of integrals to keep track of
+  integer, parameter, public  :: nintegrals=28    ! number of integrals to keep track of
+  integer, parameter, public  :: int_s_events=27,int_born_xsec=28
   integer, parameter, private :: nintervals_virt=8! max number of intervals in the grids for the approx virtual
   integer, parameter, private :: min_inter=4      ! minimal number of intervals
   integer, parameter, private :: min_it0=4        ! minimal number of iterations in the mint step 0 phase
@@ -92,7 +96,7 @@ module mint_module
   ! where 'n' is an integer smaller than or equal to min(min_it0,min_it1).
   !
   ! The number of intergrals should be equal to
-  !     nintegrals=6+2*n_ave_virt
+  !     nintegrals=6+2*n_ave_virt+2
   !
 
 ! public variables 
@@ -159,7 +163,9 @@ module mint_module
                                                    'V  9         ', & ! 23
                                                    'B  9         ', & ! 24
                                                    'V 10         ', & ! 25
-                                                   'B 10         '/)  ! 26
+                                                   'B 10         ', & ! 26
+                                                   'S events     ', & ! 27
+                                                   'Born xsec    '/)  ! 28
 
 
   integer, private :: nit,nit_included,kpoint_iter,nint_used,nint_used_virt,min_it,ncalls,pass_cuts_point,ng,npg,k
@@ -1694,9 +1700,14 @@ contains
           open(unit=58,file='res_1',status='unknown')
           write(58,*)'Final result [ABS]:',ans(1,1)+ans(5,1),' +/-',sqrt(unc(1,1)**2+unc(5,1)**2)
           write(58,*)'Final result:',ans(2,1),' +/-',unc(2,1)
+          ! Event-generation jobs link this file: their channel's S/Born ratio.
+          write(58,*)'Final result [S]:',ans(int_s_events,1),' +/-',unc(int_s_events,1)
+          write(58,*)'Final result [Born]:',ans(int_born_xsec,1),' +/-',unc(int_born_xsec,1)
           close(58)
           write(*,*)'Final result [ABS]:',ans(1,1)+ans(5,1),' +/-',sqrt(unc(1,1)**2+unc(5,1)**2)
           write(*,*)'Final result:',ans(2,1),' +/-',unc(2,1)
+          write(*,*)'Final result [S]:',ans(int_s_events,1),' +/-',unc(int_s_events,1)
+          write(*,*)'Final result [Born]:',ans(int_born_xsec,1),' +/-',unc(int_born_xsec,1)
           write(*,*)'chi**2 per D.o.F.:',chi2(1,1)
           open(unit=58,file='results.dat',status='unknown')
           write(58,*)ans(1,1)+ans(5,1),unc(2,1),0d0,0,0,0,0,0d0,0d0,ans(2,1) 
@@ -2248,7 +2259,8 @@ contains
     open (unit=12, file='res.dat',status='unknown')
     do kchan=0,nchans
        write (12,*)ans(1,kchan),unc(1,kchan),ans(2,kchan),unc(2,kchan) &
-            ,itmax,ncalls0,0d0
+            ,itmax,ncalls0,0d0,ans(int_s_events,kchan),unc(int_s_events,kchan) &
+            ,ans(int_born_xsec,kchan),unc(int_born_xsec,kchan)
     enddo
     close(12)
   end subroutine close_run_zero_res

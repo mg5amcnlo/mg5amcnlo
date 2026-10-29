@@ -227,6 +227,13 @@ def configure(process, p, delta, config):
     return values
 
 
+def veto_policy(mode):
+    """The sampled matching prescription of a campaign source mode."""
+    sys.path.insert(0, str(ROOT))
+    from madgraph.various import macnlops as mc
+    return mc.matching_prescription(mc.SOURCE_CONSTRUCTIONS[mode], 'sampled')
+
+
 def contract_id(config, p):
     return hashlib.sha256(json.dumps(dict(config=config, process=p), sort_keys=True).encode()).hexdigest()
 
@@ -290,7 +297,7 @@ def worker(base, config, key, cpus):
             source = process / 'Events' / run / 'events.lhe.gz'
             accepted = source.parent / 'macnlops/events.lhe.gz'
             checkpoint = base / (key + '_' + mode + '_complete.json')
-            policy = 'component-undamped-delta-v1' if delta else 'component-source-v1'
+            policy = veto_policy(mode)
             if checkpoint.exists():
                 saved = json.loads(checkpoint.read_text())
                 if saved.get('contract') != token or saved.get('veto_prescription') != policy:

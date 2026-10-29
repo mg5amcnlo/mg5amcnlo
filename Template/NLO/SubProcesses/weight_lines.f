@@ -17,6 +17,8 @@
 ! source keeps ordinary G/P subtraction. Never damp this K by bogus P.
          logical :: macnlops_proposal_active=.false.
          double precision :: macnlops_current_z=0d0
+! alpha_s of the last MacNLOPS real point, reported with its density.
+         double precision :: macnlops_kernel_alphas=0d0
 ! Per contribution: qMC**2, shat_Born, xBorn(1:2), connection z,
 ! and a flag: 1=legacy resolved-source gate, 2=physical proposal support.
          double precision, allocatable :: macnlops_meta(:,:)
@@ -739,6 +741,7 @@ c update maximum
       macnlops_gate_active=.false.
       macnlops_proposal_active=.false.
       macnlops_current_z=0d0
+      macnlops_kernel_alphas=0d0
       if (allocated(QCDpower)) deallocate(QCDpower)
       if (allocated(pdg)) deallocate(pdg)
       if (allocated(pdg_uborn)) deallocate(pdg_uborn)

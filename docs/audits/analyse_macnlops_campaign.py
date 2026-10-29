@@ -110,7 +110,7 @@ def prepare(keys=None,modes=None):
    if not checkpoint_path.exists():continue
    checkpoint=json.loads(checkpoint_path.read_text())
    if checkpoint.get('contract')!=campaign.contract_id(CONFIG,p):raise RuntimeError('Stale or foreign source checkpoint')
-   expected_policy='component-undamped-delta-v1' if mode=='delta' else 'component-source-v1'
+   expected_policy=campaign.veto_policy(mode)
    if checkpoint.get('veto_prescription')!=expected_policy:raise RuntimeError('Source uses the old matching prescription')
    accepted=Path(checkpoint['macnlops']['path']);source=Path(checkpoint['source']['path']);job=BASE/'jobs'/(process+'_'+mode);job.mkdir(parents=True,exist_ok=True)
    for path,expected in [(source,checkpoint['source']['sha256']),(accepted,checkpoint['macnlops']['sha256'])]:

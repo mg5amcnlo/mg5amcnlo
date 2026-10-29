@@ -2,8 +2,10 @@
 
 Ordinary MC@NLO retains its counterterms and bogus-Sudakov damping. Sampled
 fixed-flow sources carry the native sector, Born diagram and colour flow.
-Their Delta veto uses the complete undamped local H, including the G term;
-legacy globally summed Delta sources still use conditional damping replay.
+Their Delta veto uses the complete undamped local H, including the G term,
+over the S density beta*K_sh: the channel's sigma_S/sigma_B times the
+leading kernel at the shower's own emission coupling. Legacy globally summed
+Delta sources still use conditional damping replay.
 Any part that cannot be transferred with a bounded probability remains a
 signed H residual. The scalar/gated source is an explicit legacy option.
 """
@@ -46,6 +48,9 @@ DELTA_SOURCE = 'mcatnlo-delta-v1'
 SOURCE_NAMES = {ORDINARY_SOURCE: 'ordinary', RESOLVED_SOURCE: 'resolved',
                 DELTA_SOURCE: 'delta'}
 SOURCE_CONSTRUCTIONS = {name: construction for construction, name in SOURCE_NAMES.items()}
+# v2 normalises the S veto to beta*K_sh; v1 divided by the bare K.
+UNDAMPED_DELTA_POLICY = 'component-undamped-delta-v2'
+LEGACY_UNDAMPED_DELTA_POLICY = 'component-undamped-delta-v1'
 HARD_METADATA_FIELDS = (
     'nup', 'kind', 'owner', 'native_sector', 'native_provider',
     'native_context', 'native_history', 'born_flow', 'mc_kl_sum',
@@ -138,7 +143,7 @@ def matching_prescription(construction, partition):
     if partition == 'sampled':
         if construction == RESOLVED_SOURCE:
             raise MatchingError('The legacy resolved source requires a global H sum')
-        return ('component-undamped-delta-v1' if construction == DELTA_SOURCE
+        return (UNDAMPED_DELTA_POLICY if construction == DELTA_SOURCE
                 else 'component-source-v1')
     if partition == 'global_sum':
         return 'global-source-v1'
@@ -151,18 +156,28 @@ class Densities:
 
     In global Delta mode, subtraction includes the compensating real term.
     In sampled Delta mode it is the undamped local G-completed counterterm.
+    kernel_alpha_s is the coupling of K's emission vertex, when reported.
     """
     real: float
     subtraction: float
     shower: float
+    kernel_alpha_s: float = None
 
-    def acceptance(self, signed_residuals=False):
+    def transfers(self):
+        """Whether a negative hard density meets positive shower support."""
+        return self.subtraction > self.real and self.shower > 0
+
+    def acceptance(self, signed_residuals=False, kernel_scale=1.):
         """Bounded S acceptance, using only positive signed shower support.
 
         Signed-residual mode admits signed PDF luminosities. A nonpositive
         K transfers no negative H measure; no absolute-valued veto is used.
-        There is no Sudakov in the denominator.
+        There is no Sudakov in the denominator. kernel_scale rescales only
+        the S denominator, to the S events' actual normalisation and shower
+        coupling; the transfer min(u,K) removed from H is unchanged.
         """
+        if not (math.isfinite(kernel_scale) and kernel_scale > 0):
+            raise MatchingError('Invalid S-veto kernel normalisation')
         if not all(math.isfinite(x) for x in
                    (self.real, self.subtraction, self.shower)):
             raise MatchingError('Nonfinite real, subtraction or shower density')
@@ -186,7 +201,8 @@ class Densities:
         if probability > 1.0 + 32 * math.ulp(1.0) and not signed_residuals:
             raise MatchingError('Negative hard density exceeds shower density: '
                                 'H-/K = %.17g' % probability)
-        probability = min(probability, 1.0)
+        # min(u/K,1) = min(u,K)/K; a scaled denominator can still saturate.
+        probability = min(min(probability, 1.0) / kernel_scale, 1.0)
         return 1.0 - probability
 
     def hard_acceptance(self, signed_residuals=False):
@@ -198,6 +214,51 @@ class Densities:
         if signed_residuals:
             return max(1.0 - max(self.shower, 0.0) / negative_hard, 0.0)
         return 0.0
+
+
+def shower_kernel_scale(beta, record, density):
+    """beta*alpha_s^PS/alpha_s^K for one eligible emitted S proposal.
+
+    The eligible S density is approximately beta*Delta_PS*K_sh, where beta is
+    the channel's sigma_S/sigma_B and K_sh replaces K's emission coupling by
+    the shower's at this emission. With the Delta source the H removal is
+    Delta_src*min(u,K), so the S veto min(u,K)/(beta*K_sh) balances it where
+    the source and shower Sudakovs agree. Both factors are 1+O(alpha_s).
+    """
+    alpha_shower, alpha_kernel = record.get('alpha_s_emission'), density.kernel_alpha_s
+    if alpha_shower is None or alpha_kernel is None:
+        raise MatchingError('The S veto needs the shower and kernel emission couplings; '
+                            'rebuild the matching driver and evaluator')
+    values = (beta, alpha_shower, alpha_kernel)
+    if not all(type(x) in (int, float) and math.isfinite(x) and x > 0 for x in values):
+        raise MatchingError('Invalid S-veto normalisation: beta %r, alpha_s %r over %r' % values)
+    return beta * alpha_shower / alpha_kernel
+
+
+def channel_normalisation(filename):
+    """sigma_S/sigma_B of the integration channel that generated an event file.
+
+    MINT writes both integrals to the channel's res_1, which every split
+    event-generation job of that channel links.
+    """
+    path = Path(filename).parent / 'res_1'
+    values = {}
+    try:
+        for line in path.read_text().splitlines():
+            match = re.match(r'\s*Final result \[(S|Born)\]:\s*(\S+)\s+\+/-\s+(\S+)', line)
+            if match:
+                values[match[1]] = (number(match[2]), number(match[3]))
+    except (OSError, ValueError) as exc:
+        raise MatchingError('Cannot read the channel integrals in %s' % path) from exc
+    if set(values) != {'S', 'Born'}:
+        raise MatchingError('%s lacks the channel S and Born integrals; regenerate the '
+                            'source with the current integrator' % path)
+    (sigma_s, error_s), (sigma_b, error_b) = values['S'], values['Born']
+    if not all(math.isfinite(x) for x in (sigma_s, error_s, sigma_b, error_b)) or \
+            sigma_s <= 0 or sigma_b <= 0:
+        raise MatchingError('Nonpositive channel S or Born cross section in %s' % path)
+    return dict(path=str(path), sigma_S=sigma_s, sigma_S_error=error_s,
+                sigma_B=sigma_b, sigma_B_error=error_b, beta=sigma_s / sigma_b)
 
 
 def open_lhe(path, mode='rt'):
@@ -1306,7 +1367,14 @@ class NativeEvaluator:
         worker, log = self.workers[directory]
         worker.stdin.write(request)
         worker.stdin.flush()
+        kernel_alpha_s = None
         for line in worker.stdout:
+            if line.startswith('MACNLOPS_KERNEL_COUPLING_V1 '):
+                fields = line.split()
+                if len(fields) != 3 or int(fields[1]) != request_id:
+                    raise MatchingError('Invalid native kernel coupling record: ' + line.strip())
+                kernel_alpha_s = number(fields[2])
+                continue
             if not line.startswith('MACNLOPS_DENSITY_V1 '):
                 log.write(line)
                 continue
@@ -1321,7 +1389,7 @@ class NativeEvaluator:
                 raise MatchingError('Native density evaluator failed: ' + line.strip())
             if len(fields) != 6:
                 raise MatchingError('Invalid native density record: ' + line.strip())
-            return Densities(*(number(x) for x in fields[3:]))
+            return Densities(*(number(x) for x in fields[3:]), kernel_alpha_s=kernel_alpha_s)
         raise MatchingError('Native density evaluator exited for %s; see %s' %
                             (directory.name, log.name))
 
@@ -1431,7 +1499,7 @@ def collect_matched_events(inputs, reports, output, seed):
                 policy = (xml_attributes(markers[0][1]).get('prescription')
                           if markers else None)
                 if policy not in (None, 'global-source-v1', 'component-source-v1',
-                                  'component-undamped-delta-v1'):
+                                  LEGACY_UNDAMPED_DELTA_POLICY, UNDAMPED_DELTA_POLICY):
                     raise MatchingError('Unknown MAcNLOPS veto prescription')
                 matching_policies.append(policy)
                 if policy != report.get('veto_prescription'):
@@ -1472,7 +1540,10 @@ def collect_matched_events(inputs, reports, output, seed):
                                 shower_profiles[-1]['construction'] != construction):
                             raise MatchingError('Event body/shower-profile source construction disagrees')
                         legacy_global = policy is None and event.hard.partition == 'global_sum'
-                        if not legacy_global and policy != expected_policy:
+                        # The body cannot tell the v1 and v2 S-veto denominators apart.
+                        legacy_delta = (policy == LEGACY_UNDAMPED_DELTA_POLICY and
+                                        expected_policy == UNDAMPED_DELTA_POLICY)
+                        if not (legacy_global or legacy_delta) and policy != expected_policy:
                             raise MatchingError('Event body/header matching prescriptions disagree')
                         for field, expected in (('matching_partition', event.hard.partition),
                                                 ('source_construction', construction)):
@@ -1572,12 +1643,13 @@ def matching_scale(record, profile):
 
 def reject_proposals(proposals, metadata, output, evaluator, seed=1, signed_residuals=False,
                      profile=None, require_continuation=False, shower_profile=None,
-                     matching_policy=None):
+                     matching_policy=None, beta=None):
     """Make one decision per original event and preserve its absolute weight.
 
     Output is published only after all density and synchronisation checks pass.
     No accepted-count normalisation is performed.  The caller must supply sum
     normalised MC@NLO weights, which remain additive after event rejection.
+    With beta, the channel's sigma_S/sigma_B, S vetoes use beta*K_sh.
     """
     rng = random.Random(seed)
     output = Path(output)
@@ -1623,6 +1695,7 @@ def reject_proposals(proposals, metadata, output, evaluator, seed=1, signed_resi
                 density = None
                 probability = 1.0
                 gate_scale = None
+                kernel_scale = None
                 if kind == 'H' and event.weight < 0:
                     density = evaluator.evaluate(event, sequence)
                     probability = density.hard_acceptance(signed_residuals=signed_residuals)
@@ -1633,7 +1706,10 @@ def reject_proposals(proposals, metadata, output, evaluator, seed=1, signed_resi
                         counts['below_matching_boundary_S'] += 1
                     else:
                         density = evaluator.evaluate(event, sequence)
-                        probability = density.acceptance(signed_residuals=signed_residuals)
+                        if beta is not None and density.transfers():
+                            kernel_scale = shower_kernel_scale(beta, record, density)
+                        probability = density.acceptance(signed_residuals=signed_residuals,
+                                                         kernel_scale=kernel_scale or 1.)
                 accepted = rng.random() < probability
                 counts[('accepted_' if accepted else 'rejected_') + kind] += 1
                 if kind == 'S' and not record['emitted']:
@@ -1648,7 +1724,7 @@ def reject_proposals(proposals, metadata, output, evaluator, seed=1, signed_resi
                     retained.write(block)
                 audit.write(json.dumps(dict(sequence=sequence, kind=kind,
                     accepted=accepted, acceptance=probability,
-                    matching_scale=gate_scale,
+                    matching_scale=gate_scale, kernel_scale=kernel_scale,
                     component=getattr(event, 'matching_component', None),
                     densities=None if density is None else density.__dict__)) + '\n')
             if meta.readline():
@@ -1674,7 +1750,7 @@ def reject_proposals(proposals, metadata, output, evaluator, seed=1, signed_resi
         raise
     return dict(counts=dict(counts), weight_sums=dict(weight_sums),
                 seed=seed, decisions=str(audit_output), signed_residuals=signed_residuals,
-                veto_prescription=matching_policy,
+                veto_prescription=matching_policy, s_veto_beta=beta,
                 lhe_continuation=continuation)
 
 
@@ -2251,6 +2327,10 @@ def run_file(filename, process_dir, job, driver, args, seed):
     central_pdf, pdf_info = pdf_name(process_dir, card, with_info=True)
     profile = generation_profile(process_dir)
     contract = hard_source_contract(filename, profile['construction'])
+    policy = matching_prescription(profile['construction'], contract['partition'])
+    # Each event file belongs to one integration channel; fail before showering.
+    normalisation = (channel_normalisation(filename) if policy == UNDAMPED_DELTA_POLICY
+                     else None)
     signed_residuals = getattr(args, 'signed_residuals', None)
     if signed_residuals is None:
         signed_residuals = profile['construction'] != RESOLVED_SOURCE
@@ -2300,10 +2380,10 @@ def run_file(filename, process_dir, job, driver, args, seed):
         report = reject_proposals(proposal, metadata, job / 'events.lhe.gz', evaluator,
                                   seed=seed, profile=support,
                                   signed_residuals=signed_residuals, require_continuation=True,
-                                  shower_profile=shower_profile,
-                                  matching_policy=matching_prescription(
-                                      profile['construction'], contract['partition']))
+                                  shower_profile=shower_profile, matching_policy=policy,
+                                  beta=normalisation['beta'] if normalisation else None)
         report['shower_support'] = evaluator.configuration
+        report['channel_normalisation'] = normalisation
         if profile['construction'] == DELTA_SOURCE and contract['partition'] == 'global_sum':
             report['delta_auxiliary'] = dict(seed=seed,
                 sampling='independent conditional source-H law; bounded C/K_g',

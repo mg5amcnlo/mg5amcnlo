@@ -74,6 +74,7 @@ c statistics for MadLoop
 
 c timing statistics
       double precision job_started,job_finished,tTot
+      double precision res_abs,err_abs
 c general MadFKS parameters
       integer ifold_picked
       double precision x_save(ndimmax,max_fold)
@@ -380,11 +381,16 @@ c Randomly pick the contribution that will be written in the event file
 
       open (unit=12, file='res.dat',status='unknown')
       if (imode.eq.0) then
-         write (12,*)ans(1,1),unc(1,1),ans(2,1),unc(2,1),itmax,ncalls0,tTot
+         res_abs=ans(1,1)
+         err_abs=unc(1,1)
       else
-         write (12,*)ans(1,1)+ans(5,1),sqrt(unc(1,1)**2+unc(5,1)**2),ans(2,1)
-     $        ,unc(2,1),itmax,ncalls0,tTot
+         res_abs=ans(1,1)+ans(5,1)
+         err_abs=sqrt(unc(1,1)**2+unc(5,1)**2)
       endif
+c Trailing fields: the S-event part and the Born cross section.
+      write (12,*)res_abs,err_abs,ans(2,1),unc(2,1),itmax,ncalls0,tTot
+     $     ,ans(int_s_events,1),unc(int_s_events,1)
+     $     ,ans(int_born_xsec,1),unc(int_born_xsec,1)
       close(12)
 
       return

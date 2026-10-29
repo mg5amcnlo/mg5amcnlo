@@ -4056,6 +4056,10 @@ c on the imode we should or should not include the virtual corrections.
          do i=1,icontr
             sigint=sigint+wgts(1,i)
             max_weight=max(max_weight,abs(wgts(1,i)))
+! The S-event part of sigint and its Born records, per integration channel.
+! Their ratio normalises the MAcNLOPS S veto to the Born-based kernel.
+            if (.not.H_event(i)) f(int_s_events)=f(int_s_events)+wgts(1,i)
+            if (itype(i).eq.2) f(int_born_xsec)=f(int_born_xsec)+wgts(1,i)
             if (group_size(i).eq.0) cycle
             do j=1,niproc(i)
                sigint_ABS=sigint_ABS+abs(unwgt(j,i))
