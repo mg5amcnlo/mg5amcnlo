@@ -2229,13 +2229,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if vector:
             pdf_definition_lines_vec = ""
             pdf_data_lines_vec = ""
-            pdf_lines = """ NB_WARP_USED = VECSIZE_USED / WARP_SIZE
+            nb_warp_lines = """ NB_WARP_USED = VECSIZE_USED / WARP_SIZE
         IF( NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED ) THEN
         WRITE(*,*) 'ERROR: NB_WARP_USED * WARP_SIZE .NE. VECSIZE_USED',
      &    NB_WARP_USED, WARP_SIZE, VECSIZE_USED
         STOP
         ENDIF
-
+"""
+            pdf_lines = nb_warp_lines + """
         DO CURR_WARP=1, NB_WARP_USED
         IF(IMIRROR_VEC(CURR_WARP).EQ.1)THEN
           IB(1) = 1
@@ -2250,7 +2251,15 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
 
 
-        if ninitial == 1:
+        if ninitial == 1 and vector:
+            # no PDF: same weight for all the events of the vector
+            pdf_lines = nb_warp_lines + "ALL_PD(0,:) = 0d0\nIPROC = 0\n"
+            for i, proc in enumerate(processes):
+                process_line = proc.base_string()
+                pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
+                pdf_lines = pdf_lines + "\nALL_PD(IPROC,:)=1d0\n"
+                pdf_lines = pdf_lines + "ALL_PD(0,:)=ALL_PD(0,:)+ALL_PD(IPROC,:)\n"
+        elif ninitial == 1:
             pdf_lines = "PD(0) = 0d0\nIPROC = 0\n"
             for i, proc in enumerate(processes):
                 process_line = proc.base_string()
@@ -6068,7 +6077,9 @@ c of an explicit polarisation in the process
             replace_dict['define_subdiag_lines'] = "INTEGER IB(2)"
             replace_dict['cutsdone'] = "      cutsdone=.false.\n       cutspassed=.false."
             replace_dict['get_channel'] = "MAPCONFIG(ICONFIG)"
-            replace_dict['get_channel_vec'] = " channel  = MAPCONFIG(ICONFIG)"
+            replace_dict['get_channel_vec'] = """
+            CHANNELS(IVEC) = MAPCONFIG(ICONFIG)
+            channel = CHANNELS(IVEC)"""
             # need to extract get_helicities/select color from the group template file
             text = open(pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files', 'super_auto_dsig_group_v4.inc')).read()
             color_hel_text = writers.FortranWriter.get_routine(text, ['select_color', 'get_helicities'])
@@ -6144,11 +6155,20 @@ c of an explicit polarisation in the process
         end
 
         SUBROUTINE SELECT_GROUPING_VEC(IMIRROR_VEC, IPROC, ICONF_VEC, WGT, VECSIZE_USED)
+        implicit none
+        include '../../Source/vector.inc'
         integer imirror_vec(*)
         integer iproc
         integer iconf_vec(*)
         double precision WGT(*)
         integer VECSIZE_USED
+        integer iw
+c       single process and no mirror (dsample uses imirror_vec for the cuts)
+        iproc = 1
+        do iw=1, VECSIZE_USED/WARP_SIZE
+           iconf_vec(iw) = 1
+           imirror_vec(iw) = 1
+        enddo
         return
         end
         

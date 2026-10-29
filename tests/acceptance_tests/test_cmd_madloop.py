@@ -24,6 +24,8 @@ import copy
 import sys
 import logging
 import time
+import contextlib
+from unittest import mock
 import tests.IOTests as IOTests
 logger = logging.getLogger('test_cmd')
 
@@ -33,6 +35,7 @@ import madgraph.interface.master_interface as MGCmd
 import madgraph.interface.amcatnlo_run_interface as NLOCmd
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.various.misc as misc
+import madgraph.loop.loop_exporters as loop_exporters
 import tests.IOTests as IOTests
 import madgraph.various.lhe_parser as lhe_parser
 
@@ -1078,6 +1081,33 @@ set matrix_normalisation False
             self.assertAlmostEqual(density_check[j].imag, rho_standalone[j].imag, places=7)
 
 
+# Tensor Integral Reduction libraries considered as installed by the IOTests
+# below. Which of them are available changes the generated code
+# (LOOPLIBS_AVAILABLE, the NINJA/COLLIER interfaces, QP_NLOOPLIB), so the
+# reference files must not depend on what is installed on the machine
+# running the test.
+IOTEST_TIR_AVAILABLE = ['iregi', 'ninja', 'collier']
+IOTEST_NINJA_QUAD_PREC = True
+
+@contextlib.contextmanager
+def pinned_tir_libraries(available=IOTEST_TIR_AVAILABLE,
+                         ninja_quad_prec=IOTEST_NINJA_QUAD_PREC):
+    """Generate the loop output as if exactly the TIR libraries in
+    'available' were installed (ninja with quadruple precision support if
+    ninja_quad_prec), without looking for, installing or compiling any of
+    them. Only usable for tests that do not compile the output."""
+
+    def link_TIR(self, targetPath, libpath, libname, tir_name='TIR'):
+        self.tir_available_dict[tir_name] = tir_name in available
+        return ''
+
+    with mock.patch.object(loop_exporters.LoopProcessOptimizedExporterFortranSA,
+                           'link_TIR', link_TIR), \
+         mock.patch.object(misc, 'get_ninja_quad_prec_support',
+                           lambda ninja_lib_path: ninja_quad_prec):
+        yield
+
+
 class TestCmdMatchBox(IOTests.IOTestManager):
     
     def setUp(self):
@@ -1088,13 +1118,6 @@ class TestCmdMatchBox(IOTests.IOTestManager):
         # Below the key is the name of the logger and the value is a tuple with
         # first the handlers and second the level.
         self.logger_saved_info = {}
-
-        # Select the Tensor Integral to include in the test
-        misc.deactivate_dependence('pjfry', cmd = self.interface, log='stdout')
-        misc.deactivate_dependence('samurai', cmd = self.interface, log='stdout')        
-        misc.deactivate_dependence('golem', cmd = self.interface, log='stdout')
-        misc.activate_dependence('ninja', cmd = self.interface, log='stdout',MG5dir=MG5DIR)
-        misc.activate_dependence('collier', cmd = self.interface, log='stdout',MG5dir=MG5DIR)
 
     @IOTests.createIOTest()
     def testIO_MatchBoxOutput(self):
@@ -1109,8 +1132,10 @@ class TestCmdMatchBox(IOTests.IOTestManager):
         output matchbox %(path)s/TEST -f
         """ % {'path': self.IOpath}
         
-        for line in cmd.split('\n'):
-            self.interface.exec_cmd(line)
+        # the Tensor Integral libraries are fixed (see pinned_tir_libraries)
+        with pinned_tir_libraries():
+            for line in cmd.split('\n'):
+                self.interface.exec_cmd(line)
  
     
 #===============================================================================
@@ -1130,14 +1155,10 @@ class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
             interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
                                precmd=True, postcmd=True)
         
-        # Select the Tensor Integral to include in the test
-        misc.deactivate_dependence('pjfry', cmd = interface, log='stdout')
-        misc.deactivate_dependence('samurai', cmd = interface, log='stdout')        
-        misc.deactivate_dependence('golem', cmd = interface, log='stdout')
-        misc.activate_dependence('ninja', cmd = interface, log='stdout',MG5dir=MG5DIR)
-
-        run_cmd('generate g g > t t~ [virt=QCD]')
-        interface.onecmd('output %s -f' % str(pjoin(self.IOpath,'ggttx_IOTest')))
+        # the Tensor Integral libraries are fixed (see pinned_tir_libraries)
+        with pinned_tir_libraries():
+            run_cmd('generate g g > t t~ [virt=QCD]')
+            interface.onecmd('output %s -f' % str(pjoin(self.IOpath,'ggttx_IOTest')))
 
         #remove some function from some file:
         IOTests.IOTest.remove_f77_function_from_file(
