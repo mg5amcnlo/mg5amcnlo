@@ -116,6 +116,7 @@ c     count the number of j/bjet/photon/lepton
 c
       integer nb_j, nb_b, nb_a, nb_l, nb_nocut,nb_pdg
       double precision smin_p, smin_m ! local variable to compute smin
+      double precision ptjk
 c
 c     setup masses for the final-state particles
 c
@@ -534,6 +535,11 @@ c     Compute Smin (for efficiency purpose)
 c
       smin = 0d0
 c     check for the jet
+c     ptj/ej only apply to the jets with do_cuts, while ptjNmin, xptj, htNmin
+c     and htjmin apply to all the jets (ordered in pT, see cuts.f).
+c     The k-th hardest jet then has E >= pT >= max(ptjNmin, N>=k) and at least
+c     (nb_j-nb_nocut) jets have E >= max(ej,ptj), so the k-th largest
+c     E is bounded by max(ptjNmin (N>=k), ej, ptj (if k<=nb_j-nb_nocut)).
       smin_m = 0d0
       smin_p = 0d0
       nb_j = 0
@@ -542,35 +548,27 @@ c     check for the jet
           if (is_a_j(i)) then
               nb_j = nb_j + 1
               smin_m = smin_m - pmass(i)**2
-              if (do_cuts(i))then
-                 if (nb_j.eq.1) then
-                  smin_p = smin_p + max(ej,ptj,xptj,0d0,
-     &                                    max(ptj1min,ptj2min,ptj3min,ptj4min))
-                 elseif(nb_j.eq.2) then
-                  smin_p = max(ht2min, smin_p + max(ej,ptj,0d0,
-     &                                            max(ptj2min,ptj3min,ptj4min)))
-                 elseif(nb_j.eq.3) then
-                  smin_p = max(ht3min, smin_p + max(ej,ptj,0d0,
-     &                                                    max(ptj3min,ptj4min)))
-                 elseif(nb_j.eq.4) then
-                  smin_p = max(ht4min, smin_p + max(ej,ptj,ptj4min,0d0))
-                 else
-                  smin_p = smin_p + max(ej,ptj,0d0)
-                 endif
-              else
-                 nb_nocut = nb_nocut + 1
-                 if (nb_j.eq.1) then
-                  smin_p = smin_p + max(0d0,ptj1min,ptj2min,ptj3min,ptj4min)
-                 elseif(nb_j.eq.2) then
-                  smin_p = max(ht2min, smin_p + max(ptj2min,ptj3min,ptj4min,0d0))
-                 elseif(nb_j.eq.3) then
-                  smin_p = max(ht3min, smin_p + max(0d0,ptj3min,ptj4min))
-                 elseif(nb_j.eq.4) then
-                  smin_p = max(ht4min, smin_p + max(ptj4min,0d0))
-                 endif
-              endif
+              if (.not.do_cuts(i)) nb_nocut = nb_nocut + 1
           endif
-        enddo
+      enddo
+      do k=1,nb_j
+         ptjk = 0d0
+         if (jetor) then
+            do j=k,4
+               ptjk = max(ptjk, ptjmin4(j))
+            enddo
+         elseif (k.eq.1) then
+c           cutuse=1: only one of the min(nb_j,4) leading jets has to pass
+            ptjk = ptjmin4(1)
+            do j=2,min(nb_j,4)
+               ptjk = min(ptjk, ptjmin4(j))
+            enddo
+         endif
+         if (k.eq.1) ptjk = max(ptjk, xptj)
+         if (k.le.nb_j-nb_nocut) ptjk = max(ptjk, ej, ptj)
+         smin_p = smin_p + max(ptjk, 0d0)
+         if (k.ge.2.and.k.le.4) smin_p = max(smin_p, htjmin4(k))
+      enddo
       if (nb_j.gt.0)then
          if ((nb_j-nb_nocut).gt.0)then
             smin_m = smin_m + (nb_j-nb_nocut)*(nb_j-nb_nocut-1)/2d0*mmjj**2
