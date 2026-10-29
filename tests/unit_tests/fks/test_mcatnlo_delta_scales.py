@@ -77,7 +77,7 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
             'born_nhel.inc': 'integer max_bcol\nparameter(max_bcol=1)',
             'nFKSconfigs.inc': 'integer fks_configs\nparameter(fks_configs=1)',
             'run.inc': 'integer lpp(2)\ncommon/test_lpp/lpp',
-            'orders.inc': '',
+            'orders.inc': 'integer nsplitorders\nparameter(nsplitorders=1)',
             'genps.inc': 'integer maxproc\nparameter(maxproc=1)',
             'born_leshouche.inc': 'integer iproc_born\nparameter(iproc_born=1)\n'
                                   'common/test_born/idup,mothup,icolup',
@@ -94,7 +94,10 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
                         ('compute_delta', 'get_delta_stopping_scales',
                          'get_delta_connections', 'delta_leg_probability',
                          'gl_safe', 'get_parton_id',
-                         'setSudType'),
+                         'setSudType', 'delta_backward_leg', 'delta_group_xf',
+                         'delta_backward_omz', 'delta_alphas_lambdas',
+                         'delta_shower_alphas', 'delta_alphas_nf',
+                         'delta_alphas_lambda'),
                         external_functions=(('double precision', 'pysudakov_safe'),)))
         cls.executable = work / 'check_delta_matching'
         result = subprocess.run([
@@ -108,6 +111,7 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
             str(TEMPLATE / 'mcatnlo_delta_scales.f90'),
             str(TEMPLATE / 'herwig7_scales.f90'),
             str(TEMPLATE / 'scale_module.f90'),
+            str(TEMPLATE / 'FKSParams.f90'),
             str(work / 'delta_matching.f'),
             str(ROOT / 'tests/input_files/check_mcatnlo_delta_matching.f90'),
             '-o', str(cls.executable)], cwd=work, capture_output=True, text=True)

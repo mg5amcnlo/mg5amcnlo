@@ -23,6 +23,11 @@ module FKSParams
   logical :: MCSubtractionAtFixedFlow=.true.
   logical :: FKSExplicitSum=.false.
   logical :: FxFxPythia8FiniteTerms=.false.
+  ! MC@NLO-Delta prototype: backward no-emission probability for incoming
+  ! quarks, with the shower's alpha_s(MZ) and its running order (1 or 2).
+  logical :: delta_backward_isr=.false.
+  real*8 :: delta_backward_alphas=0.118d0
+  integer :: delta_backward_alphas_order=2
   logical, private :: FxFxPythia8Matching=.false.
   integer :: FKSFinalRecoil=0
   integer :: FKSISRMapping=0
@@ -113,6 +118,22 @@ contains
              read(68,*,end=999) MCSubtractionAtFixedFlow
           else if (buff .eq. '#FxFxPythia8FiniteTerms') then
              read(68,*,end=999) FxFxPythia8FiniteTerms
+          else if (buff .eq. '#DeltaBackwardISR') then
+             read(68,*,end=999) delta_backward_isr
+          else if (buff .eq. '#DeltaBackwardAlphaS') then
+             read(68,*,end=999) delta_backward_alphas
+             if (.not.(delta_backward_alphas.ge.0.06d0 .and. &
+                       delta_backward_alphas.le.0.25d0)) then
+                write(*,*) 'DeltaBackwardAlphaS must be between 0.06 and 0.25.'
+                stop 1
+             endif
+          else if (buff .eq. '#DeltaBackwardAlphaSOrder') then
+             read(68,*,end=999) delta_backward_alphas_order
+             if (delta_backward_alphas_order.lt.1 .or. &
+                 delta_backward_alphas_order.gt.2) then
+                write(*,*) 'DeltaBackwardAlphaSOrder must be 1 or 2.'
+                stop 1
+             endif
           else if (buff .eq. '#FKSExplicitSum') then
              read(68,*,end=999) FKSExplicitSum
           else if (buff .eq. '#UsePolyVirtual') then
@@ -257,6 +278,9 @@ contains
        write(*,*) ' > MCSubtractionAtFixedFlow  = ',MCSubtractionAtFixedFlow
        write(*,*) ' > FKSExplicitSum            = ',FKSExplicitSum
        write(*,*) ' > FxFxPythia8FiniteTerms     = ',FxFxPythia8FiniteTerms
+       write(*,*) ' > DeltaBackwardISR          = ',delta_backward_isr
+       write(*,*) ' > DeltaBackwardAlphaS       = ',delta_backward_alphas
+       write(*,*) ' > DeltaBackwardAlphaSOrder  = ',delta_backward_alphas_order
        write(*,*) &
             '==============================================================='
        paramPrinted=.TRUE.
@@ -288,6 +312,9 @@ contains
     MCSubtractionAtFixedFlow=.true.
     FKSExplicitSum=.false.
     FxFxPythia8FiniteTerms=.false.
+    delta_backward_isr=.false.
+    delta_backward_alphas=0.118d0
+    delta_backward_alphas_order=2
     IncludeBornContributions=.true.
     SelectedContributionTypes(0)=0
     VetoedContributionTypes(0)=0

@@ -276,6 +276,30 @@
 .true.
 ! Default :: .true.
 !
+! MC@NLO-Delta prototype for incoming quarks colour-connected to the other
+! incoming leg. .true. replaces the forward Sudakov table and PDF ratio by
+! the PYTHIA8 backward no-emission probability, from the LO identity
+! forward Sudakov x PDF ratio x exp(C): the forward kernel uses the shower's
+! alpha_s, and C adds the PDF evolution outside the massless II z bound.
+! Fixed Gauss rules evaluate both. Gluons and other connections keep the
+! table. See docs/audits/delta_noemission. Rerun the integration after
+! changing these settings.
+#DeltaBackwardISR
+.false.
+! Default :: .false.
+!
+! Shower alpha_s(MZ) and running order for DeltaBackwardISR, as PYTHIA8's
+! AlphaStrong (CMW off, alphaSnfmax = 5, thresholds 1.5 and 4.8 GeV). They
+! must equal SpaceShower:alphaSvalue and SpaceShower:alphaSorder (1 or 2).
+! The archived Sudakov table corresponds to 0.1365 at first order.
+#DeltaBackwardAlphaS
+0.118d0
+! Default :: 0.118d0
+!
+#DeltaBackwardAlphaSOrder
+2
+! Default :: 2
+!
 ! ==========================================================================
 ! FxFx analytic Sudakov finite terms (ickkw=3 only).
 ! Always enabled for FxFx with PYTHIA8 matching, regardless of this flag.

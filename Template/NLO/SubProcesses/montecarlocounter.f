@@ -35,6 +35,9 @@ c FKS/native-Born machinery or the external Sudakov tables.
          logical :: nonsoft=.false.
       end type mc_kernel_limits
 
+c     PYTHIA8's default AlphaStrong flavour thresholds (DeltaBackwardISR).
+      double precision,parameter :: delta_alphas_mc=1.5d0,
+     $     delta_alphas_mb=4.8d0
 c     Complete live colour-connection data for one Born leg in Delta.
       type :: delta_connections
          integer :: count=0,partner(2)=0,sudakov_type(2)=0
@@ -1170,6 +1173,8 @@ c
 c Delta matching: no-emission probability and H-event scales.
       subroutine compute_delta(p,probne)
 c     Assemble the no-emission probability and the H-event start scales.
+      use FKSParams, only: delta_backward_isr,delta_backward_alphas,
+     $     delta_backward_alphas_order
       use fks_phase_space_data, only: xbjrk_cnt
       use process_module, only: valid_dipole_n1,ndelH
       use scale_module, only: born_flow_picked,shower_scale_nbody,
@@ -1210,6 +1215,11 @@ c     The first Sudakov call initializes these fitted table bounds.
       type(delta_connections) leg_connections(nexternal-1)
       integer i,j
       double precision mcmass(21),deltanum,leg_probability
+c     DeltaBackwardISR: Lambda_3,4,5 of the card's shower coupling.
+      double precision backward_lambda(3:5),backward_alpha
+      integer backward_order
+      save backward_lambda,backward_alpha,backward_order
+      data backward_alpha/-1d0/,backward_order/-1/
 
       mcmass=0d0
       include 'MCmasses_PYTHIA8.inc'
@@ -1320,14 +1330,28 @@ c     Ellis-Stirling-Webber
      $     born_flow_picked,isspecial(born_flow_picked),smallptupp,
      $     cstupp,leg_connections)
 
+      if (delta_backward_isr.and.(backward_alpha.ne.
+     $     delta_backward_alphas.or.backward_order.ne.
+     $     delta_backward_alphas_order)) then
+         backward_alpha=delta_backward_alphas
+         backward_order=delta_backward_alphas_order
+         call delta_alphas_lambdas(backward_alpha,backward_order,
+     $        backward_lambda)
+      endif
       wgt_sudakov=1d0
 c     Each Born leg contributes one probability, including its live
-c     colour connections. Only incoming legs have beam PDF inputs.
+c     colour connections. Only incoming legs have beam PDF inputs. With
+c     DeltaBackwardISR, eligible quark legs take the backward probability;
+c     -1 keeps the forward table.
       do i=1,nincoming
          if (leg_connections(i)%count.eq.0) cycle
-         leg_probability=delta_leg_probability(i,idup_s(i),
-     $        idup(i,1:iproc_born),lpp(i),xbjrk_cnt(i,0),
-     $        leg_connections(i),mcmass)
+         leg_probability=-1d0
+         if (delta_backward_isr) leg_probability=delta_backward_leg(
+     $        idup_s(i),idup(i,1:iproc_born),lpp(i),xbjrk_cnt(i,0),
+     $        leg_connections(i),backward_lambda,backward_order)
+         if (leg_probability.lt.0d0) leg_probability=
+     $        delta_leg_probability(i,idup_s(i),idup(i,1:iproc_born),
+     $        lpp(i),xbjrk_cnt(i,0),leg_connections(i),mcmass)
          wgt_sudakov=wgt_sudakov*leg_probability
       enddo
       do i=nincoming+1,nexternal-1
@@ -1603,6 +1627,202 @@ c     to interpret it as a probability at the accuracy used here.
       enddo
       delta_leg_probability=min(max(PIk,0d0),1d0)
       end function delta_leg_probability
+
+      double precision function delta_backward_leg(pdg,flavours,
+     $     beam_type,bjorken,connections,lambda,order)
+c     DeltaBackwardISR prototype for an incoming quark whose colour
+c     partner is the other incoming parton: the PYTHIA8 backward
+c     no-emission probability from the LO identity B = F*R*exp(C).
+c     F = exp(-int a V1) is the PDF-free mode-1 forward kernel with the
+c     shower's alpha_s, V1 = int_0^Z z(Pqq+Pgq) dz; R is the grouped PDF
+c     ratio of the forward prescription; C restores the PDF evolution from
+c     Z(t) < z < 1, outside the massless II bound Z = 1-r/2(sqrt(1+4/r)-1),
+c     r = t/mdip^2 (see "Cheap PDF boundary correction prototype" in
+c     docs/audits/delta_noemission). F uses four Gauss nodes per alpha_s
+c     flavour interval; C uses three in ln(t) and two in
+c     (1-z)/(1-max(x,Z)), within about 0.1% in exp(C) down to 2 GeV.
+c     Returns -1 for other legs, below the table's 1.01 GeV continuation
+c     or if a PDF vanishes; the caller then keeps the forward table.
+      implicit none
+      integer, intent(in) :: pdg,flavours(:),beam_type,order
+      double precision, intent(in) :: bjorken,lambda(3:5)
+      type(delta_connections), intent(in) :: connections
+      double precision, parameter :: CF=4d0/3d0,TR=0.5d0,
+     $     pi=3.14159265358979323846d0,backward_min=1.01d0
+      double precision, parameter :: x2(2)=(/-0.5773502691896258d0,
+     $     0.5773502691896258d0/),
+     $     x3(3)=(/-0.7745966692414834d0,0d0,0.7745966692414834d0/),
+     $     w3(3)=(/0.5555555555555556d0,0.8888888888888889d0,
+     $     0.5555555555555556d0/),
+     $     x4(4)=(/-0.8611363115940526d0,-0.3399810435848563d0,
+     $     0.3399810435848563d0,0.8611363115940526d0/),
+     $     w4(4)=(/0.3478548451374538d0,0.6521451548625461d0,
+     $     0.6521451548625461d0,0.3478548451374538d0/)
+      integer ih,lp,i,k,nact,idg
+      double precision lo,hi,edges(4),t,pt,mdip,omz0,omzl,omz,z,y,val,
+     $     den,forward,boundary,ratio_den
+      double precision pdg2pdf
+      external pdg2pdf
+
+      delta_backward_leg=-1d0
+      if (abs(pdg).lt.1.or.abs(pdg).gt.5.or.connections%count.ne.1.or.
+     $     connections%partner(1).gt.nincoming.or.
+     $     connections%stop(1).le.backward_min.or.
+     $     connections%mass(1).le.0d0) return
+      mdip=connections%mass(1)
+      ih=abs(beam_type)
+      lp=sign(1,beam_type)
+      idg=get_parton_id(21,lp)
+      ratio_den=delta_group_xf(ih,lp,flavours,bjorken,
+     $     connections%start(1))
+      if (ratio_den.le.0d0) return
+      lo=2d0*log(connections%stop(1))
+      hi=2d0*log(connections%start(1))
+c     Forward kernel, split at the alpha_s flavour thresholds.
+      edges=(/lo,min(max(2d0*log(delta_alphas_mc),lo),hi),
+     $     min(max(2d0*log(delta_alphas_mb),lo),hi),hi/)
+      forward=0d0
+      do i=1,3
+         if (edges(i+1).eq.edges(i)) cycle
+         do k=1,4
+            t=exp(edges(i)+0.5d0*(x4(k)+1d0)*(edges(i+1)-edges(i)))
+            omz0=delta_backward_omz(t,mdip)
+            forward=forward+0.5d0*w4(k)*(edges(i+1)-edges(i))*
+     $           delta_shower_alphas(sqrt(t),lambda,order)/(2d0*pi)*
+     $           CF*(-2d0*log(omz0)-1.5d0*(1d0-omz0)**2)
+         enddo
+      enddo
+c     Boundary exponent C.
+      boundary=0d0
+      do i=1,3
+         t=exp(lo+0.5d0*(x3(i)+1d0)*(hi-lo))
+         pt=sqrt(t)
+         omz0=delta_backward_omz(t,mdip)
+         den=delta_group_xf(ih,lp,flavours,bjorken,pt,nact)
+         if (den.le.0d0) return
+         val=CF*(1d0-omz0)*omz0
+         omzl=min(1d0-bjorken,omz0)
+c     There is no PDF support for Z < z < x: only -Pqq remains there.
+         if (omz0.gt.1d0-bjorken) val=val-CF*(2d0*log(omz0/omzl)
+     $        -(omz0-omzl)-0.5d0*((1d0-omzl)**2-(1d0-omz0)**2))
+         do k=1,2
+            omz=omzl*0.5d0*(1d0+x2(k))
+            z=1d0-omz
+            y=bjorken/z
+            val=val+0.5d0*omzl*(CF*(1d0+z**2)/omz*
+     $           (delta_group_xf(ih,lp,flavours,y,pt)/den-1d0)
+     $           +nact*TR*(z**2+omz**2)*y*pdg2pdf(ih,idg,lp,y,pt)/den)
+         enddo
+         boundary=boundary+0.5d0*w3(i)*(hi-lo)*
+     $        delta_shower_alphas(pt,lambda,order)/(2d0*pi)*val
+      enddo
+      delta_backward_leg=min(exp(boundary-forward)*delta_group_xf(ih,lp,
+     $     flavours,bjorken,connections%stop(1))/ratio_den,1d0)
+      end function delta_backward_leg
+
+      double precision function delta_group_xf(ih,lp,flavours,x,mu,
+     $     nact)
+c     x times the PDF summed over the Born's grouped flavours; nact counts
+c     the flavours with support at (x,mu).
+      implicit none
+      integer, intent(in) :: ih,lp,flavours(:)
+      double precision, intent(in) :: x,mu
+      integer, intent(out), optional :: nact
+      integer ip
+      double precision f,pdg2pdf
+      external pdg2pdf
+      delta_group_xf=0d0
+      if (present(nact)) nact=0
+      do ip=1,size(flavours)
+         f=pdg2pdf(ih,get_parton_id(flavours(ip),lp),lp,x,mu)
+         delta_group_xf=delta_group_xf+x*f
+         if (present(nact).and.f.gt.0d0) nact=nact+1
+      enddo
+      end function delta_group_xf
+
+      double precision function delta_backward_omz(t,mdip)
+c     1-Z for the massless II bound of the PYTHIA8 backward evolution.
+      implicit none
+      double precision, intent(in) :: t,mdip
+      double precision r
+      r=t/mdip**2
+      delta_backward_omz=0.5d0*r*(sqrt(1d0+4d0/r)-1d0)
+      end function delta_backward_omz
+
+      subroutine delta_alphas_lambdas(alpha_mz,order,lambda)
+c     Lambda_3,4,5 of PYTHIA8's AlphaStrong (CMW off, alphaSnfmax = 5) at
+c     first or second order, continuous at the default flavour thresholds.
+c     First order fixes them directly; second order iterates as PYTHIA8.
+      implicit none
+      double precision, intent(in) :: alpha_mz
+      integer, intent(in) :: order
+      double precision, intent(out) :: lambda(3:5)
+      double precision, parameter :: mz=91.188d0,
+     $     pi=3.14159265358979323846d0
+      lambda(5)=mz*exp(-6d0*pi/(23d0*alpha_mz))
+      if (order.eq.1) then
+         lambda(4)=lambda(5)*(delta_alphas_mb/lambda(5))**(2d0/25d0)
+         lambda(3)=lambda(4)*(delta_alphas_mc/lambda(4))**(2d0/27d0)
+      else
+         lambda(5)=delta_alphas_lambda(5,mz,alpha_mz,lambda(5))
+         lambda(4)=delta_alphas_lambda(4,delta_alphas_mb,
+     $        delta_alphas_nf(5,delta_alphas_mb,lambda(5),2),lambda(5))
+         lambda(3)=delta_alphas_lambda(3,delta_alphas_mc,
+     $        delta_alphas_nf(4,delta_alphas_mc,lambda(4),2),lambda(4))
+      endif
+      end subroutine delta_alphas_lambdas
+
+      double precision function delta_shower_alphas(scale,lambda,order)
+c     PYTHIA8's AlphaStrong at this scale for lambda from
+c     delta_alphas_lambdas, frozen below 1.07 (first order) or 1.33
+c     (second order) Lambda_3.
+      implicit none
+      double precision, intent(in) :: scale,lambda(3:5)
+      integer, intent(in) :: order
+      double precision q
+      integer nf
+      q=max(scale,merge(1.07d0,1.33d0,order.eq.1)*lambda(3))
+      nf=3
+      if (q.gt.delta_alphas_mc) nf=4
+      if (q.gt.delta_alphas_mb) nf=5
+      delta_shower_alphas=delta_alphas_nf(nf,q,lambda(nf),order)
+      end function delta_shower_alphas
+
+      double precision function delta_alphas_nf(nf,q,lambda,order)
+c     First- or second-order alpha_s with nf flavours, as PYTHIA8's
+c     AlphaStrong.
+      implicit none
+      integer, intent(in) :: nf,order
+      double precision, intent(in) :: q,lambda
+      double precision, parameter :: pi=3.14159265358979323846d0
+      double precision b0,b1,l
+      b0=33d0-2d0*nf
+      l=2d0*log(q/lambda)
+      delta_alphas_nf=12d0*pi/(b0*l)
+      if (order.ge.2) then
+         b1=6d0*(153d0-19d0*nf)/b0**2
+         delta_alphas_nf=delta_alphas_nf*(1d0-b1*log(l)/l)
+      endif
+      end function delta_alphas_nf
+
+      double precision function delta_alphas_lambda(nf,q,alpha,start)
+c     Lambda_nf such that the second-order delta_alphas_nf(nf,q) = alpha,
+c     by PYTHIA8's fixed-point iteration from start.
+      implicit none
+      integer, intent(in) :: nf
+      double precision, intent(in) :: q,alpha,start
+      double precision, parameter :: pi=3.14159265358979323846d0
+      double precision b0,b1,l
+      integer iter
+      b0=33d0-2d0*nf
+      b1=6d0*(153d0-19d0*nf)/b0**2
+      delta_alphas_lambda=start
+      do iter=1,10
+         l=2d0*log(q/delta_alphas_lambda)
+         delta_alphas_lambda=q*exp(-6d0*pi/
+     $        (b0*alpha/(1d0-b1*log(l)/l)))
+      enddo
+      end function delta_alphas_lambda
 
       double precision function gl_safe(num,den)
       implicit none
