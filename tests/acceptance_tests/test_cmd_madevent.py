@@ -209,14 +209,9 @@ class TestMECmdShell(unittest.TestCase):
         # Make sure that the cross-section is close enough for the bias and unbiased samples
         self.assertLess((abs(biased_events.cross-unbiased_events.cross)/abs(unbiased_events.cross)),0.1)
 
-    def test_smin_below_cut_threshold(self):
-        """ Check that the lower bound on shat (smin, setcuts.f) is never above
-        the minimal shat allowed by the cuts (cuts.f): a too large smin removes
-        allowed phase space. Old overshoots: ihtmin attributed to the b's
-        (bbj: 340^2) and ptj1min charged to a decay jet on top of ptj for the
-        production jets (wjj: 460^2). Allowed configurations exist at
-        sqrt(shat) ~ 320 GeV (bbj: j=160, b+b~=160) and ~ 390 GeV (wjj: jets
-        160+150, W at rest), the new bounds are 300^2 (ihtmin) and 310^2."""
+    def get_smin(self, processes, cuts):
+        """generate the processes, run a survey with the given run_card
+        values and return {process number: set of smin (Define smin to)}"""
 
         try:
             shutil.rmtree(self.run_dir)
@@ -225,15 +220,15 @@ class TestMECmdShell(unittest.TestCase):
         interface = MGCmd.MasterCmd()
         interface.no_notification()
         interface.run_cmd('import model sm')
-        interface.run_cmd('generate p p > b b~ j')
-        interface.run_cmd('add process p p > w+ j j, w+ > j j')
+        interface.run_cmd('generate %s' % processes[0])
+        for proc in processes[1:]:
+            interface.run_cmd('add process %s' % proc)
         interface.onecmd('output madevent %s -f' % self.run_dir)
 
         run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards', 'run_card.dat'))
+        # no MLM matching (it resets ptj): exact values are checked
         for name, value in [('nevents', 100), ('use_syst', False),
-                            ('cut_decays', False), ('ptj', 150), ('ptj1min', 160),
-                            ('ptb', 20), ('etab', -1), ('drbb', 0), ('drbj', 0),
-                            ('ihtmin', 300)]:
+                            ('ickkw', 0), ('xqcut', 0)] + cuts:
             run_card.set(name, value, user=True)
         run_card.write(pjoin(self.run_dir, 'Cards', 'run_card.dat'))
 
@@ -245,6 +240,7 @@ class TestMECmdShell(unittest.TestCase):
         for pdir in os.listdir(pjoin(self.run_dir, 'SubProcesses')):
             if not pdir.startswith('P'):
                 continue
+            iproc = int(pdir[1:pdir.index('_')])
             for root, _, files_in in os.walk(pjoin(self.run_dir, 'SubProcesses', pdir)):
                 for name in files_in:
                     if not name.endswith('.log'):
@@ -252,13 +248,57 @@ class TestMECmdShell(unittest.TestCase):
                     with open(pjoin(root, name)) as fsock:
                         for line in fsock:
                             if 'Define smin to' in line:
-                                smin.setdefault(pdir, set()).add(float(line.split()[-1]))
-        self.assertTrue(smin)
-        for pdir, values in smin.items():
+                                smin.setdefault(iproc, set()).add(float(line.split()[-1]))
+        return smin
+
+    def check_smin(self, smin, expected):
+        """compare to the expected smin of each process"""
+        self.assertEqual(sorted(smin), sorted(expected))
+        for iproc, values in smin.items():
             for value in values:
-                # upper: below the allowed minimum; lower: ihtmin bound kept
-                self.assertLessEqual(value, 100000., '%s: smin=%s' % (pdir, value))
-                self.assertGreaterEqual(value, 89999., '%s: smin=%s' % (pdir, value))
+                self.assertAlmostEqual(value, expected[iproc], delta=1e-6*expected[iproc],
+                                 msg='process %s: smin=%s (expected %s)' % (iproc, value, expected[iproc]))
+
+    def test_smin_below_cut_threshold(self):
+        """ Check the lower bound on shat (smin, setcuts.f): it must never be
+        above the minimal shat allowed by the cuts (cuts.f), otherwise allowed
+        phase space is removed, and it should keep the bounds that are safe.
+        Exact values are checked; the comments give the value of 3.5.17.
+        A: ihtmin, jets from decays (cut_decays=F) with ptj1min, neutrinos only
+           with a negative misset.
+        B: leptons and photons from decays with ptl1min/xpta, misset for
+           neutrinos only, negative ihtmin/htjmin.
+        C: mmll (same-flavour opposite-sign only), ptllmin (only with a pair
+           it applies to), mmnl (exactly two leptons/neutrinos), negative misset.
+        """
+
+        # A: ptj1min=160 on top of ptj=150, ihtmin=300
+        smin = self.get_smin(['p p > b b~ j', 'p p > w+ j j, w+ > j j',
+                              'p p > z j, z > vl vl~'],
+                             [('cut_decays', False), ('ptj', 150), ('ptj1min', 160),
+                              ('ptb', 20), ('etab', -1), ('drbb', 0), ('drbj', 0),
+                              ('ihtmin', 300), ('misset', -500)])
+        self.check_smin(smin, {1: 300.**2,   # 3.5.17: 160^2+300^2 (allowed at ~320^2)
+                               2: 310.**2,   # 3.5.17: 460^2 (allowed at ~390^2)
+                               3: 300.**2})  # 3.5.17: 160^2 (ihtmin ignored)
+
+        # B: ptl1min=160 on top of ptl=150, xpta=100 on top of pta=50
+        smin = self.get_smin(['p p > w+ e+ e- j, w+ > mu+ vm', 'p p > z j, z > vl vl~',
+                              'p p > w+ a, w+ > e+ ve a'],
+                             [('cut_decays', False), ('ptl', 150), ('ptl1min', 160),
+                              ('pta', 50), ('xpta', 100), ('misset', 30),
+                              ('ihtmin', -500), ('htjmin', -500)])
+        self.check_smin(smin, {1: 20.**2 + 310.**2,  # 3.5.17: 500^2+20^2+460^2
+                               2: 20.**2 + 30.**2,   # 3.5.17: 500^2 (no neutrino block)
+                               3: 100.**2 + 160.**2}) # 3.5.17: 150^2+160^2
+
+        # C: pair cuts
+        smin = self.get_smin(['p p > e+ ve mu- vm~', 'p p > e+ ve', 'p p > e+ e-'],
+                             [('ptl', 10), ('mmll', 300), ('ptllmin', 200),
+                              ('mmnl', 250), ('misset', -500)])
+        self.check_smin(smin, {1: 200.**2,   # 3.5.17: 500^2
+                               2: 250.**2,   # 3.5.17: 500^2
+                               3: 300.**2})  # 3.5.17: 500^2
 
     def test_madspin_gridpack(self):
 
