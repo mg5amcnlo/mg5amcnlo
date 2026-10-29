@@ -583,7 +583,7 @@ c     check for the bjet
       nb_b = 0
       nb_nocut = 0
       do i=nincoming+1,nexternal
-          if (is_a_b(i)) then
+          if (is_a_b(i).and.do_cuts(i)) then
               nb_b = nb_b + 1
               smin_m = smin_m - pmass(i)**2
               if (do_cuts(i)) then
@@ -606,7 +606,7 @@ c     check for the bjet
          endif
          smin = smin + max(smin_p**2, smin_m)
       endif
-c     inclusive Ht cut (jets+b, including decay products): sqrt(shat) >= sum pT
+c     inclusive Ht cut (all jets+b, cut_decays not used in cuts.f): sqrt(shat) >= sum pT
 c     This cannot be attributed to the b-block alone since it constrains HTj+HTb.
       smin = max(smin, ihtmin**2)
 c     check for the photon
