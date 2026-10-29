@@ -843,6 +843,92 @@ class TestOnshellProductionNorm(unittest.TestCase):
         self.assertEqual(str(production), before)
 
 
+class TestFxFxEvent(unittest.TestCase):
+    """FxFx particle tags follow LHE rows through resonance insertion."""
+
+    @staticmethod
+    def event(tags='pt_clust_6="99.999" pt_clust_4="100" pt_clust_5="100"'):
+        import io
+        text = '''<event npNLO="1">
+8 1 1 100 0.01 0.1
+2 -1 0 0 501 0 0 0 95 95 0 0 9
+-2 -1 0 0 0 501 0 0 -95 95 0 0 9
+23 2 1 2 0 0 0 0 0 90 90 0 9
+24 1 1 2 0 0 0 0 0 80 80 0 9
+21 1 1 2 502 503 10 0 0 10 0 0 9
+1 1 1 2 503 0 -10 0 0 10 0 0 9
+11 1 3 3 0 0 0 0 45 45 0 0 9
+-11 1 3 3 0 0 0 0 -45 45 0 0 9
+%s
+</event>
+''' % ('<scales %s></scales>' % tags if tags else '')
+        event = madspin.Event(io.StringIO(text))
+        assert event.get_next_event() == 1
+        return event
+
+    def test_sparse_tags_use_lhe_indices(self):
+        # The resonance occupies row 3. Attribute order and missing tags must
+        # not change which jet has the scale below SCALUP.
+        event = self.event('pt_clust_6 = \'99.999\' pt_clust_5="100"')
+        self.assertEqual(event.particle[5]['pt_scale'], '99.999')
+        self.assertEqual(event.particle[4]['pt_scale'], '100')
+        self.assertNotIn('pt_scale', event.particle[3])
+        self.assertIn('pt_clust_5="100"', event.string_event())
+        self.assertIn('pt_clust_6="99.999"', event.string_event())
+
+    def test_resonance_tag_roundtrip(self):
+        event = self.event('pt_clust_6="99.999" pt_clust_3="100"')
+        self.assertEqual(event.resonance[-1]['pt_scale'], '100')
+        self.assertIn('pt_clust_3="100"', event.string_event())
+        self.assertIn('pt_clust_6="99.999"', event.string_event())
+
+    def test_decay_preserves_jet_tags_and_scalup(self):
+        from types import SimpleNamespace
+        stub = SimpleNamespace(pid2color={24: 1, -11: 1, 12: 1},
+                               MC_masses={11: 0.0, 12: 0.0})
+        decay = {3: {'tree': {-1: {'label': 24,
+                                  'd1': {'label': -11, 'index': 1},
+                                  'd2': {'label': 12, 'index': 2}}},
+                     'mg_tree': [(11, 12, 13)]}}
+        momenta = {11: madspin.momentum(80, 0, 0, 0),
+                   12: madspin.momentum(40, 40, 0, 0),
+                   13: madspin.momentum(40, -40, 0, 0)}
+        for jet_scale, scalup in [('100', 100), ('99.999', 100),
+                                  ('99.999', 99.999999)]:
+            with self.subTest(jet_scale=jet_scale, scalup=scalup):
+                event = self.event('pt_clust_6="99.999" pt_clust_4="100" '
+                                   'pt_clust_5="%s"' % jet_scale)
+                # The producer rounds tags to five decimals; the event's
+                # SCALUP can lie just below the rounded tag's 1 MeV bin.
+                event.scale = scalup
+                decayed = madspin.decay_all_events.decay_one_event_new(
+                    stub, event, decay, dict((i, i) for i in range(7)),
+                    momenta, True, [9] * 13)
+                output = decayed.string_event()
+                # W decay inserts two rows before both production jets. The
+                # old Z resonance also occupies a row in the output numbering.
+                self.assertEqual(decayed.particle[4]['istup'], 2)
+                self.assertEqual(decayed.particle[7]['pid'], 21)
+                self.assertEqual(decayed.particle[8]['pid'], 1)
+                self.assertIn('pt_clust_7="%s"' % jet_scale, output)
+                self.assertIn('pt_clust_8="99.999"', output)
+                self.assertIn('pt_clust_5="100"', output)
+                self.assertIn('pt_clust_6="100"', output)
+                # Pythia takes the maximum tagged external scale as SCALUP.
+                # Keep it even when all remaining production jets are EW.
+                parsed = lhe_parser.Event(output)
+                scales = parsed.parse_matching_scale()
+                pythia_scalup = max(scale for particle, scale in zip(parsed, scales)
+                                    if abs(particle.status) == 1)
+                self.assertEqual(pythia_scalup, 100)
+                self.assertLess(scales[7], pythia_scalup)
+                self.assertNotEqual(math.trunc(1000 * scales[7]),
+                                    math.trunc(1000 * pythia_scalup))
+
+    def test_without_fxfx_tags_no_scales_are_added(self):
+        self.assertNotIn('<scales', self.event(tags='').string_event())
+
+
 class TestEvent(unittest.TestCase):
     """Test class for the reading of the lhe input file"""
     

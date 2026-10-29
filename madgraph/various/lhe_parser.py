@@ -2361,10 +2361,12 @@ class Event(list):
             this_particle.reshuffle_info = decay_particle.reshuffle_info
         self.nexternal += decay_event.nexternal -1
         old_scales = list(self.parse_matching_scale())
-        if old_scales:
-            jet_position = sum(1 for i in range(position) if self[i].status==1)
-            initial_pos = sum(1 for i in range(position) if self[i].status==-1)
-            self.matched_scale_data.pop(initial_pos+jet_position)
+        # pt_clust indices are full LHE rows, including resonances. The
+        # decaying particle stays in place with status 2, so keep its entry
+        # and all existing particle indices unchanged.
+        decay_scale = old_scales[position] if old_scales else -1
+        if decay_scale == -1:
+            decay_scale = self.scale
         # add the particle with only handling the 4-momenta/mother
         # color information will be corrected later.
         for particle in decay_event[1:]:
@@ -2373,7 +2375,11 @@ class Event(list):
             new_particle.event_id = len(self)
             self.append(new_particle)
             if old_scales:
-                self.matched_scale_data.append(old_scales[initial_pos+jet_position])
+                # Inherit the parent's shower scale (SCALUP for FxFx
+                # resonances). Pythia takes the maximum tagged external
+                # scale as SCALUP, so daughters must keep that maximum when
+                # the parent becomes status 2 and only EW jets remain.
+                self.matched_scale_data.append(decay_scale)
             # compute and assign the new four_momenta
             if at_rest:
                 new_momentum = FourMomentum(new_particle).boost(this_4mom)

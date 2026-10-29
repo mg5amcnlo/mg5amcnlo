@@ -716,6 +716,88 @@ class TestEvent(unittest.TestCase):
         self.assertEqual(nb_identical, [4,4,2,2,2,2])
 
 
+class TestFxFxDecayScales(unittest.TestCase):
+
+    @staticmethod
+    def decay_event():
+        return lhe_parser.Event('''<event>
+3 1 1 50 0 0
+23 -1 0 0 0 0 0 0 0 100 100 0 9
+1   1 1 1 501 0 50 0 0 50 0 0 9
+-1  1 1 1 0 501 -50 0 0 50 0 0 9
+</event>''')
+
+    def test_scales_keep_full_lhe_rows_through_repeated_decays(self):
+        event = lhe_parser.Event('''<event>
+9 1 1 50 0 0
+2  -1 0 0 501 0 0 0 175 175 0 0 9
+-2 -1 0 0 0 501 0 0 -175 175 0 0 9
+24  2 1 2 0 0 0 0 0 100 100 0 9
+-11 1 3 3 0 0 50 0 0 50 0 0 9
+12  1 3 3 0 0 -50 0 0 50 0 0 9
+23  1 1 2 0 0 0 0 0 100 100 0 9
+23  1 1 2 0 0 0 0 0 100 100 0 9
+21  1 1 2 502 503 25 0 0 25 0 0 9
+1   1 1 2 503 0 -25 0 0 25 0 0 9
+<scales pt_clust_4="50" pt_clust_5="50" pt_clust_6="50" pt_clust_7="50" pt_clust_8="50" pt_clust_9="49.999"></scales>
+</event>''')
+        original = [-1, -1, -1, 50, 50, 50, 50, 50, 49.999]
+        for position, added in [(5, 2), (6, 4)]:
+            event.add_decay_to_particle(position, self.decay_event())
+            scales = lhe_parser.Event(str(event)).parse_matching_scale()
+            self.assertEqual(scales, original + [50] * added)
+            self.assertEqual(event[position].status, 2)
+            self.assertEqual(len(scales), len(event))
+        self.assertEqual(event[8].pid, 1)
+        self.assertEqual(event[8].status, 1)
+
+    def test_decay_scales_preserve_ew_jet_classification(self):
+        # After Z decay the only production final state is an EW jet.
+        # Pythia ignores the status-2 Z tag and resets SCALUP to the maximum
+        # explicitly tagged external scale, including the decay daughters.
+        event = lhe_parser.Event('''<event>
+4 1 1 50 0 0
+2  -1 0 0 501 0 0 0 100 100 0 0 9
+-2 -1 0 0 0 501 0 0 -100 100 0 0 9
+23  1 1 2 0 0 0 0 0 100 100 0 9
+1   1 1 2 502 0 0 0 0 100 0 0 9
+<scales pt_clust_3="50" pt_clust_4="49.999"></scales>
+</event>''')
+        event.add_decay_to_particle(2, self.decay_event())
+        output = lhe_parser.Event(str(event))
+        scales = output.parse_matching_scale()
+        self.assertEqual(scales, [-1, -1, 50, 49.999, 50, 50])
+        pythia_scalup = max(scale for particle, scale in zip(output, scales)
+                            if abs(particle.status) == 1)
+        self.assertEqual(pythia_scalup, 50)
+        self.assertLess(scales[3], pythia_scalup)
+        self.assertIs(output[4].mother1, output[2])
+        self.assertIs(output[5].mother1, output[2])
+
+    def test_decay_without_matching_tags(self):
+        event = lhe_parser.Event('''<event>
+1 1 1 50 0 0
+23 -1 0 0 0 0 0 0 0 100 100 0 9
+</event>''')
+        event.add_decay_to_particle(0, self.decay_event())
+        self.assertEqual(event.matched_scale_data, [])
+        self.assertNotIn('pt_clust_', str(event))
+
+    def test_parent_shower_scale_is_inherited(self):
+        # LO merging also uses pt_clust tags, with scales different from
+        # SCALUP. Preserve that per-particle scale when attaching a decay.
+        event = lhe_parser.Event('''<event>
+3 1 1 50 0 0
+2  -1 0 0 501 0 0 0 50 50 0 0 9
+-2 -1 0 0 0 501 0 0 -50 50 0 0 9
+23  1 1 2 0 0 0 0 0 100 100 0 9
+<scales pt_clust_3="100"></scales>
+</event>''')
+        event.add_decay_to_particle(2, self.decay_event())
+        self.assertEqual(lhe_parser.Event(str(event)).parse_matching_scale(),
+                         [-1, -1, 100, 100, 100])
+
+
 from madgraph.various.lhe_parser import FourMomentum
 class TestFourMomentum(unittest.TestCase):
 
