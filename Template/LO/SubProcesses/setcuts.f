@@ -575,7 +575,7 @@ c           cutuse=1: only one of the min(nb_j,4) leading jets has to pass
          if ((nb_j-nb_nocut).gt.0)then
             smin_m = smin_m + (nb_j-nb_nocut)*(nb_j-nb_nocut-1)/2d0*mmjj**2
          endif
-        smin = smin + max(smin_p**2, smin_m, htjmin**2)
+        smin = smin + max(smin_p**2, smin_m, max(htjmin,0d0)**2)
       endif
 c     check for the bjet
       smin_m = 0d0
@@ -608,7 +608,7 @@ c     check for the bjet
       endif
 c     inclusive Ht cut (all jets+b, cut_decays not used in cuts.f): sqrt(shat) >= sum pT
 c     This cannot be attributed to the b-block alone since it constrains HTj+HTb.
-      smin = max(smin, ihtmin**2)
+      smin = max(smin, max(ihtmin,0d0)**2)
 c     check for the photon
 c     pta/ea only apply to the photons with do_cuts, xpta to all of them
       smin_m = 0d0
@@ -677,7 +677,7 @@ c     mmnl only for exactly two leptons/neutrinos (see above).
          smin_p = smin_p**2
          if (has_ptll) smin_p = max(smin_p, ptllmin**2)
          if (ncheck.eq.2) smin_p = max(smin_p, max(mmnl,0d0)**2)
-         smin = smin + max(smin_p, smin_m, misset**2)
+         smin = smin + max(smin_p, smin_m, max(misset,0d0)**2)
       endif
 c  check for other PDG particle
       do i = 1,pdg_cut(0)
