@@ -116,7 +116,9 @@ c     count the number of j/bjet/photon/lepton
 c
       integer nb_j, nb_b, nb_a, nb_l, nb_nocut,nb_pdg
       double precision smin_p, smin_m ! local variable to compute smin
-      double precision ptjk
+      double precision ptk
+      integer nb_pair
+      logical has_ptll
 c
 c     setup masses for the final-state particles
 c
@@ -552,21 +554,21 @@ c     E is bounded by max(ptjNmin (N>=k), ej, ptj (if k<=nb_j-nb_nocut)).
           endif
       enddo
       do k=1,nb_j
-         ptjk = 0d0
+         ptk = 0d0
          if (jetor) then
             do j=k,4
-               ptjk = max(ptjk, ptjmin4(j))
+               ptk = max(ptk, ptjmin4(j))
             enddo
          elseif (k.eq.1) then
 c           cutuse=1: only one of the min(nb_j,4) leading jets has to pass
-            ptjk = ptjmin4(1)
+            ptk = ptjmin4(1)
             do j=2,min(nb_j,4)
-               ptjk = min(ptjk, ptjmin4(j))
+               ptk = min(ptk, ptjmin4(j))
             enddo
          endif
-         if (k.eq.1) ptjk = max(ptjk, xptj)
-         if (k.le.nb_j-nb_nocut) ptjk = max(ptjk, ej, ptj)
-         smin_p = smin_p + max(ptjk, 0d0)
+         if (k.eq.1) ptk = max(ptk, xptj)
+         if (k.le.nb_j-nb_nocut) ptk = max(ptk, ej, ptj)
+         smin_p = smin_p + max(ptk, 0d0)
          if (k.ge.2.and.k.le.4) smin_p = max(smin_p, htjmin4(k))
       enddo
       if (nb_j.gt.0)then
@@ -608,6 +610,7 @@ c     inclusive Ht cut (all jets+b, cut_decays not used in cuts.f): sqrt(shat) >
 c     This cannot be attributed to the b-block alone since it constrains HTj+HTb.
       smin = max(smin, ihtmin**2)
 c     check for the photon
+c     pta/ea only apply to the photons with do_cuts, xpta to all of them
       smin_m = 0d0
       smin_p = 0d0
       nb_a = 0
@@ -615,24 +618,17 @@ c     check for the photon
       do i=nincoming+1,nexternal
          if (is_a_a(i))then
             nb_a = nb_a + 1
-            if (do_cuts(i))then
-               if (ptgmin.eq.0d0) then
-                  if (nb_a.eq.1) then
-                     smin_p = smin_p + max(ea,pta,xpta,0d0)
-                  else
-                     smin_p = smin_p + max(ea,pta,0d0)
-                  endif
-               endif
-            else
-               nb_nocut = nb_nocut + 1
-               if(ptgmin.eq.0d0)then
-                  if (nb_a.eq.1) then
-                     smin_p = smin_p + max(xpta,0d0)
-                  endif
-               endif
-            endif
+            if (.not.do_cuts(i)) nb_nocut = nb_nocut + 1
          endif
       enddo
+      if (ptgmin.eq.0d0) then
+         do k=1,nb_a
+            ptk = 0d0
+            if (k.eq.1) ptk = xpta
+            if (k.le.nb_a-nb_nocut) ptk = max(ptk, ea, pta)
+            smin_p = smin_p + max(ptk, 0d0)
+         enddo
+      endif
       if (nb_a.gt.0) then
          if ((nb_a-nb_nocut).gt.0)then
             smin_m = (nb_a-nb_nocut)*(nb_a-nb_nocut-1)/2d0*mmaa**2
@@ -640,47 +636,48 @@ c     check for the photon
         smin = smin + max(smin_p**2, smin_m)
       endif
 c     check for lepton
+c     ptl/el only apply to the leptons with do_cuts, ptlNmin and xptl to all
+c     the leptons (ordered in pT): same bound as for the jets.
+c     mmll only applies to same-flavour opposite-sign pairs with do_cuts,
+c     ptllmin only if such a pair (or a lepton/neutrino pair) exists and
+c     mmnl only for exactly two leptons/neutrinos (see above).
       smin_m = 0d0
       smin_p = 0d0
       nb_l = 0
       nb_nocut = 0
-      do i=nincoming+1,nexternal-1
+      nb_pair = 0
+      ncheck = 0
+      has_ptll = .false.
+      do i=nincoming+1,nexternal
+         if (is_a_l(i).or.is_a_nu(i)) ncheck = ncheck + 1
          if (is_a_l(i))then
             nb_l = nb_l + 1
             smin_m = smin_m - pmass(i)**2
-            if (do_cuts(i))then 
-               if (nb_l.eq.1) then
-                  smin_p = smin_p + max(el,ptl,xptl,0d0,
-     &                 max(ptl1min,ptl2min,ptl3min,ptl4min))
-               elseif(nb_l.eq.2) then
-                  smin_p = smin_p + max(el,ptl,0d0,max(ptl2min,ptl3min,ptl4min))
-               elseif(nb_l.eq.3) then
-                  smin_p = smin_p + max(el,ptl,0d0, max(ptl3min,ptl4min))
-               elseif(nb_l.eq.4) then
-                  smin_p = smin_p + max(el,ptl,ptl4min,0d0)
-               else
-                  smin_p = smin_p + max(el,ptl,0d0)
-               endif
-            else
-               nb_nocut = nb_nocut + 1
-               if (nb_l.eq.1) then
-                  smin_p = smin_p + max(xptl,0d0,
-     &                 max(ptl1min,ptl2min,ptl3min,ptl4min))
-               elseif(nb_l.eq.2) then
-                  smin_p = smin_p + max(0d0,ptl2min,ptl3min,ptl4min)
-               elseif(nb_l.eq.3) then
-                  smin_p = smin_p + max(0d0,ptl3min,ptl4min)
-               elseif(nb_l.eq.4) then
-                  smin_p = smin_p + max(ptl4min,0d0)
-               endif
-            endif
+            if (.not.do_cuts(i)) nb_nocut = nb_nocut + 1
          endif
+         do j=i+1,nexternal
+            if (ptll_min(j,i).gt.0d0) has_ptll = .true.
+            if (is_a_l(i).and.is_a_l(j).and.do_cuts(i).and.do_cuts(j)
+     &          .and.abs(idup(i,1,iproc)).eq.abs(idup(j,1,iproc))
+     &          .and.idup(i,1,iproc)*idup(j,1,iproc).lt.0)
+     &          nb_pair = nb_pair + 1
+         enddo
+      enddo
+      do k=1,nb_l
+         ptk = 0d0
+         do j=k,4
+            ptk = max(ptk, ptlmin4(j))
+         enddo
+         if (k.eq.1) ptk = max(ptk, xptl)
+         if (k.le.nb_l-nb_nocut) ptk = max(ptk, el, ptl)
+         smin_p = smin_p + max(ptk, 0d0)
       enddo
       if (nb_l.gt.0)then
-         if ((nb_l-nb_nocut).gt.0)then
-            smin_m = smin_m + (nb_l-nb_nocut)*((nb_l-nb_nocut)-1)/2d0*mmll**2
-         endif
-        smin = smin + max(smin_p**2, smin_m, mmnl**2, ptllmin**2, misset**2)
+         smin_m = smin_m + nb_pair*max(mmll,0d0)**2
+         smin_p = smin_p**2
+         if (has_ptll) smin_p = max(smin_p, ptllmin**2)
+         if (ncheck.eq.2) smin_p = max(smin_p, max(mmnl,0d0)**2)
+         smin = smin + max(smin_p, smin_m, misset**2)
       endif
 c  check for other PDG particle
       do i = 1,pdg_cut(0)
