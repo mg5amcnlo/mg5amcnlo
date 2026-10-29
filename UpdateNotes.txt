@@ -5,6 +5,11 @@ ANNOUNCEMENT:
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
 3.8.2 (XX/XX/XX):
+    OM: Pythia8 8.318: the LO shower (main164) ran CKKW-L/UMEPS/UNLOPS merging without its merging
+        hook, since main164 loads it with a readString that Pythia8 ignores for a card with
+        Main:subrun lines (all those of MG5aMC). 'Merging:Process = guess' crashed every shower job,
+        and UMEPS/UNLOPS lost their subtractive samples (CKKW-L with an explicit process was not
+        affected). The shower card now loads the hook itself (Init:plugins).
     OM: LO grouped output (default): the renormalisation/factorisation scales and the MLM xqcut
         veto were computed on the momenta before the symmetry permutation of the channel (#453).
         Channels with such permutations were biased (e.g. -3.5% for u q > z u q, also with MLM).

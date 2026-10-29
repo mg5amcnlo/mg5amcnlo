@@ -2165,6 +2165,8 @@ class PY8Card(ConfigFile):
         self.visible_params_to_always_write = set()
         # List of parameters that should never be written out given the current context.
         self.params_to_never_write = set()
+        # Plugins that MG5aMC adds to the 'Init:plugins' of the card (see add_plugin).
+        self.init_plugins = []
         
         # Parameters which have been set by the system (i.e. MG5 itself during
         # the regular course of the shower interface)
@@ -2228,6 +2230,34 @@ class PY8Card(ConfigFile):
         "write" function will be invoked."""
         self.params_to_never_write.add(name.lower())
     
+    def card_plugins(self):
+        """The entries of 'Init:plugins' set in this card, by its 'Init:plugins ='
+        and then its 'Init:plugins +=' line."""
+
+        entries = []
+        for name in ('Init:plugins', 'Init:plugins +'):
+            if name in self:
+                value = str(self[name]).strip()
+                if value.startswith('{') and value.endswith('}'):
+                    value = value[1:-1]
+                entries += [entry.strip() for entry in value.split(',') if entry.strip()]
+        return entries
+
+    def add_plugin(self, plugin):
+        """Make Pythia8 also load the UserHooks plugin '<library>::<class>',
+        after the plugins of this card and with the key 'add', so that it does
+        not replace the UserHooks these set. All of them are written in a single
+        'Init:plugins = {...}' line: main164 reads the card twice before init(),
+        so that a '+=' line would load an 'add' plugin twice.
+        Nothing is done if the card already lists the class."""
+
+        name = plugin.split('::')[1]
+        if any(entry.split('::')[1:2] == [name] for entry in self.card_plugins()):
+            return
+        self.vetoParamWriteOut('Init:plugins')
+        self.vetoParamWriteOut('Init:plugins +')
+        self.init_plugins.append('%s::add' % plugin)
+
     def systemSet(self, name, value, **opts):
         """Set an attribute of this card, independently of a specific user
         request and only if not already user_set."""
@@ -2554,6 +2584,11 @@ class PY8Card(ConfigFile):
             elif param.lower() not in self.hidden_param:
                 logger.debug('Adding parameter %s (missing in the template) to current '+\
                                     'pythia8 card (with value %s)',param, value)
+
+        # The plugins of the card, followed by those MG5aMC adds
+        if self.init_plugins and not read_subrun:
+            output.write('!\n! Pythia8 plugins, including those added by MG5aMC.\n!\n')
+            output.write('Init:plugins={%s}\n' % ','.join(self.card_plugins() + self.init_plugins))
 
         if len(hidden_output_param)>0 and not template is None:
             output.write(

@@ -699,7 +699,8 @@ jobs:
     # madevent run helpers: Delphes split fusion and LHAPDF info patching
     # (madevent_interface), atomic make_opts update and the transpole s-hat map
     # (compiled with gfortran). These modules were not fully listed in any
-    # workflow (CI coverage audit).
+    # workflow (CI coverage audit). Also the merging hook of the Pythia8 8.318
+    # main164 (misc.get_pythia8_merging_plugin).
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
@@ -709,7 +710,7 @@ jobs:
       - name: test madevent interface, make_opts and transpole helpers
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_madevent test_make_opts test_transpole -t0
+            ./tests/test_manager.py test_madevent test_make_opts test_transpole TEST_pythia8_merging_plugin -t0
 
 
   unittest_polarisation:
