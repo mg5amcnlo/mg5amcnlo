@@ -4645,6 +4645,17 @@ already exists and is not a fifo file."""%fifo_path)
                     "Read section 'Defining the hard process' of "+\
                     "http://home.thep.lu.se/~torbjorn/pythia81html/CKKWLMerging.html for more information.")
 
+            # Since Pythia8 8.318, main164 loads its merging hook as a plugin with
+            # a readString after reading the card. Pythia8 ignores that readString
+            # for a card with 'Main:subrun' lines, as ours always has: without
+            # the hook, 'Merging:Process = guess' crashes and UMEPS/UNLOPS lose
+            # their subtractive samples. Load the hook from the card instead
+            # (only for main164: the MG5aMC_PY8_interface sets its own hooks).
+            if not use_mg5amc_py8_interface:
+                merging_plugin = misc.get_pythia8_merging_plugin(self.options['pythia8_path'])
+                if merging_plugin:
+                    PY8_Card.add_plugin(merging_plugin)
+
             # When running CKKWL make sure that we do not write out the parameter
             # JetMatching:xxx as this can interfere with the MLM merging in older
             # versions of the driver.

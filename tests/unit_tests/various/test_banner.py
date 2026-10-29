@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 import unittest
+import copy
 from unittest import mock
 import tempfile
 import madgraph.various.banner as bannermod
@@ -536,9 +537,58 @@ Beams:LHEF='events_ouaf.lhe.gz'
               set([k.lower() for k in modified_PY8Card.subruns[subrunID].keys()])
         out = io.StringIO()
         modified_PY8Card.write(out,self.basic_PY8_template)
-        out.seek(0)        
+        out.seek(0)
         read_PY8Card=bannermod.PY8Card(out)
         self.assertEqual(modified_PY8Card, read_PY8Card)
+
+    def test_PY8Card_add_plugin(self):
+        """A plugin that MG5aMC adds comes once, after the plugins of the
+        user, in the part of the card that main164 reads for all subruns,
+        also in the cards of the parallel shower."""
+
+        def write(card, template, add_missing=True):
+            out = io.StringIO()
+            card.write(out, template, direct_pythia_input=True, add_missing=add_missing)
+            return out.getvalue()
+
+        def plugin_lines(text):
+            return [l for l in text.split('\n') if l.lower().startswith('init:plugins')]
+
+        plugin = '/py8/lib/libpythia8amcatnloHooks.so::aMCatNLOHooks'
+        card = bannermod.PY8Card(self.basic_PY8_template)
+        self.assertEqual(plugin_lines(write(card, self.basic_PY8_template)), [])
+
+        for user_line, entries in [
+            ('', []),
+            ('Init:plugins = {libpythia8hepmc3.so::HepMC3Hooks}',
+             ['libpythia8hepmc3.so::HepMC3Hooks']),
+            ('Init:plugins += { libX.so::X::add }', ['libX.so::X::add'])]:
+            card = bannermod.PY8Card(self.basic_PY8_template)
+            card.read(self.basic_PY8_template + user_line + '\n', setter='user')
+            card.add_plugin(plugin)
+            text = write(card, self.basic_PY8_template)
+            expected = ['Init:plugins={%s}' % ','.join(entries + [plugin + '::add'])]
+            self.assertEqual(plugin_lines(text), expected)
+            self.assertLess(text.index('Init:plugins'), text.index('Main:subrun'))
+
+            # the parallel shower writes a copy of the card, then the card of
+            # each job, from that one
+            parallel = write(copy.copy(card), self.basic_PY8_template)
+            self.assertEqual(plugin_lines(parallel), expected)
+            split_card = bannermod.PY8Card(parallel, setter='user')
+            split_card.systemSet('Main:numberOfEvents', 10, force=True)
+            self.assertEqual(plugin_lines(write(split_card, parallel, add_missing=False)),
+                             expected)
+
+        # the user already loads it
+        card = bannermod.PY8Card(self.basic_PY8_template)
+        card.read(self.basic_PY8_template +
+                  'Init:plugins += {libpythia8amcatnloHooks.so::aMCatNLOHooks}\n',
+                  setter='user')
+        card.add_plugin(plugin)
+        self.assertEqual(card.init_plugins, [])
+        self.assertEqual(plugin_lines(write(card, self.basic_PY8_template)),
+                         ['Init:plugins +={libpythia8amcatnloHooks.so::aMCatNLOHooks}'])
 
 
 class TestRivetCard(unittest.TestCase):
