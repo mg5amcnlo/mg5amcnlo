@@ -3,7 +3,6 @@
 #include "Pythia8/Pythia.h"
 #include "Pythia8Plugins/HepMC2.h"
 #include "Pythia8Plugins/CombineMatchingInput.h"
-#include "FxFxDeltaMatching.h"
 #include "HepMC/GenEvent.h"
 #include "HepMC/IO_GenEvent.h"
 #include "HepMC/IO_BaseClass.h"
@@ -65,11 +64,7 @@ int main() {
   bool isFxFx=pythia.flag("JetMatching:doFxFx");
   if (isFxFx) {
     CombineMatchingInput combined;
-    if (pythia.mode("JetMatching:scheme") == 1 &&
-        pythia.word("Alpgen:file") == "void")
-      pythia.setUserHooksPtr(std::make_shared<FxFxDeltaMatching>());
-    else
-      combined.setHook(pythia);
+    combined.setHook(pythia);
     double Qcut=pythia.parm("JetMatching:qCut");
     double PTcut=pythia.parm("JetMatching:qCutME");
     if (Qcut <= PTcut || Qcut <= 0.) {

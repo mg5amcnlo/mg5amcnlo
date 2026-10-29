@@ -4,7 +4,6 @@
 #include "Pythia8Plugins/HepMC2.h"
 #include "Pythia8Plugins/aMCatNLOHooks.h"
 #include "Pythia8Plugins/CombineMatchingInput.h"
-#include "FxFxDeltaMatching.h"
 #include "HepMC/GenEvent.h"
 #include "HepMC/IO_GenEvent.h"
 #include "HepMC/IO_BaseClass.h"
@@ -66,12 +65,7 @@ int main() {
   bool isFxFx=pythia.flag("JetMatching:doFxFx");
   if (isFxFx) {
     CombineMatchingInput combined;
-    UserHooks* matching = NULL;
-    if (pythia.mode("JetMatching:scheme") == 1 &&
-        pythia.word("Alpgen:file") == "void")
-      matching = new FxFxDeltaMatching();
-    else
-      matching = combined.getHook(pythia);
+    UserHooks* matching = combined.getHook(pythia);
     if (!matching) {
       std::cout << " Failed to initialise jet matching structures.\n"
                 << " Program stopped.";

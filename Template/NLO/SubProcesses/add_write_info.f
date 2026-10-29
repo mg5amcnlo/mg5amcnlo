@@ -596,10 +596,15 @@ c
      $           /'(add_write_info.f)'
             stop
          endif
-! Ordinary FxFx marks matching partons by their scale relative to SCALUP.
-! With Delta, use explicit flags: PYTHIA interprets pt_clust attributes
-! as production scales, which would modify the directed shower scales.
-         if (.not.mcatnlo_delta_mod) then
+! Both FxFx modes shower from the ordinary scalar SCALUP. Delta's
+! directed scales are used internally to calculate its probability.
+         if (mcatnlo_delta_mod) then
+            if (iSorH_lhe.eq.1) then
+               matching_scale=showerscaleS_hard
+            else
+               matching_scale=showerscaleH_hard
+            endif
+         else
             if (iSorH_lhe.eq.1) then
                matching_scale=showerscaleS(1,1)
             else
@@ -608,21 +613,13 @@ c
          endif
          temp0='<scales'
          temp=''
-         if (mcatnlo_delta_mod) temp=' fxfxdelta="1"'
          do i=nincoming+1,nexpart
             write(integfour,'(i4)') ito(i)
-            if (mcatnlo_delta_mod) then
-               float='1'
-               if (need_matching(i).eq.-1) float='0'
-               temp=trim(temp)//' fxfxmatch'//trim(adjustl(integfour))/
-     $              /'="'//trim(float)//'"'
-            else
-               ptclus=matching_scale
-               if (need_matching(i).eq.-1) ptclus=ptclus-0.001d0
-               Write(float,'(f16.5)') ptclus
-               temp=trim(temp)//' pt_clust_'//trim(adjustl(integfour))/
-     $              /'="'//trim(adjustl(float))//'"'
-            endif
+            ptclus=matching_scale
+            if (need_matching(i).eq.-1) ptclus=ptclus-0.001d0
+            Write(float,'(f16.5)') ptclus
+            temp=trim(temp)//' pt_clust_'//trim(adjustl(integfour))/
+     $           /'="'//trim(adjustl(float))//'"'
          enddo
          ptclusstring=trim(adjustl(temp0//trim(temp)//'></scales>'))
       endif

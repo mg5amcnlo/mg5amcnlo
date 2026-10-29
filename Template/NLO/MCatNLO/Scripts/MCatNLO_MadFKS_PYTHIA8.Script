@@ -455,7 +455,7 @@ cat <<EOF >> $ifile
 ! 4) Switch on/off the key event-generation steps.
 EOF
 
-if [ $DELTA = "ON" ]
+if [ $DELTA = "ON" ] && [ $ICKKW != 3 ]
 then
 cat<<EOF >>$ifile
 Beams:setProductionScalesFromLHEF = on ! read the radiator starting scales

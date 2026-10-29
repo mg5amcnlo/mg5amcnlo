@@ -1,4 +1,4 @@
-"""Exercise production FxFx event metadata with directed Delta scales."""
+"""FxFx and FxFx-Delta share scalar shower metadata through resonance insertion."""
 
 from pathlib import Path
 import shutil
@@ -16,7 +16,7 @@ TEMPLATE = ROOT / 'Template/NLO/SubProcesses'
 
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
 class TestFxFxDeltaEventScales(unittest.TestCase):
-    def test_scalar_marker_and_directed_scales_survive_resonances(self):
+    def test_scalar_scale_and_matching_tags_survive_resonances(self):
         with tempfile.TemporaryDirectory(prefix='mg5_fxfx_delta_event_') as tmp:
             work = Path(tmp)
             includes = {

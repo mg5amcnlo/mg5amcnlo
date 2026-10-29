@@ -116,8 +116,8 @@ program check_mc_event_colours
        error stop 'failed to merge identical owners'
   if (abs(unwgt(1,1)-0.5d0).gt.1d-14) error stop 'changed total weight'
 
-  ! FxFx's scalar matching marker is part of the event even when the
-  ! physical Delta dipole matrices agree. Select it with the same owner
+  ! FxFx's scalar shower scale is part of the event even when the
+  ! internal Delta dipole matrices agree. Select it with the same owner
   ! and fold as the colours, never with the native weight's provenance.
   ickkw_mod=3
   emsca_H_hard=150d0
@@ -134,8 +134,10 @@ program check_mc_event_colours
   icontr=2
   ifold_cnt=1
   emsca_H_hard=150d0
+  emsca_H(2,1,:,:)=75d0
   call sum_identical_contributions()
-  if (group_size(1).ne.2) error stop 'failed to merge equal FxFx scalars'
+  if (group_size(1).ne.2) error stop 'unused Delta matrix split equal FxFx events'
+  emsca_H=150d0
   ickkw_mod=0
 
   ! Compare the packed groups with the previous dense membership for

@@ -3547,11 +3547,11 @@ c summed before taking the ABS value.
                if (ickkw_mod.eq.3.and.mcatnlo_delta_mod) then
                   if (emsca_H_hard(event_owner(ii),ifold_cnt(ii)).ne.
      $                emsca_H_hard(event_owner(i),ifold_cnt(i))) cycle
+               else
+                  if (any(emsca_H(event_owner(ii),ifold_cnt(ii),
+     $                 1:ndelH,1:ndelH).ne.emsca_H(event_owner(i),
+     $                 ifold_cnt(i),1:ndelH,1:ndelH))) cycle
                endif
-               if (any(emsca_H(event_owner(ii),ifold_cnt(ii),
-     $              1:ndelH,1:ndelH).ne.emsca_H(event_owner(i),
-     $              ifold_cnt(i),1:ndelH,1:ndelH)))
-     $              cycle
                if (any(event_colour_H(:,:,event_owner(ii),
      $              ifold_cnt(ii)).ne.event_colour_H(:,:,event_owner(i),
      $              ifold_cnt(i)))) cycle

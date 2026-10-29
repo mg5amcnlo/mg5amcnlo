@@ -154,5 +154,4 @@ runMCMadFKS
                 self.assertIn('Beams:setProductionScalesFromLHEF = on', result)
                 self.assertIn('JetMatching:doFxFx = on', result)
                 self.assertIn('JetMatching:merge = on', result)
-                self.assertEqual('Beams:setDipoleShowerStartingScalesFromLHEF = on'
-                                 in result, delta)
+                self.assertNotIn('Beams:setDipoleShowerStartingScalesFromLHEF', result)

@@ -195,11 +195,11 @@ c
             enddo
          enddo
       else
-         if (mcatnlo_delta_mod) scalup_a(1:npart,1:npart)=
+         if (mcatnlo_delta_mod.and.ickkw.ne.3)
+     $        scalup_a(1:npart,1:npart)=
      $        shower_scale_a(1:npart,1:npart)
          if (ickkw.eq.3.and.mcatnlo_delta_mod) then
-c Retain the FxFx event scale alongside Delta's directed shower scales.
-c Separate matching flags identify the partons to the FxFx shower hook.
+c FxFx-Delta retains the ordinary FxFx scalar shower interface.
             if (iSorH_lhe.eq.1) then
                SCALUP=showerscaleS_hard
             else

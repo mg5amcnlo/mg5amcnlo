@@ -11,7 +11,7 @@ program check_fxfx_delta_event_scales
   implicit none
   character(32) :: mode
   logical :: delta
-  integer :: i,j,k,next,npart,ickkw,jpart(7,-2:7),icolalt(2,-2:7)
+  integer :: i,j,next,npart,ickkw,jpart(7,-2:7),icolalt(2,-2:7)
   double precision :: pb(0:4,-2:7),scales(-2:7,-2:7),original(5,5),expected
   integer :: need_matching(5),nfksprocess
   integer :: iSorH_lhe,ifks_lhe(1),jfks_lhe(1),fksfather_lhe(1),ipartner_lhe(1)
@@ -90,35 +90,16 @@ program check_fxfx_delta_event_scales
     call write_events_lhe(pb(0,1),1d0,jpart(1,1),npart,99,ickkw,scales,1)
     call require(event_size.eq.npart,'LHE event size')
     call require(scalar.eq.expected,'SCALUP uses selected scalar, never a matrix diagonal')
-    if(delta)then
-      call require(index(ptclusstring,'fxfxdelta="1"').gt.0,'combined mode marker')
-      call require(index(ptclusstring,'fxfxmatch4="1"').gt.0,'required parton flag after remapping')
-      call require(index(ptclusstring,'fxfxmatch5="0"').gt.0,'excluded parton flag after remapping')
-      call require(index(ptclusstring,'fxfxmatch3=').eq.0,'resonance has no matching flag')
-      call require(index(ptclusstring,'_').eq.0,'matching flags cannot alter PYTHIA production scales')
-      do i=1,next
-        j=i
-        if(i.gt.2)j=i+1
-        do k=1,next
-          if(i.eq.k)cycle
-          if(k.le.2)then
-            call require(directed(j,k).eq.original(i,k),'directed scale to incoming leg preserved')
-          else
-            call require(directed(j,k+1).eq.original(i,k),'directed scale to outgoing leg remapped')
-          endif
-        enddo
-      enddo
-    else
-      write(number,'(f16.5)') scalar
-      call require(index(ptclusstring,'pt_clust_4="'//trim(adjustl(number))//'"').gt.0, &
-           'required matching parton has SCALUP marker after remapping')
-      write(number,'(f16.5)') scalar-0.001d0
-      call require(index(ptclusstring,'pt_clust_5="'//trim(adjustl(number))//'"').gt.0, &
-           'excluded matching parton has offset marker after remapping')
-      call require(index(ptclusstring,'pt_clust_3=').eq.0,'resonance has no matching marker')
-      call require(index(ptclusstring,'fxfxdelta=').eq.0,'ordinary mode retains its marker convention')
-      call require(all(directed.eq.-1d0),'ordinary FxFx emits no dipole matrix')
-    endif
+    write(number,'(f16.5)') scalar
+    call require(index(ptclusstring,'pt_clust_4="'//trim(adjustl(number))//'"').gt.0, &
+         'required matching parton has SCALUP marker after remapping')
+    write(number,'(f16.5)') scalar-0.001d0
+    call require(index(ptclusstring,'pt_clust_5="'//trim(adjustl(number))//'"').gt.0, &
+         'excluded matching parton has offset marker after remapping')
+    call require(index(ptclusstring,'pt_clust_3=').eq.0,'resonance has no matching marker')
+    call require(index(ptclusstring,'fxfxdelta=').eq.0,'both modes use ordinary FxFx markers')
+    call require(index(ptclusstring,'fxfxmatch').eq.0,'no custom matching flags')
+    call require(all(directed.eq.-1d0),'FxFx showers through SCALUP alone')
   enddo
   print *, 'PASS '//trim(mode)
 contains

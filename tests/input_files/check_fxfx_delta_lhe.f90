@@ -14,15 +14,12 @@ program check_fxfx_delta_lhe
   character(1000) :: buff,ptclusstring,saved_tags
   common/c_ptclusstring/ptclusstring
   character(40) :: mode,arg,attr
-  character(16384) :: line
-  integer :: i,j,reader,comments,reweight,legacy,ios,pos
+  integer :: i,j,reader,comments,reweight
   call get_command_argument(1,mode)
   call get_command_argument(2,arg)
   read(arg,*) comments
   call get_command_argument(3,arg)
   read(arg,*) reweight
-  call get_command_argument(4,arg)
-  read(arg,*) legacy
   ickkw=0
   if(mode=='fxfx'.or.mode=='combined') ickkw=3
   mcatnlo_delta=mode/='fxfx'
@@ -52,18 +49,13 @@ program check_fxfx_delta_lhe
   vtimup=0d0
   spinup=9d0
   ptclusstring='<scales'
-  if(mode=='combined') ptclusstring='<scales fxfxdelta="1"'
   do i=1,nup
     icolup(:,i)=[500+i,499+i]
     do j=1,nup
       scalup_a(i,j)=10d0+i+j/100d0
     enddo
     if(i>2) then
-      if(mode=='combined') then
-        write(attr,'(a,i0,a,i0,a)') ' fxfxmatch',i,'="',merge(0,1,i==12),'"'
-      else
-        write(attr,'(a,i0,a,f8.5,a)') ' pt_clust_',i,'="',merge(29.999d0,30d0,i==12),'"'
-      endif
+      write(attr,'(a,i0,a,f8.5,a)') ' pt_clust_',i,'="',merge(29.999d0,30d0,i==12),'"'
       ptclusstring=trim(ptclusstring)//trim(attr)
     endif
   enddo
@@ -83,28 +75,8 @@ program check_fxfx_delta_lhe
   call write_lhef_event(20,nup,idprup,xwgtup,scalup,aqedup,aqcdup, &
       idup,istup,mothup,icolup,pup,vtimup,spinup,buff,scalup_a)
   close(20)
-  if(legacy==1) then
-    open(20,file='event.lhe',status='old')
-    open(21,file='legacy.lhe',status='replace')
-    do
-      read(20,'(a)',iostat=ios) line
-      if(ios/=0) exit
-      if(index(line,'<scales')/=0) then
-        write(21,'(a)') trim(saved_tags)
-        pos=index(line,' muf=')
-        line='<scales'//trim(line(pos:))
-      endif
-      write(21,'(a)') trim(line)
-    enddo
-    close(20)
-    close(21)
-  endif
   do reader=1,2
-    if(legacy==1) then
-      open(20,file='legacy.lhe',status='old')
-    else
-      open(20,file='event.lhe',status='old')
-    endif
+    open(20,file='event.lhe',status='old')
     scalup_a=-99d0
     ptclusstring='stale'
     wgtxsecmu=0d0
@@ -119,7 +91,7 @@ program check_fxfx_delta_lhe
     if(nup/=12.or.nattr/=2.or.npNLO/=1.or.scalup/=30d0) stop 1
     if(reweight==1.and.abs(wgtxsecmu(0,1,1,1)-2.5d0)>1d-12) stop 2
     if(ickkw==3.and.ptclusstring/=saved_tags) stop 3
-    if(mcatnlo_delta) then
+    if(mcatnlo_delta.and.ickkw/=3) then
       do i=1,nup
         do j=1,nup
           if(abs(i-j)==1) then

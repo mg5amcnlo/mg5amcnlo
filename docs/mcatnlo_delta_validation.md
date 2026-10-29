@@ -8,7 +8,7 @@ multiplicity samples, generation cuts and shower matching settings are
 still required.
 
 The native-history probability is the physical `Delta_b`. Each MC term
-and its G replacements receives this probability once. The real term
+and G replacement receives this probability once. The real term
 is split into `Delta_b R_b` in H and `(1-Delta_b) R_b` in S, retaining
 the same real-state FxFx Sudakov and coupling/PDF scales on both pieces.
 Thus their sum recovers the existing FxFx real integrand. The established
@@ -17,8 +17,9 @@ Born subtraction and the outer-sector H repartition are retained.
 
 FxFx fixes the S-event hard starting scale to the smallest Born
 clustering scale times `shower_scale_factor`, without a damping draw.
-Delta applies Pythia's directed physical dipole limits to that scale;
-the subtraction's hard damping interval remains `[Q,Q+3 GeV]`.
+The internal Delta probability uses Pythia's directed physical dipole
+limits of that scale; the subtraction's hard damping interval remains
+`[Q,Q+3 GeV]`.
 Native histories obtain their own Born scale from the existing clustering
 cache, including when their Born provider belongs to another subprocess.
 
@@ -31,28 +32,27 @@ FxFx boundary; arbitrary independent S-event starting scales would need
 a corresponding treatment in the analytic Sudakov. It does not establish
 the combined prescription's logarithmic accuracy at higher orders.
 
-Events retain a scalar FxFx `SCALUP` as well as Delta's directed shower
-scales. For S events the scalar is the Born hard scale. For H events it
-is the ordinary FxFx scale: the larger of the real-emission dipole bound
-and the Born hard scale, or just the former when no Born flow exists.
-This scalar and the H dipole scales/colours belong to the same outer
-sector and fold. H contributions with different scalar matching scales
-are kept distinct during unweighting.
+Both FxFx modes use the ordinary scalar shower interface. For S events,
+`SCALUP` is the Born hard scale. For H events it is the larger of the
+real-emission dipole bound and the Born hard scale, or just the former
+when no Born flow exists. The scalar and colours follow the same outer
+sector and fold. H contributions with different scalar shower scales
+remain distinct during unweighting; unused Delta matrices do not split
+otherwise identical FxFx events.
 
-One LHE `<scales>` element carries both `fxfxmatchN` matching flags and
-`scalup_i_j` directed shower scales, with `fxfxdelta="1"` identifying
-the combined format. Flags are 1 for partons that require matching and
-0 for excluded partons; their indices include any inserted resonances.
-Ordinary FxFx retains its `pt_clust_N` tags. Those tags cannot also be
-used for Delta: Pythia interprets attributes with underscores as particle
-production scales and takes their minimum, altering the intended Delta
-scales and the FxFx classification.
+Events carry the standard FxFx `pt_clust_N` matching tags and no directed
+`scalup_i_j` shower tags. Shower steering enables production-scale input
+and uses Pythia's installed `JetMatchingMadgraph` through
+`CombineMatchingInput`. Pythia attaches the matching scales to the LHE
+particles before reordering them, so pre-existing resonance daughters
+cannot shift a production parton's matching label. No custom matching
+hook or flags are needed.
 
-The Pythia matching hook reads the explicit flags and applies them only
-to its private copy of the hard process. The shower event retains its
-Delta scales. Both native LHE readers and the Python reader preserve
-the combined metadata when events are rewritten. Pythia steering enables
-both FxFx matching and Delta dipole-scale input.
+Delta still modifies the event weights. Its internal directed starting
+and stopping scales remain available to calculate the no-emission
+probability. Using the ordinary FxFx H-event `SCALUP` instead of passing
+Delta stopping scales changes higher-order shower terms. Standalone
+MC@NLO-Delta retains its directed shower-scale interface.
 
 Focused regressions are available with:
 
@@ -65,28 +65,15 @@ merging factors, cut outcomes and H/S evaluation modes, plus native H
 cache reuse. Scale/event tests check physical S dipole limits, scalar
 sector/fold ownership, resonance-index remapping and ordinary-mode
 controls. LHE tests exercise both Fortran readers, scale reweights,
-multi-digit indices, legacy separate tags and Python flag reindexing.
-The C++ matching regression covers resonance daughters, missing/invalid
-flags and production scales that differ from the merging classification.
-The hook compiles with the Pythia 8.317 and 8.318 matching interfaces;
-the generated Pythia 8.2/8.3 drivers use it for both analysis and HepMC
-output.
+multi-digit indices and Python matching-scale edits. They verify that
+ordinary FxFx and FxFx-Delta write identical shower metadata, while
+standalone Delta continues to round-trip its directed scales.
 
-Integration validation on 23 October 2026 used `u u~ > z [QCD]`,
-`loop_sm-no_b_mass`, 6.5 TeV beams, `nn23nlo` and folding `(1,1,1)`.
-Compilation, matrix-element/MC checks and 20/20 pole checks passed.
-The 40 generated events (26 S, 14 H) had valid matching flags, directed
-scales and reweights. Pythia 8.317, with `qCut=30 GeV`, `qCutME=20 GeV`
-and maximum merged multiplicity one, accepted 35 events and vetoed five
-through FxFx, with no shower failures. The hook preserved physical
-production scales, including through Z decays. Separate one-jet S/H
-fixtures exercised asymmetric dipole scales. Both Pythia 8.3 driver
-variants passed compilation syntax checks.
-
-A `u u~ > z g [QCD]` export also passed compilation, ME/MC checks and
-20/20 pole checks, but its grid adaptation was stopped before event
-generation. These checks do not validate merged cross sections,
-merging-scale dependence or logarithmic accuracy.
+Set `PYTHIA8` to a Pythia installation to run the real-Pythia matching
+regression. It checks stable Z bosons and pre-decayed `Z -> e+ e-`
+records with daughters placed before or after the production gluon,
+including both matched and excluded gluons. These checks do not validate
+merged cross sections, merging-scale dependence or logarithmic accuracy.
 
 ## Pythia8 S-event starting scales
 
@@ -129,9 +116,9 @@ the finite endpoint probability when the hard-scale draw exceeds a
 dipole limit. The subtraction matrix lookups now use emitter-first order.
 
 Ordinary MC@NLO still writes only a scalar: Pythia imposes its dipole limits
-itself. Delta retains its dipole tags and uses the same effective scales
-in its Sudakov calculation. The saved scalar and matrix follow the same
-sector and fold, including the Born-only/virtual fallback; native-history
+itself. Standalone Delta retains its dipole tags and uses the same
+effective scales in its Sudakov calculation. The saved scalar and matrix
+follow the same sector and fold, including the Born-only/virtual fallback; native-history
 evaluation restores the outer hard scale. FxFx keeps its own prescription.
 
 Validation on 28 September 2026:

@@ -977,7 +977,8 @@ c Check the sampled Born before native H histories change active data.
             call compute_shower_scale_n1body(p,i_fks,j_fks,
      $           mc_shower_scale_mass())
             if (mcatnlo_delta) then
-! Delta H events use directed stopping scales for subsequent showering.
+! Standalone Delta H events use directed stopping scales for showering.
+! FxFx-Delta writes only the ordinary scalar saved below.
                emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)
      $              =shower_scale_n1body(1:ndelH,1:ndelH)
                if (ickkw.eq.3) then
