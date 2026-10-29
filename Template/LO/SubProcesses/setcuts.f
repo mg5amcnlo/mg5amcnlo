@@ -578,32 +578,25 @@ c           cutuse=1: only one of the min(nb_j,4) leading jets has to pass
         smin = smin + max(smin_p**2, smin_m, max(htjmin,0d0)**2)
       endif
 c     check for the bjet
+c     b's without cuts (decays with cut_decays=F) are skipped on purpose:
+c     xptb on the first b with cuts, ptb on the others, is then a safe bound
+c     (xptb can be satisfied by a skipped b, which still adds its energy).
       smin_m = 0d0
       smin_p = 0d0
       nb_b = 0
-      nb_nocut = 0
       do i=nincoming+1,nexternal
           if (is_a_b(i).and.do_cuts(i)) then
               nb_b = nb_b + 1
               smin_m = smin_m - pmass(i)**2
-              if (do_cuts(i)) then
-                 if (nb_b.eq.1) then
-                    smin_p = smin_p + max(eb,ptb,xptb,0d0)
-                 else
-                    smin_p = smin_p + max(eb,ptb,0d0)
-                 endif
+              if (nb_b.eq.1) then
+                 smin_p = smin_p + max(eb,ptb,xptb,0d0)
               else
-                 nb_nocut = nb_nocut +1
-                 if (nb_b.eq.1) then
-                    smin_p = smin_p + max(xptb,0d0)
-                 endif
+                 smin_p = smin_p + max(eb,ptb,0d0)
               endif
           endif
       enddo
       if (nb_b.gt.0)then
-         if ((nb_b-nb_nocut).gt.0) then
-            smin_m = smin_m + (nb_b-nb_nocut)*(nb_b-nb_nocut-1)/2d0*mmbb**2
-         endif
+         smin_m = smin_m + nb_b*(nb_b-1)/2d0*mmbb**2
          smin = smin + max(smin_p**2, smin_m)
       endif
 c     inclusive Ht cut (all jets+b, cut_decays not used in cuts.f): sqrt(shat) >= sum pT
