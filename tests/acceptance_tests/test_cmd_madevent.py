@@ -209,6 +209,54 @@ class TestMECmdShell(unittest.TestCase):
         # Make sure that the cross-section is close enough for the bias and unbiased samples
         self.assertLess((abs(biased_events.cross-unbiased_events.cross)/abs(unbiased_events.cross)),0.1)
 
+    def test_smin_below_cut_threshold(self):
+        """ Check that the lower bound on shat (smin, setcuts.f) is never above
+        the minimal shat allowed by the cuts (cuts.f): a too large smin removes
+        allowed phase space. Old overshoots: ihtmin attributed to the b's
+        (bbj: 340^2) and ptj1min charged to a decay jet on top of ptj for the
+        production jets (wjj: 460^2). Allowed configurations exist at
+        sqrt(shat) ~ 320 GeV (bbj: j=160, b+b~=160) and ~ 390 GeV (wjj: jets
+        160+150, W at rest), the new bounds are 300^2 and 310^2."""
+
+        try:
+            shutil.rmtree(self.run_dir)
+        except Exception:
+            pass
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+        interface.run_cmd('import model sm')
+        interface.run_cmd('generate p p > b b~ j')
+        interface.run_cmd('add process p p > w+ j j, w+ > j j')
+        interface.onecmd('output madevent %s -f' % self.run_dir)
+
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards', 'run_card.dat'))
+        for name, value in [('nevents', 100), ('use_syst', False),
+                            ('cut_decays', False), ('ptj', 150), ('ptj1min', 160),
+                            ('ptb', 20), ('etab', -1), ('drbb', 0), ('drbj', 0),
+                            ('ihtmin', 300)]:
+            run_card.set(name, value, user=True)
+        run_card.write(pjoin(self.run_dir, 'Cards', 'run_card.dat'))
+
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=self.run_dir)
+        self.cmd_line.no_notification()
+        self.do('survey -f')
+
+        smin = {}
+        for pdir in os.listdir(pjoin(self.run_dir, 'SubProcesses')):
+            if not pdir.startswith('P'):
+                continue
+            for root, _, files_in in os.walk(pjoin(self.run_dir, 'SubProcesses', pdir)):
+                for name in files_in:
+                    if not name.endswith('.log'):
+                        continue
+                    for line in open(pjoin(root, name)):
+                        if 'Define smin to' in line:
+                            smin.setdefault(pdir, set()).add(float(line.split()[-1]))
+        self.assertTrue(smin)
+        for pdir, values in smin.items():
+            for value in values:
+                self.assertLessEqual(value, 100000., '%s: smin=%s' % (pdir, value))
+
     def test_madspin_gridpack(self):
 
         self.out_dir = self.run_dir
