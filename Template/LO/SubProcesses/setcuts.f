@@ -672,7 +672,8 @@ c     mmnl only for exactly two leptons/neutrinos (see above).
          if (k.le.nb_l-nb_nocut) ptk = max(ptk, el, ptl)
          smin_p = smin_p + max(ptk, 0d0)
       enddo
-      if (nb_l.gt.0)then
+c     this block bounds the energy of the leptons and neutrinos together
+      if (ncheck.gt.0)then
          smin_m = smin_m + nb_pair*max(mmll,0d0)**2
          smin_p = smin_p**2
          if (has_ptll) smin_p = max(smin_p, ptllmin**2)
