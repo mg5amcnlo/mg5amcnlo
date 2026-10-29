@@ -4,6 +4,17 @@ ANNOUNCEMENT:
    2.9.X version has a LONG TERM STABLE IS now an end of life for bug fixing/support since december 2025.
    A new LTS (based on current 3.5.X) is starting now and will act as stable release for the coming years.
 
+3.5.18 (XX/XX/XX):
+  OM: LO: the lower bound on shat used for the phase-space integration (smin) could be too high,
+      never generating part of the allowed phase space (cross-section too low):
+      - ihtmin (inclusive Ht, jets+b) was attributed to the b-quarks alone, on top of the jet cuts
+        (e.g. p p > b b~ j with ptj=150, ihtmin=300: -2.8%);
+      - jets/leptons/photons from decays (cut_decays=F) together with ptjNmin/ptlNmin/xptj/xptl/xpta
+        (e.g. p p > w+ j j, w+ > j j with ptj=150, ptj1min=160: -2.2%);
+      - cutuse=1 (only one of the ptjNmin has to be satisfied);
+      - mmll for non same-flavour opposite-sign leptons, ptllmin without a pair to apply it to,
+        mmnl for more than two leptons/neutrinos.
+
 3.5.17 (9/10/26):
   RF: Fixed a bug in FxFx merging: MG side used inclusive-kT measure, PY side used exclusive.  This mismatch resulted in an
       underrepresentation of events in DRjj<1.0, particularly visibile in boosted configurations. Thanks, Sihyun Jeon.
