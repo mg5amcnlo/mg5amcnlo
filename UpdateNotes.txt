@@ -5,6 +5,10 @@ ANNOUNCEMENT:
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
 3.8.2 (XX/XX/XX):
+    OM: LO run_card ihtmin (inclusive Ht, jets+b): the lower bound on shat used for phase-space
+        integration charged the full ihtmin to the b-quarks, which removed allowed phase space when
+        jet cuts were present (e.g. p p > b b~ j with ptj=150, ihtmin=300: -2.8%). The b-quarks
+        from decays (cut_decays=F) were also ignored by this bound while ihtmin/xptb cut on them.
     OM: LO grouped output (default): the renormalisation/factorisation scales and the MLM xqcut
         veto were computed on the momenta before the symmetry permutation of the channel (#453).
         Channels with such permutations were biased (e.g. -3.5% for u q > z u q, also with MLM).
