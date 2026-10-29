@@ -3,6 +3,7 @@ module flow_fixture
   implicit none
   double precision :: values(3)=[1d0,3d0,0d0],uniform=0.5d0,last_grid_weight=-1d0
   integer :: draws=0,born_calls=0,fail_native_fold=0
+  integer :: nlo_calls=0,s_only_calls=0,native_calls=0
   logical :: real_point_active=.false.,born_cuts=.true.
   logical :: outer_no_endpoint=.false.
   logical :: fail_kinematics=.false.
@@ -83,6 +84,7 @@ module mint_module
   integer :: iconfig=1,ndim=5,ifold(5)=[1,1,3,1,1]
   integer :: ifold_energy=3,ifold_yij=4,ifold_phi=5
   integer :: born_spread_current_bin=1,born_spread_bin_fold(8),born_spread_sector_fold(8)
+  integer :: born_spread_phase=0
   logical :: new_point=.true.,pass_cuts_check=.false.
   double precision :: virt_wgt_mint(0:1)=0d0,born_wgt_mint(0:1)=0d0
 contains

@@ -2500,18 +2500,24 @@ RESTART = %(mint_mode)s
         # Needed to average the grids (both xgrids, ave_virt and
         # MC_integer grids), but sum the cross section info. The
         # latter is only the only line that contains integers.
-        for j,fs in enumerate([files_mint_grids,files_MC_integer]):
+        combined_grids=[]
+        for fs in (files_mint_grids,files_MC_integer):
             linesoffiles=[]
             polyfit_data=[]
             for f in fs:
-                with open(f,'r+') as fi:
+                with open(f,'r',newline='') as fi:
                     data=fi.readlines()
-                    linesoffiles.append([ dat for dat in data if 'POL' not in dat.split()[0] ])
-                    polyfit_data.append([ dat for dat in data if 'POL'     in dat.split()[0] ])
+                    linesoffiles.append([dat for dat in data if 'POL' not in dat.split()[0]])
+                    polyfit_data.append([dat for dat in data if 'POL' in dat.split()[0]])
+            if any(len(rows) != len(linesoffiles[0]) for rows in linesoffiles[1:]):
+                raise aMCatNLOError('Split grid files have different numbers of rows.')
             to_write=[]
+            surrogate_rows=[]
             for rowgrp in zip(*linesoffiles):
                 action=misc.make_unique([row.strip().split()[0] for row in rowgrp]) 
                 floatsbyfile = [[float(a) for a in row.strip().split()[1:]] for row in rowgrp]
+                if any(len(values) != len(floatsbyfile[0]) for values in floatsbyfile[1:]):
+                    raise aMCatNLOError('Split grid rows have different numbers of values.')
                 floatgrps = list(zip(*floatsbyfile))
                 if len(action) != 1:
                     raise aMCatNLOError('"mint_grids" files not in correct format. '+\
@@ -2531,6 +2537,10 @@ RESTART = %(mint_mode)s
                 elif 'IDE' in action:
                     # they should all be identical (INTEGERS)
                     write_string = [int(round(floatgrp[0])) for floatgrp in floatgrps]
+                elif 'VSU' in action:
+                    # A surrogate's choice and coefficients are not additive.
+                    # Any fixed surrogate is exact; keep the first job's fit.
+                    write_string = rowgrp[0].strip().split()[1:]
                 elif 'SPE' in action:
                     # special: average first; sum second; average third (ALL INTEGERS)
                     write_string=[]
@@ -2543,7 +2553,11 @@ RESTART = %(mint_mode)s
                             write_string.append(int(sum(floatgrp)/len(floatgrp)))
                 else:
                     raise aMCatNLOError('Unknown action for combining grids: %s' % action[0])
-                to_write.append(action[0] + " " + (" ".join(str(ws) for ws in write_string)) + "\n")
+                combined_row = action[0] + " " + (" ".join(str(ws) for ws in write_string)) + "\n"
+                if action[0] == 'VSU':
+                    surrogate_rows.append(combined_row)
+                else:
+                    to_write.append(combined_row)
 
             if polyfit_data:
                 # special for data regarding virtuals. Need to simply append
@@ -2568,13 +2582,15 @@ RESTART = %(mint_mode)s
                     for dat in ch:
                         to_write.append(dat)
 
-            # write the data over the master location
-            if j==0:
-                with open(pjoin(location,'mint_grids'),'w') as f:
-                    f.writelines(to_write)
-            elif j==1:
-                with open(pjoin(location,'grid.MC_integer'),'w') as f:
-                    f.writelines(to_write)
+            # The reader restores the polynomial fallback before the fit.
+            to_write.extend(surrogate_rows)
+
+            combined_grids.append(to_write)
+
+        # Validate both grids before replacing either existing master file.
+        for name,data in zip(('mint_grids','grid.MC_integer'),combined_grids):
+            with open(pjoin(location,name),'w',newline='') as f:
+                f.writelines(data)
 
                 
     def split_jobs_fixed_order(self,jobs_to_run,jobs_to_collect):

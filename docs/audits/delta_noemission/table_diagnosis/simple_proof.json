@@ -1,0 +1,22 @@
+{
+  "setting": "PartonShowers:model = 1",
+  "runtime_dynamic_casts": [
+    "SimpleShowerModel",
+    "SimpleSpaceShower",
+    "SimpleTimeShower"
+  ],
+  "all_assertions_passed": true,
+  "fresh_values_reproduced_exactly": {
+    "II_gluon": 0.374558,
+    "FI_top_dummy": 0.6533
+  },
+  "merging_useShowerPlugin": true,
+  "trial_shower_pointer_proof": "Pythia.cc:829-830 initializes trialPartonLevel using the same timesPtr and spacePtr from getShowerModelPtr; Merging.cc:420,424,428,432 dispatches to those pointers.",
+  "sha256": {
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/table_simple_proof.cc": "e5797d8bdc6cf696948f2fa153751651d8529151ec51a3d015f29a91b3e9ad96",
+    "/export/tmp/rikkert/delta_noemission_20261027/table_diagnosis/simple_proof": "5084f115f3e9a7c89b94399155da0efc55619b85f54439939478b71e140f41bc",
+    "/export/tmp/rikkert/delta_noemission_20261027/table_diagnosis/simple_proof.log": "3d763bc5a04e7371a7dc01311d89718207922d4769b4c3d2a8cc98aab7362833",
+    "/export/tmp/rikkert/Pythia/pythia8313/src/Pythia.cc": "35322338b4a5b1825d72f5dd5dfdca039b1c7b0889b04e85e5c5501977b66e28",
+    "/export/tmp/rikkert/Pythia/pythia8313/src/ShowerModel.cc": "99fd9671c8613e4730464feac9a81597ee3daf714eb817bdd45178acf9a83186"
+  }
+}

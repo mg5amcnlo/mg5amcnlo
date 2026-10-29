@@ -1,0 +1,919 @@
+{
+  "mass_GeV": 91.1876,
+  "hard_scale_GeV": 91.1876,
+  "x": 0.00701443076923077,
+  "pdf": "Pythia13",
+  "alphaS_MZ": 0.13,
+  "alphaS_reference_MZ_GeV": 91.188,
+  "alphaS_order": 1,
+  "CMW": false,
+  "pT0_GeV": 0.0,
+  "zmax_at_hard": 0.3819660112501051,
+  "formulae": {
+    "forward_kernel": "V1(zmax)=CF*(-2*log(1-zmax)-1.5*zmax^2)",
+    "forward_probability": "exp(-integral dlog(t)*alphaS(t)/(2*pi)*V1(t))",
+    "backward_kernel": "integral_x^zmax dz [Pqq(z)*xfq(x/z,t)+Pqg(z)*xfg(x/z,t)]/xfq(x,t)",
+    "quark_kernel": "Pqq=CF*(1+z^2)/(1-z)",
+    "gluon_to_quark_kernel": "Pqg=TR*(z^2+(1-z)^2)",
+    "phase_space": "zmax=1-r/2*(sqrt(1+4/r)-1), r=t/mdip^2"
+  },
+  "boundary_identity": "Dlog(f)/Dlog(t)+alphaS*V1/(2*pi)-R_backward = alphaS/(2*pi)*{CF*Z*(1-Z) + integral_Z^1 dz Pqq(z)[xfq(x/z)/xfq(x)-1] + integral_Z^1 dz Pqg(z)*xfg(x/z)/xfq(x)}, Z=zmax; assuming LO DGLAP evolution",
+  "rows": [
+    {
+      "cut": 5.0,
+      "forward_kernel_probability": 0.5789596409046698,
+      "stored_up_probability": 0.5557379610086514,
+      "forward_rate_integral": 0.546522508666495,
+      "forward_quad_estimated_absolute_error": 6.0676187259744436e-15,
+      "zmax_at_cut": 0.9466506553607204,
+      "legs": {
+        "1": {
+          "pdf_ratio": 0.6949849788026978,
+          "backward_kernel_noemission": 0.48388877995823304,
+          "forward_times_pdf": 0.40236825376174945,
+          "stored_times_pdf": 0.3862295350514521,
+          "log_difference": 0.18448736340414107,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.032137711400502804,
+            "omitted_diagonal_real_minus_virtual": -0.02416173208079589,
+            "omitted_gluon_to_quark_real": 0.17646462471277002
+          },
+          "boundary_correction_sum": 0.18444060403247695,
+          "boundary_vs_pdf_ratio_residual": 4.675937166412347e-05,
+          "backward_rate_integral": 0.7259001921467965,
+          "outer_quad_estimated_absolute_error": 2.327638589518515e-06
+        },
+        "2": {
+          "pdf_ratio": 0.6993919231668014,
+          "backward_kernel_noemission": 0.48253520577990594,
+          "forward_times_pdf": 0.40491969668827776,
+          "stored_times_pdf": 0.3886786413266376,
+          "log_difference": 0.1753651157996804,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.032137711400502804,
+            "omitted_diagonal_real_minus_virtual": -0.0172036244330643,
+            "omitted_gluon_to_quark_real": 0.15986190647488496
+          },
+          "boundary_correction_sum": 0.17479599344232347,
+          "boundary_vs_pdf_ratio_residual": 0.0005691223573569271,
+          "backward_rate_integral": 0.7287013955179825,
+          "outer_quad_estimated_absolute_error": 2.007467795600192e-06
+        },
+        "-1": {
+          "pdf_ratio": 0.6808420374543066,
+          "backward_kernel_noemission": 0.48319884733472973,
+          "forward_times_pdf": 0.3941800615173491,
+          "stored_times_pdf": 0.3783697656638322,
+          "log_difference": 0.20362044730655704,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.032137711400502804,
+            "omitted_diagonal_real_minus_virtual": -0.03796451313504412,
+            "omitted_gluon_to_quark_real": 0.2095708872990146
+          },
+          "boundary_correction_sum": 0.2037440855644733,
+          "boundary_vs_pdf_ratio_residual": -0.00012363825791625316,
+          "backward_rate_integral": 0.7273270178471385,
+          "outer_quad_estimated_absolute_error": 3.04093659708329e-06
+        },
+        "-2": {
+          "pdf_ratio": 0.6772917159971981,
+          "backward_kernel_noemission": 0.48248208560509176,
+          "forward_times_pdf": 0.3921245686814454,
+          "stored_times_pdf": 0.37639671725633345,
+          "log_difference": 0.20736422525161458,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.032137711400502804,
+            "omitted_diagonal_real_minus_virtual": -0.040913365655470525,
+            "omitted_gluon_to_quark_real": 0.21676315887929484
+          },
+          "boundary_correction_sum": 0.20798750462432714,
+          "boundary_vs_pdf_ratio_residual": -0.0006232793727125596,
+          "backward_rate_integral": 0.7288114871719706,
+          "outer_quad_estimated_absolute_error": 3.187970420081256e-06
+        },
+        "3": {
+          "pdf_ratio": 0.4697949339455881,
+          "backward_kernel_noemission": 0.37883537085871577,
+          "forward_times_pdf": 0.2719923062559707,
+          "stored_times_pdf": 0.2610828786831152,
+          "log_difference": 0.3313279529593147,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.032137711400502804,
+            "omitted_diagonal_real_minus_virtual": -0.047800132232052955,
+            "omitted_gluon_to_quark_real": 0.3469192824125966
+          },
+          "boundary_correction_sum": 0.33125686158104645,
+          "boundary_vs_pdf_ratio_residual": 7.109137826827316e-05,
+          "backward_rate_integral": 0.9706535459505135,
+          "outer_quad_estimated_absolute_error": 7.4754021221916805e-06
+        },
+        "-3": {
+          "pdf_ratio": 0.4698838677216053,
+          "backward_kernel_noemission": 0.37888589271014506,
+          "forward_times_pdf": 0.27204379532299794,
+          "stored_times_pdf": 0.26113230255846376,
+          "log_difference": 0.3312720195551143,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.032137711400502804,
+            "omitted_diagonal_real_minus_virtual": -0.047794653174765334,
+            "omitted_gluon_to_quark_real": 0.3468580202589783
+          },
+          "boundary_correction_sum": 0.33120107848471575,
+          "boundary_vs_pdf_ratio_residual": 7.09410703985669e-05,
+          "backward_rate_integral": 0.970520193875197,
+          "outer_quad_estimated_absolute_error": 7.48102595134467e-06
+        }
+      },
+      "events": {
+        "1": {
+          "backward_kernel_probability": 0.23381450071402687,
+          "forward_times_pdf_probability": 0.15860554302043472,
+          "archive_times_pdf_probability": 0.1461375786698688,
+          "fresh_ratio_to_backward": 0.6783392070897327,
+          "archive_ratio_to_backward": 0.6250150363796567,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.06427542280100561,
+            "omitted_diagonal_real_minus_virtual": -0.06212624521584001,
+            "omitted_gluon_to_quark_real": 0.38603551201178465
+          },
+          "boundary_correction_sum": 0.38818468959695024
+        },
+        "2": {
+          "backward_kernel_probability": 0.23281459246257113,
+          "forward_times_pdf_probability": 0.15877896141451261,
+          "archive_times_pdf_probability": 0.14629736466299825,
+          "fresh_ratio_to_backward": 0.681997463024312,
+          "archive_ratio_to_backward": 0.6283857172162352,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.06427542280100561,
+            "omitted_diagonal_real_minus_virtual": -0.058116990088534826,
+            "omitted_gluon_to_quark_real": 0.37662506535417983
+          },
+          "boundary_correction_sum": 0.3827834980666506
+        },
+        "3": {
+          "backward_kernel_probability": 0.14353537767798338,
+          "forward_times_pdf_probability": 0.07399381929252946,
+          "archive_times_pdf_probability": 0.06817717326911392,
+          "fresh_ratio_to_backward": 0.5155092806355519,
+          "archive_ratio_to_backward": 0.47498515259469365,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.06427542280100561,
+            "omitted_diagonal_real_minus_virtual": -0.09559478540681829,
+            "omitted_gluon_to_quark_real": 0.6937773026715749
+          },
+          "boundary_correction_sum": 0.6624579400657622
+        }
+      }
+    },
+    {
+      "cut": 10.0,
+      "forward_kernel_probability": 0.7460680834543333,
+      "stored_up_probability": 0.7329437788163548,
+      "forward_rate_integral": 0.2929384182586512,
+      "forward_quad_estimated_absolute_error": 3.252269767480289e-15,
+      "zmax_at_cut": 0.8961843353517672,
+      "legs": {
+        "1": {
+          "pdf_ratio": 0.7838567684800123,
+          "backward_kernel_noemission": 0.6852422193165296,
+          "forward_times_pdf": 0.5848105169625898,
+          "stored_times_pdf": 0.5745229419405167,
+          "log_difference": 0.15848448846439755,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.02766671340077067,
+            "omitted_diagonal_real_minus_virtual": -0.02236372449359,
+            "omitted_gluon_to_quark_real": 0.1531603786170866
+          },
+          "boundary_correction_sum": 0.15846336752426726,
+          "boundary_vs_pdf_ratio_residual": 2.112094013029253e-05,
+          "backward_rate_integral": 0.3779828983817207,
+          "outer_quad_estimated_absolute_error": 1.451961406960605e-08
+        },
+        "2": {
+          "pdf_ratio": 0.786980351649259,
+          "backward_kernel_noemission": 0.6827138252168804,
+          "forward_times_pdf": 0.5871409226711799,
+          "stored_times_pdf": 0.5768123527920316,
+          "log_difference": 0.15081091130400015,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.02766671340077067,
+            "omitted_diagonal_real_minus_virtual": -0.01608984787831862,
+            "omitted_gluon_to_quark_real": 0.1388171745272002
+          },
+          "boundary_correction_sum": 0.15039404004965223,
+          "boundary_vs_pdf_ratio_residual": 0.00041687125434791694,
+          "backward_rate_integral": 0.3816795039692157,
+          "outer_quad_estimated_absolute_error": 1.2400148272994809e-08
+        },
+        "-1": {
+          "pdf_ratio": 0.7733226375584352,
+          "backward_kernel_noemission": 0.6869274105267632,
+          "forward_times_pdf": 0.5769513380950718,
+          "stored_times_pdf": 0.5668020162163098,
+          "log_difference": 0.17447069821213418,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.02766671340077067,
+            "omitted_diagonal_real_minus_virtual": -0.034703844485727144,
+            "omitted_gluon_to_quark_real": 0.18161262411605483
+          },
+          "boundary_correction_sum": 0.17457549303109837,
+          "boundary_vs_pdf_ratio_residual": -0.0001047948189641934,
+          "backward_rate_integral": 0.37552665387545653,
+          "outer_quad_estimated_absolute_error": 1.9926848300125192e-08
+        },
+        "-2": {
+          "pdf_ratio": 0.7706384301735321,
+          "backward_kernel_noemission": 0.6867275647297558,
+          "forward_times_pdf": 0.5749487366358231,
+          "stored_times_pdf": 0.5648346431124921,
+          "log_difference": 0.17765677253665058,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.02766671340077067,
+            "omitted_diagonal_real_minus_virtual": -0.03733177141442532,
+            "omitted_gluon_to_quark_real": 0.1877712326393794
+          },
+          "boundary_correction_sum": 0.17810617462572476,
+          "boundary_vs_pdf_ratio_residual": -0.0004494020890741801,
+          "backward_rate_integral": 0.3758176232993906,
+          "outer_quad_estimated_absolute_error": 2.0412455817473754e-08
+        },
+        "3": {
+          "pdf_ratio": 0.6239263381868587,
+          "backward_kernel_noemission": 0.6134484870032044,
+          "forward_times_pdf": 0.4654915273477499,
+          "stored_times_pdf": 0.45730292801372713,
+          "log_difference": 0.2760023994955768,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.02766671340077067,
+            "omitted_diagonal_real_minus_virtual": -0.04344723812224461,
+            "omitted_gluon_to_quark_real": 0.29176089463658966
+          },
+          "boundary_correction_sum": 0.2759803699151157,
+          "boundary_vs_pdf_ratio_residual": 2.2029580461102594e-05,
+          "backward_rate_integral": 0.48865898412144104,
+          "outer_quad_estimated_absolute_error": 4.8307652435151e-08
+        },
+        "-3": {
+          "pdf_ratio": 0.6239903391497795,
+          "backward_kernel_noemission": 0.613485365028534,
+          "forward_times_pdf": 0.46553927642349546,
+          "stored_times_pdf": 0.4573498371213382,
+          "log_difference": 0.2759599411230553,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.02766671340077067,
+            "omitted_diagonal_real_minus_virtual": -0.043442859640263065,
+            "omitted_gluon_to_quark_real": 0.2917141621592957
+          },
+          "boundary_correction_sum": 0.27593801591980327,
+          "boundary_vs_pdf_ratio_residual": 2.1925203252004533e-05,
+          "backward_rate_integral": 0.48859886999991825,
+          "outer_quad_estimated_absolute_error": 4.756687806256386e-08
+        }
+      },
+      "events": {
+        "1": {
+          "backward_kernel_probability": 0.47071166329871605,
+          "forward_times_pdf_probability": 0.33740721029363685,
+          "archive_times_pdf_probability": 0.3256407618544107,
+          "fresh_ratio_to_backward": 0.7168023157299939,
+          "archive_ratio_to_backward": 0.6918051691609719,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.05533342680154134,
+            "omitted_diagonal_real_minus_virtual": -0.05706756897931714,
+            "omitted_gluon_to_quark_real": 0.3347730027331414
+          },
+          "boundary_correction_sum": 0.33303886055536563
+        },
+        "2": {
+          "backward_kernel_probability": 0.46883840259852444,
+          "forward_times_pdf_probability": 0.3375759317169864,
+          "archive_times_pdf_probability": 0.325803599432164,
+          "fresh_ratio_to_backward": 0.7200261963311468,
+          "archive_ratio_to_backward": 0.6949166229268042,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.05533342680154134,
+            "omitted_diagonal_real_minus_virtual": -0.053421619292743944,
+            "omitted_gluon_to_quark_real": 0.32658840716657955
+          },
+          "boundary_correction_sum": 0.328500214675377
+        },
+        "3": {
+          "backward_kernel_probability": 0.37634166897536275,
+          "forward_times_pdf_probability": 0.21670458882273924,
+          "archive_times_pdf_probability": 0.20914741964218914,
+          "fresh_ratio_to_backward": 0.5758187484599954,
+          "archive_ratio_to_backward": 0.5557381413852448,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.05533342680154134,
+            "omitted_diagonal_real_minus_virtual": -0.08689009776250767,
+            "omitted_gluon_to_quark_real": 0.5834750567958853
+          },
+          "boundary_correction_sum": 0.551918385834919
+        }
+      }
+    },
+    {
+      "cut": 20.0,
+      "forward_kernel_probability": 0.8689984266459772,
+      "stored_up_probability": 0.8625544262150118,
+      "forward_rate_integral": 0.14041396425235736,
+      "forward_quad_estimated_absolute_error": 1.5589081609186079e-15,
+      "zmax_at_cut": 0.8034094337298332,
+      "legs": {
+        "1": {
+          "pdf_ratio": 0.8620385169960278,
+          "backward_kernel_noemission": 0.8447770016852089,
+          "forward_times_pdf": 0.7491101149777797,
+          "stored_times_pdf": 0.7435551384027485,
+          "log_difference": 0.1201867004943255,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.020977680900767712,
+            "omitted_diagonal_real_minus_virtual": -0.01881659224770634,
+            "omitted_gluon_to_quark_real": 0.11801981836114792
+          },
+          "boundary_correction_sum": 0.12018090701420929,
+          "boundary_vs_pdf_ratio_residual": 5.793480116214611e-06,
+          "backward_rate_integral": 0.1686825897846888,
+          "outer_quad_estimated_absolute_error": 1.0890840175927723e-09
+        },
+        "2": {
+          "pdf_ratio": 0.8639446327634589,
+          "backward_kernel_noemission": 0.8419305092600475,
+          "forward_times_pdf": 0.7507665265806823,
+          "stored_times_pdf": 0.7451992669948243,
+          "log_difference": 0.1146027602178471,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.020977680900767712,
+            "omitted_diagonal_real_minus_virtual": -0.013670451369586353,
+            "omitted_gluon_to_quark_real": 0.10701941187039835
+          },
+          "boundary_correction_sum": 0.1143266414015797,
+          "boundary_vs_pdf_ratio_residual": 0.00027611881626739276,
+          "backward_rate_integral": 0.17205779871565996,
+          "outer_quad_estimated_absolute_error": 1.5509568088346676e-09
+        },
+        "-1": {
+          "pdf_ratio": 0.855184391887771,
+          "backward_kernel_noemission": 0.8478289146718732,
+          "forward_times_pdf": 0.7431538910426697,
+          "stored_times_pdf": 0.7376430824527901,
+          "log_difference": 0.13177571941202273,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.020977680900767712,
+            "omitted_diagonal_real_minus_virtual": -0.028838485286758708,
+            "omitted_gluon_to_quark_real": 0.13971472373571778
+          },
+          "boundary_correction_sum": 0.1318539193497268,
+          "boundary_vs_pdf_ratio_residual": -7.819993770405431e-05,
+          "backward_rate_integral": 0.16507641511100632,
+          "outer_quad_estimated_absolute_error": 5.21431221954842e-10
+        },
+        "-2": {
+          "pdf_ratio": 0.8534070725081098,
+          "backward_kernel_noemission": 0.8480444693929481,
+          "forward_times_pdf": 0.7416094032980968,
+          "stored_times_pdf": 0.7361100477550656,
+          "log_difference": 0.13411038082364446,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.020977680900767712,
+            "omitted_diagonal_real_minus_virtual": -0.030964363698555555,
+            "omitted_gluon_to_quark_real": 0.1443916418396583
+          },
+          "boundary_correction_sum": 0.13440495904187047,
+          "boundary_vs_pdf_ratio_residual": -0.0002945782182260104,
+          "backward_rate_integral": 0.16482220424330685,
+          "outer_quad_estimated_absolute_error": 7.27403373222799e-11
+        },
+        "3": {
+          "pdf_ratio": 0.7597420553918699,
+          "backward_kernel_noemission": 0.8093232807419118,
+          "forward_times_pdf": 0.6602146507923158,
+          "stored_times_pdf": 0.655318872659948,
+          "log_difference": 0.20363343198618075,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.020977680900767712,
+            "omitted_diagonal_real_minus_virtual": -0.035839192487655464,
+            "omitted_gluon_to_quark_real": 0.218495934171871
+          },
+          "boundary_correction_sum": 0.20363442258498324,
+          "boundary_vs_pdf_ratio_residual": -9.905988024860868e-07,
+          "backward_rate_integral": 0.21155683637759518,
+          "outer_quad_estimated_absolute_error": 5.496069395049787e-10
+        },
+        "-3": {
+          "pdf_ratio": 0.7597835088045094,
+          "backward_kernel_noemission": 0.8093439372178101,
+          "forward_times_pdf": 0.6602506737426787,
+          "stored_times_pdf": 0.655354628484502,
+          "log_difference": 0.20360439381195777,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.020977680900767712,
+            "omitted_diagonal_real_minus_virtual": -0.03583607666513088,
+            "omitted_gluon_to_quark_real": 0.2184638461406715
+          },
+          "boundary_correction_sum": 0.2036054503763083,
+          "boundary_vs_pdf_ratio_residual": -1.056564350537803e-06,
+          "backward_rate_integral": 0.21153131355774668,
+          "outer_quad_estimated_absolute_error": 5.496752801173224e-10
+        }
+      },
+      "events": {
+        "1": {
+          "backward_kernel_probability": 0.7162263684785298,
+          "forward_times_pdf_probability": 0.5567040967651586,
+          "archive_times_pdf_probability": 0.5484783042650143,
+          "fresh_ratio_to_backward": 0.7772739475478371,
+          "archive_ratio_to_backward": 0.7657890415709484,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.041955361801535425,
+            "omitted_diagonal_real_minus_virtual": -0.047655077534465046,
+            "omitted_gluon_to_quark_real": 0.2577345420968657
+          },
+          "boundary_correction_sum": 0.2520348263639361
+        },
+        "2": {
+          "backward_kernel_probability": 0.7139945119911716,
+          "forward_times_pdf_probability": 0.5567755157936846,
+          "archive_times_pdf_probability": 0.5485486680146,
+          "fresh_ratio_to_backward": 0.7798036349620695,
+          "archive_ratio_to_backward": 0.7682813506294607,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.041955361801535425,
+            "omitted_diagonal_real_minus_virtual": -0.04463481506814191,
+            "omitted_gluon_to_quark_real": 0.2514110537100567
+          },
+          "boundary_correction_sum": 0.24873160044345016
+        },
+        "3": {
+          "backward_kernel_probability": 0.655020890517694,
+          "forward_times_pdf_probability": 0.4359071680004138,
+          "archive_times_pdf_probability": 0.42946625633094293,
+          "fresh_ratio_to_backward": 0.6654859017639816,
+          "archive_ratio_to_backward": 0.6556527624508517,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.041955361801535425,
+            "omitted_diagonal_real_minus_virtual": -0.07167526915278635,
+            "omitted_gluon_to_quark_real": 0.43695978031254246
+          },
+          "boundary_correction_sum": 0.40723987296129155
+        }
+      }
+    },
+    {
+      "cut": 30.0,
+      "forward_kernel_probability": 0.9202283670310921,
+      "stored_up_probability": 0.9170067173785974,
+      "forward_rate_integral": 0.08313341470799174,
+      "forward_quad_estimated_absolute_error": 9.229663112452406e-16,
+      "zmax_at_cut": 0.7207044204445718,
+      "legs": {
+        "1": {
+          "pdf_ratio": 0.9030647748362757,
+          "backward_kernel_noemission": 0.9109030970270775,
+          "forward_times_pdf": 0.8310258230708869,
+          "stored_times_pdf": 0.8281164647528554,
+          "log_difference": 0.0917756526419936,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.01590389707508425,
+            "omitted_diagonal_real_minus_virtual": -0.015516852320006205,
+            "omitted_gluon_to_quark_real": 0.09138784711193348
+          },
+          "boundary_correction_sum": 0.09177489186701153,
+          "boundary_vs_pdf_ratio_residual": 7.607749820670584e-07,
+          "backward_rate_integral": 0.09331875727329554,
+          "outer_quad_estimated_absolute_error": 7.951912284908018e-11
+        },
+        "2": {
+          "pdf_ratio": 0.9043509895395019,
+          "backward_kernel_noemission": 0.9084590745771272,
+          "forward_times_pdf": 0.8322094343268881,
+          "stored_times_pdf": 0.8292959322757049,
+          "log_difference": 0.08766570648106085,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.01590389707508425,
+            "omitted_diagonal_real_minus_virtual": -0.011328500614508132,
+            "omitted_gluon_to_quark_real": 0.08289192304806246
+          },
+          "boundary_correction_sum": 0.08746731950863858,
+          "boundary_vs_pdf_ratio_residual": 0.00019838697242227643,
+          "backward_rate_integral": 0.09600543940643878,
+          "outer_quad_estimated_absolute_error": 1.5466804460726901e-10
+        },
+        "-1": {
+          "pdf_ratio": 0.8982343956089381,
+          "backward_kernel_noemission": 0.9137952244471693,
+          "forward_times_pdf": 0.8265807710823732,
+          "stored_times_pdf": 0.8236869745539008,
+          "log_difference": 0.10030886393469561,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.01590389707508425,
+            "omitted_diagonal_real_minus_virtual": -0.02361916392244744,
+            "omitted_gluon_to_quark_real": 0.10808403495764411
+          },
+          "boundary_correction_sum": 0.10036876811028092,
+          "boundary_vs_pdf_ratio_residual": -5.9904175585309694e-05,
+          "backward_rate_integral": 0.09014877590386251,
+          "outer_quad_estimated_absolute_error": 3.4982204255160395e-11
+        },
+        "-2": {
+          "pdf_ratio": 0.8969679845825086,
+          "backward_kernel_noemission": 0.9140825244147907,
+          "forward_times_pdf": 0.8254153837315317,
+          "stored_times_pdf": 0.8225256671357025,
+          "log_difference": 0.1020341016168526,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.01590389707508425,
+            "omitted_diagonal_real_minus_virtual": -0.025333281396452162,
+            "omitted_gluon_to_quark_real": 0.11167442075970789
+          },
+          "boundary_correction_sum": 0.10224503643833999,
+          "boundary_vs_pdf_ratio_residual": -0.00021093482148738796,
+          "backward_rate_integral": 0.08983442230973833,
+          "outer_quad_estimated_absolute_error": 2.6192234543021275e-11
+        },
+        "3": {
+          "pdf_ratio": 0.8311024851253183,
+          "backward_kernel_noemission": 0.8915065262703104,
+          "forward_times_pdf": 0.7648040827223541,
+          "stored_times_pdf": 0.7621265616899626,
+          "log_difference": 0.1532930578158437,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.01590389707508425,
+            "omitted_diagonal_real_minus_virtual": -0.029203776680980453,
+            "omitted_gluon_to_quark_real": 0.16659955326388123
+          },
+          "boundary_correction_sum": 0.15329967365798502,
+          "boundary_vs_pdf_ratio_residual": -6.615842141316497e-06,
+          "backward_rate_integral": 0.11484252115575347,
+          "outer_quad_estimated_absolute_error": 6.881176412068188e-12
+        },
+        "-3": {
+          "pdf_ratio": 0.8311318630153015,
+          "backward_kernel_noemission": 0.8915192320008446,
+          "forward_times_pdf": 0.7648311170900802,
+          "stored_times_pdf": 0.7621535014124198,
+          "log_difference": 0.15327196222058176,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.01590389707508425,
+            "omitted_diagonal_real_minus_virtual": -0.02920148533643016,
+            "omitted_gluon_to_quark_real": 0.16657622395328436
+          },
+          "boundary_correction_sum": 0.15327863569193845,
+          "boundary_vs_pdf_ratio_residual": -6.6734713566884984e-06,
+          "backward_rate_integral": 0.11482826928028224,
+          "outer_quad_estimated_absolute_error": 4.755514493804409e-11
+        }
+      },
+      "events": {
+        "1": {
+          "backward_kernel_probability": 0.8323788999974799,
+          "forward_times_pdf_probability": 0.6869099656232975,
+          "archive_times_pdf_probability": 0.6821087454305516,
+          "fresh_ratio_to_backward": 0.8252371193279613,
+          "archive_ratio_to_backward": 0.8194690488101232,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.0318077941501685,
+            "omitted_diagonal_real_minus_virtual": -0.03913601624245364,
+            "omitted_gluon_to_quark_real": 0.1994718820695776
+          },
+          "boundary_correction_sum": 0.19214365997729244
+        },
+        "2": {
+          "backward_kernel_probability": 0.830406564216985,
+          "forward_times_pdf_probability": 0.6869184695799292,
+          "archive_times_pdf_probability": 0.6821171899479985,
+          "fresh_ratio_to_backward": 0.827207417643242,
+          "archive_ratio_to_backward": 0.8214255755446576,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.0318077941501685,
+            "omitted_diagonal_real_minus_virtual": -0.03666178201096029,
+            "omitted_gluon_to_quark_real": 0.19456634380777035
+          },
+          "boundary_correction_sum": 0.18971235594697855
+        },
+        "3": {
+          "backward_kernel_probability": 0.7947952136242479,
+          "forward_times_pdf_probability": 0.5849459609435922,
+          "archive_times_pdf_probability": 0.5808574275114136,
+          "fresh_ratio_to_backward": 0.7359706637842622,
+          "archive_ratio_to_backward": 0.7308265293429701,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.0318077941501685,
+            "omitted_diagonal_real_minus_virtual": -0.058405262017410614,
+            "omitted_gluon_to_quark_real": 0.3331757772171656
+          },
+          "boundary_correction_sum": 0.3065783093499235
+        }
+      }
+    },
+    {
+      "cut": 50.0,
+      "forward_kernel_probability": 0.9663365069967967,
+      "stored_up_probability": 0.9656561360259659,
+      "forward_rate_integral": 0.0342431545013558,
+      "forward_quad_estimated_absolute_error": 3.8017538563201784e-16,
+      "zmax_at_cut": 0.581773755788825,
+      "legs": {
+        "1": {
+          "pdf_ratio": 0.9502551723893842,
+          "backward_kernel_noemission": 0.9663137649079498,
+          "forward_times_pdf": 0.9182662640423964,
+          "stored_times_pdf": 0.9176197380082208,
+          "log_difference": 0.05100119332583963,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.008586022116652832,
+            "omitted_diagonal_real_minus_virtual": -0.009660270314783878,
+            "omitted_gluon_to_quark_real": 0.052077264693306126
+          },
+          "boundary_correction_sum": 0.05100301649517508,
+          "boundary_vs_pdf_ratio_residual": -1.8231693354464618e-06,
+          "backward_rate_integral": 0.03426668911512269,
+          "outer_quad_estimated_absolute_error": 6.519325792896477e-11
+        },
+        "2": {
+          "pdf_ratio": 0.950874881156482,
+          "backward_kernel_noemission": 0.9648706006359975,
+          "forward_times_pdf": 0.9188651112477491,
+          "stored_times_pdf": 0.9182181635817179,
+          "log_difference": 0.048854665909806944,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.008586022116652832,
+            "omitted_diagonal_real_minus_virtual": -0.007086379633560802,
+            "omitted_gluon_to_quark_real": 0.047250277660497976
+          },
+          "boundary_correction_sum": 0.04874992014359,
+          "boundary_vs_pdf_ratio_residual": 0.00010474576621694043,
+          "backward_rate_integral": 0.03576127923955226,
+          "outer_quad_estimated_absolute_error": 1.6891526244638722e-11
+        },
+        "-1": {
+          "pdf_ratio": 0.9477811919645681,
+          "backward_kernel_noemission": 0.9681249550459046,
+          "forward_times_pdf": 0.9158755664403012,
+          "stored_times_pdf": 0.9152307236305891,
+          "log_difference": 0.05548065378800393,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.008586022116652832,
+            "omitted_diagonal_real_minus_virtual": -0.014592033189312369,
+            "omitted_gluon_to_quark_real": 0.06152075514942873
+          },
+          "boundary_correction_sum": 0.05551474407676919,
+          "boundary_vs_pdf_ratio_residual": -3.409028876526221e-05,
+          "backward_rate_integral": 0.03239411424519009,
+          "outer_quad_estimated_absolute_error": 2.7867758855036804e-12
+        },
+        "-2": {
+          "pdf_ratio": 0.9471230950650845,
+          "backward_kernel_noemission": 0.9683317515891489,
+          "forward_times_pdf": 0.9152396233811888,
+          "stored_times_pdf": 0.9145952283215031,
+          "log_difference": 0.056388832679070904,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.008586022116652832,
+            "omitted_diagonal_real_minus_virtual": -0.015631212260208454,
+            "omitted_gluon_to_quark_real": 0.06354512881708894
+          },
+          "boundary_correction_sum": 0.056499938673533326,
+          "boundary_vs_pdf_ratio_residual": -0.00011110599446242236,
+          "backward_rate_integral": 0.03218053183632772,
+          "outer_quad_estimated_absolute_error": 1.4289126771345796e-11
+        },
+        "3": {
+          "pdf_ratio": 0.9132708722724598,
+          "backward_kernel_noemission": 0.959778524360961,
+          "forward_times_pdf": 0.8825269846536865,
+          "stored_times_pdf": 0.881905621663687,
+          "log_difference": 0.08391318820377426,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.008586022116652832,
+            "omitted_diagonal_real_minus_virtual": -0.0179123625621034,
+            "omitted_gluon_to_quark_real": 0.09324670036851415
+          },
+          "boundary_correction_sum": 0.08392035992306358,
+          "boundary_vs_pdf_ratio_residual": -7.171719289322809e-06,
+          "backward_rate_integral": 0.04105272492713402,
+          "outer_quad_estimated_absolute_error": 1.564111987418321e-11
+        },
+        "-3": {
+          "pdf_ratio": 0.9132860948468913,
+          "backward_kernel_noemission": 0.9597838127359555,
+          "forward_times_pdf": 0.8825416947830901,
+          "stored_times_pdf": 0.8819203214360928,
+          "log_difference": 0.0839020301304346,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.008586022116652832,
+            "omitted_diagonal_real_minus_virtual": -0.017911160037824454,
+            "omitted_gluon_to_quark_real": 0.09323436289491945
+          },
+          "boundary_correction_sum": 0.08390922497374782,
+          "boundary_vs_pdf_ratio_residual": -7.19484331322684e-06,
+          "backward_rate_integral": 0.04104721494718457,
+          "outer_quad_estimated_absolute_error": 1.5729285415508142e-11
+        }
+      },
+      "events": {
+        "1": {
+          "backward_kernel_probability": 0.9355124702117478,
+          "forward_times_pdf_probability": 0.8410176347228491,
+          "archive_times_pdf_probability": 0.8398337768349755,
+          "fresh_ratio_to_backward": 0.8989913673010577,
+          "archive_ratio_to_backward": 0.8977259027288904,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.017172044233305664,
+            "omitted_diagonal_real_minus_virtual": -0.024252303504096247,
+            "omitted_gluon_to_quark_real": 0.11359801984273485
+          },
+          "boundary_correction_sum": 0.10651776057194427
+        },
+        "2": {
+          "backward_kernel_probability": 0.9343148387707296,
+          "forward_times_pdf_probability": 0.840981758356504,
+          "archive_times_pdf_probability": 0.8397979509699726,
+          "fresh_ratio_to_backward": 0.9001053215241415,
+          "archive_ratio_to_backward": 0.8988382888950879,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.017172044233305664,
+            "omitted_diagonal_real_minus_virtual": -0.022717591893769255,
+            "omitted_gluon_to_quark_real": 0.11079540647758693
+          },
+          "boundary_correction_sum": 0.10524985881712333
+        },
+        "3": {
+          "backward_kernel_probability": 0.9211798914932523,
+          "forward_times_pdf_probability": 0.7788668607280747,
+          "archive_times_pdf_probability": 0.7777704893339361,
+          "fresh_ratio_to_backward": 0.8455100550072959,
+          "archive_ratio_to_backward": 0.8443198733671373,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.017172044233305664,
+            "omitted_diagonal_real_minus_virtual": -0.035823522599927854,
+            "omitted_gluon_to_quark_real": 0.1864810632634336
+          },
+          "boundary_correction_sum": 0.1678295848968114
+        }
+      }
+    },
+    {
+      "cut": 75.0,
+      "forward_kernel_probability": 0.9911036432349953,
+      "stored_up_probability": 0.9914142182193106,
+      "forward_rate_integral": 0.008936165625271747,
+      "forward_quad_estimated_absolute_error": 9.921136829040552e-17,
+      "zmax_at_cut": 0.44892369142986255,
+      "legs": {
+        "1": {
+          "pdf_ratio": 0.9844597136716665,
+          "backward_kernel_noemission": 0.992035805592701,
+          "forward_times_pdf": 0.975701608838069,
+          "stored_times_pdf": 0.9760073573982017,
+          "log_difference": 0.016602389961926617,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.002656251992273462,
+            "omitted_diagonal_real_minus_virtual": -0.003476966417336082,
+            "omitted_gluon_to_quark_real": 0.017424234867880386
+          },
+          "boundary_correction_sum": 0.016603520442817765,
+          "boundary_vs_pdf_ratio_residual": -1.130480891148311e-06,
+          "backward_rate_integral": 0.007996078001168671,
+          "outer_quad_estimated_absolute_error": 1.8042082407982586e-09
+        },
+        "2": {
+          "pdf_ratio": 0.9846422215508087,
+          "backward_kernel_noemission": 0.9915684320628612,
+          "forward_times_pdf": 0.9758824930620059,
+          "stored_times_pdf": 0.9761882983045203,
+          "log_difference": 0.015945781588171427,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.002656251992273462,
+            "omitted_diagonal_real_minus_virtual": -0.0025564714651448535,
+            "omitted_gluon_to_quark_real": 0.015812523512312854
+          },
+          "boundary_correction_sum": 0.015912304039441463,
+          "boundary_vs_pdf_ratio_residual": 3.347754872996475e-05,
+          "backward_rate_integral": 0.008467314681970642,
+          "outer_quad_estimated_absolute_error": 9.816014774330595e-12
+        },
+        "-1": {
+          "pdf_ratio": 0.9836906893444975,
+          "backward_kernel_noemission": 0.9926330124340746,
+          "forward_times_pdf": 0.9749394260256755,
+          "stored_times_pdf": 0.9752449357460898,
+          "log_difference": 0.0179856792328898,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.002656251992273462,
+            "omitted_diagonal_real_minus_virtual": -0.00522547349761045,
+            "omitted_gluon_to_quark_real": 0.020566417738040667
+          },
+          "boundary_correction_sum": 0.01799719623270368,
+          "boundary_vs_pdf_ratio_residual": -1.1516999813880602e-05,
+          "backward_rate_integral": 0.007394257834524947,
+          "outer_quad_estimated_absolute_error": 2.2849762054046222e-11
+        },
+        "-2": {
+          "pdf_ratio": 0.9834836562479451,
+          "backward_kernel_noemission": 0.9927030514771651,
+          "forward_times_pdf": 0.9747342347694121,
+          "stored_times_pdf": 0.9750396801905258,
+          "log_difference": 0.01826672339014694,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.002656251992273462,
+            "omitted_diagonal_real_minus_virtual": -0.005592401154155613,
+            "omitted_gluon_to_quark_real": 0.02123835261532148
+          },
+          "boundary_correction_sum": 0.018302203453439327,
+          "boundary_vs_pdf_ratio_residual": -3.548006329238615e-05,
+          "backward_rate_integral": 0.007323701474427939,
+          "outer_quad_estimated_absolute_error": 5.422840366871531e-11
+        },
+        "3": {
+          "pdf_ratio": 0.9728923236299731,
+          "backward_kernel_noemission": 0.990701893555124,
+          "forward_times_pdf": 0.9642371264250265,
+          "stored_times_pdf": 0.9645392824431783,
+          "log_difference": 0.027076429176965247,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.002656251992273462,
+            "omitted_diagonal_real_minus_virtual": -0.006374008411460771,
+            "omitted_gluon_to_quark_real": 0.03079735563230887
+          },
+          "boundary_correction_sum": 0.02707959921312156,
+          "boundary_vs_pdf_ratio_residual": -3.17003615631431e-06,
+          "backward_rate_integral": 0.009341603674481511,
+          "outer_quad_estimated_absolute_error": 5.247259208714633e-11
+        },
+        "-3": {
+          "pdf_ratio": 0.9728971215080842,
+          "backward_kernel_noemission": 0.9907032587651622,
+          "forward_times_pdf": 0.9642418816195022,
+          "stored_times_pdf": 0.9645440391277549,
+          "log_difference": 0.02707287564994096,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.002656251992273462,
+            "omitted_diagonal_real_minus_virtual": -0.006373642285009992,
+            "omitted_gluon_to_quark_real": 0.030793448936131
+          },
+          "boundary_correction_sum": 0.02707605864339447,
+          "boundary_vs_pdf_ratio_residual": -3.182993453511307e-06,
+          "backward_rate_integral": 0.00934022565238775,
+          "outer_quad_estimated_absolute_error": 5.624824359952819e-11
+        }
+      },
+      "events": {
+        "1": {
+          "backward_kernel_probability": 0.9847274901479468,
+          "forward_times_pdf_probability": 0.9512499664929152,
+          "archive_times_pdf_probability": 0.9518462325535201,
+          "fresh_ratio_to_backward": 0.966003260810763,
+          "archive_ratio_to_backward": 0.9666087745864731,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.005312503984546924,
+            "omitted_diagonal_real_minus_virtual": -0.008702439914946531,
+            "omitted_gluon_to_quark_real": 0.03799065260592105
+          },
+          "boundary_correction_sum": 0.03460071667552145
+        },
+        "2": {
+          "backward_kernel_probability": 0.9843330082572304,
+          "forward_times_pdf_probability": 0.9512260750996605,
+          "archive_times_pdf_probability": 0.951822326184573,
+          "fresh_ratio_to_backward": 0.9663661252037195,
+          "archive_ratio_to_backward": 0.966971866431445,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.005312503984546924,
+            "omitted_diagonal_real_minus_virtual": -0.008148872619300467,
+            "omitted_gluon_to_quark_real": 0.03705087612763433
+          },
+          "boundary_correction_sum": 0.03421450749288079
+        },
+        "3": {
+          "backward_kernel_probability": 0.9814915944098781,
+          "forward_times_pdf_probability": 0.9297578211114493,
+          "archive_times_pdf_probability": 0.9303406153851296,
+          "fresh_ratio_to_backward": 0.947290660874652,
+          "archive_ratio_to_backward": 0.9478844451485058,
+          "boundary_correction_terms": {
+            "virtual_prescription": 0.005312503984546924,
+            "omitted_diagonal_real_minus_virtual": -0.012747650696470762,
+            "omitted_gluon_to_quark_real": 0.06159080456843987
+          },
+          "boundary_correction_sum": 0.054155657856516035
+        }
+      }
+    }
+  ],
+  "interpretation": "Illustrative rate-level calculation with the same finite-z kinematic bound and LO PDF provider. It numerically tests whether multiplying a PDF-free forward Sudakov by ordinary DGLAP PDF ratios reconstructs the finite-phase-space backward rate.",
+  "limitations": [
+    "Not a new full-shower sample",
+    "Total light-quark PDF used; explicit Pythia valence/sea selection is not modeled",
+    "Massless light-quark kinematics; randomized sister flavour/mass in forward code is omitted",
+    "Single central Born point, not a replacement for the full Born ensemble",
+    "Quadrature error is not the full shower/modeling uncertainty"
+  ],
+  "source_sha256": {
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/dy_phase_space_quadrature.py": "9f94d7dd249f6a87485b069a68ce258b848a1a14183b53162e121c21e2ba07ea",
+    "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/analysis_pdf13/pythia_pdf.so": "88c210fbc18613f76bfdc2f41d524e6401473eb9596e29ef0594e97290f6cb12",
+    "/export/tmp/rikkert/Pythia/pythia8313/src/SimpleSpaceShower.cc": "fe74d843e7725497558fec97a6f1a7394b51ea1d853e4f0ea6dc1fcb238f2d73",
+    "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/pdfdata/NNPDF23_lo_as_0130_qed_0000.dat": "5ac9499dcf7f6fe0a363f89f9320782f412eb91732725f7c435f0e2c119e2bf0"
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "table": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/sudakov_template.f",
+  "table_sha256": "dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9",
+  "source_sha256": {
+    "Template/NLO/SubProcesses/montecarlocounter.f": "554432b7b09075c21a8484e5d7d34b261d345af1849d23c2402659bd9a14071f",
+    "Template/NLO/SubProcesses/mcatnlo_delta_scales.f90": "a010072c50e8e2ee2777e0a2116f7f06f8b4cff88a8417a88923eb1e4cd85124",
+    "Template/NLO/SubProcesses/MCmasses_PYTHIA8.inc": "0374ba4b1855d0dc1de74f8f68ecc990ffe93d289cda0e01041f3274c04aae94"
+  },
+  "extracted_routines": [
+    "delta_leg_probability",
+    "gl_safe",
+    "pysudakov_safe",
+    "get_parton_id",
+    "setSudType",
+    "get_to_zero",
+    "emscafun",
+    "get_delta_connections"
+  ],
+  "compile_command": [
+    "gfortran",
+    "-O2",
+    "-std=legacy",
+    "-shared",
+    "-fPIC",
+    "-ffixed-line-length-none",
+    "-I/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses",
+    "-J/export/tmp/rikkert/delta_noemission_20261027/table_diagnosis/table_build",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses/mcatnlo_delta_scales.f90",
+    "/export/tmp/rikkert/delta_noemission_20261027/table_diagnosis/table_build/delta_production.f",
+    "/export/tmp/rikkert/delta_noemission_20261027/table_diagnosis/table_build/delta_wrapper.f90",
+    "/export/tmp/rikkert/delta_noemission_20261027/table_diagnosis/table_build/sudakov.f",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/dfint.f",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/kerset.f",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/abend.f",
+    "-o",
+    "/export/tmp/rikkert/delta_noemission_20261027/table_diagnosis/table_build/delta.so"
+  ],
+  "fresh_source_hashes": {
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/table_fresh_probe.cc": "98cbbcf3c71237724d35c05b652961238d218b98bc13a8bc399e0426d4df9156",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/pythia_interface_for_sudgen.cc": "904f6eb4cd08e48d2fff72c5f3fe23d10c241736e59e332700f95b7a69a291fb",
+    "/export/tmp/rikkert/Pythia/pythia8313/src/SimpleSpaceShower.cc": "fe74d843e7725497558fec97a6f1a7394b51ea1d853e4f0ea6dc1fcb238f2d73",
+    "/export/tmp/rikkert/Pythia/pythia8313/src/SimpleTimeShower.cc": "6925aa2d2a6b86e8a3037a3554f5dbb399d2259d167f8b935ec0cfab947fc4ca",
+    "/export/tmp/rikkert/Pythia/pythia8313/lib/libpythia8.so": "18e9aec234ec594b6e0193cb24d0d4100fc5eb3fa68fbc9362e9f4c3c8bf636c",
+    "/export/tmp/rikkert/delta_noemission_20261027/table_diagnosis/fresh_probe": "0c5154413a3b4e146f41e77740b3dbc0d5a2586c42677361fc228d42992aec23",
+    "/export/tmp/rikkert/delta_noemission_20261027/table_diagnosis/points.txt": "aaf4b98e3fdaf64bcedc04df33177de2a422916892e26c140f3253b577c408e6"
+  },
+  "version": "Pythia8.313",
+  "normalization": "Current API ISR=one full radiator, FI=one full radiator, FF=both radiators. Per-colour-line probability is API^(1/((2 for FF else1)*(2 for gluon else1))); dummyFF ends symmetric. No heavy-top claim: API dummy radiators massless.",
+  "settings_note": "vendor means ISRalpha.130 FSRalpha.1365, pdfMode2. The current wrapper explicitly removes PDF ratios via ISRpdfMode; TimeShowerpdfMode remains default0.",
+  "fresh_setup": "Unmodified current vendor initializer; control replaces both shower alphaS=.118 order1 CMWoff and ISRpdfMode=1 or2 before reinitialization",
+  "energy_control": {
+    "s_values": [
+      7000.0,
+      49000000.0
+    ],
+    "x": 0.1,
+    "same_seed_result_lines_bitwise_equal": true,
+    "points": 9,
+    "note": "CurrentPythia API only, does not reconstruct historicalDire implementation"
+  },
+  "energy_files": {
+    "energy_probe.cc": "e852fb92d258f64c8a0353500b460a22679afe0d279369e94b42854f0afe8aa1",
+    "energy_probe": "1ec0c61f3012e30ef45248c6ef45bd358ce29812198a80af7c2811baa2481095",
+    "energy_points.txt": "8f2c79f5763027d6b45d821a5bea0c24c205de8f1f5a115271ac5669b301bafe",
+    "fresh_wrong_s.log": "908780cc8fee23e969110b81dd8ded0babbf97692affb0b7e7059daaa336d430",
+    "fresh_correct_s.log": "7d32aef0baffe4c7e87a25808d1c7c7d0ea6f430b4ee2e34254bb9d4516c9b10"
+  },
+  "simple_shower_runtime_proof": {
+    "setting": "PartonShowers:model = 1",
+    "runtime_dynamic_casts": [
+      "SimpleShowerModel",
+      "SimpleSpaceShower",
+      "SimpleTimeShower"
+    ],
+    "all_assertions_passed": true,
+    "fresh_values_reproduced_exactly": {
+      "II_gluon": 0.374558,
+      "FI_top_dummy": 0.6533
+    },
+    "merging_useShowerPlugin": true,
+    "trial_shower_pointer_proof": "Pythia.cc:829-830 initializes trialPartonLevel using the same timesPtr and spacePtr from getShowerModelPtr; Merging.cc:420,424,428,432 dispatches to those pointers.",
+    "sha256": {
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/table_simple_proof.cc": "e5797d8bdc6cf696948f2fa153751651d8529151ec51a3d015f29a91b3e9ad96",
+      "/export/tmp/rikkert/delta_noemission_20261027/table_diagnosis/simple_proof": "5084f115f3e9a7c89b94399155da0efc55619b85f54439939478b71e140f41bc",
+      "/export/tmp/rikkert/delta_noemission_20261027/table_diagnosis/simple_proof.log": "3d763bc5a04e7371a7dc01311d89718207922d4769b4c3d2a8cc98aab7362833",
+      "/export/tmp/rikkert/Pythia/pythia8313/src/Pythia.cc": "35322338b4a5b1825d72f5dd5dfdca039b1c7b0889b04e85e5c5501977b66e28",
+      "/export/tmp/rikkert/Pythia/pythia8313/src/ShowerModel.cc": "99fd9671c8613e4730464feac9a81597ee3daf714eb817bdd45178acf9a83186"
+    }
+  }
+}

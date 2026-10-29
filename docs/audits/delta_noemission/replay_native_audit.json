@@ -1,0 +1,11 @@
+{
+  "events": 2000,
+  "seed": 72880,
+  "identical_first_emission_pt_and_type": true,
+  "maximum_absolute_difference": 0.0,
+  "comparison": "Native Pythia LHEF reader frameType4 vs custom replay LHAup frameType5, same first branch Born repeated2000, same seed/settings, explicit dipole tags enabled.",
+  "source_sha256": "6c6661a0c171ef774fe9e59a4da7f300aa57c053625869e8ec656c94572e0f3d",
+  "qqbar_events": 2000,
+  "qqbar_identical": true,
+  "qqbar_maxdiff": 0.0
+}

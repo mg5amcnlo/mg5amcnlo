@@ -99,6 +99,13 @@ contains
     endif
   end function
 
+  logical function born_amplitude_state_equal(a,b)
+    type(BornModelState),intent(in) :: a,b
+    ! Only certified exports may omit model entries unused by tree amplitudes.
+    ! Unlike the helicity-mask key, this key never permits coupling rescaling.
+    born_amplitude_state_equal=born_model_state_equal(a,b)
+  end function
+
   subroutine born_resize_model_state(state,nreal,ncomplex)
     type(BornModelState),intent(inout) :: state
     integer,intent(in) :: nreal,ncomplex

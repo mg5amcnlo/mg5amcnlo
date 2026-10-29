@@ -15,7 +15,10 @@ int main() {
 
   string inputname="Pythia8.cmd",outputname="Pythia8.hep";
 
-  pythia.readFile(inputname.c_str());
+  if (!pythia.readFile(inputname.c_str())) {
+    std::cerr << "Error: invalid or unsupported Pythia settings" << std::endl;
+    return 1;
+  }
 
   int nAbort=10;
   int nPrintLHA=1;

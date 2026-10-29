@@ -1,0 +1,90 @@
+{
+  "table": {
+    "table": "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/sudakov_r515_PDFmode1.f.gz",
+    "table_sha256": "16e07784f53f347f64b3fb5168100c2b6ca0747c8dd2dd0f97370f0d27b5e435",
+    "source_sha256": {
+      "Template/NLO/SubProcesses/montecarlocounter.f": "554432b7b09075c21a8484e5d7d34b261d345af1849d23c2402659bd9a14071f",
+      "Template/NLO/SubProcesses/mcatnlo_delta_scales.f90": "a010072c50e8e2ee2777e0a2116f7f06f8b4cff88a8417a88923eb1e4cd85124",
+      "Template/NLO/SubProcesses/MCmasses_PYTHIA8.inc": "0374ba4b1855d0dc1de74f8f68ecc990ffe93d289cda0e01041f3274c04aae94"
+    },
+    "extracted_routines": [
+      "delta_leg_probability",
+      "gl_safe",
+      "pysudakov_safe",
+      "get_parton_id",
+      "setSudType",
+      "get_to_zero",
+      "emscafun",
+      "get_delta_connections"
+    ],
+    "compile_command": [
+      "gfortran",
+      "-O2",
+      "-std=legacy",
+      "-shared",
+      "-fPIC",
+      "-ffixed-line-length-none",
+      "-I/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses",
+      "-J/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_analysis_build/delta",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses/mcatnlo_delta_scales.f90",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_analysis_build/delta/delta_production.f",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_analysis_build/delta/delta_wrapper.f90",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_analysis_build/delta/sudakov.f",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/dfint.f",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/kerset.f",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/abend.f",
+      "-o",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_analysis_build/delta/delta.so"
+    ]
+  },
+  "native_pdf": {
+    "pdf": "nn23nlo",
+    "convention": "x*f; x cancels in Delta PDF ratios",
+    "command": [
+      "gfortran",
+      "-O2",
+      "-std=legacy",
+      "-shared",
+      "-fPIC",
+      "-ffixed-line-length-none",
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/Source/PDF/NNPDFDriver.f",
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/Source/PDF/opendata.f",
+      "-o",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_analysis_build/native_pdf/native_pdf.so"
+    ],
+    "sha256": {
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/Source/PDF/NNPDFDriver.f": "569c080439879972784ada0d6e0b040e8a7a93a0cf363cf99fa3bead12abae14",
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/Source/PDF/opendata.f": "bfaa0cd1c1d12b64785d833ae35e6dad093d80c45a5d26613e9fb6fc4e90b1c2",
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/lib/Pdfdata/NNPDF23nlo_as_0119_qed_mem0.grid": "e1ad3115d9bc36f4cdf43268138ab6c2efb9a4803bff376f493c85260181213e"
+    }
+  },
+  "settings": {
+    "PartonShowers:model": "1",
+    "PDF:pSet": "15",
+    "SpaceShower:pdfMode": "0",
+    "TimeShower:pdfMode": "0",
+    "SpaceShower:alphaSvalue": "0.13",
+    "TimeShower:alphaSvalue": "0.1365",
+    "SpaceShower:alphaSorder": "1",
+    "TimeShower:alphaSorder": "1",
+    "SpaceShower:alphaSuseCMW": "off",
+    "TimeShower:alphaSuseCMW": "off"
+  },
+  "input_files": {
+    "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15.born.jsonl": "72e6e0f82eeeed14ea0e00370b2a84e552ef3946064824a1c43f7ddd0d412913",
+    "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15.trials.jsonl": "a74b3e1880b3a542e9b70c6987e266d4c5f0f3a425134457bf952569295b65dc",
+    "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15.settings.cmnd": "bdc5f093535186d8e475869393256b5e792bcd87586bc371fb20d36f1f262aac"
+  },
+  "born": 871,
+  "trials": 261300,
+  "probes": 52224,
+  "reference_per_born": 240,
+  "checks": [
+    "Born JSON content exactly equals baseline including scales, weights and order",
+    "Every Born has successful trials0-299",
+    "First Born serial and parallel results agree bitwise",
+    "Every common-cut Delta agrees bitwise with baseline",
+    "All evaluated probabilities are finite"
+  ],
+  "elapsed_seconds": 6.29960103193298
+}

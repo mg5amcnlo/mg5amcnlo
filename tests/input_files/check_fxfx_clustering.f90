@@ -20,6 +20,10 @@ program check_fxfx_clustering
      call check_zero(mode.eq.'wrapper')
   case ('qcd_core')
      call check_qcd_core()
+  case ('quark_core_zero')
+     call check_quark_core_zero()
+  case ('quark_core_branch')
+     call check_quark_core_branch()
   case default
      error stop 'unknown clustering test'
   end select
@@ -214,6 +218,97 @@ contains
     call close(scales(0),30d0,'QCD core transverse scale')
     call close(scales(1),30d0,'last QCD transverse scale')
   end subroutine
+
+  subroutine check_quark_core_zero()
+    ! W b -> t has two coloured legs, including the outgoing core mother.
+    ! Both incoming orientations must use that mother's physical momentum.
+    integer :: ipdg(3),cpdg(0:2,0:0,1),tree(2,-1:-1),ij(0),iord(0:0)
+    integer :: conf,empty(0,1),sp(0),ctype(7),orientation
+    integer :: qcd_mask(0:0,1),qcd_count(0:0)
+    integer(kind=8) :: config_masks(1,7)
+    double precision :: p(0:3,3),scales(0:0),mass(0),width(0),eb,ew
+    double precision, parameter :: mt=173d0,mw=80.4d0
+    eb=(mt**2-mw**2)/(2d0*mt)
+    ew=(mt**2+mw**2)/(2d0*mt)
+    tree(:,-1)=[1,2]
+    call make_cluster_config_masks(3,0,1,empty,config_masks)
+    do orientation=1,2
+       if (orientation.eq.1) then
+          ipdg=[5,24,6]
+          p(:,1)=[eb,0d0,0d0,eb]
+          p(:,2)=[ew,0d0,0d0,-eb]
+       else
+          ipdg=[24,5,6]
+          p(:,1)=[ew,0d0,0d0,eb]
+          p(:,2)=[eb,0d0,0d0,-eb]
+       endif
+       p(:,3)=p(:,1)+p(:,2)
+       ctype=0
+       cpdg=-777
+       call cluster(3,p,1,0,empty,config_masks,cpdg,qcd_mask,tree,ipdg,mass,width,1,sp,conf, &
+            scales,ij,iord,ctype,qcd_count)
+       if (qcd_count(0).ne.2) error stop 'quark core colour count'
+       if (.not.btest(qcd_mask(0,1),0)) error stop 'quark core mother is not coloured'
+       call close(scales(0),sqrt(mt**2-mw**2),'Wb->t core scale')
+    enddo
+  end subroutine
+
+  subroutine check_quark_core_branch()
+    ! Physical t-channel single-top Born kinematics. Clustering the light
+    ! line leaves a Wb->t core; its scale is sqrt(2 p_b.p_t), while the
+    ! light-line scale is sqrt(2 p_q.p_qprime). Check both beam directions.
+    integer :: ipdg(4),cpdg(0:2,0:2,1),tree(2,-2:-1),ij(1),iord(0:1)
+    integer :: conf,lst(2,1),sp(-1:-1),tp(-1:-1),ctype(15),orientation,i,b
+    integer :: qcd_mask(0:2,1),qcd_count(0:1),matching(4),nren
+    integer, external :: qcd_vertex_mask
+    integer(kind=8) :: config_masks(1,15)
+    double precision :: p(0:3,4),scales(0:1),mass(-1:-1),width(-1:-1)
+    double precision :: momentum,energy,qheavy,qlight,ren(0:4),fac,sudakov,expanded
+    double precision, parameter :: mt=173d0,ecm=400d0
+    momentum=(ecm**2-mt**2)/(2d0*ecm)
+    energy=(ecm**2+mt**2)/(2d0*ecm)
+    do orientation=1,2
+       p(:,1)=[ecm/2d0,0d0,0d0,ecm/2d0]
+       p(:,2)=[ecm/2d0,0d0,0d0,-ecm/2d0]
+       if (orientation.eq.1) then
+          ipdg=[5,2,6,1]
+          b=1
+          p(:,3)=[energy,0.8d0*momentum,0d0,0.6d0*momentum]
+          tree(:,-1)=[1,3]
+          tree(:,-2)=[-1,4]
+       else
+          ipdg=[2,5,6,1]
+          b=2
+          p(:,3)=[energy,0.8d0*momentum,0d0,-0.6d0*momentum]
+          tree(:,-1)=[1,4]
+          tree(:,-2)=[-1,3]
+       endif
+       p(:,4)=p(:,1)+p(:,2)-p(:,3)
+       qheavy=sqrt(2d0*(p(0,b)*p(0,3)-sum(p(1:3,b)*p(1:3,3))))
+       qlight=sqrt(2d0*(p(0,3-b)*p(0,4)-sum(p(1:3,3-b)*p(1:3,4))))
+       sp=0
+       tp=24
+       mass=80.4d0
+       width=0d0
+       ctype=0
+       call iforest_to_list(4,2,1,tree,sp,tp,ipdg,lst,cpdg,ctype)
+       call make_cluster_config_masks(4,1,1,lst,config_masks)
+       do i=1,2
+          qcd_mask(i,1)=qcd_vertex_mask(cpdg(:,i,1))
+       enddo
+       call cluster(4,p,1,1,lst,config_masks,cpdg,qcd_mask,tree,ipdg,mass,width,1,sp,conf, &
+            scales,ij,iord,ctype,qcd_count)
+       if (any(qcd_count.ne.2)) error stop 'single-top electroweak colour count'
+       if (cpdg(0,0,1).ne.6) error stop 'single-top core mother is not top'
+       call close(scales(0),qheavy,'single-top heavy-line core scale')
+       call close(scales(1),qlight,'single-top light-line branching scale')
+       call reweighting(4,1,.false.,ij,ipdg,cpdg,scales,iord,qcd_count,sudakov,expanded, &
+            nren,ren,fac,matching,.true.)
+       if (nren.ne.0) error stop 'electroweak Born has a QCD branching'
+       call close(ren(0),sqrt(qheavy*qlight),'single-top shower reference scale')
+       call close(fac,ren(0),'single-top factorisation reference scale')
+    enddo
+  end subroutine
 end program
 
 ! Model/export interfaces are controlled data. All kinematic calculations and
@@ -240,6 +335,8 @@ double precision function get_mass_from_id(id)
   get_mass_from_id=0d0
   if (id.eq.23) get_mass_from_id=90d0
   if (id.eq.25) get_mass_from_id=125d0
+  if (abs(id).eq.6) get_mass_from_id=173d0
+  if (abs(id).eq.24) get_mass_from_id=80.4d0
 end function
 
 subroutine set_pdg(dummy,iproc)

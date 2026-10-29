@@ -1,0 +1,437 @@
+{
+  "pythia_version": "8.313",
+  "build": [
+    "c++",
+    "-O2",
+    "-std=c++17",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/pythia_probe.cc",
+    "-I/export/tmp/rikkert/Pythia/pythia8313/include",
+    "-L/export/tmp/rikkert/Pythia/pythia8313/lib",
+    "-Wl,-rpath,/export/tmp/rikkert/Pythia/pythia8313/lib",
+    "-lpythia8",
+    "-o",
+    "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe"
+  ],
+  "samples": {
+    "matched_pdf13": {
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13",
+      "born": 871,
+      "trials": 261300,
+      "emitted": 261128,
+      "failures": 0,
+      "input_born_exactly_matches_baseline": true,
+      "merged_sha256": {
+        ".born.jsonl": "72e6e0f82eeeed14ea0e00370b2a84e552ef3946064824a1c43f7ddd0d412913",
+        ".trials.jsonl": "614fbea0cb5958a28d103bbfcbb40a9d91f645501f4edf3762c9024b3de72313",
+        ".settings.cmnd": "11b5af4467687645a01aa369713d1379aea45c48c53f6fe3ac218e7e2a961dd5"
+      }
+    },
+    "matched_pdf15": {
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15",
+      "born": 871,
+      "trials": 261300,
+      "emitted": 261149,
+      "failures": 0,
+      "input_born_exactly_matches_baseline": true,
+      "merged_sha256": {
+        ".born.jsonl": "72e6e0f82eeeed14ea0e00370b2a84e552ef3946064824a1c43f7ddd0d412913",
+        ".trials.jsonl": "a74b3e1880b3a542e9b70c6987e266d4c5f0f3a425134457bf952569295b65dc",
+        ".settings.cmnd": "bdc5f093535186d8e475869393256b5e792bcd87586bc371fb20d36f1f262aac"
+      }
+    }
+  },
+  "shards": [
+    {
+      "pdf": 13,
+      "shard": 0,
+      "first": 0,
+      "last": 108,
+      "seed": 10279300,
+      "command": [
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/input_00.lhe",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13_shard00",
+        "300",
+        "10279300",
+        "13",
+        "both",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/historical_couplings.cmnd"
+      ],
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13_shard00"
+    },
+    {
+      "pdf": 15,
+      "shard": 0,
+      "first": 0,
+      "last": 108,
+      "seed": 10279500,
+      "command": [
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/input_00.lhe",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_shard00",
+        "300",
+        "10279500",
+        "15",
+        "both",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/historical_couplings.cmnd"
+      ],
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_shard00"
+    },
+    {
+      "pdf": 13,
+      "shard": 1,
+      "first": 108,
+      "last": 217,
+      "seed": 10279301,
+      "command": [
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/input_01.lhe",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13_shard01",
+        "300",
+        "10279301",
+        "13",
+        "both",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/historical_couplings.cmnd"
+      ],
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13_shard01"
+    },
+    {
+      "pdf": 15,
+      "shard": 1,
+      "first": 108,
+      "last": 217,
+      "seed": 10279501,
+      "command": [
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/input_01.lhe",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_shard01",
+        "300",
+        "10279501",
+        "15",
+        "both",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/historical_couplings.cmnd"
+      ],
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_shard01"
+    },
+    {
+      "pdf": 13,
+      "shard": 2,
+      "first": 217,
+      "last": 326,
+      "seed": 10279302,
+      "command": [
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/input_02.lhe",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13_shard02",
+        "300",
+        "10279302",
+        "13",
+        "both",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/historical_couplings.cmnd"
+      ],
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13_shard02"
+    },
+    {
+      "pdf": 15,
+      "shard": 2,
+      "first": 217,
+      "last": 326,
+      "seed": 10279502,
+      "command": [
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/input_02.lhe",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_shard02",
+        "300",
+        "10279502",
+        "15",
+        "both",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/historical_couplings.cmnd"
+      ],
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_shard02"
+    },
+    {
+      "pdf": 13,
+      "shard": 3,
+      "first": 326,
+      "last": 435,
+      "seed": 10279303,
+      "command": [
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/input_03.lhe",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13_shard03",
+        "300",
+        "10279303",
+        "13",
+        "both",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/historical_couplings.cmnd"
+      ],
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13_shard03"
+    },
+    {
+      "pdf": 15,
+      "shard": 3,
+      "first": 326,
+      "last": 435,
+      "seed": 10279503,
+      "command": [
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/input_03.lhe",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_shard03",
+        "300",
+        "10279503",
+        "15",
+        "both",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/historical_couplings.cmnd"
+      ],
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_shard03"
+    },
+    {
+      "pdf": 13,
+      "shard": 4,
+      "first": 435,
+      "last": 544,
+      "seed": 10279304,
+      "command": [
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/input_04.lhe",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13_shard04",
+        "300",
+        "10279304",
+        "13",
+        "both",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/historical_couplings.cmnd"
+      ],
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13_shard04"
+    },
+    {
+      "pdf": 15,
+      "shard": 4,
+      "first": 435,
+      "last": 544,
+      "seed": 10279504,
+      "command": [
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/input_04.lhe",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_shard04",
+        "300",
+        "10279504",
+        "15",
+        "both",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/historical_couplings.cmnd"
+      ],
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_shard04"
+    },
+    {
+      "pdf": 13,
+      "shard": 5,
+      "first": 544,
+      "last": 653,
+      "seed": 10279305,
+      "command": [
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/input_05.lhe",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13_shard05",
+        "300",
+        "10279305",
+        "13",
+        "both",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/historical_couplings.cmnd"
+      ],
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13_shard05"
+    },
+    {
+      "pdf": 15,
+      "shard": 5,
+      "first": 544,
+      "last": 653,
+      "seed": 10279505,
+      "command": [
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/input_05.lhe",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_shard05",
+        "300",
+        "10279505",
+        "15",
+        "both",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/historical_couplings.cmnd"
+      ],
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_shard05"
+    },
+    {
+      "pdf": 13,
+      "shard": 6,
+      "first": 653,
+      "last": 762,
+      "seed": 10279306,
+      "command": [
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/input_06.lhe",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13_shard06",
+        "300",
+        "10279306",
+        "13",
+        "both",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/historical_couplings.cmnd"
+      ],
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13_shard06"
+    },
+    {
+      "pdf": 15,
+      "shard": 6,
+      "first": 653,
+      "last": 762,
+      "seed": 10279506,
+      "command": [
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/input_06.lhe",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_shard06",
+        "300",
+        "10279506",
+        "15",
+        "both",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/historical_couplings.cmnd"
+      ],
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_shard06"
+    },
+    {
+      "pdf": 13,
+      "shard": 7,
+      "first": 762,
+      "last": 871,
+      "seed": 10279307,
+      "command": [
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/input_07.lhe",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13_shard07",
+        "300",
+        "10279307",
+        "13",
+        "both",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/historical_couplings.cmnd"
+      ],
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf13_shard07"
+    },
+    {
+      "pdf": 15,
+      "shard": 7,
+      "first": 762,
+      "last": 871,
+      "seed": 10279507,
+      "command": [
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+        "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+        "shower",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/input_07.lhe",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_shard07",
+        "300",
+        "10279507",
+        "15",
+        "both",
+        "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/historical_couplings.cmnd"
+      ],
+      "prefix": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/matched_pdf15_shard07"
+    }
+  ],
+  "source_sha256": "2aedbe95db6a2256db0bdd2800c90014e09cd5d89b8f515077f0a060dba300ed",
+  "executable_sha256": "60ca58a8b4c645377a19ce2adb4998915b8e74833b4c600faaa6c3b129262071",
+  "library_sha256": "18e9aec234ec594b6e0193cb24d0d4100fc5eb3fa68fbc9362e9f4c3c8bf636c",
+  "input_lhe_sha256": "09992482fbb1d263310cc3c1d4375316904bf84003e3fb49db801252ae2a45b3",
+  "settings_override_sha256": "e7d6f7459bd03f1af206059a3f96b2cfed76ef2b1f2fd112a094884e5cdf72e4",
+  "original_settings": "Existing ttbar first-emission probe settings, overridden only as recorded",
+  "runtime_assertions": [
+    "SimpleShowerModel",
+    "SimpleSpaceShower",
+    "SimpleTimeShower",
+    "PartonShowers:model=1",
+    "SpaceShower:pdfMode=0",
+    "TimeShower:pdfMode=0"
+  ],
+  "historical_couplings": {
+    "commit": "df4187461e8d10f05e78987dd8de5f02fe4e719a",
+    "isr_source": "SudGen/pythia_interface_for_sudgen.cc:75, alphaSvalue=0.130",
+    "fsr_source": "Pythia/Pythia/pythia-src/share/Pythia8/xmldoc/TimelikeShowers.xml:171, default0.1365",
+    "fsr_order_source": "TimelikeShowers.xml:181, default1",
+    "fsr_cmw_source": "TimelikeShowers.xml:197, defaultoff"
+  },
+  "caveat": "Couplings match the historical source; producing archive binary and all generation settings remain unrecorded.",
+  "elapsed_seconds": 195.8636398767121,
+  "baseline_driver_check": {
+    "trials": 300,
+    "bitwise_json_numbers_identical": true,
+    "command": [
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/pythia_probe",
+      "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/xmldoc",
+      "shower",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/baseline_check.lhe",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/baseline_check",
+      "300",
+      "72883",
+      "13",
+      "both"
+    ]
+  },
+  "settings_differences": {
+    "PDF13": {
+      "Random:seed": [
+        "72883",
+        "10279300"
+      ],
+      "SpaceShower:alphaSvalue": [
+        "0.118",
+        "0.13"
+      ],
+      "TimeShower:alphaSvalue": [
+        "0.118",
+        "0.1365"
+      ]
+    },
+    "PDF15": {
+      "Random:seed": [
+        "72883",
+        "10279500"
+      ],
+      "PDF:pSet": [
+        "13",
+        "15"
+      ],
+      "SpaceShower:alphaSvalue": [
+        "0.118",
+        "0.13"
+      ],
+      "TimeShower:alphaSvalue": [
+        "0.118",
+        "0.1365"
+      ]
+    }
+  }
+}

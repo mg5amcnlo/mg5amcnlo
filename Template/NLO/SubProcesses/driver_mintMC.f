@@ -660,7 +660,8 @@ c
       include 'mc_histories.inc'
       logical firsttime,passcuts,passcuts_native_born,
      $     passcuts_nbody,passcuts_n1body
-      logical rejected_point,weights_valid,born_cuts_for_flow
+      logical rejected_point,weights_valid,born_cuts_for_flow,
+     $     calibrating_spread
       save rejected_point
       data rejected_point/.false./
       integer i,ifl,proc_map(0:fks_configs,0:fks_configs),nFKS_picked_nbody,nFKS_in,nFKS_out,izero,mohdr,iFKS,sum,
@@ -721,6 +722,8 @@ c
 c Each fold owns its Born sample; compatible sectors can reuse it.
       phase_space%born%valid=.false.
       have_sum_born=.false.
+      calibrating_spread=born_spread_phase.eq.1.or.
+     $                   born_spread_phase.eq.2
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
       endif
@@ -764,6 +767,7 @@ c "npNLO".
             virt_wgt_mint(0:amp_split_size)=0d0
             born_wgt_mint(0:amp_split_size)=0d0
             virtual_over_born=0d0
+            call vs_begin_point
             born_flow_picked=0
          endif
          MCcntcalled=0
@@ -1032,17 +1036,20 @@ c check if event or counter-event passes cuts
 ! history retains its own counterevents and regulated factors; FxFx H
 ! weights and scales below are taken from the common outer real state.
             call mc_begin_real_point(p)
-! The complete H sum below replaces the outer H records. Suppress them
-! here, preserving the original path if no real point can be repartitioned.
-            mc_S_only=MCExplicitKLSum.and.ickkw.ne.4.and.abrv.ne.'real'.and.
-     $           p(0,1).gt.0d0.and.jacPS.gt.0d0.and.MC_HIST_COUNT.gt.0
+! Calibration fits S weights only. Retain their (1-P) real term and G
+! replacements, but omit H records and the complete inner H-history sum.
+! Outside calibration, suppress outer H only when it will be rebuilt.
+            mc_S_only=calibrating_spread.or.
+     $           (MCExplicitKLSum.and.ickkw.ne.4.and.abrv.ne.'real'.and.
+     $           p(0,1).gt.0d0.and.jacPS.gt.0d0.and.MC_HIST_COUNT.gt.0)
             call compute_NLOPS_flow_weights(p,p_cms,passcuts_nbody,passcuts_n1body,probne,weights_valid)
             mc_S_only=.false.
             if(.not.weights_valid)then
                call mc_end_real_point()
                goto 900
             endif
-            if (MCExplicitKLSum.and.ickkw.ne.4 .and. abrv.ne.'real') then
+            if (MCExplicitKLSum.and..not.calibrating_spread.and.
+     $           ickkw.ne.4.and.abrv.ne.'real') then
                call repartition_MC_H(first_native_H,p,p_lab,
      $              p_cms,jacPS,vegas_wgt,1d0/vol1,born_flow_factor,
      $              phase_space,weights_valid)
@@ -1095,6 +1102,8 @@ c Sum the contributions that can be summed before taking the ABS value
          call fill_mint_function_NLOPS(f,n1body_wgt)
          if(nonfinite_contribution)goto 900
          call fill_MC_integer(1,proc_map(0,1),n1body_wgt*vol1)
+c Use the final, finite PDF/bias weights of the complete point for the fit.
+         call virt_surrogate_fit_point
       endif
 
       return
@@ -1116,6 +1125,7 @@ c Sum the contributions that can be summed before taking the ABS value
          endif
       endif
       rejected_point=.true.
+      call vs_begin_point
       call mc_set_history(0)
       icontr=0
       born_flow_picked=0

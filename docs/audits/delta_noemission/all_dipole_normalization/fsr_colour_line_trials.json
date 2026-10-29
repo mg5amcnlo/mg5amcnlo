@@ -1,0 +1,286 @@
+{
+  "cases": [
+    {
+      "type": 2,
+      "pdg": 2,
+      "ends": [
+        {
+          "radiator": 1,
+          "recoiler": 2,
+          "colour_type": 1,
+          "isr_type": 0,
+          "pTmax": 500.0
+        },
+        {
+          "radiator": 2,
+          "recoiler": 1,
+          "colour_type": -1,
+          "isr_type": 0,
+          "pTmax": 500.0
+        }
+      ],
+      "trials": [
+        {
+          "subset": "one_line",
+          "ends": 1,
+          "probability": 0.658355,
+          "trials": 200000,
+          "standard_error": 0.0010604803015025787
+        },
+        {
+          "subset": "one_radiator",
+          "ends": 1,
+          "probability": 0.65872,
+          "trials": 200000,
+          "standard_error": 0.0010602074363066881
+        },
+        {
+          "subset": "full_system",
+          "ends": 2,
+          "probability": 0.43311,
+          "trials": 200000,
+          "standard_error": 0.0011079840429807641
+        }
+      ],
+      "end_count": 2,
+      "radiator_count": 2,
+      "power_checks": [
+        {
+          "subset": "one_radiator",
+          "power": 1,
+          "predicted_from_one_line": 0.658355,
+          "pull": 0.24340591817938484
+        },
+        {
+          "subset": "full_system",
+          "power": 2,
+          "predicted_from_one_line": 0.433431306025,
+          "pull": -0.18025294694908975
+        }
+      ]
+    },
+    {
+      "type": 2,
+      "pdg": 21,
+      "ends": [
+        {
+          "radiator": 1,
+          "recoiler": 2,
+          "colour_type": 2,
+          "isr_type": 0,
+          "pTmax": 500.0
+        },
+        {
+          "radiator": 1,
+          "recoiler": 2,
+          "colour_type": -2,
+          "isr_type": 0,
+          "pTmax": 500.0
+        },
+        {
+          "radiator": 2,
+          "recoiler": 1,
+          "colour_type": 2,
+          "isr_type": 0,
+          "pTmax": 500.0
+        },
+        {
+          "radiator": 2,
+          "recoiler": 1,
+          "colour_type": -2,
+          "isr_type": 0,
+          "pTmax": 500.0
+        }
+      ],
+      "trials": [
+        {
+          "subset": "one_line",
+          "ends": 1,
+          "probability": 0.611935,
+          "trials": 200000,
+          "standard_error": 0.001089657184106543
+        },
+        {
+          "subset": "one_radiator",
+          "ends": 2,
+          "probability": 0.3738,
+          "trials": 200000,
+          "standard_error": 0.0010818353848899565
+        },
+        {
+          "subset": "full_system",
+          "ends": 4,
+          "probability": 0.1413,
+          "trials": 200000,
+          "standard_error": 0.0007788912311741608
+        }
+      ],
+      "end_count": 4,
+      "radiator_count": 2,
+      "power_checks": [
+        {
+          "subset": "one_radiator",
+          "power": 2,
+          "predicted_from_one_line": 0.374464444225,
+          "pull": -0.3869295874813391
+        },
+        {
+          "subset": "full_system",
+          "power": 4,
+          "predicted_from_one_line": 0.14022361998873814,
+          "pull": 0.8498346456169207
+        }
+      ]
+    },
+    {
+      "type": 4,
+      "pdg": 2,
+      "ends": [
+        {
+          "radiator": 2,
+          "recoiler": 1,
+          "colour_type": 1,
+          "isr_type": 0,
+          "pTmax": 500.0
+        }
+      ],
+      "trials": [
+        {
+          "subset": "one_line",
+          "ends": 1,
+          "probability": 0.65837,
+          "trials": 200000,
+          "standard_error": 0.0010604691016243707
+        },
+        {
+          "subset": "one_radiator",
+          "ends": 1,
+          "probability": 0.658815,
+          "trials": 200000,
+          "standard_error": 0.0010601363020267722
+        },
+        {
+          "subset": "full_system",
+          "ends": 1,
+          "probability": 0.65974,
+          "trials": 200000,
+          "standard_error": 0.0010594412027101834
+        }
+      ],
+      "end_count": 1,
+      "radiator_count": 1,
+      "power_checks": [
+        {
+          "subset": "one_radiator",
+          "power": 1,
+          "predicted_from_one_line": 0.65837,
+          "pull": 0.29676668107264265
+        },
+        {
+          "subset": "full_system",
+          "power": 1,
+          "predicted_from_one_line": 0.65837,
+          "pull": 0.9139407213280668
+        }
+      ]
+    },
+    {
+      "type": 4,
+      "pdg": 21,
+      "ends": [
+        {
+          "radiator": 2,
+          "recoiler": 1,
+          "colour_type": 2,
+          "isr_type": 0,
+          "pTmax": 500.0
+        },
+        {
+          "radiator": 2,
+          "recoiler": 1,
+          "colour_type": -2,
+          "isr_type": 0,
+          "pTmax": 500.0
+        }
+      ],
+      "trials": [
+        {
+          "subset": "one_line",
+          "ends": 1,
+          "probability": 0.611945,
+          "trials": 200000,
+          "standard_error": 0.0010896520476165775
+        },
+        {
+          "subset": "one_radiator",
+          "ends": 2,
+          "probability": 0.37701,
+          "trials": 200000,
+          "standard_error": 0.0010836822871580028
+        },
+        {
+          "subset": "full_system",
+          "ends": 2,
+          "probability": 0.37461,
+          "trials": 200000,
+          "standard_error": 0.0010823062133703196
+        }
+      ],
+      "end_count": 2,
+      "radiator_count": 1,
+      "power_checks": [
+        {
+          "subset": "one_radiator",
+          "power": 2,
+          "predicted_from_one_line": 0.374476683025,
+          "pull": 1.4742311584030012
+        },
+        {
+          "subset": "full_system",
+          "power": 2,
+          "predicted_from_one_line": 0.374476683025,
+          "pull": 0.0776212792542679
+        }
+      ]
+    }
+  ],
+  "Q": 200.0,
+  "q": 20.0,
+  "dipole_mass": 500.0,
+  "pythia_version": "8.313",
+  "build": [
+    "c++",
+    "-O2",
+    "-std=c++17",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/fsr_colour_line_probe.cc",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/pythia_interface_for_sudgen.cc",
+    "-I/export/tmp/rikkert/Pythia/pythia8313/include",
+    "-L/export/tmp/rikkert/Pythia/pythia8313/lib",
+    "-Wl,-rpath,/export/tmp/rikkert/Pythia/pythia8313/lib",
+    "-lpythia8",
+    "-o",
+    "/export/tmp/rikkert/delta_fsr_line_norm_20261028/fsr_colour_line_probe"
+  ],
+  "command": [
+    "/export/tmp/rikkert/delta_fsr_line_norm_20261028/fsr_colour_line_probe",
+    "/export/tmp/rikkert/delta_fsr_line_norm_20261028/fsr_colour_line_probe",
+    "200000"
+  ],
+  "definition": "Actual SimpleTimeShower::prepare() builds the API-style massless dummy states. Custom pTnext trials are then restricted to one prepared colour end, one radiator, or all prepared ends. Independent seeds for each subset.",
+  "conclusion": "FI q/g raw probabilities cover1/2 ends; FF q/g cover2/4 ends. One emitter/one colour-line factors therefore require FI gluon sqrt, FF quark sqrt and FF gluon fourth root.",
+  "limitations": [
+    "Dummy massless radiators; does not validate massive-top showering",
+    "FI dummy ends have isrType=0 and therefore do not exercise the physical initial-recoiler PDF-weight block gated by isrType!=0",
+    "Header-only private-access shim is diagnostic; the linked Pythia library is unchanged"
+  ],
+  "input_sha256": {
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/fsr_colour_line_probe.py": "f65c548509269de5380bcfce94cc0824b1f6e354c5a0209e94b414f683d58138",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/fsr_colour_line_probe.cc": "318b61fdb306b50278ba4566c900368a21cf27a03f8282fcc82fdec68e1b7d9f",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/pythia_interface_for_sudgen.cc": "904f6eb4cd08e48d2fff72c5f3fe23d10c241736e59e332700f95b7a69a291fb",
+    "/export/tmp/rikkert/delta_fsr_line_norm_20261028/fsr_colour_line_probe": "dcca013a43b0691dd503d0e9eb88de1784bcffd7b6de51269d881d586cef049f",
+    "/export/tmp/rikkert/Pythia/pythia8313/lib/libpythia8.so": "18e9aec234ec594b6e0193cb24d0d4100fc5eb3fa68fbc9362e9f4c3c8bf636c",
+    "/export/tmp/rikkert/Pythia/pythia8313/src/SimpleTimeShower.cc": "6925aa2d2a6b86e8a3037a3554f5dbb399d2259d167f8b935ec0cfab947fc4ca",
+    "/export/tmp/rikkert/delta_fsr_line_norm_20261028/fsr_colour_line_probe.log": "a4bdba1936485791823a6c04220bb220bf8fdda9d44f1ca2394892f9233db1c8",
+    "/export/tmp/rikkert/delta_fsr_line_norm_20261028/fsr_colour_line_probe.settings.cmnd": "ed1bb7a5cb75b54dc8ba87832c14ed8822e39e05fcced7a6180bdf33e3654156"
+  }
+}

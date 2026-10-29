@@ -155,7 +155,7 @@ c Sets the lower bound for tau=x1*x2, using information on particle
 c masses and on the jet minimum pt, as entered in run_card.dat, 
 c variable ptj
       use mc_native_context, only: active_context,
-     $     native_context_ids,native_mapping
+     $     native_context_ids,native_mapping,active_history
       use mint_module, only: maxchannels,iconfig,ichan,nlo_ps,
      $     FKSExplicitSum
       implicit none
@@ -281,7 +281,7 @@ c Scalar stores avoid compiler-allocated array-constructor temporaries.
       key_r(6)=ebeam(1)
       key_r(7)=ebeam(2)
       key_l(1)=native_mapping
-      key_l(2)=FKSExplicitSum
+      key_l(2)=FKSExplicitSum.and.active_history.eq.0
       key_l(3)=nlo_ps
       mode_index=1
       if(native_mapping)mode_index=2
@@ -731,12 +731,17 @@ c
             endif
          enddo
       sampling_sector=nFKSprocess
-      if (FKSExplicitSum.and.nlo_ps.and..not.native_mapping) then
+      if (FKSExplicitSum.and.nlo_ps.and..not.native_mapping.and.
+     $     active_history.eq.0.and.nFKSprocess.le.fks_integrated) then
 c S weights may be combined only at a common Born point. In particular,
 c jet cuts give ISR and FSR different Born thresholds. Use the same
 c sampling chart for all integrated sectors, also during event replay.
 c Choose the widest Born support; radiation and recoil remain local to
 c nFKSprocess. Auxiliary inner matching histories keep their own maps.
+c Their cut preparation temporarily clears native_mapping, but retains
+c active_history; a foreign Born need not have any outer sampling chart.
+c Auxiliary sectors also retain their own generation cuts when recoil
+c selection is requested outside an active inner-history evaluation.
          sampling_sector=0
          do iFKS=1,fks_integrated
             if(native_context_ids(iFKS).ne.active_context)cycle

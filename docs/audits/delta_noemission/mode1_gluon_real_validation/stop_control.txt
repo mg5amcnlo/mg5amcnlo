@@ -1,0 +1,82 @@
+Stopping-scale controls on identical actual first-emission probes
+
+Corrected PDFmode1: incoming-gluon table values replaced by sqrt(T), other table entries unchanged.
+Same actual probe configurations and reference CDF for every variant within a sample.
+These are probe-conditioned averages; they differ from common-cut averages over all Born states.
+Same native caller, starting scales, grouped native nn23nlo PDF prescription and Simple-shower references.
+matched_pdf13/PDF15 use ISR alphaS=.130, FSR=.1365, one loop, CMWoff.
+
+Variants:
+native: Native real stopping scales, real masses, native kinematic dead zones and start veto.
+uniform_real_keep_dead: Every stopping scale is actual shower pT; real masses and native kinematic dead zones retained; start veto recomputed.
+uniform_real: Every stopping scale is actual shower pT; real masses; only q>=start veto.
+uniform_born: Every stopping scale is actual shower pT; Born soft-limit masses; only q>=start veto (evaluator.evaluate).
+isr_uniform: Incoming stopping scales are actual shower pT with only q>=start veto; final stopping scales/dead zones remain native; real masses.
+
+Mean Delta / mean Simple-shower CDF, all channels:
+sample          variant                   pTbin     ratio       SE
+matched_pdf13   native                      10-20  1.991191 0.051272
+matched_pdf13   native                      20-30  1.461960 0.022691
+matched_pdf13   native                      30-50  1.226107 0.009829
+matched_pdf13   native                      50-75  1.105901 0.005509
+matched_pdf13   native                      75-100 1.058988 0.004502
+matched_pdf13   native                     100-150 1.020781 0.003662
+matched_pdf13   uniform_real_keep_dead      10-20  0.826023 0.014496
+matched_pdf13   uniform_real_keep_dead      20-30  0.988513 0.009516
+matched_pdf13   uniform_real_keep_dead      30-50  1.038464 0.004895
+matched_pdf13   uniform_real_keep_dead      50-75  1.043494 0.003043
+matched_pdf13   uniform_real_keep_dead      75-100 1.033115 0.002205
+matched_pdf13   uniform_real_keep_dead     100-150 1.024800 0.002057
+matched_pdf13   uniform_real                10-20  0.753078 0.012984
+matched_pdf13   uniform_real                20-30  0.935358 0.008549
+matched_pdf13   uniform_real                30-50  1.006600 0.004602
+matched_pdf13   uniform_real                50-75  1.027000 0.002872
+matched_pdf13   uniform_real                75-100 1.024668 0.002073
+matched_pdf13   uniform_real               100-150 1.020929 0.001902
+matched_pdf13   uniform_born                10-20  0.795597 0.013340
+matched_pdf13   uniform_born                20-30  0.972409 0.008954
+matched_pdf13   uniform_born                30-50  1.032546 0.004684
+matched_pdf13   uniform_born                50-75  1.041047 0.002814
+matched_pdf13   uniform_born                75-100 1.031336 0.001981
+matched_pdf13   uniform_born               100-150 1.022860 0.001801
+matched_pdf13   isr_uniform                 10-20  1.118977 0.015703
+matched_pdf13   isr_uniform                 20-30  1.132653 0.009451
+matched_pdf13   isr_uniform                 30-50  1.100890 0.004747
+matched_pdf13   isr_uniform                 50-75  1.065663 0.003071
+matched_pdf13   isr_uniform                 75-100 1.039417 0.002323
+matched_pdf13   isr_uniform                100-150 1.022548 0.002185
+matched_pdf15   native                      10-20  1.883287 0.045691
+matched_pdf15   native                      20-30  1.436403 0.021729
+matched_pdf15   native                      30-50  1.214996 0.009559
+matched_pdf15   native                      50-75  1.098994 0.005029
+matched_pdf15   native                      75-100 1.043071 0.003925
+matched_pdf15   native                     100-150 1.010117 0.003742
+matched_pdf15   uniform_real_keep_dead      10-20  0.805618 0.014863
+matched_pdf15   uniform_real_keep_dead      20-30  0.978720 0.008186
+matched_pdf15   uniform_real_keep_dead      30-50  1.033294 0.004860
+matched_pdf15   uniform_real_keep_dead      50-75  1.036479 0.002921
+matched_pdf15   uniform_real_keep_dead      75-100 1.028270 0.002118
+matched_pdf15   uniform_real_keep_dead     100-150 1.017435 0.001791
+matched_pdf15   uniform_real                10-20  0.737407 0.013159
+matched_pdf15   uniform_real                20-30  0.926068 0.007572
+matched_pdf15   uniform_real                30-50  1.001959 0.004516
+matched_pdf15   uniform_real                50-75  1.020545 0.002792
+matched_pdf15   uniform_real                75-100 1.019795 0.001991
+matched_pdf15   uniform_real               100-150 1.013769 0.001650
+matched_pdf15   uniform_born                10-20  0.776292 0.013636
+matched_pdf15   uniform_born                20-30  0.962122 0.007802
+matched_pdf15   uniform_born                30-50  1.027061 0.004593
+matched_pdf15   uniform_born                50-75  1.034088 0.002688
+matched_pdf15   uniform_born                75-100 1.026218 0.001904
+matched_pdf15   uniform_born               100-150 1.015523 0.001563
+matched_pdf15   isr_uniform                 10-20  1.089547 0.015351
+matched_pdf15   isr_uniform                 20-30  1.120617 0.008217
+matched_pdf15   isr_uniform                 30-50  1.095211 0.004634
+matched_pdf15   isr_uniform                 50-75  1.057949 0.002823
+matched_pdf15   isr_uniform                 75-100 1.033114 0.002236
+matched_pdf15   isr_uniform                100-150 1.014932 0.001953
+
+Uncertainties:500 paired Born-cluster bootstrap replicas; bins and variants correlated.
+CSV includes gg/qqbar and first-emission ISR/FSR channel splits, individual legs and clipping counts.
+This diagnostic does not prescribe replacing the production stopping-scale definition.
+Reproduce: python tests/validation/delta_noemission/mode1_stopping_scale_control.py STUDY_DIR OUTPUT_DIR

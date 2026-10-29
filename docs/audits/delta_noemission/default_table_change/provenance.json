@@ -1,0 +1,55 @@
+{
+  "selected_symlink": "vendor/SudGen/sudakov.f",
+  "selected_target": "sudakov_pdfmode1.f",
+  "selected_sha256": "020c561c3d09fee13ea93c2faae4052206ac64bb2f1250b0ba552af7da63f10a",
+  "source_archive": "vendor/SudGen/sudakov_r515_PDFmode1.f.gz",
+  "archive_sha256": "a59f3a7ad1396d74175120c957fa564991d614f064d482e07839b4b1969463a6",
+  "decompressed_archive_sha256": "16e07784f53f347f64b3fb5168100c2b6ca0747c8dd2dd0f97370f0d27b5e435",
+  "raw_grid_unchanged": true,
+  "conversion": {
+    "quark": {
+      "II": 1,
+      "IF": 1,
+      "FI": 1,
+      "FF": 0.5
+    },
+    "gluon": {
+      "II": 0.5,
+      "IF": 0.5,
+      "FI": 0.5,
+      "FF": 0.25
+    }
+  },
+  "normalization": "One emitter and one directed colour line. FF raw tables cover both final radiators; gluons have two lines each.",
+  "implementation": "Two reader-level square roots: one for FF type2, one for gluon abs(id)=21. Low-scale continuation and PDF factors are not rooted.",
+  "tests": {
+    "command": [
+      "/usr/bin/python3",
+      "-m",
+      "unittest",
+      "tests.unit_tests.fks.test_sudakov_table",
+      "tests.unit_tests.fks.test_mcatnlo_delta_scales",
+      "-v"
+    ],
+    "exit_code": 0,
+    "tests": 19,
+    "seconds": 8.624,
+    "log_sha256": "e782cdfd6599b8522c9bd973fa1b2104eeb16f58c67ba6964517188f5970d640"
+  },
+  "consumer_fixtures": 32,
+  "whole_api_trials": 6480000,
+  "prepared_FSR_trials": 2400000,
+  "exporter": "Both export_fks.py copy paths follow vendor/SudGen/sudakov.f into standalone SubProcesses/sudakov.f. New exports receive new default; existing exports retain copied source.",
+  "scope": "Default table selection and per-colour-line normalization only. Boundary-correction code, probability combination and grid-generation interfaces are not changed.",
+  "retained_original_default_sha256": "dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9",
+  "input_sha256": {
+    "vendor/SudGen/sudakov_pdfmode1.f": "020c561c3d09fee13ea93c2faae4052206ac64bb2f1250b0ba552af7da63f10a",
+    "vendor/SudGen/sudakov_r515_PDFmode1.f.gz": "a59f3a7ad1396d74175120c957fa564991d614f064d482e07839b4b1969463a6",
+    "vendor/SudGen/README_grid_clust": "8e8a3549ecf9c841fea6d977e3400ecb4cb34959100fcf9709e9795347c7366e",
+    "tests/unit_tests/fks/test_sudakov_table.py": "246dc84032ffad9b50cec6ff3bce4428dddfd5803e597546fb59c74eefb1060c",
+    "docs/audits/delta_noemission/dipole_normalization/consumer_check.json": "a154b1f083130c4001801bf14c5f11680257e67390a7fc17be8e5c46bc2ccc1f",
+    "docs/audits/delta_noemission/dipole_normalization/source_audit.json": "64e781b86f089b9a108236fc1c77dc4f02bb4d53d761a08c3650fd145294fba2",
+    "docs/audits/delta_noemission/dipole_normalization/whole_api.json": "6733a78b20b03e6bea9f6893874ce24eabf546501d56a642ec5c663e2cc68e88",
+    "docs/audits/delta_noemission/all_dipole_normalization/fsr_colour_line_trials.json": "54198b35b20dd84a78fafc184160368e111edadcf586e5abcd7d1c0929256c89"
+  }
+}

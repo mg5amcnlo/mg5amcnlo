@@ -102,3 +102,9 @@ class TestFxFxClustering(unittest.TestCase):
 
     def test_nonzero_branching_qcd_core_scale(self):
         self.check_clustering('qcd_core')
+
+    def test_zero_branching_coloured_core_mother(self):
+        self.check_clustering('quark_core_zero')
+
+    def test_single_top_coloured_core_mother(self):
+        self.check_clustering('quark_core_branch')

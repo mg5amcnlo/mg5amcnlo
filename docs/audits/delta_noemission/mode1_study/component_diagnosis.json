@@ -1,0 +1,532 @@
+{
+  "definition": "Unchanged archivedPDFmode1 and currentcaller; commonstopping scale compared to ordinarySimple-shower first-emission CDFs. Actual-real comparison listed separately.",
+  "settings": {
+    "reference": "Pythia8.313 Simple",
+    "alphaS_ISR": 0.118,
+    "alphaS_FSR": 0.118,
+    "alphaS_order": 1,
+    "CMW": false,
+    "shower_PDF": 13,
+    "delta_PDF": "native nn23nlo",
+    "process": "pp->ttbar,13TeV,stablemt173"
+  },
+  "born": 871,
+  "gg": 785,
+  "qqbar": 86,
+  "component_reference_trials": {
+    "isr": 174200,
+    "fsr": 174200
+  },
+  "component_reference_repeats": 200,
+  "total_reference_repeats": 240,
+  "input_sha256": {
+    "/export/tmp/rikkert/delta_noemission_20261027/archive_validation/PDFmode1.npz": "f466c1fae3e3e49269f60c353251844eaaa64961f6d0b165bded4c0845b85742",
+    "docs/audits/delta_noemission/controls.csv": "1c739d503bf547afef88571bf80fea51449b264310bd326e99c0519c4b4c6e80",
+    "docs/audits/delta_noemission/archive_validation/real_emission.csv": "2444b6b8291bf872d6488737ec6b516bd28524170c4d0e2d268d28c40f29ceb8",
+    "/export/tmp/rikkert/delta_noemission_20261027/branch_exact.born.jsonl": "0fbbb8def7d8c9812314530f2864df79376453261b0d21c23ac6a9fb11359aa1",
+    "/export/tmp/rikkert/delta_noemission_20261027/branch_exact_isr.born.jsonl": "0fbbb8def7d8c9812314530f2864df79376453261b0d21c23ac6a9fb11359aa1",
+    "/export/tmp/rikkert/delta_noemission_20261027/branch_exact_fsr.born.jsonl": "0fbbb8def7d8c9812314530f2864df79376453261b0d21c23ac6a9fb11359aa1",
+    "/export/tmp/rikkert/delta_noemission_20261027/branch_exact_isr.trials.jsonl": "a76ee9c2ae84da732dfb6dc859973103317fed80c6a62fdf7e4f181202d88612",
+    "/export/tmp/rikkert/delta_noemission_20261027/branch_exact_fsr.trials.jsonl": "879f608a20c33c0b9850f7518ad207356c9484b46efeabf627afd111a7f090f5"
+  },
+  "common_cut": [
+    {
+      "channel": "all",
+      "cut_GeV": 20.0,
+      "component": "total",
+      "born": 871,
+      "delta": 0.04509972486102187,
+      "shower_cdf": 0.17851128970531957,
+      "ratio": 0.252643543920785,
+      "ratio_se": 0.011845875697518899,
+      "difference": -0.1334115648442977,
+      "difference_se": 0.0019646386912014627
+    },
+    {
+      "channel": "all",
+      "cut_GeV": 20.0,
+      "component": "isr",
+      "born": 871,
+      "delta": 0.06519558771484675,
+      "shower_cdf": 0.23974741676234212,
+      "ratio": 0.27193447418653155,
+      "ratio_se": 0.013235061050856853,
+      "difference": -0.17455182904749536,
+      "difference_se": 0.0018928289616269732
+    },
+    {
+      "channel": "all",
+      "cut_GeV": 20.0,
+      "component": "fsr",
+      "born": 871,
+      "delta": 0.7022745105116927,
+      "shower_cdf": 0.7098105625717566,
+      "ratio": 0.9893830094148507,
+      "ratio_se": 0.00766485674193062,
+      "difference": -0.007536052060063942,
+      "difference_se": 0.005668325209169701
+    },
+    {
+      "channel": "all",
+      "cut_GeV": 50.0,
+      "component": "total",
+      "born": 871,
+      "delta": 0.34873183449465694,
+      "shower_cdf": 0.5627631075392269,
+      "ratio": 0.6196778534746948,
+      "ratio_se": 0.0071957086672434665,
+      "difference": -0.21403127304457,
+      "difference_se": 0.0028721829784721167
+    },
+    {
+      "channel": "all",
+      "cut_GeV": 50.0,
+      "component": "isr",
+      "born": 871,
+      "delta": 0.3691693714422831,
+      "shower_cdf": 0.6185017221584386,
+      "ratio": 0.5968768690796221,
+      "ratio_se": 0.007530927746995973,
+      "difference": -0.24933235071615534,
+      "difference_se": 0.0031503872626158806
+    },
+    {
+      "channel": "all",
+      "cut_GeV": 50.0,
+      "component": "fsr",
+      "born": 871,
+      "delta": 0.9303595826029963,
+      "shower_cdf": 0.8936567164179104,
+      "ratio": 1.0410704306371734,
+      "ratio_se": 0.0030579579759432685,
+      "difference": 0.03670286618508593,
+      "difference_se": 0.002651874750259351
+    },
+    {
+      "channel": "all",
+      "cut_GeV": 100.0,
+      "component": "total",
+      "born": 871,
+      "delta": 0.8051030783581202,
+      "shower_cdf": 0.8904994259471871,
+      "ratio": 0.9041028605961937,
+      "ratio_se": 0.0034084004544616816,
+      "difference": -0.08539634758906682,
+      "difference_se": 0.002866210072013266
+    },
+    {
+      "channel": "all",
+      "cut_GeV": 100.0,
+      "component": "isr",
+      "born": 871,
+      "delta": 0.8104134099362859,
+      "shower_cdf": 0.9041676234213547,
+      "ratio": 0.8963088137017067,
+      "ratio_se": 0.0037642943967329257,
+      "difference": -0.09375421348506886,
+      "difference_se": 0.0032826172582232
+    },
+    {
+      "channel": "all",
+      "cut_GeV": 100.0,
+      "component": "fsr",
+      "born": 871,
+      "delta": 0.9899895860633825,
+      "shower_cdf": 0.9814293915040184,
+      "ratio": 1.0087221705743352,
+      "ratio_se": 0.0008098518332541291,
+      "difference": 0.00856019455936419,
+      "difference_se": 0.0007932388183076618
+    },
+    {
+      "channel": "gg",
+      "cut_GeV": 20.0,
+      "component": "total",
+      "born": 785,
+      "delta": 0.02172356923268801,
+      "shower_cdf": 0.15618895966029725,
+      "ratio": 0.1390851778508265,
+      "ratio_se": 0.005706135064821948,
+      "difference": -0.13446539042760922,
+      "difference_se": 0.0019947884573154185
+    },
+    {
+      "channel": "gg",
+      "cut_GeV": 20.0,
+      "component": "isr",
+      "born": 785,
+      "delta": 0.028921068603744392,
+      "shower_cdf": 0.21040764331210193,
+      "ratio": 0.1374525570862708,
+      "ratio_se": 0.004886199575864783,
+      "difference": -0.1814865747083575,
+      "difference_se": 0.0018052381157833025
+    },
+    {
+      "channel": "gg",
+      "cut_GeV": 20.0,
+      "component": "fsr",
+      "born": 785,
+      "delta": 0.7095507404366369,
+      "shower_cdf": 0.7070254777070063,
+      "ratio": 1.0035716714733116,
+      "ratio_se": 0.008975653584130544,
+      "difference": 0.0025252627296305204,
+      "difference_se": 0.006019731633810834
+    },
+    {
+      "channel": "gg",
+      "cut_GeV": 50.0,
+      "component": "total",
+      "born": 785,
+      "delta": 0.3132217370815738,
+      "shower_cdf": 0.5438588110403396,
+      "ratio": 0.5759247266444327,
+      "ratio_se": 0.007655113464562546,
+      "difference": -0.23063707395876593,
+      "difference_se": 0.00247027392872648
+    },
+    {
+      "channel": "gg",
+      "cut_GeV": 50.0,
+      "component": "isr",
+      "born": 785,
+      "delta": 0.3283223848500486,
+      "shower_cdf": 0.5977834394904459,
+      "ratio": 0.5492329883375701,
+      "ratio_se": 0.007496581562013408,
+      "difference": -0.26946105464039727,
+      "difference_se": 0.0025975384073343676
+    },
+    {
+      "channel": "gg",
+      "cut_GeV": 50.0,
+      "component": "fsr",
+      "born": 785,
+      "delta": 0.9339208402523228,
+      "shower_cdf": 0.8926624203821656,
+      "ratio": 1.046219510229291,
+      "ratio_se": 0.003388485370766541,
+      "difference": 0.04125841987015733,
+      "difference_se": 0.0028098799945472414
+    },
+    {
+      "channel": "gg",
+      "cut_GeV": 100.0,
+      "component": "total",
+      "born": 785,
+      "delta": 0.7923821853750423,
+      "shower_cdf": 0.8853397027600848,
+      "ratio": 0.8950035595430281,
+      "ratio_se": 0.0038670684653319683,
+      "difference": -0.09295751738504252,
+      "difference_se": 0.003042600970239847
+    },
+    {
+      "channel": "gg",
+      "cut_GeV": 100.0,
+      "component": "isr",
+      "born": 785,
+      "delta": 0.7966751466913862,
+      "shower_cdf": 0.8984012738853503,
+      "ratio": 0.8867698319771684,
+      "ratio_se": 0.004324524175325342,
+      "difference": -0.10172612719396405,
+      "difference_se": 0.0035151908613939836
+    },
+    {
+      "channel": "gg",
+      "cut_GeV": 100.0,
+      "component": "fsr",
+      "born": 785,
+      "delta": 0.9908247437498002,
+      "shower_cdf": 0.9816114649681529,
+      "ratio": 1.0093858712030694,
+      "ratio_se": 0.000855247316083108,
+      "difference": 0.009213278781647393,
+      "difference_se": 0.0008460162331664374
+    },
+    {
+      "channel": "qqbar",
+      "cut_GeV": 20.0,
+      "component": "total",
+      "born": 86,
+      "delta": 0.25847509891034853,
+      "shower_cdf": 0.38226744186046513,
+      "ratio": 0.6761629963890486,
+      "ratio_se": 0.016513009301047297,
+      "difference": -0.12379234295011662,
+      "difference_se": 0.00799339772840562
+    },
+    {
+      "channel": "qqbar",
+      "cut_GeV": 20.0,
+      "component": "isr",
+      "born": 86,
+      "delta": 0.39630602378711843,
+      "shower_cdf": 0.5075581395348837,
+      "ratio": 0.7808091190307488,
+      "ratio_se": 0.010798179038028079,
+      "difference": -0.11125211574776538,
+      "difference_se": 0.0066877891475570295
+    },
+    {
+      "channel": "qqbar",
+      "cut_GeV": 20.0,
+      "component": "fsr",
+      "born": 86,
+      "delta": 0.6358577606153993,
+      "shower_cdf": 0.7352325581395348,
+      "ratio": 0.8648389595591388,
+      "ratio_se": 0.01643510916201612,
+      "difference": -0.09937479752413553,
+      "difference_se": 0.013026643335135505
+    },
+    {
+      "channel": "qqbar",
+      "cut_GeV": 50.0,
+      "component": "total",
+      "born": 86,
+      "delta": 0.6728647004164041,
+      "shower_cdf": 0.7353197674418606,
+      "ratio": 0.9150640717265981,
+      "ratio_se": 0.008438846636314529,
+      "difference": -0.06245506702545627,
+      "difference_se": 0.006440913817946481
+    },
+    {
+      "channel": "qqbar",
+      "cut_GeV": 50.0,
+      "component": "isr",
+      "born": 86,
+      "delta": 0.7420168653365179,
+      "shower_cdf": 0.8076162790697674,
+      "ratio": 0.918774032379822,
+      "ratio_se": 0.0054030825569554,
+      "difference": -0.06559941373324951,
+      "difference_se": 0.004485833572332812
+    },
+    {
+      "channel": "qqbar",
+      "cut_GeV": 50.0,
+      "component": "fsr",
+      "born": 86,
+      "delta": 0.8978527540597249,
+      "shower_cdf": 0.9027325581395346,
+      "ratio": 0.9945944077946334,
+      "ratio_se": 0.007187725035382808,
+      "difference": -0.004879804079810003,
+      "difference_se": 0.00645743461555242
+    },
+    {
+      "channel": "qqbar",
+      "cut_GeV": 100.0,
+      "component": "total",
+      "born": 86,
+      "delta": 0.9212182061687731,
+      "shower_cdf": 0.9375968992248063,
+      "ratio": 0.982531199634326,
+      "ratio_se": 0.0032666890316873426,
+      "difference": -0.016378693056033008,
+      "difference_se": 0.003166167363841819
+    },
+    {
+      "channel": "qqbar",
+      "cut_GeV": 100.0,
+      "component": "isr",
+      "born": 86,
+      "delta": 0.9358149988577533,
+      "shower_cdf": 0.9568023255813953,
+      "ratio": 0.9780651382605188,
+      "ratio_se": 0.002812562371802872,
+      "difference": -0.020987326723641828,
+      "difference_se": 0.002753514071844955
+    },
+    {
+      "channel": "qqbar",
+      "cut_GeV": 100.0,
+      "component": "fsr",
+      "born": 86,
+      "delta": 0.982366344390849,
+      "shower_cdf": 0.979767441860465,
+      "ratio": 1.0026525708237957,
+      "ratio_se": 0.0021231546047766523,
+      "difference": 0.0025989025303837948,
+      "difference_se": 0.0021221845756036477
+    }
+  ],
+  "actual_real": [
+    {
+      "channel": "all",
+      "pt_low": 10.0,
+      "pt_high": 20.0,
+      "delta": 0.1127365677693787,
+      "pythia": 0.15054530642278988,
+      "delta_over_pythia": 0.7488547497639713,
+      "ratio_se": 0.019121020615916782
+    },
+    {
+      "channel": "all",
+      "pt_low": 20.0,
+      "pt_high": 30.0,
+      "delta": 0.1951132219753482,
+      "pythia": 0.28045179895633066,
+      "delta_over_pythia": 0.6957103598601961,
+      "ratio_se": 0.009560873116647509
+    },
+    {
+      "channel": "all",
+      "pt_low": 30.0,
+      "pt_high": 50.0,
+      "delta": 0.3430088014215089,
+      "pythia": 0.46214811634925584,
+      "delta_over_pythia": 0.7422053434537627,
+      "ratio_se": 0.004954179408954433
+    },
+    {
+      "channel": "all",
+      "pt_low": 50.0,
+      "pt_high": 75.0,
+      "delta": 0.5299999117871846,
+      "pythia": 0.6552912591780155,
+      "delta_over_pythia": 0.8088005209347766,
+      "ratio_se": 0.004068426052514549
+    },
+    {
+      "channel": "all",
+      "pt_low": 75.0,
+      "pt_high": 100.0,
+      "delta": 0.6721211968809502,
+      "pythia": 0.7846306863848256,
+      "delta_over_pythia": 0.856608349053666,
+      "ratio_se": 0.003606423501815741
+    },
+    {
+      "channel": "all",
+      "pt_low": 100.0,
+      "pt_high": 150.0,
+      "delta": 0.7720261486791756,
+      "pythia": 0.8652239378011389,
+      "delta_over_pythia": 0.8922847773273425,
+      "ratio_se": 0.0033750104585349963
+    },
+    {
+      "channel": "gg",
+      "pt_low": 10.0,
+      "pt_high": 20.0,
+      "delta": 0.0711589933771185,
+      "pythia": 0.12258413019492459,
+      "delta_over_pythia": 0.5804910738769082,
+      "ratio_se": 0.010106723796438717
+    },
+    {
+      "channel": "gg",
+      "pt_low": 20.0,
+      "pt_high": 30.0,
+      "delta": 0.16245043173911197,
+      "pythia": 0.2562879958784132,
+      "delta_over_pythia": 0.6338589179033607,
+      "ratio_se": 0.007167693996846064
+    },
+    {
+      "channel": "gg",
+      "pt_low": 30.0,
+      "pt_high": 50.0,
+      "delta": 0.31947761206442815,
+      "pythia": 0.4459643314822725,
+      "delta_over_pythia": 0.7163748073810421,
+      "ratio_se": 0.0047524336722357865
+    },
+    {
+      "channel": "gg",
+      "pt_low": 50.0,
+      "pt_high": 75.0,
+      "delta": 0.514822057774119,
+      "pythia": 0.6465913150800611,
+      "delta_over_pythia": 0.7962093609475309,
+      "ratio_se": 0.00405759824625262
+    },
+    {
+      "channel": "gg",
+      "pt_low": 75.0,
+      "pt_high": 100.0,
+      "delta": 0.6625297629796869,
+      "pythia": 0.7800700934579439,
+      "delta_over_pythia": 0.8493208091631653,
+      "ratio_se": 0.0036849316756221813
+    },
+    {
+      "channel": "gg",
+      "pt_low": 100.0,
+      "pt_high": 150.0,
+      "delta": 0.766732875985874,
+      "pythia": 0.8635932580818553,
+      "delta_over_pythia": 0.8878402752806109,
+      "ratio_se": 0.0033130350173171488
+    },
+    {
+      "channel": "qqbar",
+      "pt_low": 10.0,
+      "pt_high": 20.0,
+      "delta": 0.3628459146113154,
+      "pythia": 0.3187453908554573,
+      "delta_over_pythia": 1.1383565849768054,
+      "ratio_se": 0.03155292850280067
+    },
+    {
+      "channel": "qqbar",
+      "pt_low": 20.0,
+      "pt_high": 30.0,
+      "delta": 0.45536969097590035,
+      "pythia": 0.4729885057471264,
+      "delta_over_pythia": 0.9627500149429729,
+      "ratio_se": 0.026952571320494927
+    },
+    {
+      "channel": "qqbar",
+      "pt_low": 30.0,
+      "pt_high": 50.0,
+      "delta": 0.5918187123742009,
+      "pythia": 0.6332693465823548,
+      "delta_over_pythia": 0.9345450171686728,
+      "ratio_se": 0.015038438872780094
+    },
+    {
+      "channel": "qqbar",
+      "pt_low": 50.0,
+      "pt_high": 75.0,
+      "delta": 0.7597496400115075,
+      "pythia": 0.7869837758112095,
+      "delta_over_pythia": 0.9653942855789759,
+      "ratio_se": 0.010697023294437226
+    },
+    {
+      "channel": "qqbar",
+      "pt_low": 75.0,
+      "pt_high": 100.0,
+      "delta": 0.8401140198242105,
+      "pythia": 0.8645089285714285,
+      "delta_over_pythia": 0.9717817735121259,
+      "ratio_se": 0.013254209839753988
+    },
+    {
+      "channel": "qqbar",
+      "pt_low": 100.0,
+      "pt_high": 150.0,
+      "delta": 0.8741510231752755,
+      "pythia": 0.8966851851851851,
+      "delta_over_pythia": 0.9748694833123001,
+      "ratio_se": 0.011461258470189861
+    }
+  ],
+  "notes": [
+    "The raw Born JSONL files are byte-identical for both component controls and the baseline.",
+    "All CDF means reproduce the existing controls.csv to absolute precision better than1e-14.",
+    "Common-cut ratios are auxiliary and must not be quoted as actual-real-bin ratios.",
+    "Component estimates use500 Born-cluster bootstrap resamples; different q values are correlated.",
+    "Mean fullDelta is not the product of component means because Born-dependent factors are correlated.",
+    "The original actual-real errors listed here were copied from its500-resample paired analysis.",
+    "Equality to the complete shower is a diagnostic target, not an exact theorem for the approximate Delta construction.",
+    "Matching historical shower couplings changes emission rates; known version, PDF and massive-top/table conventions remain distinct issues."
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "point": {
+    "q_GeV": 20,
+    "Q_GeV": 200,
+    "mDip_GeV": 500
+  },
+  "trial_count_per_point": 500000,
+  "total_trials": 12000000,
+  "shower": "SimpleSpaceShower / SimpleTimeShower runtime dynamic_cast assertions",
+  "version": "Pythia8.313",
+  "coupling": "one-loop; StandardModel:alphaSnfmax=6; all other current SudGen wrapper settings retained",
+  "seeds": {
+    "up": 1027271,
+    "gluon": 1027272
+  },
+  "cmw_implementation": "Pythia AlphaStrong::init rescales Lambda5 by1.569; changing running coupling at every scale",
+  "sha256": {
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/table_coupling_probe.cc": "b96fdc160ab842ed0fa3c212467fb4c13bc66e712b2dc27c6b6a1b4c7854ef5e",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/pythia_interface_for_sudgen.cc": "904f6eb4cd08e48d2fff72c5f3fe23d10c241736e59e332700f95b7a69a291fb",
+    "/export/tmp/rikkert/Pythia/pythia8313/src/StandardModel.cc": "5219cc973411008c17c838660df8244ed0b675e17ab4c92b43d000f7ae702595",
+    "/export/tmp/rikkert/Pythia/pythia8313/lib/libpythia8.so": "18e9aec234ec594b6e0193cb24d0d4100fc5eb3fa68fbc9362e9f4c3c8bf636c",
+    "/export/tmp/rikkert/delta_noemission_20261027/coupling_scan/probe": "557adaa0abd0ab6b0d8eb32924220956a6d62aa037247097a01c102640f44f9d",
+    "/export/tmp/rikkert/delta_noemission_20261027/coupling_scan/alpha0.118_cmw1_pdf2.log": "8d81d25fad158021d3bd5ac768a0914beb41f54632cd84a34e622dc620683ddc",
+    "/export/tmp/rikkert/delta_noemission_20261027/coupling_scan/alpha0.1365_cmw0_pdf1.log": "7c05a7ccecb96d090ac6239461e56c3fe14839f32d13d66e4633fe16cb6e9a62",
+    "/export/tmp/rikkert/delta_noemission_20261027/coupling_scan/alpha0.1365_cmw1_pdf2.log": "a68e70d7548c1da8fabb316b6b896b8900c7a0e538cb8fe80f85a5a00854330e",
+    "/export/tmp/rikkert/delta_noemission_20261027/coupling_scan/alpha0.118_cmw0_pdf1.log": "b6bce14cc0f271eb49161c07c76020c7ebd9e2a652770ee832fda4052b96763b",
+    "/export/tmp/rikkert/delta_noemission_20261027/coupling_scan/alpha0.130_cmw1_pdf2.log": "a4f8b98817a23d025539cec93b7a96c559dd53ef8064c67ae5a7e58aaf5aeeb9",
+    "/export/tmp/rikkert/delta_noemission_20261027/coupling_scan/alpha0.118_cmw0_pdf2.log": "452af483377379a3394b304d23c1a391c20cc854dfd669421befaa502fa8a9c1",
+    "/export/tmp/rikkert/delta_noemission_20261027/coupling_scan/alpha0.130_cmw0_pdf1.log": "9d6c4fe2e4295f35fd08994d9d8f87e473bdf4af5a0713218b023d080ae737d6",
+    "/export/tmp/rikkert/delta_noemission_20261027/coupling_scan/alpha0.1365_cmw0_pdf2.log": "4c6378f6e0f56369f608b792084643125122059f68c14ef7dd88efdf2c5bce79",
+    "/export/tmp/rikkert/delta_noemission_20261027/coupling_scan/alpha0.1365_cmw1_pdf1.log": "8d32a585b6175e277e40c3e49bc4280d6d4dbf0ce772dc6f225f254eca67cfef",
+    "/export/tmp/rikkert/delta_noemission_20261027/coupling_scan/alpha0.118_cmw1_pdf1.log": "8c8bb3371eb0dea0a6018fa64c3c7cab2497b59a86180cd6f854ae069b0ff986",
+    "/export/tmp/rikkert/delta_noemission_20261027/coupling_scan/alpha0.130_cmw0_pdf2.log": "6b61b1bc610bd40330aba6695b00161aa8340974db99609ab8bacebf00e78cd5",
+    "/export/tmp/rikkert/delta_noemission_20261027/coupling_scan/alpha0.130_cmw1_pdf1.log": "35c2e13d96396b045c2c6ee3e4aeae9c173f4c97d5966d58efbb685c81dc41d5"
+  }
+}

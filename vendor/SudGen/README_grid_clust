@@ -2,6 +2,37 @@
   Sudakov grid pre-tabulation
 ==================================================
 
+Shipped MC@NLO-Delta default
+--------------------------
+The selected table is sudakov.f -> sudakov_pdfmode1.f. Its numerical grid
+is the archived sudakov_r515_PDFmode1.f.gz grid. The top-level pysudakov
+function converts the raw probabilities to individual colour-line factors:
+
+  Radiator       II / IF / FI             FF
+  quark          raw                      sqrt(raw)
+  gluon          sqrt(raw)                sqrt(sqrt(raw))
+
+FF raw entries cover both final radiators; the other types cover one.
+Each gluon radiator has two colour lines. The beam-PDF factor is applied
+separately by the Delta caller.
+
+The exporter copies this standalone source into new process directories.
+Existing exports retain their local SubProcesses/sudakov.f; regenerate
+the export or replace that file and rebuild to use the new default.
+The previous sudakov_template.f and compressed archives are retained for
+historical comparisons. The investigation and validation are recorded in
+docs/audits/delta_noemission/investigation_report.md.
+
+This default selects an existing archive and adjusts its lookup function.
+To generate a replacement with the same prescription, select ISR PDFmode
+1 in the generation interface and preserve these radiator/colour-line
+conversions in the generated lookup function. The raw trial-shower API
+returns full-radiator probabilities; it does not perform that conversion.
+
+The selected-table regression requires gfortran, with no shower runtime:
+
+  python3 -m unittest tests.unit_tests.fks.test_sudakov_table
+
 0. The MC@NLO-Delta short-distance cross sections feature the non-emission
  probabilities (NEPs) as returned by the PSMC one matches to (in the
  current  setup, this is Pythia8). Since such NEPs are too slow to be

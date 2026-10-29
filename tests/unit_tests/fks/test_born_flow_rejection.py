@@ -44,6 +44,7 @@ class TestBornFlowRejection(unittest.TestCase):
                  'Bornonly_shower_scale', 'compute_shower_scale_n1body',
                  'compute_prefactors_nbody', 'compute_prefactors_n1body',
                  'special_check_SoftSing', 'mc_set_history',
+                 'vs_begin_point', 'virt_surrogate_fit_point',
                  'include_bias_wgt', 'sum_identical_contributions',
                  'apply_born_spread_weight')
         (work / 'noops.f90').write_text('\n'.join(
@@ -68,6 +69,12 @@ class TestBornFlowRejection(unittest.TestCase):
 
     def test_nonfinite_and_zero_colour_weights(self):
         self.check_mode('selection')
+
+    def test_calibration_uses_s_weights_and_restores_production(self):
+        self.check_mode('calibration')
+
+    def test_calibration_rejects_the_complete_nonfinite_s_point(self):
+        self.check_mode('calib_reject')
 
     def test_outer_rejection_discards_all_contributions(self):
         self.check_mode('outer')

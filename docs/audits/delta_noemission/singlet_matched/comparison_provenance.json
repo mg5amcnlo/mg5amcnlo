@@ -1,0 +1,179 @@
+{
+  "checks": [
+    {
+      "pdf": "13",
+      "sample": "dy_fixed",
+      "born": 1000,
+      "trials": 300000,
+      "born_records_byte_identical": true,
+      "cdf_recomputed_bitwise_identical": true,
+      "table_pdf_and_native_source_hashes_match_old": true,
+      "old_delta_available": true,
+      "overlapping_native_delta_values_bitwise_identical": true,
+      "overlapping_tables": [
+        "default",
+        "PDFmode2",
+        "PDFmode2_root",
+        "PDFmode1",
+        "PDFmode1_root"
+      ]
+    },
+    {
+      "pdf": "13",
+      "sample": "dy_damped",
+      "born": 1000,
+      "trials": 300000,
+      "born_records_byte_identical": true,
+      "cdf_recomputed_bitwise_identical": true,
+      "table_pdf_and_native_source_hashes_match_old": true,
+      "old_delta_available": false,
+      "overlapping_native_delta_values_bitwise_identical": null,
+      "overlapping_tables": []
+    },
+    {
+      "pdf": "13",
+      "sample": "higgs_fixed",
+      "born": 1000,
+      "trials": 300000,
+      "born_records_byte_identical": true,
+      "cdf_recomputed_bitwise_identical": true,
+      "table_pdf_and_native_source_hashes_match_old": true,
+      "old_delta_available": true,
+      "overlapping_native_delta_values_bitwise_identical": true,
+      "overlapping_tables": [
+        "default",
+        "PDFmode2",
+        "PDFmode2_root",
+        "PDFmode1",
+        "PDFmode1_root"
+      ]
+    },
+    {
+      "pdf": "13",
+      "sample": "higgs_damped",
+      "born": 1000,
+      "trials": 300000,
+      "born_records_byte_identical": true,
+      "cdf_recomputed_bitwise_identical": true,
+      "table_pdf_and_native_source_hashes_match_old": true,
+      "old_delta_available": false,
+      "overlapping_native_delta_values_bitwise_identical": null,
+      "overlapping_tables": []
+    },
+    {
+      "pdf": "15",
+      "sample": "dy_fixed",
+      "born": 1000,
+      "trials": 300000,
+      "born_records_byte_identical": true,
+      "cdf_recomputed_bitwise_identical": true,
+      "table_pdf_and_native_source_hashes_match_old": true,
+      "old_delta_available": true,
+      "overlapping_native_delta_values_bitwise_identical": true,
+      "overlapping_tables": [
+        "default",
+        "PDFmode2",
+        "PDFmode2_root",
+        "PDFmode1",
+        "PDFmode1_root"
+      ]
+    },
+    {
+      "pdf": "15",
+      "sample": "dy_damped",
+      "born": 1000,
+      "trials": 300000,
+      "born_records_byte_identical": true,
+      "cdf_recomputed_bitwise_identical": true,
+      "table_pdf_and_native_source_hashes_match_old": true,
+      "old_delta_available": true,
+      "overlapping_native_delta_values_bitwise_identical": true,
+      "overlapping_tables": [
+        "default",
+        "PDFmode2",
+        "PDFmode2_root",
+        "PDFmode1",
+        "PDFmode1_root"
+      ]
+    },
+    {
+      "pdf": "15",
+      "sample": "higgs_fixed",
+      "born": 1000,
+      "trials": 300000,
+      "born_records_byte_identical": true,
+      "cdf_recomputed_bitwise_identical": true,
+      "table_pdf_and_native_source_hashes_match_old": true,
+      "old_delta_available": true,
+      "overlapping_native_delta_values_bitwise_identical": true,
+      "overlapping_tables": [
+        "default",
+        "PDFmode2",
+        "PDFmode2_root",
+        "PDFmode1",
+        "PDFmode1_root"
+      ]
+    },
+    {
+      "pdf": "15",
+      "sample": "higgs_damped",
+      "born": 1000,
+      "trials": 300000,
+      "born_records_byte_identical": true,
+      "cdf_recomputed_bitwise_identical": true,
+      "table_pdf_and_native_source_hashes_match_old": true,
+      "old_delta_available": true,
+      "overlapping_native_delta_values_bitwise_identical": true,
+      "overlapping_tables": [
+        "default",
+        "PDFmode2",
+        "PDFmode2_root",
+        "PDFmode1",
+        "PDFmode1_root"
+      ]
+    }
+  ],
+  "input_sha256": {
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/docs/audits/delta_noemission/singlet_validation/pdf13_control/analysis_provenance.json": "86cb8a7b31c8da81c5d238da954b7c0118502a96d34b7eba905a95ddd41ced87",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/docs/audits/delta_noemission/singlet_matched/pdf13/analysis_provenance.json": "2726c0cba5a16d1a95c04bb66702c209bc69fdcd672d1df9788cd5c71cb63212",
+    "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/analysis_pdf13/dy_fixed.npz": "7c0b744a5f3451b6491e6af1ca4c4d04d4c997ceb968676ea50ecbd1b9150f65",
+    "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_fixed.born.jsonl": "0084ae185071a2fac82cbd9754741ecfbfa6799d671bfc614f1e279611b1bfde",
+    "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed.born.jsonl": "0084ae185071a2fac82cbd9754741ecfbfa6799d671bfc614f1e279611b1bfde",
+    "/export/tmp/rikkert/delta_singlets_20261028/analysis_pdf13/dy_fixed_pdf13.npz": "31b7cb415a302c60519ec536e6a0b67d9fe60f600ed4c16dd266cc104e144022",
+    "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/analysis_pdf13/dy_damped.npz": "b53d84572f242363837cb35588febc386bf0896e68a2a5d00b4aafa24e9a2474",
+    "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/dy_damped.born.jsonl": "7993cc57a7753ff049d2c865c780dea6851bcb4a7918ae2b6beea1ff01114d06",
+    "/export/tmp/rikkert/delta_singlets_20261028/dy_damped.born.jsonl": "7993cc57a7753ff049d2c865c780dea6851bcb4a7918ae2b6beea1ff01114d06",
+    "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/analysis_pdf13/higgs_fixed.npz": "6b22ffee05c87ccf4dc3292230f345d714fe8ca1493cc3395f98c1c73c1e7bb7",
+    "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_fixed.born.jsonl": "81eed994c86ecd989739a35052e36cb02a809abfc59b02df69fa4b9e20056741",
+    "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed.born.jsonl": "81eed994c86ecd989739a35052e36cb02a809abfc59b02df69fa4b9e20056741",
+    "/export/tmp/rikkert/delta_singlets_20261028/analysis_pdf13/higgs_fixed_pdf13.npz": "a9ee493bdb3dee7f701c9b25d7790cdd4da4c4927a7c9d7f8ff7c370bebe1939",
+    "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/analysis_pdf13/higgs_damped.npz": "af382a222696509cfe57991c53dedf177c162a62544e258dbbf9220178ab6596",
+    "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf13/higgs_damped.born.jsonl": "65c408573f3927cdd5add35dc3c18dd522996d2c0a3b3f64a8c84bd89967038f",
+    "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped.born.jsonl": "65c408573f3927cdd5add35dc3c18dd522996d2c0a3b3f64a8c84bd89967038f",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/docs/audits/delta_noemission/singlet_validation/analysis_provenance.json": "0ecb0b264b4d4f9f0a467609dced178cc6fac86a708d7524ada20a45d3a06e83",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/docs/audits/delta_noemission/singlet_matched/pdf15/analysis_provenance.json": "e221e50d0443100cf7bece5a756c0e1cd997654ebbd9135fd838d39465c57efa",
+    "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/analysis/dy_fixed.npz": "d60c01ffa80f48e3449b5cd0f4b9c54111f1e31e5e3bd7d1f9a7ba5f1009fb18",
+    "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_fixed.born.jsonl": "0084ae185071a2fac82cbd9754741ecfbfa6799d671bfc614f1e279611b1bfde",
+    "/export/tmp/rikkert/delta_singlets_20261028/analysis/dy_fixed.npz": "0d033375ab70b6ef1bb5ff8a62cc32a0496cb620541d2768f823d616f828d131",
+    "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/analysis/dy_damped.npz": "e67eeba9f1ffa9ccbcbf5987b4530f8db11def9d862b285d17694f810570ee5b",
+    "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/dy_damped.born.jsonl": "7993cc57a7753ff049d2c865c780dea6851bcb4a7918ae2b6beea1ff01114d06",
+    "/export/tmp/rikkert/delta_singlets_20261028/analysis/dy_damped.npz": "7f8ac20cc4f27e9d5d0f6cbf06305a56626b0dd96f74b349d0eb25cc1d2c7b1d",
+    "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/analysis/higgs_fixed.npz": "230c3d8226a0601720a0f6c564d5d75116f349d0b6ef4db51161deda940d3d4f",
+    "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_fixed.born.jsonl": "81eed994c86ecd989739a35052e36cb02a809abfc59b02df69fa4b9e20056741",
+    "/export/tmp/rikkert/delta_singlets_20261028/analysis/higgs_fixed.npz": "1a8be25f31e9e42c01c4f52a04cd5927a57744c6b5b39e5e0d6b27ebf56bb248",
+    "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/analysis/higgs_damped.npz": "ed9d551981039e0b214ff4c7089915ca1f4c490e970dcfff725e0515fc55ee98",
+    "/export/tmp/rikkert/delta_singlets_matched_20261028/pdf15/higgs_damped.born.jsonl": "65c408573f3927cdd5add35dc3c18dd522996d2c0a3b3f64a8c84bd89967038f",
+    "/export/tmp/rikkert/delta_singlets_20261028/analysis/higgs_damped.npz": "aafa7da5e9e48a705b79d9f22a1c3cae3c18e94c22d3853c18b3b191c952b94e"
+  },
+  "script_sha256": "34c4d729c2e0391ae43742c2a31972cd973f59345f3a931ae0b9bf4abdddc129",
+  "definitions": {
+    "ratio": "Mean Delta divided by mean first-QCD-emission CDF",
+    "before": "Original singlet reference settings, including ISR pT0Ref=2GeV",
+    "after": "Historical-settings-matched reference; see shower_provenance.json",
+    "bootstrap": "500 paired Born-cluster resamples, seed102828; identical resamples for before/after",
+    "zero_probability": "Ratios or bootstrap errors with zero denominators are null; no such ratio is interpreted as a probability",
+    "threshold_qualification": "For samples whose full showers report xPDF=0 in pT2nearThreshold, cuts at/below sqrt(2)*4.8GeV are counted and masked in plots. Their retained numerical ratios are qualified diagnostics, not unqualified physics validation.",
+    "unavailable": "No old PDF13 damped reference exists; before values are null for those rows. PDFmode0 is newly evaluated, so its old Delta ratios are null."
+  },
+  "note": "Every matched native Delta value was recalculated. All six overlapping old/new sample/PDF combinations agree bitwise for all five previously tested table variants, including clipping and undefined flags. Only the empirical shower reference changes for those comparisons."
+}

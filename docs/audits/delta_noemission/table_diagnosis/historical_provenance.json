@@ -1,0 +1,43 @@
+{
+  "current": {
+    "path": "vendor/SudGen/sudakov_template.f",
+    "sha256": "dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9",
+    "bytes": 2648508
+  },
+  "16e0bf768": {
+    "path": "SudGen/sudakov_template.f",
+    "sha256": "dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9",
+    "bytes": 2648508
+  },
+  "9fb59956b": {
+    "path": "vendor/SudGen/sudakov_template.f",
+    "sha256": "dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9",
+    "bytes": 2648508
+  },
+  "interface_chronology": [
+    "9fb59956b 2020-11-05 moved the SudGen directory into the vendor directory.",
+    "d21db0e5c 2020-11-05 Updated the code to PY8meetsMG5aMC revision 547. And deleted the Pythia folder since it should not be part of this release.",
+    "a6c31ac8b 2019-07-25 fix for quark Sudakovs with pdfMode=2",
+    "dad69e3f2 2019-07-25 fix for quark Sudakovs with pdfMode=2",
+    "e35eee2e5 2019-07-25 added fix for threshold behavior of Sudakovs with pdfMode!=0",
+    "8d989b6ab 2019-07-23 updated number of initial flavors in SudGen",
+    "4bf2f26a7 2019-07-10 Updated Pythia Sudakovs so that without PDFs, splitting flavor sums conform to forward evolution / sum rules",
+    "206612698 2019-06-07 Non-complete changes to get the correct PDF*Sudakov vs. No-emission probability in Pythia",
+    "4083d3fe3 2019-05-17 Added the factor in SudGen grid generation to use normal alphaS for pythia also when scales are very small.",
+    "60bd944b4 2019-05-16 updated pythia timelike shower sudakovs",
+    "99771294d 2019-05-14 implementing pythia sudakovs"
+  ],
+  "original_20190319_generator": "Dire only: dire_init/dire_get_no_emission_prob; ps_interface.cc; makefile links -ldire; Dire:doSingleLegSudakovs=on",
+  "inference": "Shipped table predates Pythia-specific Sudakov interface and subsequent fixes. Exact external original generation invocation not archived; do not claim a proven generation log.",
+  "fi_generation_energy_bug": {
+    "historical_wrapper_argument_s": 7000.0,
+    "historical_wrapper_argument_x": 0.1,
+    "api_semantics": "s is squared collision energy: eCM=sqrt(s); x2=mDip^2/(s*x1)",
+    "phase_space": "massless FI requires xOld<=xCS<=1, xOld=x2; thus impossible whenx2>1",
+    "predicted_mass_boundary_GeV": 26.457513110645905,
+    "largest_active_table_mass_node_GeV": 25.851455,
+    "next_table_mass_node_GeV": 30.971082,
+    "evidence": "all shipped FI grids are unity above mass25.851455; exact boundary falls between grid nodes",
+    "scope": "Source proves bug in contemporaneous generation setup and table exhibits its predicted fingerprint; no original generation log is available."
+  }
+}

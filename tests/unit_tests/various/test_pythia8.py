@@ -31,6 +31,7 @@ int main(int argc, char** argv) {
   int count = 0;
   reader.lhef_read_wgtsinfo_(count, labels);
   std::cout << "count " << count << '\n';
+  if (argc > 2) std::cout << "label " << std::string(labels[1], 80) << '\n';
   double weights[1024] = {0.};
   for (int event = 0; event < 2; ++event) {
     reader.lhef_read_wgts_(weights);
@@ -43,9 +44,10 @@ int main(int argc, char** argv) {
                         str(MCATNLO / 'include'), str(source), '-o',
                         str(cls.executable)], check=True, capture_output=True)
 
-    def read_events(self, reweight, jwgtinfo=0, header=True):
+    def read_events(self, reweight, jwgtinfo=0, header=True,
+                    label='scale variation', show_label=False):
         weights = ("<initrwgt>\n<weightgroup name='test'>\n"
-                   "<weight id='1001'> scale variation </weight>\n"
+                   f"<weight id='1001'> {label} </weight>\n"
                    "</weightgroup>\n</initrwgt>\n") if reweight else ''
         contents = '<LesHouchesEvents version="3.0">\n'
         if header:
@@ -64,7 +66,8 @@ int main(int argc, char** argv) {
         contents += '</LesHouchesEvents>\n'
         path = Path(self.work.name) / 'events.lhe'
         path.write_text(contents)
-        result = subprocess.run([str(self.executable), str(path)],
+        result = subprocess.run([str(self.executable), str(path)] +
+                                (['labels'] if show_label else []),
                                 text=True, capture_output=True, timeout=3)
         self.assertEqual(result.returncode, 0, result.stderr)
         return result.stdout
@@ -77,11 +80,19 @@ int main(int argc, char** argv) {
         self.assertEqual(self.read_events(False, header=False),
                          'count 1\nevent 0 0\nevent 1 0\n')
 
-    def test_reweighting_with_both_supported_weight_formats(self):
-        for jwgtinfo in (0, 9):
+    def test_reweighting_with_supported_weight_formats(self):
+        for jwgtinfo in (0, 9, -9):
             with self.subTest(jwgtinfo=jwgtinfo):
                 self.assertEqual(self.read_events(True, jwgtinfo),
                                  'count 2\nevent 0 2.5\nevent 1 -3.25\n')
+
+    def test_inclusive_scale_labels_are_recognised_and_order_tags_retained(self):
+        for tag in (0, 400, 402):
+            label = f'tag= {tag} dyn= -1 muR=0.20000E+01 muF=0.10000E+01'
+            result = self.read_events(True, -9, label=label, show_label=True)
+            output = next(line for line in result.splitlines() if line.startswith('label '))
+            self.assertIn('dyn= -1 muR=0.20000E+01 muF=0.10000E+01', output)
+            self.assertEqual('tag=' in output, tag != 0)
 
 
 @unittest.skipUnless(shutil.which('bash'), 'requires bash')

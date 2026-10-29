@@ -1,0 +1,23 @@
+Isolated incoming-gluon normalization diagnostic
+
+Only incoming gluon table values (II/IF) are replaced by sqrt(max(T,0)).
+The production table and caller are untouched; no FF/FSR transformation.
+Reference: existing Pythia8.313 Simple, alphaS=.118, PDF13, stable ttbar.
+This is a common-cutoff test, not the actual-first-emission comparison.
+
+channel q[GeV] rawMode1 diagnostic SimpleCDF rawRatio diagnosticRatio
+all         20 0.045100 0.136724 0.178511 0.252644 0.765914+/-0.007210
+all         50 0.348732 0.554525 0.562763 0.619678 0.985362+/-0.003119
+all        100 0.805103 0.892788 0.890499 0.904103 1.002570+/-0.000871
+gg          20 0.021724 0.123386 0.156189 0.139085 0.789979+/-0.007070
+gg          50 0.313222 0.541561 0.543859 0.575925 0.995774+/-0.003266
+gg         100 0.792382 0.889674 0.885340 0.895004 1.004895+/-0.000889
+qqbar       20 0.258475 0.258475 0.382267 0.676163 0.676163+/-0.016521
+qqbar       50 0.672865 0.672865 0.735320 0.915064 0.915064+/-0.008764
+qqbar      100 0.921218 0.921218 0.937597 0.982531 0.982531+/-0.003453
+
+FSR components and all qqbar results are bitwise unchanged.
+
+This is a hypothesis test, not a universal root prescription: a full-radiator probability need not factor into identical colour-line probabilities for arbitrary geometry. The source API contract must be fixed explicitly before production use.
+
+Reproduce: python tests/validation/delta_noemission/mode1_gluon_normalization.py STUDY_DIRECTORY OUTPUT_DIRECTORY

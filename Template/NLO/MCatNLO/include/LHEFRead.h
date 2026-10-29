@@ -52,6 +52,13 @@ class MyReader {
 	  if (hs.find("<weight id") != std::string::npos) {
 	    std::string sRWGT = hs.substr(hs.find("'>")+2,hs.find("</w")-3);
 	    sRWGT = sRWGT.substr(0,sRWGT.find("<"));
+	    // tag=0 is the sum over coupling orders. Expose its usual
+	    // dyn/muR/muF label to HwU; retain the order-resolved labels.
+	    std::istringstream label(sRWGT);
+	    std::string first;
+	    int tag;
+	    if ((label >> first) && first == "tag=" && (label >> tag) && tag == 0)
+	      std::getline(label,sRWGT);
 	    sprintf(cwgtinfo_weights_info[cwgtinfo_nn],format_str.str().c_str(),sRWGT.c_str());
 	    ++cwgtinfo_nn;
 	  }
@@ -96,7 +103,9 @@ class MyReader {
       // TV: change the line below to read the rwgt block even if the
       // the jwgtinfo is 0 (when no scale or PDF variation is done)
       //if (jwgtinfo != 9) {
-      if (jwgtinfo != 9 && jwgtinfo != 0) {
+      // Negative jwgtinfo also stores <mgrwgt> coefficients. The <rwgt>
+      // weights are still present and must reach the shower analysis.
+      if (jwgtinfo != 9 && jwgtinfo != -9 && jwgtinfo != 0) {
 	return;
       }
       else {

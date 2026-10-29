@@ -1,0 +1,221 @@
+{
+  "current_commit": "801a3417c98335f33894376df6e1005221ec53a6",
+  "nonshallow": true,
+  "scope": "all locally available refs; renamed default paths and symlink checked",
+  "default_versions": [
+    {
+      "label": "original",
+      "commit": "16e0bf7683bf7342401e43a0f344e98267222125",
+      "author_date": "2019-03-19T16:07:02+01:00",
+      "subject": "Added sudakov_template.f in the SudGen folder. It can be used as a default sudakov.f file.",
+      "path": "SudGen/sudakov_template.f",
+      "blob": "67544032eab0740ae9fe885ffe51e3e7e12d2302",
+      "sha256": "dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9",
+      "bytes": 2648508,
+      "ancestor_of_head": false
+    },
+    {
+      "label": "moved",
+      "commit": "9fb59956b7b8e2b40b2c9f3bae6eab7baa1c815c",
+      "author_date": "2020-11-05T10:10:29+01:00",
+      "subject": "moved the SudGen directory into the vendor directory.",
+      "path": "vendor/SudGen/sudakov_template.f",
+      "blob": "67544032eab0740ae9fe885ffe51e3e7e12d2302",
+      "sha256": "dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9",
+      "bytes": 2648508,
+      "ancestor_of_head": false
+    },
+    {
+      "label": "squashed",
+      "commit": "26a54b50ccc033771c258b825ae9cd6ca07db11d",
+      "author_date": "2023-05-12T18:40:54+02:00",
+      "subject": "3.5.0 (#53)",
+      "path": "vendor/SudGen/sudakov_template.f",
+      "blob": "67544032eab0740ae9fe885ffe51e3e7e12d2302",
+      "sha256": "dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9",
+      "bytes": 2648508,
+      "ancestor_of_head": true
+    },
+    {
+      "label": "current",
+      "commit": "801a3417c98335f33894376df6e1005221ec53a6",
+      "author_date": "2026-10-25T08:26:15+00:00",
+      "subject": "Fix coloured-core scales and Pythia shower bookkeeping",
+      "path": "vendor/SudGen/sudakov_template.f",
+      "blob": "67544032eab0740ae9fe885ffe51e3e7e12d2302",
+      "sha256": "dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9",
+      "bytes": 2648508,
+      "ancestor_of_head": true
+    }
+  ],
+  "unique_default_blobs": [
+    "67544032eab0740ae9fe885ffe51e3e7e12d2302 vendor/SudGen/sudakov_template.f"
+  ],
+  "unique_symlink_blobs": [
+    "d48a92af2fe910dd2e207a6013d1953cb81f4d3d vendor/SudGen/sudakov.f"
+  ],
+  "symlink_target": "sudakov_template.f",
+  "archives": [
+    {
+      "file": "sudakov_r515_PDFmode0.f.gz",
+      "first_commit": "df4187461e8d10f05e78987dd8de5f02fe4e719a",
+      "first_date": "2019-08-08",
+      "sha256": "55d18d010c9b3939e4117629b2daf120991a55a6b62a44bb72ef16082cce5a92",
+      "unchanged_since_addition": true
+    },
+    {
+      "file": "sudakov_r515_PDFmode1.f.gz",
+      "first_commit": "df4187461e8d10f05e78987dd8de5f02fe4e719a",
+      "first_date": "2019-08-08",
+      "sha256": "a59f3a7ad1396d74175120c957fa564991d614f064d482e07839b4b1969463a6",
+      "unchanged_since_addition": true
+    },
+    {
+      "file": "sudakov_r515_PDFmode2.f.gz",
+      "first_commit": "df4187461e8d10f05e78987dd8de5f02fe4e719a",
+      "first_date": "2019-08-08",
+      "sha256": "b360d1b9fe0d8db6d572231fb1681688ea48235da5069d5fed516235d85c18ca",
+      "unchanged_since_addition": true
+    }
+  ],
+  "benchmark": {
+    "description": "unmodified table ratio T(q,m)/T(Q,m), no roots or PDF factors",
+    "q_GeV": 20,
+    "Q_GeV": 200,
+    "mDip_GeV": 500,
+    "values": [
+      {
+        "table": "shipped",
+        "pdg": 21,
+        "type": 1,
+        "mass": 500.0,
+        "stop": 20.0,
+        "start": 200.0,
+        "num": 0.010457182809181538,
+        "den": 0.9788035718192881,
+        "ratio": 0.010683637769879531
+      },
+      {
+        "table": "shipped",
+        "pdg": 2,
+        "type": 1,
+        "mass": 500.0,
+        "stop": 20.0,
+        "start": 200.0,
+        "num": 0.6591003970180259,
+        "den": 0.9999999999999999,
+        "ratio": 0.659100397018026
+      },
+      {
+        "table": "shipped",
+        "pdg": 6,
+        "type": 4,
+        "mass": 500.0,
+        "stop": 20.0,
+        "start": 200.0,
+        "num": 0.9999999999999999,
+        "den": 0.9999999999999999,
+        "ratio": 1.0
+      },
+      {
+        "table": "archive_pdf0",
+        "pdg": 21,
+        "type": 1,
+        "mass": 500.0,
+        "stop": 20.0,
+        "start": 200.0,
+        "num": 0.3711311159078465,
+        "den": 0.9356966906065267,
+        "ratio": 0.39663613180813545
+      },
+      {
+        "table": "archive_pdf0",
+        "pdg": 2,
+        "type": 1,
+        "mass": 500.0,
+        "stop": 20.0,
+        "start": 200.0,
+        "num": 0.6667248829735208,
+        "den": 0.9817777727203936,
+        "ratio": 0.6790995900488791
+      },
+      {
+        "table": "archive_pdf0",
+        "pdg": 6,
+        "type": 4,
+        "mass": 500.0,
+        "stop": 20.0,
+        "start": 200.0,
+        "num": 0.6539303821322364,
+        "den": 0.9963989760625022,
+        "ratio": 0.6562937114973677
+      },
+      {
+        "table": "archive_pdf1",
+        "pdg": 21,
+        "type": 1,
+        "mass": 500.0,
+        "stop": 20.0,
+        "start": 200.0,
+        "num": 0.29182808517358483,
+        "den": 0.8894255493388782,
+        "ratio": 0.328108502606547
+      },
+      {
+        "table": "archive_pdf1",
+        "pdg": 2,
+        "type": 1,
+        "mass": 500.0,
+        "stop": 20.0,
+        "start": 200.0,
+        "num": 0.5926244651697639,
+        "den": 0.9511813164953767,
+        "ratio": 0.623040481233679
+      },
+      {
+        "table": "archive_pdf1",
+        "pdg": 6,
+        "type": 4,
+        "mass": 500.0,
+        "stop": 20.0,
+        "start": 200.0,
+        "num": 0.6539303821322364,
+        "den": 0.9963989760625022,
+        "ratio": 0.6562937114973677
+      },
+      {
+        "table": "archive_pdf2",
+        "pdg": 21,
+        "type": 1,
+        "mass": 500.0,
+        "stop": 20.0,
+        "start": 200.0,
+        "num": 0.3448700121881665,
+        "den": 0.9687240435320131,
+        "ratio": 0.3560043899919675
+      },
+      {
+        "table": "archive_pdf2",
+        "pdg": 2,
+        "type": 1,
+        "mass": 500.0,
+        "stop": 20.0,
+        "start": 200.0,
+        "num": 0.6373108272592938,
+        "den": 0.9868661264338089,
+        "ratio": 0.645792585426266
+      },
+      {
+        "table": "archive_pdf2",
+        "pdg": 6,
+        "type": 4,
+        "mass": 500.0,
+        "stop": 20.0,
+        "start": 200.0,
+        "num": 0.6539303821322364,
+        "den": 0.9963989760625022,
+        "ratio": 0.6562937114973677
+      }
+    ]
+  }
+}

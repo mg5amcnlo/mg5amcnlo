@@ -1,0 +1,159 @@
+{
+  "samples": {
+    "dy_fixed": {
+      "messages": {
+        "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 285,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 5204
+      },
+      "log_sha256": {
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard00.log": "a47554c71662ad495c736c2d74065f80e7b3ec9df43bc669d4a138af614f2351",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard01.log": "7aacefecc9c21855686d09374685a408eb835e1ed5d00b55a085919b233e3c80",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard02.log": "03788102bac6c0e9153eb567e5eca3f90c255ac207432e78c4cce0ca344adc21",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard03.log": "acd411fb0ea86a1f5ea852f87bd90c0cd1801c505f46cb8687f7d2af7eca9d4d",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard04.log": "488aab4148409a6940a9c9196f010c62df2ae4f719cc3067711078a4d16c26d4",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard05.log": "b56a2a3fafa49e9664e251b10b59e62f71885445b7a8963bcae0f4e3eff628e5",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard06.log": "734d62a43c1c782e9c0520a36ba4b4392dadae336952f4c43363694d22e27874",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed_shard07.log": "94baa62152cb93c7587c8ca38df7b7800c392c9964843c017f2a1164c37a8dc3"
+      },
+      "invariant_mass_range_GeV": [
+        66.52957770862398,
+        114.97452425198227
+      ],
+      "incoming_abs_flavour_counts": {
+        "1": 388,
+        "2": 386,
+        "3": 115,
+        "5": 43,
+        "4": 68
+      },
+      "statistics": {
+        "born": 1000,
+        "trials": 300000,
+        "emitting": 285755,
+        "no_emission": 14245,
+        "files": {
+          "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed.born.jsonl": "0084ae185071a2fac82cbd9754741ecfbfa6799d671bfc614f1e279611b1bfde",
+          "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed.trials.jsonl": "699d6e3f8a99bc8da51bf1aa45caccd10ff895be14db8f220de6cc9c40694d58",
+          "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed.settings.cmnd": "9a9bdc597d88ffa690a25e945f65c8a4a338212a5e8fc0829290994040898d0d"
+        },
+        "maximum_relative_Born_replay_difference": 3.810285420513537e-13
+      }
+    },
+    "dy_damped": {
+      "messages": {
+        "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 310,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 5362
+      },
+      "log_sha256": {
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard00.log": "593d7642d76384a894deebc4f313e66f29d7fb823fc77d5c9509dfd740195cde",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard01.log": "2ee924c75b761cec6e5849a3f17f9977e8c973f7c17b6c228b53178c96281819",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard02.log": "95a154f4c5427d37ea87d0a11830dd26d8ee030de0267f7c2fe2b021aa56d692",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard03.log": "c7905a43b1e93eb276554e32507ccbcd23376659bd0fe82af01f4e2b0cc26323",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard04.log": "f0bcee97bb73186fc44ca4365bbb76edf8466311597eafd812a1b873e8ecc286",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard05.log": "bd869d7b5fa71802dc7d8ff81a46c08eaf9bdeee29afd7db207deb984a38ad72",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard06.log": "ca029e6bd5bbc778e5d72f0851790b330fe799e10f258732c8db6f0b9aaa0464",
+        "/export/tmp/rikkert/delta_singlets_20261028/dy_damped_shard07.log": "3adc108d319d7d93aeb26ac386d932e20f117c5152afffc2b48052e20ff98d96"
+      },
+      "invariant_mass_range_GeV": [
+        66.52957770862398,
+        114.97452425198227
+      ],
+      "incoming_abs_flavour_counts": {
+        "1": 388,
+        "2": 386,
+        "3": 115,
+        "5": 43,
+        "4": 68
+      },
+      "statistics": {
+        "born": 1000,
+        "trials": 300000,
+        "emitting": 284506,
+        "no_emission": 15494,
+        "files": {
+          "/export/tmp/rikkert/delta_singlets_20261028/dy_damped.born.jsonl": "7993cc57a7753ff049d2c865c780dea6851bcb4a7918ae2b6beea1ff01114d06",
+          "/export/tmp/rikkert/delta_singlets_20261028/dy_damped.trials.jsonl": "169ea4fb56df70126111997aabcd65adb6c5779eaa18a730e0b5e0d65a319561",
+          "/export/tmp/rikkert/delta_singlets_20261028/dy_damped.settings.cmnd": "0cdbc9a939125f1be2b27ae337793949f41fef5ebc3b29c00b1020fce06bb05f"
+        },
+        "maximum_relative_Born_replay_difference": 3.810285420513537e-13
+      }
+    },
+    "higgs_fixed": {
+      "messages": {
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1676,
+        "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 1
+      },
+      "log_sha256": {
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard00.log": "13388c7bb25a3d016b964e66894bc62f20422f8de0537fd3f97951313ba669be",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard01.log": "d8da0230b16fc6e58f5d3f493fda3969ecbe533b5dfc894e24ca631384264be9",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard02.log": "574ebdb6b98e462a35365e53bff7b2e7172b41dd72629cf9b24b9eb32b79a874",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard03.log": "fbe948e3c36824f61c59c822977e1cb2d061440c1d65c520c7913c41b3103304",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard04.log": "1ec68c60e5734fa3a68be67cbd74ac6b6524160e26da76d29dd3573d8706d567",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard05.log": "398b783f4da0ceb8db98455b4f0dfabd59a1b9ae278961756d7863d900fbe7de",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard06.log": "4b62c3bbbe7f34e9821c916680cd3f2d9beaca7d1190b7bebc35590512ea6de9",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed_shard07.log": "c7f39acc93c29698a30144696d7bd6ce97851686856eb78c4abdd929641b8977"
+      },
+      "invariant_mass_range_GeV": [
+        124.86758267843484,
+        125.10935319902799
+      ],
+      "incoming_abs_flavour_counts": {
+        "21": 1000
+      },
+      "statistics": {
+        "born": 1000,
+        "trials": 300000,
+        "emitting": 299983,
+        "no_emission": 17,
+        "files": {
+          "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed.born.jsonl": "81eed994c86ecd989739a35052e36cb02a809abfc59b02df69fa4b9e20056741",
+          "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed.trials.jsonl": "0649dc5076ef57d45343a247db77fef13d370bbde27ab386d708bdbeb4955743",
+          "/export/tmp/rikkert/delta_singlets_20261028/higgs_fixed.settings.cmnd": "5bb31a99083fd5c6e4ae1f425acb30d8bdcd14682e7592420dca320e0d610c97"
+        },
+        "maximum_relative_Born_replay_difference": 5.419429206396266e-14
+      }
+    },
+    "higgs_damped": {
+      "messages": {
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2024,
+        "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 12
+      },
+      "log_sha256": {
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard00.log": "e13a25ab6268b0b260134f0cac950af00782af751281501a04fdc974c257c6e9",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard01.log": "107d76c004b3d6c6a6c008a88dcb38949f77d1d119945ec86dd4921bf7e432c2",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard02.log": "7c713a8b4975023624ed9f43f884e87b4602176fb513b0a7314b51ebd8d97b1e",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard03.log": "4a60e05501801836cd0e21010eafc9580bef6ca63b4e0f7a33639e4c2937278a",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard04.log": "6be63cabe0b77f1c0c91662389b354595e53c838ec290901f6c62964d8457993",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard05.log": "8c73d071fb77dfad700a8cc6f06f854623e23d8cbecee707fd7bcafbc8353b33",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard06.log": "abc259368a7ae018b364c4a2e9d29cafae8d4bef440d6eb9635ded0c09ba06a3",
+        "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped_shard07.log": "52a0ec80f66e495ee70761b5585466b3e98c037975c2ca8a70c8b4255ac99d54"
+      },
+      "invariant_mass_range_GeV": [
+        124.86758267843484,
+        125.10935319902799
+      ],
+      "incoming_abs_flavour_counts": {
+        "21": 1000
+      },
+      "statistics": {
+        "born": 1000,
+        "trials": 300000,
+        "emitting": 299980,
+        "no_emission": 20,
+        "files": {
+          "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped.born.jsonl": "65c408573f3927cdd5add35dc3c18dd522996d2c0a3b3f64a8c84bd89967038f",
+          "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped.trials.jsonl": "a6dc9d44956469973f48218194c5c809d6e6de4aecdf3731573af8f9a1e3afdf",
+          "/export/tmp/rikkert/delta_singlets_20261028/higgs_damped.settings.cmnd": "579149697c743fe0802d71cb7483d66edb08bfada95ae9e8e8d52705c33ad35a"
+        },
+        "maximum_relative_Born_replay_difference": 5.419429206396266e-14
+      }
+    }
+  },
+  "definition": "Counts from Pythia end-of-run warning/error summaries, across complete showers; not restricted to the first emission.",
+  "checks": [
+    "No Pythia Error or Abort messages in any shard summary",
+    "All 1.2 million trial records successful and first-QCD branching ISR, as checked by run driver",
+    "Every reference sample has 1000 Born states and 300 repetitions",
+    "All generated Born momenta are massless incoming and replayed within recorded tolerance"
+  ]
+}

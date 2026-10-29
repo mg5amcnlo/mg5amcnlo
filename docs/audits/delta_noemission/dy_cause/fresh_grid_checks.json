@@ -1,0 +1,84 @@
+{
+  "checks": [
+    {
+      "alpha": 0.13,
+      "mode": 1,
+      "messages": [
+        [
+          2,
+          "Warning in PhaseSpace::trialKin123: maximum for cross section violated"
+        ],
+        [
+          1,
+          "Warning in Pythia::init: be aware that successive calls to init() do not clear previous settings"
+        ],
+        [
+          4,
+          "Warning in SimpleSpaceShower::init: pTmin too low"
+        ]
+      ],
+      "settings_sha256": "ed1bb7a5cb75b54dc8ba87832c14ed8822e39e05fcced7a6180bdf33e3654156"
+    },
+    {
+      "alpha": 0.13,
+      "mode": 2,
+      "messages": [
+        [
+          2,
+          "Warning in PhaseSpace::trialKin123: maximum for cross section violated"
+        ],
+        [
+          1,
+          "Warning in Pythia::init: be aware that successive calls to init() do not clear previous settings"
+        ],
+        [
+          4,
+          "Warning in SimpleSpaceShower::init: pTmin too low"
+        ]
+      ],
+      "settings_sha256": "c236b991922eb3a27e3ee8a3cbf66e1f79d7ad820e139c25184daef996b8fa06"
+    },
+    {
+      "alpha": 0.1365,
+      "mode": 1,
+      "messages": [
+        [
+          2,
+          "Warning in PhaseSpace::trialKin123: maximum for cross section violated"
+        ],
+        [
+          1,
+          "Warning in Pythia::init: be aware that successive calls to init() do not clear previous settings"
+        ],
+        [
+          4,
+          "Warning in SimpleSpaceShower::init: pTmin too low"
+        ]
+      ],
+      "settings_sha256": "e099fb800c5d3b23abe06e45b26afc0b49f977830c696f49c2ddde273694605e"
+    },
+    {
+      "alpha": 0.1365,
+      "mode": 2,
+      "messages": [
+        [
+          2,
+          "Warning in PhaseSpace::trialKin123: maximum for cross section violated"
+        ],
+        [
+          1,
+          "Warning in Pythia::init: be aware that successive calls to init() do not clear previous settings"
+        ],
+        [
+          4,
+          "Warning in SimpleSpaceShower::init: pTmin too low"
+        ]
+      ],
+      "settings_sha256": "9b325680bdf01eb6b3b9d897eccc66794d9beef1a112d6e2738daa27b27239a4"
+    }
+  ],
+  "direct_trials": 10000000,
+  "uncertainty": "Quoted standard errors are fresh Bernoulli trial sampling only; archive generation and interpolation uncertainties are not included in difference_sigma.",
+  "interpretation": "At these benchmark points archive quark probabilities are within0.16percent of freshISRalphaS=.1365. Contemporary wrapper declares.130; the numerical coupling fingerprint does not prove actual historical generation inputs.",
+  "no_production_changes": true
+}

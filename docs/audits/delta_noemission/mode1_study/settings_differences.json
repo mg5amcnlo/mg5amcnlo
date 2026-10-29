@@ -1,0 +1,34 @@
+{
+  "PDF13": {
+    "Random:seed": [
+      "72883",
+      "10279300"
+    ],
+    "SpaceShower:alphaSvalue": [
+      "0.118",
+      "0.13"
+    ],
+    "TimeShower:alphaSvalue": [
+      "0.118",
+      "0.1365"
+    ]
+  },
+  "PDF15": {
+    "Random:seed": [
+      "72883",
+      "10279500"
+    ],
+    "PDF:pSet": [
+      "13",
+      "15"
+    ],
+    "SpaceShower:alphaSvalue": [
+      "0.118",
+      "0.13"
+    ],
+    "TimeShower:alphaSvalue": [
+      "0.118",
+      "0.1365"
+    ]
+  }
+}

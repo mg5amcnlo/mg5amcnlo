@@ -1,12 +1,34 @@
 """Reuse central luminosities without losing native flavour or PDF state."""
 
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
 import unittest
 
 from tests.unit_tests.fks.test_momentum_maps import ROOT, TEMPLATE, fortran_routine
+
+
+@unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
+class TestPdg2PDFCache(unittest.TestCase):
+    def test_flavour_keys_and_ring_wrap(self):
+        with tempfile.TemporaryDirectory(prefix='mg5_pdg2pdf_') as tmp:
+            work = Path(tmp)
+            shutil.copyfile(ROOT / 'Template/Common/Source/PDF/pdf.inc', work / 'pdf.inc')
+            shutil.copyfile(TEMPLATE / 'timing_variables.inc', work / 'timing_variables.inc')
+            executable = work / 'check_pdg2pdf_cache'
+            result = subprocess.run([
+                shutil.which('gfortran'), '-O2', '-std=legacy', '-fcheck=all',
+                '-ffixed-line-length-none', '-I', str(work),
+                str(ROOT / 'Template/NLO/Source/PDF/pdg2pdf_lhapdf6.f'),
+                str(ROOT / 'Template/NLO/Source/timing.f'),
+                str(ROOT / 'tests/input_files/check_pdg2pdf_cache.f90'),
+                '-o', str(executable)], cwd=work, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            result = subprocess.run([str(executable)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn('PASS pdg2pdf cache', result.stdout)
 
 
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
@@ -31,12 +53,15 @@ class TestPDFLuminosityCache(unittest.TestCase):
                 shutil.copyfile(TEMPLATE / name, work / name)
             (work / 'modules.f90').write_text(
                 'module mint_module\n'
+                'logical :: vs_vcomp=.false.\n'
                 'double precision :: virt_wgt_mint(0:1)=0d0,born_wgt_mint(0:1)=0d0\n'
                 'end module\n'
                 'module FKSParams\nlogical :: separate_flavour_configs=.false.\nend module\n')
             (work / 'weights.f').write_text('\n'.join(
                 fortran_routine(TEMPLATE / 'fks_singular.f', name)
-                for name in ('include_PDF_and_alphas', 'separate_flavour_config')))
+                for name in ('include_PDF_and_alphas', 'separate_flavour_config')) + '\n' +
+                re.search(r'^      integer function find_virtual_mint_carrier\b.*?^      end\s*$',
+                          (TEMPLATE / 'fks_singular.f').read_text(), re.M | re.S).group(0))
             executable = work / 'check_pdf_cache'
             result = subprocess.run([
                 shutil.which('gfortran'), str(TEMPLATE.parent / 'Source/timing.f'), '-O2', '-std=legacy', '-fcheck=all',

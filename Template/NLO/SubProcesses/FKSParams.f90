@@ -16,6 +16,9 @@ module FKSParams
               SelectedCouplingOrders(maxCouplingTypes,0:maxCouplingsSelected), &
               QCD_squared_selected
   logical :: separate_flavour_configs,IncludeBornContributions,use_poly_virtual
+  ! Native virtual surrogate: 0 = grid/polynomial, 1 = colour dipoles,
+  ! 2 = colour dipoles and logarithms of all Born pairs (default).
+  integer :: VirtTrickSurrogate=2
   logical :: MCExplicitKLSum=.true.
   logical :: MCSubtractionAtFixedFlow=.true.
   logical :: FKSExplicitSum=.false.
@@ -114,6 +117,12 @@ contains
              read(68,*,end=999) FKSExplicitSum
           else if (buff .eq. '#UsePolyVirtual') then
              read(68,*,end=999) use_poly_virtual
+          else if (buff .eq. '#VirtTrickSurrogate') then
+             read(68,*,end=999) VirtTrickSurrogate
+             if (VirtTrickSurrogate.lt.0.or.VirtTrickSurrogate.gt.2) then
+                write(*,*) 'VirtTrickSurrogate must be 0, 1 or 2.'
+                stop 1
+             endif
           else if (buff .eq. '#VetoedContributionTypes') then
              read(68,*,end=999) VetoedContributionTypes(0)
              if (VetoedContributionTypes(0) .lt. 0.or. &
@@ -240,6 +249,7 @@ contains
        write(*,*) ' > MinVirtualFraction        = ',Min_virt_fraction
        write(*,*) ' > SeparateFlavourConfigs    = ',separate_flavour_configs
        write(*,*) ' > UsePolyVirtual            = ',use_poly_virtual
+       write(*,*) ' > VirtTrickSurrogate        = ',VirtTrickSurrogate
        write(*,*) ' > FKSFinalRecoil            = ',FKSFinalRecoil
        write(*,*) ' > FKSISRMapping             = ',FKSISRMapping
        write(*,*) ' > Pythia8MMaxGamma           = ',Pythia8MMaxGamma
@@ -270,6 +280,7 @@ contains
     Min_virt_fraction=0.005d0
     separate_flavour_configs=.false.
     use_poly_virtual=.true.
+    VirtTrickSurrogate=2
     FKSFinalRecoil=0
     FKSISRMapping=0
     Pythia8MMaxGamma=10d0

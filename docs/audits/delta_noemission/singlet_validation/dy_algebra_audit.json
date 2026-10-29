@@ -1,0 +1,58 @@
+{
+  "rows": [
+    {
+      "sample": "dy_fixed",
+      "born": 1000,
+      "active_born_cut_points": 16018,
+      "endpoint_born_cut_points": 3982,
+      "maximum_absolute_probability_error": {
+        "default": 3.860800568133982e-14,
+        "PDFmode1": 2.9254376698872875e-14,
+        "PDFmode2": 3.4583447217073626e-14
+      },
+      "maximum_fixed_start_vs_beam_invariant_relative_error": 3.7444766871461733e-13
+    },
+    {
+      "sample": "dy_damped",
+      "born": 1000,
+      "active_born_cut_points": 14232,
+      "endpoint_born_cut_points": 5768,
+      "maximum_absolute_probability_error": {
+        "default": 4.6129766673175254e-14,
+        "PDFmode1": 2.7783331191244542e-14,
+        "PDFmode2": 3.658184866139891e-14
+      },
+      "maximum_fixed_start_vs_beam_invariant_relative_error": 0.0
+    }
+  ],
+  "definition": "Direct product clip(Fa*Ra)*clip(Fb*Rb), using raw Fortran table calls, Pythia PDF15 and definite incoming flavours. No native Delta caller is invoked.",
+  "mass_definition": "M=sqrt(4*Ebeam_parton_A*Ebeam_parton_B) for massless collinear Born incoming partons",
+  "table_order_in_saved_arrays": [
+    "default",
+    "PDFmode2",
+    "PDFmode2_root",
+    "PDFmode1",
+    "PDFmode1_root"
+  ],
+  "checks": [
+    "Every active tested cutoff is at least1.01GeV",
+    "Independent table/PDF product agrees with every saved active DY probability within1e-10",
+    "Every saved probability equals1 for cutoffs at or above its starting scale"
+  ],
+  "limitation": "This checks table arguments and caller algebra, not the physical fidelity of the archived tables or the reference-shower measurement.",
+  "script_sha256": "321b9a258cce121be498b4d2b61e59340ab3a6129fb7dc086737d433bcefc14d",
+  "input_sha256": {
+    "/export/tmp/rikkert/delta_singlets_20261028/analysis/pythia_pdf.so": "88c210fbc18613f76bfdc2f41d524e6401473eb9596e29ef0594e97290f6cb12",
+    "/export/tmp/rikkert/Pythia/pythia8313/share/Pythia8/pdfdata/NNPDF23_nlo_as_0119_qed_0000.dat": "8315541674b604fe82ba900436255551fda350c98fdd4d1190b398ed2423accc",
+    "/export/tmp/rikkert/delta_singlets_20261028/analysis/default/delta.so": "29cb6cb4bb447a35a872c0daf64ab390e249e211e3a1daeb49bc6102b2543c3a",
+    "/export/tmp/rikkert/delta_singlets_20261028/analysis/default/sudakov.f": "dc5894b2fd611f7c6cf0a1b3ad7c8705ab652ad8070d4ed44de4b43447b8d0e9",
+    "/export/tmp/rikkert/delta_singlets_20261028/analysis/PDFmode1/delta.so": "27915912c8cfe5ee201fc2b48551120ea84b5917d2f736027398718d2d25dc55",
+    "/export/tmp/rikkert/delta_singlets_20261028/analysis/PDFmode1/sudakov.f": "16e07784f53f347f64b3fb5168100c2b6ca0747c8dd2dd0f97370f0d27b5e435",
+    "/export/tmp/rikkert/delta_singlets_20261028/analysis/PDFmode2/delta.so": "22a1fc6d2a0757ee97a7a9446a6172543bbd9ed80325da2a6926a66a9ae9823a",
+    "/export/tmp/rikkert/delta_singlets_20261028/analysis/PDFmode2/sudakov.f": "84c4fef64348eb3ba10985f3921f88cabe8889a3ec0238bda520034bcaea9208",
+    "/export/tmp/rikkert/delta_singlets_20261028/dy_fixed.born.jsonl": "0084ae185071a2fac82cbd9754741ecfbfa6799d671bfc614f1e279611b1bfde",
+    "/export/tmp/rikkert/delta_singlets_20261028/analysis/dy_fixed.npz": "0d033375ab70b6ef1bb5ff8a62cc32a0496cb620541d2768f823d616f828d131",
+    "/export/tmp/rikkert/delta_singlets_20261028/dy_damped.born.jsonl": "7993cc57a7753ff049d2c865c780dea6851bcb4a7918ae2b6beea1ff01114d06",
+    "/export/tmp/rikkert/delta_singlets_20261028/analysis/dy_damped.npz": "7f8ac20cc4f27e9d5d0f6cbf06305a56626b0dd96f74b349d0eb25cc1d2c7b1d"
+  }
+}

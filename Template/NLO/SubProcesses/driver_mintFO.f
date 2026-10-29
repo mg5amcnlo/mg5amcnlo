@@ -315,6 +315,7 @@ c Share the sampled Born within this evaluation when sectors permit it.
       if (new_point .and. ifl.ne.2) then
          pass_cuts_check=.false.
       endif
+      call vs_begin_point
       if (firsttime) then
          firsttime=.false.
          call setup_ini_fin_fks_map(ini_fin_fks_map)
@@ -457,6 +458,8 @@ c Include PDFs and alpha_S and reweight to include the uncertainties
 
 c Include the bias weight specified in the bias_weight_function
       call include_bias_wgt
+c Fit the virtual surrogate after the PDF and bias factors are included.
+      call virt_surrogate_fit_point
 
       if (doreweight) then
          if (do_rwgt_scale .and. ickkw.ne.-1) call reweight_scale

@@ -1,0 +1,200 @@
+{
+  "rows": [
+    {
+      "channel": "all",
+      "q_GeV": 20.0,
+      "born": 871,
+      "raw_mode1": 0.04509972486102187,
+      "diagnostic": 0.13672423549008741,
+      "shower": 0.17851128970531957,
+      "raw_ratio": 0.252643543920785,
+      "diagnostic_ratio": 0.7659136613476222,
+      "diagnostic_ratio_se": 0.007210273187149959,
+      "raw_isr": 0.06519558771484675,
+      "diagnostic_isr": 0.19187971917436414,
+      "unchanged_fsr": 0.7022745105116927
+    },
+    {
+      "channel": "all",
+      "q_GeV": 50.0,
+      "born": 871,
+      "raw_mode1": 0.34873183449465694,
+      "diagnostic": 0.5545252226307114,
+      "shower": 0.5627631075392269,
+      "raw_ratio": 0.6196778534746948,
+      "diagnostic_ratio": 0.9853617182822503,
+      "diagnostic_ratio_se": 0.003119269295246598,
+      "raw_isr": 0.3691693714422831,
+      "diagnostic_isr": 0.5905100070051393,
+      "unchanged_fsr": 0.9303595826029963
+    },
+    {
+      "channel": "all",
+      "q_GeV": 100.0,
+      "born": 871,
+      "raw_mode1": 0.8051030783581202,
+      "diagnostic": 0.8927882632253539,
+      "shower": 0.8904994259471871,
+      "raw_ratio": 0.9041028605961937,
+      "diagnostic_ratio": 1.0025702849563685,
+      "diagnostic_ratio_se": 0.0008713355657717971,
+      "raw_isr": 0.8104134099362859,
+      "diagnostic_isr": 0.9000874124756383,
+      "unchanged_fsr": 0.9899895860633825
+    },
+    {
+      "channel": "gg",
+      "q_GeV": 20.0,
+      "born": 785,
+      "raw_mode1": 0.02172356923268801,
+      "diagnostic": 0.12338592433831357,
+      "shower": 0.15618895966029725,
+      "raw_ratio": 0.1390851778508265,
+      "diagnostic_ratio": 0.7899785273342715,
+      "diagnostic_ratio_se": 0.007070058921236701,
+      "raw_isr": 0.028921068603744392,
+      "diagnostic_isr": 0.16948397115309422,
+      "unchanged_fsr": 0.7095507404366369
+    },
+    {
+      "channel": "gg",
+      "q_GeV": 50.0,
+      "born": 785,
+      "raw_mode1": 0.3132217370815738,
+      "diagnostic": 0.5415606428987756,
+      "shower": 0.5438588110403396,
+      "raw_ratio": 0.5759247266444327,
+      "diagnostic_ratio": 0.9957743294860519,
+      "diagnostic_ratio_se": 0.0032663590912918082,
+      "raw_isr": 0.3283223848500486,
+      "diagnostic_isr": 0.5739118034172431,
+      "unchanged_fsr": 0.9339208402523228
+    },
+    {
+      "channel": "gg",
+      "q_GeV": 100.0,
+      "born": 785,
+      "raw_mode1": 0.7923821853750423,
+      "diagnostic": 0.8896736452723167,
+      "shower": 0.8853397027600848,
+      "raw_ratio": 0.8950035595430281,
+      "diagnostic_ratio": 1.004895231173662,
+      "diagnostic_ratio_se": 0.000888764651519946,
+      "raw_isr": 0.7966751466913862,
+      "diagnostic_isr": 0.8961733074707185,
+      "unchanged_fsr": 0.9908247437498002
+    },
+    {
+      "channel": "qqbar",
+      "q_GeV": 20.0,
+      "born": 86,
+      "raw_mode1": 0.25847509891034853,
+      "diagnostic": 0.25847509891034853,
+      "shower": 0.38226744186046513,
+      "raw_ratio": 0.6761629963890486,
+      "diagnostic_ratio": 0.6761629963890486,
+      "diagnostic_ratio_se": 0.01652130662702046,
+      "raw_isr": 0.39630602378711843,
+      "diagnostic_isr": 0.39630602378711843,
+      "unchanged_fsr": 0.6358577606153993
+    },
+    {
+      "channel": "qqbar",
+      "q_GeV": 50.0,
+      "born": 86,
+      "raw_mode1": 0.6728647004164041,
+      "diagnostic": 0.6728647004164041,
+      "shower": 0.7353197674418606,
+      "raw_ratio": 0.9150640717265981,
+      "diagnostic_ratio": 0.9150640717265981,
+      "diagnostic_ratio_se": 0.008764081876121554,
+      "raw_isr": 0.7420168653365179,
+      "diagnostic_isr": 0.7420168653365179,
+      "unchanged_fsr": 0.8978527540597249
+    },
+    {
+      "channel": "qqbar",
+      "q_GeV": 100.0,
+      "born": 86,
+      "raw_mode1": 0.9212182061687731,
+      "diagnostic": 0.9212182061687731,
+      "shower": 0.9375968992248063,
+      "raw_ratio": 0.982531199634326,
+      "diagnostic_ratio": 0.982531199634326,
+      "diagnostic_ratio_se": 0.0034526715461405846,
+      "raw_isr": 0.9358149988577533,
+      "diagnostic_isr": 0.9358149988577533,
+      "unchanged_fsr": 0.982366344390849
+    }
+  ],
+  "modification": "      pysudakov=tmp\n      if(abs(id).eq.21.and.(itype.eq.1.or.itype.eq.3))then\n        pysudakov=sqrt(max(tmp,0d0))\n      endif\n",
+  "definition": "Common stopping cut only; sqrt of incoming-gluon typeII/IF table return in an isolated copy; all other entries and caller unchanged.",
+  "source_sha256": {
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/vendor/SudGen/sudakov_r515_PDFmode1.f.gz": "a59f3a7ad1396d74175120c957fa564991d614f064d482e07839b4b1969463a6",
+    "/export/tmp/rikkert/delta_noemission_20261027/archive_validation/PDFmode1.npz": "f466c1fae3e3e49269f60c353251844eaaa64961f6d0b165bded4c0845b85742",
+    "/export/tmp/rikkert/delta_noemission_20261027/branch_exact.born.jsonl": "0fbbb8def7d8c9812314530f2864df79376453261b0d21c23ac6a9fb11359aa1",
+    "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/tests/validation/delta_noemission/mode1_gluon_normalization.py": "963e3dc3fd8139a42f46f6f7497a9546e4457e8a6832df2f8d64042bd6de62e6"
+  },
+  "modified_table_sha256": "53196f39bd9a08155ce8bc8d6166a722fb218bc5f352ca518316e72d21bbc3ee",
+  "table_provenance": {
+    "table": "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/gluon_normalization/mode1_incoming_gluon_root.f",
+    "table_sha256": "53196f39bd9a08155ce8bc8d6166a722fb218bc5f352ca518316e72d21bbc3ee",
+    "source_sha256": {
+      "Template/NLO/SubProcesses/montecarlocounter.f": "554432b7b09075c21a8484e5d7d34b261d345af1849d23c2402659bd9a14071f",
+      "Template/NLO/SubProcesses/mcatnlo_delta_scales.f90": "a010072c50e8e2ee2777e0a2116f7f06f8b4cff88a8417a88923eb1e4cd85124",
+      "Template/NLO/SubProcesses/MCmasses_PYTHIA8.inc": "0374ba4b1855d0dc1de74f8f68ecc990ffe93d289cda0e01041f3274c04aae94"
+    },
+    "extracted_routines": [
+      "delta_leg_probability",
+      "gl_safe",
+      "pysudakov_safe",
+      "get_parton_id",
+      "setSudType",
+      "get_to_zero",
+      "emscafun",
+      "get_delta_connections"
+    ],
+    "compile_command": [
+      "gfortran",
+      "-O2",
+      "-std=legacy",
+      "-shared",
+      "-fPIC",
+      "-ffixed-line-length-none",
+      "-I/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses",
+      "-J/export/tmp/rikkert/delta_noemission_20261027/mode1_study/gluon_normalization/build",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/SubProcesses/mcatnlo_delta_scales.f90",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/gluon_normalization/build/delta_production.f",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/gluon_normalization/build/delta_wrapper.f90",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/gluon_normalization/build/sudakov.f",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/dfint.f",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/kerset.f",
+      "/export/tmp/rikkert/git/mg5amcnlo/MCcntRefactor_Sfun/Template/NLO/Source/CERNLIB/abend.f",
+      "-o",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/gluon_normalization/build/delta.so"
+    ]
+  },
+  "pdf_provenance": {
+    "pdf": "nn23nlo",
+    "convention": "x*f; x cancels in Delta PDF ratios",
+    "command": [
+      "gfortran",
+      "-O2",
+      "-std=legacy",
+      "-shared",
+      "-fPIC",
+      "-ffixed-line-length-none",
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/Source/PDF/NNPDFDriver.f",
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/Source/PDF/opendata.f",
+      "-o",
+      "/export/tmp/rikkert/delta_noemission_20261027/mode1_study/gluon_normalization/pdf/native_pdf.so"
+    ],
+    "sha256": {
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/Source/PDF/NNPDFDriver.f": "569c080439879972784ada0d6e0b040e8a7a93a0cf363cf99fa3bead12abae14",
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/Source/PDF/opendata.f": "bfaa0cd1c1d12b64785d833ae35e6dad093d80c45a5d26613e9fb6fc4e90b1c2",
+      "/export/tmp/rikkert/delta_noemission_20261027/TT/lib/Pdfdata/NNPDF23nlo_as_0119_qed_mem0.grid": "e1ad3115d9bc36f4cdf43268138ab6c2efb9a4803bff376f493c85260181213e"
+    }
+  },
+  "validation": "FSR components and all qqbar results are bitwise unchanged.",
+  "caution": "This is a hypothesis test, not a universal root prescription: a full-radiator probability need not factor into identical colour-line probabilities for arbitrary geometry. The source API contract must be fixed explicitly before production use."
+}
