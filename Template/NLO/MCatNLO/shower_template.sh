@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 SHOWER=$1
 #HEP-> hepmc/stdhep
@@ -17,9 +18,21 @@ fi
 
 # if one is splitting file cd to a new dir and link all files here
 if [[ "$NFILE" != "" ]]; then
-    mkdir run_$NFILE
-    cd run_$NFILE
-    cp -H ../events_$NFILE.lhe events.lhe
+    mkdir -p "run_$NFILE"
+    cd "run_$NFILE"
+    ln -sf "../events_$NFILE.lhe" events.lhe
+    # Deliver the log even when the shower or the analysis fails. Successful
+    # jobs no longer need their input link; the caller removes the split files
+    # after all jobs have finished.
+    finish_split_job() {
+        status=$?
+        if [ -f mcatnlo_run.log ]; then
+            mv mcatnlo_run.log "../mcatnlo_run_$NFILE.log"
+        fi
+        if [ "$status" -eq 0 ]; then rm -f events.lhe; fi
+        exit "$status"
+    }
+    trap finish_split_job EXIT
     if [ $SHOWER == "PYTHIA8" ] ; then
         cp ../Pythia8.exe ../Pythia8.cmd .
         # Each split job needs a different random sequence. Keep the first
@@ -48,7 +61,7 @@ PYTHIA_SEED
 fi
 
 if [ -e events.lhe.gz ] ; then
-    gunzip $RUN_NAME/events.lhe.gz
+    gunzip events.lhe.gz
 fi
 
 if [ "$SHOWER" == "HERWIG6" ] || [ "$SHOWER" == "PYTHIA6Q" ] || [ "$SHOWER" == "PYTHIA6PT" ] || [ "$SHOWER" == "HERWIG7" ] ; then
@@ -87,10 +100,9 @@ elif [ "$OUTPUT" == "TOP" ] || [ "$OUTPUT" == "HWU" ]; then
     else
         NAME="histfile"
     fi
-    # just tar all the topfiles which are found
-    tar -cf $NAME.tar *.top *.TOP *.HwU *.hwu *.HWU > tarlog.txt 2>&1
-fi
-
-if [[ "$NFILE" != "" ]]; then
-    mv mcatnlo_run.log ../mcatnlo_run_$NFILE.log
+    # Only pass existing files to tar. Unmatched globs used to make every
+    # analysis job report a tar error, even when its output was present.
+    shopt -s nullglob
+    histograms=( *.top *.TOP *.HwU *.hwu *.HWU )
+    tar -cf "$NAME.tar" -T /dev/null "${histograms[@]}" > tarlog.txt 2>&1
 fi

@@ -1,6 +1,7 @@
 from __future__ import division
 from __future__ import absolute_import
 import collections
+import codecs
 import random
 import re
 import operator
@@ -1142,33 +1143,86 @@ class EventFile(object):
         else:
             return out
 
-    def split(self, nb_event=0, partition=None, cwd=os.path.curdir, zip=False):
-        """split the file in multiple file. Do not change the weight!"""
+    def _iter_event_text(self, chunk_size=1024 * 1024):
+        """Read complete event blocks without parsing or reformatting particles.
 
-        nb_file = -1
-        for i, event in enumerate(self):
-            if (not (partition is None) and i==sum(partition[:nb_file+1])) or \
-                                   (partition is None and i % nb_event == 0):
-                if i:
-                    #close previous file
-                    current.write('</LesHouchesEvent>\n')
+        Scan buffered chunks, rather than making a Python call for every line.
+        Memory use is limited to a chunk plus the largest event. Keep the usual
+        iterator for subclasses which generate or mix events themselves.
+        """
+        if type(self) is not EventFile or self.eventgroup:
+            for event in self:
+                yield str(event)
+            return
+
+        opening = re.compile(r'(?m)^[ \t]*<event(?:[ \t][^>\r\n]*)?>')
+        closing = re.compile(r'(?m)^[ \t]*</event>[ \t]*\r?\n')
+        decoder = codecs.getincrementaldecoder(self.encoding)(errors='ignore')
+        pending = ''
+        while True:
+            chunk = self.file.read(chunk_size)
+            eof = not chunk
+            if isinstance(chunk, bytes):
+                chunk = decoder.decode(chunk, final=eof)
+            pending += chunk
+            if eof and pending and not pending.endswith('\n'):
+                pending += '\n'
+            end = 0
+            for match in closing.finditer(pending):
+                start = opening.search(pending, end, match.start())
+                if start is not None:
+                    yield pending[start.start():match.end()]
+                end = match.end()
+            pending = pending[end:]
+            if eof:
+                if opening.search(pending):
+                    raise ValueError('Incomplete LHE event in %s' % self.path)
+                return
+
+    def split(self, nb_event=0, partition=None, cwd=os.path.curdir, zip=False):
+        """Split into consecutive files, preserving event text and weights.
+
+        File names retain the historical ``<input>_<index>.lhe[.gz]`` form.
+        A partition can select only the first sum(partition) events.
+        """
+        if partition is None:
+            sizes = None
+            if nb_event <= 0 or int(nb_event) != nb_event:
+                raise ValueError('nb_event must be a positive integer')
+            size = int(nb_event)
+        else:
+            sizes = list(partition)
+            if any(n <= 0 or int(n) != n for n in sizes):
+                raise ValueError('partition sizes must be positive integers')
+            if not sizes:
+                return 0
+
+        nb_file = 0
+        current = None
+        remaining = 0
+        try:
+            for event in self._iter_event_text():
+                if current is None:
+                    suffix = '.lhe.gz' if zip else '.lhe'
+                    path = pjoin(cwd, '%s_%d%s' % (self.path, nb_file, suffix))
+                    current = EventFile(path, 'w')
+                    current.write(self.banner)
+                    remaining = int(sizes[nb_file]) if sizes is not None else size
+                    nb_file += 1
+                current.write(event)
+                remaining -= 1
+                if remaining == 0:
+                    current.write('</LesHouchesEvents>\n')
                     current.close()
-                # create the new file
-                nb_file +=1
-                # If end of partition then finish writing events here.
-                if not partition is None and (nb_file+1>len(partition)):
-                    return nb_file
-                if zip:
-                    current = EventFile(pjoin(cwd,'%s_%s.lhe.gz' % (self.path, nb_file)),'w')
-                else:
-                    current = open(pjoin(cwd,'%s_%s.lhe' % (self.path, nb_file)),'w')                    
-                current.write(self.banner)
-            current.write(str(event))
-        if i!=0:
-            current.write('</LesHouchesEvent>\n')
-            current.close()
-             
-        return nb_file +1
+                    current = None
+                    if sizes is not None and nb_file == len(sizes):
+                        break
+            if current is not None:
+                current.write('</LesHouchesEvents>\n')
+        finally:
+            if current is not None:
+                current.close()
+        return nb_file
 
     def update_HwU(self, hwu, fct, name='lhe', keep_wgt=False, maxevents=sys.maxsize):
         """take a HwU and add this event file for the function fct"""
