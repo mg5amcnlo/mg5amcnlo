@@ -986,7 +986,7 @@ class AskRunNLO(cmd.ControlSwitch):
     
     def __init__(self, question, line_args=[], mode=None, force=False,
                                                                   *args, **opt):
-        
+        self.allow_qed_ps = opt.pop('allow_qed_ps', False)
         self.me_dir = opt['mother_interface'].me_dir
         self.check_available_module(opt['mother_interface'].options)
         self.last_mode = opt['mother_interface'].last_mode
@@ -997,11 +997,18 @@ class AskRunNLO(cmd.ControlSwitch):
 
         hide_line = []
         if 'QED' in self.proc_characteristics['splitting_types']:
-            hide_line = ['madspin', 'shower', 'reweight', 'madanalysis']        
+            hide_line = ['madspin', 'shower', 'reweight', 'madanalysis']
+            if self.allow_qed_ps:
+                hide_line.remove('shower')
         
         super(AskRunNLO,self).__init__(self.to_control, opt['mother_interface'],
                                      *args, hide_line=hide_line, force=force,
                                       **opt)
+
+    @property
+    def qed_ps_restricted(self):
+        return ('QED' in self.proc_characteristics['splitting_types'] and
+                not self.allow_qed_ps)
 
     @property
     def answer(self):
@@ -1122,12 +1129,9 @@ class AskRunNLO(cmd.ControlSwitch):
 #    
     def get_allowed_fixed_order(self):
         """ """
-        
-        if self.proc_characteristics['ninitial'] == 1 or \
-           'QED' in self.proc_characteristics['splitting_types']:
+        if self.proc_characteristics['ninitial'] == 1 or self.qed_ps_restricted:
             return ['ON']
-        else:
-            return ['ON', 'OFF']
+        return ['ON', 'OFF']
         
     def set_default_fixed_order(self):
           
@@ -1135,8 +1139,8 @@ class AskRunNLO(cmd.ControlSwitch):
             self.switch['fixed_order'] = 'ON'
         elif self.proc_characteristics['ninitial'] == 1:
             self.switch['fixed_order'] = 'ON'
-        elif 'QED' in self.proc_characteristics['splitting_types']:
-             self.switch['fixed_order'] = 'ON'
+        elif self.qed_ps_restricted:
+            self.switch['fixed_order'] = 'ON'
         else:
             self.switch['fixed_order'] = 'OFF'
 
@@ -1148,11 +1152,9 @@ class AskRunNLO(cmd.ControlSwitch):
             return self.red % switch_value
     
     def print_options_fixed_order(self):
-        
-        if 'QED' in self.proc_characteristics['splitting_types']:
+        if self.qed_ps_restricted:
             return "No NLO+PS available for EW correction"
-        else:
-            return self.print_options('fixed_order', keep_default=True)
+        return self.print_options('fixed_order', keep_default=True)
     
     def print_options_madspin(self):
         if 'QED' in self.proc_characteristics['splitting_types']:
@@ -1171,26 +1173,24 @@ class AskRunNLO(cmd.ControlSwitch):
     
    
     def consistency_QED(self, key, value, switch):
-        """ temporary way to forbid event generation due to lack of validation"""
-        
-#        if True:
-        if 'QED' in self.proc_characteristics['splitting_types']:
+        """Restrict unvalidated QED matching unless explicitly enabled."""
+        if self.qed_ps_restricted:
             out = {}
-            to_check ={'fixed_order': ['ON'],
-                       'shower': ['OFF'],
-                       'madanalysis': ['OFF'],
-                       'madspin': ['OFF','none'],
-                       'reweight': ['OFF']}
-            for key, allowed  in to_check.items():        
-                if switch[key] not in allowed:
-                    out[key] = allowed[0]
+            to_check = {'fixed_order': ['ON'],
+                        'shower': ['OFF'],
+                        'madanalysis': ['OFF'],
+                        'madspin': ['OFF', 'none'],
+                        'reweight': ['OFF']}
+            for name, allowed in to_check.items():
+                if switch[name] not in allowed:
+                    out[name] = allowed[0]
                     if not self.nb_fo_warning:
-                        if 'QED' in self.proc_characteristics['splitting_types']:
-                            logger.warning("NLO+PS mode is not allowed for processes including electroweak corrections")
+                        logger.warning('NLO+PS mode is not allowed for processes '
+                                       'including electroweak corrections. Use '
+                                       '--allow_qed_ps for experimental runs.')
                         self.nb_fo_warning = 1
-        else: 
-            return self.check_consistency_with_all(key, value)
-        return out 
+            return out
+        return self.check_consistency_with_all(key, value)
     #apply to all related to the group 
     consistency_fixed_order = lambda self, *args, **opts: self.consistency_QED('fixed_order', *args, **opts)
     consistency_shower = lambda self, *args, **opts: self.consistency_QED('shower', *args, **opts)
@@ -1245,7 +1245,7 @@ class AskRunNLO(cmd.ControlSwitch):
         if hasattr(self, 'allowed_shower'):
             return self.allowed_shower
         
-        if 'QED' in self.proc_characteristics['splitting_types']:
+        if self.qed_ps_restricted:
             self.allowed_shower = ['OFF']
             return self.allowed_shower
 
@@ -1292,7 +1292,7 @@ class AskRunNLO(cmd.ControlSwitch):
     
     def set_default_shower(self): 
         
-        if 'QED' in self.proc_characteristics['splitting_types']:
+        if self.qed_ps_restricted:
             self.switch['shower'] = 'Not Avail'
         elif self.last_mode in ['LO', 'NLO', 'noshower', 'noshowerLO']:
             self.switch['shower'] = 'OFF'         
@@ -4038,6 +4038,37 @@ RESTART = %(mint_mode)s
             pjoin(self.me_dir, 'Events', self.run_name))
 
 
+    def collect_shower_logs(self, rundir):
+        """Archive logs per shower invocation, retaining links for diagnostics."""
+        event_dir = pjoin(self.me_dir, 'Events', self.run_name)
+        label = os.path.basename(rundir)[len('RUN_'):]
+        compile_log = pjoin(self.me_dir, 'mcatnlo.log')
+        if os.path.isfile(compile_log):
+            files.mv(compile_log, pjoin(event_dir, 'mcatnlo_%s.log' % label))
+
+        split_logs = sorted(misc.glob('mcatnlo_run_[0-9]*.log', rundir),
+                            key=lambda path: int(os.path.basename(path)[12:-4]))
+        logs = split_logs or misc.glob('mcatnlo_run.log', rundir)
+        archived = []
+        for log in logs:
+            job = '__%s' % os.path.basename(log)[12:-4] if split_logs else ''
+            destination = pjoin(event_dir, 'mcatnlo_run_%s%s.log' % (label, job))
+            files.mv(log, destination)
+            files.ln(destination, rundir, os.path.basename(log))
+            archived.append(destination)
+
+        # Existing diagnostic links and the FxFx summary use mcatnlo_run.log.
+        if split_logs:
+            combined = pjoin(event_dir, 'mcatnlo_run_%s.log' % label)
+            with open(combined, 'w') as output:
+                for log in archived:
+                    job = os.path.basename(log).rsplit('__', 1)[1][:-4]
+                    output.write('\n===== Shower job %s =====\n' % job)
+                    with open(log) as source:
+                        shutil.copyfileobj(source, output)
+            files.ln(combined, rundir, 'mcatnlo_run.log')
+        return archived
+
     def run_mcatnlo(self, evt_file, options):
         """runs mcatnlo on the generated event file, to produce showered-events
         """
@@ -4228,12 +4259,13 @@ RESTART = %(mint_mode)s
         #                  "It is needed for the correct running of PY8.2xx.\n" + \
         #                  "If this library cannot be found on your system, a crash will occur.")
 
-        misc.call(['./MCatNLO_MadFKS.inputs'], stdout=open(mcatnlo_log, 'w'),
-                    stderr=open(mcatnlo_log, 'w'), 
-                    cwd=pjoin(self.me_dir, 'MCatNLO'),
-                    env=(self.macnlops_continuation['environment']
-                         if self.macnlops_continuation else None),
-                    close_fds=True)
+        with open(mcatnlo_log, 'w') as log:
+            misc.call(['./MCatNLO_MadFKS.inputs'], stdout=log,
+                      stderr=subprocess.STDOUT,
+                      cwd=pjoin(self.me_dir, 'MCatNLO'),
+                      env=(self.macnlops_continuation['environment']
+                           if self.macnlops_continuation else None),
+                      close_fds=True)
 
         exe = 'MCATNLO_%s_EXE' % shower
         if not os.path.exists(pjoin(self.me_dir, 'MCatNLO', exe)) and \
@@ -4252,22 +4284,33 @@ RESTART = %(mint_mode)s
         os.mkdir(rundir)
         files.cp(shower_card_path, rundir)
 
-        # An older accepted continuation is one collected file. Other samples,
-        # first-emission ones included, may reuse or regenerate split files.
+        # An older accepted continuation is one collected file. The splits of
+        # any other sample, first-emission ones included, are temporary:
+        # regenerate them from the current input, since a previous interrupted
+        # run may have left incomplete or outdated files.
         event_files = []
         if not legacy_continuation:
-            event_directory = pjoin(self.me_dir, 'Events', self.run_name)
-            event_files = misc.glob('events.lhe_*', event_directory)
-            if max(len(event_files), 1) != self.shower_card['nsplit_jobs']:
-                logger.info('Cleaning old files and splitting the event file...')
-                files.rm([f for f in event_files if 'events.lhe' not in f])
-                if self.shower_card['nsplit_jobs'] > 1:
-                    eventfile = lhe_parser.EventFile(evt_file)
-                    eventfile.split(self.banner.get_detail('run_card', 'nevents') /
-                                    self.shower_card['nsplit_jobs'], cwd=event_directory)
-                    logger.info('Splitting done.')
-                event_files = misc.glob('events.lhe_*', event_directory)
-            event_files.sort()
+            event_dir = pjoin(self.me_dir, 'Events', self.run_name)
+            old_splits = [path for path in misc.glob('events.lhe_*', event_dir)
+                          if re.fullmatch(r'events\.lhe_\d+\.lhe(?:\.gz)?',
+                                          os.path.basename(path))]
+            files.rm(old_splits)
+            if self.shower_card['nsplit_jobs'] > 1:
+                logger.info('Splitting the event file...')
+                eventfile = lhe_parser.EventFile(evt_file)
+                try:
+                    nb_files = eventfile.split(
+                        self.banner.get_detail('run_card', 'nevents') //
+                        self.shower_card['nsplit_jobs'], cwd=event_dir)
+                finally:
+                    eventfile.close()
+                if nb_files != self.shower_card['nsplit_jobs']:
+                    raise aMCatNLOError('Expected %d split event files, found %d. '
+                                       'Check the event count in the LHE banner.' %
+                                       (self.shower_card['nsplit_jobs'], nb_files))
+                # Numeric order matters once there are more than ten jobs.
+                event_files = ['%s_%d.lhe' % (evt_file, i) for i in range(nb_files)]
+                logger.info('Splitting done.')
 
         self.update_status('Showering events...', level='shower')
         logger.info('(Running in %s)' % rundir)
@@ -4311,13 +4354,14 @@ RESTART = %(mint_mode)s
                 out_id = 'TOP'
 
         # write the executable
-        with open(pjoin(rundir, 'shower.sh'), 'w') as fsock:
+        with open(pjoin(rundir, 'shower.sh'), 'w') as fsock, \
+             open(pjoin(self.me_dir, 'MCatNLO', 'shower_template.sh')) as template:
             # set the PATH for the dynamic libraries
             if sys.platform == 'darwin':
                 ld_library_path = 'DYLD_LIBRARY_PATH'
             else:
                 ld_library_path = 'LD_LIBRARY_PATH'
-            script = open(pjoin(self.me_dir, 'MCatNLO', 'shower_template.sh')).read() \
+            script = template.read() \
                 % {'ld_library_path': ld_library_path,
                    'extralibs': ':'.join(extrapaths)}
             if legacy_continuation:
@@ -4336,7 +4380,10 @@ RESTART = %(mint_mode)s
         else:
             arg_list = [[shower, out_id, self.run_name]]
 
-        self.run_all({rundir: 'shower.sh'}, arg_list, 'shower')
+        try:
+            self.run_all({rundir: 'shower.sh'}, arg_list, 'shower')
+        finally:
+            shower_logs = self.collect_shower_logs(rundir)
         #self.njobs = 1
         #self.wait_for_complete('shower')
 
@@ -4384,7 +4431,7 @@ RESTART = %(mint_mode)s
 
             except OSError as IOError:
                 raise aMCatNLOError('No file has been generated, an error occurred.'+\
-             ' More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
+             ' More information in %s' % ', '.join(shower_logs))
 
             # run the plot creation in a secure way
             if hep_format == 'StdHEP':
@@ -4401,9 +4448,12 @@ RESTART = %(mint_mode)s
             elif out_id=='HWU':
                 ext='HwU'
             topfiles = []
-            top_tars = [tarfile.TarFile(f) for f in misc.glob('histfile*.tar', rundir)]
+            top_tars = sorted(misc.glob('histfile*.tar', rundir),
+                              key=lambda path: int(re.search(r'_(\d+)\.tar$', path)[1])
+                              if re.search(r'_(\d+)\.tar$', path) else 0)
             for top_tar in top_tars:
-                topfiles.extend(top_tar.getnames())
+                with tarfile.open(top_tar) as archive:
+                    topfiles.extend(archive.getnames())
 
             # safety check
             if len(top_tars) != self.shower_card['nsplit_jobs']:
@@ -4428,11 +4478,12 @@ RESTART = %(mint_mode)s
 
             if not topfiles:
                 # if no topfiles are found just warn the user
-                warning = 'No .top file has been generated. For the results of your ' +\
+                warning = 'No .%s file has been generated. For the results of your ' % ext +\
                                'run, please check inside %s' % rundir
             elif self.shower_card['nsplit_jobs'] == 1:
                 # only one job for the shower
-                top_tars[0].extractall(path = rundir) 
+                with tarfile.open(top_tars[0]) as archive:
+                    archive.extractall(path=rundir)
                 plotfiles = [] 
                 for i, file in enumerate(topfiles):
                     if out_id=='TOP':
@@ -4466,10 +4517,11 @@ RESTART = %(mint_mode)s
                         hist_format, evt_file, shower)
             else:
                 # many jobs for the shower have been run
-                topfiles_set = set(topfiles)
+                topfiles_set = sorted(set(topfiles))
                 plotfiles = [] 
                 for j, top_tar in enumerate(top_tars):
-                    top_tar.extractall(path = rundir) 
+                    with tarfile.open(top_tar) as archive:
+                        archive.extractall(path=rundir)
                     for i, file in enumerate(topfiles_set):
                         plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
                                              '%s%d__%d.%s' % (filename, i, j + 1,ext))
@@ -4478,7 +4530,8 @@ RESTART = %(mint_mode)s
 
                 # check if the user asked to combine the .top into a single file
                 if self.shower_card['combine_td']:
-                    misc.compile(['sum_plots'], cwd = pjoin(self.me_dir, 'Utilities'))
+                    if out_id == 'TOP':
+                        misc.compile(['sum_plots'], cwd=pjoin(self.me_dir, 'Utilities'))
 
                     if self.banner.get('run_card', 'event_norm').lower() == 'sum':
                         norm = 1.
@@ -4506,8 +4559,8 @@ RESTART = %(mint_mode)s
                                       self.run_name,'%s%d'% (filename,i))
                             histos=[]
                             norms=[]
-                            for plotfile in plotfiles:
-                                histos.append({'dirname':plotfile})
+                            for plotfile in filelist:
+                                histos.append({'dirname':pjoin(event_dir, plotfile)})
                                 norms.append(norm)
                             self.combine_plots_HwU(histos,out,normalisation=norms)
                             try:
@@ -4518,13 +4571,11 @@ RESTART = %(mint_mode)s
                                 pass
 
                         plotfiles2.append(pjoin(self.me_dir, 'Events', self.run_name, '%s%d.%s' % (filename, i,ext)))
-                        tar = tarfile.open(
-                                pjoin(self.me_dir, 'Events', self.run_name, '%s%d.tar.gz' % (filename, i)), 'w:gz')
-                        for f in filelist:
-                            tar.add(pjoin(self.me_dir, 'Events', self.run_name, f), arcname=f)
+                        with tarfile.open(pjoin(event_dir, '%s%d.tar.gz' %
+                                                (filename, i)), 'w:gz') as tar:
+                            for f in filelist:
+                                tar.add(pjoin(event_dir, f), arcname=f)
                         files.rm([pjoin(self.me_dir, 'Events', self.run_name, f) for f in filelist])
-
-                    tar.close()
 
                     ffiles = 'files'
                     have = 'have'
@@ -4563,42 +4614,53 @@ RESTART = %(mint_mode)s
             if self.run_card['ickkw'] != 3 or shower != 'PYTHIA8':
                 logger.warning("Merged cross-section not retrieved by MadGraph. Please check the parton-shower log to get the correct cross-section after merging")
             else:
-                pythia_log = misc.BackRead(pjoin(rundir, "mcatnlo_run.log") )
-                
-                pythiare = re.compile(r"\s*Les Houches User Process\(es\)\s+9999\s*\|\s*(?P<generated>\d+)\s+(?P<tried>\d+)\s+(?P<accepted>\d+)\s*\|\s*(?P<xsec>[\d\.DeE\-+]+)\s+(?P<xerr>[\d\.DeE\-+]+)\s*\|")    
-                # | Les Houches User Process(es)                  9999 |       10000      10000       7115 |   1.120e-04  0.000e+00 |     
-                                                         
-                for line in pythia_log:
-                    info = pythiare.search(line)
-                    if not info:
-                        continue
-                    try:
-                        # Pythia cross section in mb, we want pb
-                        sigma_m = float(info.group('xsec').replace('D','E')) *1e9
-                        sigma_err = float(info.group('xerr').replace('D','E')) *1e9
-                        Nacc = int(info.group('accepted'))
-                        #Ntry = int(info.group('accepted'))
-                    except:
-                        logger.warning("Merged cross-section not retrieved by MadGraph. Please check the parton-shower log to get the correct cross-section after merging")
-                        break
-                    
+                pythiare = re.compile(
+                    r"Les Houches User Process\(es\)\s+9999\s*\|\s*"
+                    r"(?P<generated>\d+)\s+(?P<tried>\d+)\s+(?P<accepted>\d+)\s*\|\s*"
+                    r"(?P<xsec>[\d\.DeE\-+]+)\s+(?P<xerr>[\d\.DeE\-+]+)\s*\|")
+                summaries = []
+                for log in shower_logs:
+                    with open(log) as source:
+                        for line in reversed(source.readlines()):
+                            info = pythiare.search(line)
+                            if info:
+                                summaries.append(info.groupdict())
+                                break
+                if len(summaries) != self.shower_card['nsplit_jobs']:
+                    logger.warning("Merged cross-section not retrieved by MadGraph. Please check the parton-shower log to get the correct cross-section after merging")
+                else:
+                    # Each Pythia table is an estimate of the full cross section.
+                    # Average independent estimates, and sum accepted events.
+                    generated = sum(int(s['generated']) for s in summaries)
+                    fractions = [int(s['generated']) / float(generated)
+                                 for s in summaries] if generated else [
+                                     1. / len(summaries)] * len(summaries)
+                    sigma_m = sum(float(s['xsec'].replace('D', 'E')) * f
+                                  for s, f in zip(summaries, fractions)) * 1e9
+                    sigma_err = math.sqrt(sum(
+                        (float(s['xerr'].replace('D', 'E')) * f)**2
+                        for s, f in zip(summaries, fractions))) * 1e9
+                    Nacc = sum(int(s['accepted']) for s in summaries)
                     self.results.add_detail('cross_pythia', sigma_m)
                     self.results.add_detail('nb_event_pythia', Nacc)
                     self.results.add_detail('error_pythia', sigma_err)
                     self.results.add_detail('shower_dir', os.path.basename(rundir))
-                    logger.info("\nFxFx  Cross-Section:\n"+\
-                                "======================\n"+\
+                    logger.info("\nFxFx  Cross-Section:\n"+
+                                "======================\n"+
                                 "    %f pb.\n"
-                                "    Number of events after merging: %s\n", sigma_m, Nacc, '$MG:BOLD')
-                    break
-                else:
-                    logger.warning("Merged cross-section not retrieved by MadGraph. Please check the parton-shower log to get the correct cross-section after merging")
-                                    
-                
-            
-            
-            
-            
+                                "    Number of events after merging: %s\n",
+                                sigma_m, Nacc, '$MG:BOLD')
+
+        # All shower jobs and output collection have finished. Remove both the
+        # temporary splits and their links (including copies left by older
+        # shower templates). Keep the original event sample.
+        files.rm(pjoin(rundir, 'events.lhe'))
+        for i in range(len(event_files)):
+            files.rm(pjoin(rundir, 'events_%d.lhe' % (i + 1)))
+            for name in ('events.lhe', 'events.lhe.gz'):
+                files.rm(pjoin(rundir, 'run_%d' % (i + 1), name))
+        files.rm(event_files)
+
         # end of the run, gzip files and print out the message/warning
         for f in to_gzip:
             misc.gzip(f)
@@ -5214,7 +5276,10 @@ RESTART = %(mint_mode)s
         # finally run it
         if self.cluster_mode == 0:
             #this is for the serial run
-            misc.call(['./'+exe] + args, cwd=cwd)
+            status = misc.call(['./'+exe] + args, cwd=cwd)
+            if run_type == 'shower' and status:
+                raise aMCatNLOError('Shower job failed (status %d). Check the '
+                                   'mcatnlo_run log in %s.' % (status, cwd))
             self.ijob += 1
             self.update_status((max([self.njobs - self.ijob - 1, 0]), 
                                 min([1, self.njobs - self.ijob]),
@@ -5982,6 +6047,13 @@ RESTART = %(mint_mode)s
             mode = None
         if not mode and (options['parton'] or options['reweightonly']):
             mode = 'noshower'  
+
+        allow_qed_ps = options.get('allow_qed_ps', False)
+        if ('QED' in self.proc_characteristics['splitting_types'] and
+                not allow_qed_ps and mode in
+                ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO', 'onlyshower']):
+            raise self.InvalidCmd('NLO QED+PS matching is disabled. Use '
+                                  '--allow_qed_ps to enable experimental runs.')
         
         passing_cmd = []
         for key,value in switch.keys():
@@ -6003,6 +6075,7 @@ RESTART = %(mint_mode)s
         switch, cmd_switch = self.ask('', '0', [], ask_class = self.action_switcher,
                               mode=mode, force=(force or mode),
                               first_cmd=passing_cmd,
+                              allow_qed_ps=allow_qed_ps,
                               return_instance=True)
 
         if 'mode' in switch:
@@ -6129,6 +6202,8 @@ _compile_usage = "compile [MODE] [options]\n" + \
                 "   or MC for matching with parton-shower monte-carlos. \n" + \
                 "   (if omitted, it is set to MC)\n"
 _compile_parser = misc.OptionParser(usage=_compile_usage)
+_compile_parser.add_option("--allow_qed_ps", default=False, action='store_true',
+                            help="Allow experimental NLO QED+PS matching by bypassing the launch restriction")
 _compile_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory for the launch, without editing them")
 
@@ -6142,6 +6217,8 @@ _launch_usage = "launch [MODE] [options]\n" + \
                 "     in the run_card.dat\n"
 
 _launch_parser = misc.OptionParser(usage=_launch_usage)
+_launch_parser.add_option("--allow_qed_ps", default=False, action='store_true',
+                            help="Allow experimental NLO QED+PS matching by bypassing the launch restriction")
 _launch_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory for the launch, without editing them")
 _launch_parser.add_option("-c", "--cluster", default=False, action='store_true',

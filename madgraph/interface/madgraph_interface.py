@@ -10799,6 +10799,8 @@ _launch_usage = "launch [DIRPATH] [options]\n" + \
          "   Example: launch PROC_sm_1 --name=run2 \n" + \
          "   Example: launch ../pythia8 \n"
 _launch_parser = misc.OptionParser(usage=_launch_usage)
+_launch_parser.add_option("--allow_qed_ps", default=False, action='store_true',
+                            help="Allow experimental NLO QED+PS matching by bypassing the launch restriction")
 _launch_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory in order to launch the different program")
 _launch_parser.add_option("-n", "--name", default='', type='str',

@@ -2069,7 +2069,10 @@ class OrganizeModelExpression:
     
     
     def __init__(self, model):
-    
+
+        # EW schemes and LOOP inputs extend this list while organizing a model.
+        # Keep those additions local to this import, including the first one.
+        self.track_dependant = list(self.track_dependant)
         self.model = model  # UFOMODEL
         self.perturbation_couplings = {}
         try:

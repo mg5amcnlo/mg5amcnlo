@@ -46,6 +46,25 @@ folders.
 Output files are stored in Events/run_*, and results from the various runs can
 be combined by means of the python script in bin/internal/histograms.py.
 
+With NSPLIT_JOBS > 1, the input is split without parsing or rewriting the event
+records. The temporary split LHE files and their shower-directory links are
+removed after successful output collection; the original events.lhe.gz is kept.
+Failed runs retain their inputs for diagnosis.
+
+Compilation and shower logs are stored in Events/<run-name>/, with the shower
+name and invocation number in their filenames (for example,
+mcatnlo_PYTHIA8_1.log and mcatnlo_run_PYTHIA8_1.log). Split jobs also have
+individual logs named mcatnlo_run_PYTHIA8_1__<job>.log. The combined shower log
+contains every job, and later shower invocations keep the earlier logs.
+
+Experimental NLO QED+PS runs can be enabled for one invocation with
+  launch aMC@NLO --allow_qed_ps
+or, in a generated process directory,
+  ./bin/generate_events aMC@NLO --allow_qed_ps
+The default QED+PS restriction remains in place when this option is omitted.
+This option bypasses the launch restriction only; the matrix-element and
+MC subtraction checks still run.
+
 4) User's own analyses.
 The user has to assign non-default values to the EXTRALIBS, EXTRAPATHS,
 INCLUDEPATHS, ANALYSE environmental variables.  Analysis files have to be put

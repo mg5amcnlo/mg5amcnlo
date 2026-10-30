@@ -1,0 +1,249 @@
+--- a/src/SimpleSpaceShower.cc
++++ b/src/SimpleSpaceShower.cc
+@@ -7,6 +7,7 @@
+ // SimpleSpaceShower class.
+ 
+ #include "Pythia8/SimpleSpaceShower.h"
++#include <stdexcept>
+ 
+ namespace Pythia8 {
+ 
+@@ -661,8 +662,12 @@
+       // Now do evolution in pT2, for QCD, QED or weak.
+       if (pT2begDip > pT2endDip) {
+         if (dipEndNow->colType != 0)       pT2nextQCD( pT2begDip, pT2endDip);
+-        else if (dipEndNow->chgType != 0 || idDaughter == 22)
++        else if (dipEndNow->chgType != 0 || idDaughter == 22) {
+           pT2nextQED( pT2begDip, pT2endDip);
++          // Independent gamma -> q qbar channel: keep the hardest trial.
++          pT2nextQEDHadronGamma(pT2begDip,
++            max(pT2endDip, dipEndNow->pT2));
++        }
+         else if (dipEndNow->weakType != 0) pT2nextWeak( pT2begDip, pT2endDip);
+ 
+         // Update if found larger pT than current maximum.
+@@ -2233,6 +2238,119 @@
+     pT2, z, xMother, Q2, mSister, m2Sister, pT2corr, 0, m2ColPair,
+     mColPartner);
+ 
++}
++
++//--------------------------------------------------------------------------
++
++// Backward gamma -> q qbar evolution for a sea quark in a hadron.
++// This channel competes independently with q -> q gamma. The photon is a
++// resolved hadron constituent: xMother = xDaughter/z, not the beam endpoint.
++void SimpleSpaceShower::pT2nextQEDHadronGamma(double pT2begDip,
++  double pT2endDip) {
++
++  BeamParticle& beam = (sideA) ? *beamAPtr : *beamBPtr;
++  int idAbs = abs(idDaughter);
++  if (!beam.isHadron() || idAbs < 1 || idAbs > min(5, nQuarkIn)
++    || beam[iSysNow].isValence()
++    || !flag("SpaceShower:QEDshowerByGamma")) return;
++
++  // Keep heavy conversions above the ordinary heavy-flavour transition.
++  // Incoming legs are massless; the emitted sister retains its shower mass.
++  double m2Heavy = (idAbs == 4) ? m2c : (idAbs == 5) ? m2b : 0.;
++  double pT2cut = max(pT2endDip, 2. * m2Heavy);
++  if (pT2begDip <= pT2cut || m2Dip <= 0.) return;
++  double xMaxAbs = beam.xMax(iSysNow);
++  if (xDaughter <= 0. || xMaxAbs <= xDaughter) return;
++  double xResc = dipEndNow->normalRecoil ? 0.
++    : m2Rec / ((sideA ? x2Now : x1Now) * sCM);
++  double zMin = (xDaughter + xResc) / (xMaxAbs + xResc);
++  double mSister = particleDataPtr->m0(idDaughter);
++  double m2Sister = pow2(mSister);
++  double charge2 = pow2(particleDataPtr->charge(idDaughter));
++  double headroom = parm("SpaceShower:gammaToQuarkHeadroom");
++  double enhance = canEnhanceET ? enhanceFactor("isr:A2QQ") : 1.;
++  double overFac = canEnhanceET ? overFactor : 1.;
++  int MEtype = dipEndNow->MEtype;
++  double meMax = doMEcorrections ? calcMEmax(MEtype, 22, idDaughter) : 1.;
++  double pT2top = pT2begDip;
++
++  // Piecewise constant veto envelope. Refresh PDFs in each scale interval,
++  // and sample the photon/daughter ratio over x as well as Q2. A tunable
++  // headroom and an explicit overweight check avoid silently clipping rates.
++  while (pT2top > pT2cut) {
++    double pT2low = max(pT2cut, EVALPDFSTEP * pT2top);
++    double r = pT2low / m2Dip;
++    double zMax = 2. / (2. + r + sqrt(r * (r + 4.)));
++    if (zMin >= zMax) { pT2top = pT2low; continue; }
++    double ratioMax = 0.;
++    for (int iq = 0; iq < 3; ++iq) {
++      double tPDF = pT2top * pow(pT2low / pT2top, 0.5 * iq);
++      double scale2 = useFixedFacScale ? fixedFacScale2
++        : factorMultFac * tPDF;
++      xfModPrepData xfData = beam.xfModPrep(iSysNow, scale2);
++      double daughter = beam.xfISR(iSysNow, idDaughter, xDaughter,
++        scale2, xfData);
++      if (daughter <= TINYPDF) continue;
++      for (int iz = 0; iz <= 16; ++iz) {
++        double z = zMin * pow(zMax / zMin, iz / 16.);
++        double xMo = (xDaughter + xResc) / z - xResc;
++        double photon = beam.xfISR(iSysNow, 22, xMo, scale2, xfData);
++        ratioMax = max(ratioMax, max(0., photon) / daughter);
++      }
++    }
++    ratioMax *= headroom;
++    if (ratioMax <= 0.) { pT2top = pT2low; continue; }
++    double massMax = 1. + 0.5 * m2Heavy / pT2low;
++    double alphaMax = alphaEM.alphaEM(renormMultFac * pT2top);
++    double rate = alphaMax / (2. * M_PI) * 3. * charge2
++      * (zMax - zMin) * ratioMax * massMax * meMax * enhance * overFac;
++    if (rate <= 0.) return;
++    double pT2 = pT2top;
++
++    while (true) {
++      pT2 *= pow(rndmPtr->flat(), 1. / rate);
++      if (pT2 <= pT2low) break;
++      double z = zMin + (zMax - zMin) * rndmPtr->flat();
++      double xMother = (xDaughter + xResc) / z - xResc;
++      if (xMother >= xMaxAbs) continue;
++      double Q2 = pT2 / (1. - z);
++      double pT2corr = Q2 - z * (m2Dip + Q2) * (Q2 + m2Sister) / m2Dip;
++      if (pT2corr < TINYPT2) continue;
++      double scale2 = useFixedFacScale ? fixedFacScale2
++        : factorMultFac * pT2;
++      xfModPrepData xfData = beam.xfModPrep(iSysNow, scale2);
++      double daughter = beam.xfISR(iSysNow, idDaughter, xDaughter,
++        scale2, xfData);
++      if (daughter <= TINYPDF) continue;
++      double photon = max(0., beam.xfISR(iSysNow, 22, xMother, scale2, xfData));
++      // xf ratios already contain the 1/z Jacobian: no further 1/z here.
++      double kernel = pow2(z) + pow2(1. - z)
++        + 2. * z * (1. - z) * m2Heavy / pT2;
++      double wt = kernel / massMax * photon / (daughter * ratioMax)
++        * alphaEM.alphaEM(renormMultFac * pT2) / alphaMax / overFac;
++      if (doMEcorrections)
++        wt *= calcMEcorr(MEtype, 22, idDaughter, m2Dip, z, Q2,
++          m2Sister) / meMax;
++      if (dopTdamp && iSysNow == 0 && MEtype == 0 && nRad == 0)
++        wt *= pT2damp / (pT2 + pT2damp);
++      if (!isfinite(wt) || wt > 1. + 1e-10)
++        throw std::runtime_error("SimpleSpaceShower gamma -> q qbar: "
++          "PDF veto envelope exceeded; increase SpaceShower:gammaToQuarkHeadroom");
++      wt = min(1., max(0., wt));
++      // Use the existing delayed veto and enhancement weight bookkeeping.
++      bool delayed = canEnhanceET;
++      if (!delayed && wt < rndmPtr->flat()) continue;
++      if (wt <= 0.) continue;
++      dipEndNow->pAccept = delayed ? wt : 1.;
++      splittingNameNow = "isr:A2QQ";
++      if (canEnhanceET) storeEnhanceFactor(pT2, "isr:A2QQ", enhance);
++      dipEndNow->store(idDaughter, 22, -idDaughter, x1Now, x2Now, m2Dip,
++        pT2, z, xMother, Q2, mSister, m2Sister, pT2corr, 0, m2ColPair,
++        mColPartner);
++      return;
++    }
++    pT2top = pT2low;
++  }
+ }
+ 
+ //--------------------------------------------------------------------------
+@@ -2781,13 +2899,13 @@
+     colMother       = 0;
+     acolMother      = 0;
+     acolSister      = colDaughter;
+-    gamma2qqbar     = true;
++    gamma2qqbar     = beamNow.isGamma();
+   // gamma -> qbar + q.
+   } else if ( (idDaughterNow < 0 && idDaughterNow > -9) && idMother == 22) {
+     colMother       = 0;
+     acolMother      = 0;
+     colSister       = acolDaughter;
+-    gamma2qqbar     = true;
++    gamma2qqbar     = beamNow.isGamma();
+   }
+ 
+   // Indices of partons involved. Add new sister.
+@@ -3162,7 +3280,7 @@
+   partonSystemsPtr->setSHat(iSysSel, m2II / z);
+ 
+   // Add dipoles for  q -> g q, where the daughter is the gluon.
+-  if (idDaughter == 21 && idMother != 21) {
++  if (idDaughterNow == 21 && idMother != 21) {
+     if (doQEDshowerByQ) {
+       dipEnd.push_back( SpaceDipoleEnd( iSysSel, side, iMother,
+          iNewRec, pT2, 0, mother.chargeType(), 0, 0, normalRecoil) );
+@@ -3185,12 +3303,17 @@
+   }
+ 
+   // Add dipoles for q -> q gamma, where the daughter is the gamma.
+-  if (idDaughter == 22 && idMother != 22) {
++  if (idDaughterNow == 22 && idMother != 22) {
++    bool hasQEDend = false;
++    for (int iDip = 0; iDip < int(dipEnd.size()); ++iDip)
++      if (dipEnd[iDip].system == iSysSel
++        && abs(dipEnd[iDip].side) == side && dipEnd[iDip].chgType == 22)
++        hasQEDend = true;
+     if (doQCDshower && mother.colType() != 0) {
+       dipEnd.push_back( SpaceDipoleEnd( iSysSel, side, iMother,
+         iNewRec, pT2, mother.colType(), 0, 0, 0, normalRecoil) );
+     }
+-    if (doQEDshowerByQ && mother.chargeType() != 3) {
++    if (doQEDshowerByQ && mother.chargeType() != 3 && !hasQEDend) {
+       dipEnd.push_back( SpaceDipoleEnd( iSysSel, side, iMother,
+         iNewRec, pT2, 0, mother.chargeType(), 0, 0, normalRecoil) );
+     }
+@@ -3248,6 +3371,9 @@
+         if ( (mother.isQuark() && doQEDshowerByQ)
+           || (mother.isLepton() && doQEDshowerByL) )
+           dipEnd[iDip].chgType = mother.chargeType();
++        // A resolved hadron photon can continue backwards to a quark.
++        if (mother.id() == 22 && doQEDshowerByQ)
++          dipEnd[iDip].chgType = 22;
+       }
+       else if (dipEnd[iDip].weakType != 0) {
+         // Kill weak dipole if mother becomes gluon / photon.
+--- a/include/Pythia8/SimpleSpaceShower.h
++++ b/include/Pythia8/SimpleSpaceShower.h
+@@ -240,6 +240,9 @@
+   // Evolve a QED dipole end.
+   void pT2nextQED( double pT2begDip, double pT2endDip);
+ 
++  // Backward photon-mother conversion for quarks in hadron beams.
++  void pT2nextQEDHadronGamma(double pT2begDip, double pT2endDip);
++
+   // Evolve a Weak dipole end.
+   void pT2nextWeak( double pT2begDip, double pT2endDip);
+ 
+--- a/share/Pythia8/xmldoc/SpacelikeShowers.xml
++++ b/share/Pythia8/xmldoc/SpacelikeShowers.xml
+@@ -424,6 +424,21 @@
+ Allow quarks to radiate photons; on/off = true/false. 
+ </flag> 
+  
++<flag name="SpaceShower:QEDshowerByGamma" default="on">
++Allow a sea quark in a hadron beam to evolve backwards to a photon mother,
++using the photon PDF of that hadron. Requires QEDshowerByQ to be on.
++Flavours are restricted by nQuarkIn (at most five). Valence quarks do not
++convert. Charm and bottom conversions terminate at twice the squared shower
++mass; the emitted antiquark retains its shower mass.
++</flag>
++
++<parm name="SpaceShower:gammaToQuarkHeadroom" default="2." min="1.">
++Headroom on the sampled photon/quark PDF ratio for hadron conversions.
++The scale intervals and momentum-fraction grid are refreshed throughout
++the veto evolution. An observed overweight aborts rather than clipping the
++rate; increase this value and restart if that diagnostic is raised.
++</parm>
++
+ <flag name="SpaceShower:QEDshowerByL" default="on"> 
+ Allow leptons to radiate photons; on/off = true/false. 
+ </flag> 
+@@ -541,9 +556,10 @@
+ to that of a gluon, with <ei>CF &rarr; eq^2</ei> and <ei>CA &rarr; 0</ei>. 
+ Note that this will only work in conjunction with parton distributions 
+ that explicitly include photons as part of the hadron structure, such 
+-as the NNPDF2.3 QCD+QED sets. The possibility of a fermion 
+-backwards-evolving to a photon has not yet been included, nor has 
+-photon backwards-evolution in lepton beams. 
++as the NNPDF2.3 QCD+QED sets. Sea quarks can also evolve backwards to
++photons in a hadron, controlled by SpaceShower:QEDshowerByGamma. The
++conversion uses 3 e_q^2 [z^2 + (1-z)^2] and the photon-to-quark PDF ratio.
++Photon backwards-evolution in lepton beams remains unsupported. 
+ </li> 
+ </ul> 
+  

@@ -56,7 +56,8 @@ TimeShower:mMaxGamma later in pythia8_options would break that agreement.
 The MC subtraction retains its infrared limits and does not cut them off
 at the shower's nonperturbative termination scale.
 
-Initial-state QED support also follows SimpleSpaceShower 8.318. Its
+Initial-state QED support in the MG5 counterterms follows stock
+SimpleSpaceShower 8.318. Its
 backward photon-mother -> fermion-daughter conversion exists only for a
 physical photon beam, which this launch script does not configure. A
 photon PDF inside a proton does not enable that channel. Backward evolution
@@ -67,14 +68,18 @@ replacement remains in place. Ordinary charged-fermion photon radiation
 remains supported. Both UPC beam codes equal to 2 disable all ISR, as in
 the launch script; a single such beam does not disable the other side.
 
-The NLO QED user-interface guard remains enabled. This source patch and the
+The NLO QED user-interface guard remains enabled by default; the explicit
+--allow_qed_ps launch/generate_events option bypasses it for experimental
+studies. The global-recoil source patch and the
 scalar kernel/support checks alone do not establish an end-to-end NLO QED
 S/H cancellation or the normalization of the shower's first-order expansion.
 In particular, zero raw subtraction for the absent ISR conversion channels
 reproduces the shower's support; it does not provide a finite exclusive
 MC@NLO H contribution in their collinear limit. Generated MC/ME limit tests
 for those channels fail. Processes containing them remain unsupported until
-their matching treatment is implemented; retain the launch guard.
+their matching treatment is implemented. The separate hadron-conversion
+patch below adds that shower channel, but does not change MG5's support
+veto or by itself validate matched samples.
 
 Validation against the actual shower
 
@@ -96,6 +101,115 @@ failures. The patched shower gave 322 first and 184 later S emissions,
 330 first and 206 later H emissions, with zero recoil or event failures.
 The largest component-sum momentum residual was 1.85e-13 GeV. This verifies
 the recoil configuration and source patch; it does not test matched weights.
+
+PYTHIA 8.318 hadron-beam gamma -> q qbar
+
+pythia8318-hadron-gamma-qqbar.patch adds backward evolution of an incoming
+sea quark or antiquark to a photon constituent of a hadron. Unlike the
+existing physical-photon-beam implementation, the photon mother has
+x_mother = x_daughter/z and is weighted by the hadron's photon PDF.
+For massless quarks the branching probability is
+
+  dP = alpha_em(pT^2)/(2 pi) * 3 e_q^2 [z^2 + (1-z)^2]
+       * xf_gamma(x_daughter/z, pT^2)/xf_q(x_daughter, pT^2)
+       * dz * dpT^2/pT^2.
+
+Here xf means x times the PDF: no additional 1/z multiplies this ratio.
+The implementation uses the configured factorization and renormalization
+scale multipliers (or fixed factorization scale), and Pythia's modified
+ISR PDFs after other beam extractions. Valence quarks do not convert;
+the denominator for a selected sea quark is its conditional sea PDF, as
+in the QCD g -> q qbar channel. Both incoming sides and charge conjugates
+are included. The new channel competes with q -> q gamma and the other
+interleaved shower/MPI candidates, using the existing ISR recoil mapping.
+
+The patch also keeps photon evolution active after a conversion, reuses
+the QED dipole when the photon evolves back to a quark, and uses the
+selected daughter flavour when adding dipoles. Hadron-PDF conversions
+use ordinary ISR bookkeeping, including when MPI is present; they do not
+set the special flag that defers physical-photon-beam conversions to the
+beam-remnant machinery.
+
+Target: unmodified PYTHIA 8.318. The three original SHA256 values are:
+  src/SimpleSpaceShower.cc
+    79b9f2334af443005b7c4722dc629ca4facdce6663b73815c1fa0278aacfa789
+  include/Pythia8/SimpleSpaceShower.h
+    b145926773ead27097376a45b4881dceb86f74e4f3104b978b583ce89822c5d7
+  share/Pythia8/xmldoc/SpacelikeShowers.xml
+    0d4d3c6b54e7dc8f1dfb89088a96c9354a07ec447cb1b5a96b81baba00d09d2e
+
+Apply in a separate source checkout, then rebuild that checkout:
+  patch --batch --fuzz=0 -p1 < /path/to/pythia8318-hadron-gamma-qqbar.patch
+  make -j4
+If using an installed prefix, also install the rebuilt library, headers
+and XML settings there. Select that prefix for the MG5 shower driver and
+recompile the driver. The global-recoil and hadron-conversion patches
+touch separate files and can be applied together.
+
+The new channel is enabled by default with QED quark showers. Relevant
+settings, including an example photon-containing PDF, are:
+  SpaceShower:QEDshowerByQ = on
+  SpaceShower:QEDshowerByGamma = on
+  SpaceShower:gammaToQuarkHeadroom = 2.
+  PDF:pSet = 13
+The photon PDF must be nonzero. QEDshowerByGamma = off disables the new
+channel. It does not control the existing q -> q gamma channels or the
+physical-photon-beam conversion. For MC@NLO studies use MECs off and the
+matching settings appropriate to the process, including the recoil
+configuration above where applicable.
+
+Flavours follow SpaceShower:nQuarkIn, with a maximum of five. Charm and
+bottom use the g -> Q Qbar massive numerator and an emitted sister with
+its shower mass. This patch stops their photon-mother evolution at
+pT^2 = max(pTminChgQ^2, 2 m_Q^2); it does not extend the forced QCD
+heavy-flavour threshold transition to a photon/gluon mixture. Lepton
+conversion, lepton beams and matching across heavy-flavour thresholds
+are outside this implementation.
+
+The veto envelope samples the photon/sea-quark PDF ratio at three scales
+and 17 momentum fractions per scale interval, with the configurable
+headroom above. An observed overweight raises an exception and requires
+restarting with a larger headroom. This sampling is not a proven bound
+for arbitrary PDFs with sharp features; check envelope stability for
+the chosen PDF and kinematics. The validation below compares headrooms
+2 and 4 against the same independent emission law.
+
+Run the actual-shower validation from the MG5 source root:
+  python3 docs/audits/check_pythia8_hadron_gamma.py /path/to/pythia8318
+An optional --report /path/to/results.json saves the numerical results.
+The script checks the three source hashes and applies the patch without
+fuzz in a temporary tree. It compiles the C++ fixture both with the stock
+library and with patched SimpleSpaceShower definitions overriding the
+stock shared-library definitions in that executable. The installed
+source, headers, data and library are never modified.
+
+The tests compare first-emission probabilities, eight pT bins and the
+first z moment with an independently integrated two-leg Sudakov, with
+flat quark PDFs and both constant and x-dependent photon PDFs. They
+also check exact stock event checksums when disabled or with zero photon
+PDF, quark/antiquark colour flow, energy-momentum conservation, accepted
+ISR counts, repeated flavour changes, heavy-flavour and enhanced-emission
+smoke tests, a real NNPDF2.3 QED PDF, and interleaved QCD/MPI evolution.
+The repeated-flavour stress test raises alpha_em to 0.2. The MPI stress
+test multiplies only the real photon's PDF by 1000 to obtain enough
+conversions; it is a bookkeeping test, not a physical rate prediction.
+Enhanced-emission tests check event construction and counts, not weighted
+cross-section normalization.
+
+At seed 734612 all 120000 events passed, with zero colour or event
+failures. The largest absolute pull among the independent first-emission
+checks was 2.22. The flavour-change stress test had 224 accepted
+photon-mother conversions and 62 subsequent quark-mother conversions,
+with exactly one active QED end per incoming leg. The MPI test had 267
+accepted photon-mother conversions, including 239 in events with MPI;
+the unmodified real photon PDF gave two conversions in 10000 events.
+
+MG5's py8_qed_isr_support in Template/NLO/SubProcesses/montecarlocounter.f
+still returns zero for these photon-mother channels in hadron beams.
+It must be enabled consistently for this patched shower before using
+the new channel for MC@NLO matching. --allow_qed_ps only bypasses the
+user-interface restriction. This patch and its shower tests alone do
+not establish cancellation of matched S/H weights for p p > z [real=QED].
 
 Massive W and SUSY radiators
 
