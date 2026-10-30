@@ -13,11 +13,22 @@ from madgraph.various import macnlops as mc
 from tests.unit_tests.various.test_macnlops import HEADER, event, hard_annotation
 from tests.unit_tests.various.test_macnlops_component_protocol import packet
 
+# The diagnostic reuses the validation plots, which need NumPy; MG5_aMC does
+# not. Without it this module still imports and its tests are skipped.
+try:
+    import numpy  # noqa: F401
+    HAVE_NUMPY = True
+except ImportError:
+    HAVE_NUMPY = False
+
 ROOT = Path(__file__).resolve().parents[3]
-SPEC = importlib.util.spec_from_file_location('macnlops_transfer_diagnostic',
-    ROOT / 'docs/audits/diagnose_macnlops_transfer.py')
-DIAGNOSTIC = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(DIAGNOSTIC)
+if HAVE_NUMPY:
+    SPEC = importlib.util.spec_from_file_location('macnlops_transfer_diagnostic',
+        ROOT / 'docs/audits/diagnose_macnlops_transfer.py')
+    DIAGNOSTIC = importlib.util.module_from_spec(SPEC)
+    SPEC.loader.exec_module(DIAGNOSTIC)
+else:
+    DIAGNOSTIC = None
 
 # kind, weight, electron pT, source factor, emitted, acceptance, accepted
 SAMPLE = [('S', 2., 1., 1., True, .75, True),
@@ -67,6 +78,7 @@ def write_job(directory, sample=SAMPLE, partition='sampled'):
     return directory
 
 
+@unittest.skipUnless(HAVE_NUMPY, 'NumPy is required by the transfer diagnostic')
 class TestTransferDiagnostic(unittest.TestCase):
     def test_expected_removals_and_their_ratios(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -11,15 +11,25 @@ import tempfile
 import unittest
 from unittest import mock
 
-import numpy as np
+# The validation plots (docs/audits) need NumPy; MG5_aMC itself does not.
+# Without it this module must still import, because the test collector
+# imports every module, and the plot tests are skipped.
+try:
+    import numpy as np
+except ImportError:
+    np=None
+HAVE_NUMPY=np is not None
 
 
 ROOT=Path(__file__).resolve().parents[3]
-SPEC=importlib.util.spec_from_file_location('macnlops_validation_plots',
-    ROOT/'docs/audits/plot_macnlops_validation.py')
-PLOTS=importlib.util.module_from_spec(SPEC)
-sys.modules[SPEC.name]=PLOTS
-SPEC.loader.exec_module(PLOTS)
+if HAVE_NUMPY:
+    SPEC=importlib.util.spec_from_file_location('macnlops_validation_plots',
+        ROOT/'docs/audits/plot_macnlops_validation.py')
+    PLOTS=importlib.util.module_from_spec(SPEC)
+    sys.modules[SPEC.name]=PLOTS
+    SPEC.loader.exec_module(PLOTS)
+else:
+    PLOTS=None
 try:
     import awkward,fastjet,vector
     HAVE_FASTJET=True
@@ -89,6 +99,7 @@ def common_fixture(folder):
     return config
 
 
+@unittest.skipUnless(HAVE_NUMPY,'NumPy is required by the validation plots')
 class TestMacNLOPSPlotAlgebra(unittest.TestCase):
     def test_stock_no_emission_warning_is_recorded_without_filtering(self):
         row=dict(schema='macnlops-full-audit-v1',sequence=1,kind='S',emissions=0,

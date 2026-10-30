@@ -6,13 +6,17 @@ import tempfile
 import unittest
 
 from tests.unit_tests.various.test_macnlops import HEADER
-from tests.unit_tests.various.test_macnlops_transfer_diagnostic import proposal
+from tests.unit_tests.various.test_macnlops_transfer_diagnostic import HAVE_NUMPY, proposal
 
 ROOT = Path(__file__).resolve().parents[3]
-SPEC = importlib.util.spec_from_file_location('macnlops_delta_sudakov_check',
-    ROOT / 'docs/audits/check_macnlops_delta_sudakov.py')
-CHECK = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(CHECK)
+# The check needs NumPy; without it its tests are skipped.
+if HAVE_NUMPY:
+    SPEC = importlib.util.spec_from_file_location('macnlops_delta_sudakov_check',
+        ROOT / 'docs/audits/check_macnlops_delta_sudakov.py')
+    CHECK = importlib.util.module_from_spec(SPEC)
+    SPEC.loader.exec_module(CHECK)
+else:
+    CHECK = None
 
 # kind, emission/stopping scale (also the lepton-pair pT), source Delta, SCALUP
 SAMPLE = [('S', 1., 1., 100.), ('S', 3., 1., 100.), ('S', 30., 1., 100.),
@@ -36,6 +40,7 @@ def write_job(directory):
     return directory
 
 
+@unittest.skipUnless(HAVE_NUMPY, 'NumPy is required by the Delta Sudakov check')
 class TestDeltaSudakovCheck(unittest.TestCase):
     def test_paired_source_and_shower_no_emission(self):
         with tempfile.TemporaryDirectory() as temporary:

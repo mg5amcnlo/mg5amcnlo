@@ -8,16 +8,20 @@ import tempfile
 import unittest
 from unittest import mock
 
-import numpy as np
-
 from tests.unit_tests.various.test_macnlops_plots import (
-    ROOT,PLOTS,HAVE_FASTJET,fixture,common_fixture)
+    ROOT,PLOTS,HAVE_NUMPY,HAVE_FASTJET,fixture,common_fixture)
 
-SPEC=importlib.util.spec_from_file_location('macnlops_histogram_audit',
-    ROOT/'docs/audits/audit_macnlops_validation.py')
-AUDIT=importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(AUDIT)
+# The audit (docs/audits) needs NumPy; without it these tests are skipped.
+if HAVE_NUMPY:
+    import numpy as np
+    SPEC=importlib.util.spec_from_file_location('macnlops_histogram_audit',
+        ROOT/'docs/audits/audit_macnlops_validation.py')
+    AUDIT=importlib.util.module_from_spec(SPEC);SPEC.loader.exec_module(AUDIT)
+else:
+    AUDIT=None
 
 
+@unittest.skipUnless(HAVE_NUMPY,'NumPy is required by the histogram audit')
 class TestMacNLOPSOriginalWeightAnchors(unittest.TestCase):
     def test_common_source_anchors_both_curves_with_one_original_read(self):
         integral=dict(processes=dict(dy=dict(primary=dict(source='/original/ordinary.lhe.gz'))))
