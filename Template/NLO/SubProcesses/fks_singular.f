@@ -4706,9 +4706,9 @@ c Insert <ij>/[ij] which is not included by sborn()
                azifact=xij_aor
             else
                if (xi_i_fks.lt.1d-8) then
-                  pi(i)=p_i_fks_ev(i)
+                  pi(0:3)=p_i_fks_ev(0:3)
                else
-                  pi(i)=p(i,i_fks)
+                  pi(0:3)=p(0:3,i_fks)
                endif
                pj(0:3)=p(0:3,j_fks)
                CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        
@@ -4891,9 +4891,9 @@ c Insert <ij>/[ij] which is not included by sborn()
               azifact=xij_aor
            else
               if (xi_i_fks.lt.1d-8) then
-                 pi(i)=p_i_fks_ev(i)
+                 pi(0:3)=p_i_fks_ev(0:3)
               else
-                 pi(i)=p(i,i_fks)
+                 pi(0:3)=p(0:3,i_fks)
               endif
               pj(0:3)=p(0:3,j_fks)
               if(j_fks.eq.2 .and. nincoming.eq.2)then
