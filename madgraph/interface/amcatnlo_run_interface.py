@@ -967,7 +967,7 @@ class AskRunNLO(cmd.ControlSwitch):
     
     def __init__(self, question, line_args=[], mode=None, force=False,
                                                                   *args, **opt):
-        
+        self.allow_qed_ps = opt.pop('allow_qed_ps', False)
         self.me_dir = opt['mother_interface'].me_dir
         self.check_available_module(opt['mother_interface'].options)
         self.last_mode = opt['mother_interface'].last_mode
@@ -978,11 +978,18 @@ class AskRunNLO(cmd.ControlSwitch):
 
         hide_line = []
         if 'QED' in self.proc_characteristics['splitting_types']:
-            hide_line = ['madspin', 'shower', 'reweight', 'madanalysis']        
+            hide_line = ['madspin', 'shower', 'reweight', 'madanalysis']
+            if self.allow_qed_ps:
+                hide_line.remove('shower')
         
         super(AskRunNLO,self).__init__(self.to_control, opt['mother_interface'],
                                      *args, hide_line=hide_line, force=force,
                                       **opt)
+
+    @property
+    def qed_ps_restricted(self):
+        return ('QED' in self.proc_characteristics['splitting_types'] and
+                not self.allow_qed_ps)
 
     @property
     def answer(self):
@@ -1103,12 +1110,9 @@ class AskRunNLO(cmd.ControlSwitch):
 #    
     def get_allowed_fixed_order(self):
         """ """
-        
-        if self.proc_characteristics['ninitial'] == 1 or \
-           'QED' in self.proc_characteristics['splitting_types']:
+        if self.proc_characteristics['ninitial'] == 1 or self.qed_ps_restricted:
             return ['ON']
-        else:
-            return ['ON', 'OFF']
+        return ['ON', 'OFF']
         
     def set_default_fixed_order(self):
           
@@ -1116,8 +1120,8 @@ class AskRunNLO(cmd.ControlSwitch):
             self.switch['fixed_order'] = 'ON'
         elif self.proc_characteristics['ninitial'] == 1:
             self.switch['fixed_order'] = 'ON'
-        elif 'QED' in self.proc_characteristics['splitting_types']:
-             self.switch['fixed_order'] = 'ON'
+        elif self.qed_ps_restricted:
+            self.switch['fixed_order'] = 'ON'
         else:
             self.switch['fixed_order'] = 'OFF'
 
@@ -1129,11 +1133,9 @@ class AskRunNLO(cmd.ControlSwitch):
             return self.red % switch_value
     
     def print_options_fixed_order(self):
-        
-        if 'QED' in self.proc_characteristics['splitting_types']:
+        if self.qed_ps_restricted:
             return "No NLO+PS available for EW correction"
-        else:
-            return self.print_options('fixed_order', keep_default=True)
+        return self.print_options('fixed_order', keep_default=True)
     
     def print_options_madspin(self):
         if 'QED' in self.proc_characteristics['splitting_types']:
@@ -1152,26 +1154,24 @@ class AskRunNLO(cmd.ControlSwitch):
     
    
     def consistency_QED(self, key, value, switch):
-        """ temporary way to forbid event generation due to lack of validation"""
-        
-#        if True:
-        if 'QED' in self.proc_characteristics['splitting_types']:
+        """Restrict unvalidated QED matching unless explicitly enabled."""
+        if self.qed_ps_restricted:
             out = {}
-            to_check ={'fixed_order': ['ON'],
-                       'shower': ['OFF'],
-                       'madanalysis': ['OFF'],
-                       'madspin': ['OFF','none'],
-                       'reweight': ['OFF']}
-            for key, allowed  in to_check.items():        
-                if switch[key] not in allowed:
-                    out[key] = allowed[0]
+            to_check = {'fixed_order': ['ON'],
+                        'shower': ['OFF'],
+                        'madanalysis': ['OFF'],
+                        'madspin': ['OFF', 'none'],
+                        'reweight': ['OFF']}
+            for name, allowed in to_check.items():
+                if switch[name] not in allowed:
+                    out[name] = allowed[0]
                     if not self.nb_fo_warning:
-                        if 'QED' in self.proc_characteristics['splitting_types']:
-                            logger.warning("NLO+PS mode is not allowed for processes including electroweak corrections")
+                        logger.warning('NLO+PS mode is not allowed for processes '
+                                       'including electroweak corrections. Use '
+                                       '--allow_qed_ps for experimental runs.')
                         self.nb_fo_warning = 1
-        else: 
-            return self.check_consistency_with_all(key, value)
-        return out 
+            return out
+        return self.check_consistency_with_all(key, value)
     #apply to all related to the group 
     consistency_fixed_order = lambda self, *args, **opts: self.consistency_QED('fixed_order', *args, **opts)
     consistency_shower = lambda self, *args, **opts: self.consistency_QED('shower', *args, **opts)
@@ -1226,7 +1226,7 @@ class AskRunNLO(cmd.ControlSwitch):
         if hasattr(self, 'allowed_shower'):
             return self.allowed_shower
         
-        if 'QED' in self.proc_characteristics['splitting_types']:
+        if self.qed_ps_restricted:
             self.allowed_shower = ['OFF']
             return self.allowed_shower
 
@@ -1273,7 +1273,7 @@ class AskRunNLO(cmd.ControlSwitch):
     
     def set_default_shower(self): 
         
-        if 'QED' in self.proc_characteristics['splitting_types']:
+        if self.qed_ps_restricted:
             self.switch['shower'] = 'Not Avail'
         elif self.last_mode in ['LO', 'NLO', 'noshower', 'noshowerLO']:
             self.switch['shower'] = 'OFF'         
@@ -5894,6 +5894,13 @@ RESTART = %(mint_mode)s
             mode = None
         if not mode and (options['parton'] or options['reweightonly']):
             mode = 'noshower'  
+
+        allow_qed_ps = options.get('allow_qed_ps', False)
+        if ('QED' in self.proc_characteristics['splitting_types'] and
+                not allow_qed_ps and mode in
+                ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO', 'onlyshower']):
+            raise self.InvalidCmd('NLO QED+PS matching is disabled. Use '
+                                  '--allow_qed_ps to enable experimental runs.')
         
         passing_cmd = []
         for key,value in switch.keys():
@@ -5915,6 +5922,7 @@ RESTART = %(mint_mode)s
         switch, cmd_switch = self.ask('', '0', [], ask_class = self.action_switcher,
                               mode=mode, force=(force or mode),
                               first_cmd=passing_cmd,
+                              allow_qed_ps=allow_qed_ps,
                               return_instance=True)
 
         if 'mode' in switch:
@@ -6041,6 +6049,8 @@ _compile_usage = "compile [MODE] [options]\n" + \
                 "   or MC for matching with parton-shower monte-carlos. \n" + \
                 "   (if omitted, it is set to MC)\n"
 _compile_parser = misc.OptionParser(usage=_compile_usage)
+_compile_parser.add_option("--allow_qed_ps", default=False, action='store_true',
+                            help="Allow experimental NLO QED+PS matching by bypassing the launch restriction")
 _compile_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory for the launch, without editing them")
 
@@ -6054,6 +6064,8 @@ _launch_usage = "launch [MODE] [options]\n" + \
                 "     in the run_card.dat\n"
 
 _launch_parser = misc.OptionParser(usage=_launch_usage)
+_launch_parser.add_option("--allow_qed_ps", default=False, action='store_true',
+                            help="Allow experimental NLO QED+PS matching by bypassing the launch restriction")
 _launch_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory for the launch, without editing them")
 _launch_parser.add_option("-c", "--cluster", default=False, action='store_true',
