@@ -414,7 +414,7 @@ class TestSourceState(unittest.TestCase):
     def test_source_construction_accepts_the_actual_generation_run_card(self):
         from madgraph.various.banner import RunCardNLO
         card = RunCardNLO()
-        self.assertTrue(card['store_hard_momenta'])
+        self.assertFalse(card['store_hard_momenta'])
         self.assertEqual(source_construction(card), ORDINARY_SOURCE)
         card.set('macnlops_resolved_source', True, user=True)
         self.assertEqual(source_construction(card), RESOLVED_SOURCE)

@@ -96,7 +96,7 @@ $ion_pdf
                             ! scale by this factor
   %(mcatnlo_delta)s = MCatNLO_DELTA ! use MC@NLO-Delta matching, arXiv:2002.12716
                         ! (only with Pythia8309 or later)
-  %(store_hard_momenta)s = store_hard_momenta ! annotate momenta before shower-mass reshuffling
+  %(store_hard_momenta)s = store_hard_momenta ! annotate momenta before shower-mass reshuffling (on with macnlops)
   %(macnlops)s = macnlops ! match the first emission (MAcNLOPS; needs MCatNLO_DELTA = True)
   %(macnlops_keep_rejected)s = macnlops_keep_rejected ! keep vetoed/removed events with zero 'macnlops' weight
   %(macnlops_resolved_source)s = macnlops_resolved_source ! legacy scalar/gated source (ordinary MC@NLO is the default)

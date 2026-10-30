@@ -1944,9 +1944,12 @@ def check_source(header, process_dir):
         raise MatchingError('Generation cards differ from input for: ' + ', '.join(mismatch))
     if source.get('event_norm') != 'sum':
         raise MatchingError('Generate with event_norm=sum: rejection must retain absolute weights')
-    if source.get('store_hard_momenta', 'false') not in ('true', '.true.', 't'):
-        raise MatchingError('Generate with store_hard_momenta=True to retain the '
-                            'pre-shuffle hard point and source-partition provenance')
+    # Run-card validation switches store_hard_momenta on for macnlops=True,
+    # but the stored card keeps the value written by the user.
+    if not any(source.get(key, 'false') in ('true', '.true.', 't')
+               for key in ('store_hard_momenta', 'macnlops')):
+        raise MatchingError('Generate with macnlops=True (or store_hard_momenta=True) to retain '
+                            'the pre-shuffle hard point and source-partition provenance')
     if source_construction(source) != source_construction(current):
         raise MatchingError('Source and evaluator counterterm constructions differ')
     if source.get('parton_shower', '').upper() != 'PYTHIA8':

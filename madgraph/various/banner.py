@@ -5883,8 +5883,8 @@ class RunCardNLO(RunCard):
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
         self.add_param('mcatnlo_delta', False)
-        self.add_param('store_hard_momenta', True,
-                       comment='Store the hard external momenta before shower-mass reshuffling in each LHE event')
+        self.add_param('store_hard_momenta', False,
+                       comment='Store the hard external momenta before shower-mass reshuffling in each LHE event (switched on by macnlops)')
         self.add_param('macnlops', False, hidden=True,
                        comment='Prepare a common MC@NLO input for matching and preserve hard-event momenta')
         self.add_param('macnlops_resolved_source', False, hidden=True,
@@ -6184,9 +6184,12 @@ class RunCardNLO(RunCard):
                 raise InvalidRunCard('MAcNLOPS requires unmerged PYTHIA8 MC@NLO generation')
             if self['mcatnlo_delta'] and self['macnlops_resolved_source']:
                 raise InvalidRunCard('MC@NLO-Delta requires macnlops_resolved_source=False')
+            # The matching reads the hard momenta from before shower-mass
+            # reshuffling; ordinary samples keep the stock event format.
             if not self['store_hard_momenta']:
-                raise InvalidRunCard('MAcNLOPS requires store_hard_momenta=True to retain '
-                                     'momenta before shower-mass reshuffling')
+                self['store_hard_momenta'] = True
+                logger.info('MAcNLOPS stores the hard momenta before shower-mass '
+                            'reshuffling: store_hard_momenta set to True')
             if self['event_norm'] != 'sum' or self['pdlabel'].lower() != 'lhapdf':
                 raise InvalidRunCard('MAcNLOPS requires event_norm=sum and pdlabel=lhapdf')
             if len(self['lhaid']) != 1 or any(self['reweight_scale']) or any(self['reweight_pdf']):

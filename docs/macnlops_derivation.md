@@ -450,9 +450,10 @@ False = mcatnlo_delta
 ```
 
 `macnlops=True` prepares the measured matching profile and complete source
-coalescing. It requires `store_hard_momenta=True`; disabling that annotation
-is rejected during run-card validation, before generation. The annotation
-records the momenta before shower-mass reshuffling;
+coalescing. Run-card validation also switches on `store_hard_momenta`, which
+is off by default so that ordinary samples keep the stock event format (the
+PYTHIA6 reader, for one, expects `</event>` right after the weights). The
+annotation records the momenta before shower-mass reshuffling;
 the ordinary event body still uses its stock MC-mass reshuffle. The default
 `macnlops_resolved_source=False` keeps the ordinary G/P counterterm and
 records profile construction `ordinary-mcatnlo-v1`. Setting
