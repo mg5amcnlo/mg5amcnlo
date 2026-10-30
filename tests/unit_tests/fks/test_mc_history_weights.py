@@ -27,7 +27,10 @@ class TestMCHistoryWeights(unittest.TestCase):
                 'pmass.inc': 'pmass=0d0\npmass(3)=test_mass',
                 'run.inc': 'integer ickkw,lpp(2)\n'
                            'double precision scale,q2fact(2),xbk(2)\n'
-                           'common/test_run/scale,q2fact,xbk,ickkw,lpp',
+                           'common/test_run/scale,q2fact,xbk,ickkw,lpp\n'
+                           'logical macnlops\ncommon /cMAcNLOPS/ macnlops\n'
+                           'logical macnlops_resolved_source\n'
+                           'common /cMAcNLOPSConstruction/ macnlops_resolved_source',
                 'q_es.inc': 'double precision QES2\ncommon/test_qes/QES2',
                 'fks_info.inc': 'integer fks_i_d(1)\nparameter(fks_i_d=[5])',
             }
@@ -48,7 +51,13 @@ class TestMCHistoryWeights(unittest.TestCase):
                 'integer :: QCD_squared_selected=-1,QED_squared_selected=-1\nend module\n'
                 'module mint_module\nlogical :: pass_cuts_check=.false.\nend module\n'
                 'module mc_counterterms\n'
-                'double precision :: gfactsf,gfactcl,gfactazi\nend module\n')
+                'double precision :: gfactsf,gfactcl,gfactazi\n'
+                'contains\n'
+                # MAcNLOPS metadata only; this fixture runs with macnlops off.
+                'double precision function get_qMC(xi_i_fks,y_ij_fks)\n'
+                'double precision :: xi_i_fks,y_ij_fks\n'
+                "error stop 'unexpected MAcNLOPS shower-scale query'\n"
+                'end function\nend module\n')
             routines = ('compute_native_NLOPS_weights', 'compute_real_emission',
                         'compute_soft_counter_term', 'compute_collinear_counter_term',
                         'compute_soft_collinear_counter_term', 'add_wgt')
