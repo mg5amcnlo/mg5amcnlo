@@ -20,6 +20,8 @@ import copy
 import os
 import sys
 import time
+from types import SimpleNamespace
+from unittest import mock
 
 import tests.unit_tests as unittest
 
@@ -37,6 +39,53 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 #===============================================================================
 # TestImportUFO
 #===============================================================================
+class TestOrganizeModelExpression(unittest.TestCase):
+    """A model's EW scheme and LOOP inputs must not affect later imports."""
+
+    def setUp(self):
+        defaults = mock.patch.object(import_ufo.OrganizeModelExpression,
+                                    'track_dependant', ['aS', 'aEWM1', 'MU_R'])
+        defaults.start()
+        self.addCleanup(defaults.stop)
+
+    def organize(self, gmu=False, loop_scale=False):
+        def external(name, block, code):
+            return SimpleNamespace(name=name, nature='external', type='real',
+                                   value=1., lhablock=block, lhacode=[code])
+
+        parameters = [external('Gf', 'SMINPUTS', 2),
+                      external('custom_scale', 'LOOP' if loop_scale else 'INPUTS', 1)]
+        if not gmu:
+            parameters.append(external('aEWM1', 'SMINPUTS', 1))
+        parameters += [SimpleNamespace(name=name, nature='internal', type='real',
+                                       value=expression)
+                       for name, expression in (('mass', '2*Gf'),
+                                                ('scale', '2*custom_scale'))]
+        model = SimpleNamespace(all_parameters=parameters, all_couplings=[])
+        organizer = import_ufo.OrganizeModelExpression(model)
+        organizer.main()
+        return organizer
+
+    def test_gmu_dependencies_do_not_leak_between_models(self):
+        before = self.organize()
+        gmu = self.organize(gmu=True)
+        after = self.organize()
+        self.assertEqual(before.all_expr['mass'].depend, ())
+        self.assertEqual(gmu.all_expr['mass'].depend, ('Gf',))
+        self.assertEqual(after.all_expr['mass'].depend, ())
+        self.assertNotIn('Gf', import_ufo.OrganizeModelExpression.track_dependant)
+
+    def test_loop_scale_dependencies_do_not_leak_between_models(self):
+        before = self.organize()
+        running = self.organize(loop_scale=True)
+        after = self.organize()
+        self.assertEqual(before.all_expr['scale'].depend, ())
+        self.assertEqual(running.all_expr['scale'].depend, ('custom_scale',))
+        self.assertEqual(after.all_expr['scale'].depend, ())
+        self.assertNotIn('custom_scale',
+                         import_ufo.OrganizeModelExpression.track_dependant)
+
+
 class TestImportUFO(unittest.TestCase):
     """Test class for the RestrictModel object"""
 
