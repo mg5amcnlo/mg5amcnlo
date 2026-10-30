@@ -396,6 +396,66 @@ class TestHistogramRegressions(unittest.TestCase):
             self.assertTrue(os.path.exists(cli_base+'.html'))
             self.assertFalse(os.path.exists(cli_base+'.pdf'))
 
+    def test_alternative_central_weight_is_drawn_by_every_renderer(self):
+        # The 'macnlops' weight of a MAcNLOPS first-emission sample is a
+        # second central value; other unnamed weights stay undrawn.
+        labels = ['central', 'stat_error', 'macnlops', 'other']
+        first = self.make_hwu(labels, [2.0, 0.2, 1.5, 7.0],
+                              title='alternative plot', n_bins=2)
+        second = self.make_hwu(labels, [1.0, 0.1, 1.2, 7.0],
+                               title='alternative plot', n_bins=2)
+        first.type, second.type = 'NOCUT', 'CUT'
+
+        with misc.TMP_directory() as tmpdir:
+            output_base = pjoin(tmpdir, 'alternative')
+            histograms.HwUList([first, second]).output(
+                output_base, format='gnuplot', auto_open=False,
+                uncertainties=['statistical'])
+
+            with open(output_base+'.gnuplot') as stream:
+                card = stream.read()
+            for index, (name, style) in enumerate((('NOCUT', 51), ('CUT', 52))):
+                self.assertIn("'alternative.HwU' index %d using (($1+$2)/2):"
+                    "($5 <= 0 ? 1/0 : $5) ls %d title '%s, MAcNLOPS'" %
+                    (index, style, name), card)
+                self.assertIn("'alternative.HwU' index %d using (($1+$2)/2):"
+                    "(safe($5,$3,1.0)-1.0) ls %d title ''" % (index, style), card)
+            self.assertIn('set style line  51 lt 1', card)
+            self.assertNotIn('$6', card)
+
+            script_path = output_base+'.py'
+            with open(script_path) as stream:
+                script = stream.read()
+            namespace = {'__file__': script_path,
+                         '__name__': 'generated_alternative_renderer_test'}
+            exec(compile(script, script_path, 'exec'), namespace)
+            plot = namespace['PLOTS'][0]
+            self.assertEqual([curve['alternatives'] for curve in plot['main']],
+                             [[{'label': 'MAcNLOPS', 'column': 4}]] * 2)
+            self.assertTrue(plot['relative_uncertainties'])
+            hwu_path = output_base+'.HwU'
+            offsets = namespace['_index_hwu_blocks'](hwu_path)
+            self.assertIn(4, namespace['_required_columns'](plot)[0])
+            blocks = namespace['_load_plot_blocks'](hwu_path, offsets, plot)
+            for draw, values in (('_draw_main', [1.5, 1.5, 1.5]),
+                                 ('_draw_relative_uncertainties', [-0.25, -0.25, -0.25])):
+                axis = mock.MagicMock()
+                axis.get_legend_handles_labels.return_value = ([], [])
+                namespace[draw](axis, plot, blocks)
+                drawn = [call for call in axis.step.call_args_list
+                         if call.kwargs.get('label') == 'NOCUT, MAcNLOPS']
+                self.assertEqual(len(drawn), 1)
+                self.assertEqual(drawn[0].args[1], values)
+
+            with open(output_base+'.html') as stream:
+                page = stream.read()
+            specs = json.loads(re.search(
+                r'<script id="plot-specs" type="application/json">(.*?)</script>',
+                page, re.S).group(1))
+            self.assertEqual(specs[0]['main'][1]['alternatives'],
+                             [{'label': 'MAcNLOPS', 'column': 4}])
+            self.assertIn("alternative: '9 3 2 3'", page)
+
     def test_renderer_prefers_gnuplot_and_falls_back_to_matplotlib(self):
         with misc.TMP_directory() as tmpdir:
             output_base = pjoin(tmpdir, 'rendered')

@@ -32,6 +32,7 @@ set style line  11 lt 2 lc rgb "#009e73" lw 1.3 dt (6,3)
 set style line  21 lt 4 lc rgb "#009e73" lw 1.3 dt (3,2)
 set style line  31 lt 6 lc rgb "#009e73" lw 1.3 dt (2,1)
 set style line  41 lt 8 lc rgb "#009e73" lw 1.3 dt (4,3)
+set style line  51 lt 1 lc rgb "#009e73" lw 1.3 dt (8,3,2,3)
 
 set style line   2 lt 1 lc rgb "#0072b2" lw 1.3
 set style line 102 lt 1 lc rgb "#0072b2" lw 1.3 dt (6,3)
@@ -39,6 +40,7 @@ set style line  12 lt 2 lc rgb "#0072b2" lw 1.3 dt (6,3)
 set style line  22 lt 4 lc rgb "#0072b2" lw 1.3 dt (3,2)
 set style line  32 lt 6 lc rgb "#0072b2" lw 1.3 dt (2,1)
 set style line  42 lt 8 lc rgb "#0072b2" lw 1.3 dt (4,3)
+set style line  52 lt 1 lc rgb "#0072b2" lw 1.3 dt (8,3,2,3)
 
 set style line   3 lt 1 lc rgb "#d55e00" lw 1.3
 set style line 103 lt 1 lc rgb "#d55e00" lw 1.3 dt (6,3)
@@ -46,6 +48,7 @@ set style line  13 lt 2 lc rgb "#d55e00" lw 1.3 dt (6,3)
 set style line  23 lt 4 lc rgb "#d55e00" lw 1.3 dt (3,2)
 set style line  33 lt 6 lc rgb "#d55e00" lw 1.3 dt (2,1)
 set style line  43 lt 8 lc rgb "#d55e00" lw 1.3 dt (4,3)
+set style line  53 lt 1 lc rgb "#d55e00" lw 1.3 dt (8,3,2,3)
 
 set style line   4 lt 1 lc rgb "#f0e442" lw 1.3
 set style line 104 lt 1 lc rgb "#f0e442" lw 1.3 dt (6,3)
@@ -53,6 +56,7 @@ set style line  14 lt 2 lc rgb "#f0e442" lw 1.3 dt (6,3)
 set style line  24 lt 4 lc rgb "#f0e442" lw 1.3 dt (3,2)
 set style line  34 lt 6 lc rgb "#f0e442" lw 1.3 dt (2,1)
 set style line  44 lt 8 lc rgb "#f0e442" lw 1.3 dt (4,3)
+set style line  54 lt 1 lc rgb "#f0e442" lw 1.3 dt (8,3,2,3)
 
 set style line   5 lt 1 lc rgb "#56b4e9" lw 1.3
 set style line 105 lt 1 lc rgb "#56b4e9" lw 1.3 dt (6,3)
@@ -60,6 +64,7 @@ set style line  15 lt 2 lc rgb "#56b4e9" lw 1.3 dt (6,3)
 set style line  25 lt 4 lc rgb "#56b4e9" lw 1.3 dt (3,2)
 set style line  35 lt 6 lc rgb "#56b4e9" lw 1.3 dt (2,1)
 set style line  45 lt 8 lc rgb "#56b4e9" lw 1.3 dt (4,3)
+set style line  55 lt 1 lc rgb "#56b4e9" lw 1.3 dt (8,3,2,3)
 
 set style line   6 lt 1 lc rgb "#cc79a7" lw 1.3
 set style line 106 lt 1 lc rgb "#cc79a7" lw 1.3 dt (6,3)
@@ -67,6 +72,7 @@ set style line  16 lt 2 lc rgb "#cc79a7" lw 1.3 dt (6,3)
 set style line  26 lt 4 lc rgb "#cc79a7" lw 1.3 dt (3,2)
 set style line  36 lt 6 lc rgb "#cc79a7" lw 1.3 dt (2,1)
 set style line  46 lt 8 lc rgb "#cc79a7" lw 1.3 dt (4,3)
+set style line  56 lt 1 lc rgb "#cc79a7" lw 1.3 dt (8,3,2,3)
 
 set style line   7 lt 1 lc rgb "#e69f00" lw 1.3
 set style line 107 lt 1 lc rgb "#e69f00" lw 1.3 dt (6,3)
@@ -74,6 +80,7 @@ set style line  17 lt 2 lc rgb "#e69f00" lw 1.3 dt (6,3)
 set style line  27 lt 4 lc rgb "#e69f00" lw 1.3 dt (3,2)
 set style line  37 lt 6 lc rgb "#e69f00" lw 1.3 dt (2,1)
 set style line  47 lt 8 lc rgb "#e69f00" lw 1.3 dt (4,3)
+set style line  57 lt 1 lc rgb "#e69f00" lw 1.3 dt (8,3,2,3)
 
 set style line   8 lt 1 lc rgb "black" lw 1.3
 set style line 108 lt 1 lc rgb "black" lw 1.3 dt (6,3)
@@ -81,6 +88,7 @@ set style line  18 lt 2 lc rgb "black" lw 1.3 dt (6,3)
 set style line  28 lt 4 lc rgb "black" lw 1.3 dt (3,2)
 set style line  38 lt 6 lc rgb "black" lw 1.3 dt (2,1)
 set style line  48 lt 8 lc rgb "black" lw 1.3 dt (4,3)
+set style line  58 lt 1 lc rgb "black" lw 1.3 dt (8,3,2,3)
 
 
 set style line 999 lt 1 lc rgb "gray" lw 1.3

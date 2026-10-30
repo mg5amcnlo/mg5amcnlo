@@ -876,9 +876,19 @@ class HwU(Histogram):
     weight_label_PDF_adv = re.compile(r'^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s*$')
     
     
+    # Weights drawn as alternative central values beside the nominal one,
+    # keyed by their lower-case HwU label, with their legend names.
+    alternative_central_weights = {'macnlops': 'MAcNLOPS'}
+
     class ParseError(MadGraph5Error):
         """a class for histogram data parsing errors"""
-    
+
+    def get_alternative_weights(self):
+        """(label, legend name) of each alternative central weight column."""
+        return [(label, HwU.alternative_central_weights[label.strip().lower()])
+                for label in self.bins.weight_labels if isinstance(label, str)
+                and label.strip().lower() in HwU.alternative_central_weights]
+
     @classmethod
     def get_HwU_wgt_label_type(cls, wgt_label):
         """ From the format of the weight label given in argument, it returns
@@ -3753,48 +3763,56 @@ set style line 11 lt 2 lc rgb "%(col1)s" lw 2.5
 set style line 21 lt 4 lc rgb "%(col1)s" lw 2.5
 set style line 31 lt 6 lc rgb "%(col1)s" lw 2.5
 set style line 41 lt 8 lc rgb "%(col1)s" lw 2.5
+set style line 51 lt 3 lc rgb "%(col1)s" lw 2.5
 
 set style line  2 lt 1 lc rgb "%(col2)s" lw 2.5
 set style line 12 lt 2 lc rgb "%(col2)s" lw 2.5
 set style line 22 lt 4 lc rgb "%(col2)s" lw 2.5
 set style line 32 lt 6 lc rgb "%(col2)s" lw 2.5
 set style line 42 lt 8 lc rgb "%(col2)s" lw 2.5
+set style line 52 lt 3 lc rgb "%(col2)s" lw 2.5
 
 set style line  3 lt 1 lc rgb "%(col3)s" lw 2.5
 set style line 13 lt 2 lc rgb "%(col3)s" lw 2.5
 set style line 23 lt 4 lc rgb "%(col3)s" lw 2.5
 set style line 33 lt 6 lc rgb "%(col3)s" lw 2.5
 set style line 43 lt 8 lc rgb "%(col3)s" lw 2.5
+set style line 53 lt 3 lc rgb "%(col3)s" lw 2.5
 
 set style line  4 lt 1 lc rgb "%(col4)s" lw 2.5
 set style line 14 lt 2 lc rgb "%(col4)s" lw 2.5
 set style line 24 lt 4 lc rgb "%(col4)s" lw 2.5
 set style line 34 lt 6 lc rgb "%(col4)s" lw 2.5
 set style line 44 lt 8 lc rgb "%(col4)s" lw 2.5
+set style line 54 lt 3 lc rgb "%(col4)s" lw 2.5
 
 set style line  5 lt 1 lc rgb "%(col5)s" lw 2.5
 set style line 15 lt 2 lc rgb "%(col5)s" lw 2.5
 set style line 25 lt 4 lc rgb "%(col5)s" lw 2.5
 set style line 35 lt 6 lc rgb "%(col5)s" lw 2.5
 set style line 45 lt 8 lc rgb "%(col5)s" lw 2.5
+set style line 55 lt 3 lc rgb "%(col5)s" lw 2.5
 
 set style line  6 lt 1 lc rgb "%(col6)s" lw 2.5
 set style line 16 lt 2 lc rgb "%(col6)s" lw 2.5
 set style line 26 lt 4 lc rgb "%(col6)s" lw 2.5
 set style line 36 lt 6 lc rgb "%(col6)s" lw 2.5
 set style line 46 lt 8 lc rgb "%(col6)s" lw 2.5
+set style line 56 lt 3 lc rgb "%(col6)s" lw 2.5
 
 set style line  7 lt 1 lc rgb "%(col7)s" lw 2.5
 set style line 17 lt 2 lc rgb "%(col7)s" lw 2.5
 set style line 27 lt 4 lc rgb "%(col7)s" lw 2.5
 set style line 37 lt 6 lc rgb "%(col7)s" lw 2.5
 set style line 47 lt 8 lc rgb "%(col7)s" lw 2.5
+set style line 57 lt 3 lc rgb "%(col7)s" lw 2.5
 
 set style line  8 lt 1 lc rgb "%(col8)s" lw 2.5
 set style line 18 lt 2 lc rgb "%(col8)s" lw 2.5
 set style line 28 lt 4 lc rgb "%(col8)s" lw 2.5
 set style line 38 lt 6 lc rgb "%(col8)s" lw 2.5
 set style line 48 lt 7 lc rgb "%(col8)s" lw 2.5
+set style line 58 lt 3 lc rgb "%(col8)s" lw 2.5
 
 
 set style line 999 lt 1 lc rgb "gray" lw 2.5
@@ -3842,6 +3860,7 @@ set style line  11 lt 2 lc rgb "%(col1)s" lw 1.3 dt (6,3)
 set style line  21 lt 4 lc rgb "%(col1)s" lw 1.3 dt (3,2)
 set style line  31 lt 6 lc rgb "%(col1)s" lw 1.3 dt (2,1)
 set style line  41 lt 8 lc rgb "%(col1)s" lw 1.3 dt (4,3)
+set style line  51 lt 1 lc rgb "%(col1)s" lw 1.3 dt (8,3,2,3)
 
 set style line   2 lt 1 lc rgb "%(col2)s" lw 1.3
 set style line 102 lt 1 lc rgb "%(col2)s" lw 1.3 dt (6,3)
@@ -3849,6 +3868,7 @@ set style line  12 lt 2 lc rgb "%(col2)s" lw 1.3 dt (6,3)
 set style line  22 lt 4 lc rgb "%(col2)s" lw 1.3 dt (3,2)
 set style line  32 lt 6 lc rgb "%(col2)s" lw 1.3 dt (2,1)
 set style line  42 lt 8 lc rgb "%(col2)s" lw 1.3 dt (4,3)
+set style line  52 lt 1 lc rgb "%(col2)s" lw 1.3 dt (8,3,2,3)
 
 set style line   3 lt 1 lc rgb "%(col3)s" lw 1.3
 set style line 103 lt 1 lc rgb "%(col3)s" lw 1.3 dt (6,3)
@@ -3856,6 +3876,7 @@ set style line  13 lt 2 lc rgb "%(col3)s" lw 1.3 dt (6,3)
 set style line  23 lt 4 lc rgb "%(col3)s" lw 1.3 dt (3,2)
 set style line  33 lt 6 lc rgb "%(col3)s" lw 1.3 dt (2,1)
 set style line  43 lt 8 lc rgb "%(col3)s" lw 1.3 dt (4,3)
+set style line  53 lt 1 lc rgb "%(col3)s" lw 1.3 dt (8,3,2,3)
 
 set style line   4 lt 1 lc rgb "%(col4)s" lw 1.3
 set style line 104 lt 1 lc rgb "%(col4)s" lw 1.3 dt (6,3)
@@ -3863,6 +3884,7 @@ set style line  14 lt 2 lc rgb "%(col4)s" lw 1.3 dt (6,3)
 set style line  24 lt 4 lc rgb "%(col4)s" lw 1.3 dt (3,2)
 set style line  34 lt 6 lc rgb "%(col4)s" lw 1.3 dt (2,1)
 set style line  44 lt 8 lc rgb "%(col4)s" lw 1.3 dt (4,3)
+set style line  54 lt 1 lc rgb "%(col4)s" lw 1.3 dt (8,3,2,3)
 
 set style line   5 lt 1 lc rgb "%(col5)s" lw 1.3
 set style line 105 lt 1 lc rgb "%(col5)s" lw 1.3 dt (6,3)
@@ -3870,6 +3892,7 @@ set style line  15 lt 2 lc rgb "%(col5)s" lw 1.3 dt (6,3)
 set style line  25 lt 4 lc rgb "%(col5)s" lw 1.3 dt (3,2)
 set style line  35 lt 6 lc rgb "%(col5)s" lw 1.3 dt (2,1)
 set style line  45 lt 8 lc rgb "%(col5)s" lw 1.3 dt (4,3)
+set style line  55 lt 1 lc rgb "%(col5)s" lw 1.3 dt (8,3,2,3)
 
 set style line   6 lt 1 lc rgb "%(col6)s" lw 1.3
 set style line 106 lt 1 lc rgb "%(col6)s" lw 1.3 dt (6,3)
@@ -3877,6 +3900,7 @@ set style line  16 lt 2 lc rgb "%(col6)s" lw 1.3 dt (6,3)
 set style line  26 lt 4 lc rgb "%(col6)s" lw 1.3 dt (3,2)
 set style line  36 lt 6 lc rgb "%(col6)s" lw 1.3 dt (2,1)
 set style line  46 lt 8 lc rgb "%(col6)s" lw 1.3 dt (4,3)
+set style line  56 lt 1 lc rgb "%(col6)s" lw 1.3 dt (8,3,2,3)
 
 set style line   7 lt 1 lc rgb "%(col7)s" lw 1.3
 set style line 107 lt 1 lc rgb "%(col7)s" lw 1.3 dt (6,3)
@@ -3884,6 +3908,7 @@ set style line  17 lt 2 lc rgb "%(col7)s" lw 1.3 dt (6,3)
 set style line  27 lt 4 lc rgb "%(col7)s" lw 1.3 dt (3,2)
 set style line  37 lt 6 lc rgb "%(col7)s" lw 1.3 dt (2,1)
 set style line  47 lt 8 lc rgb "%(col7)s" lw 1.3 dt (4,3)
+set style line  57 lt 1 lc rgb "%(col7)s" lw 1.3 dt (8,3,2,3)
 
 set style line   8 lt 1 lc rgb "%(col8)s" lw 1.3
 set style line 108 lt 1 lc rgb "%(col8)s" lw 1.3 dt (6,3)
@@ -3891,6 +3916,7 @@ set style line  18 lt 2 lc rgb "%(col8)s" lw 1.3 dt (6,3)
 set style line  28 lt 4 lc rgb "%(col8)s" lw 1.3 dt (3,2)
 set style line  38 lt 6 lc rgb "%(col8)s" lw 1.3 dt (2,1)
 set style line  48 lt 8 lc rgb "%(col8)s" lw 1.3 dt (4,3)
+set style line  58 lt 1 lc rgb "%(col8)s" lw 1.3 dt (8,3,2,3)
 
 
 set style line 999 lt 1 lc rgb "gray" lw 1.3
@@ -4176,12 +4202,17 @@ set key invert
             for uncertainty in curve_uncertainties:
                 if uncertainty['type'] not in available_uncertainties:
                     available_uncertainties.append(uncertainty['type'])
+            alternatives = [{'label': name,
+                             'column': histo.bins.weight_labels.index(label)+2}
+                            for label, name in histo.get_alternative_weights()] \
+                           if show_uncertainties else []
             main_curves.append({
                 'block': first_block+index,
                 'label': cls._get_matplotlib_curve_label(histo, index),
                 'color': colours[index%len(colours)],
                 'statistical': 'statistical' in uncertainties,
-                'uncertainties': curve_uncertainties})
+                'uncertainties': curve_uncertainties,
+                'alternatives': alternatives})
 
         if use_band is None:
             if len(available_uncertainties) <= 1:
@@ -4220,7 +4251,9 @@ set key invert
             'main': main_curves,
             'ratios': ratio_curves,
             'relative_uncertainties': bool(available_uncertainties or
-                                           'statistical' in uncertainties)}
+                                           'statistical' in uncertainties or
+                                           any(curve['alternatives']
+                                               for curve in main_curves))}
 
     @staticmethod
     def _get_matplotlib_script(output_base_name, plot_specs, auto_open,
@@ -4492,7 +4525,10 @@ PLOTS = %s
             uncertainties_present.remove('merging_scale')
         if alpsfact_var_pos is None and 'alpsfact' in uncertainties_present:
             uncertainties_present.remove('alpsfact')
-        no_uncertainties = len(uncertainties_present)==0
+        # Alternative central weights (e.g. MAcNLOPS) are drawn beside the
+        # central value and, relative to it, in the uncertainty panel.
+        alternatives = self[0].get_alternative_weights()
+        no_uncertainties = len(uncertainties_present)==0 and not alternatives
         
         # If the 'use_band' option is None we should adopt a default which is
         try:
@@ -4622,6 +4658,7 @@ plot \\"""
                 wgts_to_consider.append(self[0].bins.weight_labels[alpsfact_var])
                 wgts_to_consider.append(self[0].bins.weight_labels[alpsfact_var+1])
                 wgts_to_consider.append(self[0].bins.weight_labels[alpsfact_var+2])
+        wgts_to_consider.extend(label for label, _ in alternatives)
 
         (xmin, xmax) = HwU.get_x_optimal_range(self[:n_histograms],\
                                                weight_labels = wgts_to_consider)
@@ -4762,6 +4799,15 @@ plot \\"""
                     else:
                         uncertainty_plot_lines[-1]['alpsfact'] = \
         ["1/0 ls %d title '%s'"%(color_index+40,'%s, alpsfact variation'%title)]
+                # And the alternative central weights; logarithmic axes show
+                # their positive bins only.
+                if alternatives:
+                    data = '($%d <= 0 ? 1/0 : $%d)' if y_axis_mode=='LOG' else '%d'
+                    uncertainty_plot_lines[-1]['alternatives'] = [
+         "'%s' index %d using (($1+$2)/2):%s ls %d title '%s'"%(HwU_name,
+                      block_position+i, data%((histo.bins.weight_labels.index(
+                      label)+3,)*data.count('%d')), color_index+50,
+                      '%s, %s'%(title, name)) for label, name in alternatives]
 
 #            plot_lines.append(
 # "'%s' index %d using (($1+$2)/2):3 ls %d title '%s'"\
@@ -4960,6 +5006,11 @@ r'%s dynamical\_scale\_choice=%s' % (title,mu[j])))
                     HwU_name, block_position+i, alpsfact_var+4, color_index+40,'',
                                    ratio=True, band='alpsfact' in use_band)
                 
+            for label, _ in alternatives:
+                plot_lines.append(
+"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
+                      %(HwU_name,block_position+i,histo.bins.weight_labels.index(
+                      label)+3,k%self.number_line_colors_defined+51))
             if 'statistical' in uncertainties:
                    plot_lines.append(
     "'%s' index %d using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls %d title ''"%\
@@ -5427,7 +5478,8 @@ _HTML_SCRIPT_BODY = r'''<script>
             scale: '8 4',
             pdf: '2 3',
             merging_scale: '8 3 2 3',
-            alpsfact: '5 2 1 2'
+            alpsfact: '5 2 1 2',
+            alternative: '9 3 2 3'
         }[type] || '6 3';
     }
 
@@ -5559,6 +5611,9 @@ _HTML_SCRIPT_BODY = r'''<script>
                 range = range.concat(column(block, uncertainty.minimum));
                 range = range.concat(column(block, uncertainty.maximum));
             });
+            (curve.alternatives || []).forEach(function (alternative) {
+                range = range.concat(column(block, alternative.column));
+            });
         });
         return {
             edges: panelEdges(plot, blocks),
@@ -5623,6 +5678,21 @@ _HTML_SCRIPT_BODY = r'''<script>
                                    column(block, 3), curve.color);
                     }
                 });
+                plot.main.forEach(function (curve) {
+                    var block = blockAt(blocks, curve.block);
+                    var dash = dashFor('alternative');
+                    (curve.alternatives || []).forEach(function (alternative) {
+                        var values = column(block, alternative.column);
+                        if (plot.y_axis_mode === 'LOG') {
+                            values = values.map(function (value) {
+                                return value > 0 ? value : null;
+                            });
+                        }
+                        api.step(edges(block), values, curve.color, dash, 1.8);
+                        addLegend(article, curve.label + ', ' +
+                            alternative.label, curve.color, dash, false);
+                    });
+                });
             }
         };
     }
@@ -5637,6 +5707,10 @@ _HTML_SCRIPT_BODY = r'''<script>
                     column(block, uncertainty.minimum), central));
                 range = range.concat(relative(
                     column(block, uncertainty.maximum), central));
+            });
+            (curve.alternatives || []).forEach(function (alternative) {
+                range = range.concat(relative(
+                    column(block, alternative.column), central));
             });
             if (curve.statistical) {
                 column(block, 3).forEach(function (error, index) {
@@ -5688,6 +5762,14 @@ _HTML_SCRIPT_BODY = r'''<script>
                             errors.map(function () { return 0; }),
                             errors, curve.color);
                     }
+                    (curve.alternatives || []).forEach(function (alternative) {
+                        var dash = dashFor('alternative');
+                        api.step(edges(block), relative(
+                            column(block, alternative.column), central),
+                            curve.color, dash, 1.8);
+                        addLegend(article, curve.label + ', ' +
+                            alternative.label, curve.color, dash, false);
+                    });
                 });
             }
         };
@@ -6027,6 +6109,7 @@ _MATPLOTLIB_SCRIPT_BODY = r'''SOURCE_LINESTYLES = {
     'merging_scale': '-.',
     'alpsfact': (0, (3, 1, 1, 1)),
 }
+ALTERNATIVE_LINESTYLE = (0, (8, 3, 2, 3))
 
 
 def _load_matplotlib():
@@ -6134,6 +6217,8 @@ def _required_columns(plot):
             positions.add(3)
         for uncertainty in curve['uncertainties']:
             positions.update([uncertainty['minimum'], uncertainty['maximum']])
+        for alternative in curve.get('alternatives', ()):
+            positions.add(alternative['column'])
     return required
 
 
@@ -6237,6 +6322,14 @@ def _draw_main(axis, plot, blocks):
                 _draw_step(axis, edges, maximum, color=curve['color'],
                            linestyle=linestyle, linewidth=1.0,
                            label='_nolegend_')
+        for alternative in curve.get('alternatives', ()):
+            values = _column(block, alternative['column'])
+            if plot['y_axis_mode'] == 'LOG':
+                values = [value if value > 0.0 else float('nan')
+                          for value in values]
+            _draw_step(axis, edges, values, color=curve['color'],
+                       linestyle=ALTERNATIVE_LINESTYLE, linewidth=1.8, zorder=3,
+                       label='%s, %s' % (curve['label'], alternative['label']))
 
     # Match gnuplot: the histogram's axis mode, rather than empty bins,
     # determines whether the main y axis is logarithmic.
@@ -6270,6 +6363,12 @@ def _draw_relative_uncertainties(axis, plot, blocks):
                 _draw_step(axis, edges, maximum, color=curve['color'],
                            linestyle=linestyle, linewidth=1.0,
                            label='_nolegend_')
+        for alternative in curve.get('alternatives', ()):
+            _draw_step(axis, edges,
+                       _relative(_column(block, alternative['column']), central),
+                       color=curve['color'], linestyle=ALTERNATIVE_LINESTYLE,
+                       linewidth=1.8, zorder=3,
+                       label='%s, %s' % (curve['label'], alternative['label']))
         if curve['statistical']:
             statistical = [(abs(error) / abs(value)) if value else 0.0
                            for error, value in zip(_column(block, 3), central)]
