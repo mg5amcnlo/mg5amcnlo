@@ -331,6 +331,13 @@ shutil.copy(path.join(filepath, 'input','proc_card_default.dat'),
     # remove the apidoc file.
 #    shutil.rmtree(os.path.join(filepath,'apidoc'))
 
+# Do not ship macOS metadata (xattrs such as com.apple.provenance, ACLs,
+# AppleDouble ._ files): GNU tar on linux warns about every such entry.
+tar_env = dict(os.environ, COPYFILE_DISABLE='1')
+tar_clean_options = ['--no-xattrs', '--no-acls']
+if b'bsdtar' in subprocess.check_output(['tar', '--version']):
+    tar_clean_options += ['--no-mac-metadata', '--no-fflags']
+
 # 4. Download the offline installer and other similar code
 install_str = """
 cd %s
@@ -340,11 +347,11 @@ cd download-temp;
 git clone git@github.com:mg5amcnlo/HEPToolsInstallers.git
 rm -rfv `find HEPToolsInstallers -name .bzr -type d` > /dev/null;
 rm -rfv `find HEPToolsInstallers -name .git -type d` > /dev/null;
-tar czf OfflineHEPToolsInstaller.tar.gz HEPToolsInstallers/ > /dev/null;
+COPYFILE_DISABLE=1 tar %s -czf OfflineHEPToolsInstaller.tar.gz HEPToolsInstallers/ > /dev/null;
 mv OfflineHEPToolsInstaller.tar.gz ../vendor;
 cd ..;
 rm -rf download-temp;
-""" % filepath
+""" % (filepath, ' '.join(tar_clean_options))
 os.system(install_str)
 
 sys.path.append(pjoin(root_path, '..'))
@@ -356,7 +363,7 @@ misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'ninja.tar.gz'))
 
 # Add the tarball for SMWidth
 swidth_link = "http://madgraph.phys.ucl.ac.be/Downloads/SMWidth.tgz"
-misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'SMWidth.tar.gz')) 
+misc.wget(swidth_link, os.path.join(filepath, 'vendor', 'SMWidth.tar.gz')) 
 
 if not os.path.exists(os.path.join(filepath, 'vendor', 'OfflineHEPToolsInstaller.tar.gz')):
     print('Fail to create OfflineHEPToolsInstaller')
@@ -367,10 +374,11 @@ if not os.path.exists(os.path.join(filepath, 'vendor', 'OfflineHEPToolsInstaller
 logging.info("Create the tar file " + filename)
 # clean all the pyc
 os.system("cd %s;find . -name '*.pyc' -delete" % filepath)
-status2 = subprocess.call(['tar', 'czf', filename, filepath])
+status2 = subprocess.call(['tar'] + tar_clean_options + ['-czf', filename, filepath],
+                          env=tar_env)
 if status2:
     logging.error('Non-0 exit code %d from tar. Please check result.' % \
-                 status)
+                 status2)
     sys.exit()
 
 try:
