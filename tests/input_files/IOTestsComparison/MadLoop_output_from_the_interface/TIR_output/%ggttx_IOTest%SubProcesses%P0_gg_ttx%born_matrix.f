@@ -704,8 +704,8 @@ C           in BLOCK DATA BEAMPOL_DEFAULT.
           ENDIF
         ENDDO
  10   ENDDO
-      RETURN
       DEALLOCATE(TMP_INTER)
+      RETURN
       END
 
 
