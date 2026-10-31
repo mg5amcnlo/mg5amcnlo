@@ -1,0 +1,734 @@
+{
+  "jets_current": {
+    "path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031",
+    "processes": {
+      "EE2Jets_5FS": {
+        "fks_configurations": 4,
+        "nonlast_fks_configurations": 0,
+        "nonlast_subprocesses": 0,
+        "subprocess_details": [
+          {
+            "directory": "P0_epem_ddx",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 2,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "775786517ac6c18b0c60d8447e36567b5f77f3a80bac641348c7492675710f61"
+          },
+          {
+            "directory": "P0_epem_uux",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 2,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "5cf0aaa35a55e588ac138e2bf0ccc0915e30563eeb7766d5c1a2219494a953ed"
+          }
+        ],
+        "subprocesses": 2
+      },
+      "EE3Jets_5FS": {
+        "fks_configurations": 14,
+        "nonlast_fks_configurations": 0,
+        "nonlast_subprocesses": 0,
+        "subprocess_details": [
+          {
+            "directory": "P0_epem_ddxg",
+            "emitted_indices": [
+              6
+            ],
+            "fks_configurations": 7,
+            "nexternal": 6,
+            "nonlast": {},
+            "source_sha256": "327ad682645c76401cc47223acf1fa20d8abc6758c961b95a2f21bf20108fb32"
+          },
+          {
+            "directory": "P0_epem_uuxg",
+            "emitted_indices": [
+              6
+            ],
+            "fks_configurations": 7,
+            "nexternal": 6,
+            "nonlast": {},
+            "source_sha256": "f33709afaeca3f61156fdd9dd586f1c760a10cfb5524df89af7b4760eb348290"
+          }
+        ],
+        "subprocesses": 2
+      },
+      "EE4Jets_5FS": {
+        "fks_configurations": 70,
+        "nonlast_fks_configurations": 16,
+        "nonlast_subprocesses": 8,
+        "subprocess_details": [
+          {
+            "directory": "P0_epem_cuuxcx",
+            "emitted_indices": [
+              6,
+              7
+            ],
+            "fks_configurations": 5,
+            "nexternal": 7,
+            "nonlast": {
+              "5": {
+                "emitted": 6,
+                "radiator": 5
+              }
+            },
+            "source_sha256": "bb56d12b36362cf70e682a3d223083e895584a65fc7cec6517da10ad7a904bb8"
+          },
+          {
+            "directory": "P0_epem_dddxdx",
+            "emitted_indices": [
+              6,
+              7
+            ],
+            "fks_configurations": 3,
+            "nexternal": 7,
+            "nonlast": {
+              "3": {
+                "emitted": 6,
+                "radiator": 5
+              }
+            },
+            "source_sha256": "1e39e0eae59d371fe66c6ed33673eedd323e950f7d65354f7660352060b0fa6c"
+          },
+          {
+            "directory": "P0_epem_ddxgg",
+            "emitted_indices": [
+              6,
+              7
+            ],
+            "fks_configurations": 21,
+            "nexternal": 7,
+            "nonlast": {
+              "21": {
+                "emitted": 6,
+                "radiator": 5
+              },
+              "4": {
+                "emitted": 6,
+                "radiator": 5
+              },
+              "5": {
+                "emitted": 6,
+                "radiator": 5
+              },
+              "6": {
+                "emitted": 6,
+                "radiator": 5
+              }
+            },
+            "source_sha256": "15264eeb6249f09516c0494b203f1dcde73d73861b52e7857304000c81ce1abc"
+          },
+          {
+            "directory": "P0_epem_sddxsx",
+            "emitted_indices": [
+              6,
+              7
+            ],
+            "fks_configurations": 5,
+            "nexternal": 7,
+            "nonlast": {
+              "5": {
+                "emitted": 6,
+                "radiator": 5
+              }
+            },
+            "source_sha256": "67e1a4aa2730186092b63c3dabf223042eaa584bd6c6823d9c1c4453f7b48551"
+          },
+          {
+            "directory": "P0_epem_suuxsx",
+            "emitted_indices": [
+              6,
+              7
+            ],
+            "fks_configurations": 6,
+            "nexternal": 7,
+            "nonlast": {
+              "5": {
+                "emitted": 6,
+                "radiator": 5
+              },
+              "6": {
+                "emitted": 6,
+                "radiator": 5
+              }
+            },
+            "source_sha256": "578bcc1568260c634f44fcbb6a37967da7d9d5dc77f139c0c486dfa6eb43847b"
+          },
+          {
+            "directory": "P0_epem_uddxux",
+            "emitted_indices": [
+              6,
+              7
+            ],
+            "fks_configurations": 6,
+            "nexternal": 7,
+            "nonlast": {
+              "5": {
+                "emitted": 6,
+                "radiator": 5
+              },
+              "6": {
+                "emitted": 6,
+                "radiator": 5
+              }
+            },
+            "source_sha256": "c4367b32623e6050cadf7868d43c0b11ddedaaf7060d92bac2a318e2c4fff7da"
+          },
+          {
+            "directory": "P0_epem_uuuxux",
+            "emitted_indices": [
+              6,
+              7
+            ],
+            "fks_configurations": 3,
+            "nexternal": 7,
+            "nonlast": {
+              "3": {
+                "emitted": 6,
+                "radiator": 5
+              }
+            },
+            "source_sha256": "75295992dc982f26cf9493a4fb942aa355802c88cf54b3a5601d0ab7fd8ba08b"
+          },
+          {
+            "directory": "P0_epem_uuxgg",
+            "emitted_indices": [
+              6,
+              7
+            ],
+            "fks_configurations": 21,
+            "nexternal": 7,
+            "nonlast": {
+              "11": {
+                "emitted": 6,
+                "radiator": 5
+              },
+              "4": {
+                "emitted": 6,
+                "radiator": 5
+              },
+              "5": {
+                "emitted": 6,
+                "radiator": 5
+              },
+              "6": {
+                "emitted": 6,
+                "radiator": 5
+              }
+            },
+            "source_sha256": "66a54ae121dd44bdb6e0f170b3c1f561b1306853b8491ea6ca6c3374923cecf7"
+          }
+        ],
+        "subprocesses": 8
+      },
+      "WPlusJet_5FS": {
+        "fks_configurations": 96,
+        "nonlast_fks_configurations": 24,
+        "nonlast_subprocesses": 6,
+        "subprocess_details": [
+          {
+            "directory": "P0_dxg_wpux",
+            "emitted_indices": [
+              4,
+              5
+            ],
+            "fks_configurations": 16,
+            "nexternal": 5,
+            "nonlast": {
+              "10": {
+                "emitted": 4,
+                "radiator": 2
+              },
+              "11": {
+                "emitted": 4,
+                "radiator": 2
+              },
+              "14": {
+                "emitted": 4,
+                "radiator": 2
+              },
+              "4": {
+                "emitted": 4,
+                "radiator": 1
+              },
+              "6": {
+                "emitted": 4,
+                "radiator": 2
+              },
+              "8": {
+                "emitted": 4,
+                "radiator": 2
+              }
+            },
+            "source_sha256": "c0fdb661aa3a56986998a04ca3315e2e062af34980b4390088d24eda440344a5"
+          },
+          {
+            "directory": "P0_dxu_wpg",
+            "emitted_indices": [
+              4,
+              5
+            ],
+            "fks_configurations": 16,
+            "nexternal": 5,
+            "nonlast": {
+              "12": {
+                "emitted": 4,
+                "radiator": 2
+              },
+              "4": {
+                "emitted": 4,
+                "radiator": 1
+              },
+              "5": {
+                "emitted": 4,
+                "radiator": 2
+              }
+            },
+            "source_sha256": "5f396878bb14d2eb0dc9a5350447501a48de2cbe43ec2d43d9349257c17e77de"
+          },
+          {
+            "directory": "P0_gdx_wpux",
+            "emitted_indices": [
+              4,
+              5
+            ],
+            "fks_configurations": 16,
+            "nexternal": 5,
+            "nonlast": {
+              "10": {
+                "emitted": 4,
+                "radiator": 2
+              },
+              "11": {
+                "emitted": 4,
+                "radiator": 1
+              },
+              "14": {
+                "emitted": 4,
+                "radiator": 1
+              },
+              "5": {
+                "emitted": 4,
+                "radiator": 1
+              },
+              "7": {
+                "emitted": 4,
+                "radiator": 1
+              },
+              "9": {
+                "emitted": 4,
+                "radiator": 1
+              }
+            },
+            "source_sha256": "55ac1b68664a7a2301e66fe81c3a6a81868607be61475770631d1ec8707dbff2"
+          },
+          {
+            "directory": "P0_gu_wpd",
+            "emitted_indices": [
+              4,
+              5
+            ],
+            "fks_configurations": 16,
+            "nexternal": 5,
+            "nonlast": {
+              "11": {
+                "emitted": 4,
+                "radiator": 1
+              },
+              "12": {
+                "emitted": 4,
+                "radiator": 1
+              },
+              "14": {
+                "emitted": 4,
+                "radiator": 2
+              }
+            },
+            "source_sha256": "03a05a8519071989b8af512195791d45ba7dd013031aeb016dbc1a0e74222e4b"
+          },
+          {
+            "directory": "P0_udx_wpg",
+            "emitted_indices": [
+              4,
+              5
+            ],
+            "fks_configurations": 16,
+            "nexternal": 5,
+            "nonlast": {
+              "12": {
+                "emitted": 4,
+                "radiator": 1
+              },
+              "4": {
+                "emitted": 4,
+                "radiator": 1
+              },
+              "5": {
+                "emitted": 4,
+                "radiator": 2
+              }
+            },
+            "source_sha256": "836c205bd0d23fb38ec2d96925a09313d9748ee8bdcf73cd0336afdcf14930e1"
+          },
+          {
+            "directory": "P0_ug_wpd",
+            "emitted_indices": [
+              4,
+              5
+            ],
+            "fks_configurations": 16,
+            "nexternal": 5,
+            "nonlast": {
+              "11": {
+                "emitted": 4,
+                "radiator": 1
+              },
+              "12": {
+                "emitted": 4,
+                "radiator": 2
+              },
+              "15": {
+                "emitted": 4,
+                "radiator": 2
+              }
+            },
+            "source_sha256": "102533be10f12537fffc87f0823b685e8b4e34ad71c6876e0166ad74e9d6cca7"
+          }
+        ],
+        "subprocesses": 6
+      }
+    }
+  },
+  "native_DY_H_tt": {
+    "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031",
+    "processes": {
+      "DY_5FS": {
+        "fks_configurations": 16,
+        "nonlast_fks_configurations": 0,
+        "nonlast_subprocesses": 0,
+        "subprocess_details": [
+          {
+            "directory": "P0_ddx_emep",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 4,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "97e082728c5d24dd4f794220b3a02e9487d00c59db27a966f6cd34374b82dd5f"
+          },
+          {
+            "directory": "P0_dxd_emep",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 4,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "18e977845285581c4f1070c61014091b37525d876de5719bab6b3a004e90fc83"
+          },
+          {
+            "directory": "P0_uux_emep",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 4,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "99f5a3e04984bf45abb46722a85d1912469ea8adc36c40491ff6d404342bb6ac"
+          },
+          {
+            "directory": "P0_uxu_emep",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 4,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "36c38176e5214097f62a5a692eacbbec3ba65d9d739282b539f8b34f05257d10"
+          }
+        ],
+        "subprocesses": 4
+      },
+      "Higgs_HEFT_5FS": {
+        "fks_configurations": 6,
+        "nonlast_fks_configurations": 0,
+        "nonlast_subprocesses": 0,
+        "subprocess_details": [
+          {
+            "directory": "P0_gg_x0_no_t",
+            "emitted_indices": [
+              4
+            ],
+            "fks_configurations": 6,
+            "nexternal": 4,
+            "nonlast": {},
+            "source_sha256": "813ab30f179bddab7f5ab506c31d3f92eedb397197ac030721aea17ef27ffbac"
+          }
+        ],
+        "subprocesses": 1
+      },
+      "TTbar_5FS": {
+        "fks_configurations": 28,
+        "nonlast_fks_configurations": 0,
+        "nonlast_subprocesses": 0,
+        "subprocess_details": [
+          {
+            "directory": "P0_gg_ttx",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 12,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "2d5c3c3143ec67cbff38c02435542c4f23523c8fd97d52a2057a5db1948b30af"
+          },
+          {
+            "directory": "P0_uux_ttx",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 8,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "3d711dfda621afe52a53a8ef55cfb053e364acc6f5545a8e1bf506e10a00e6bb"
+          },
+          {
+            "directory": "P0_uxu_ttx",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 8,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "1f9dba610de6219225d98f5fdf163a2ba452546a01d406dd90bed2b5068b7807"
+          }
+        ],
+        "subprocesses": 3
+      }
+    }
+  },
+  "v4_DY_H_tt": {
+    "path": "/export/slow1/rikkert/macnlops_sudakov_1M_20261030",
+    "processes": {
+      "DY_5FS": {
+        "fks_configurations": 16,
+        "nonlast_fks_configurations": 0,
+        "nonlast_subprocesses": 0,
+        "subprocess_details": [
+          {
+            "directory": "P0_ddx_emep",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 4,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "97e082728c5d24dd4f794220b3a02e9487d00c59db27a966f6cd34374b82dd5f"
+          },
+          {
+            "directory": "P0_dxd_emep",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 4,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "18e977845285581c4f1070c61014091b37525d876de5719bab6b3a004e90fc83"
+          },
+          {
+            "directory": "P0_uux_emep",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 4,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "99f5a3e04984bf45abb46722a85d1912469ea8adc36c40491ff6d404342bb6ac"
+          },
+          {
+            "directory": "P0_uxu_emep",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 4,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "36c38176e5214097f62a5a692eacbbec3ba65d9d739282b539f8b34f05257d10"
+          }
+        ],
+        "subprocesses": 4
+      },
+      "Higgs_HEFT_5FS": {
+        "fks_configurations": 6,
+        "nonlast_fks_configurations": 0,
+        "nonlast_subprocesses": 0,
+        "subprocess_details": [
+          {
+            "directory": "P0_gg_x0_no_t",
+            "emitted_indices": [
+              4
+            ],
+            "fks_configurations": 6,
+            "nexternal": 4,
+            "nonlast": {},
+            "source_sha256": "813ab30f179bddab7f5ab506c31d3f92eedb397197ac030721aea17ef27ffbac"
+          }
+        ],
+        "subprocesses": 1
+      },
+      "TTbar_5FS": {
+        "fks_configurations": 28,
+        "nonlast_fks_configurations": 0,
+        "nonlast_subprocesses": 0,
+        "subprocess_details": [
+          {
+            "directory": "P0_gg_ttx",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 12,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "2d5c3c3143ec67cbff38c02435542c4f23523c8fd97d52a2057a5db1948b30af"
+          },
+          {
+            "directory": "P0_uux_ttx",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 8,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "3d711dfda621afe52a53a8ef55cfb053e364acc6f5545a8e1bf506e10a00e6bb"
+          },
+          {
+            "directory": "P0_uxu_ttx",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 8,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "1f9dba610de6219225d98f5fdf163a2ba452546a01d406dd90bed2b5068b7807"
+          }
+        ],
+        "subprocesses": 3
+      }
+    }
+  },
+  "winner_DY_H_tt": {
+    "path": "/export/slow1/rikkert/macnlops_winner_1M_20261031",
+    "processes": {
+      "DY_5FS": {
+        "fks_configurations": 16,
+        "nonlast_fks_configurations": 0,
+        "nonlast_subprocesses": 0,
+        "subprocess_details": [
+          {
+            "directory": "P0_ddx_emep",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 4,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "97e082728c5d24dd4f794220b3a02e9487d00c59db27a966f6cd34374b82dd5f"
+          },
+          {
+            "directory": "P0_dxd_emep",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 4,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "18e977845285581c4f1070c61014091b37525d876de5719bab6b3a004e90fc83"
+          },
+          {
+            "directory": "P0_uux_emep",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 4,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "99f5a3e04984bf45abb46722a85d1912469ea8adc36c40491ff6d404342bb6ac"
+          },
+          {
+            "directory": "P0_uxu_emep",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 4,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "36c38176e5214097f62a5a692eacbbec3ba65d9d739282b539f8b34f05257d10"
+          }
+        ],
+        "subprocesses": 4
+      },
+      "Higgs_HEFT_5FS": {
+        "fks_configurations": 6,
+        "nonlast_fks_configurations": 0,
+        "nonlast_subprocesses": 0,
+        "subprocess_details": [
+          {
+            "directory": "P0_gg_x0_no_t",
+            "emitted_indices": [
+              4
+            ],
+            "fks_configurations": 6,
+            "nexternal": 4,
+            "nonlast": {},
+            "source_sha256": "813ab30f179bddab7f5ab506c31d3f92eedb397197ac030721aea17ef27ffbac"
+          }
+        ],
+        "subprocesses": 1
+      },
+      "TTbar_5FS": {
+        "fks_configurations": 28,
+        "nonlast_fks_configurations": 0,
+        "nonlast_subprocesses": 0,
+        "subprocess_details": [
+          {
+            "directory": "P0_gg_ttx",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 12,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "2d5c3c3143ec67cbff38c02435542c4f23523c8fd97d52a2057a5db1948b30af"
+          },
+          {
+            "directory": "P0_uux_ttx",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 8,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "3d711dfda621afe52a53a8ef55cfb053e364acc6f5545a8e1bf506e10a00e6bb"
+          },
+          {
+            "directory": "P0_uxu_ttx",
+            "emitted_indices": [
+              5
+            ],
+            "fks_configurations": 8,
+            "nexternal": 5,
+            "nonlast": {},
+            "source_sha256": "1f9dba610de6219225d98f5fdf163a2ba452546a01d406dd90bed2b5068b7807"
+          }
+        ],
+        "subprocesses": 3
+      }
+    }
+  }
+}

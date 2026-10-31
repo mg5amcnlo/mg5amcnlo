@@ -1,0 +1,177 @@
+test_absent_gluons_and_dead_global_phase_space (tests.unit_tests.various.test_macnlops_gluon_sudakov.TestGlobalGluonRate.test_absent_gluons_and_dead_global_phase_space) ... ok
+test_closed_massless_limit_and_each_colour_end (tests.unit_tests.various.test_macnlops_gluon_sudakov.TestGlobalGluonRate.test_closed_massless_limit_and_each_colour_end) ... ok
+test_gluon_marginal_matches_independent_massless_integral (tests.unit_tests.various.test_macnlops_gluon_sudakov.TestGlobalGluonRate.test_gluon_marginal_matches_independent_massless_integral) ... ok
+test_massive_global_recoiler_and_native_running_thresholds (tests.unit_tests.various.test_macnlops_gluon_sudakov.TestGlobalGluonRate.test_massive_global_recoiler_and_native_running_thresholds) ... ok
+test_native_starting_slab_gate_depends_on_q_and_each_end_cap (tests.unit_tests.various.test_macnlops_gluon_sudakov.TestGlobalGluonRate.test_native_starting_slab_gate_depends_on_q_and_each_end_cap) ... ok
+test_pair_mass_threshold_does_not_become_an_evolution_pt_cut (tests.unit_tests.various.test_macnlops_gluon_sudakov.TestGlobalGluonRate.test_pair_mass_threshold_does_not_become_an_evolution_pt_cut) ... ok
+test_massive_support_and_reduced_transverse_momentum_cutoff (tests.unit_tests.various.test_macnlops_sudakov_kernel.TestMassiveShowerRate.test_massive_support_and_reduced_transverse_momentum_cutoff) ... ok
+test_finite_transfer_remains_bounded_by_both_densities (tests.unit_tests.various.test_macnlops_sudakov_kernel.TestSudakovTransferSupport.test_finite_transfer_remains_bounded_by_both_densities) ... ok
+test_negative_shower_density_still_fails (tests.unit_tests.various.test_macnlops_sudakov_kernel.TestSudakovTransferSupport.test_negative_shower_density_still_fails) ... ok
+test_zero_shower_support_retains_the_source_hard_remainder (tests.unit_tests.various.test_macnlops_sudakov_kernel.TestSudakovTransferSupport.test_zero_shower_support_retains_the_source_hard_remainder) ... ok
+test_global_recoiler_two_caps_source_measure_and_c_api (tests.unit_tests.fks.test_macnlops_sudakov_profile.TestGlobalGluonProfile.test_global_recoiler_two_caps_source_measure_and_c_api)
+A W+g Born separates its two local caps from global recoil. ... ok
+test_grouped_source_average_uses_representative_flavours (tests.unit_tests.fks.test_macnlops_sudakov_profile.TestSudakovMarginal.test_grouped_source_average_uses_representative_flavours) ... ok
+test_native_source_average_includes_unsupported_start_nodes (tests.unit_tests.fks.test_macnlops_sudakov_profile.TestSudakovMarginal.test_native_source_average_includes_unsupported_start_nodes) ... ok
+test_original_source_average_and_conditional_start_cdf (tests.unit_tests.fks.test_macnlops_sudakov_profile.TestSudakovMarginal.test_original_source_average_and_conditional_start_cdf) ... ok
+test_every_event_is_written_with_its_macnlops_weight (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionNative.test_every_event_is_written_with_its_macnlops_weight) ... ok
+test_native_ir_source_uses_matching_policy_and_rejects_winner_backend (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionNative.test_native_ir_source_uses_matching_policy_and_rejects_winner_backend) ... ok
+test_previous_v3_prescription_remains_reproducible (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionNative.test_previous_v3_prescription_remains_reproducible) ... ok
+test_probability_cap_reduces_h_removal_together_with_s_veto (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionNative.test_probability_cap_reduces_h_removal_together_with_s_veto) ... ok
+test_v2_has_no_pdf_ratio_and_dropped_rejections_are_omitted (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionNative.test_v2_has_no_pdf_ratio_and_dropped_rejections_are_omitted) ... ok
+test_zero_source_sudakov_protects_both_s_and_negative_h (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionNative.test_zero_source_sudakov_protects_both_s_and_negative_h) ... ok
+test_collector_carries_the_marker_and_weight_declaration (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionPython.test_collector_carries_the_marker_and_weight_declaration) ... ok
+test_dropped_rejections_restate_the_retained_cross_sections (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionPython.test_dropped_rejections_restate_the_retained_cross_sections) ... ok
+test_kept_rejections_collect_the_channel_files_unchanged (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionPython.test_kept_rejections_collect_the_channel_files_unchanged) ... ok
+test_marker_gives_the_shower_hand_off (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionPython.test_marker_gives_the_shower_hand_off) ... ok
+test_route_table_exports_sectors_and_certified_born_transports (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionPython.test_route_table_exports_sectors_and_certified_born_transports) ... /export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/check_param_card.py:336: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/sm/restrict_default.dat' mode='r' encoding='UTF-8'>
+  self.read(input_path)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_route_table_requires_a_matching_registry (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionPython.test_route_table_requires_a_matching_registry) ... ok
+test_table_coupling_is_shared_by_python_c_and_the_backward_correction (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionPython.test_table_coupling_is_shared_by_python_c_and_the_backward_correction) ... ok
+test_gate_history_survives_resize_copy_and_reuse (tests.unit_tests.fks.test_macnlops_weight_lines.TestMacNLOPSWeightLines.test_gate_history_survives_resize_copy_and_reuse) ... ok
+test_partial_native_flavour_overlap_is_not_a_global_group (tests.unit_tests.fks.test_macnlops_weight_lines.TestMacNLOPSWeightLines.test_partial_native_flavour_overlap_is_not_a_global_group) ... ok
+test_sampled_component_identity_survives_growth_copy_and_point_reset (tests.unit_tests.fks.test_macnlops_weight_lines.TestMacNLOPSWeightLines.test_sampled_component_identity_survives_growth_copy_and_point_reset) ... ok
+test_complete_and_empty_packets_preserved_by_generic_reader (tests.unit_tests.fks.test_macnlops_delta_context.TestMacNLOPSDeltaContext.test_complete_and_empty_packets_preserved_by_generic_reader) ... ok
+test_context_growth_replay_and_zero_mid_one_transfer (tests.unit_tests.fks.test_macnlops_delta_context.TestMacNLOPSDeltaContext.test_context_growth_replay_and_zero_mid_one_transfer) ... ok
+test_delta_scales_accept_old_inline_and_full_precision_multiline (tests.unit_tests.fks.test_macnlops_delta_context.TestMacNLOPSDeltaContext.test_delta_scales_accept_old_inline_and_full_precision_multiline) ... ok
+test_malformed_probability_or_registry_fails (tests.unit_tests.fks.test_macnlops_delta_context.TestMacNLOPSDeltaContext.test_malformed_probability_or_registry_fails) ... ok
+test_missing_duplicate_nonfinite_or_repeated_keys_fail (tests.unit_tests.fks.test_macnlops_delta_context.TestMacNLOPSDeltaContext.test_missing_duplicate_nonfinite_or_repeated_keys_fail) ... ok
+test_native_ir_source_survives_native_collect_roundtrip (tests.unit_tests.fks.test_macnlops_delta_context.TestMacNLOPSDeltaContext.test_native_ir_source_survives_native_collect_roundtrip) ... ok
+test_winner_source_survives_native_collect_roundtrip (tests.unit_tests.fks.test_macnlops_delta_context.TestMacNLOPSDeltaContext.test_winner_source_survives_native_collect_roundtrip) ... ok
+test_native_wrapper_preserves_delta_compensation_and_ordinary_limit (tests.unit_tests.fks.test_macnlops_delta_context.TestMacNLOPSDeltaSource.test_native_wrapper_preserves_delta_compensation_and_ordinary_limit) ... ok
+test_ordinary_real_transfer_and_flavour_resolved_proposal (tests.unit_tests.fks.test_macnlops_source_modes.TestMacNLOPSSourceModes.test_ordinary_real_transfer_and_flavour_resolved_proposal) ... ok
+test_common_hard_scale_without_a_passing_born (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_common_hard_scale_without_a_passing_born) ... ok
+test_common_scale_global_ir_weight_and_native_handoff (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_common_scale_global_ir_weight_and_native_handoff) ... ok
+test_common_scale_gluon_colour_multiplicities (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_common_scale_gluon_colour_multiplicities) ... ok
+test_common_scale_retains_deep_collinear_damping (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_common_scale_retains_deep_collinear_damping) ... ok
+test_native_global_fsr_does_not_require_local_inverse (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_native_global_fsr_does_not_require_local_inverse) ... ok
+test_native_scales_feed_sudakov_and_h_event_assignment (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_native_scales_feed_sudakov_and_h_event_assignment) ... ok
+test_nonlast_emission_uses_the_compact_native_born_state (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_nonlast_emission_uses_the_compact_native_born_state) ... ok
+test_reconstruction_error_is_fatal (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_reconstruction_error_is_fatal) ... ok
+test_charm_mass_model_uses_both_heavy_flavour_thresholds (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaModelMasses.test_charm_mass_model_uses_both_heavy_flavour_thresholds) ... /export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/check_param_card.py:336: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/loop_sm/restrict_c_mass.dat' mode='r' encoding='UTF-8'>
+  self.read(input_path)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1488: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/template_files/get_mass_width_fcts.inc' mode='r' encoding='UTF-8'>
+  'iolibs/template_files/get_mass_width_fcts.inc')).read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1495: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_3u9guup6/makeinc.inc' mode='r' encoding='UTF-8'>
+  makeinc_content = open(makeinc).read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1497: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_3u9guup6/makeinc.inc' mode='w' encoding='UTF-8'>
+  open(makeinc, 'w').write(makeinc_content)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_default_model_has_massless_charm_and_massive_bottom (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaModelMasses.test_default_model_has_massless_charm_and_massive_bottom) ... /export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/check_param_card.py:336: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/loop_sm/restrict_default.dat' mode='r' encoding='UTF-8'>
+  self.read(input_path)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1495: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_ow03gk1_/makeinc.inc' mode='r' encoding='UTF-8'>
+  makeinc_content = open(makeinc).read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1497: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_ow03gk1_/makeinc.inc' mode='w' encoding='UTF-8'>
+  open(makeinc, 'w').write(makeinc_content)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_five_flavour_model_has_massless_charm_and_bottom (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaModelMasses.test_five_flavour_model_has_massless_charm_and_bottom) ... /export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/check_param_card.py:336: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/loop_sm/restrict_no_b_mass.dat' mode='r' encoding='UTF-8'>
+  self.read(input_path)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1495: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_vv207d1a/makeinc.inc' mode='r' encoding='UTF-8'>
+  makeinc_content = open(makeinc).read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1497: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_vv207d1a/makeinc.inc' mode='w' encoding='UTF-8'>
+  open(makeinc, 'w').write(makeinc_content)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_dead_zone_and_small_virtuality_conventions (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_dead_zone_and_small_virtuality_conventions) ... ok
+test_final_dipoles_and_emission_remapping (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_final_dipoles_and_emission_remapping) ... ok
+test_heavy_flavour_thresholds (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_heavy_flavour_thresholds) ... ok
+test_initial_double_colour_connection (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_initial_double_colour_connection) ... ok
+test_invalid_colours_arguments_and_pair_threshold (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_invalid_colours_arguments_and_pair_threshold) ... ok
+test_mixed_dipoles_and_lorentz_invariance (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_mixed_dipoles_and_lorentz_invariance) ... ok
+test_pythia_starting_limits_and_lorentz_invariance (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_pythia_starting_limits_and_lorentz_invariance) ... ok
+test_starting_threshold_and_invalid_input (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_starting_threshold_and_invalid_input) ... ok
+test_delta_scales_and_fold_selection_use_same_hard_scale (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestStartingScaleIntegration.test_delta_scales_and_fold_selection_use_same_hard_scale) ... ok
+test_herwig_scalar_matches_effective_dipoles_and_subtractions (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestStartingScaleIntegration.test_herwig_scalar_matches_effective_dipoles_and_subtractions) ... ok
+test_ordinary_scalar_matches_effective_dipoles_and_subtractions (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestStartingScaleIntegration.test_ordinary_scalar_matches_effective_dipoles_and_subtractions) ... ok
+test_delta_free_density_retains_the_required_signed_h_residual (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_delta_free_density_retains_the_required_signed_h_residual) ... ok
+test_h_request_uses_exact_source_basis_and_undamped_delta_without_replay (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_h_request_uses_exact_source_basis_and_undamped_delta_without_replay) ... ok
+test_invalid_or_incomplete_component_cannot_select_a_native_density (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_invalid_or_incomplete_component_cannot_select_a_native_density) ... ok
+test_legacy_winner_component_requires_its_archived_evaluator (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_legacy_winner_component_requires_its_archived_evaluator) ... ok
+test_ordinary_local_mode_keeps_the_native_bogus_profile (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_ordinary_local_mode_keeps_the_native_bogus_profile) ... ok
+test_orientation_mark_uses_physical_kernels_and_never_zero_kernel (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_orientation_mark_uses_physical_kernels_and_never_zero_kernel) ... ok
+test_qualified_packet_and_hard_colour_topology (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_qualified_packet_and_hard_colour_topology) ... ok
+test_saved_s_branch_overrides_integration_owner_and_carries_actual_born (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_saved_s_branch_overrides_integration_owner_and_carries_actual_born) ... ok
+test_signed_pdf_orientation_mark_keeps_physical_signs (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_signed_pdf_orientation_mark_keeps_physical_signs) ... ok
+test_source_contract_requires_component_and_separates_old_global_source (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_source_contract_requires_component_and_separates_old_global_source) ... ok
+test_continuation_requires_fixed_beams_and_disabled_lepton_pdf (tests.unit_tests.various.test_macnlops_fixed_beams.TestFixedLeptonProfiles.test_continuation_requires_fixed_beams_and_disabled_lepton_pdf) ... ok
+test_fixed_beams_do_not_resolve_or_fingerprint_an_inactive_pdf (tests.unit_tests.various.test_macnlops_fixed_beams.TestFixedLeptonProfiles.test_fixed_beams_do_not_resolve_or_fingerprint_an_inactive_pdf) ... ok
+test_generation_profiles_fixed_beams_without_pdf_metadata (tests.unit_tests.various.test_macnlops_fixed_beams.TestFixedLeptonProfiles.test_generation_profiles_fixed_beams_without_pdf_metadata) ... /export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/various/banner.py:2953: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/Template/Common/Source/PDF/lep_densities/isrbetmll/info' mode='r' encoding='UTF-8'>
+  for line in open(pjoin(check_dir, name, 'info')):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_mixed_ambiguous_or_partonic_fixed_beams_are_rejected (tests.unit_tests.various.test_macnlops_fixed_beams.TestFixedLeptonProfiles.test_mixed_ambiguous_or_partonic_fixed_beams_are_rejected) ... ok
+test_ordered_fixed_beams_come_from_generated_flavours (tests.unit_tests.various.test_macnlops_fixed_beams.TestFixedLeptonProfiles.test_ordered_fixed_beams_come_from_generated_flavours) ... ok
+test_first_emissions_are_fsr_without_lepton_structure_functions (tests.unit_tests.various.test_macnlops_fixed_beams.TestStockFixedLeptonShower.test_first_emissions_are_fsr_without_lepton_structure_functions) ... ok
+test_native_fixed_beam_probe_and_hadron_mislabel_rejection (tests.unit_tests.various.test_macnlops_fixed_beams.TestStockFixedLeptonShower.test_native_fixed_beam_probe_and_hadron_mislabel_rejection) ... ok
+test_missing_or_nonpositive_channel_integrals_are_errors (tests.unit_tests.various.test_macnlops_s_veto_normalisation.TestChannelNormalisation.test_missing_or_nonpositive_channel_integrals_are_errors) ... ok
+test_split_job_reads_its_channel_through_res_1 (tests.unit_tests.various.test_macnlops_s_veto_normalisation.TestChannelNormalisation.test_split_job_reads_its_channel_through_res_1) ... ok
+test_coupling_precedes_and_annotates_its_density (tests.unit_tests.various.test_macnlops_s_veto_normalisation.TestKernelCouplingRecord.test_coupling_precedes_and_annotates_its_density) ... ok
+test_s_veto_uses_beta_and_the_shower_coupling (tests.unit_tests.various.test_macnlops_s_veto_normalisation.TestNormalisedVetoDecisions.test_s_veto_uses_beta_and_the_shower_coupling) ... ok
+test_transferring_s_event_needs_the_kernel_coupling (tests.unit_tests.various.test_macnlops_s_veto_normalisation.TestNormalisedVetoDecisions.test_transferring_s_event_needs_the_kernel_coupling) ... ok
+test_without_beta_the_veto_is_unchanged (tests.unit_tests.various.test_macnlops_s_veto_normalisation.TestNormalisedVetoDecisions.test_without_beta_the_veto_is_unchanged) ... ok
+test_kernel_scale_uses_both_couplings_and_beta (tests.unit_tests.various.test_macnlops_s_veto_normalisation.TestScaledAcceptance.test_kernel_scale_uses_both_couplings_and_beta) ... ok
+test_only_the_s_denominator_is_rescaled (tests.unit_tests.various.test_macnlops_s_veto_normalisation.TestScaledAcceptance.test_only_the_s_denominator_is_rescaled) ... ok
+test_transfers_needs_negative_hard_density_and_shower_support (tests.unit_tests.various.test_macnlops_s_veto_normalisation.TestScaledAcceptance.test_transfers_needs_negative_hard_density_and_shower_support) ... ok
+test_h_directed_fsr_override_survives_the_production_minimum (tests.unit_tests.various.test_macnlops_continuation_scales.TestNativeContinuationScales.test_h_directed_fsr_override_survives_the_production_minimum) ... ok
+test_s_common_winning_scale_is_the_native_global_and_dipole_ceiling (tests.unit_tests.various.test_macnlops_continuation_scales.TestNativeContinuationScales.test_s_common_winning_scale_is_the_native_global_and_dipole_ceiling) ... ok
+test_zero_h_pair_stops_that_fsr_end_without_zeroing_its_production_anchor (tests.unit_tests.various.test_macnlops_continuation_scales.TestNativeContinuationScales.test_zero_h_pair_stops_that_fsr_end_without_zeroing_its_production_anchor) ... ok
+test_bad_active_caps_or_state_cannot_silently_restart (tests.unit_tests.various.test_macnlops_continuation.TestContinuation.test_bad_active_caps_or_state_cannot_silently_restart) ... ok
+test_continuation_checks_original_pdf_and_libraries_without_reading_current_cards (tests.unit_tests.various.test_macnlops_continuation.TestContinuation.test_continuation_checks_original_pdf_and_libraries_without_reading_current_cards) ... ok
+test_current_starts_and_source_provenance_are_distinct_in_both_modes (tests.unit_tests.various.test_macnlops_continuation.TestContinuation.test_current_starts_and_source_provenance_are_distinct_in_both_modes) ... ok
+test_delta_h_source_sentinel_is_inert_provenance (tests.unit_tests.various.test_macnlops_continuation.TestContinuation.test_delta_h_source_sentinel_is_inert_provenance) ... ok
+test_failed_continuation_cannot_publish_a_partial_shower_file (tests.unit_tests.various.test_macnlops_continuation.TestContinuation.test_failed_continuation_cannot_publish_a_partial_shower_file) ... ok
+test_native_snapshot_keeps_physics_without_paths_or_random_seeds (tests.unit_tests.various.test_macnlops_continuation.TestContinuation.test_native_snapshot_keeps_physics_without_paths_or_random_seeds) ... ok
+test_nested_collected_sample_keeps_the_source_run_identifier (tests.unit_tests.various.test_macnlops_continuation.TestContinuation.test_nested_collected_sample_keeps_the_source_run_identifier) ... ok
+test_normal_consumer_settings_read_current_caps_with_local_recoil (tests.unit_tests.various.test_macnlops_continuation.TestContinuation.test_normal_consumer_settings_read_current_caps_with_local_recoil) ... ok
+test_normal_shower_dispatch_does_not_repeat_first_emission_or_veto (tests.unit_tests.various.test_macnlops_continuation.TestContinuation.test_normal_shower_dispatch_does_not_repeat_first_emission_or_veto) ... ok
+test_old_endpoint_files_are_not_claimed_as_corrected_continuations (tests.unit_tests.various.test_macnlops_continuation.TestContinuation.test_old_endpoint_files_are_not_claimed_as_corrected_continuations) ... ok
+test_portable_profile_preserves_exact_coupling_masses_and_flavours (tests.unit_tests.various.test_macnlops_continuation.TestContinuation.test_portable_profile_preserves_exact_coupling_masses_and_flavours) ... ok
+test_profile_identity_is_required_across_collection_and_for_continuation (tests.unit_tests.various.test_macnlops_continuation.TestContinuation.test_profile_identity_is_required_across_collection_and_for_continuation) ... ok
+test_qed_card_switch_also_controls_radiation_from_stable_tops (tests.unit_tests.various.test_macnlops_continuation.TestContinuation.test_qed_card_switch_also_controls_radiation_from_stable_tops) ... ok
+test_unshowered_delta_zero_pair_retains_stock_ignore_zero_semantics (tests.unit_tests.various.test_macnlops_continuation.TestContinuation.test_unshowered_delta_zero_pair_retains_stock_ignore_zero_semantics) ... ok
+test_veto_and_randomized_collection_preserve_all_active_starts (tests.unit_tests.various.test_macnlops_continuation.TestContinuation.test_veto_and_randomized_collection_preserve_all_active_starts) ... ok
+test_card_on_disk_restores_the_measured_profile (tests.unit_tests.various.test_macnlops_run_card.TestMacNLOPSRunCardProfile.test_card_on_disk_restores_the_measured_profile) ... /export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/various/banner.py:3152: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/Template/NLO/Cards/run_card.dat' mode='r' encoding='UTF-8'>
+  text = open(template,'r').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/various/banner.py:1012: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/macnlops_run_card_e1jua90q/Cards/run_card.dat' mode='r' encoding='UTF-8'>
+  self.read(finput, **opt)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/various/banner.py:3868: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/macnlops_run_card_e1jua90q/Source/run.inc' mode='r' encoding='UTF-8'>
+  input = open(pjoin(output_dir,pathinc),'r').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_fixed_beams_accept_the_inactive_builtin_pdf_on_card_reload (tests.unit_tests.various.test_macnlops_run_card.TestMacNLOPSRunCardProfile.test_fixed_beams_accept_the_inactive_builtin_pdf_on_card_reload) ... /export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/various/banner.py:1012: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/macnlops_run_card_cmnui0qm/Cards/run_card.dat' mode='r' encoding='UTF-8'>
+  self.read(finput, **opt)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/various/banner.py:3180: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/Template/NLO/Cards/run_card.dat' mode='r' encoding='UTF-8'>
+  for line in open(template,'r'):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_hadronic_pdf_and_mixed_beam_restrictions_are_retained (tests.unit_tests.various.test_macnlops_run_card.TestMacNLOPSRunCardProfile.test_hadronic_pdf_and_mixed_beam_restrictions_are_retained) ... /export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/various/banner.py:1012: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/macnlops_run_card_84tqjwqh/Cards/run_card.dat' mode='r' encoding='UTF-8'>
+  self.read(finput, **opt)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_values_set_in_memory_or_absent_profiles_are_kept (tests.unit_tests.various.test_macnlops_run_card.TestMacNLOPSRunCardProfile.test_values_set_in_memory_or_absent_profiles_are_kept) ... /export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/various/banner.py:1012: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/macnlops_run_card_td94lvhj/Cards/run_card.dat' mode='r' encoding='UTF-8'>
+  self.read(finput, **opt)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/various/banner.py:3868: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/macnlops_run_card_td94lvhj/Source/run.inc' mode='r' encoding='UTF-8'>
+  input = open(pjoin(output_dir,pathinc),'r').read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_ambiguous_configured_abi_fails_closed (tests.unit_tests.various.test_macnlops_native_environment.TestNativeLibraryEnvironment.test_ambiguous_configured_abi_fails_closed) ... ok
+test_inherited_legacy_abi_cannot_shadow_native_backend (tests.unit_tests.various.test_macnlops_native_environment.TestNativeLibraryEnvironment.test_inherited_legacy_abi_cannot_shadow_native_backend) ... ok
+
+----------------------------------------------------------------------
+Ran 111 tests in 37.886s
+
+OK

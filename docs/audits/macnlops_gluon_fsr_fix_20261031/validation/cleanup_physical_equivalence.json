@@ -1,0 +1,48 @@
+{
+  "providers": [
+    {
+      "provider": "P0_dxg_wpux",
+      "contexts": 12,
+      "byte_identical": true,
+      "sha256": "c22da679a6a58e7441569ffd547f7d308e946b3156a23c0bce826b9ab79209ba"
+    },
+    {
+      "provider": "P0_dxu_wpg",
+      "contexts": 19,
+      "byte_identical": true,
+      "sha256": "c593436edbfadd436971c72b9c53ef34ea60503768f37e617bf59d488529de0b"
+    },
+    {
+      "provider": "P0_gdx_wpux",
+      "contexts": 7,
+      "byte_identical": true,
+      "sha256": "284b0f4302f0d2c4ffe5b993635f5af0ec15cd60b02a69471e8d4fb2dd2ce79b"
+    },
+    {
+      "provider": "P0_gu_wpd",
+      "contexts": 20,
+      "byte_identical": true,
+      "sha256": "4771f3e9add4827900dc9a2db5ce8efb9762f82d6155732e1a315368e3249e5c"
+    },
+    {
+      "provider": "P0_udx_wpg",
+      "contexts": 16,
+      "byte_identical": true,
+      "sha256": "2ef2a0ba1465ecd903525c3c5dd62315ea07bf3e5427933d21e2855a12a8621a"
+    },
+    {
+      "provider": "P0_ug_wpd",
+      "contexts": 22,
+      "byte_identical": true,
+      "sha256": "6d555e35b47b000a7e3793a4567310cb7cd278c6cac26521c6707b1a3a0f86f1"
+    }
+  ],
+  "contexts": 96,
+  "valid_contexts": 95,
+  "source_Q_cdf_RDK_all_component_CDF_and_metadata_byte_identical": true,
+  "pilot_events": 1200,
+  "pilot_eventstreams_byte_identical": true,
+  "pilot_summary_difference": "Only input/output file paths differ between isolated build directories.",
+  "before_build_sha256": "299a0cf224b24315eeaae8d2bf461082954a99ede753741676b0c03f4444e47a",
+  "after_build_sha256": "4126b8e6dd8a01387a3bac518f056cf1f95e961f6525920661cefb631a0ea6a8"
+}

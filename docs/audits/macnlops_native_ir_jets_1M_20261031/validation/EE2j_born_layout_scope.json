@@ -1,0 +1,81 @@
+{
+  "status": "scope candidate awaiting parent audit",
+  "all_emitted_slots_last": true,
+  "entries": [
+    {
+      "directory": "P0_epem_uux",
+      "context": 1,
+      "sector": 1,
+      "emitted": 5,
+      "radiator": 3,
+      "nexternal": 5
+    },
+    {
+      "directory": "P0_epem_uux",
+      "context": 1,
+      "sector": 2,
+      "emitted": 5,
+      "radiator": 4,
+      "nexternal": 5
+    },
+    {
+      "directory": "P0_epem_uux",
+      "context": 2,
+      "sector": 1,
+      "emitted": 5,
+      "radiator": 3,
+      "nexternal": 5
+    },
+    {
+      "directory": "P0_epem_uux",
+      "context": 2,
+      "sector": 2,
+      "emitted": 5,
+      "radiator": 4,
+      "nexternal": 5
+    },
+    {
+      "directory": "P0_epem_ddx",
+      "context": 1,
+      "sector": 1,
+      "emitted": 5,
+      "radiator": 3,
+      "nexternal": 5
+    },
+    {
+      "directory": "P0_epem_ddx",
+      "context": 1,
+      "sector": 2,
+      "emitted": 5,
+      "radiator": 4,
+      "nexternal": 5
+    },
+    {
+      "directory": "P0_epem_ddx",
+      "context": 2,
+      "sector": 1,
+      "emitted": 5,
+      "radiator": 3,
+      "nexternal": 5
+    },
+    {
+      "directory": "P0_epem_ddx",
+      "context": 2,
+      "sector": 2,
+      "emitted": 5,
+      "radiator": 4,
+      "nexternal": 5
+    }
+  ],
+  "registry_files": [
+    {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/processes/EE2Jets_5FS/SubProcesses/P0_epem_uux/mc_histories.json",
+      "sha256": "ef64edf8e186c0d4f892dedf84474f70071d4bc27f49acf8f91356a5ad2d403e"
+    },
+    {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/processes/EE2Jets_5FS/SubProcesses/P0_epem_ddx/mc_histories.json",
+      "sha256": "ee2c745992470df7920ffda156e3071149478c508c1a8d0e7f5f7b390d72d739"
+    }
+  ],
+  "argument": "For every certified native sector i_fks==nexternal, real-to-Born map is identity on1:nexternal-1; the old slice and explicit compact Born map select identical vectors."
+}

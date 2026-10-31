@@ -1,0 +1,6 @@
+test_massive_soft_counterevents (tests.unit_tests.fks.test_momentum_maps.TestMomentumMaps.test_massive_soft_counterevents) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 3.459s
+
+OK

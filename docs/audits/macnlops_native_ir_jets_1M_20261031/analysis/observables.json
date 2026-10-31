@@ -1,0 +1,22 @@
+{
+  "fields": [
+    "y23",
+    "y34",
+    "y45",
+    "c_parameter",
+    "primary_scale",
+    "ndurham",
+    "w_pt",
+    "jet1_pt",
+    "jet2_pt",
+    "wj_recoil",
+    "nfidjets",
+    "jet1_y",
+    "fiducial",
+    "fid_primary_scale"
+  ],
+  "ee_definition": "Durham E-scheme y_n,n+1=exclusive_dmerge_max(n)/s; primary Qsqrt(y23/y34/y45) for Born2/3/4jets; C=(3/2)(1-tr(Theta^2)), Theta_ab=sum p_a p_b/|p| /sum|p|.",
+  "ee_fiducial": "at least Born multiplicity Durhamjets at ycut0.01",
+  "pp_definition": "anti-kT R0.5. Primaryraw recoil W+leadinginclusivejet. Fiducialrecoil W+leading jet withpT>25GeV,|y|<4.5. jet2_pt is secondcentraljet evenifbelow25.",
+  "weights": "Original signed eventweights; no survival/fiducial renormalization."
+}

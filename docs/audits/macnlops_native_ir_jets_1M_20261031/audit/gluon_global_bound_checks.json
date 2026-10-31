@@ -1,0 +1,541 @@
+{
+  "S_sample_events": 2062,
+  "gluon_parent_events": 616,
+  "gluon_parent_bound_violations": 0,
+  "quark_parent_events": 1446,
+  "quark_parent_unphysical_gluon_table_interval_events": 253,
+  "signed_S_transfer_estimate_pb": 1466.8226302649343,
+  "signed_S_transfer_affected_estimate_pb": 123.09628119627017,
+  "examples": [
+    {
+      "sequence": 3631,
+      "primary_scale_GeV": 5.663898745005452,
+      "native_t_GeV": 4.594215026844574,
+      "gluon_global_absolute_pT_bound_GeV": 4.484246196652805,
+      "local_gluon_color_end_ceiling_GeV": [
+        10.527763543318265,
+        16.672347555283253
+      ],
+      "source_scalar_GeV": 8.2928518,
+      "born_particles": [
+        {
+          "id": -11,
+          "status": -1,
+          "colors": [
+            0,
+            0
+          ],
+          "p": [
+            0.0,
+            0.0,
+            45.594,
+            45.594
+          ]
+        },
+        {
+          "id": 11,
+          "status": -1,
+          "colors": [
+            0,
+            0
+          ],
+          "p": [
+            -0.0,
+            -0.0,
+            -45.594,
+            45.594
+          ]
+        },
+        {
+          "id": 5,
+          "status": 1,
+          "colors": [
+            501,
+            0
+          ],
+          "p": [
+            10.94345926837039,
+            14.35615481708846,
+            -35.13101502615473,
+            39.49742648146336
+          ]
+        },
+        {
+          "id": -5,
+          "status": 1,
+          "colors": [
+            0,
+            502
+          ],
+          "p": [
+            -4.506940182330604,
+            -13.69186521486313,
+            40.68506787813586,
+            43.16311424257531
+          ]
+        },
+        {
+          "id": 21,
+          "status": 1,
+          "colors": [
+            502,
+            501
+          ],
+          "p": [
+            -6.436519086039786,
+            -0.6642896022253297,
+            -5.554052851981134,
+            8.527459275961327
+          ]
+        }
+      ],
+      "decision": {
+        "version": "1",
+        "rule": "s_veto",
+        "keep": "0.7254755004772766",
+        "accepted": "1",
+        "pt": "4.5942150268445738",
+        "matching_scale": "0.50000000000000011",
+        "r": "46688382.518813685",
+        "d": "139469606.8547965",
+        "k": "139469606.8547965",
+        "sector": "1",
+        "orientation": "native",
+        "candidates": "1",
+        "marking": "1",
+        "kernel_scale": "2.8952325631855005",
+        "alpha_s_shower": "0.27208784334434127",
+        "alpha_s_kernel": "0.11800044614252592",
+        "pdf_ratio": "1",
+        "delta_source_mean": "0.77931014272484755",
+        "delta_shower_mean": "0.65226832314951433",
+        "starting_cdf": "0.91375775958587568"
+      }
+    },
+    {
+      "sequence": 5567,
+      "primary_scale_GeV": 17.199390530984942,
+      "native_t_GeV": 10.400422774886863,
+      "gluon_global_absolute_pT_bound_GeV": 8.928798781087764,
+      "local_gluon_color_end_ceiling_GeV": [
+        13.940425986737207,
+        23.240920353655923
+      ],
+      "source_scalar_GeV": 10.880511,
+      "born_particles": [
+        {
+          "id": -11,
+          "status": -1,
+          "colors": [
+            0,
+            0
+          ],
+          "p": [
+            0.0,
+            0.0,
+            45.594,
+            45.594
+          ]
+        },
+        {
+          "id": 11,
+          "status": -1,
+          "colors": [
+            0,
+            0
+          ],
+          "p": [
+            -0.0,
+            -0.0,
+            -45.594,
+            45.594
+          ]
+        },
+        {
+          "id": 5,
+          "status": 1,
+          "colors": [
+            501,
+            0
+          ],
+          "p": [
+            -18.701983340448464,
+            -11.592429083180862,
+            25.587668785426647,
+            33.74725747061065
+          ]
+        },
+        {
+          "id": -5,
+          "status": 1,
+          "colors": [
+            0,
+            502
+          ],
+          "p": [
+            12.080899105549575,
+            5.828377002412712,
+            -39.094641756925164,
+            41.33169626065495
+          ]
+        },
+        {
+          "id": 21,
+          "status": 1,
+          "colors": [
+            502,
+            501
+          ],
+          "p": [
+            6.621084234898888,
+            5.76405208076815,
+            13.50697297149852,
+            16.1090462687344
+          ]
+        }
+      ],
+      "decision": {
+        "version": "1",
+        "rule": "s_veto",
+        "keep": "0.95744329179275867",
+        "accepted": "1",
+        "pt": "10.400422774886863",
+        "matching_scale": "0.50000000000000011",
+        "r": "840274.57511935232",
+        "d": "922923.48868552886",
+        "k": "922923.48868552886",
+        "sector": "2",
+        "orientation": "native",
+        "candidates": "1",
+        "marking": "1",
+        "kernel_scale": "2.2751894594440207",
+        "alpha_s_shower": "0.21381750160297502",
+        "alpha_s_kernel": "0.11800044614252592",
+        "pdf_ratio": "1",
+        "delta_source_mean": "0.95880652510922271",
+        "delta_shower_mean": "0.88678193292644192",
+        "starting_cdf": "0.58918054031222389"
+      }
+    },
+    {
+      "sequence": 8301,
+      "primary_scale_GeV": 3.7326338955294585,
+      "native_t_GeV": 5.417650385172345,
+      "gluon_global_absolute_pT_bound_GeV": 4.3285524878855455,
+      "local_gluon_color_end_ceiling_GeV": [
+        14.193788967387446,
+        13.210300237852175
+      ],
+      "source_scalar_GeV": 8.5590862,
+      "born_particles": [
+        {
+          "id": -11,
+          "status": -1,
+          "colors": [
+            0,
+            0
+          ],
+          "p": [
+            0.0,
+            0.0,
+            45.594,
+            45.594
+          ]
+        },
+        {
+          "id": 11,
+          "status": -1,
+          "colors": [
+            0,
+            0
+          ],
+          "p": [
+            -0.0,
+            -0.0,
+            -45.594,
+            45.594
+          ]
+        },
+        {
+          "id": 2,
+          "status": 1,
+          "colors": [
+            501,
+            0
+          ],
+          "p": [
+            -18.693459829873266,
+            -32.407884186807344,
+            18.566698604747174,
+            41.76647812488053
+          ]
+        },
+        {
+          "id": -2,
+          "status": 1,
+          "colors": [
+            0,
+            502
+          ],
+          "p": [
+            24.97626431947906,
+            27.069309397090972,
+            -18.40784256521205,
+            41.17535620365115
+          ]
+        },
+        {
+          "id": 21,
+          "status": 1,
+          "colors": [
+            502,
+            501
+          ],
+          "p": [
+            -6.282804489605794,
+            5.338574789716369,
+            -0.15885603953512195,
+            8.246165671468326
+          ]
+        }
+      ],
+      "decision": {
+        "version": "1",
+        "rule": "s_veto",
+        "keep": "0.8997163538962385",
+        "accepted": "1",
+        "pt": "5.4176503851723448",
+        "matching_scale": "0.50000000000000011",
+        "r": "2203318.074378286",
+        "d": "17373319.418623466",
+        "k": "19013485.713657692",
+        "sector": "2",
+        "orientation": "native",
+        "candidates": "1",
+        "marking": "1",
+        "kernel_scale": "2.7350025765387032",
+        "alpha_s_shower": "0.2576590235856373",
+        "alpha_s_kernel": "0.11800044614252592",
+        "pdf_ratio": "1",
+        "delta_source_mean": "0.23838102944311007",
+        "delta_shower_mean": "0.69343811977689429",
+        "starting_cdf": "0.87532278730520063"
+      }
+    },
+    {
+      "sequence": 12478,
+      "primary_scale_GeV": 22.304269479380768,
+      "native_t_GeV": 14.169613036288517,
+      "gluon_global_absolute_pT_bound_GeV": 9.187268473445343,
+      "local_gluon_color_end_ceiling_GeV": [
+        17.434575511265027,
+        21.19901677661889
+      ],
+      "source_scalar_GeV": 17.905492,
+      "born_particles": [
+        {
+          "id": -11,
+          "status": -1,
+          "colors": [
+            0,
+            0
+          ],
+          "p": [
+            0.0,
+            0.0,
+            45.594,
+            45.594
+          ]
+        },
+        {
+          "id": 11,
+          "status": -1,
+          "colors": [
+            0,
+            0
+          ],
+          "p": [
+            -0.0,
+            -0.0,
+            -45.594,
+            45.594
+          ]
+        },
+        {
+          "id": 4,
+          "status": 1,
+          "colors": [
+            501,
+            0
+          ],
+          "p": [
+            -21.00431894347394,
+            -27.92212334877205,
+            7.5060556628722015,
+            35.73747694224308
+          ]
+        },
+        {
+          "id": -4,
+          "status": 1,
+          "colors": [
+            0,
+            502
+          ],
+          "p": [
+            9.47271097725298,
+            37.74615648985955,
+            -0.9083746158989164,
+            38.927236319296355
+          ]
+        },
+        {
+          "id": 21,
+          "status": 1,
+          "colors": [
+            502,
+            501
+          ],
+          "p": [
+            11.531607966220962,
+            -9.8240331410875,
+            -6.5976810469732845,
+            16.523286738460573
+          ]
+        }
+      ],
+      "decision": {
+        "version": "1",
+        "rule": "s_veto",
+        "keep": "0.94692724776608517",
+        "accepted": "1",
+        "pt": "14.169613036288517",
+        "matching_scale": "0.50000000000000011",
+        "r": "97847.824701175108",
+        "d": "109643.8389842296",
+        "k": "109643.83898422962",
+        "sector": "1",
+        "orientation": "native",
+        "candidates": "1",
+        "marking": "1",
+        "kernel_scale": "2.1001830348812103",
+        "alpha_s_shower": "0.19785396721762669",
+        "alpha_s_kernel": "0.11800044614252592",
+        "pdf_ratio": "1",
+        "delta_source_mean": "0.97997311155758104",
+        "delta_shower_mean": "0.94588091008120956",
+        "starting_cdf": "0.42180439634751266"
+      }
+    },
+    {
+      "sequence": 15931,
+      "primary_scale_GeV": 6.514965016687174,
+      "native_t_GeV": 5.655909239559953,
+      "gluon_global_absolute_pT_bound_GeV": 4.635208384822278,
+      "local_gluon_color_end_ceiling_GeV": [
+        11.218433827929303,
+        16.59328080497701
+      ],
+      "source_scalar_GeV": 9.2978202,
+      "born_particles": [
+        {
+          "id": -11,
+          "status": -1,
+          "colors": [
+            0,
+            0
+          ],
+          "p": [
+            0.0,
+            0.0,
+            45.594,
+            45.594
+          ]
+        },
+        {
+          "id": 11,
+          "status": -1,
+          "colors": [
+            0,
+            0
+          ],
+          "p": [
+            -0.0,
+            -0.0,
+            -45.594,
+            45.594
+          ]
+        },
+        {
+          "id": 1,
+          "status": 1,
+          "colors": [
+            501,
+            0
+          ],
+          "p": [
+            26.450012119747782,
+            12.954106298247755,
+            -26.404451010110613,
+            39.555114009018325
+          ]
+        },
+        {
+          "id": -1,
+          "status": 1,
+          "colors": [
+            0,
+            502
+          ],
+          "p": [
+            -28.240627859064503,
+            -6.099197908668649,
+            31.622655120283767,
+            42.83369694364108
+          ]
+        },
+        {
+          "id": 21,
+          "status": 1,
+          "colors": [
+            502,
+            501
+          ],
+          "p": [
+            1.7906157393167206,
+            -6.854908389579105,
+            -5.2182041101731516,
+            8.799189047340594
+          ]
+        }
+      ],
+      "decision": {
+        "version": "1",
+        "rule": "s_veto",
+        "keep": "0.70442497127686343",
+        "accepted": "1",
+        "pt": "5.6559092395599526",
+        "matching_scale": "0.50000000000000011",
+        "r": "18186975.69153855",
+        "d": "59534757.894147001",
+        "k": "59534757.894146994",
+        "sector": "2",
+        "orientation": "native",
+        "candidates": "1",
+        "marking": "1",
+        "kernel_scale": "2.7050956316778545",
+        "alpha_s_shower": "0.25421917597307297",
+        "alpha_s_kernel": "0.11800044614252592",
+        "pdf_ratio": "1",
+        "delta_source_mean": "0.88245900716872772",
+        "delta_shower_mean": "0.76652408405147332",
+        "starting_cdf": "0.77480775888614795"
+      }
+    }
+  ],
+  "method": "Massless splitting m_virtual<=Q-M_recoil and t=sqrt(z(1-z))*m_virtual imply strict t<=0.5*(Q-M_recoil). Source native-global recoil preserves spectator-system invariant mass. Compare actual gluon winners as a control, then inspect quark-winner points whose local gluon table interval extends above this strict bound.",
+  "limits": "Existing stratified reservoir only; signed-transfer estimate uses saved inclusion factors and has no reported sampling error. This identifies kinematically impossible modeled gluon intervals, not their numerical Sudakov suppression or their contribution to the full closure residual. All raw data and matching decisions are unchanged.",
+  "source_sample": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/scale_audit/EE3j_sample.lhe",
+  "source_sha256": "3d15cc6bdee6fd3e3c3e6de5c2c727657f95810e0fc33c4c5ea7d8a8aa55707b",
+  "signed_transfer_affected_fraction_estimate": 0.08392035864216028
+}

@@ -60,6 +60,30 @@ class TestMacNLOPSRunCardProfile(unittest.TestCase):
         values = self.include(card)
         self.assertEqual((values['macnlops_isr_cutoff'], values['macnlops_fsr_cutoff']), (.6, .7))
 
+    def test_fixed_beams_accept_the_inactive_builtin_pdf_on_card_reload(self):
+        path = self.work / 'Cards/run_card.dat'
+        card = banner.RunCardNLO(str(path))
+        card['lpp1'] = card['lpp2'] = 0
+        card['pdlabel'] = 'nn23nlo'
+        card.check_validity()
+        card.write(str(path))
+        restored = banner.RunCardNLO(str(path))
+        restored.check_validity()
+        self.assertEqual((restored['lpp1'], restored['lpp2'], restored['pdlabel']), (0, 0, 'nn23nlo'))
+        restored['event_norm'] = 'average'
+        with self.assertRaisesRegex(banner.InvalidRunCard, 'event_norm=sum'):
+            restored.check_validity()
+
+    def test_hadronic_pdf_and_mixed_beam_restrictions_are_retained(self):
+        card = banner.RunCardNLO(str(self.work / 'Cards/run_card.dat'))
+        card['pdlabel'] = 'nn23nlo'
+        with self.assertRaisesRegex(banner.InvalidRunCard, 'pdlabel=lhapdf'):
+            card.check_validity()
+        card['pdlabel'] = 'lhapdf'
+        card['lpp1'] = 0
+        with self.assertRaises(banner.InvalidRunCard):
+            card.check_validity()
+
 
 if __name__ == '__main__':
     unittest.main()

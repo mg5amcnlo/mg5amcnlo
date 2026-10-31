@@ -1,0 +1,7 @@
+{
+  "process": "EE4j",
+  "run": "run_1M_native_ir_jets",
+  "source_logfiles_checked": 563,
+  "mass_underflow_warning_files": [],
+  "mass_underflow_warning_count": 0
+}

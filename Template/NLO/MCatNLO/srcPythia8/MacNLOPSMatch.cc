@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <array>
+#include <functional>
 
 extern "C" {
 void macnlops_c_setup(int* nlegs, char* registry);
@@ -22,6 +23,7 @@ void macnlops_c_sudakov_request(int enabled, double pt);
 void macnlops_c_sudakov_profile(int* ready, int* n, int* ids, double* x,
   double* mass, double* pt, double* source, double* cdf, double* q, double* w, double* fsr,
   int* nquarks, double* quarks);
+void macnlops_c_gluon_profile(int* n, double* gluons);
 }
 
 namespace {
@@ -228,6 +230,8 @@ struct SudakovProfile {
   std::array<double, maximum> q{}, w{}, fsr{};
   int nquarks = 0;
   std::array<double, 256> quarks{};
+  int ngluons = 0;
+  std::array<double, 320> gluons{};
 };
 
 struct Density {
@@ -297,10 +301,15 @@ Density evaluate(const std::vector<LHEParticle>& legs, int sector, const Compone
     macnlops_c_sudakov_profile(&p.ready, &p.count, p.ids, p.x, &p.mass,
       &p.pt, &p.source, &p.cdf, p.q.data(), p.w.data(), p.fsr.data(),
       &p.nquarks, p.quarks.data());
+    macnlops_c_gluon_profile(&p.ngluons, p.gluons.data());
     if (!p.ready || p.count < 0 || p.count > SudakovProfile::maximum ||
         !(p.pt > 0. && p.mass > 0.) || !std::isfinite(p.source) ||
-        p.source < 0. || p.source > 1. + 1.e-12 || p.nquarks<0 || p.nquarks>64)
+        p.source < 0. || p.source > 1. + 1.e-12 || p.nquarks<0 || p.nquarks>64 ||
+        p.ngluons<0 || p.ngluons>64)
       throw std::runtime_error("Invalid native Sudakov marginal");
+    for (int i=0; i<5*p.ngluons; ++i)
+      if (!std::isfinite(p.gluons[i]) || p.gluons[i]<0.)
+        throw std::runtime_error("Invalid global gluon shower profile");
   }
   return x;
 }
@@ -568,6 +577,7 @@ double backwardRate(const Context& c, const SudakovProfile& p, double logT) {
   double rate=0.;
   for (int side=0; side<2; ++side) {
     const double x=p.x[side]; const int pid=p.ids[side];
+    if (pid != 21 && (std::abs(pid) < 1 || std::abs(pid) > c.flavours)) continue;
     if (!(x>0. && x<1. && Z>x)) continue;
     const double denominator=c.hook->beamXf(side,pid,x,t);
     if (!(denominator>0.)) continue;
@@ -596,6 +606,169 @@ double backwardRate(const Context& c, const SudakovProfile& p, double logT) {
   if (!std::isfinite(rate) || rate<0.)
     throw std::runtime_error("Invalid backward ISR no-emission rate");
   return rate;
+}
+
+// Integrate in logit(z), resolving the finite global-recoil support and
+// daughter-mass thresholds before adapting. The two quadratures share no
+// endpoint evaluations, including at square-root flavour thresholds.
+double gluonQuadrature(const std::function<double(double)>& f,
+                       double a, double b, double tolerance, int depth=0) {
+  static const GaussRule coarse(12), fine(24);
+  const double middle=.5*(a+b), half=.5*(b-a);
+  double low=0., high=0.;
+  for (int j=0; j<int(coarse.x.size()); ++j)
+    low+=half*coarse.w[j]*f(middle+half*coarse.x[j]);
+  for (int j=0; j<int(fine.x.size()); ++j)
+    high+=half*fine.w[j]*f(middle+half*fine.x[j]);
+  if (std::abs(high-low)<=tolerance*(1.+std::abs(high))) return high;
+  if (depth==18)
+    throw std::runtime_error("Global gluon shower quadrature did not converge");
+  return gluonQuadrature(f,a,middle,.5*tolerance,depth+1)+
+    gluonQuadrature(f,middle,b,.5*tolerance,depth+1);
+}
+
+// Borrow only the five-value radiator records. The gluon integrals do not
+// need a copy of the starting-scale quadrature carried by SudakovProfile.
+struct GluonRadiators {
+  int count;
+  const double* data;
+};
+
+double gluonFsrRate(const Context& c, const GluonRadiators& p, double logT) {
+  if (!p.count) return 0.;
+  const double t=std::exp(logT);
+  if (t<c.hook->cutoffFSR*c.hook->cutoffFSR) return 0.;
+  if (!c.engine || c.engine->mode("TimeShower:alphaSorder")!=1)
+    throw std::runtime_error("Global gluon rate requires the one-loop matching profile");
+  std::array<double,5> quarkMass2{};
+  bool massiveDaughters=false;
+  for (int f=0; f<c.flavours; ++f) {
+    quarkMass2[f]=std::pow(c.engine->particleData.m0(f+1),2);
+    massiveDaughters=massiveDaughters || quarkMass2[f]>0.;
+  }
+  // SimpleTimeShower evolves with these thresholds even when the active
+  // quarks are massless. AlphaStrong::alphaS instead switches at 1.5/4.8;
+  // use the actual one-loop trial hazard and the same initialized Lambdas.
+  const double charm=std::max(1.2,c.engine->particleData.m0(4));
+  const double bottom=std::max(4.,c.engine->particleData.m0(5));
+  const int nf=t>bottom*bottom ? 5 : t>charm*charm ? 4 : 3;
+  const double lambda=nf==5 ? c.hook->fsrAlphaS.Lambda5() :
+    nf==4 ? c.hook->fsrAlphaS.Lambda4() : c.hook->fsrAlphaS.Lambda3();
+  const double alphaOver2Pi=1./((11.-2.*nf/3.)*.5*std::log(t/(lambda*lambda)));
+  double rate=0.;
+  for (int i=0; i<p.count; ++i) {
+    const double* d=p.data+5*i;
+    if (d[0]!=0.)
+      throw std::runtime_error("Global gluon profile requires a massless Born gluon");
+    const int ends=int(t<d[3]*d[3])+int(t<d[4]*d[4]);
+    const double M2=d[2]*d[2], rec2=d[1]*d[1], A=M2-rec2;
+    const double corrected=(d[2]-d[1])*(d[2]-d[1]);
+    if (!ends || !(d[2]>d[1] && t<.25*corrected)) continue;
+    // The original native virtual-mass and momentum inequalities, solved
+    // for z(1-z). The second bound includes the entire hard recoiler.
+    const double smin=std::max(t/corrected,(d[2]*std::sqrt(t)-t)/A);
+    if (!(smin>0. && smin<.25)) continue;
+    const double zmin=2.*smin/(1.+std::sqrt(1.-4.*smin));
+    const double vmax=std::log((1.-zmin)/zmin);
+    std::vector<double> edges{-vmax,vmax};
+    for (int f=0; f<c.flavours; ++f) if (quarkMass2[f]>t) {
+      const double s=t/(4.*quarkMass2[f]);
+      const double z=2.*s/(1.+std::sqrt(1.-4.*s));
+      const double v=std::log((1.-z)/z);
+      if (v<vmax) {edges.push_back(-v); edges.push_back(v);}
+    }
+    std::sort(edges.begin(),edges.end());
+    edges.erase(std::unique(edges.begin(),edges.end()),edges.end());
+    const auto integrand=[&](double v) {
+      const double z=1./(1.+std::exp(-v)), omz=1.-z;
+      const double virtual2=t/(z*omz), r=rec2/M2, a=virtual2/M2;
+      const double x1=(1.-r+a)*z, x2=1.+r-a;
+      const double deadCone=rec2>0. ? std::max(0.,1.-
+        r/std::max(1.e-12,x1+x2-1.-r)*
+        std::max(1.e-12,1.+r-x2)/std::max(1.e-12,1.-r-x1)) : 1.;
+      // Native colour-end partition, not the full Pgg counted twice.
+      const double gg=1.5*(1.+z*z*z)/omz*deadCone;
+      double flavours=0.;
+      for (int f=0; f<c.flavours; ++f)
+        flavours+=std::sqrt(std::max(0.,1.-4.*quarkMass2[f]/virtual2));
+      const double qq=.25*flavours*(z*z+omz*omz);
+      // g -> qq has no beta*pT cutoff: the native reduced-pT veto applies
+      // only to gluon emission. Its mass threshold is already in beta.
+      return z*omz*(gg+qq);
+    };
+    double integral=0.;
+    for (int k=1; k<int(edges.size()); ++k) {
+      const int panels=std::max(1,int(std::ceil((edges[k]-edges[k-1])/2.)));
+      for (int j=0; j<panels; ++j) {
+        const double a=edges[k-1]+(edges[k]-edges[k-1])*j/panels;
+        const double b=edges[k-1]+(edges[k]-edges[k-1])*(j+1)/panels;
+        if (massiveDaughters) {
+          // A cosine map removes the square-root onset at either end of
+          // each flavour-threshold interval before adaptive quadrature.
+          const auto smooth=[&](double theta) {
+            const double sine=std::sin(.5*theta);
+            return .5*(b-a)*std::sin(theta)*
+              integrand(a+(b-a)*sine*sine);
+          };
+          integral+=gluonQuadrature(smooth,0.,std::acos(-1.),1.e-10/panels);
+        } else integral+=gluonQuadrature(integrand,a,b,1.e-10/panels);
+      }
+    }
+    rate+=ends*integral*alphaOver2Pi;
+  }
+  if (!std::isfinite(rate) || rate<0.)
+    throw std::runtime_error("Invalid global gluon no-emission rate");
+  return rate;
+}
+
+double gluonFsrRate(const Context& c, const SudakovProfile& p, double logT) {
+  return gluonFsrRate(c,GluonRadiators{p.ngluons,p.gluons.data()},logT);
+}
+
+bool gluonEndActive(const Context& c, const double* d, double cap, double Q) {
+  const double start=std::min(cap,Q);
+  const double charm=std::max(1.2,c.engine->particleData.m0(4));
+  const double bottom=std::max(4.,c.engine->particleData.m0(5));
+  const double floor=start>bottom ? bottom : start>charm ? charm : c.hook->cutoffFSR;
+  const double lower=std::max(floor,c.hook->cutoffFSR);
+  const double corrected=(d[2]-d[1])*(d[2]-d[1]);
+  // Stock pT2nextQCD returns before crossing its first flavour slab if
+  // zMinAbs > .499. A soft global radiator can therefore be inactive at
+  // Q>m_b but active at Q<m_b; this is a property of the sampled shower.
+  return start>c.hook->cutoffFSR && corrected>0. &&
+    lower*lower/corrected<=.499*.501;
+}
+
+double gluonFsrIntegral(const Context& c, const GluonRadiators& p, double lo, double hi) {
+  if (!p.count || !(hi>lo)) return 0.;
+  static const GaussRule rule(4);
+  std::vector<double> edges{lo,hi};
+  for (int f : {4,5}) {
+    const double q=std::max(f==4 ? 1.2 : 4.,c.engine->particleData.m0(f));
+    const double u=2.*std::log(q);
+    if (u>lo && u<hi) edges.push_back(u);
+  }
+  for (int i=0; i<p.count; ++i) {
+    const double* d=p.data+5*i;
+    for (double q : {d[3],d[4],.5*(d[2]-d[1])}) {
+      if (!(q>0.)) continue;
+      const double u=2.*std::log(q);
+      if (u>lo && u<hi) edges.push_back(u);
+    }
+  }
+  std::sort(edges.begin(),edges.end());
+  edges.erase(std::unique(edges.begin(),edges.end()),edges.end());
+  double result=0.;
+  for (int k=1; k<int(edges.size()); ++k) {
+    const int panels=std::max(1,int(std::ceil((edges[k]-edges[k-1])/.5)));
+    for (int j=0; j<panels; ++j) {
+      const double a=edges[k-1]+(edges[k]-edges[k-1])*j/panels;
+      const double b=edges[k-1]+(edges[k]-edges[k-1])*(j+1)/panels;
+      for (int l=0; l<int(rule.x.size()); ++l)
+        result+=.5*(b-a)*rule.w[l]*gluonFsrRate(c,p,.5*(a+b)+.5*(b-a)*rule.x[l]);
+    }
+  }
+  return result;
 }
 
 double quarkFsrRate(const Context& c, const SudakovProfile& p, double logT) {
@@ -665,12 +838,36 @@ double backwardIntegral(const Context& c, const SudakovProfile& p, double lo, do
 double showerMarginal(const Context& c, const SudakovProfile& p) {
   if (p.count==0 || p.cdf<=0.) return 0.;
   double previous=2.*std::log(p.pt), exponent=0., probability=0., weights=0.;
+  std::vector<std::array<double,5>> single(p.ngluons);
+  std::vector<double> primitive(p.ngluons,0.);
+  std::vector<std::array<double,2>> atCap(p.ngluons);
+  for (int g=0; g<p.ngluons; ++g) {
+    std::copy_n(p.gluons.data()+5*g,5,single[g].data());
+    single[g][3]=std::max(single[g][3],single[g][4]);
+    single[g][4]=0.;
+    for (int end=0; end<2; ++end)
+      atCap[g][end]=p.gluons[5*g+3+end]<=p.pt ? 0. :
+        std::numeric_limits<double>::quiet_NaN();
+  }
   for (int i=0; i<p.count; ++i) {
     const double next=2.*std::log(p.q[i]);
     if (next<previous || !(p.w[i]>=0. && p.fsr[i]>=0. && p.fsr[i]<=1.))
       throw std::runtime_error("Invalid Sudakov quadrature node");
     exponent+=backwardIntegral(c,p,previous,next);
-    probability+=p.w[i]*p.fsr[i]*std::exp(-exponent);
+    double gluonExponent=0.;
+    for (int g=0; g<p.ngluons; ++g) {
+      const double* d=p.gluons.data()+5*g;
+      const GluonRadiators gluon{1,single[g].data()};
+      for (int end=0; end<2; ++end)
+        if (std::isnan(atCap[g][end]) && d[3+end]<=p.q[i])
+          atCap[g][end]=primitive[g]+gluonFsrIntegral(c,gluon,previous,
+            2.*std::log(d[3+end]));
+      primitive[g]+=gluonFsrIntegral(c,gluon,previous,next);
+      for (int end=0; end<2; ++end)
+        if (gluonEndActive(c,d,d[3+end],p.q[i]))
+          gluonExponent+=d[3+end]>p.q[i] ? primitive[g] : atCap[g][end];
+    }
+    probability+=p.w[i]*p.fsr[i]*std::exp(-exponent-gluonExponent);
     weights+=p.w[i]; previous=next;
   }
   if (!std::isfinite(probability) || probability<0. || probability>1.+1.e-5 ||

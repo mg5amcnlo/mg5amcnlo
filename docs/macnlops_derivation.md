@@ -1,5 +1,107 @@
 # MAcNLOPS from the generated measures
 
+## Global gluon shower denominator correction: 31 October
+
+The competing-shower denominator integrates the stock global-recoil
+`g -> gg` and `g -> qqbar` kernels, with native colour-end factors,
+finite support, active masses/flavours, massive-recoiler weights and
+separate end caps. Its one-loop coupling uses the native shower's
+threshold switches, including the effective 1.2/4 GeV floors. Source
+damping, the generation H/S split, ISR and quark rates retain their
+previous definitions.
+
+A soft-gluon end can fail the native initial flavour-slab phase-space
+check at one starting Q yet radiate at a lower Q. The denominator applies
+this check per Q node and colour end. Cached integrals and a separate
+shower quadrature resolve these threshold jumps; the source average,
+physical starting-scale distribution and its CDF remain unchanged.
+
+All 35 saved W+gluon contexts agree with native no-emission tests:
+pure-FSR native/predicted survival is 0.99921 ± 0.00119, with maximum pull
+2.45. All 60 quark-Born contexts retain their previous denominator. A
+1,200-event pilot preserves native momenta, continuation scales and source
+damping bit-identically. Low-scale, startup-gate and continuous-Q controls
+also pass. Pythia source and libraries are unchanged.
+
+The [fix report](audits/macnlops_gluon_fsr_fix_20261031/report.md) records
+the implementation, regressions, native comparisons and provenance.
+These are denominator and matching-pilot checks; the 1M full-shower samples
+below precede this correction. The separate local signed-S problem remains.
+
+## W+jet discrepancy investigation: 31 October
+
+The channel-average model `S ≈ beta B` fails near the 20 GeV generation
+cut. Underlying Born jet pT 20–21 GeV has signed S weight
+−441.29 ± 13.11 pb, while all channel betas are positive (0.787–1.034)
+and an independent 200k Born control gives 1191.45 ± 11.10 pb there.
+Rejecting negative S events contributes weight with the same sign as
+negative-H removal. A negative local beta cannot simply be inserted into
+the current positive bounded veto.
+
+In first-emission raw recoil 5–20 GeV, the expected H−S imbalance is
++231.77 ± 13.93 pb. Its soft-jet excess includes events failing the real
+cuts while Born-supported counterterms survive. Continuation increases
+the imbalance by eroding an initial hard-jet deficit. Replayed scales,
+imported dipole caps and endpoints agree with production; scale assignment
+does not explain the shift. Conditional shower tests separately exposed
+the gluon denominator approximation corrected above.
+
+The [investigation report](audits/macnlops_wj_investigation_20261031/report.md)
+and [plots](audits/macnlops_wj_investigation_20261031/plots/wj_investigation.pdf)
+retain the signed-density decomposition, continuation controls, native ISR
+warning checks and an open Born-integral normalization cross-check. The
+selected-context tests do not determine the gluon correction's contribution
+to the full W+jet residual.
+
+## Multijet validation: 31 October
+
+The native-history construction was tested with **1,000,000 events each**
+for `e+e- -> 2j`, `e+e- -> 3j`, `pp -> W+ j`, and `e+e- -> 4j`.
+All 4M events completed first-emission matching and full showering in
+200 jobs. The e+e samples use **91.188 GeV**, five massless Born flavours
+and Durham generation cuts `ycut=0.01`. The pp sample uses 13 TeV,
+NNPDF40_nlo_as_01180/0, stable W+ and anti-kT R=0.5 generation jets above
+20 GeV. The [report](audits/macnlops_native_ir_jets_1M_20261031/report.txt)
+records the cards, observables, signed normalization and sampling errors.
+
+The signed H-removal/net S-veto transfer ratio in radiation 5–20 GeV is:
+
+| Process | First emission | Full shower | Inclusive matched/source − 1 |
+|---|---:|---:|---:|
+| e+e → 2j | 1.00037 ± 0.01114 | 0.98231 ± 0.00951 | −0.02192% |
+| e+e → 3j | 0.92551 ± 0.00765 | 0.92238 ± 0.00775 | −0.74827% |
+| pp → W+ j | 1.14344 ± 0.01248 | 1.20408 ± 0.01301 | +0.36020% |
+| e+e → 4j | 0.93373 ± 0.00906 | 0.91618 ± 0.00886 | −0.69075% |
+
+The campaign fixed a source Born-array packing bug: `compute_delta` now
+passes compact `p_born`, rather than truncating the real-sized counterevent
+with its zero FKS slot. This affected interior emitted indices in 24/96
+W+jet and 16/70 four-jet sectors. Those sources were regenerated before
+unweighting; invalid partial runs are archived. The retained 2-/3-jet and
+DY/H/ttbar source epochs have the emitted index last, with equivalence
+checks recorded in the
+[source epochs](audits/macnlops_native_ir_jets_1M_20261031/validation/source_epochs.json).
+
+Fixed bare e+e beams use a genuine no-PDF profile: ordered PDGs come from
+the generated process, lepton structure functions are disabled, and no
+inactive PDF is looked up or fingerprinted. Structured-lepton and mixed
+beams remain outside this profile.
+
+All-event probability, written-scale and inclusive weight checks pass,
+as do 16,509 native cap probes and independent Durham-cut comparisons.
+These checks establish implementation consistency, not transfer closure.
+W+jet records 151 first-emission and 5,097 full-shower native ISR
+`weight above unity` warning occurrences; their distributional effect is
+unquantified. The
+[warning audit](audits/macnlops_native_ir_jets_1M_20261031/validation/shower_warnings.json)
+retains counts and log hashes. No Pythia change or warning-conditioned
+retry was made.
+
+The [eight-page plot book](audits/macnlops_native_ir_jets_1M_20261031/plots/jet_validation_run_1M_native_ir_jets.pdf)
+and [paired migration analysis](audits/macnlops_native_ir_jets_1M_20261031/validation/migration_summary.json)
+retain the differential results. Complete events, scripts, logs and frozen
+sources remain at `/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031`.
+
 ## Native-history/global-IR validation: 31 October
 
 Fresh `delta_native_ir` / `mcatnlo-delta-native-ir-v1` samples contain
@@ -99,6 +201,9 @@ stopping scale is not used to remove competing radiators. The factors reuse
 the existing Sudakov tables, grouped source PDF corrections and optional
 `DeltaBackwardISR` correction. Born dipole masses are used, with the opposite
 beam as ISR kinematic recoiler; gluon colour-end multiplicities are retained.
+Generation must pass the compact native `p_born` to this calculation. The
+real-sized `p1_cnt` retains a zero FKS slot and cannot be truncated to obtain
+Born momenta when the emitted index is interior.
 
 Let \(\mathcal I_c(Q)\) contain the valid inverse singular reconstructions in
 the fixed native Born/flavour/colour context. Validity requires a connected
@@ -300,15 +405,16 @@ uses the Born state and a common lower evolution scale:
   \(t(1-m_q^2/m_v^2)>p_{T,\min}^{\rm FSR}\) must hold. For tops this
   restricts radiation well above the nominal evolution cutoff. The
   ordinary local colour-partner ceiling still limits the start.
-* Remaining final gluon legs use the existing FSR tables at the common
-  cutoff and Born dipole masses. Below the table grid, the denominator
-  continues its finite logarithmic slope rather than using the
-  artificial source zero at 0.5 GeV. This is a table approximation for
-  such Born states; the DY, inclusive Higgs and stable-top validation
-  processes have no final Born gluons.
+* Final gluons use numerical integrals of the native global-recoil
+  `g -> gg` and `g -> qqbar` rates, including the massive-recoiler weight
+  and both colour-end caps. The native initial-slab condition is applied
+  at each starting Q, and the shower-only Q grid resolves any resulting
+  threshold jumps. The source continues to use its shipped tables.
 
 The native helper `macnlops_delta_profile` exposes the source average
 and conditional starting-scale nodes through `macnlops_c_sudakov_profile`.
+`macnlops_c_gluon_profile` separately supplies global recoil masses and
+both end caps, preserving the existing quark-profile ABI.
 The matcher computes the denominator, uses the paired bound for S and H,
 and records `delta_source_mean`, `delta_shower_mean` and `starting_cdf`
 in each evaluated `<macnlops_decision>`. The default marker and summaries

@@ -1177,7 +1177,7 @@ c     Assemble the no-emission probability and the H-event start scales.
       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       use FKSParams, only: delta_backward_isr,delta_backward_alphas,
      $     delta_backward_alphas_order,delta_common_scale
-      use fks_phase_space_data, only: xbjrk_cnt,p1_cnt,
+      use fks_phase_space_data, only: xbjrk_cnt,p_born,
      $     xi_i_fks_ev,y_ij_fks_ev
       use process_module, only: valid_dipole_n1,ndelH
       use scale_module, only: born_flow_picked,shower_scale_nbody,
@@ -1282,7 +1282,10 @@ c unweighting; no independent continuation-history draw is introduced.
          native_scale=get_qMC(xi_i_fks_ev,y_ij_fks_ev)
          if(.not.ieee_is_finite(native_scale))
      $        stop 'Nonfinite native H continuation scale'
-         call delta_native_ir_probability(p,p1_cnt(:,1:nexternal-1,0),
+c Use the same compact native Born state as the MC subtraction. The
+c real-sized counterevent p1_cnt retains a zero at i_fks; slicing it
+c would omit a Born leg whenever the emitted leg is not last.
+         call delta_native_ir_probability(p,p_born,
      $        idup_h,Sevent_starting_scales,native_scale,wgt_sudakov,
      $        history_count,history_t)
          if(native_scale.le.0d0)then
@@ -1710,13 +1713,14 @@ c and a common evolution cutoff.
      $     shower_scale_nbody_max
       use mcatnlo_delta_scales, only: pythia8_starting_scales,delta_ok
       use weight_lines, only: macnlops_sudakov_max,
-     $     macnlops_sudakov_nquarks,macnlops_sudakov_quarks
+     $     macnlops_sudakov_nquarks,macnlops_sudakov_quarks,
+     $     macnlops_sudakov_ngluons,macnlops_sudakov_gluons
       implicit none
       include 'genps.inc'
       include 'run.inc'
       integer real_ids(nexternal),source_ids(nexternal),
-     $     nnode,status,i,j,k,l,nc,partners(2),
-     $     nbreak,part,local_status,sudtype,history_count
+     $     nnode,status,i,j,k,nc,partners(2),
+     $     nbreak,ps_nbreak,part,local_status,history_count
       integer idup(nexternal-1,maxproc),
      $     mothup(2,nexternal-1,maxproc),
      $     icolup(2,nexternal-1,max_bcol)
@@ -1726,14 +1730,16 @@ c and a common evolution cutoff.
      $     wnode(macnlops_sudakov_max),fsrnode(macnlops_sudakov_max),
      $     cdf,lo,hi,q,a,b,u,weight,total_weight,prob,legprob,tmp,
      $     boundaries((nexternal-1)**2+4*nexternal+10),
+     $     ps_boundaries((nexternal-1)**2+4*nexternal+10+2+64),
+     $     ps_total_weight,floors(2),corrected,
      $     mcmass(21),lambda(3:5),
      $     start(nexternal-1,nexternal-1),
      $     stop(nexternal-1,nexternal-1),
      $     masses(nexternal-1,nexternal-1),
-     $     born_mass(nexternal-1,nexternal-1),
      $     history_t((nexternal-1)**2)
       double precision rec(0:3),whole(0:3)
       logical connected(nexternal-1,nexternal-1)
+      logical gluon_gate(64)
       logical*1 dead(nexternal-1,nexternal-1),
      $     node_dead(nexternal-1,nexternal-1)
       type(delta_connections) conn(nexternal-1)
@@ -1749,10 +1755,14 @@ c and a common evolution cutoff.
       source_mean=0d0
       qnode=0d0
       wnode=0d0
+c The matching driver integrates all Born FSR radiators. Preserve the
+c existing profile field as a unity factor, without source-table FSR.
       fsrnode=1d0
       cdf=0d0
       macnlops_sudakov_nquarks=0
       macnlops_sudakov_quarks=0d0
+      macnlops_sudakov_ngluons=0
+      macnlops_sudakov_gluons=0d0
       if(.not.(pt.gt.0d0))return
       mcmass=0d0
       include 'MCmasses_PYTHIA8.inc'
@@ -1774,22 +1784,30 @@ c and a common evolution cutoff.
       if(local_status.ne.delta_ok)return
       call get_delta_stopping_scales(p,real_ids,
      $     icolup(:,:,born_flow_picked),start,cxmupp,stop,masses,dead)
-c For a quark the first global-recoil kernel has an analytic z integral.
-c Its recoiler is ALL other hard final particles, not its colour partner.
-c Keep the table for the original source; supply this mass/recoil
-c correction only to the competing-shower denominator.
+c The first global-recoil kernels use ALL other hard final particles as
+c recoiler. Supply those masses and the local line caps to the shower
+c denominator; the source still uses its original tables below.
       do i=nincoming+1,nexternal-1
-         if(abs(idup(i,1)).gt.6.or.
-     $      .not.any(connected(i,:)))cycle
-         if(macnlops_sudakov_nquarks.eq.64)return
-         macnlops_sudakov_nquarks=macnlops_sudakov_nquarks+1
+         if(.not.any(connected(i,:)))cycle
+         if(abs(idup(i,1)).gt.6.and.idup(i,1).ne.21)cycle
          rec=sum(pborn(:,nincoming+1:nexternal-1),dim=2)-pborn(:,i)
          whole=rec+pborn(:,i)
          call find_color_connectors(born_flow_picked,i,nc,partners)
-         macnlops_sudakov_quarks(:,macnlops_sudakov_nquarks)=
+         if(idup(i,1).eq.21)then
+            if(nc.ne.2.or.macnlops_sudakov_ngluons.eq.64)return
+            macnlops_sudakov_ngluons=macnlops_sudakov_ngluons+1
+            macnlops_sudakov_gluons(:,macnlops_sudakov_ngluons)=
+     $        [mass_n(i),sqrt(max(0d0,rec(0)**2-sum(rec(1:3)**2))),
+     $        sqrt(max(0d0,whole(0)**2-sum(whole(1:3)**2))),
+     $        start(i,partners(1)),start(i,partners(2))]
+         else
+            if(macnlops_sudakov_nquarks.eq.64)return
+            macnlops_sudakov_nquarks=macnlops_sudakov_nquarks+1
+            macnlops_sudakov_quarks(:,macnlops_sudakov_nquarks)=
      $        [mass_n(i),sqrt(max(0d0,rec(0)**2-sum(rec(1:3)**2))),
      $        sqrt(max(0d0,whole(0)**2-sum(whole(1:3)**2))),
      $        start(i,partners(1))]
+         endif
       enddo
       if(delta_backward_isr)call delta_alphas_lambdas(
      $     delta_backward_alphas,delta_backward_alphas_order,lambda)
@@ -1810,11 +1828,6 @@ c This includes discontinuous colour-line mixtures in the source Delta.
      $           start(i,j).lt.hi)then
                nbreak=nbreak+1
                boundaries(nbreak)=start(i,j)
-            endif
-            if(i.gt.nincoming)then
-               born_mass(i,j)=sqrt(abs(sumdot(pborn(:,i),
-     $              pborn(:,j),merge(-1d0,1d0,j.le.nincoming))))
-               born_mass(i,j)=min(born_mass(i,j),cxmupp)
             endif
          enddo
       enddo
@@ -1889,56 +1902,96 @@ c The source average includes unsupported hard-remainder nodes.
             nnode=nnode+1
             qnode(nnode)=q
             wnode(nnode)=weight
-            fsrnode(nnode)=1d0
-c The denominator includes EVERY live Born radiator, independent of
-c which real-state inverse history happened to generate this endpoint.
-            do i=nincoming+1,nexternal-1
-               if(.not.any(connected(i,:)))cycle
-               if(abs(idup(i,1)).le.6)cycle
-               call find_color_connectors(born_flow_picked,i,nc,
-     $              partners)
-               legprob=1d0
-               do l=1,nc
-                  j=partners(l)
-                  if(start(i,j).le.pt)cycle
-                  sudtype=setSudType(i,j)
-                  tmp=macnlops_fsr_sudakov(pt,born_mass(i,j),
-     $                 idup(i,1),sudtype,mcmass)/
-     $                 macnlops_fsr_sudakov(start(i,j),
-     $                 born_mass(i,j),idup(i,1),sudtype,mcmass)
-                  legprob=legprob*tmp
-               enddo
-               fsrnode(nnode)=fsrnode(nnode)*
-     $              min(max(legprob,0d0),1d0)
-            enddo
          enddo
       enddo
       if(.not.(total_weight.gt.0d0))return
       source_mean=source_mean/total_weight
       if(cdf.gt.0d0)wnode(1:nnode)=
      $     wnode(1:nnode)/(total_weight*cdf)
+c A soft gluon may fail PYTHIA's first flavour slab at Q>m_c or m_b,
+c even though the same Born state can radiate when Q is below that
+c threshold. Refine ONLY the shower quadrature at those jumps and its
+c global phase-space ceiling. The source average above must retain its
+c original nodes, evaluation order and normalization bit for bit.
+      gluon_gate=.false.
+      if(macnlops_sudakov_ngluons.gt.0)then
+         floors=[macnlops_charm_mass,macnlops_bottom_mass]
+         if(.not.all(ieee_is_finite(floors)).or.
+     $      any(floors.le.0d0))return
+         do i=1,macnlops_sudakov_ngluons
+            corrected=(macnlops_sudakov_gluons(3,i)-
+     $           macnlops_sudakov_gluons(2,i))**2-
+     $           macnlops_sudakov_gluons(1,i)**2
+            if(corrected.le.0d0)cycle
+            do k=1,2
+               if(floors(k).le.max(lo,pt).or.floors(k).ge.hi)cycle
+               if(maxval(macnlops_sudakov_gluons(4:5,i)).le.
+     $              floors(k))cycle
+               if(floors(k)**2.gt.0.499d0*0.501d0*corrected)
+     $              gluon_gate(i)=.true.
+            enddo
+         enddo
+      endif
+      if(any(gluon_gate))then
+         ps_nbreak=nbreak
+         ps_boundaries(1:nbreak)=boundaries(1:nbreak)
+         do k=1,2
+            if(floors(k).le.max(lo,pt).or.floors(k).ge.hi)cycle
+            if(any(ps_boundaries(1:ps_nbreak).eq.floors(k)))cycle
+            ps_nbreak=ps_nbreak+1
+            ps_boundaries(ps_nbreak)=floors(k)
+         enddo
+         do i=1,macnlops_sudakov_ngluons
+            if(.not.gluon_gate(i))cycle
+            corrected=(macnlops_sudakov_gluons(3,i)-
+     $           macnlops_sudakov_gluons(2,i))**2-
+     $           macnlops_sudakov_gluons(1,i)**2
+            q=.5d0*sqrt(corrected)
+            if(q.le.max(lo,pt).or.q.ge.hi)cycle
+            if(any(ps_boundaries(1:ps_nbreak).eq.q))cycle
+            ps_nbreak=ps_nbreak+1
+            ps_boundaries(ps_nbreak)=q
+         enddo
+         do i=2,ps_nbreak
+            tmp=ps_boundaries(i)
+            j=i-1
+            do while(j.ge.1)
+               if(ps_boundaries(j).le.tmp)exit
+               ps_boundaries(j+1)=ps_boundaries(j)
+               j=j-1
+            enddo
+            ps_boundaries(j+1)=tmp
+         enddo
+         nnode=0
+         qnode=0d0
+         wnode=0d0
+         fsrnode=1d0
+         ps_total_weight=0d0
+         do part=1,ps_nbreak-1
+            a=ps_boundaries(part)
+            b=ps_boundaries(part+1)
+            if(b-a.le.1d-12*hi)cycle
+            do k=1,ng
+               q=(a+b+(b-a)*gx(k))/2d0
+               u=(q-lo)/(hi-lo)
+               weight=gw(k)*(b-a)/(hi-lo)*u*(1d0-u)/
+     $              (u*u+(1d0-u)**2)**2
+               ps_total_weight=ps_total_weight+weight
+               if(q.le.pt)cycle
+               if(nnode.eq.macnlops_sudakov_max)return
+               nnode=nnode+1
+               qnode(nnode)=q
+               wnode(nnode)=weight
+            enddo
+         enddo
+         if(.not.(ps_total_weight.gt.0d0))return
+         if(cdf.gt.0d0)wnode(1:nnode)=
+     $        wnode(1:nnode)/(ps_total_weight*cdf)
+      endif
       if(.not.all(ieee_is_finite([source_mean,cdf])).or.
      $     .not.all(ieee_is_finite(fsrnode(1:nnode))))return
       status=0
       end subroutine macnlops_delta_profile
-
-      double precision function macnlops_fsr_sudakov(q,m,pdg,typ,mc)
-c The source deliberately forces zero at 0.5 GeV; that is NOT the
-c physical shower probability. Continue the table's finite log slope
-c below its grid instead of inserting that artificial zero in a ratio.
-      implicit none
-      double precision q,m,mc(21),a,b,slope,pysudakov
-      integer pdg,typ
-      if(q.ge.1.01d0)then
-         macnlops_fsr_sudakov=pysudakov(q,m,pdg,typ,mc)
-      else
-         a=max(pysudakov(1.01d0,m,pdg,typ,mc),1d-300)
-         b=max(pysudakov(1.2d0,m,pdg,typ,mc),1d-300)
-         slope=max(log(b/a)/log(1.2d0/1.01d0),0d0)
-         macnlops_fsr_sudakov=exp(max(log(a)+
-     $        slope*log(q/1.01d0),log(1d-300)))
-      endif
-      end function macnlops_fsr_sudakov
 
       subroutine macnlops_gauss_rule(n,x,w)
       implicit none

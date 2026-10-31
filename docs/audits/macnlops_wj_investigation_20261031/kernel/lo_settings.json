@@ -1,0 +1,1 @@
+{"nevents":200000,"iseed":3720301,"lpp1":1,"lpp2":1,"ebeam1":6500.0,"ebeam2":6500.0,"pdlabel1":"lhapdf","pdlabel2":"lhapdf","lhaid":331700,"ptj":20.0,"etaj":-1.0,"maxjetflavor":5,"dynamical_scale_choice":3,"fixed_ren_scale":false,"fixed_fac_scale1":false,"fixed_fac_scale2":false,"scalefact":1.0,"event_norm":"sum","use_syst":false}

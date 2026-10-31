@@ -32,9 +32,10 @@ def number(s):
     return float(s.replace('D', 'E').replace('d', 'e'))
 
 
-def scan(source, output, key, per_bin):
+def scan(source, output, key, per_bin, sample_coordinate=None, seed=None):
     output.mkdir(parents=True, exist_ok=True)
-    rng = random.Random(310010 + ['DY', 'H', 'ttbar'].index(key))
+    rng = random.Random(seed if seed is not None else
+                        310010 + ['DY', 'H', 'ttbar'].index(key))
     counts = collections.Counter()
     maxerr = collections.defaultdict(float)
     groups = collections.Counter()
@@ -119,7 +120,8 @@ def scan(source, output, key, per_bin):
             keep = number(dec['keep'])
             transfer = (w if sh == 'S' else -w)*(1-keep)
             hard = [p for p in ps if int(p[1]) == 1 and abs(int(p[0])) in HARD]
-            pt = math.hypot(sum(number(p[6]) for p in hard), sum(number(p[7]) for p in hard))
+            pt = (float(sample_coordinate[sequence]) if sample_coordinate is not None else
+                  math.hypot(sum(number(p[6]) for p in hard), sum(number(p[7]) for p in hard)))
             if transfer != 0:
                 assert t > 0
                 bi = int(np.searchsorted(EDGES, pt, side='right')-1)
@@ -138,6 +140,8 @@ def scan(source, output, key, per_bin):
                         reservoir[index] = record
             sequence += 1
             line = next(f, '')
+    if sample_coordinate is not None:
+        assert sequence == len(sample_coordinate)
     selected = sorted((dict(e, sample_factor=groups[g]/len(es))
                        for g, es in samples.items() for e in es), key=lambda e: e['sequence'])
     with (output/f'{key}_sample.lhe').open('w') as out, (output/f'{key}_sample.jsonl').open('w') as side:

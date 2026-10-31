@@ -1,0 +1,1119 @@
+{
+  "process": "EE3j",
+  "events": 1000000,
+  "source": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/backup/EE3j_run_1M_native_ir_jets_events.lhe.gz",
+  "classification": "Actual packet registry SHA + decision native sector -> certified alias context/sector -> fks.ij Born parent, checked against all grouped Born flavours and fks.ij_id. Splitting class checked against real daughter IDs.",
+  "limits": "This is a partition by emitting Born parent, not a separation of Sudakov contributions: each source/shower Sudakov includes all radiators. Conditional groups have different phase-space and signed-S populations and do not isolate gluon-Sudakov versus channel-beta errors causally.",
+  "registry_sources": [
+    {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/processes/EE3Jets_5FS/SubProcesses/P0_epem_uuxg/mc_histories.json",
+      "sha256": "4d67f82d596b7b6c74002485cadf8c04d93e0bf101e9e6780ec5d52b12b952ad",
+      "registry": "4ccbb762b14acd4726d7c46a09006d028b2af1d4845121f2c2fa23203a621122",
+      "canonical_sectors": {
+        "7": {
+          "parent": "gluon",
+          "split": "gluon_to_qq",
+          "context": 1,
+          "local_sector": 5,
+          "emitted_real": 6,
+          "radiator_real": 5,
+          "radiator_born": 5,
+          "representative_parent_id": 21
+        },
+        "1": {
+          "parent": "quark",
+          "split": "quark_to_qg",
+          "context": 2,
+          "local_sector": 1,
+          "emitted_real": 6,
+          "radiator_real": 3,
+          "radiator_born": 3,
+          "representative_parent_id": 2
+        },
+        "2": {
+          "parent": "quark",
+          "split": "quark_to_qg",
+          "context": 2,
+          "local_sector": 2,
+          "emitted_real": 6,
+          "radiator_real": 4,
+          "radiator_born": 4,
+          "representative_parent_id": -2
+        },
+        "3": {
+          "parent": "gluon",
+          "split": "gluon_to_gg",
+          "context": 2,
+          "local_sector": 3,
+          "emitted_real": 6,
+          "radiator_real": 5,
+          "radiator_born": 5,
+          "representative_parent_id": 21
+        },
+        "4": {
+          "parent": "gluon",
+          "split": "gluon_to_qq",
+          "context": 2,
+          "local_sector": 4,
+          "emitted_real": 6,
+          "radiator_real": 5,
+          "radiator_born": 5,
+          "representative_parent_id": 21
+        },
+        "5": {
+          "parent": "gluon",
+          "split": "gluon_to_qq",
+          "context": 2,
+          "local_sector": 5,
+          "emitted_real": 6,
+          "radiator_real": 5,
+          "radiator_born": 5,
+          "representative_parent_id": 21
+        },
+        "6": {
+          "parent": "gluon",
+          "split": "gluon_to_qq",
+          "context": 2,
+          "local_sector": 6,
+          "emitted_real": 6,
+          "radiator_real": 5,
+          "radiator_born": 5,
+          "representative_parent_id": 21
+        }
+      }
+    },
+    {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/processes/EE3Jets_5FS/SubProcesses/P0_epem_ddxg/mc_histories.json",
+      "sha256": "8efde8d4559a8de0a84c9542152c7e48f015296fcb77c5582646ae0f7bae5806",
+      "registry": "3f13e8fc3fff3c0950e8533bdcfea05c40b95fe9c94ea5414fd7cdc96ce6fdb4",
+      "canonical_sectors": {
+        "1": {
+          "parent": "quark",
+          "split": "quark_to_qg",
+          "context": 1,
+          "local_sector": 1,
+          "emitted_real": 6,
+          "radiator_real": 3,
+          "radiator_born": 3,
+          "representative_parent_id": 1
+        },
+        "2": {
+          "parent": "quark",
+          "split": "quark_to_qg",
+          "context": 1,
+          "local_sector": 2,
+          "emitted_real": 6,
+          "radiator_real": 4,
+          "radiator_born": 4,
+          "representative_parent_id": -1
+        },
+        "3": {
+          "parent": "gluon",
+          "split": "gluon_to_gg",
+          "context": 1,
+          "local_sector": 3,
+          "emitted_real": 6,
+          "radiator_real": 5,
+          "radiator_born": 5,
+          "representative_parent_id": 21
+        },
+        "4": {
+          "parent": "gluon",
+          "split": "gluon_to_qq",
+          "context": 1,
+          "local_sector": 4,
+          "emitted_real": 6,
+          "radiator_real": 5,
+          "radiator_born": 5,
+          "representative_parent_id": 21
+        },
+        "5": {
+          "parent": "gluon",
+          "split": "gluon_to_qq",
+          "context": 1,
+          "local_sector": 5,
+          "emitted_real": 6,
+          "radiator_real": 5,
+          "radiator_born": 5,
+          "representative_parent_id": 21
+        },
+        "6": {
+          "parent": "gluon",
+          "split": "gluon_to_qq",
+          "context": 1,
+          "local_sector": 6,
+          "emitted_real": 6,
+          "radiator_real": 5,
+          "radiator_born": 5,
+          "representative_parent_id": 21
+        },
+        "7": {
+          "parent": "gluon",
+          "split": "gluon_to_qq",
+          "context": 2,
+          "local_sector": 4,
+          "emitted_real": 6,
+          "radiator_real": 5,
+          "radiator_born": 5,
+          "representative_parent_id": 21
+        }
+      }
+    }
+  ],
+  "registry_event_counts": {
+    "4ccbb762b14acd4726d7c46a09006d028b2af1d4845121f2c2fa23203a621122": 342494,
+    "3f13e8fc3fff3c0950e8533bdcfea05c40b95fe9c94ea5414fd7cdc96ce6fdb4": 657506
+  },
+  "beta_check": {
+    "reconstructed_from": "kernel_scale * alpha_s_kernel / (alpha_s_shower * pdf_ratio)",
+    "verified_events": 736480,
+    "maximum_distance_to_recorded_channel_beta": 2.220446049250313e-16,
+    "recorded_channel_beta_range": [
+      1.2370106007620854,
+      1.2577441304548318
+    ]
+  },
+  "inclusive_by_parent": {
+    "not_evaluated": {
+      "events": 74553,
+      "S": 8,
+      "H": 74545,
+      "negative_S": 4,
+      "negative_H": 0,
+      "expected_S_pb": 0.0,
+      "expected_H_pb": 0.0,
+      "ratio": null,
+      "ratio_sampling_error": null,
+      "expected_net_pb": 0.0,
+      "net_sampling_error_pb": 0.0,
+      "realized_S_pb": 0.0,
+      "realized_H_pb": 0.0,
+      "S_positive_expected_pb": 0.0,
+      "S_negative_expected_pb": 0.0,
+      "recorded_beta_quantiles": null,
+      "all_radiator_source_over_shower_mean_quantiles": null
+    },
+    "quark": {
+      "events": 607217,
+      "S": 567738,
+      "H": 39479,
+      "negative_S": 53190,
+      "negative_H": 39479,
+      "expected_S_pb": 980.158232199453,
+      "expected_H_pb": 870.2630071375424,
+      "ratio": 0.8878801182791598,
+      "ratio_sampling_error": 0.004912684633584161,
+      "expected_net_pb": -109.89522506191068,
+      "net_sampling_error_pb": 4.925244375598213,
+      "realized_S_pb": 976.404241376,
+      "realized_H_pb": 870.2128857999998,
+      "S_positive_expected_pb": 1101.9902264800753,
+      "S_negative_expected_pb": -121.83199428062278,
+      "recorded_beta_quantiles": [
+        1.2370106007620854,
+        1.2525527720369538,
+        1.254072983461901,
+        1.2566507498219057,
+        1.257744130454832
+      ],
+      "all_radiator_source_over_shower_mean_quantiles": [
+        0.0,
+        0.20657834176613152,
+        1.1191889440345917,
+        1.5468083818961589,
+        14.438051641720559
+      ]
+    },
+    "gluon": {
+      "events": 318230,
+      "S": 299288,
+      "H": 18942,
+      "negative_S": 26284,
+      "negative_H": 18942,
+      "expected_S_pb": 422.09851205061597,
+      "expected_H_pb": 409.5295446625664,
+      "ratio": 0.9702226683363852,
+      "ratio_sampling_error": 0.008011325283945901,
+      "expected_net_pb": -12.568967388049744,
+      "net_sampling_error_pb": 3.4044580876359802,
+      "realized_S_pb": 422.91132256000014,
+      "realized_H_pb": 409.49117203199995,
+      "S_positive_expected_pb": 480.75641330841626,
+      "S_negative_expected_pb": -58.65790125780036,
+      "recorded_beta_quantiles": [
+        1.2370106007620854,
+        1.2525527720369538,
+        1.2556192512794346,
+        1.2566507498219057,
+        1.257744130454832
+      ],
+      "all_radiator_source_over_shower_mean_quantiles": [
+        0.0,
+        0.2690964086435798,
+        0.9763825676916045,
+        1.266245564596493,
+        13.340209834822552
+      ]
+    }
+  },
+  "inclusive_by_splitting": {
+    "not_evaluated": {
+      "events": 74553,
+      "S": 8,
+      "H": 74545,
+      "negative_S": 4,
+      "negative_H": 0,
+      "expected_S_pb": 0.0,
+      "expected_H_pb": 0.0,
+      "ratio": null,
+      "ratio_sampling_error": null,
+      "expected_net_pb": 0.0,
+      "net_sampling_error_pb": 0.0,
+      "realized_S_pb": 0.0,
+      "realized_H_pb": 0.0,
+      "S_positive_expected_pb": 0.0,
+      "S_negative_expected_pb": 0.0,
+      "recorded_beta_quantiles": null,
+      "all_radiator_source_over_shower_mean_quantiles": null
+    },
+    "quark_to_qg": {
+      "events": 607217,
+      "S": 567738,
+      "H": 39479,
+      "negative_S": 53190,
+      "negative_H": 39479,
+      "expected_S_pb": 980.158232199453,
+      "expected_H_pb": 870.2630071375424,
+      "ratio": 0.8878801182791598,
+      "ratio_sampling_error": 0.004912684633584161,
+      "expected_net_pb": -109.89522506191068,
+      "net_sampling_error_pb": 4.925244375598213,
+      "realized_S_pb": 976.404241376,
+      "realized_H_pb": 870.2128857999998,
+      "S_positive_expected_pb": 1101.9902264800753,
+      "S_negative_expected_pb": -121.83199428062278,
+      "recorded_beta_quantiles": [
+        1.2370106007620854,
+        1.2525527720369538,
+        1.254072983461901,
+        1.2566507498219057,
+        1.257744130454832
+      ],
+      "all_radiator_source_over_shower_mean_quantiles": [
+        0.0,
+        0.20657834176613152,
+        1.1191889440345917,
+        1.5468083818961589,
+        14.438051641720559
+      ]
+    },
+    "gluon_to_gg": {
+      "events": 265118,
+      "S": 250226,
+      "H": 14892,
+      "negative_S": 22116,
+      "negative_H": 14892,
+      "expected_S_pb": 324.5415145464564,
+      "expected_H_pb": 320.3545429391622,
+      "ratio": 0.9870988104152237,
+      "ratio_sampling_error": 0.00919512551640054,
+      "expected_net_pb": -4.186971607294271,
+      "net_sampling_error_pb": 2.992685691613975,
+      "realized_S_pb": 326.12290139999993,
+      "realized_H_pb": 320.29573077599997,
+      "S_positive_expected_pb": 371.444872547952,
+      "S_negative_expected_pb": -46.90335800149552,
+      "recorded_beta_quantiles": [
+        1.2370106007620854,
+        1.2525527720369538,
+        1.2556192512794346,
+        1.2566507498219057,
+        1.257744130454832
+      ],
+      "all_radiator_source_over_shower_mean_quantiles": [
+        0.0,
+        0.19816214754883493,
+        0.9654806435817282,
+        1.274793161665753,
+        13.340209834822552
+      ]
+    },
+    "gluon_to_qq": {
+      "events": 53112,
+      "S": 49062,
+      "H": 4050,
+      "negative_S": 4168,
+      "negative_H": 4050,
+      "expected_S_pb": 97.55699750415957,
+      "expected_H_pb": 89.17500172340411,
+      "ratio": 0.9140810398516204,
+      "ratio_sampling_error": 0.01628530967994737,
+      "expected_net_pb": -8.381995780755474,
+      "net_sampling_error_pb": 1.6230117749661779,
+      "realized_S_pb": 96.78842116000001,
+      "realized_H_pb": 89.19544125600001,
+      "S_positive_expected_pb": 109.3115407604644,
+      "S_negative_expected_pb": -11.754543256304844,
+      "recorded_beta_quantiles": [
+        1.2370106007620854,
+        1.2525527720369538,
+        1.254072983461901,
+        1.2566507498219057,
+        1.2577441304548318
+      ],
+      "all_radiator_source_over_shower_mean_quantiles": [
+        0.0,
+        0.7873213009074258,
+        1.0084820243652182,
+        1.229776881675533,
+        11.118509898936631
+      ]
+    }
+  },
+  "ranges": [
+    {
+      "lo": 0.0,
+      "hi": 5.0,
+      "by_parent": {
+        "not_evaluated": {
+          "events": 37762,
+          "S": 8,
+          "H": 37754,
+          "negative_S": 4,
+          "negative_H": 0,
+          "expected_S_pb": 0.0,
+          "expected_H_pb": 0.0,
+          "ratio": null,
+          "ratio_sampling_error": null,
+          "expected_net_pb": 0.0,
+          "net_sampling_error_pb": 0.0,
+          "realized_S_pb": 0.0,
+          "realized_H_pb": 0.0,
+          "S_positive_expected_pb": 0.0,
+          "S_negative_expected_pb": 0.0,
+          "recorded_beta_quantiles": null,
+          "all_radiator_source_over_shower_mean_quantiles": null
+        },
+        "quark": {
+          "events": 318239,
+          "S": 301772,
+          "H": 16467,
+          "negative_S": 30918,
+          "negative_H": 16467,
+          "expected_S_pb": 423.57484122562784,
+          "expected_H_pb": 362.33870313928463,
+          "ratio": 0.8554301811005715,
+          "ratio_sampling_error": 0.0073083037293843935,
+          "expected_net_pb": -61.2361380863432,
+          "net_sampling_error_pb": 3.1889018614859417,
+          "realized_S_pb": 425.00822108,
+          "realized_H_pb": 362.2778464079999,
+          "S_positive_expected_pb": 486.2105821684466,
+          "S_negative_expected_pb": -62.63574094281853,
+          "recorded_beta_quantiles": [
+            1.2370106007620854,
+            1.2525527720369538,
+            1.2556192512794346,
+            1.2566507498219057,
+            1.257744130454832
+          ],
+          "all_radiator_source_over_shower_mean_quantiles": [
+            0.0,
+            0.04537765349972836,
+            1.1539726337939702,
+            1.7617379779679676,
+            14.438051641720559
+          ]
+        },
+        "gluon": {
+          "events": 187667,
+          "S": 177311,
+          "H": 10356,
+          "negative_S": 16697,
+          "negative_H": 10356,
+          "expected_S_pb": 222.14184293927227,
+          "expected_H_pb": 220.13933594639764,
+          "ratio": 0.9909854579111327,
+          "ratio_sampling_error": 0.011180764547672585,
+          "expected_net_pb": -2.002506992874615,
+          "net_sampling_error_pb": 2.488877833584072,
+          "realized_S_pb": 221.16761231999996,
+          "realized_H_pb": 220.13019936799995,
+          "S_positive_expected_pb": 257.62542235478725,
+          "S_negative_expected_pb": -35.483579415514896,
+          "recorded_beta_quantiles": [
+            1.2370106007620854,
+            1.2525527720369538,
+            1.254072983461901,
+            1.2566507498219057,
+            1.2577441304548318
+          ],
+          "all_radiator_source_over_shower_mean_quantiles": [
+            0.0,
+            0.08913688707559561,
+            0.9356631629056271,
+            1.3862431790960241,
+            13.340209834822552
+          ]
+        }
+      },
+      "by_splitting": {
+        "not_evaluated": {
+          "events": 37762,
+          "S": 8,
+          "H": 37754,
+          "negative_S": 4,
+          "negative_H": 0,
+          "expected_S_pb": 0.0,
+          "expected_H_pb": 0.0,
+          "ratio": null,
+          "ratio_sampling_error": null,
+          "expected_net_pb": 0.0,
+          "net_sampling_error_pb": 0.0,
+          "realized_S_pb": 0.0,
+          "realized_H_pb": 0.0,
+          "S_positive_expected_pb": 0.0,
+          "S_negative_expected_pb": 0.0,
+          "recorded_beta_quantiles": null,
+          "all_radiator_source_over_shower_mean_quantiles": null
+        },
+        "quark_to_qg": {
+          "events": 318239,
+          "S": 301772,
+          "H": 16467,
+          "negative_S": 30918,
+          "negative_H": 16467,
+          "expected_S_pb": 423.57484122562784,
+          "expected_H_pb": 362.33870313928463,
+          "ratio": 0.8554301811005715,
+          "ratio_sampling_error": 0.0073083037293843935,
+          "expected_net_pb": -61.2361380863432,
+          "net_sampling_error_pb": 3.1889018614859417,
+          "realized_S_pb": 425.00822108,
+          "realized_H_pb": 362.2778464079999,
+          "S_positive_expected_pb": 486.2105821684466,
+          "S_negative_expected_pb": -62.63574094281853,
+          "recorded_beta_quantiles": [
+            1.2370106007620854,
+            1.2525527720369538,
+            1.2556192512794346,
+            1.2566507498219057,
+            1.257744130454832
+          ],
+          "all_radiator_source_over_shower_mean_quantiles": [
+            0.0,
+            0.04537765349972836,
+            1.1539726337939702,
+            1.7617379779679676,
+            14.438051641720559
+          ]
+        },
+        "gluon_to_gg": {
+          "events": 157726,
+          "S": 149622,
+          "H": 8104,
+          "negative_S": 14129,
+          "negative_H": 8104,
+          "expected_S_pb": 169.61367679893996,
+          "expected_H_pb": 170.57685745868312,
+          "ratio": 1.0056786733117336,
+          "ratio_sampling_error": 0.01285488774580557,
+          "expected_net_pb": 0.9631806597431632,
+          "net_sampling_error_pb": 2.177570557181441,
+          "realized_S_pb": 168.96587547999997,
+          "realized_H_pb": 170.57717644800002,
+          "S_positive_expected_pb": 197.55562308371879,
+          "S_negative_expected_pb": -27.941946284778815,
+          "recorded_beta_quantiles": [
+            1.2370106007620854,
+            1.2525527720369538,
+            1.2556192512794346,
+            1.2566507498219057,
+            1.2577441304548318
+          ],
+          "all_radiator_source_over_shower_mean_quantiles": [
+            0.0,
+            0.051432805002975486,
+            0.9131950668297543,
+            1.400874102739514,
+            13.340209834822552
+          ]
+        },
+        "gluon_to_qq": {
+          "events": 29941,
+          "S": 27689,
+          "H": 2252,
+          "negative_S": 2568,
+          "negative_H": 2252,
+          "expected_S_pb": 52.52816614033232,
+          "expected_H_pb": 49.56247848771454,
+          "ratio": 0.9435410015134594,
+          "ratio_sampling_error": 0.022630315266098183,
+          "expected_net_pb": -2.9656876526177776,
+          "net_sampling_error_pb": 1.2052797762356589,
+          "realized_S_pb": 52.20173684,
+          "realized_H_pb": 49.553022920000004,
+          "S_positive_expected_pb": 60.0697992710684,
+          "S_negative_expected_pb": -7.541633130736088,
+          "recorded_beta_quantiles": [
+            1.2370106007620854,
+            1.2525527720369538,
+            1.254072983461901,
+            1.2566507498219057,
+            1.2577441304548318
+          ],
+          "all_radiator_source_over_shower_mean_quantiles": [
+            0.0,
+            0.7018071776335286,
+            0.9918141651561038,
+            1.3177144237590948,
+            11.118509898936631
+          ]
+        }
+      }
+    },
+    {
+      "lo": 5.0,
+      "hi": 20.0,
+      "by_parent": {
+        "not_evaluated": {
+          "events": 36435,
+          "S": 0,
+          "H": 36435,
+          "negative_S": 0,
+          "negative_H": 0,
+          "expected_S_pb": 0.0,
+          "expected_H_pb": 0.0,
+          "ratio": null,
+          "ratio_sampling_error": null,
+          "expected_net_pb": 0.0,
+          "net_sampling_error_pb": 0.0,
+          "realized_S_pb": 0.0,
+          "realized_H_pb": 0.0,
+          "S_positive_expected_pb": 0.0,
+          "S_negative_expected_pb": 0.0,
+          "recorded_beta_quantiles": null,
+          "all_radiator_source_over_shower_mean_quantiles": null
+        },
+        "quark": {
+          "events": 284474,
+          "S": 261796,
+          "H": 22678,
+          "negative_S": 22057,
+          "negative_H": 22678,
+          "expected_S_pb": 548.2154082614803,
+          "expected_H_pb": 500.5520502542575,
+          "ratio": 0.9130572448549475,
+          "ratio_sampling_error": 0.006682466551821227,
+          "expected_net_pb": -47.66335800722298,
+          "net_sampling_error_pb": 3.7274734107227365,
+          "realized_S_pb": 543.7588951600001,
+          "realized_H_pb": 500.562785648,
+          "S_positive_expected_pb": 606.9522884637548,
+          "S_negative_expected_pb": -58.73688020227434,
+          "recorded_beta_quantiles": [
+            1.2370106007620854,
+            1.2525527720369538,
+            1.254072983461901,
+            1.2566507498219057,
+            1.257744130454832
+          ],
+          "all_radiator_source_over_shower_mean_quantiles": [
+            0.1201146176462071,
+            0.8225596583604479,
+            1.1154964275133092,
+            1.2479170663079633,
+            1.6620196593988177
+          ]
+        },
+        "gluon": {
+          "events": 128889,
+          "S": 120424,
+          "H": 8465,
+          "negative_S": 9495,
+          "negative_H": 8465,
+          "expected_S_pb": 197.26199000362914,
+          "expected_H_pb": 186.71942218016864,
+          "ratio": 0.9465555030481719,
+          "ratio_sampling_error": 0.011560594567761527,
+          "expected_net_pb": -10.542567823460526,
+          "net_sampling_error_pb": 2.3078226058074316,
+          "realized_S_pb": 198.80805231200003,
+          "realized_H_pb": 186.690186128,
+          "S_positive_expected_pb": 220.25753876588493,
+          "S_negative_expected_pb": -22.9955487622558,
+          "recorded_beta_quantiles": [
+            1.2370106007620854,
+            1.2525527720369538,
+            1.2556192512794346,
+            1.2566507498219057,
+            1.257744130454832
+          ],
+          "all_radiator_source_over_shower_mean_quantiles": [
+            0.0914981856268377,
+            0.7487779788041129,
+            0.9983717910356004,
+            1.1343013501326105,
+            1.5305927591964408
+          ]
+        }
+      },
+      "by_splitting": {
+        "not_evaluated": {
+          "events": 36435,
+          "S": 0,
+          "H": 36435,
+          "negative_S": 0,
+          "negative_H": 0,
+          "expected_S_pb": 0.0,
+          "expected_H_pb": 0.0,
+          "ratio": null,
+          "ratio_sampling_error": null,
+          "expected_net_pb": 0.0,
+          "net_sampling_error_pb": 0.0,
+          "realized_S_pb": 0.0,
+          "realized_H_pb": 0.0,
+          "S_positive_expected_pb": 0.0,
+          "S_negative_expected_pb": 0.0,
+          "recorded_beta_quantiles": null,
+          "all_radiator_source_over_shower_mean_quantiles": null
+        },
+        "quark_to_qg": {
+          "events": 284474,
+          "S": 261796,
+          "H": 22678,
+          "negative_S": 22057,
+          "negative_H": 22678,
+          "expected_S_pb": 548.2154082614803,
+          "expected_H_pb": 500.5520502542575,
+          "ratio": 0.9130572448549475,
+          "ratio_sampling_error": 0.006682466551821227,
+          "expected_net_pb": -47.66335800722298,
+          "net_sampling_error_pb": 3.7274734107227365,
+          "realized_S_pb": 543.7588951600001,
+          "realized_H_pb": 500.562785648,
+          "S_positive_expected_pb": 606.9522884637548,
+          "S_negative_expected_pb": -58.73688020227434,
+          "recorded_beta_quantiles": [
+            1.2370106007620854,
+            1.2525527720369538,
+            1.254072983461901,
+            1.2566507498219057,
+            1.257744130454832
+          ],
+          "all_radiator_source_over_shower_mean_quantiles": [
+            0.1201146176462071,
+            0.8225596583604479,
+            1.1154964275133092,
+            1.2479170663079633,
+            1.6620196593988177
+          ]
+        },
+        "gluon_to_gg": {
+          "events": 106027,
+          "S": 99334,
+          "H": 6693,
+          "negative_S": 7908,
+          "negative_H": 6693,
+          "expected_S_pb": 152.72713707486216,
+          "expected_H_pb": 147.68078696047903,
+          "ratio": 0.9669583925225446,
+          "ratio_sampling_error": 0.01326094442263432,
+          "expected_net_pb": -5.046350114383097,
+          "net_sampling_error_pb": 2.0397218215633663,
+          "realized_S_pb": 154.751110776,
+          "realized_H_pb": 147.621655808,
+          "S_positive_expected_pb": 171.55651227949744,
+          "S_negative_expected_pb": -18.829375204635305,
+          "recorded_beta_quantiles": [
+            1.2370106007620854,
+            1.2525527720369538,
+            1.2556192512794346,
+            1.2566507498219057,
+            1.257744130454832
+          ],
+          "all_radiator_source_over_shower_mean_quantiles": [
+            0.0914981856268377,
+            0.6955033807494306,
+            0.9919749989931729,
+            1.134565072042744,
+            1.5149862756344243
+          ]
+        },
+        "gluon_to_qq": {
+          "events": 22862,
+          "S": 21090,
+          "H": 1772,
+          "negative_S": 1587,
+          "negative_H": 1772,
+          "expected_S_pb": 44.53485292876698,
+          "expected_H_pb": 39.03863521968955,
+          "ratio": 0.8765861488783051,
+          "ratio_sampling_error": 0.023496382072814397,
+          "expected_net_pb": -5.496217709077428,
+          "net_sampling_error_pb": 1.0796203362821843,
+          "realized_S_pb": 44.056941536,
+          "realized_H_pb": 39.06853032,
+          "S_positive_expected_pb": 48.70102648638747,
+          "S_negative_expected_pb": -4.1661735576204935,
+          "recorded_beta_quantiles": [
+            1.2370106007620854,
+            1.2525527720369538,
+            1.2556192512794346,
+            1.2566507498219057,
+            1.2577441304548318
+          ],
+          "all_radiator_source_over_shower_mean_quantiles": [
+            0.7066753055224481,
+            0.901607760773937,
+            1.0207150479967586,
+            1.133312183224967,
+            1.5305927591964408
+          ]
+        }
+      }
+    },
+    {
+      "lo": 20.0,
+      "hi": 50.0,
+      "by_parent": {
+        "not_evaluated": {
+          "events": 356,
+          "S": 0,
+          "H": 356,
+          "negative_S": 0,
+          "negative_H": 0,
+          "expected_S_pb": 0.0,
+          "expected_H_pb": 0.0,
+          "ratio": null,
+          "ratio_sampling_error": null,
+          "expected_net_pb": 0.0,
+          "net_sampling_error_pb": 0.0,
+          "realized_S_pb": 0.0,
+          "realized_H_pb": 0.0,
+          "S_positive_expected_pb": 0.0,
+          "S_negative_expected_pb": 0.0,
+          "recorded_beta_quantiles": null,
+          "all_radiator_source_over_shower_mean_quantiles": null
+        },
+        "quark": {
+          "events": 4504,
+          "S": 4170,
+          "H": 334,
+          "negative_S": 215,
+          "negative_H": 334,
+          "expected_S_pb": 8.367982712344439,
+          "expected_H_pb": 7.372253744,
+          "ratio": 0.8810072866336661,
+          "ratio_sampling_error": 0.05177149076432314,
+          "expected_net_pb": -0.9957289683444386,
+          "net_sampling_error_pb": 0.44145107263179545,
+          "realized_S_pb": 7.637125136,
+          "realized_H_pb": 7.372253744,
+          "S_positive_expected_pb": 8.827355847874376,
+          "S_negative_expected_pb": -0.45937313552993664,
+          "recorded_beta_quantiles": [
+            1.2525527720369536,
+            1.2525527720369538,
+            1.254072983461901,
+            1.2566507498219057,
+            1.2577441304548318
+          ],
+          "all_radiator_source_over_shower_mean_quantiles": [
+            0.8167354238062964,
+            0.9773726257678705,
+            1.0314547403261638,
+            1.0637918542650713,
+            1.1038211685274946
+          ]
+        },
+        "gluon": {
+          "events": 1674,
+          "S": 1553,
+          "H": 121,
+          "negative_S": 92,
+          "negative_H": 121,
+          "expected_S_pb": 2.694679107714604,
+          "expected_H_pb": 2.670786536,
+          "ratio": 0.9911334260000747,
+          "ratio_sampling_error": 0.09789329435479618,
+          "expected_net_pb": -0.023892571714604516,
+          "net_sampling_error_pb": 0.264153023999192,
+          "realized_S_pb": 2.9356579279999995,
+          "realized_H_pb": 2.670786536,
+          "S_positive_expected_pb": 2.87345218774426,
+          "S_negative_expected_pb": -0.17877308002965575,
+          "recorded_beta_quantiles": [
+            1.2525527720369536,
+            1.2525527720369538,
+            1.254072983461901,
+            1.2566507498219057,
+            1.256650749821906
+          ],
+          "all_radiator_source_over_shower_mean_quantiles": [
+            0.7163295156776172,
+            0.8991684583381105,
+            0.967460642757028,
+            1.0093212202431423,
+            1.036620812371428
+          ]
+        }
+      },
+      "by_splitting": {
+        "not_evaluated": {
+          "events": 356,
+          "S": 0,
+          "H": 356,
+          "negative_S": 0,
+          "negative_H": 0,
+          "expected_S_pb": 0.0,
+          "expected_H_pb": 0.0,
+          "ratio": null,
+          "ratio_sampling_error": null,
+          "expected_net_pb": 0.0,
+          "net_sampling_error_pb": 0.0,
+          "realized_S_pb": 0.0,
+          "realized_H_pb": 0.0,
+          "S_positive_expected_pb": 0.0,
+          "S_negative_expected_pb": 0.0,
+          "recorded_beta_quantiles": null,
+          "all_radiator_source_over_shower_mean_quantiles": null
+        },
+        "quark_to_qg": {
+          "events": 4504,
+          "S": 4170,
+          "H": 334,
+          "negative_S": 215,
+          "negative_H": 334,
+          "expected_S_pb": 8.367982712344439,
+          "expected_H_pb": 7.372253744,
+          "ratio": 0.8810072866336661,
+          "ratio_sampling_error": 0.05177149076432314,
+          "expected_net_pb": -0.9957289683444386,
+          "net_sampling_error_pb": 0.44145107263179545,
+          "realized_S_pb": 7.637125136,
+          "realized_H_pb": 7.372253744,
+          "S_positive_expected_pb": 8.827355847874376,
+          "S_negative_expected_pb": -0.45937313552993664,
+          "recorded_beta_quantiles": [
+            1.2525527720369536,
+            1.2525527720369538,
+            1.254072983461901,
+            1.2566507498219057,
+            1.2577441304548318
+          ],
+          "all_radiator_source_over_shower_mean_quantiles": [
+            0.8167354238062964,
+            0.9773726257678705,
+            1.0314547403261638,
+            1.0637918542650713,
+            1.1038211685274946
+          ]
+        },
+        "gluon_to_gg": {
+          "events": 1365,
+          "S": 1270,
+          "H": 95,
+          "negative_S": 79,
+          "negative_H": 95,
+          "expected_S_pb": 2.200700672654335,
+          "expected_H_pb": 2.09689852,
+          "ratio": 0.9528322256887684,
+          "ratio_sampling_error": 0.1047967776232941,
+          "expected_net_pb": -0.10380215265433511,
+          "net_sampling_error_pb": 0.23214006101016596,
+          "realized_S_pb": 2.4059151439999997,
+          "realized_H_pb": 2.09689852,
+          "S_positive_expected_pb": 2.3327371847357283,
+          "S_negative_expected_pb": -0.13203651208139316,
+          "recorded_beta_quantiles": [
+            1.2525527720369536,
+            1.2525527720369538,
+            1.254072983461901,
+            1.2566507498219057,
+            1.256650749821906
+          ],
+          "all_radiator_source_over_shower_mean_quantiles": [
+            0.7163295156776172,
+            0.89367443387593,
+            0.9664123055839158,
+            1.0094474253120378,
+            1.036620812371428
+          ]
+        },
+        "gluon_to_qq": {
+          "events": 309,
+          "S": 283,
+          "H": 26,
+          "negative_S": 13,
+          "negative_H": 26,
+          "expected_S_pb": 0.4939784350602694,
+          "expected_H_pb": 0.573888016,
+          "ratio": 1.161767347050243,
+          "ratio_sampling_error": 0.26405602894359137,
+          "expected_net_pb": 0.07990958093973057,
+          "net_sampling_error_pb": 0.12604686494361578,
+          "realized_S_pb": 0.529742784,
+          "realized_H_pb": 0.573888016,
+          "S_positive_expected_pb": 0.540715003008532,
+          "S_negative_expected_pb": -0.046736567948262614,
+          "recorded_beta_quantiles": [
+            1.2525527720369536,
+            1.2525527720369538,
+            1.254072983461901,
+            1.2566507498219057,
+            1.256650749821906
+          ],
+          "all_radiator_source_over_shower_mean_quantiles": [
+            0.9008372054354417,
+            0.9301344692821669,
+            0.9736489031020226,
+            1.0075224743467976,
+            1.0294140648130832
+          ]
+        }
+      }
+    },
+    {
+      "lo": 50.0,
+      "hi": 100.0,
+      "by_parent": {
+        "not_evaluated": {
+          "events": 0,
+          "S": 0,
+          "H": 0,
+          "negative_S": 0,
+          "negative_H": 0,
+          "expected_S_pb": 0.0,
+          "expected_H_pb": 0.0,
+          "ratio": null,
+          "ratio_sampling_error": null,
+          "expected_net_pb": 0.0,
+          "net_sampling_error_pb": 0.0,
+          "realized_S_pb": 0.0,
+          "realized_H_pb": 0.0,
+          "S_positive_expected_pb": 0.0,
+          "S_negative_expected_pb": 0.0,
+          "recorded_beta_quantiles": null,
+          "all_radiator_source_over_shower_mean_quantiles": null
+        },
+        "quark": {
+          "events": 0,
+          "S": 0,
+          "H": 0,
+          "negative_S": 0,
+          "negative_H": 0,
+          "expected_S_pb": 0.0,
+          "expected_H_pb": 0.0,
+          "ratio": null,
+          "ratio_sampling_error": null,
+          "expected_net_pb": 0.0,
+          "net_sampling_error_pb": 0.0,
+          "realized_S_pb": 0.0,
+          "realized_H_pb": 0.0,
+          "S_positive_expected_pb": 0.0,
+          "S_negative_expected_pb": 0.0,
+          "recorded_beta_quantiles": null,
+          "all_radiator_source_over_shower_mean_quantiles": null
+        },
+        "gluon": {
+          "events": 0,
+          "S": 0,
+          "H": 0,
+          "negative_S": 0,
+          "negative_H": 0,
+          "expected_S_pb": 0.0,
+          "expected_H_pb": 0.0,
+          "ratio": null,
+          "ratio_sampling_error": null,
+          "expected_net_pb": 0.0,
+          "net_sampling_error_pb": 0.0,
+          "realized_S_pb": 0.0,
+          "realized_H_pb": 0.0,
+          "S_positive_expected_pb": 0.0,
+          "S_negative_expected_pb": 0.0,
+          "recorded_beta_quantiles": null,
+          "all_radiator_source_over_shower_mean_quantiles": null
+        }
+      },
+      "by_splitting": {
+        "not_evaluated": {
+          "events": 0,
+          "S": 0,
+          "H": 0,
+          "negative_S": 0,
+          "negative_H": 0,
+          "expected_S_pb": 0.0,
+          "expected_H_pb": 0.0,
+          "ratio": null,
+          "ratio_sampling_error": null,
+          "expected_net_pb": 0.0,
+          "net_sampling_error_pb": 0.0,
+          "realized_S_pb": 0.0,
+          "realized_H_pb": 0.0,
+          "S_positive_expected_pb": 0.0,
+          "S_negative_expected_pb": 0.0,
+          "recorded_beta_quantiles": null,
+          "all_radiator_source_over_shower_mean_quantiles": null
+        },
+        "quark_to_qg": {
+          "events": 0,
+          "S": 0,
+          "H": 0,
+          "negative_S": 0,
+          "negative_H": 0,
+          "expected_S_pb": 0.0,
+          "expected_H_pb": 0.0,
+          "ratio": null,
+          "ratio_sampling_error": null,
+          "expected_net_pb": 0.0,
+          "net_sampling_error_pb": 0.0,
+          "realized_S_pb": 0.0,
+          "realized_H_pb": 0.0,
+          "S_positive_expected_pb": 0.0,
+          "S_negative_expected_pb": 0.0,
+          "recorded_beta_quantiles": null,
+          "all_radiator_source_over_shower_mean_quantiles": null
+        },
+        "gluon_to_gg": {
+          "events": 0,
+          "S": 0,
+          "H": 0,
+          "negative_S": 0,
+          "negative_H": 0,
+          "expected_S_pb": 0.0,
+          "expected_H_pb": 0.0,
+          "ratio": null,
+          "ratio_sampling_error": null,
+          "expected_net_pb": 0.0,
+          "net_sampling_error_pb": 0.0,
+          "realized_S_pb": 0.0,
+          "realized_H_pb": 0.0,
+          "S_positive_expected_pb": 0.0,
+          "S_negative_expected_pb": 0.0,
+          "recorded_beta_quantiles": null,
+          "all_radiator_source_over_shower_mean_quantiles": null
+        },
+        "gluon_to_qq": {
+          "events": 0,
+          "S": 0,
+          "H": 0,
+          "negative_S": 0,
+          "negative_H": 0,
+          "expected_S_pb": 0.0,
+          "expected_H_pb": 0.0,
+          "ratio": null,
+          "ratio_sampling_error": null,
+          "expected_net_pb": 0.0,
+          "net_sampling_error_pb": 0.0,
+          "realized_S_pb": 0.0,
+          "realized_H_pb": 0.0,
+          "S_positive_expected_pb": 0.0,
+          "S_negative_expected_pb": 0.0,
+          "recorded_beta_quantiles": null,
+          "all_radiator_source_over_shower_mean_quantiles": null
+        }
+      }
+    }
+  ]
+}

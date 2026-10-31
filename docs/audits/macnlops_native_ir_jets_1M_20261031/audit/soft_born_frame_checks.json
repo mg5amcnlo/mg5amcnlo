@@ -1,0 +1,12 @@
+{
+  "5": {
+    "physical_points": 72,
+    "max_relative_Gram_error": 8.750135519876386e-16,
+    "modes": "fixedee FSR; hadron ISR and FSR; 2 or3 final Born partons"
+  },
+  "6": {
+    "physical_points": 96,
+    "max_relative_Gram_error": 2.619344741106034e-16,
+    "modes": "fixedee FSR; hadron ISR and FSR; 2 or3 final Born partons"
+  }
+}

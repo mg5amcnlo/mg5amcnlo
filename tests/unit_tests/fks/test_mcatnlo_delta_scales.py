@@ -167,6 +167,12 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn('PASS real-only common H hard fallback', result.stdout)
 
+    def test_nonlast_emission_uses_the_compact_native_born_state(self):
+        result = subprocess.run([str(self.executable), 'nonlast_born'],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('PASS compact Born with nonlast emitted leg', result.stdout)
+
 
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
 class TestStartingScaleIntegration(unittest.TestCase):

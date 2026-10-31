@@ -40,6 +40,9 @@
          integer :: macnlops_sudakov_nquarks=0
 ! Per global-recoil quark radiator: m_rad, m_rec, m_dip, maximum start.
          double precision :: macnlops_sudakov_quarks(4,64)=0d0
+         integer :: macnlops_sudakov_ngluons=0
+! Per global-recoil gluon: m_rad, m_rec, m_hard, two colour-end starts.
+         double precision :: macnlops_sudakov_gluons(5,64)=0d0
 ! Per contribution: qMC**2, shat_Born, xBorn(1:2), connection z,
 ! and a flag: 1=legacy resolved-source gate, 2=physical proposal support.
          double precision, allocatable :: macnlops_meta(:,:)

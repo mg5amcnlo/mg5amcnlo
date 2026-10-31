@@ -6190,8 +6190,12 @@ class RunCardNLO(RunCard):
                 self['store_hard_momenta'] = True
                 logger.info('MAcNLOPS stores the hard momenta before shower-mass '
                             'reshuffling: store_hard_momenta set to True')
-            if self['event_norm'] != 'sum' or self['pdlabel'].lower() != 'lhapdf':
-                raise InvalidRunCard('MAcNLOPS requires event_norm=sum and pdlabel=lhapdf')
+            if self['event_norm'] != 'sum':
+                raise InvalidRunCard('MAcNLOPS requires event_norm=sum')
+            fixed_beams = self['lpp1'] == 0 and self['lpp2'] == 0
+            if not fixed_beams and (any(abs(self[key]) != 1 for key in ('lpp1', 'lpp2')) or
+                                    self['pdlabel'].lower() != 'lhapdf'):
+                raise InvalidRunCard('MAcNLOPS requires fixed beams or proton/antiproton beams with pdlabel=lhapdf')
             if len(self['lhaid']) != 1 or any(self['reweight_scale']) or any(self['reweight_pdf']):
                 raise InvalidRunCard('MAcNLOPS rejection requires a single central weight; disable scale/PDF reweighting')
 

@@ -822,6 +822,12 @@ public:
   FirstEmission() : seen(false), finished(false), type(0), nISR(0), nFSR(0), pt(0.),
     beamXMaxA(0.), beamXMaxB(0.), cutoffISR(0.), cutoffFSR(0.) {}
   void captureBeamLimits() {
+    if (fixedLeptonBeams) {
+      if (std::abs(beamAPtr->id()) != 11 || beamAPtr->id() != -beamBPtr->id())
+        throw std::runtime_error("The no-PDF profile requires fixed e+e- beams");
+      beamXMaxA = beamXMaxB = 1.;
+      return;
+    }
     // Before extracting the sole hard system, xMax(-1) is the exact beam
     // boundary later returned by xMax(0), including the hadron mass reserve.
     beamXMaxA = beamAPtr->xMax(-1);
@@ -831,6 +837,7 @@ public:
   double beamXf(int side, int id, double x, double q2) const {
     return (side ? beamBPtr : beamAPtr)->xf(id, x, q2);
   }
+  bool fixedLeptonBeams = false;
   bool canVetoStep() override { return true; }
   bool canVetoProcessLevel() override { return true; }
   bool doVetoProcessLevel(Event& process) override {
@@ -1428,8 +1435,8 @@ Options options(int argc, char** argv) {
     throw std::runtime_error("Seed must be in [1,900000000]");
   if (o.kind != "auto" && o.kind != "S" && o.kind != "H")
     throw std::runtime_error("--event-kind must be auto, S, or H");
-  if (o.pdf.compare(0, 8, "LHAPDF6:") != 0)
-    throw std::runtime_error("Supply an ordinary MSbar PDF via LHAPDF6:SET/MEMBER");
+  if (o.pdf != "none" && o.pdf.compare(0, 8, "LHAPDF6:") != 0)
+    throw std::runtime_error("Supply LHAPDF6:SET/MEMBER or none for fixed e+e- beams");
   if (o.alphaSMZ != -1. && (o.alphaSMZ < 0.06 || o.alphaSMZ > 0.25))
     throw std::runtime_error("--alpha-s-mz must be in [0.06,0.25]");
   if (o.alphaSorder < -1 || o.alphaSorder > 3)
@@ -1572,7 +1579,8 @@ void configure(Pythia& p, const Options& o) {
   applyPhysicalSettings(p, o.settings);
   // Enforce lifecycle and sample identity even when applying a settings file.
   p.readString("Beams:frameType = 5");
-  p.readString("PDF:pSet = " + o.pdf);
+  if (o.pdf == "none") p.readString("PDF:lepton = off");
+  else p.readString("PDF:pSet = " + o.pdf);
   p.readString("Random:seed = " + std::to_string(o.seed));
   p.readString("Check:abortIfVeto = on");
   // Match the ordinary stock MC@NLO-Delta interface. With an external LHAup
@@ -1700,6 +1708,7 @@ void setEffectiveCutoffs(Pythia& p, FirstEmission& hook) {
 
 void configureHook(Pythia& p, const Options& o, FirstEmission& hook) {
   hook.engine = &p;
+  hook.fixedLeptonBeams = o.pdf == "none";
   hook.flavourCount = o.flavourCount;
   hook.alphaSNfmax = p.mode("StandardModel:alphaSnfmax");
   setEffectiveCutoffs(p, hook);

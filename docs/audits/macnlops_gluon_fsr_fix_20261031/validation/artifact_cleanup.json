@@ -1,0 +1,80 @@
+{
+  "date_utc": "2026-10-31T19:13:43.237987+00:00",
+  "changes": [
+    {
+      "folder": "macnlops_native_ir_jets_1M_20261031",
+      "path": "plots/jet_validation_run_1M_native_ir_jets.json",
+      "operation": "Omit repository duplicate; full external original andhash retained",
+      "before_bytes": 1572801,
+      "after_bytes": 0,
+      "original_repository_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/before/macnlops_native_ir_jets_1M_20261031/plots/jet_validation_run_1M_native_ir_jets.json",
+      "original_repository_sha256": "feffbcb675244c5a75a3de18efe22d1069d210fb5174b90c3106ea18ca8868e6"
+    },
+    {
+      "folder": "macnlops_wj_investigation_20261031",
+      "path": "first/first_decomposition.json",
+      "operation": "Retain every scope total/radiation/parent/splitting/R=0 partition; archive repeated per-channel/source-directory partitions",
+      "before_bytes": 503245,
+      "after_bytes": 314316,
+      "original_repository_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/before/macnlops_wj_investigation_20261031/first/first_decomposition.json",
+      "original_repository_sha256": "f591e571e9772e5898d99be0c23ef12e4ee5314f991cfcc4b9f40a821abb078f"
+    },
+    {
+      "folder": "macnlops_wj_investigation_20261031",
+      "path": "warnings/warning_endpoint_summary.json",
+      "operation": "Drop repeated command/runtime/commonhash fields; retain all104 numeric channel rows and unique filebindings",
+      "before_bytes": 206573,
+      "after_bytes": 102459,
+      "original_repository_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/before/macnlops_wj_investigation_20261031/warnings/warning_endpoint_summary.json",
+      "original_repository_sha256": "d57f1c7a87e4e1bba80930651b7b09b4095f6b6d62e5926fc079f414ad207efe"
+    },
+    {
+      "folder": "macnlops_wj_investigation_20261031",
+      "path": "warnings/conditional_sudakov_summary.json",
+      "operation": "Retain all95 numerical CDF rows, saved numerical decisions andaggregates; omit duplicated source paths boundbycdf_provenance",
+      "before_bytes": 165232,
+      "after_bytes": 125794,
+      "original_repository_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/before/macnlops_wj_investigation_20261031/warnings/conditional_sudakov_summary.json",
+      "original_repository_sha256": "b73453b40c59db4100991909a0b9bdf6eb64ce5642c6cf72674ddfc36f7e0c8f"
+    },
+    {
+      "folder": "macnlops_wj_investigation_20261031",
+      "path": "warnings/conditional_sudakov_components.json",
+      "operation": "Keep all35 FSR/ISR component rows; replace duplicatedfullrecords withmainCDF contextreferences",
+      "before_bytes": 74057,
+      "after_bytes": 16451,
+      "original_repository_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/before/macnlops_wj_investigation_20261031/warnings/conditional_sudakov_components.json",
+      "original_repository_sha256": "f8b6342c863177e26edfa8b1a24d1b03609f127c2ec7e109d3fd51db11157c4b"
+    },
+    {
+      "folder": "macnlops_wj_investigation_20261031",
+      "path": "first/CDF_and_report_review.json",
+      "operation": "Replace embedded scaleaudit copies withretained proof-file references andhashes",
+      "before_bytes": 42688,
+      "after_bytes": 3165,
+      "original_repository_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/before/macnlops_wj_investigation_20261031/first/CDF_and_report_review.json",
+      "original_repository_sha256": "7a56819b84110e22ca1d4b547a774e7b34dba7a43d8962acefc964b76a3b59f3"
+    },
+    {
+      "folder": "macnlops_gluon_fsr_fix_20261031",
+      "path": "validation/build_manifest.json",
+      "operation": "Omit repository duplicate; full external original andhash retained",
+      "before_bytes": 66745,
+      "after_bytes": 0,
+      "original_repository_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/before/macnlops_gluon_fsr_fix_20261031/validation/build_manifest.json",
+      "original_repository_sha256": "c04bd421643d7e9b4dba15f055ea02c5d5f79fc2f0ddf99c04cc56a16129b35d"
+    },
+    {
+      "folder": "macnlops_gluon_fsr_fix_20261031",
+      "path": "validation/fortran_build_manifest.json",
+      "operation": "Omit repository duplicate; full external original andhash retained",
+      "before_bytes": 4331,
+      "after_bytes": 0,
+      "original_repository_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/before/macnlops_gluon_fsr_fix_20261031/validation/fortran_build_manifest.json",
+      "original_repository_sha256": "65d81a6f31d2c0dff3394a694278836dc1a7bfa6e5763a421900d49a8cc08c68"
+    }
+  ],
+  "removed_repository_bytes": 2073487,
+  "external_data_deleted": false,
+  "source_or_physics_hashes_relabelled": false
+}

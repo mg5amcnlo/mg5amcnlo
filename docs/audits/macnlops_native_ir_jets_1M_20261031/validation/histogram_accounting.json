@@ -1,0 +1,26 @@
+{
+  "identity": "source + matched = veto + removal",
+  "all_pass": true,
+  "processes": {
+    "EE2j": {
+      "jobs": 50,
+      "histogram_bins_checked": 71700,
+      "max_residual_over_rounding_budget": 0.8387096774792862
+    },
+    "EE3j": {
+      "jobs": 50,
+      "histogram_bins_checked": 71700,
+      "max_residual_over_rounding_budget": 0.9230769234792345
+    },
+    "Wj": {
+      "jobs": 50,
+      "histogram_bins_checked": 71700,
+      "max_residual_over_rounding_budget": 0.923076923018065
+    },
+    "EE4j": {
+      "jobs": 50,
+      "histogram_bins_checked": 71700,
+      "max_residual_over_rounding_budget": 0.9230769231248172
+    }
+  }
+}

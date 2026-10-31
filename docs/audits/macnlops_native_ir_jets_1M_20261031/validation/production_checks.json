@@ -1,0 +1,114 @@
+{
+  "EE2j": {
+    "first_channels": 103,
+    "full_jobs": 50,
+    "native_probe_max_errors": {
+      "dipole_error": 0.0,
+      "global_error": 0.0,
+      "production_error": 0.0
+    },
+    "native_probe_points": 4197,
+    "shower_directory": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/processes/EE2Jets_5FS/MCatNLO/RUN_PYTHIA8_2",
+    "tried_selected_accepted": [
+      1000000,
+      1000000,
+      1000000
+    ],
+    "weight_sum_absolute_rounding_bounds_pb": {
+      "matched": 0.0025,
+      "removal": 0.0025,
+      "source": 0.0025,
+      "veto": 0.0025
+    },
+    "weight_sum_relative_errors": {
+      "matched": 2.167867150645038e-09,
+      "removal": 3.37767225262551e-09,
+      "source": 4.839823163316228e-09,
+      "veto": 6.176643354384514e-09
+    }
+  },
+  "EE3j": {
+    "first_channels": 106,
+    "full_jobs": 50,
+    "native_probe_max_errors": {
+      "dipole_error": 0.0,
+      "global_error": 0.0,
+      "production_error": 0.0
+    },
+    "native_probe_points": 3936,
+    "shower_directory": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/processes/EE3Jets_5FS/MCatNLO/RUN_PYTHIA8_2",
+    "tried_selected_accepted": [
+      1000000,
+      1000000,
+      1000000
+    ],
+    "weight_sum_absolute_rounding_bounds_pb": {
+      "matched": 0.0025,
+      "removal": 0.0025,
+      "source": 0.0025,
+      "veto": 0.0025
+    },
+    "weight_sum_relative_errors": {
+      "matched": 1.552609237704191e-08,
+      "removal": 1.2178813169619963e-08,
+      "source": 9.231635939055836e-09,
+      "veto": 7.644739072348538e-09
+    }
+  },
+  "EE4j": {
+    "first_channels": 174,
+    "full_jobs": 50,
+    "native_probe_max_errors": {
+      "dipole_error": 0.0,
+      "global_error": 0.0,
+      "production_error": 0.0
+    },
+    "native_probe_points": 3488,
+    "shower_directory": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/processes/EE4Jets_5FS/MCatNLO/RUN_PYTHIA8_2",
+    "tried_selected_accepted": [
+      1000000,
+      1000000,
+      1000000
+    ],
+    "weight_sum_absolute_rounding_bounds_pb": {
+      "matched": 0.00025000000000000033,
+      "removal": 0.00025000000000000033,
+      "source": 0.00025000000000000033,
+      "veto": 0.00025000000000000033
+    },
+    "weight_sum_relative_errors": {
+      "matched": 9.929601021306821e-09,
+      "removal": 5.663326255393157e-09,
+      "source": 5.017360711040618e-09,
+      "veto": 3.614761204161121e-09
+    }
+  },
+  "Wj": {
+    "first_channels": 104,
+    "full_jobs": 50,
+    "native_probe_max_errors": {
+      "dipole_error": 0.0,
+      "global_error": 0.0,
+      "production_error": 0.0
+    },
+    "native_probe_points": 4888,
+    "shower_directory": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/processes/WPlusJet_5FS/MCatNLO/RUN_PYTHIA8_2",
+    "tried_selected_accepted": [
+      1000000,
+      1000000,
+      1000000
+    ],
+    "weight_sum_absolute_rounding_bounds_pb": {
+      "matched": 0.0025,
+      "removal": 0.0025,
+      "source": 0.0025,
+      "veto": 0.0025
+    },
+    "weight_sum_relative_errors": {
+      "matched": 3.4500799620459803e-09,
+      "removal": 4.908218909528572e-09,
+      "source": 1.6910454291721196e-09,
+      "veto": 3.920337330088638e-09
+    }
+  }
+}

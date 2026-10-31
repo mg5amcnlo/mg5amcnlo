@@ -1,0 +1,188 @@
+MC@NLO-Delta native-history validation: e+e -> 2j/3j/4j and pp -> W+1j
+
+Completed: 1,000,000 freshly generated inputs per process, first-emission matching,
+and full showers of all 4,000,000 diagnostic events in 200 jobs. Stock Pythia 8.318
+source and libraries were not modified. Computational/scale checks pass; the
+measured H/S transfer cancellation is not exact, as the tables below show.
+Wj also retains native ISR trial-envelope warnings, detailed below.
+
+Setup and observables
+---------------------
+The e+e samples use sqrt(s) = 91.188 GeV, fixed bare lepton beams, no PDFs,
+five massless Born flavours, and pure jet orders QCD = 0/1/2, QED = 2 for
+2/3/4 jets. Hard muR, muF and QES are fixed at MZ. Hard alpha_s(MZ) = 0.118
+comes from the model (two-loop hard running). Generation requires at least
+the Born jet multiplicity at Durham E-scheme ycut = 0.01; standard NLO jet
+cuts are disabled. The same Durham multiplicity requirement is reapplied
+independently for fiducial analysis at each stage. All 15,603 independent
+FJcore/soft/collinear/zero-counter-slot cut comparisons pass.
+
+The pp sample uses 13 TeV, NNPDF40_nlo_as_01180/0 (331700), stable W+, and
+the previous dynamic hard-scale choice 3. Generation requires an anti-kT
+R = 0.5 jet with pT > 20 GeV and no rapidity cut. Analysis fiducial jets
+require pT > 25 GeV and |y| < 4.5. Raw distributions retain every generated
+event; they are diagnostics of this generation-cut sample, not a fully
+inclusive W+jet prediction.
+
+The source Sudakov tables/first-emission shower use alpha_s(MZ) = 0.1365;
+the continuation uses 0.118, both one loop with CMW off, as in the prior
+campaign. QCD cutoff = 0.5 GeV. MPI, hadronization, primordial kT, QED
+(including QEDByOther), W/top/Higgs decays and source DeltaBackwardISR are off.
+DeltaCommonScale is on; source = delta_native_ir, construction =
+mcatnlo-delta-native-ir-v1. Seeds EE2j/EE3j/Wj/EE4j =
+3320101/3320201/3320301/3320401.
+
+For e+e the primary radiation variable is Q*sqrt(y23), Q*sqrt(y34), or
+Q*sqrt(y45), respectively. The C parameter uses the full momentum tensor.
+For pp the raw variable is pT(W + leading inclusive anti-kT R=0.5 jet).
+The fiducial pp variable is pT(W + leading jet passing pT/y cuts), with
+at least one passing jet required. These pp definitions can use different
+leading jets: raw/fiducial differences cannot be attributed to a cut alone.
+There is no normalization to surviving, selected, or plotted-range events.
+
+Source corrections and regeneration
+-----------------------------------
+End-to-end pilots established fixed e+e beam IDs, genuine no-PDF handling,
+nullable PDF fingerprints, and PDF:lepton = off. The analytic backward-QCD
+factor skips colorless incoming particles. Hard generation explicitly uses
+PDFset none and the model coupling; an inactive run-card pdlabel is ignored.
+
+Multijet validation exposed a Born-array packing bug in compute_delta:
+slicing real-sized p1_cnt at 1:nexternal-1 retained a zero FKS slot and
+dropped a physical Born leg when the emitted index was not last. The native-IR
+Delta call now uses the actual compact p_born shared with MC subtraction and
+source profiling. Wj has 24/96 and EE4j 16/70 affected FKS sectors. Their
+pre-fix partial campaigns and pilots are archived as invalid; both accepted
+1M-event sources were generated afresh with the fix before unweighting.
+
+EE2j, EE3j and the earlier DY/H/ttbar samples have only last-emitted indices.
+Their data are retained with exact source epochs, a sector-layout audit,
+168 production phase-space Gram/frame comparisons (maximum relative error
+8.76e-16), and a massive soft-counterevent check. No post-hoc source reweight
+was used. A nonlinear-table regression changes old/new source probability
+by > 0.1 for a nonlast emitted index and tests masses, generation/profile
+agreement, native caps and RNG invariance. The 38 core tests pass.
+Fixed Wj/EE4j generation has zero spurious sub-GeV dipole-mass warnings.
+
+Inclusive signed weights (pb)
+-----------------------------
+Process        Source          Matched      Relative shift    Expected net +/- sampling error
+EE2j       43822.261488    43812.655205   -0.02192%     -8.892844 +/- 9.532229
+EE3j       15985.032652    15865.421146   -0.74827%   -122.464192 +/- 5.987351
+Wj         27656.262647    27755.881204   +0.36020%   +106.604025 +/- 16.085751
+EE4j        2104.692519     2090.154371   -0.69075%    -13.757200 +/- 0.807034
+
+Net means signed H-removal transfer minus signed S-veto transfer. Source
+negative-weight S/H counts are retained, rather than taking absolute weights:
+EE2j: 184 / 34,509
+EE3j: 79,478 / 58,421
+Wj: 187,167 / 47,982
+EE4j: 112,529 / 51,821
+
+H-removal / net S-veto, primary radiation variable 5-20 GeV
+-------------------------------------------------------
+Unity represents transfer cancellation. Raw generated-event selection:
+Process     Expected first       Realized first        Full shower
+EE2j    0.997705 +/- 0.008558   1.000372 +/- 0.011144   0.982312 +/- 0.009512
+EE3j    0.921921 +/- 0.005787   0.925510 +/- 0.007647   0.922383 +/- 0.007749
+Wj      1.150349 +/- 0.009769   1.143439 +/- 0.012479   1.204077 +/- 0.013009
+EE4j    0.932513 +/- 0.006670   0.933730 +/- 0.009063   0.916184 +/- 0.008859
+
+Fiducial selection, reapplied separately at first/full stages:
+Process     Realized first        Full shower
+EE2j    1.000372 +/- 0.011144   0.982312 +/- 0.009512
+EE3j    0.916524 +/- 0.007908   0.906134 +/- 0.007982
+Wj      0.828101 +/- 0.009973   0.830016 +/- 0.009132
+EE4j    0.929554 +/- 0.009944   0.893208 +/- 0.009099
+
+Paired full-minus-first ratio changes (same 50 source chunks/shower jobs):
+Process          Raw drift +/- error           Fiducial drift +/- error
+EE2j    -0.018061 +/- 0.006996    -0.018061 +/- 0.006996
+EE3j    -0.003127 +/- 0.004441    -0.010390 +/- 0.005391
+Wj      +0.060638 +/- 0.008098    +0.001915 +/- 0.007844
+EE4j    -0.017546 +/- 0.005100    -0.036346 +/- 0.006103
+
+The paired comparison preserves covariance; its first-stage uncertainty is
+computed over the 50 paired chunks, while the marginal first-stage tables
+above use individual-event influence errors. Full-shower errors use jobs.
+All errors are conditional finite-event/shower sampling estimates. Hard
+integration and channel beta-normalization uncertainties are separate.
+Sparse unsampled transfer bins have no Gaussian zero-ratio inference.
+
+Interpretation
+--------------
+EE2j has good first-emission transfer closure in 5-20 GeV; its paired raw
+drift is -0.01806 +/- 0.00700 (2.6 conditional sigma). EE3j already has a
+first-step deficit and a significant inclusive mismatch; no additional raw
+drift is resolved. EE4j already has a first-step deficit; the paired raw
+drift is -0.01755 +/- 0.00510 (3.4 conditional sigma), and its fiducial
+deficit grows by -0.03635 +/- 0.00610. Wj raw recoil has a sizable drift
+of +0.06064 +/- 0.00810; its distinct fiducial recoil variable has no
+resolved drift (+0.00191 +/- 0.00784), but is already below unity initially.
+Thus the multijet results do not establish transfer closure. Correctly
+transporting each event cap does not force the two conditional event
+populations, recoil maps and subsequent shower migrations to agree.
+
+An optional EE3j parent-stratified diagnostic finds roughly 90% of its
+expected inclusive deficit in quark-parent sectors; this does not isolate
+the cause because every sector uses all Born radiators in its Sudakov.
+A read-only gluon-bound diagnostic finds some quark-winner endpoints above
+the tighter Born-gluon global-recoil bound but below a local table ceiling.
+It does not calculate the extra no-emission exponent and is not a causal
+explanation of the observed deficit. No approximate-kernel, Sudakov, beta,
+or shower algorithm change was made to tune away these residuals.
+
+Native stock-shower warning limitation
+--------------------------------------
+Wj has 151 first-step SimpleSpaceShower::pT2nextQCD weight-above-unity
+warning occurrences across 64/104 channels, and 5,097 full-shower occurrences
+across 50 jobs. The first counts are recorded logger deltas around actual
+S-event shower calls; full counts come from complete native statistics.
+Printed warning lines undercount these totals. These are occurrences, not
+numbers of distinct affected events. No ee native trial warning is found;
+the ee full logs contain only the expected SLHA initialization warnings.
+The Wj trial-envelope warnings are a separate limitation even though every
+event completes and scale/probability/accounting audits pass. Their effect
+on the Wj distribution or residual has not been quantified; the quoted
+sampling errors do not cover it. This campaign therefore does not certify
+the native ISR proposal or attribute Wj nonclosure solely to matching.
+No Pythia modification or warning-conditioned event retry was introduced.
+
+Implementation, scale and accounting checks
+------------------------------------------
+All 487 first-emission channel records are complete; all 200 full jobs report
+4,000,000 tried/selected/accepted events in total. Four inclusive weights
+are conserved at full shower within exact per-token HwU rounding bounds.
+Every generated H common cap and written S winning scale is checked;
+exhausted S showers continue below the cutoff as specified. Native H
+reconstructions agree with their source caps within 1.60e-12 relative.
+16,509 stock-Pythia imports/full-continuation probes have zero global, production
+and dipole errors, no missing directed FSR pairs, no photons, and no
+emission above the written cap. Some H early-keep K=0 cases have no native
+reconstruction payload; their common source caps are still checked.
+
+Test suites overlap and are not added: 46 fixed-beam/card tests pass;
+86 extended beam/profile/collection tests run (85 pass, one optional
+saved-artifact binding test skips); 38 compact-Born/core tests pass.
+The 15,603 Durham cut checks and 168 phase-space frame comparisons pass.
+Source hashes and both retained source epochs are checked explicitly.
+Pythia library hashes are unchanged from the initial campaign manifest.
+
+Artifacts and reproduction
+--------------------------
+plots/jet_validation_run_1M_native_ir_jets.pdf/json contain eight pages of
+first/full four-weight distributions, with raw and fiducial selections.
+validation/summary.json, production_checks.json, provenance.json,
+migration_summary.json, source_epochs.json, shower_warnings.json and
+per-process *_event_checks.json
+retain the numerical results. scale_audit/*_written_scales.json summarize
+the all-event cap checks; *_native.csv retains detailed stock probe results.
+audit/ contains independent cut, layout, frame and optional gluon-bound checks.
+All raw events, logs, frozen sources, invalid runs and reproduction scripts
+remain at /export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031.
+run_1M.py KEY --cores 32 exports/configures/generates/matches/showers the
+1M sample; KEY is EE2j, EE3j, Wj or EE4j. Use --events 200 --run
+run_pilot_packed --seed-offset 200000 for a separate pilot. audit_events.py
+and audit_scales.py audit all events; analyse_jets.py and analyse_migration.py
+assemble the plots and paired comparisons. build_report.py verifies accepted
+source epochs and production before writing this report.

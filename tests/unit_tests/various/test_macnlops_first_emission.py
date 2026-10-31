@@ -266,6 +266,10 @@ void macnlops_c_sudakov_profile(int* ready,int* n,int* ids,double* x,
   x[0]=profile_x[0]; x[1]=profile_x[1];
   *mass=13000.*sqrt(x[0]*x[1]);
 }
+void macnlops_c_gluon_profile(int* n,double* gluons) {
+  *n=0;
+  for (int i=0;i<320;++i) gluons[i]=0.;
+}
 void macnlops_c_density(int owner, const int* ids, const double* lab, int config,
   int graph, int flow, int damping, double symmetry, int has_born, const int* born_ids,
   const int* born_colours, const double* born_lab, const double* born_masses,

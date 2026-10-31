@@ -1,0 +1,73 @@
+test_common_hard_scale_without_a_passing_born (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_common_hard_scale_without_a_passing_born) ... ok
+test_common_scale_global_ir_weight_and_native_handoff (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_common_scale_global_ir_weight_and_native_handoff) ... ok
+test_common_scale_gluon_colour_multiplicities (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_common_scale_gluon_colour_multiplicities) ... ok
+test_common_scale_retains_deep_collinear_damping (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_common_scale_retains_deep_collinear_damping) ... ok
+test_native_global_fsr_does_not_require_local_inverse (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_native_global_fsr_does_not_require_local_inverse) ... ok
+test_native_scales_feed_sudakov_and_h_event_assignment (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_native_scales_feed_sudakov_and_h_event_assignment) ... ok
+test_nonlast_emission_uses_the_compact_native_born_state (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_nonlast_emission_uses_the_compact_native_born_state) ... ok
+test_reconstruction_error_is_fatal (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_reconstruction_error_is_fatal) ... ok
+test_charm_mass_model_uses_both_heavy_flavour_thresholds (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaModelMasses.test_charm_mass_model_uses_both_heavy_flavour_thresholds) ... /export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/check_param_card.py:336: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/loop_sm/restrict_c_mass.dat' mode='r' encoding='UTF-8'>
+  self.read(input_path)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1488: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/template_files/get_mass_width_fcts.inc' mode='r' encoding='UTF-8'>
+  'iolibs/template_files/get_mass_width_fcts.inc')).read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1495: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_c7u858k7/makeinc.inc' mode='r' encoding='UTF-8'>
+  makeinc_content = open(makeinc).read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1497: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_c7u858k7/makeinc.inc' mode='w' encoding='UTF-8'>
+  open(makeinc, 'w').write(makeinc_content)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_default_model_has_massless_charm_and_massive_bottom (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaModelMasses.test_default_model_has_massless_charm_and_massive_bottom) ... /export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/check_param_card.py:336: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/loop_sm/restrict_default.dat' mode='r' encoding='UTF-8'>
+  self.read(input_path)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1495: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_n5hgg484/makeinc.inc' mode='r' encoding='UTF-8'>
+  makeinc_content = open(makeinc).read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1497: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_n5hgg484/makeinc.inc' mode='w' encoding='UTF-8'>
+  open(makeinc, 'w').write(makeinc_content)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_five_flavour_model_has_massless_charm_and_bottom (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaModelMasses.test_five_flavour_model_has_massless_charm_and_bottom) ... /export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/check_param_card.py:336: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/loop_sm/restrict_no_b_mass.dat' mode='r' encoding='UTF-8'>
+  self.read(input_path)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1495: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_vkgabxtt/makeinc.inc' mode='r' encoding='UTF-8'>
+  makeinc_content = open(makeinc).read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1497: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_vkgabxtt/makeinc.inc' mode='w' encoding='UTF-8'>
+  open(makeinc, 'w').write(makeinc_content)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_dead_zone_and_small_virtuality_conventions (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_dead_zone_and_small_virtuality_conventions) ... ok
+test_final_dipoles_and_emission_remapping (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_final_dipoles_and_emission_remapping) ... ok
+test_heavy_flavour_thresholds (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_heavy_flavour_thresholds) ... ok
+test_initial_double_colour_connection (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_initial_double_colour_connection) ... ok
+test_invalid_colours_arguments_and_pair_threshold (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_invalid_colours_arguments_and_pair_threshold) ... ok
+test_mixed_dipoles_and_lorentz_invariance (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_mixed_dipoles_and_lorentz_invariance) ... ok
+test_pythia_starting_limits_and_lorentz_invariance (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_pythia_starting_limits_and_lorentz_invariance) ... ok
+test_starting_threshold_and_invalid_input (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_starting_threshold_and_invalid_input) ... ok
+test_delta_scales_and_fold_selection_use_same_hard_scale (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestStartingScaleIntegration.test_delta_scales_and_fold_selection_use_same_hard_scale) ... ok
+test_herwig_scalar_matches_effective_dipoles_and_subtractions (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestStartingScaleIntegration.test_herwig_scalar_matches_effective_dipoles_and_subtractions) ... ok
+test_ordinary_scalar_matches_effective_dipoles_and_subtractions (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestStartingScaleIntegration.test_ordinary_scalar_matches_effective_dipoles_and_subtractions) ... ok
+test_grouped_source_average_uses_representative_flavours (tests.unit_tests.fks.test_macnlops_sudakov_profile.TestSudakovMarginal.test_grouped_source_average_uses_representative_flavours) ... ok
+test_native_source_average_includes_unsupported_start_nodes (tests.unit_tests.fks.test_macnlops_sudakov_profile.TestSudakovMarginal.test_native_source_average_includes_unsupported_start_nodes) ... ok
+test_original_source_average_and_conditional_start_cdf (tests.unit_tests.fks.test_macnlops_sudakov_profile.TestSudakovMarginal.test_original_source_average_and_conditional_start_cdf) ... ok
+test_alpha_s_reproduces_pythia (tests.unit_tests.fks.test_delta_backward_isr.TestDeltaBackwardISR.test_alpha_s_reproduces_pythia) ... ok
+test_first_order_running (tests.unit_tests.fks.test_delta_backward_isr.TestDeltaBackwardISR.test_first_order_running) ... ok
+test_fixed_rules_reproduce_the_identity (tests.unit_tests.fks.test_delta_backward_isr.TestDeltaBackwardISR.test_fixed_rules_reproduce_the_identity) ... ok
+test_gluon_lines (tests.unit_tests.fks.test_delta_backward_isr.TestDeltaBackwardISR.test_gluon_lines) ... ok
+test_if_connections_use_the_ii_dipole (tests.unit_tests.fks.test_delta_backward_isr.TestDeltaBackwardISR.test_if_connections_use_the_ii_dipole) ... ok
+test_no_evolution_and_table_fallbacks (tests.unit_tests.fks.test_delta_backward_isr.TestDeltaBackwardISR.test_no_evolution_and_table_fallbacks) ... ok
+test_deep_collinear_sentinel_retains_singular_history (tests.unit_tests.fks.test_delta_history_scales.TestDeltaHistoryScales.test_deep_collinear_sentinel_retains_singular_history) ... ok
+test_flavour_incompatible_candidates_are_unsupported (tests.unit_tests.fks.test_delta_history_scales.TestDeltaHistoryScales.test_flavour_incompatible_candidates_are_unsupported) ... ok
+test_flavour_preserving_quark_and_gluon (tests.unit_tests.fks.test_delta_history_scales.TestDeltaHistoryScales.test_flavour_preserving_quark_and_gluon) ... ok
+test_fsr_pair_creation_and_reordered_quark (tests.unit_tests.fks.test_delta_history_scales.TestDeltaHistoryScales.test_fsr_pair_creation_and_reordered_quark) ... ok
+test_isr_crossing (tests.unit_tests.fks.test_delta_history_scales.TestDeltaHistoryScales.test_isr_crossing) ... ok
+test_native_lund_scale_and_kinematic_support (tests.unit_tests.fks.test_delta_history_scales.TestDeltaHistoryScales.test_native_lund_scale_and_kinematic_support) ... ok
+test_soft_limit_and_invalid_kinematic_support (tests.unit_tests.fks.test_delta_history_scales.TestDeltaHistoryScales.test_soft_limit_and_invalid_kinematic_support) ... ok
+
+----------------------------------------------------------------------
+Ran 38 tests in 9.296s
+
+OK

@@ -1,0 +1,212 @@
+{
+  "date_utc": "2026-10-31T19:15:40.108683+00:00",
+  "status": "passed",
+  "scope": "Behavior-preserving code/artifact cleanup after the frozen gluon denominator fix; no original production campaign or Pythia files changed.",
+  "source_before": {
+    "Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc": "ac36ce7da3bc4a15f457c40405f900d3514fadb009d56e4ecc2a8f268c193fa3",
+    "Template/NLO/MCatNLO/srcPythia8/MacNLOPS.h": "c8303b63f16aad43073ad5e189d7bbca1433af85187ac7974f85b95ced8209f1",
+    "Template/NLO/SubProcesses/weight_lines.f": "0cc6344cef02f6b722ba432f234fc0002fc72c946eb382e621dc8cf0c97f634d",
+    "Template/NLO/SubProcesses/montecarlocounter.f": "7b729cf7660dcc235569d312438251c848bb4a197a5ba1f748a0bb88bea72811",
+    "Template/NLO/SubProcesses/macnlops_capi.f": "aa80d1e7677d761f66ce1cff185aaf11a8b2dc4cc737af2b716a0a20a8f0ab25"
+  },
+  "source_after": {
+    "Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc": "e0ea3bdddc4891ee5b212a16c1d21f45b174f079cc63ec077bc17608bb66e8e5",
+    "Template/NLO/MCatNLO/srcPythia8/MacNLOPS.h": "c8303b63f16aad43073ad5e189d7bbca1433af85187ac7974f85b95ced8209f1",
+    "Template/NLO/SubProcesses/weight_lines.f": "0cc6344cef02f6b722ba432f234fc0002fc72c946eb382e621dc8cf0c97f634d",
+    "Template/NLO/SubProcesses/montecarlocounter.f": "88e7c11118bd125d1f261284fbef65187a922dc52fba957a8422bc3fc5d35d7c",
+    "Template/NLO/SubProcesses/macnlops_capi.f": "aa80d1e7677d761f66ce1cff185aaf11a8b2dc4cc737af2b716a0a20a8f0ab25"
+  },
+  "source_delta": {
+    "Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc": {
+      "before_sha256": "ac36ce7da3bc4a15f457c40405f900d3514fadb009d56e4ecc2a8f268c193fa3",
+      "after_sha256": "e0ea3bdddc4891ee5b212a16c1d21f45b174f079cc63ec077bc17608bb66e8e5",
+      "before_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/cpp/before/Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc"
+    },
+    "Template/NLO/SubProcesses/macnlops_capi.f": {
+      "before_sha256": "aa80d1e7677d761f66ce1cff185aaf11a8b2dc4cc737af2b716a0a20a8f0ab25",
+      "after_sha256": "aa80d1e7677d761f66ce1cff185aaf11a8b2dc4cc737af2b716a0a20a8f0ab25",
+      "before_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/fortran/before/Template/NLO/SubProcesses/macnlops_capi.f"
+    },
+    "Template/NLO/SubProcesses/montecarlocounter.f": {
+      "before_sha256": "7b729cf7660dcc235569d312438251c848bb4a197a5ba1f748a0bb88bea72811",
+      "after_sha256": "88e7c11118bd125d1f261284fbef65187a922dc52fba957a8422bc3fc5d35d7c",
+      "before_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/fortran/before/Template/NLO/SubProcesses/montecarlocounter.f"
+    },
+    "Template/NLO/SubProcesses/weight_lines.f": {
+      "before_sha256": "0cc6344cef02f6b722ba432f234fc0002fc72c946eb382e621dc8cf0c97f634d",
+      "after_sha256": "0cc6344cef02f6b722ba432f234fc0002fc72c946eb382e621dc8cf0c97f634d",
+      "before_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/fortran/before/Template/NLO/SubProcesses/weight_lines.f"
+    },
+    "docs/macnlops_derivation.md": {
+      "before_sha256": "f4f04afc0c9c9495f093268abdf8d9f3dfb95a034c0255429b085606ee90215f",
+      "after_sha256": "d96ca9267dbd0c54b9cae6c5678687751b674734bc0d82f0ed2001f766f929e2",
+      "before_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/python/before/docs/macnlops_derivation.md"
+    },
+    "madgraph/various/banner.py": {
+      "before_sha256": "66a5469bd61656303ba9bbd9e78b715a52101646383b36ab8ecb6b9a5de43e1f",
+      "after_sha256": "66a5469bd61656303ba9bbd9e78b715a52101646383b36ab8ecb6b9a5de43e1f",
+      "before_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/python/before/madgraph/various/banner.py"
+    },
+    "madgraph/various/macnlops.py": {
+      "before_sha256": "df0ff511e1d0bf9a53a1ed6613faac639edcb0733f6ce63d2d688e01f0fe29e7",
+      "after_sha256": "2f9ec8f2c14581f2577a31d255df6e3634bb04860834d8fb28a19627493f75e9",
+      "before_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/python/before/madgraph/various/macnlops.py"
+    },
+    "tests/unit_tests/fks/test_macnlops_sudakov_profile.py": {
+      "before_sha256": "615c8fb078fe271727b638b169f5ba833c6aea2e0377c8a8f352c05b264bb2cd",
+      "after_sha256": "3c766d6bf01d12638c55c4b2cb10680ea16c6588c6d4592dea4a8e4df3a65324",
+      "before_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/fortran/before/tests/unit_tests/fks/test_macnlops_sudakov_profile.py"
+    },
+    "tests/unit_tests/various/test_macnlops_gluon_sudakov.py": {
+      "before_sha256": "93a8830b9239027fb06bd0d956f7d68c2a7db33af9ecc79d7983aa3d175829d4",
+      "after_sha256": "93a8830b9239027fb06bd0d956f7d68c2a7db33af9ecc79d7983aa3d175829d4",
+      "before_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/cpp/before/tests/unit_tests/various/test_macnlops_gluon_sudakov.py"
+    }
+  },
+  "cleanup_patch_sha256": "78d747eb78ad7aeb9b15edb6b572ad16b3484282907ee250945dafa49f98f8c4",
+  "cleanup_patch_roundtrip_verified": true,
+  "validation": {
+    "final_tests": {
+      "command": [
+        "/usr/bin/python",
+        "-m",
+        "unittest",
+        "tests.unit_tests.various.test_macnlops_gluon_sudakov",
+        "tests.unit_tests.various.test_macnlops_sudakov_kernel",
+        "tests.unit_tests.fks.test_macnlops_sudakov_profile",
+        "tests.unit_tests.various.test_macnlops_first_emission",
+        "tests.unit_tests.fks.test_macnlops_weight_lines",
+        "tests.unit_tests.fks.test_macnlops_delta_context",
+        "tests.unit_tests.fks.test_macnlops_source_modes",
+        "tests.unit_tests.fks.test_mcatnlo_delta_scales",
+        "tests.unit_tests.various.test_macnlops_component_protocol",
+        "tests.unit_tests.various.test_macnlops_fixed_beams",
+        "tests.unit_tests.various.test_macnlops_s_veto_normalisation",
+        "tests.unit_tests.various.test_macnlops_continuation_scales",
+        "tests.unit_tests.various.test_macnlops_continuation",
+        "tests.unit_tests.various.test_macnlops_run_card",
+        "tests.unit_tests.various.test_macnlops_native_environment",
+        "-v"
+      ],
+      "cwd": "/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS",
+      "elapsed_seconds": 38.03178535681218,
+      "environment": {
+        "LD_LIBRARY_PATH": "/nfs/home/rikkert/LHAPDF/lib:/nfs/home/rikkert/Downloads/pythia8/lib",
+        "PYTHIA8": "/nfs/home/rikkert/Downloads/pythia8",
+        "PYTHIA8DATA": "/nfs/home/rikkert/Downloads/pythia8/share/Pythia8/xmldoc"
+      },
+      "exit_code": 0,
+      "log_sha256": "89a3c9d46eb6a56a62823e093f3927ef0532031b5a0ecad78891c2b20068a9bf",
+      "source_sha256": {
+        "Template/NLO/MCatNLO/srcPythia8/MacNLOPS.h": "c8303b63f16aad43073ad5e189d7bbca1433af85187ac7974f85b95ced8209f1",
+        "Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc": "e0ea3bdddc4891ee5b212a16c1d21f45b174f079cc63ec077bc17608bb66e8e5",
+        "Template/NLO/SubProcesses/macnlops_capi.f": "aa80d1e7677d761f66ce1cff185aaf11a8b2dc4cc737af2b716a0a20a8f0ab25",
+        "Template/NLO/SubProcesses/montecarlocounter.f": "88e7c11118bd125d1f261284fbef65187a922dc52fba957a8422bc3fc5d35d7c",
+        "Template/NLO/SubProcesses/weight_lines.f": "0cc6344cef02f6b722ba432f234fc0002fc72c946eb382e621dc8cf0c97f634d",
+        "docs/audits/check_macnlops_continuation_scales.py": "5c89d02230b0acbc9bb05541636fc150ce07de033a51e7a4efd160fffcd352e2",
+        "docs/macnlops_derivation.md": "d96ca9267dbd0c54b9cae6c5678687751b674734bc0d82f0ed2001f766f929e2",
+        "madgraph/various/banner.py": "66a5469bd61656303ba9bbd9e78b715a52101646383b36ab8ecb6b9a5de43e1f",
+        "madgraph/various/macnlops.py": "2f9ec8f2c14581f2577a31d255df6e3634bb04860834d8fb28a19627493f75e9",
+        "tests/input_files/check_mcatnlo_delta_matching.f90": "7016e45871271283cd1b1d187a199e2315aae0c57301b6ff91dee6b36cbed69d",
+        "tests/unit_tests/fks/test_macnlops_sudakov_profile.py": "3c766d6bf01d12638c55c4b2cb10680ea16c6588c6d4592dea4a8e4df3a65324",
+        "tests/unit_tests/fks/test_mcatnlo_delta_scales.py": "9d0e6706b8bae0c136d32268c5c64ab1f47b402c1f8c96a91178959a7af5323c",
+        "tests/unit_tests/various/test_macnlops_first_emission.py": "efd83208e9a396cbbb6f549da925a61e1677812d0ad24c6138fd4a4c88a7628f",
+        "tests/unit_tests/various/test_macnlops_fixed_beams.py": "96b36b41d9fddfaa48018a0c05962216c0f77259c9420d497e801e99aa175b57",
+        "tests/unit_tests/various/test_macnlops_gluon_sudakov.py": "93a8830b9239027fb06bd0d956f7d68c2a7db33af9ecc79d7983aa3d175829d4",
+        "tests/unit_tests/various/test_macnlops_run_card.py": "4b385491c39a0c2bf439aedac5c1c78b9f417ce9caeeae031769ebc18057a022"
+      }
+    },
+    "physical_provider_equivalence": {
+      "providers": [
+        {
+          "provider": "P0_dxg_wpux",
+          "contexts": 12,
+          "byte_identical": true,
+          "sha256": "c22da679a6a58e7441569ffd547f7d308e946b3156a23c0bce826b9ab79209ba"
+        },
+        {
+          "provider": "P0_dxu_wpg",
+          "contexts": 19,
+          "byte_identical": true,
+          "sha256": "c593436edbfadd436971c72b9c53ef34ea60503768f37e617bf59d488529de0b"
+        },
+        {
+          "provider": "P0_gdx_wpux",
+          "contexts": 7,
+          "byte_identical": true,
+          "sha256": "284b0f4302f0d2c4ffe5b993635f5af0ec15cd60b02a69471e8d4fb2dd2ce79b"
+        },
+        {
+          "provider": "P0_gu_wpd",
+          "contexts": 20,
+          "byte_identical": true,
+          "sha256": "4771f3e9add4827900dc9a2db5ce8efb9762f82d6155732e1a315368e3249e5c"
+        },
+        {
+          "provider": "P0_udx_wpg",
+          "contexts": 16,
+          "byte_identical": true,
+          "sha256": "2ef2a0ba1465ecd903525c3c5dd62315ea07bf3e5427933d21e2855a12a8621a"
+        },
+        {
+          "provider": "P0_ug_wpd",
+          "contexts": 22,
+          "byte_identical": true,
+          "sha256": "6d555e35b47b000a7e3793a4567310cb7cd278c6cac26521c6707b1a3a0f86f1"
+        }
+      ],
+      "contexts": 96,
+      "valid_contexts": 95,
+      "source_Q_cdf_RDK_all_component_CDF_and_metadata_byte_identical": true,
+      "pilot_events": 1200,
+      "pilot_eventstreams_byte_identical": true,
+      "pilot_summary_difference": "Only input/output file paths differ between isolated build directories.",
+      "before_build_sha256": "299a0cf224b24315eeaae8d2bf461082954a99ede753741676b0c03f4444e47a",
+      "after_build_sha256": "4126b8e6dd8a01387a3bac518f056cf1f95e961f6525920661cefb631a0ea6a8"
+    },
+    "synthetic_cpp_equivalence": {
+      "rate_comparisons": 180,
+      "cdf_comparisons": 180,
+      "preexisting_synthetic_quadrature_errors": 2,
+      "bit_identical": true,
+      "coverage": "0\u20134 Born gluons; nf4/5; independent colour-end caps including zero; global ceilings across native charm/bottom startup gates; up to 31 conditional-Q nodes; unchanged nonzero common ISR/quark exponent.",
+      "before_source_sha256": "ac36ce7da3bc4a15f457c40405f900d3514fadb009d56e4ecc2a8f268c193fa3",
+      "after_source_sha256": "e0ea3bdddc4891ee5b212a16c1d21f45b174f079cc63ec077bc17608bb66e8e5",
+      "old_single_cache_record_bytes": 16976,
+      "new_single_cache_record_bytes": 40,
+      "input_sha256": "2796c0c563be47771dde74dfd77ba18b4f3ce54307b8622750fea999a9763612",
+      "before_output_sha256": "18b7398990ebbd4f3e748e7d0f5a557443fbab3e114b15f45b4ec4ad198685db",
+      "after_output_sha256": "18b7398990ebbd4f3e748e7d0f5a557443fbab3e114b15f45b4ec4ad198685db",
+      "focused_tests": {
+        "run": 10,
+        "passed": 10,
+        "modules": [
+          "tests.unit_tests.various.test_macnlops_gluon_sudakov",
+          "tests.unit_tests.various.test_macnlops_sudakov_kernel"
+        ],
+        "log_sha256": "53017712c1b0892b0966f3f0b2494d9405e11e7a3916082d5261e8a4af2acbfd"
+      },
+      "change": "Replace per-gluon copies of full SudakovProfile by five-double metadata arrays and a borrowed count/data view; retain existing rate wrapper, arithmetic, thresholds, integration order and gate semantics.",
+      "limits": "Two unphysical random metadata requests trigger the same preexisting quadrature-convergence exception before and after. The other 358 synthetic results are bit-identical. Physical provider CDF equivalence is independently checked by the validation task."
+    },
+    "fortran_review": {
+      "source_average_operations_unchanged": true,
+      "removed_only_dead_fsr_store_from_source_loop": true,
+      "source_average_operations_sha256": "394de2fbbf562ed1ccf1e834d08ec0923b64751b4b6a9b659c3abb231d980e36",
+      "capi_unchanged": true,
+      "weight_lines_unchanged": true,
+      "tests": "16 profile/weight/context/source-mode tests passed",
+      "python_review": "Read-only review found no material fixed-beam/banner issue."
+    }
+  },
+  "artifact_cleanup": {
+    "removed_duplicate_bytes": 2073487,
+    "external_archive_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031/repository_artifacts_before.tar.gz",
+    "external_archive_sha256": "b8325aee644c607e19adae50cffd5ea8010e1a14dd931a362d01ad286fa1135f",
+    "archived_repository_files": 117,
+    "external_data_deleted": false,
+    "historical_source_hashes_relabelled": false
+  },
+  "detailed_external_directory": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/gluon_cleanup_20261031",
+  "limits": "Prior source/fix hashes remain the exact epochs actually used. The 1M campaigns and native trial ensembles were not regenerated for this behavior-preserving cleanup. Separate frozen-source provider rebuilds and matching pilots establish equivalence."
+}

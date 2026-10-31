@@ -41,13 +41,16 @@ c Legacy auxiliary-winner mode 2 is incompatible with this generator.
      $     bind(C,name='macnlops_c_sudakov_request')
       use, intrinsic :: iso_c_binding, only: c_int,c_double
       use weight_lines, only: macnlops_sudakov_enabled,
-     $     macnlops_sudakov_requested_pt,macnlops_sudakov_ready
+     $     macnlops_sudakov_requested_pt,macnlops_sudakov_ready,
+     $     macnlops_sudakov_ngluons,macnlops_sudakov_gluons
       implicit none
       integer(c_int), value :: enabled
       real(c_double), value :: pt
       macnlops_sudakov_enabled=enabled.ne.0
       macnlops_sudakov_requested_pt=pt
       macnlops_sudakov_ready=.false.
+      macnlops_sudakov_ngluons=0
+      macnlops_sudakov_gluons=0d0
       end
 
 
@@ -74,6 +77,21 @@ c Legacy auxiliary-winner mode 2 is incompatible with this generator.
       fsr=macnlops_sudakov_fsr
       nquarks=macnlops_sudakov_nquarks
       quarks=macnlops_sudakov_quarks
+      end
+
+
+      subroutine macnlops_c_gluon_profile(n,gluons)
+     $     bind(C,name='macnlops_c_gluon_profile')
+c Separate getter preserves the existing quark/Sudakov profile ABI.
+c Columns: m_rad, global m_rec, m_hard, two colour-end starting caps.
+      use, intrinsic :: iso_c_binding, only: c_int,c_double
+      use weight_lines, only: macnlops_sudakov_ngluons,
+     $     macnlops_sudakov_gluons
+      implicit none
+      integer(c_int) n
+      real(c_double) gluons(5,64)
+      n=macnlops_sudakov_ngluons
+      gluons=macnlops_sudakov_gluons
       end
 
 

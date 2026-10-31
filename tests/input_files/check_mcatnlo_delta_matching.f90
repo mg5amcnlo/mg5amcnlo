@@ -3,7 +3,7 @@
 program check_mcatnlo_delta_matching
   use mc_counterterms, only: compute_delta,delta_native_ir_probability,delta_common_probability,isspecial
   use FKSParams, only: delta_common_scale
-  use fks_phase_space_data, only: p1_cnt
+  use fks_phase_space_data, only: p1_cnt,p_born
   use process_module
   use scale_module
   implicit none
@@ -27,10 +27,12 @@ program check_mcatnlo_delta_matching
   double precision :: start(4,4),source_prob,native_scale
   common /test_native_scale/ native_scale
   double precision :: fallback(5,5),fallback_original(5,5)
-  double precision :: epsilon,previous
+  double precision :: epsilon,previous,bad_probability,seen_mass_min,seen_mass_max
+  common /test_seen_masses/ seen_mass_min,seen_mass_max
   integer :: history_count,rng_calls,point
   common /test_rng/ rng_calls
-  logical :: ir_test,gluon_test,globalfsr_test
+  logical :: ir_test,gluon_test,globalfsr_test,packing_test
+  common /test_packing_mode/ packing_test
   common /test_globalfsr/ globalfsr_test
   common /test_ir/ ir_test
   common /test_gluon/ gluon_test
@@ -38,6 +40,7 @@ program check_mcatnlo_delta_matching
 
   call get_command_argument(1,mode)
   globalfsr_test=trim(mode)=='native_global_fsr'
+  packing_test=trim(mode)=='nonlast_born'
   gluon_test=trim(mode)=='common_gluon'
   ir_test=trim(mode)=='common_ir'.or.gluon_test
   call init_process_module_global('PYTHIA8   ','born',5,2,.true.,1000d0,1,1,0)
@@ -71,8 +74,57 @@ program check_mcatnlo_delta_matching
   p(:,4)=(/30d0,-30d0,0d0,0d0/)
   p(:,5)=(/30d0,0d0,30d0,0d0/)
   p1_cnt(:,1:4,0)=p(:,1:4)
+  p_born=p(:,1:4)
   rng_calls=0
   native_scale=30d0
+
+  if(packing_test)then
+    ! A physical qqg point with the emitted antiquark in real slot 4.
+    ! The compact qq Born state has no hole; its real-sized counterevent
+    ! has a zero in slot 4 and the second Born quark in real slot 5.
+    delta_common_scale=.true.
+    i_fks=4
+    j_fks=5
+    call RealToBornMapping(i_fks)
+    p(:,1)=[50d0,0d0,0d0,50d0]
+    p(:,2)=[50d0,0d0,0d0,-50d0]
+    p(:,3)=[40d0,40d0,0d0,0d0]
+    p(:,4)=[30d0,-20d0,sqrt(500d0),0d0]
+    p(:,5)=[30d0,-20d0,-sqrt(500d0),0d0]
+    p_born(:,1:2)=p(:,1:2)
+    p_born(:,3)=[50d0,50d0,0d0,0d0]
+    p_born(:,4)=[50d0,-50d0,0d0,0d0]
+    p1_cnt(:,:,0)=0d0
+    p1_cnt(:,1:3,0)=p_born(:,1:3)
+    p1_cnt(:,5,0)=p_born(:,4)
+    native_scale=sqrt(500d0)
+    valid_dipole_n1(3,5)=.true.
+    valid_dipole_n1(5,3)=.true.
+    valid_dipole_n1(4,5)=.true.
+    valid_dipole_n1(5,4)=.true.
+    seen_mass_min=huge(1d0)
+    seen_mass_max=-1d0
+    call compute_delta(p,prob)
+    call require(seen_mass_min==50d0.and.seen_mass_max==50d0, &
+                 'generation receives both compact Born legs and their capped dipole mass')
+    expected=exp(2d0*(1d0-50d0/native_scale))
+    call require(abs(prob-expected)<1d-14,'nonlinear mass-dependent source Sudakov')
+    call delta_native_ir_probability(p,p_born,[11,-11,1,-1,21], &
+                             shower_scale_nbody,native_scale,source_prob,history_count,history_t)
+    call require(history_count==1.and.abs(source_prob-prob)<1d-14, &
+                 'generation and profile-style compact Born evaluation agree')
+    call delta_native_ir_probability(p,p1_cnt(:,1:4,0),[11,-11,1,-1,21], &
+                             shower_scale_nbody,native_scale,bad_probability,history_count,history_t)
+    call require(all(p1_cnt(:,i_fks,0)==0d0).and.p1_cnt(0,5,0)>0d0, &
+                 'the real-sized Born counterevent has an interior hole')
+    call require(seen_mass_min==0d0.and.abs(bad_probability-prob)>.1d0, &
+                 'the old counterevent slice loses a colored Born leg and changes the weight')
+    call require(all(abs(pack(emsca_H(1,1,:,:),valid_dipole_n1)-native_scale)<1d-12), &
+                 'compact Born packing preserves the native H continuation scale')
+    call require(mccntcalled==8.and.rng_calls==0,'packing fix introduces no draw or extra weight assembly')
+    print *, 'PASS compact Born with nonlast emitted leg'
+    stop
+  endif
 
   if(trim(mode)=='common_hard')then
     ! The rare ttbar real-only packet had a common global maximum but
@@ -119,12 +171,13 @@ program check_mcatnlo_delta_matching
     p1_cnt(:,2,0)=p(:,2)
     p1_cnt(:,3,0)=[1455.5010496837672d0,32.45026001439164d0,12.100233453323458d0,1444.768102709193d0]
     p1_cnt(:,4,0)=[511.43054796412946d0,-32.45026001439164d0,-12.100233453323458d0,-480.03413458447216d0]
+    p_born=p1_cnt(:,1:4,0)
     native_scale=34.131440508948806d0
     valid_dipole_n=.false.
     valid_dipole_n(3,1,1)=.true.
     shower_scale_nbody=-1d0
     shower_scale_nbody(3,1)=88.69246172113849d0
-    call delta_native_ir_probability(p,p1_cnt(:,1:4,0),[21,21,6,-6,21], &
+    call delta_native_ir_probability(p,p_born,[21,21,6,-6,21], &
                              shower_scale_nbody,native_scale,source_prob,history_count,history_t)
     call require(history_count==0,'actual native top endpoint has no supported local inverse')
     call require(abs(source_prob-native_scale/shower_scale_nbody(3,1))<1d-14, &
@@ -154,7 +207,7 @@ program check_mcatnlo_delta_matching
       p(:,5)=[100d0,80d0,0d0,60d0]
       native_scale=200d0
       call compute_delta(p,prob)
-      call delta_native_ir_probability(p,p1_cnt(:,1:4,0),[21,21,11,-11,21], &
+      call delta_native_ir_probability(p,p_born,[21,21,11,-11,21], &
                                shower_scale_nbody,native_scale,source_prob,history_count,history_t)
       call require(history_count==2,'two gluon radiators, each sharing both colour ends with its partner')
       call require(maxval(abs(history_t(1:2)**2-[8000d0,32000d0]))<1d-8,'gluon Lund scales')
@@ -164,7 +217,7 @@ program check_mcatnlo_delta_matching
                    'both gluons contribute both colour ends: all-leg survival is (t/Q)^4')
       call require(rng_calls==0,'native gluon continuation requires no history draw')
       call require(.not.any(isspecial),'common source_prob does not mutate legacy special-flow flags')
-      source_prob=delta_common_probability(p1_cnt(:,1:4,0),shower_scale_nbody,nearest(300d0,-1d0))
+      source_prob=delta_common_probability(p_born,shower_scale_nbody,nearest(300d0,-1d0))
       call require(source_prob>.999d0.and.source_prob<=1d0,'rounded unit two-line ratios remain finite')
       print *, 'PASS common-scale Delta gluon colour multiplicities'
       stop
@@ -185,7 +238,7 @@ program check_mcatnlo_delta_matching
       p(:,5)=[100d0,100d0*sqrt(max(0d0,2d0*epsilon-epsilon**2)),0d0,100d0*(1d0-epsilon)]
       mccntcalled=0
       call compute_delta(p,prob)
-      call delta_native_ir_probability(p,p1_cnt(:,1:4,0),[1,-1,11,-11,21], &
+      call delta_native_ir_probability(p,p_born,[1,-1,11,-11,21], &
                                shower_scale_nbody,native_scale,source_prob,history_count,history_t)
       call require(history_count==2,'both ISR histories retained into the deep-collinear limit')
       call require(abs(source_prob-prob)<1d-14,'source and explicit source_prob agree in the collinear limit')
@@ -202,17 +255,17 @@ program check_mcatnlo_delta_matching
     do point=1,2
       p(:,5)=0d0
       if(point==2)p(:,5)=[1d-14,1d-14,0d0,0d0]
-      call delta_native_ir_probability(p,p1_cnt(:,1:4,0),[1,-1,11,-11,21], &
+      call delta_native_ir_probability(p,p_born,[1,-1,11,-11,21], &
                                shower_scale_nbody,native_scale,source_prob,history_count,history_t)
       call require(history_count==0.and.source_prob==0d0,'exact and rounded soft boundaries retain zero Delta')
       mccntcalled=0
       call compute_delta(p,prob)
       call require(prob==0d0.and.rng_calls==0,'soft boundary creates no weighted H event or history draw')
     enddo
-    previous=delta_common_probability(p1_cnt(:,1:4,0),shower_scale_nbody,.51d0)
-    source_prob=delta_common_probability(p1_cnt(:,1:4,0),shower_scale_nbody,.5001d0)
+    previous=delta_common_probability(p_born,shower_scale_nbody,.51d0)
+    source_prob=delta_common_probability(p_born,shower_scale_nbody,.5001d0)
     call require(previous>source_prob.and.source_prob>0d0,'common source approaches its zero continuously')
-    call require(delta_common_probability(p1_cnt(:,1:4,0),shower_scale_nbody,.5d0)==0d0, &
+    call require(delta_common_probability(p_born,shower_scale_nbody,.5d0)==0d0, &
                  'the artificial source infrared endpoint is exactly zero')
     print *, 'PASS common-scale Delta deep-collinear damping'
     stop
@@ -232,7 +285,7 @@ program check_mcatnlo_delta_matching
     call require(all(abs(pack(emsca_H(1,1,:,:),valid_dipole_n1)-native_scale)<1d-12), &
                  'all active H dipoles inherit the native matching evolution scale')
     call require(rng_calls==0,'native continuation needs no conditional history draw')
-    call delta_native_ir_probability(p,p1_cnt(:,1:4,0),[11,-11,1,-1,21], &
+    call delta_native_ir_probability(p,p_born,[11,-11,1,-1,21], &
                              shower_scale_nbody,native_scale,source_prob,history_count,history_t)
     call require(history_count==2,'two valid fixed-Born quark singular reconstructions')
     call require(maxval(abs(history_t(1:2)-[t34,t43]))<1d-12,'inverse reconstruction scales')
@@ -245,7 +298,7 @@ program check_mcatnlo_delta_matching
     call require(all(abs(pack(emsca_H(1,1,:,:),valid_dipole_n1)-10d0)<1d-12), &
                  'native scale fixes every active H dipole')
     native_scale=0d0
-    call delta_native_ir_probability(p,p1_cnt(:,1:4,0),[11,-11,1,-1,21], &
+    call delta_native_ir_probability(p,p_born,[11,-11,1,-1,21], &
                              shower_scale_nbody,native_scale,source_prob,history_count,history_t)
     call require(source_prob==0d0,'native zero scale forces the infrared source limit')
     native_scale=30d0
@@ -254,7 +307,7 @@ program check_mcatnlo_delta_matching
     p(:,5)=10d0*p(:,5)
     mccntcalled=0
     call compute_delta(p,prob)
-    call delta_native_ir_probability(p,p1_cnt(:,1:4,0),[11,-11,1,-1,21], &
+    call delta_native_ir_probability(p,p_born,[11,-11,1,-1,21], &
                              shower_scale_nbody,native_scale,source_prob,history_count,history_t)
     call require(history_count==0.and.abs(prob-.36d0)<1d-14, &
                  'native damping does not require a supported local inverse')
@@ -266,13 +319,13 @@ program check_mcatnlo_delta_matching
     ! lower reconstruction scale. Reusing the old dead mask would omit it.
     start=shower_scale_nbody
     start(3,4)=22d0
-    call delta_native_ir_probability(p,p1_cnt(:,1:4,0),[11,-11,1,-1,21], &
+    call delta_native_ir_probability(p,p_born,[11,-11,1,-1,21], &
                              start,native_scale,source_prob,history_count,history_t)
     call require(history_count==1.and.abs(history_t(1)-t43)<1d-12,'unsupported reconstruction excluded')
     call require(abs(source_prob-t43*t43/(22d0*50d0))<1d-12, &
                  'all competing legs use the common cutoff, regardless of old dead masks')
     start=1d0
-    call delta_native_ir_probability(p,p1_cnt(:,1:4,0),[11,-11,1,-1,21], &
+    call delta_native_ir_probability(p,p_born,[11,-11,1,-1,21], &
                              start,native_scale,source_prob,history_count,history_t)
     call require(history_count==0.and.source_prob==1d0,'no supported histories retain hard remainder')
     shower_scale_nbody=1d0
@@ -356,9 +409,12 @@ end function get_mass_from_id
 double precision function pysudakov_safe(scale,mass,id,kind,mcmass)
   implicit none
   double precision :: scale,mass,mcmass(21),cstlow,cstupp,cxmlow,cxmupp
+  double precision :: seen_mass_min,seen_mass_max
+  common /test_seen_masses/ seen_mass_min,seen_mass_max
   common /cstxmbds/ cstlow,cstupp,cxmlow,cxmupp
   integer :: id,kind,table_calls
-  logical :: ir_test,gluon_test,globalfsr_test
+  logical :: ir_test,gluon_test,globalfsr_test,packing_test
+  common /test_packing_mode/ packing_test
   common /test_globalfsr/ globalfsr_test
   common /test_ir/ ir_test
   common /test_gluon/ gluon_test
@@ -370,12 +426,17 @@ double precision function pysudakov_safe(scale,mass,id,kind,mcmass)
     cxmupp=50d0
   else
     ! The physical dipole mass sqrt(9000) is capped at the table upper limit.
-    if (.not.globalfsr_test.and.mass /= 50d0) stop 4
+    if (.not.globalfsr_test.and..not.packing_test.and.mass /= 50d0) stop 4
     if (.not.globalfsr_test.and.(abs(id) /= merge(21,1,gluon_test).or.kind /= merge(1,2,ir_test))) stop 4
     if (mcmass(4) /= 1.5d0 .or. mcmass(5) /= 4.8d0) stop 5
+    if(packing_test)then
+      seen_mass_min=min(seen_mass_min,mass)
+      seen_mass_max=max(seen_mass_max,mass)
+    endif
   endif
   table_calls=table_calls+1
   pysudakov_safe=scale/1000d0
+  if(packing_test)pysudakov_safe=exp(-mass/scale)
   if(ir_test.and.scale<1.01d0)pysudakov_safe=pysudakov_safe*max(scale-.5d0,0d0)/.51d0
 end function pysudakov_safe
 

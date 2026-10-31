@@ -942,9 +942,17 @@ def continuation_physics(profile):
                     'SpaceShower:pT0Ref', 'StandardModel:alphaSnfmax', 'PDF:pSet')
         if any(key not in settings for key in required):
             raise ValueError('incomplete effective settings')
-        if (settings['PDF:pSet'] != profile['pdf'] or
+        no_pdf = profile['pdf'] == 'none'
+        if ((not no_pdf and settings['PDF:pSet'] != profile['pdf']) or
                 number(settings['SpaceShower:pT0Ref']) != 0.):
             raise ValueError('PDF or ISR regularization')
+        if no_pdf:
+            beams = support['beam_ids']
+            if (len(beams) != 2 or abs(beams[0]) != 11 or beams[0] != -beams[1] or
+                    settings.get('PDF:lepton') not in ('off', 'false') or
+                    profile['pdf_info_sha256'] is not None or
+                    profile['pdf_member_sha256'] is not None):
+                raise ValueError('fixed lepton beam/PDF profile')
         alpha, order = profile['alpha_s_mz'], profile['alpha_s_order']
         if not math.isfinite(alpha) or alpha <= 0 or type(order) is not int or order not in range(4):
             raise ValueError('coupling')
@@ -973,9 +981,11 @@ def continuation_physics(profile):
             if not re.fullmatch(r'[A-Za-z0-9]+:[A-Za-z0-9]+', key) or value is not False:
                 raise ValueError('parton-level profile')
             settings[key] = 'off'
+        fingerprints = list(profile['shower_libraries'].values())
+        if not no_pdf:
+            fingerprints += [profile['pdf_info_sha256'], profile['pdf_member_sha256']]
         if (not profile['shower_libraries'] or any(not re.fullmatch(r'[0-9a-f]{64}', value)
-                for value in list(profile['shower_libraries'].values()) +
-                [profile['pdf_info_sha256'], profile['pdf_member_sha256']])):
+                for value in fingerprints)):
             raise ValueError('library/PDF fingerprints')
         backend = profile['lhapdf_library_sha256']
         if backend is not None and not re.fullmatch(r'[0-9a-f]{64}', backend):
@@ -1004,7 +1014,8 @@ def lhapdf_backend_hash(environment):
 def recorded_shower_profile(profile, effective_settings, environment=None):
     """Make a portable physics packet from the validated run and native dump."""
     record = {key: value for key, value in profile.items() if key != 'native_build'}
-    record['lhapdf_library_sha256'] = lhapdf_backend_hash(environment or {})
+    record['lhapdf_library_sha256'] = (None if profile['pdf'] == 'none'
+                                       else lhapdf_backend_hash(environment or {}))
     record['effective_shower_settings'] = {}
     for line in Path(effective_settings).read_text().splitlines():
         if '=' not in line or line.lstrip().startswith(('!', '#')):
@@ -1054,12 +1065,13 @@ def write_continuation_settings(process_dir, pythia8, filename, contract, output
         source_card = re.search(r'<MGRunCard>(.*?)</MGRunCard>', stream.header, re.S | re.I)
     if source_card is None:
         raise MatchingError('Accepted LHE has no source run card for its PDF')
-    pdf, info = pdf_name(Path(process_dir), run_card_values(source_card[1]), with_info=True)
-    if (pdf != profile['pdf'] or sha256(info) != profile['pdf_info_sha256'] or
-            pdf_member_hash(pdf, info) != profile['pdf_member_sha256']):
+    pdf, info = shower_pdf(Path(process_dir), run_card_values(source_card[1]))
+    info_hash, member_hash = pdf_fingerprints(pdf, info)
+    if (pdf != profile['pdf'] or info_hash != profile['pdf_info_sha256'] or
+            member_hash != profile['pdf_member_sha256']):
         raise MatchingError('Continuation PDF differs from the first-emission run')
     environment = shower_environment(pythia8, info)
-    if lhapdf_backend_hash(environment) != profile['lhapdf_library_sha256']:
+    if pdf != 'none' and lhapdf_backend_hash(environment) != profile['lhapdf_library_sha256']:
         raise MatchingError('Continuation LHAPDF library differs from the first-emission run')
     Path(output).write_text(continuation_physics(profile))
     return environment
@@ -2046,6 +2058,42 @@ def pdf_name(process_dir, card, with_info=False):
     raise MatchingError('Cannot resolve LHAPDF ID %d in the configured data directories' % pdf_id)
 
 
+def fixed_lepton_beams(card):
+    """Fixed beams have no structure function; their PDGs come from the process."""
+    return all(key in card and int(card[key]) == 0 for key in ('lpp1', 'lpp2'))
+
+
+def source_beam_ids(process_dir, card):
+    if not fixed_lepton_beams(card):
+        if any(abs(int(card[key])) != 1 for key in ('lpp1', 'lpp2')):
+            raise MatchingError('MAcNLOPS requires proton/antiproton or fixed e+e- beams')
+        return [2212 * int(card[key]) for key in ('lpp1', 'lpp2')]
+    pairs = set()
+    for filename in (Path(process_dir) / 'SubProcesses').glob('P*/leshouche_info.dat'):
+        for line in filename.read_text().splitlines():
+            fields = line.split()
+            if fields and fields[0] == 'I':
+                pairs.add(tuple(map(int, fields[3:5])))
+    if len(pairs) != 1:
+        raise MatchingError('Cannot identify unique ordered fixed beam flavours')
+    beams = pairs.pop()
+    if len(beams) != 2 or abs(beams[0]) != 11 or beams[0] != -beams[1]:
+        raise MatchingError('The no-PDF MAcNLOPS profile requires fixed e+e- beams')
+    return list(beams)
+
+
+def shower_pdf(process_dir, card):
+    """Resolve hadron PDFs; a fixed lepton beam uses no PDF backend."""
+    if fixed_lepton_beams(card):
+        return 'none', None
+    ids = card['lhaid']
+    ids = ids if isinstance(ids, (list, tuple)) else [ids]
+    if len(ids) != 1:
+        raise MatchingError('A single central LHAPDF member is required')
+    return pdf_name(process_dir, dict(pdlabel=card['pdlabel'], lhaid=str(ids[0])),
+                    with_info=True)
+
+
 def shower_parameters(process_dir, output, custom=None):
     """Write the hard model's external masses; return the tables' coupling.
 
@@ -2106,7 +2154,9 @@ def native_library_environment(pythia8):
 
 def shower_environment(pythia8, pdf_info):
     environment = native_library_environment(pythia8)
-    environment['LHAPDF_DATA_PATH'] = str(pdf_info.parent.parent) + os.pathsep + environment.get('LHAPDF_DATA_PATH', '')
+    environment.setdefault('LHAPDF_DATA_PATH', '')
+    if pdf_info is not None:
+        environment['LHAPDF_DATA_PATH'] = str(pdf_info.parent.parent) + os.pathsep + environment['LHAPDF_DATA_PATH']
     environment['PYTHIA8DATA'] = str(Path(pythia8).resolve() / 'share/Pythia8/xmldoc')
     return environment
 
@@ -2114,6 +2164,11 @@ def shower_environment(pythia8, pdf_info):
 def pdf_member_hash(pdf, info):
     member = int(pdf.rsplit('/', 1)[1])
     return sha256(info.with_name('%s_%04d.dat' % (info.stem, member)))
+
+
+def pdf_fingerprints(pdf, info):
+    """Fixed lepton beams have no PDF metadata or member to fingerprint."""
+    return (sha256(info), pdf_member_hash(pdf, info)) if info is not None else (None, None)
 
 
 def shower_library_hashes(pythia8):
@@ -2143,7 +2198,7 @@ def build_shower(process_dir, pythia8, log, pdf=None):
             backend = candidate.resolve()
             break
     pdf_info = None
-    if pdf is not None:
+    if pdf is not None and pdf != 'none':
         card = run_card_values((process_dir / 'Cards/run_card.dat').read_text())
         actual_pdf, pdf_info = pdf_name(process_dir, card, with_info=True)
         if pdf != actual_pdf:
@@ -2204,16 +2259,9 @@ def prepare_generation(process_dir, run_card, pythia8):
     construction = configured_source_construction(process_dir, run_card)
     if not pythia8:
         raise MatchingError('macnlops=True requires pythia8_path before generation')
-    if any(abs(run_card[key]) != 1 for key in ('lpp1', 'lpp2')):
-        raise MatchingError('The validated MAcNLOPS profile requires proton or antiproton beams')
-    ids = run_card['lhaid']
-    if not isinstance(ids, (list, tuple)):
-        ids = [ids]
-    if len(ids) != 1:
-        raise MatchingError('A single central LHAPDF member is required')
-    pdf, info = pdf_name(process_dir, dict(pdlabel=run_card['pdlabel'],
-                                          lhaid=str(ids[0])), with_info=True)
-    flavours = re.search(r'^NumFlavors:\s*(\d+)', info.read_text(), re.M)
+    beams = source_beam_ids(process_dir, run_card)
+    pdf, info = shower_pdf(process_dir, run_card)
+    flavours = re.search(r'^NumFlavors:\s*(\d+)', info.read_text(), re.M) if info else None
     if flavours and int(flavours[1]) != run_card['macnlops_flavour_count']:
         raise MatchingError('PDF flavour count differs from macnlops_flavour_count')
     settings = process_dir / 'Cards/macnlops_shower.cmnd'
@@ -2224,16 +2272,16 @@ def prepare_generation(process_dir, run_card, pythia8):
     native_build = Path(str(process_dir / 'macnlops_build.log') + '.build.json')
     probe = process_dir / 'Cards/macnlops_probe.json'
     support = probe_shower(driver, probe,
-        [2212 * run_card[key] for key in ('lpp1', 'lpp2')],
+        beams,
         [run_card[key] for key in ('ebeam1', 'ebeam2')], pdf, alpha, order, settings,
         shower_environment(pythia8, info), process_dir / 'macnlops_probe.log',
         flavour_count=run_card['macnlops_flavour_count'],
         mcatnlo_delta=construction in DELTA_SOURCES)
+    info_hash, member_hash = pdf_fingerprints(pdf, info)
     profile = dict(schema='macnlops-generation-profile-v1', shower_backend='stock-pythia8',
                    construction=construction, support=support,
                    shower_libraries=shower_library_hashes(pythia8),
-                   pdf=pdf, pdf_info_sha256=sha256(info),
-                   pdf_member_sha256=pdf_member_hash(pdf, info),
+                   pdf=pdf, pdf_info_sha256=info_hash, pdf_member_sha256=member_hash,
                    settings_sha256=sha256(settings), alpha_s_mz=alpha, alpha_s_order=order)
     if native_build.is_file():
         profile['native_build'] = dict(path=str(native_build), sha256=sha256(native_build))
@@ -2376,12 +2424,7 @@ def prepare_first_emission(process_dir, run_card, pythia8, inputs, seed,
         raise MatchingError('macnlops=True requires pythia8_path')
     if configured_source_construction(process_dir, run_card) not in DELTA_SOURCES:
         raise MatchingError('The MAcNLOPS first emission matches MC@NLO-Delta sources')
-    ids = run_card['lhaid']
-    ids = ids if isinstance(ids, (list, tuple)) else [ids]
-    if len(ids) != 1:
-        raise MatchingError('A single central LHAPDF member is required')
-    pdf, info = pdf_name(process_dir, dict(pdlabel=run_card['pdlabel'], lhaid=str(ids[0])),
-                         with_info=True)
+    pdf, info = shower_pdf(process_dir, run_card)
     settings = process_dir / 'Cards/macnlops_shower.cmnd'
     if not settings.is_file():
         raise MatchingError('Missing measured shower settings; generate a fresh macnlops=True sample')
@@ -2615,7 +2658,7 @@ def run_file(filename, process_dir, job, driver, args, seed):
     manifest = check_manifest(filename, process_dir)
     header = source_header(filename, process_dir, manifest)
     card = check_source(header, process_dir)
-    central_pdf, pdf_info = pdf_name(process_dir, card, with_info=True)
+    central_pdf, pdf_info = shower_pdf(process_dir, card)
     profile = generation_profile(process_dir)
     contract = hard_source_contract(filename, profile['construction'])
     policy = matching_prescription(profile['construction'], contract['partition'])
@@ -2627,8 +2670,9 @@ def run_file(filename, process_dir, job, driver, args, seed):
         signed_residuals = profile['construction'] != RESOLVED_SOURCE
     if shower_library_hashes(args.pythia8) != profile['shower_libraries']:
         raise MatchingError('Pythia libraries differ from those used before generation')
-    if (central_pdf != profile['pdf'] or sha256(pdf_info) != profile['pdf_info_sha256'] or
-            pdf_member_hash(central_pdf, pdf_info) != profile['pdf_member_sha256']):
+    info_hash, member_hash = pdf_fingerprints(central_pdf, pdf_info)
+    if (central_pdf != profile['pdf'] or info_hash != profile['pdf_info_sha256'] or
+            member_hash != profile['pdf_member_sha256']):
         raise MatchingError('The source MSbar PDF metadata changed since generation')
     environment = shower_environment(args.pythia8, pdf_info)
     settings = job / 'shower_input.cmnd'
@@ -2689,7 +2733,7 @@ def run_file(filename, process_dir, job, driver, args, seed):
                   cards={name: sha256(process_dir / 'Cards' / name)
                          for name in ('run_card.dat', 'param_card.dat')},
                   fks_parameters=sha256(process_dir / 'SubProcesses/FKS_params.dat'),
-                  pdf_info_sha256=sha256(pdf_info),
+                  pdf_info_sha256=info_hash,
                   effective_settings_sha256=sha256(Path(str(metadata) + '.settings.cmnd')))
     (job / 'report.json').write_text(json.dumps(report, indent=2, sort_keys=True) + '\n')
     return report

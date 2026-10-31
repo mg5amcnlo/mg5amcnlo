@@ -1,0 +1,124 @@
+{
+  "accepted_processes": {
+    "EE2j": "pre_packing_fix_all_emitted_indices_last",
+    "EE3j": "pre_packing_fix_all_emitted_indices_last",
+    "EE4j": "compact_born_fix_fresh_generation",
+    "Wj": "compact_born_fix_fresh_generation"
+  },
+  "epochs": {
+    "compact_born_fix": {
+      "analysis_sha256": {
+        "analysis/durham_2j_cuts.f": "82a5c60706f77b27eba84ad81ddb0a08168ffc11817474b8cf7f885ba6d9f4e0",
+        "analysis/durham_3j_cuts.f": "21dd9f6706a0eca3403747ae3da127e3e60697a0d5ced23d8847286341944b2a",
+        "analysis/durham_4j_cuts.f": "6af80e1b17dbc816d21345ce606c9a0e40aaf7be345958b05924104772667c5d",
+        "analysis/durham_cuts_template.f": "4e212154cdfe8226fcb56619c66d7941763309a64ca281f3a1148c8aaaa276b4",
+        "analysis/jet_observables.cc": "32f3a861660a4d4e934d7e888b76408d3f4b91a9e986b14ac56fd028d0aa7c22",
+        "analysis/observables.json": "05fbb596504cbc6d8e289d92338860ecf06d27e5e89ee43db02e18eb1ca660c7",
+        "analysis/py8an_HwU_jets_template.f": "d8a1214c92462d4d3392e1ff0193a42b9c1b82ac4d9610a934c3822de36e36ea"
+      },
+      "baseline_commit": "36f8ffb5c44cdf9fa5586ab92240e9ee4923aa10",
+      "compact_born_regression_tests": 38,
+      "created_utc": "2026-10-31T13:54:03.907766+00:00",
+      "durham_ycut": 0.01,
+      "ee_energy_GeV": 91.188,
+      "events_per_process": 1000000,
+      "fixed_beam_tests": 46,
+      "independent_durham_checks": 15603,
+      "pp_energy_GeV": 13000,
+      "pythia_library_sha256": {
+        "libpythia8.so": "35203dfab4e20b044fe6e669b8170f5905f56c43c6dad6e762ceff86158a283c",
+        "libpythia8amcatnloHooks.so": "95913dec94ff37c8255832e8a652dd7ff821467f6636ad76de1e7842a8196bce",
+        "libpythia8colourReconnectionHooks.so": "abafd0e305f41f5b8150943eff6c17c3b2c1d3c80eb0c4e2aa3fbec3f2c3de1a",
+        "libpythia8jetMatchingHooks.so": "885beedf340c726de7fb6c2f0b13b7766540895fe7091cb9f84990c72f688384",
+        "libpythia8lhapdf6.so": "6d024e50492bb6d065f4a5e2ad47f894fec2730ce700431b8bd6a9123d15815b",
+        "libpythia8lhefHooks.so": "15b705c3ce9db69a9dc7e7584f4afd2a1f9d8b144f99f65ec1c5b18ab9645496",
+        "libpythia8powhegHooks.so": "7782fb751ce9759a3fed56b65fa54ba92323b6664dbf6c5c9d3299b7552878d6",
+        "libpythia8resonanceDecayFilterHooks.so": "50ae1d857bad71282d429c717db4f2a4bf51353a8f5acd506a3b657105756bce",
+        "libpythia8setLHEDecayProductHooks.so": "522b081175494e616d095e44ceaaeeabf14a30eb92d67ccc7b0ca63e5043fe49"
+      },
+      "run": "run_1M_native_ir_jets",
+      "seeds": {
+        "EE2j": 3320101,
+        "EE3j": 3320201,
+        "EE4j": 3320401,
+        "Wj": 3320301
+      },
+      "source": "delta_native_ir",
+      "source_construction": "mcatnlo-delta-native-ir-v1",
+      "source_sha256": {
+        "Template/NLO/MCatNLO/srcPythia8/MacNLOPS.h": "c8303b63f16aad43073ad5e189d7bbca1433af85187ac7974f85b95ced8209f1",
+        "Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc": "0d5f60e0aae3aff5361ea7be83b2f656df7df76d8d19c8701ae494b507610488",
+        "Template/NLO/SubProcesses/FKSParams.f90": "5625b460f5d6e31255d852b56670f49bc1a3c5dfdfa179a5c2b9f6749429a256",
+        "Template/NLO/SubProcesses/driver_macnlops.f": "e4003b2864a7ea4a73e1b9c62a6116df4c2d4989dbad7b99d96406f5cbf57ed5",
+        "Template/NLO/SubProcesses/macnlops_capi.f": "8cfa8cf53f5a2a468393edebeffc0624f7766b84256d4983de7abafdf6369454",
+        "Template/NLO/SubProcesses/mcatnlo_delta_scales.f90": "6c8954e0d95b34d409f547bf3da001b929cf09f11f018d1f11b569e2cdbc7f1e",
+        "Template/NLO/SubProcesses/montecarlocounter.f": "16c99cb1c86eebe1392f7bc7a784d8487a66dfc78e0b39c4a292bc82883dd3b5",
+        "madgraph/various/banner.py": "66a5469bd61656303ba9bbd9e78b715a52101646383b36ab8ecb6b9a5de43e1f",
+        "madgraph/various/macnlops.py": "df0ff511e1d0bf9a53a1ed6613faac639edcb0733f6ce63d2d688e01f0fe29e7"
+      },
+      "stage": "compact-Born packing fix for Wj/EE4j; EE2j/EE3j retained by scope/equivalence proof"
+    },
+    "pre_packing_fix": {
+      "analysis_sha256": {
+        "analysis/durham_2j_cuts.f": "82a5c60706f77b27eba84ad81ddb0a08168ffc11817474b8cf7f885ba6d9f4e0",
+        "analysis/durham_3j_cuts.f": "21dd9f6706a0eca3403747ae3da127e3e60697a0d5ced23d8847286341944b2a",
+        "analysis/durham_4j_cuts.f": "6af80e1b17dbc816d21345ce606c9a0e40aaf7be345958b05924104772667c5d",
+        "analysis/durham_cuts_template.f": "4e212154cdfe8226fcb56619c66d7941763309a64ca281f3a1148c8aaaa276b4",
+        "analysis/jet_observables.cc": "32f3a861660a4d4e934d7e888b76408d3f4b91a9e986b14ac56fd028d0aa7c22",
+        "analysis/observables.json": "05fbb596504cbc6d8e289d92338860ecf06d27e5e89ee43db02e18eb1ca660c7",
+        "analysis/py8an_HwU_jets_template.f": "d8a1214c92462d4d3392e1ff0193a42b9c1b82ac4d9610a934c3822de36e36ea"
+      },
+      "baseline_commit": "36f8ffb5c44cdf9fa5586ab92240e9ee4923aa10",
+      "created_utc": "2026-10-31T13:25:02.557911+00:00",
+      "durham_ycut": 0.01,
+      "ee_energy_GeV": 91.188,
+      "events_per_process": 1000000,
+      "fixed_beam_tests": 46,
+      "independent_durham_checks": 15603,
+      "pp_energy_GeV": 13000,
+      "pythia_library_sha256": {
+        "libpythia8.so": "35203dfab4e20b044fe6e669b8170f5905f56c43c6dad6e762ceff86158a283c",
+        "libpythia8amcatnloHooks.so": "95913dec94ff37c8255832e8a652dd7ff821467f6636ad76de1e7842a8196bce",
+        "libpythia8colourReconnectionHooks.so": "abafd0e305f41f5b8150943eff6c17c3b2c1d3c80eb0c4e2aa3fbec3f2c3de1a",
+        "libpythia8jetMatchingHooks.so": "885beedf340c726de7fb6c2f0b13b7766540895fe7091cb9f84990c72f688384",
+        "libpythia8lhapdf6.so": "6d024e50492bb6d065f4a5e2ad47f894fec2730ce700431b8bd6a9123d15815b",
+        "libpythia8lhefHooks.so": "15b705c3ce9db69a9dc7e7584f4afd2a1f9d8b144f99f65ec1c5b18ab9645496",
+        "libpythia8powhegHooks.so": "7782fb751ce9759a3fed56b65fa54ba92323b6664dbf6c5c9d3299b7552878d6",
+        "libpythia8resonanceDecayFilterHooks.so": "50ae1d857bad71282d429c717db4f2a4bf51353a8f5acd506a3b657105756bce",
+        "libpythia8setLHEDecayProductHooks.so": "522b081175494e616d095e44ceaaeeabf14a30eb92d67ccc7b0ca63e5043fe49"
+      },
+      "run": "run_1M_native_ir_jets",
+      "seeds": {
+        "EE2j": 3320101,
+        "EE3j": 3320201,
+        "EE4j": 3320401,
+        "Wj": 3320301
+      },
+      "source": "delta_native_ir",
+      "source_construction": "mcatnlo-delta-native-ir-v1",
+      "source_sha256": {
+        "Template/NLO/MCatNLO/srcPythia8/MacNLOPS.h": "c8303b63f16aad43073ad5e189d7bbca1433af85187ac7974f85b95ced8209f1",
+        "Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc": "0d5f60e0aae3aff5361ea7be83b2f656df7df76d8d19c8701ae494b507610488",
+        "Template/NLO/SubProcesses/FKSParams.f90": "5625b460f5d6e31255d852b56670f49bc1a3c5dfdfa179a5c2b9f6749429a256",
+        "Template/NLO/SubProcesses/driver_macnlops.f": "e4003b2864a7ea4a73e1b9c62a6116df4c2d4989dbad7b99d96406f5cbf57ed5",
+        "Template/NLO/SubProcesses/macnlops_capi.f": "8cfa8cf53f5a2a468393edebeffc0624f7766b84256d4983de7abafdf6369454",
+        "Template/NLO/SubProcesses/mcatnlo_delta_scales.f90": "6c8954e0d95b34d409f547bf3da001b929cf09f11f018d1f11b569e2cdbc7f1e",
+        "Template/NLO/SubProcesses/montecarlocounter.f": "3074529855e7f47f07c67d7498918d55709c692a491efeb6167d6f8cdb6cec79",
+        "madgraph/various/banner.py": "66a5469bd61656303ba9bbd9e78b715a52101646383b36ab8ecb6b9a5de43e1f",
+        "madgraph/various/macnlops.py": "df0ff511e1d0bf9a53a1ed6613faac639edcb0733f6ce63d2d688e01f0fe29e7"
+      },
+      "stage": "frozen production after fixed-beam and end-to-end pilots"
+    }
+  },
+  "invalidated": [
+    "Wj pre-fix partial1M and200pilot",
+    "EE4j pre-fix integration/200pilot"
+  ],
+  "reason": "Real-sized soft counterevent arrays contain a zero emitted slot; slicing did not compact nonlast FKS indices. Generation now uses the same compact p_born as native MC subtraction and source profiling.",
+  "scope_proof": [
+    "audit/nonlast_fks_scope.json",
+    "audit/soft_born_frame_checks.json",
+    "audit/massive_soft_frame_test.log"
+  ],
+  "source_construction": "mcatnlo-delta-native-ir-v1"
+}
