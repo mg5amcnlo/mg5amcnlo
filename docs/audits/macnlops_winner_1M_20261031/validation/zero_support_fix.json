@@ -1,0 +1,16 @@
+{
+  "problem": "Negative H source hard remainder with zero resolved shower PDF has F=0; old matcher incorrectly required strictly positive normalization.",
+  "example": {
+    "r": 1249686376664.813,
+    "d": 1258672154209.456,
+    "k": 1258672154209.456,
+    "source": 1.0,
+    "kernel_scale": 0.0,
+    "shower_sudakov": 0.028761
+  },
+  "fix": "Finite zero kernel scale gives T=min(C*A,F)=0 and H acceptance1. Negative/nonfinite scales remain errors.",
+  "source_events_regenerated": false,
+  "pythia_modified": false,
+  "tests": "4 tests in test_macnlops_sudakov_kernel, including zero support and bounded-transfer grid",
+  "matcher_sha256": "c3a5fbdb834121e8b130920ffc5768179ba625efe8bb4f5bf3f8aef7602a4be7"
+}

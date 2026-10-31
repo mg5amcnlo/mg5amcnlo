@@ -91,7 +91,7 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
                         work / 'MCmasses_PYTHIA8.inc')
         shutil.copyfile(TEMPLATE / 'fks_powers.inc', work / 'fks_powers.inc')
         (work / 'delta_matching.f').write_text(mc_counterterm_test_module(
-                        ('compute_delta', 'get_delta_stopping_scales',
+                        ('compute_delta', 'delta_native_ir_probability', 'delta_common_probability', 'get_delta_stopping_scales',
                          'get_delta_connections', 'delta_leg_probability',
                          'gl_safe', 'get_parton_id',
                          'setSudType', 'delta_backward_leg', 'delta_group_xf',
@@ -100,7 +100,12 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
                          'delta_backward_omz', 'delta_alphas_lambdas',
                          'delta_shower_alphas', 'delta_alphas_nf',
                          'delta_alphas_lambda'),
-                        external_functions=(('double precision', 'pysudakov_safe'),)))
+                        external_functions=(('double precision', 'pysudakov_safe'),
+                                            ('double precision', 'compute_pTparton'),
+                                            ('double precision', 'get_qMC')),
+                        include_kinematics=False).replace(
+                            '      implicit none',
+                            '      use fks_phase_space_helpers, only: sumdot\n      implicit none',1))
         cls.executable = work / 'check_delta_matching'
         result = subprocess.run([
             shutil.which('gfortran'), '-O2', '-std=legacy', '-fcheck=all',
@@ -131,6 +136,36 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
                                 capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn('MC@NLO-Delta scale reconstruction failed', result.stdout)
+
+    def test_common_scale_global_ir_weight_and_native_handoff(self):
+        result = subprocess.run([str(self.executable), 'common'],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('PASS native-history global-IR Delta weight and handoff', result.stdout)
+
+    def test_common_scale_retains_deep_collinear_damping(self):
+        result = subprocess.run([str(self.executable), 'common_ir'],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('PASS common-scale Delta deep-collinear damping', result.stdout)
+
+    def test_common_scale_gluon_colour_multiplicities(self):
+        result = subprocess.run([str(self.executable), 'common_gluon'],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('PASS common-scale Delta gluon colour multiplicities', result.stdout)
+
+    def test_native_global_fsr_does_not_require_local_inverse(self):
+        result = subprocess.run([str(self.executable), 'native_global_fsr'],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('PASS native global-FSR independent of local inverse', result.stdout)
+
+    def test_common_hard_scale_without_a_passing_born(self):
+        result = subprocess.run([str(self.executable), 'common_hard'],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('PASS real-only common H hard fallback', result.stdout)
 
 
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')

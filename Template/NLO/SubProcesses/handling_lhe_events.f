@@ -1557,12 +1557,14 @@ c ordinary Fortran collect/reweight readers. No generator module is needed.
       integer hard_event_lines
       character*1000 hard_event_text(503)
       common/c_macnlops_hard_event/hard_event_lines,hard_event_text
-      character*12 source,partition
+      character*16 source,partition
       call clear_macnlops_hard_event()
       if(nup.lt.2.or.nup.gt.500)error stop 'Invalid hard-event size'
       source='ordinary'
       if(meta(14).eq.1)source='resolved'
       if(meta(14).eq.2)source='delta'
+      if(meta(14).eq.3)source='delta_winner'
+      if(meta(14).eq.4)source='delta_native_ir'
       partition='sampled'
       if(meta(15).eq.1)partition='global_sum'
       hard_event_text(1)='  <macnlops_hard_event version="1"'//
@@ -1629,7 +1631,9 @@ c This is used by collect_events as well as the EOF-catching reader.
      $   index(header,'frame="lab"').eq.0.or.
      $   (index(header,'source="ordinary"').eq.0.and.
      $    index(header,'source="resolved"').eq.0.and.
-     $    index(header,'source="delta"').eq.0).or.
+     $    index(header,'source="delta"').eq.0.and.
+     $    index(header,'source="delta_winner"').eq.0.and.
+     $    index(header,'source="delta_native_ir"').eq.0).or.
      $   (index(header,'partition="sampled"').eq.0.and.
      $    index(header,'partition="global_sum"').eq.0))
      $     error stop 'Unsupported hard-event annotation header'

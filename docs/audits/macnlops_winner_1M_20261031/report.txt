@@ -1,0 +1,98 @@
+Common-scale MC@NLO-Delta source: 1M-event validation, 31 October 2026
+
+Fresh independent source generation: 1,000,000 events each for DY, gluon-fusion
+Higgs in HEFT and stable ttbar; source construction mcatnlo-delta-winner-v1.
+13 TeV pp, NNPDF40_nlo_as_01180/0 (LHAID331700); DY mee>60 GeV, mH125, mt173.
+Seeds: DY3120101, H3120201, ttbar3120301. DeltaCommonScale=true; DeltaBackwardISR=false.
+First emission: stock Pythia8.318, alpha_s(MZ)=0.1365, one loop, no CMW,
+ISR/FSR cutoffs0.5GeV. Full continuation: alpha_s0.118 one loop, local recoil;
+MPI, hadronization, primordial kT, all QED switches (including ByOther), and
+Higgs/top decays disabled. Pythia libraries are byte-identical to campaign start.
+
+Validation exposed and fixed two matching bugs:
+1. A negative source H hard remainder with zero resolved shower-PDF density
+   has F=0 and no common transfer; H must be retained. Zero normalization
+   previously aborted. Negative/nonfinite normalization remains an error.
+2. Source auxiliary-history kernels must use the representative flavour IDs
+   used by grouped source generation. Resolved charm/strange/bottom IDs
+   previously produced false hard-remainder source averages. The actual
+   shower denominator continues to use resolved physical flavours.
+Both have regression tests. All final channels were rematched with both fixes.
+A third scale-only edge case affected five positive ttbar H hard remainders
+without a Born counterevent. Their common hard fallback now uses the largest
+pre-existing hard scale. Weights/momenta were preserved exactly, and ttbar
+was rematched and reshowered after that deterministic cap repair. The source
+weight functions were unchanged. Invalid intermediate results are archived
+under validation/pre_grouped_profile_fix and excluded from final numbers.
+
+Inclusive sums (pb; source and matched use the same events):
+process    source           matched          change        expected net +/- sample error
+DY        1932.40036929   1933.72459661  +0.06853%   +1.2231381 +/- 0.2204228
+H           30.72038497     30.71991668  -0.00152%   -0.0007499 +/- 0.0024534
+ttbar      636.75534394    632.70242742  -0.63650%   -3.5685001 +/- 0.2611901
+
+Expected transfers before rejection draws (pb):
+process    S rejection       H addition
+DY          19.85467503     21.07781312
+H            0.16796485      0.16721494
+ttbar       62.54063600     58.97213585
+
+H addition / S rejection in hard-system pT5-20GeV:
+process    first emission expected       first emission realized       full shower realized
+DY       1.06315 +/- 0.01383        1.04365 +/- 0.01879        1.05220 +/- 0.01769
+H        0.99106 +/- 0.01655        0.99640 +/- 0.02311        1.13919 +/- 0.03547
+ttbar    0.96693 +/- 0.01055        0.95742 +/- 0.01369        0.94205 +/- 0.01334
+
+Errors before shower are finite-event sampling estimates; realized estimates
+also include the rejection draws. After shower they use correlated differences
+over50 split jobs. Hard-integration/channel-beta errors are separate.
+
+Production checks:
+DY: 104 complete first-emission channels; 50 full-shower jobs; tried/selected/accepted [1000000, 1000000, 1000000].
+  Maximum full-shower vs first-stage weight-sum relative difference 3.59e-08; all probabilities and source/common-cap checks pass.
+  Every written endpoint checked (1,000,000); 4,152 actual stock-shower imports/full continuations: scale errors {'global_error': 0.0, 'production_error': 0.0, 'dipole_error': 0.0}, no emission above cap.
+H: 100 complete first-emission channels; 50 full-shower jobs; tried/selected/accepted [1000000, 1000000, 1000000].
+  Maximum full-shower vs first-stage weight-sum relative difference 3.34e-08; all probabilities and source/common-cap checks pass.
+  Every written endpoint checked (1,000,000); 3,455 actual stock-shower imports/full continuations: scale errors {'global_error': 0.0, 'production_error': 0.0, 'dipole_error': 0.0}, no emission above cap.
+ttbar: 101 complete first-emission channels; 50 full-shower jobs; tried/selected/accepted [1000000, 1000000, 1000000].
+  Maximum full-shower vs first-stage weight-sum relative difference 1.78e-08; all probabilities and source/common-cap checks pass.
+  Every written endpoint checked (1,000,000); 4,304 actual stock-shower imports/full continuations: scale errors {'global_error': 0.0, 'production_error': 0.0, 'dipole_error': 0.0}, no emission above cap.
+All five repaired ttbar hard remainders also pass dedicated native import/full-shower checks.
+82 targeted regression tests pass:45 FKS/source,20 runtime/flow,17 native first-emission/transfer.
+
+Interpretation and limits:
+The implementation now passes generation, probability, provenance, unweighting
+and stock-shower transport checks at the requested statistics. This does not
+establish exact cancellation. Inspect the transfer tables and PDF plots:
+common H caps can still have a different conditional distribution from the
+actual S winning scales. In Higgs pT5-20GeV, transfer-weighted mean starts
+S=28.282GeV and H=17.699GeV (H matching-component scale=28.066GeV). This
+points to a conditioning difference: the H posterior approximates the overall
+first-emission history density, while vetoed S histories are transfer weighted.
+The means do not establish the sole cause of the observed shower migration.
+The history prior is fixed-native-Born AP(z)/t^2 with coupling/PDF corrections;
+alternative inverse Born states, their matrix elements/Jacobians and exact
+massive/global-recoil proposal kernels are approximated. The S/B normalization
+is still a channel average beta. Statistically resolved residuals must not
+be described as fluctuations or exact matching closure.
+
+The previous ttbar full-shower comparison used QEDByOther=on unintentionally;
+the new sample disables it. Comparisons with that archived ttbar shower
+combine this configuration correction with the source/scale change.
+
+Artifacts:
+  plots/hard_pt_run_1M_winner.pdf: source/veto-only/removal-only/matched, both stages
+  plots/winner_transfer_comparison.pdf: previous/new transfer balance
+  plots/winner_transfer_comparison.json: correlated transfer ratios and range sums
+  plots/hard_pt_1M_ranges.json: correlated ratios to each sample source
+  validation/summary.json, production_checks.json, provenance.json
+  validation/*_event_checks.json and *_decisions.npz
+  scale_audit/*_written_scales.json and *_native.csv
+  processes/*/Events/run_1M_winner/events.lhe.gz: four-weight final shower inputs
+  backup/*_events.lhe.gz: matching output before diagnostic weight augmentation
+  logs/: complete production, replay, audit and regression logs
+
+Reproduction: python run_1M.py KEY --events 1000000 --run run_1M_winner --seed-offset 110000
+KEY=DY,H,ttbar.
+Then validate_events.py, plot_hard_pt.py, range_ratios.py, analyse_winner.py,
+check_production.py, scan_scales.py/native probes and build_report.py.

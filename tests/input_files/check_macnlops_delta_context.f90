@@ -74,13 +74,15 @@ program check_macnlops_delta_context
     read(*,'(a)')line
     call read_macnlops_delta_context(5,line)
     call write_macnlops_hard_event(6)
-  elseif(mode==7.or.mode==8)then
+  elseif(mode==7.or.mode==8.or.mode==10.or.mode==11)then
     ic=0;p=0d0;meta=0
     ic(1,:)=[2,-2,11,-11];ic(6,:)=[-1,-1,1,1];ic(7,:)=9
     p(0,:)=10d0;p(3,1)=10d0;p(3,2)=-10d0
     p(1,3)=10d0;p(1,4)=-10d0
     meta(1:3)=[2,3,3];meta(7:13)=[1,1,0,0,1,1,4]
     meta(14)=2;meta(15)=1
+    if(mode==10)meta(14)=3
+    if(mode==11)meta(14)=4
     call store_macnlops_hard_event(4,ic,p,meta)
     associate(packet=>delta_contexts(first))
       i=packet%count

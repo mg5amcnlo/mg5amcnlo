@@ -1,0 +1,268 @@
+{
+  "source": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/backup/ttbar_run_1M_native_ir_events.lhe.gz",
+  "events": 1000000,
+  "counts": {
+    "S": 849143,
+    "emitted": 849143,
+    "H": 150857,
+    "unshowered": 150857
+  },
+  "max_relative_errors": {
+    "header_vs_marker": 0.0,
+    "S_scalup_vs_winning_evolution": 0.0,
+    "H_pair_vs_source_pair": 0.0
+  },
+  "sampled_events": 3922,
+  "bins": {
+    "S_9": {
+      "transfer": 10.547149909198554,
+      "events": 103626,
+      "mean_evolution": 36.170586114365726,
+      "mean_global": 36.170586114365726,
+      "mean_beam1": 36.170586114365726,
+      "mean_beam2": 36.170586114365726,
+      "mean_max_FSR": 36.170586114365726,
+      "fraction_global_above_evolution": 0.0
+    },
+    "H_10": {
+      "transfer": 18.021288577491166,
+      "events": 21375,
+      "mean_evolution": 53.26043921052324,
+      "mean_global": 53.26043921052323,
+      "mean_beam1": 53.26043921052323,
+      "mean_beam2": 53.26043921052323,
+      "mean_max_FSR": 53.26043921052323,
+      "fraction_global_above_evolution": 0.0
+    },
+    "S_11": {
+      "transfer": 17.036484581667622,
+      "events": 134323,
+      "mean_evolution": 82.68771009238158,
+      "mean_global": 82.68771009238158,
+      "mean_beam1": 82.68771009238158,
+      "mean_beam2": 82.68771009238158,
+      "mean_max_FSR": 82.68771009238158,
+      "fraction_global_above_evolution": 0.0
+    },
+    "S_6": {
+      "transfer": 0.4934934870041203,
+      "events": 25980,
+      "mean_evolution": 17.204566986389842,
+      "mean_global": 17.204566986389842,
+      "mean_beam1": 17.204566986389842,
+      "mean_beam2": 17.204566986389842,
+      "mean_max_FSR": 17.204566986389842,
+      "fraction_global_above_evolution": 0.0
+    },
+    "S_7": {
+      "transfer": 2.2569964200536847,
+      "events": 48381,
+      "mean_evolution": 21.036394641368695,
+      "mean_global": 21.036394641368695,
+      "mean_beam1": 21.036394641368695,
+      "mean_beam2": 21.036394641368695,
+      "mean_max_FSR": 21.036394641368695,
+      "fraction_global_above_evolution": 0.0
+    },
+    "S_8": {
+      "transfer": 4.044596624158594,
+      "events": 53133,
+      "mean_evolution": 26.913162213566718,
+      "mean_global": 26.913162213566718,
+      "mean_beam1": 26.913162213566718,
+      "mean_beam2": 26.913162213566718,
+      "mean_max_FSR": 26.913162213566718,
+      "fraction_global_above_evolution": 0.0
+    },
+    "S_10": {
+      "transfer": 19.25840477903936,
+      "events": 155259,
+      "mean_evolution": 53.02595177163828,
+      "mean_global": 53.02595177163828,
+      "mean_beam1": 53.02595177163828,
+      "mean_beam2": 53.02595177163828,
+      "mean_max_FSR": 53.02595177163828,
+      "fraction_global_above_evolution": 0.0
+    },
+    "S_5": {
+      "transfer": 0.10343879049792869,
+      "events": 15725,
+      "mean_evolution": 17.61794406037397,
+      "mean_global": 17.61794406037397,
+      "mean_beam1": 17.61794406037397,
+      "mean_beam2": 17.61794406037397,
+      "mean_max_FSR": 17.61794406037397,
+      "fraction_global_above_evolution": 0.0
+    },
+    "H_9": {
+      "transfer": 9.928359966718862,
+      "events": 11776,
+      "mean_evolution": 36.197591606822115,
+      "mean_global": 36.197591606822115,
+      "mean_beam1": 36.197591606822115,
+      "mean_beam2": 36.197591606822115,
+      "mean_max_FSR": 36.197591606822115,
+      "fraction_global_above_evolution": 0.0
+    },
+    "S_12": {
+      "transfer": 1.3820474390138473,
+      "events": 13072,
+      "mean_evolution": 144.25378731053422,
+      "mean_global": 144.25378731053422,
+      "mean_beam1": 144.25378731053422,
+      "mean_beam2": 144.25378731053422,
+      "mean_max_FSR": 144.25378731053422,
+      "fraction_global_above_evolution": 0.0
+    },
+    "S_2": {
+      "transfer": 0.003294744705640718,
+      "events": 2267,
+      "mean_evolution": 38.558583410544465,
+      "mean_global": 38.558583410544465,
+      "mean_beam1": 38.558583410544465,
+      "mean_beam2": 38.558583410544465,
+      "mean_max_FSR": 38.558583410544465,
+      "fraction_global_above_evolution": 0.0
+    },
+    "S_4": {
+      "transfer": 0.032688441389695434,
+      "events": 13852,
+      "mean_evolution": 31.083685898509234,
+      "mean_global": 31.083685898509234,
+      "mean_beam1": 31.083685898509234,
+      "mean_beam2": 31.083685898509234,
+      "mean_max_FSR": 31.083685898509234,
+      "fraction_global_above_evolution": 0.0
+    },
+    "H_8": {
+      "transfer": 3.9279240394466837,
+      "events": 4659,
+      "mean_evolution": 26.909363433741092,
+      "mean_global": 26.909363433741085,
+      "mean_beam1": 26.909363433741085,
+      "mean_beam2": 26.909363433741085,
+      "mean_max_FSR": 26.909363433741085,
+      "fraction_global_above_evolution": 0.0
+    },
+    "H_11": {
+      "transfer": 15.621822505373448,
+      "events": 18529,
+      "mean_evolution": 82.69060519000246,
+      "mean_global": 82.69060519000243,
+      "mean_beam1": 82.69060519000243,
+      "mean_beam2": 82.69060519000243,
+      "mean_max_FSR": 82.69060519000243,
+      "fraction_global_above_evolution": 0.0
+    },
+    "S_3": {
+      "transfer": 0.0029941856933171102,
+      "events": 5208,
+      "mean_evolution": 36.53234267516357,
+      "mean_global": 36.53234267516357,
+      "mean_beam1": 36.53234267516357,
+      "mean_beam2": 36.53234267516357,
+      "mean_max_FSR": 36.53234267516357,
+      "fraction_global_above_evolution": 0.0
+    },
+    "H_6": {
+      "transfer": 0.5000217741471626,
+      "events": 594,
+      "mean_evolution": 17.64739330038176,
+      "mean_global": 17.647393300381765,
+      "mean_beam1": 17.647393300381765,
+      "mean_beam2": 17.647393300381765,
+      "mean_max_FSR": 17.647393300381765,
+      "fraction_global_above_evolution": 0.0
+    },
+    "H_7": {
+      "transfer": 2.211704985789304,
+      "events": 2624,
+      "mean_evolution": 21.084744985846132,
+      "mean_global": 21.08474498584615,
+      "mean_beam1": 21.08474498584615,
+      "mean_beam2": 21.08474498584615,
+      "mean_max_FSR": 21.08474498584615,
+      "fraction_global_above_evolution": 0.0
+    },
+    "H_12": {
+      "transfer": 1.2047916433799999,
+      "events": 1429,
+      "mean_evolution": 145.7061692657175,
+      "mean_global": 145.70616926571748,
+      "mean_beam1": 145.70616926571748,
+      "mean_beam2": 145.70616926571748,
+      "mean_max_FSR": 145.70616926571748,
+      "fraction_global_above_evolution": 0.0
+    },
+    "S_1": {
+      "transfer": 0.001531063941321933,
+      "events": 151,
+      "mean_evolution": 38.77204724991342,
+      "mean_global": 38.77204724991342,
+      "mean_beam1": 38.77204724991342,
+      "mean_beam2": 38.77204724991342,
+      "mean_max_FSR": 38.77204724991342,
+      "fraction_global_above_evolution": 0.0
+    },
+    "H_5": {
+      "transfer": 0.10317025567887117,
+      "events": 124,
+      "mean_evolution": 20.093316262098583,
+      "mean_global": 20.093316262098597,
+      "mean_beam1": 20.093316262098597,
+      "mean_beam2": 20.093316262098597,
+      "mean_max_FSR": 20.093316262098597,
+      "fraction_global_above_evolution": 0.0
+    },
+    "H_2": {
+      "transfer": 0.003336421882810637,
+      "events": 4,
+      "mean_evolution": 76.63120909593648,
+      "mean_global": 76.63120909593648,
+      "mean_beam1": 76.63120909593648,
+      "mean_beam2": 76.63120909593648,
+      "mean_max_FSR": 76.63120909593648,
+      "fraction_global_above_evolution": 0.0
+    },
+    "H_4": {
+      "transfer": 0.03203784636,
+      "events": 38,
+      "mean_evolution": 27.255092017573222,
+      "mean_global": 27.255092017573254,
+      "mean_beam1": 27.255092017573254,
+      "mean_beam2": 27.255092017573254,
+      "mean_max_FSR": 27.255092017573254,
+      "fraction_global_above_evolution": 0.0
+    },
+    "H_3": {
+      "transfer": 0.0025251963598153238,
+      "events": 3,
+      "mean_evolution": 42.145791034077206,
+      "mean_global": 42.145791034077114,
+      "mean_beam1": 42.145791034077114,
+      "mean_beam2": 42.145791034077114,
+      "mean_max_FSR": 42.145791034077114,
+      "fraction_global_above_evolution": 0.0
+    },
+    "S_0": {
+      "transfer": 6.731487825655812e-05,
+      "events": 1,
+      "mean_evolution": 5.482163120149216,
+      "mean_global": 5.482163120149216,
+      "mean_beam1": 5.482163120149216,
+      "mean_beam2": 5.482163120149216,
+      "mean_max_FSR": 5.482163120149216,
+      "fraction_global_above_evolution": 0.0
+    },
+    "H_0": {
+      "transfer": 0.00084310122,
+      "events": 1,
+      "mean_evolution": 64.8252240395388,
+      "mean_global": 64.82522403953888,
+      "mean_beam1": 64.82522403953888,
+      "mean_beam2": 64.82522403953888,
+      "mean_max_FSR": 64.82522403953888,
+      "fraction_global_above_evolution": 0.0
+    }
+  }
+}

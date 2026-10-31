@@ -1,5 +1,198 @@
 # MAcNLOPS from the generated measures
 
+## Native-history/global-IR validation: 31 October
+
+Fresh `delta_native_ir` / `mcatnlo-delta-native-ir-v1` samples contain
+**1,000,000 events each** for DY, gluon-fusion Higgs (HEFT), and stable ttbar.
+The native-history construction below applies the shared infrared damping
+before unweighting and continues H at its native matching scale.
+
+The setup is 13 TeV pp, NNPDF40_nlo_as_01180/0, DY mee > 60 GeV, mH = 125 GeV,
+and mt = 173 GeV. Seeds are 3220101/3220201/3220301. First emission uses
+alpha_s(MZ) = 0.1365 and continuation uses 0.118, both at one loop. Source
+backward-ISR corrections, MPI, hadronization, primordial kT, QED radiation,
+and top/Higgs decays are off. Pythia source and libraries are unchanged.
+
+H addition / S rejection in hard-system pT **5–20 GeV**:
+
+| Process | First emission, expected | First emission, realized | Full shower, realized |
+|---|---:|---:|---:|
+| DY | 1.0522 ± 0.0141 | 1.0402 ± 0.0193 | 1.0304 ± 0.0175 |
+| H | 0.9803 ± 0.0179 | 0.9728 ± 0.0247 | 0.9905 ± 0.0285 |
+| ttbar | 0.9774 ± 0.0119 | 0.9890 ± 0.0162 | 0.9637 ± 0.0150 |
+
+Higgs improves from the auxiliary-winner sample's full-shower ratio of
+1.1392 ± 0.0355. Its paired full-minus-first drift is +0.01772 ± 0.02142,
+versus +0.14280 ± 0.02662 previously; their difference is −0.12508 ± 0.03416.
+The Higgs mean starts are now S = 28.873 GeV and H = 28.533 GeV, compared
+with the previous H mean of 17.699 GeV. DY and ttbar drift changes are not
+statistically significant. The independent campaigns also change source
+damping, so this comparison alone is not a controlled causal test.
+
+All 3M inputs pass full showering in 150 jobs. Every emitted S scale equals
+its winning evolution scale; the 37 exhausted DY endpoints continue below
+the cutoff. All 411,812 H events have common positive caps, and all 74,525
+evaluated negative-H scales agree with native `t_c` to better than 1.1e−12.
+The 11,218 stock-Pythia imports/full continuations have zero global,
+production, or dipole scale errors and no above-cap emission. All 126
+pre-cleanup targeted tests pass. Source hashes identify the exact version
+used for these runs; later cleanup checks are recorded separately.
+
+The behavior-preserving cleanup passes **136** targeted tests. Its explicit
+history-support helper agrees with the validated rate-based eligibility in
+all **597,584** flavour trials over the 11,218 saved probe events, with no
+support, scale or status differences. The original source hashes remain
+unchanged; [cleanup validation](audits/macnlops_native_ir_1M_20261031/validation/cleanup_validation.json)
+records the later source and checks separately. The 1M-event samples were
+not regenerated for this cleanup.
+
+Cancellation remains imperfect: inclusive shifts are DY +0.04861%,
+H −0.01173%, and ttbar −0.55500%. ttbar full-shower ratios are
+0.93895 ± 0.00763 at 20–50 GeV and 0.93344 ± 0.00935 at 50–100 GeV;
+substantial deficits already exist before continuation. Quoted errors are
+conditional sampling estimates; channel integration and beta-normalization
+uncertainties are separate. These checks do not determine the remaining
+residuals' cause or establish exact transfer closure.
+
+The [report](audits/macnlops_native_ir_1M_20261031/report.txt),
+[first/full-shower plots](audits/macnlops_native_ir_1M_20261031/plots/hard_pt_run_1M_native_ir.pdf),
+[v4/winner/native comparison](audits/macnlops_native_ir_1M_20261031/plots/native_transfer_comparison.pdf),
+and [paired migration analysis](audits/macnlops_native_ir_1M_20261031/validation/migration_summary.json)
+are preserved with compact provenance. Complete events, logs, scripts and
+frozen sources remain at `/export/slow1/rikkert/macnlops_native_ir_1M_20261031`.
+
+The [historical winner report](audits/macnlops_winner_1M_20261031/report.txt)
+and [plots](audits/macnlops_winner_1M_20261031/plots/hard_pt_run_1M_winner.pdf)
+record the former `delta_winner` / `mcatnlo-delta-winner-v1` construction.
+That campaign exposed zero shower-PDF support, representative source-flavour,
+and no-Born-counterevent cap edge cases, whose fixes are retained. It does
+not validate the current source. The original-v4 ttbar shower also retained
+QEDByOther; winner and native samples disable it, so comparisons with
+original v4 include that configuration correction.
+
+## Native-history source with global infrared damping (`DeltaCommonScale`)
+
+Set `mcatnlo_delta=True` in the run card and `#DeltaCommonScale` to `.true.`
+in `SubProcesses/FKS_params.dat` **before integration and event generation**.
+The flag defaults to `.false.` to preserve the per-dipole source. It requires
+Pythia8, two incoming particles, and `ickkw=0`. Fresh source events carry
+`source="delta_native_ir"` and generation profiles identify
+`mcatnlo-delta-native-ir-v1`. The C API and local evaluator use source/damping
+mode 3; the internal writer source tag is 4. Legacy auxiliary-winner mode 2
+is rejected by the compiled evaluator. Reading archived winner events for
+inspection or collection does not make them compatible with the new source.
+Pythia source code and libraries are unchanged.
+
+Keep the native source component \(c\), including its FKS partition, recoil,
+Born chart and colour flow. Its continuation scale is
+\(t_c=\texttt{get_qMC}(\xi_c,y_c)\), the evolution scale used by the matching
+component and the corresponding S branching. In particular this uses the
+native global-recoil scale for final-state radiation; a different local
+inverse-dipole scale must not replace it. No auxiliary history is drawn.
+
+At a sampled source starting scale \(Q\), define
+\(\Delta_{\rm all}(\Phi_{B,c};Q,t)\) as the product of no-emission factors for
+**all** Born radiators down to one common lower scale \(t\). Each radiator
+retains its own allowed starting scale and contributes one if its start is
+already below \(t\). An old dead-zone mask reconstructed at a different
+stopping scale is not used to remove competing radiators. The factors reuse
+the existing Sudakov tables, grouped source PDF corrections and optional
+`DeltaBackwardISR` correction. Born dipole masses are used, with the opposite
+beam as ISR kinematic recoiler; gluon colour-end multiplicities are retained.
+
+Let \(\mathcal I_c(Q)\) contain the valid inverse singular reconstructions in
+the fixed native Born/flavour/colour context. Validity requires a connected
+Born colour line, a supported flavour/kinematic reconstruction, finite
+positive \(t_i\), and \(t_i\) no larger than that line's source start.
+`delta_history_scale` checks this support directly. There is no emission-rate
+prior, emission-PDF prior, or positive-PDF support gate. Gluon emission can
+use any certified connected radiator;
+emitted-quark candidates are restricted to the native radiator, whose
+flavour-changing Born map is known. Invalid, absent, wrong-flavour and
+kinematically dead sentinels do not supply zero-scale candidates.
+
+The source multiplier is the lower envelope
+
+\[
+ P_c(Q)=\min\!\left(1,
+       \left.\Delta_{\rm all}(\Phi_{B,c};Q,t_c)\right|_{c\ {\rm supported}},
+       \{\Delta_{\rm all}(\Phi_{B,c};Q,t_i):i\in\mathcal I_c(Q)\}\right).
+\]
+
+The prepared native component defines its own valid `get_qMC` reconstruction.
+Its factor is included whenever its Born radiator has a live colour-line
+start at or above \(t_c\); a local inverse-dipole reconstruction need not
+exist. A connected native radiator at \(t_c=0\) gives \(P_c=0\).
+The lower envelope uses the actual corrected probabilities without assuming
+that PDF-corrected tables are monotonic in their lower cutoff. When they are monotonic, it is
+simply the all-radiator Sudakov at the smallest included scale. Its approach
+to an infrared zero is continuous along a fixed valid history. In particular,
+if one genuine reconstruction has zero Sudakov while another remains finite,
+\(P_c=0\). This is a global source-damping prescription, not a conditional
+probability theorem or a reason to pick that zero-weight history for a
+surviving H event. At fixed resolved kinematics every included factor is
+\(1+O(\alpha_s)\), and the finite lower envelope has the same expansion.
+
+`compute_delta` inserts this deterministic \(P_c\) into `probne` before signed
+weight assembly and unweighting. The existing wrapper uses the **same** value
+in the real H/S split, raw MC terms and G replacements. Schematically,
+
+\[
+ H_c=(R_c-D_c)P_c,\qquad
+ S_c\supset D_cP_c+R_c(1-P_c),\qquad H_c+S_c\supset R_c.
+\]
+
+Thus a valid infrared zero removes the H contribution and puts its paired
+real/MC contribution into S. A separate factor must not be multiplied into
+the weight after choosing a continuation scale. Native signed partitions
+are retained; no global negative-part operation is introduced.
+
+Every surviving H event with finite positive \(t_c\), of either sign,
+receives \(t_c\) on all active directed H dipole caps, even if no local
+inverse-dipole history exists. Their maximum supplies the stock reader's
+global continuation scale. The outer flow owner retains its matrix. A point
+with neither supported native evolution nor any valid alternative inverse
+history has \(P_c=1\). The cap fallback
+`max(1.01,compute_pTparton(p))` is used only if \(t_c\) is nonpositive.
+A real H remainder without a passing Born counterevent never calls
+`compute_delta`; its initial positive dipole caps share their existing maximum. Zero stops and absent
+connections retain their meaning. Neither fallback changes the source weight.
+An emitted gluon whose energy is within 32 machine epsilons of the largest
+real-particle energy is handled separately as the numerical soft limit,
+\(P_c=0\), rather than as an unsupported hard remainder. The source table
+continuation is exactly zero at or below 0.5 GeV and joins the fitted tables
+smoothly between 0.5 and 1.01 GeV. This table continuation is part of the
+source prescription, rather than an identity for a shower with a finite
+physical cutoff.
+
+The v4 matcher recomputes the same \(P_c(Q)\) at every quadrature node of the
+scalar source starting-scale law. Its source average
+\(A_c=\int dQ\,\rho_c(Q)P_c(Q)\) is unconditional, including unsupported
+nodes with unit factor. The source uses generation's representative real
+flavour IDs for its grouped Born convention; the competing-shower denominator
+keeps the resolved physical flavours and remains conditional on \(Q>t_c\).
+The starting-scale CDF is counted once. The shared transfer remains
+\(T_c=\min(C_cA_c,F_c)\), as in the per-dipole v4 construction below.
+
+The former auxiliary-winner source used
+\(P_c=\sum_i a_{ci}\Delta_{ci}\) and separately drew an H continuation history
+with probability \(a_{ci}\Delta_{ci}/P_c\). The matching transfer was still
+paired to the original native component \(c\). Consequently, removed H
+continued as \(T_c\sum_i\pi_{ci}U(t_i)\), while vetoed S continued as
+\(T_cU(t_c)\). Their integrals could nearly cancel before showering but their
+conditional continuation laws differed. Keeping \(c\) and \(t_c\) removes
+that extra continuation mixture. It also avoids using alternative ISR
+histories with Born momentum fractions inconsistent with the fixed source
+Born state. A bare AP kernel is not, by itself, the cause of that mismatch.
+
+This change does not prove exact full-shower cancellation. The bounded v4
+transfer, channel-average S/B approximation, source tables/PDF convention,
+resolved shower kernel, and matching/recoil approximations remain. The global
+infrared lower envelope is a deliberate source-damping choice; the supported
+inverse scales are not claimed to form a complete exact shower-history
+posterior. The validation above records both the improvement and the remaining
+statistical limitations of this source.
+
 ## Continuation-scale audit: 31 October
 
 The full-shower cancellation audit finds no error in exporting the S-event

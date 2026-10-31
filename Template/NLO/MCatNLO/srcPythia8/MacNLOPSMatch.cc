@@ -11,6 +11,7 @@
 
 extern "C" {
 void macnlops_c_setup(int* nlegs, char* registry);
+void macnlops_c_source_mode(int* mode);
 void macnlops_c_profile(double* cutoffs, double* xmax, double* masses, int* flavours);
 void macnlops_c_configure(double* xmax, double* isr, double* fsr);
 void macnlops_c_density(int owner, const int* ids, const double* lab, int config,
@@ -190,7 +191,7 @@ struct RouteTable {
 
 struct ComponentPacket {
   std::string registry;
-  int sector = 0, config = 0, graph = 0, flow = 0;
+  int sector = 0, config = 0, graph = 0, flow = 0, damping = 1;
   double flowProbability = 0., insertion = 0., sourceFactor = 0., symmetry = 0.;
 };
 
@@ -198,7 +199,7 @@ struct ComponentPacket {
 ComponentPacket componentPacket(const InputEvent& input) {
   const auto block = sourceXMLBlock(input.extra, "macnlops_component");
   if (!block.present || !input.hasHard || input.hardPartition != "sampled" ||
-      input.hardSource != "delta")
+      (input.hardSource != "delta" && input.hardSource != "delta_native_ir"))
     throw std::runtime_error("The first-emission program requires sampled MC@NLO-Delta "
                              "sources with component packets");
   std::istringstream rows(block.contents);
@@ -209,6 +210,7 @@ ComponentPacket componentPacket(const InputEvent& input) {
   const auto labels = fields(data[0], 4, "sampled-component labels");
   const auto weights = fields(data[1], 4, "sampled-component weights");
   ComponentPacket c;
+  c.damping = input.hardSource == "delta_native_ir" ? 3 : 1;
   c.registry = block.attributes.at("registry");
   c.sector = integer(labels[0]); c.config = integer(labels[1]);
   c.graph = integer(labels[2]); c.flow = integer(labels[3]);
@@ -277,7 +279,7 @@ Density evaluate(const std::vector<LHEParticle>& legs, int sector, const Compone
   Density x;
   int status = 1;
   macnlops_c_sudakov_request(sudakov ? 1 : 0, pt);
-  macnlops_c_density(sector, ids.data(), lab.data(), config, graph, flow, 1, c.symmetry,
+  macnlops_c_density(sector, ids.data(), lab.data(), config, graph, flow, c.damping, c.symmetry,
     born ? 1 : 0, bornIds.data(), bornColours.data(), bornLab.data(), bornMasses.data(),
     &x.r, &x.d, &x.k, &x.alphaK, x.q2fact, &status);
   if (status == 23)
@@ -680,9 +682,13 @@ double showerMarginal(const Context& c, const SudakovProfile& p) {
 double sudakovAcceptance(const Density& x, double scale, double ps, bool hard) {
   const double u=std::max(x.d-x.r,0.), source=x.sudakov.source;
   if (u==0. || x.k<=0. || source<=0.) return 1.;
-  if (!(scale>0.) || !std::isfinite(scale) || !std::isfinite(ps) || ps<0.)
+  if (!std::isfinite(scale) || scale<0. || !std::isfinite(ps) || ps<0.)
     throw std::runtime_error("Invalid Sudakov transfer density");
-  if (ps==0.) return hard ? 1. : 0.;
+  // A source hard remainder can exist where the resolved shower PDF is
+  // zero. Then F=0 and the common transfer T=min(C*A,F) vanishes: retain H.
+  // The S value is the F->0+ saturated limit; an actual zero-scale S
+  // denominator is already rejected by sAcceptance before reaching here.
+  if (scale==0. || ps==0.) return hard ? 1. : 0.;
   const double logC=std::log(std::min(u,x.k));
   const double logH=std::log(source), logS=std::log(x.k)+std::log(scale)+std::log(ps);
   const double rejection=hard ? std::exp(std::min(logC-std::log(u),logS-logH-std::log(u)))
@@ -1033,8 +1039,13 @@ int main(int argc, char** argv) {
     if (m.seed < 1 || m.seed > 900000000)
       throw std::runtime_error("Seed must be in [1,900000000]");
     int nlegs = 0;
+    int sourceMode = 0;
     char registry[64];
     macnlops_c_setup(&nlegs, registry);
+    macnlops_c_source_mode(&sourceMode);
+    if (sourceMode != 1 && sourceMode != 3)
+      throw std::runtime_error("First emission requires a compiled MC@NLO-Delta source");
+    const std::string expectedSource = sourceMode == 3 ? "delta_native_ir" : "delta";
     c.routes.read(m.routes);
     if (c.routes.registry != std::string(registry, 64) || c.routes.nexternal != nlegs)
       throw std::runtime_error("Route table does not describe this directory's densities");
@@ -1098,6 +1109,8 @@ int main(int argc, char** argv) {
       output << (header ? input.prefix : matchedPreamble(input.prefix, m.dropRejected, m.pdfCorrection, m.sudakovCorrection, c.cutoffs));
       header = true;
       const int kind = input.kind;
+      if (!input.hasHard || input.hardSource != expectedSource)
+        throw std::runtime_error("Source Sudakov policy differs from the compiled evaluator");
       if (kind != 1 && kind != 2) throw std::runtime_error("Missing #aMCatNLO S/H event kind");
       if (input.hasHard && kind != input.hardMetadata[1])
         throw std::runtime_error("S/H kind conflicts with hard-event annotation");

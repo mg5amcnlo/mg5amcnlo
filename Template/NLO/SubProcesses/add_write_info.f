@@ -8,7 +8,7 @@ c intermediate resonances. It also boosts the events to the lab frame
       use process_module
       use scale_module
       use FKSParams, only: MCExplicitKLSum,MCSubtractionAtFixedFlow,
-     $     FKSExplicitSum
+     $     FKSExplicitSum,delta_common_scale
       use weight_lines, only: icontr_picked,native_ids,nFKS,
      $     group_size,event_owner,icontr,iproc_picked,H_event,
      $     momenta,ifold_cnt,group_flavour_complete,delta_line_context,
@@ -467,6 +467,7 @@ c and before auxiliary resonance records alter their mother labels.
          hard_meta(14)=merge(1,0,macnlops.and.
      $        macnlops_resolved_source)
          if(mcatnlo_delta)hard_meta(14)=2
+         if(mcatnlo_delta.and.delta_common_scale)hard_meta(14)=4
          if(allocated(nFKS))then
             if(icontr_picked.ge.1.and.
      $         icontr_picked.le.size(nFKS))then

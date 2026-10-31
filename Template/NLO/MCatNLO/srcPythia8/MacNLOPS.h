@@ -39,6 +39,10 @@ bool eventStart(const std::string& line) {
     (s[6] == '>' || s[6] == ' ' || s[6] == '\t');
 }
 
+bool isDeltaSource(const std::string& source) {
+  return source == "delta" || source == "delta_winner" || source == "delta_native_ir";
+}
+
 double number(std::string s) {
   std::replace(s.begin(), s.end(), 'D', 'E');
   std::replace(s.begin(), s.end(), 'd', 'e');
@@ -215,7 +219,7 @@ struct InputEvent {
             attributes.at("frame") != "lab")
           throw std::runtime_error("Unsupported hard-event annotation schema");
         hardSource = attributes.at("source"); hardPartition = attributes.at("partition");
-        if ((hardSource != "ordinary" && hardSource != "resolved" && hardSource != "delta") ||
+        if ((hardSource != "ordinary" && hardSource != "resolved" && !isDeltaSource(hardSource)) ||
             (hardPartition != "sampled" && hardPartition != "global_sum"))
           throw std::runtime_error("Invalid hard-event partition metadata");
         if (!std::getline(input, line)) throw std::runtime_error("Truncated hard-event annotation");
@@ -354,7 +358,7 @@ void prepareSourceMatching(InputEvent& input, bool delta) {
     throw std::runtime_error("Negative LHE shower scale");
   if (input.hasEndpoint || sourceXMLBlock(input.extra, "macnlops_continuation").present)
     throw std::runtime_error("Derived endpoint requires shower continuation; do not repeat first-emission matching");
-  if (input.hasHard && ((input.hardSource == "delta") != delta))
+  if (input.hasHard && isDeltaSource(input.hardSource) != delta)
     throw std::runtime_error("Source matching mode conflicts with hard-event annotation");
   const auto scales = sourceXMLBlock(input.extra, "scales");
   const auto context = sourceXMLBlock(input.extra, "macnlops_delta_context");

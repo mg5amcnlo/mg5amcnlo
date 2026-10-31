@@ -14,6 +14,7 @@ module mcatnlo_delta_scales
   integer, parameter, public :: dp = selected_real_kind(15,307)
   integer, parameter, public :: delta_ok = 0, delta_bad_input = 1, delta_numerical = 2
   public :: delta_scale_matrices, pythia_pt_lund, pythia8_starting_scales
+  public :: delta_history_scale
 
 contains
 
@@ -94,7 +95,7 @@ contains
   ! w_parent_mass is only relevant when abs(id_emt)==24; the QCD matrix
   ! routine never uses that branch. It corresponds to m0(idRadBef).
   subroutine pythia_pt_lund(pr, pe, pk, id_rad, id_emt, rad_final, rec_final, &
-                            charm_mass, bottom_mass, t, status, w_parent_mass)
+                            charm_mass, bottom_mass, t, status, w_parent_mass, z_out)
     real(dp), intent(in) :: pr(0:3), pe(0:3), pk(0:3)
     integer, intent(in) :: id_rad, id_emt
     logical, intent(in) :: rad_final, rec_final
@@ -102,12 +103,14 @@ contains
     real(dp), intent(out) :: t
     integer, intent(out) :: status
     real(dp), intent(in), optional :: w_parent_mass
+    real(dp), intent(out), optional :: z_out
     real(dp) :: q(0:3), r(0:3), total(0:3), qsq, mr2, me2, mb2
     real(dp) :: mfinal2, mar2, ratio, mdip2, x1, x2, qbr2, qar2
     real(dp) :: discriminant, lambda13, k1, k3, z, pt2, mh2
 
     status = delta_ok
     t = 0._dp
+    if (present(z_out)) z_out = -1._dp
     if (.not.all(abs(pr) <= huge(1._dp)) .or. &
         .not.all(abs(pe) <= huge(1._dp)) .or. &
         .not.all(abs(pk) <= huge(1._dp))) then
@@ -128,6 +131,21 @@ contains
     end if
     if (abs(qsq) < 1.e-6_dp) then
       t = 1.e-6_dp
+      ! Preserve the native scale sentinel, but do not lose the singular
+      ! splitting from a singular reconstruction. Direct fractions below divide
+      ! tiny virtualities by one another in exactly collinear kinematics.
+      ! Their limiting values instead follow from the spectator invariants.
+      if (present(z_out)) then
+        if (rad_final) then
+          ratio = dot4(pr+pe,pk)
+          if (ratio /= 0._dp) z_out = dot4(pr,pk)/ratio
+        else
+          total = pr+pk
+          ratio = dot4(total,total)
+          if (ratio /= 0._dp) z_out = 1._dp- &
+              (2._dp*dot4(pe,total)-dot4(pe,pe))/ratio
+        end if
+      end if
       return
     end if
 
@@ -212,6 +230,8 @@ contains
       if (pt2 < 2._dp*mh2) pt2 = (qsq+mh2)*(1._dp-qbr2/qar2)
     end if
 
+    if (present(z_out)) z_out = z
+
     if (pt2 < 0._dp) then
       t = 1.e-6_dp
     else if (pt2 <= huge(1._dp)) then
@@ -220,6 +240,42 @@ contains
       status = delta_numerical
     end if
   end subroutine pythia_pt_lund
+
+  ! Scale and support of a singular reconstruction on the fixed Born state.
+  ! id_born is the incoming daughter for ISR and outgoing parent for FSR.
+  ! A valid scale alone does not certify the required flavour crossing.
+  ! Return the scale helper's status even when the history is unsupported;
+  ! no emission-rate or PDF prior enters this source-damping decision.
+  subroutine delta_history_scale(pr, pe, pk, id_rad, id_emt, id_born, &
+                                 rad_final, rec_final, charm_mass, bottom_mass, &
+                                 t, supported, status)
+    real(dp), intent(in) :: pr(0:3), pe(0:3), pk(0:3)
+    integer, intent(in) :: id_rad, id_emt, id_born
+    logical, intent(in) :: rad_final, rec_final
+    real(dp), intent(in) :: charm_mass, bottom_mass
+    real(dp), intent(out) :: t
+    logical, intent(out) :: supported
+    integer, intent(out) :: status
+    real(dp) :: z
+
+    supported = .false.
+    call pythia_pt_lund(pr,pe,pk,id_rad,id_emt,rad_final,rec_final, &
+                        charm_mass,bottom_mass,t,status,z_out=z)
+    if (status /= delta_ok) return
+    if (.not.qcd_parton(id_rad) .or. .not.qcd_parton(id_emt) .or. &
+        .not.qcd_parton(id_born)) return
+    if (.not.(t > 0._dp .and. t < 1.e10_dp .and. z > 0._dp .and. z < 1._dp)) return
+    if (id_emt == 21 .and. id_rad == id_born) then
+      supported = .true.
+    else if (rad_final) then
+      supported = (id_born == 21 .and. id_rad == -id_emt) .or. &
+                  (id_rad == 21 .and. id_born == id_emt)
+    else
+      ! Cross the emitted final quark when identifying the Born daughter.
+      supported = (id_rad == 21 .and. id_born == -id_emt) .or. &
+                  (id_born == 21 .and. id_rad == id_emt)
+    end if
+  end subroutine delta_history_scale
 
   ! Born colour tags are in Born order (real order with emitted removed).
   ! Return arrays use MG5's real labels: 1..nreal inside zero-based buffers.

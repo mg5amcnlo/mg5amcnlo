@@ -1,0 +1,15 @@
+test_delta_free_density_retains_the_required_signed_h_residual (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_delta_free_density_retains_the_required_signed_h_residual) ... ok
+test_h_request_uses_exact_source_basis_and_undamped_delta_without_replay (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_h_request_uses_exact_source_basis_and_undamped_delta_without_replay) ... ok
+test_invalid_or_incomplete_component_cannot_select_a_native_density (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_invalid_or_incomplete_component_cannot_select_a_native_density) ... ok
+test_legacy_winner_component_requires_its_archived_evaluator (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_legacy_winner_component_requires_its_archived_evaluator) ... ok
+test_ordinary_local_mode_keeps_the_native_bogus_profile (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_ordinary_local_mode_keeps_the_native_bogus_profile) ... ok
+test_orientation_mark_uses_physical_kernels_and_never_zero_kernel (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_orientation_mark_uses_physical_kernels_and_never_zero_kernel) ... ok
+test_qualified_packet_and_hard_colour_topology (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_qualified_packet_and_hard_colour_topology) ... ok
+test_saved_s_branch_overrides_integration_owner_and_carries_actual_born (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_saved_s_branch_overrides_integration_owner_and_carries_actual_born) ... ok
+test_signed_pdf_orientation_mark_keeps_physical_signs (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_signed_pdf_orientation_mark_keeps_physical_signs) ... ok
+test_source_contract_requires_component_and_separates_old_global_source (tests.unit_tests.various.test_macnlops_component_protocol.TestComponentProtocol.test_source_contract_requires_component_and_separates_old_global_source) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.054s
+
+OK

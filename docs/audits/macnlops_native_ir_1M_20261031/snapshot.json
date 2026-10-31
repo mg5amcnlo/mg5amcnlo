@@ -1,0 +1,443 @@
+{
+  "archive_cleanup": {
+    "date_utc": "2026-10-31T12:49:02.252140+00:00",
+    "external_campaign_data_deleted": false,
+    "reason": "Remove repository duplicates; preserve compact results and unchanged historical production hashes.",
+    "removed_bytes": 3803590,
+    "removed_files": 61
+  },
+  "archived_files": {
+    "inputs/DY/macnlops_first_emission.json": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/processes/DY_5FS/Events/run_1M_native_ir/macnlops_first_emission.json",
+      "sha256": "87d2dc0c845af0e4d0ff2b290b26b69cba7781e28299a549bbd3e9f58d343b6d"
+    },
+    "inputs/H/macnlops_first_emission.json": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/processes/Higgs_HEFT_5FS/Events/run_1M_native_ir/macnlops_first_emission.json",
+      "sha256": "17bddad422bf8865ceef8bc55ea805a91f9097733a6ad877feba639d014c3aeb"
+    },
+    "inputs/ttbar/macnlops_first_emission.json": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/processes/TTbar_5FS/Events/run_1M_native_ir/macnlops_first_emission.json",
+      "sha256": "e1898e363efa93437a72f6f37055a91659a97c96e6681c5767661cb2f4522fea"
+    },
+    "logs/DY_export.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/DY_export.log",
+      "sha256": "4af8453c72939ae90e76078c0d05925b44491a13f896a790f7fb93e87837d115"
+    },
+    "logs/DY_native_probe.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/DY_native_probe.log",
+      "sha256": "1189f0f9d2578ee4e142c34b98a06dc9d392c2e6d577f1e67c77bddcd6e2ac35"
+    },
+    "logs/DY_run_1M_native_ir_generate.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/DY_run_1M_native_ir_generate.log",
+      "sha256": "128bbd46849ec0c3d51d9512d3a1b260d0019b85912648b92a85af50deb2b254"
+    },
+    "logs/DY_run_1M_native_ir_shower.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/DY_run_1M_native_ir_shower.log",
+      "sha256": "a0646d66cc1fb2009f13a4d2f639ed33bd9301666e023d594bbab9aef6fdcd99"
+    },
+    "logs/DY_scale_scan.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/DY_scale_scan.log",
+      "sha256": "d5bb9e4e06fe5cc0929d55f030620acf508999ca97ba375f136225cdecefa853"
+    },
+    "logs/DY_validation.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/DY_validation.log",
+      "sha256": "bf1a106feac55957264f204e88643192e51159f277518a4241ec94995cdf591c"
+    },
+    "logs/DY_workflow.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/DY_workflow.log",
+      "sha256": "d0ac3d7b5c0a65d3a030d1e1b79cf92c7cc92dac0d16e9871050d2c820b91fb5"
+    },
+    "logs/H_export.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/H_export.log",
+      "sha256": "05da1d79ae3bf1fd9be4a3b93fd51272efa35faf1e28687c9181ba326b01343c"
+    },
+    "logs/H_native_probe.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/H_native_probe.log",
+      "sha256": "fd1a7271c9fbd5a3eb8a91271bcdf439def8a8fd0c8829fcc38225e3756bacec"
+    },
+    "logs/H_run_1M_native_ir_generate.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/H_run_1M_native_ir_generate.log",
+      "sha256": "e4d84995ab599e1d43cffd45c33f1f8349144fa42fff146fe2380230969d205f"
+    },
+    "logs/H_run_1M_native_ir_shower.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/H_run_1M_native_ir_shower.log",
+      "sha256": "9826e6bd7929404f393a9f898fc7400efb86d003ee9e4b3838e9e91e98c5332f"
+    },
+    "logs/H_scale_scan.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/H_scale_scan.log",
+      "sha256": "0a507e6b5e5dab19cbbee4ef3d1b558dd64d17662a69d6664a96f419c85c279c"
+    },
+    "logs/H_validation.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/H_validation.log",
+      "sha256": "86e1f375cd7c7aafd969cbdc91027dbc38413f2c7eefaf05e9ed8f5096108563"
+    },
+    "logs/H_workflow.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/H_workflow.log",
+      "sha256": "9c18cdc27e61897ea6740b56f53083d2add90df0e0a8001bf2988b9e5608f485"
+    },
+    "logs/comparison.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/comparison.log",
+      "sha256": "2b60b6f223940f8fdc9011f0a0bd0565ed0f8356df358362c02b69f99c571df7"
+    },
+    "logs/core_tests.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/core_tests.log",
+      "sha256": "2b637bd4ba4ea5399edae494d1bb7733bb792d50952ec2a5427f0300134b4b64"
+    },
+    "logs/migration.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/migration.log",
+      "sha256": "58f86408e697d24e9010eb9abd4e1b6c197d5a6a16c70479321cf22289f75016"
+    },
+    "logs/plots.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/plots.log",
+      "sha256": "efcbbbf0c5e390afbd90e8731d432846d40c26efcc33809acb92d5abe3d92f88"
+    },
+    "logs/ranges.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/ranges.log",
+      "sha256": "4ddf44bc4412dc495e24df5bf08cfb450bb0025abb96e0c495dca0e834e10ce4"
+    },
+    "logs/report.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/report.log",
+      "sha256": "b29eeb60228492bc9439192cdb9928bfc1b6fa585028fad81989694b04b27348"
+    },
+    "logs/runtime_tests.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/runtime_tests.log",
+      "sha256": "443ab12e62c4b194569930eb27e446ef697a39c3f658b1d3d1a2ee390a10e93f"
+    },
+    "logs/ttbar_export.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/ttbar_export.log",
+      "sha256": "a4131b0534f3c086388d92174da5c0dd51645ece030318da85746d93b8bba625"
+    },
+    "logs/ttbar_native_probe.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/ttbar_native_probe.log",
+      "sha256": "7419e8cf45e99763d9154b39dbb51cd729528b29852c1067258d68e28a80855e"
+    },
+    "logs/ttbar_run_1M_native_ir_generate.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/ttbar_run_1M_native_ir_generate.log",
+      "sha256": "19c8bc2b9a891f7a3fa7c967ef7cd000bc627e31de7ca28056656567c12209bc"
+    },
+    "logs/ttbar_run_1M_native_ir_shower.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/ttbar_run_1M_native_ir_shower.log",
+      "sha256": "8d90cc480da48078c3da81e77336ac8c80f34d6829585b1724bd941e5ce47648"
+    },
+    "logs/ttbar_scale_scan.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/ttbar_scale_scan.log",
+      "sha256": "85d38851170e5868dde9cfcc56de4fe94e4c4dc988567a935393219e339df2e2"
+    },
+    "logs/ttbar_validation.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/ttbar_validation.log",
+      "sha256": "7bfb768640c12aa83cae5e3368b8606919fe97ddaa37053463ba0100b0ac3d7b"
+    },
+    "logs/ttbar_workflow.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/logs/ttbar_workflow.log",
+      "sha256": "efd290afe3c03a7f9842e1e6d36bfee58848c8679f8a35d82b446bafd3dcc47b"
+    },
+    "plots/hard_pt_run_1M_native_ir_DY.png": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/plots/hard_pt_run_1M_native_ir_DY.png",
+      "sha256": "a29c244007ae062f538398795d7a96e797bad863b8a781aaca08041c6f6537f9"
+    },
+    "plots/hard_pt_run_1M_native_ir_H.png": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/plots/hard_pt_run_1M_native_ir_H.png",
+      "sha256": "01f31aad14efaa11f4ab17440fb42f023965b06e3595c606a0eb91d96465a0f5"
+    },
+    "plots/hard_pt_run_1M_native_ir_ttbar.png": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/plots/hard_pt_run_1M_native_ir_ttbar.png",
+      "sha256": "dc891300e93af5b0f579462587b5ae98380bf8ad14ca44489b8b5b15ebf50f85"
+    },
+    "plots/native_transfer_comparison_DY.png": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/plots/native_transfer_comparison_DY.png",
+      "sha256": "46db03d1775c677d957a5161d83b946f09aa3b306a339318fa8649e5e6740ba2"
+    },
+    "plots/native_transfer_comparison_H.png": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/plots/native_transfer_comparison_H.png",
+      "sha256": "f92d444c2374ac3e2518ef7c008b73e72b410980394cee0e2d028308458ced99"
+    },
+    "plots/native_transfer_comparison_ttbar.png": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/plots/native_transfer_comparison_ttbar.png",
+      "sha256": "4bce88155d7923a7d0a8cf547271947ad0f906654efa0ada6ad15e4bb05bb53c"
+    },
+    "scale_audit/DY_native.csv": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/scale_audit/DY_native.csv",
+      "sha256": "f1adc4228bde76c1de313993f18b0ba0536d7b6a140483a09748f6bba1f40b86"
+    },
+    "scale_audit/H_native.csv": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/scale_audit/H_native.csv",
+      "sha256": "9427a877a58a2f4756631776b26a878295a5679711a9a9da6b26aae39ecea748"
+    },
+    "scale_audit/ttbar_native.csv": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/scale_audit/ttbar_native.csv",
+      "sha256": "4d57b80c397b0dac53634f918fbc3ed42b75483ce543d40a9d309960b1d15b0f"
+    },
+    "scripts/analyse_migration.py": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/analyse_migration.py",
+      "sha256": "91de240e0c4db3ea6938b008b55dcdb61953087e34e8776c7438071eecea8445"
+    },
+    "scripts/analyse_native.py": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/analyse_native.py",
+      "sha256": "9c6cb112f6ec72e8eaf9825fe82cd1b064719c9ff4970b7dd2de1571286f1c47"
+    },
+    "scripts/analyse_winner.py": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/analyse_winner.py",
+      "sha256": "3461de98b5c59eb9d7960c7bd0b7eab797d11d24a6e882b0095979a9d6615082"
+    },
+    "scripts/build_report.py": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/build_report.py",
+      "sha256": "6e6d0d6c127e51f34a7791dda9b77441188cef9dc0797cf5f1b6b3e0019b2325"
+    },
+    "scripts/check_production.py": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/check_production.py",
+      "sha256": "b973a4c3eb825ca5bf7eb631e2e4200f43b0cd8baa9a9627826099c8e83d0489"
+    },
+    "scripts/diag_weights.py": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/diag_weights.py",
+      "sha256": "3526c94b56b972450a70dc078ded11222f557857b3cfb309552e84251ab1835a"
+    },
+    "scripts/plot_hard_pt.py": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/plot_hard_pt.py",
+      "sha256": "8f1c3294f910d1a5b2ec4a0cf615f636732cffd32cd53927b50facd685113f6a"
+    },
+    "scripts/py.py": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/py.py",
+      "sha256": "99ba332c677f18b4eb6283ebdc987ab2dffdd33210e22d6b2e2ea132a9d1af9a"
+    },
+    "scripts/py8an_HwU_hardsystem.f": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/analysis/py8an_HwU_hardsystem.f",
+      "sha256": "d867ef72102ce33f8e5d7d8b1af7bf0b38e79a4d109f12fe83d2de617fc8819d"
+    },
+    "scripts/range_ratios.py": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/range_ratios.py",
+      "sha256": "5ab643d60f6e08f7c33876f41722674133319a909cddb2a5ea547f69ca1bad0e"
+    },
+    "scripts/resume_first_emission.py": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/resume_first_emission.py",
+      "sha256": "826f2ba340f39324592d67b4e3e6c36f34ceebf13e544b39c83d877c3da55d60"
+    },
+    "scripts/run_1M.py": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/run_1M.py",
+      "sha256": "d09530f4dd9bed5531c92e128430636f337ce1341a68a48b09d0b0fe75f49f65"
+    },
+    "scripts/scan_scales.py": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/scan_scales.py",
+      "sha256": "53e6a16e526721deb22a32a7600f97358dda64b19b8526aa8e5bdc0ebc988089"
+    },
+    "scripts/validate_events.py": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/validate_events.py",
+      "sha256": "607a9e72009d225109c84d88d35ee9841d400baf510da1cf485a206349943476"
+    },
+    "validation/DY_export_sources.json": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/validation/DY_export_sources.json",
+      "sha256": "f0d7b54d548980a40dcb655eb7587105c9e96b17d7bbdd3240a20d5439749d90"
+    },
+    "validation/DY_full_counts.json": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/validation/DY_full_counts.json",
+      "sha256": "dd959a58a8c9c30182cf32c73851d3a821f3d96c0cf369173c6bf411857ee7b0"
+    },
+    "validation/DY_worker_result.json": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/validation/DY_worker_result.json",
+      "sha256": "302abeb6f7a385e7fa4c442bfa69b18969c28647a9e43678d6d4287694342a23"
+    },
+    "validation/H_export_checks.json": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/validation/H_export_checks.json",
+      "sha256": "670eae765b82ebc1ded4077c9b02d4fc00fe4812d155d40d9bef61c1e4b5454c"
+    },
+    "validation/H_worker_summary.json": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/validation/H_worker_summary.json",
+      "sha256": "15c91ae1bdfc4e54375dda0dc2e3be395c3518d21e946d57a6ca3d9061b256f5"
+    },
+    "validation/source_state.tar.gz": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/validation/source_state.tar.gz",
+      "sha256": "eaaa8e6b8603bfd71fc5d4040ad8348104d5f5408594f9a22d326ed6be681842"
+    },
+    "validation/ttbar_worker_result.json": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/validation/ttbar_worker_result.json",
+      "sha256": "034faa555f48ed4af1d681ada66e72df0ae63792c4f070c3236e3cc4e2834618"
+    }
+  },
+  "archived_snapshot": {
+    "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/validation/repository_snapshot_before_cleanup.json",
+    "sha256": "5ffb3a3c0abf33a6ba70f782de6c4f446ace75ecdc48f8677ae6598cc727a9e7"
+  },
+  "compressed_files": {
+    "validation/source_changes.patch": {
+      "compressed_path": "validation/source_changes.patch.gz",
+      "compressed_sha256": "1911550e2ca59d448e17a21133a89ebca1bc7bee102b19e91bd93122a390f5e6",
+      "compression": "gzip with mtime=0 and empty filename",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/validation/source_changes.patch",
+      "sha256": "d4f86d8376a53f2eaf98b1ba8f3765c18f93db11cbe1d7541ef1865c259e149b"
+    }
+  },
+  "created_utc": "2026-10-31T12:37:22.197906+00:00",
+  "derived_files": {
+    "validation/scale_summary.json": {
+      "change": "Replace embedded written-scale audit copies with references, event counts and state counts.",
+      "compact_sha256": "0a406a4feaa420261b934dae0108e9c181fbd643a2db48aa050f02cd17b9d887",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/validation/scale_summary.json",
+      "sha256": "efba577a04b4ea703d3fd0f5c9ce3cd5f4e69eae436a3fd0884d406e81927ef7"
+    },
+    "validation/summary.json": {
+      "change": "Keep all scalar results; replace duplicated comparison and migration trees with references.",
+      "compact_sha256": "fa78a1ef9dc9151f299e7e74c632f853dd68fac7a108f8132f480eb63e669728",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/validation/summary.json",
+      "sha256": "1bfe1b6a9911868df4485b936795a6087efa03441ade6e917d618cb0942d4ad9"
+    }
+  },
+  "files_sha256": {
+    "README.txt": "75f730d5259458f8b935b1c20f838a7fd484d45fa18a35abc237e2a48d5e48cd",
+    "inputs/DY/FKS_params.dat": "24f460082c81127a53c7de6b10bc0807a58b8af7bd5f9afd90158c7fa7a49006",
+    "inputs/DY/Pythia8.cmd": "a44b46eb49bc5d3585cb2e27738ff9d8cc220fd0fdc03eebb25897d4daabd9b7",
+    "inputs/DY/macnlops_profile.json": "f5b2383acb1eab369cfd1d0b25c535b9e9ee31472c243b810e8ec70ef74e83af",
+    "inputs/DY/param_card.dat": "4abd41508a7497fc08dbab277e248f94f7842442835593a151e56888f2be3dc9",
+    "inputs/DY/proc_card_mg5.dat": "09503409557102a3f968f3d1e5f61a1b3b14f2bbaf15a6649e033f0750f1a95c",
+    "inputs/DY/run_card.dat": "5db6d75570fb9ce4cf0185c9d731c031c8fc669335d1e714403ed625617f9e04",
+    "inputs/DY/shower_card.dat": "5a275c4186193e219ec0165a3f83a02ec9e0183d34886096a6c5cc5286ae2833",
+    "inputs/H/FKS_params.dat": "24f460082c81127a53c7de6b10bc0807a58b8af7bd5f9afd90158c7fa7a49006",
+    "inputs/H/Pythia8.cmd": "e94fb248f5127ef28431da4ecaa6f351705af7fc7d98d259f3938ebf88574b4e",
+    "inputs/H/macnlops_profile.json": "fd954dcee0eabf1bc5a6604ed846cc3b83b763b64b5e2b93858c4c0c77b1cf4a",
+    "inputs/H/param_card.dat": "1f44d54b7157e824f9d37ffcbd542ea62a792074aed43a38dca7ee2dcc1ace01",
+    "inputs/H/proc_card_mg5.dat": "86773029d9a630450a77fa079667fd5f32478b32c892dc1319acb94a2997d0a4",
+    "inputs/H/run_card.dat": "e9059764f4aa2c71526db5e49cb0c68cee501ac22d6f8b70e64b7e2c6af3f97e",
+    "inputs/H/shower_card.dat": "5a275c4186193e219ec0165a3f83a02ec9e0183d34886096a6c5cc5286ae2833",
+    "inputs/ttbar/FKS_params.dat": "24f460082c81127a53c7de6b10bc0807a58b8af7bd5f9afd90158c7fa7a49006",
+    "inputs/ttbar/Pythia8.cmd": "a44b46eb49bc5d3585cb2e27738ff9d8cc220fd0fdc03eebb25897d4daabd9b7",
+    "inputs/ttbar/macnlops_profile.json": "dbccb808214be64fb5d6b1b9619d2bd46d542faf44391e9ada5416334f976b0d",
+    "inputs/ttbar/param_card.dat": "4abd41508a7497fc08dbab277e248f94f7842442835593a151e56888f2be3dc9",
+    "inputs/ttbar/proc_card_mg5.dat": "e7833995af1d3eaf3c7ec09351001551e59e145e415ddf6016875a50a33f5391",
+    "inputs/ttbar/run_card.dat": "b99728e87bd0cab918d07d1d8c9e0fcb25d1942d257f2a4ef35a6cfb93a49aac",
+    "inputs/ttbar/shower_card.dat": "5a275c4186193e219ec0165a3f83a02ec9e0183d34886096a6c5cc5286ae2833",
+    "logs/cleanup_component_protocol_tests.txt": "b294db8047103fda32a41c708c2814ebb533c58d86cd6c34975c495a09056752",
+    "logs/cleanup_regression_tests.txt": "b1c7c5c5384bc0edbb3cfa52c19c3fba910ef2aa640afc57f036e02ad6315e99",
+    "logs/regression_tests.txt": "119149f6285e95ebae0f47ac0aee254e4ae0c21e8b1c30d9261181f09c7059d6",
+    "plots/hard_pt_1M_ranges.json": "d3d8a7cad0d72ebdc0ac1d2a5d5d53cf3c73bdd85918b9a4d8a35ad2830562a7",
+    "plots/hard_pt_run_1M_native_ir.json": "4630f73383956e405ca215d692483f003679317e5aa9917ac253b7d6edadb03a",
+    "plots/hard_pt_run_1M_native_ir.pdf": "28baaf02230961017634f75812f019b2270e9ea9c4d3ba5d420334ce8b573142",
+    "plots/native_transfer_comparison.json": "4f4b67667af32375ccf74b4e3344ad8230548827464efa1943267b779d03c6a3",
+    "plots/native_transfer_comparison.pdf": "830fb384992b5f2fa495f256e690c74a2af969bcad560bd6fb87895d1643cd2a",
+    "report.txt": "b29eeb60228492bc9439192cdb9928bfc1b6fa585028fad81989694b04b27348",
+    "scale_audit/DY_written_scales.json": "1054cddd1d8f7d283714a3bec5fa26a83257acd1cc1468919555af03cad0fc84",
+    "scale_audit/H_written_scales.json": "146dbdd6d65a0d46141127b6740553a56d320d87550fd279c172a7bdcb473ada",
+    "scale_audit/ttbar_written_scales.json": "82fe4f579f3d9f0deb952e4b64fb70e4df13e4d296a3023e301f469f7d6cd59b",
+    "validation/DY_event_checks.json": "bf1a106feac55957264f204e88643192e51159f277518a4241ec94995cdf591c",
+    "validation/H_event_checks.json": "86e1f375cd7c7aafd969cbdc91027dbc38413f2c7eefaf05e9ed8f5096108563",
+    "validation/cleanup_history_equivalence.json": "8d404962cdf0095ca2413c628ec6167060bf580670677f64f5ec81c8cafc6050",
+    "validation/cleanup_validation.json": "696cd4e0c8d150c4a0e307776375d0e4f24c7b5244fa1135d2ce956102f40a5a",
+    "validation/initial_manifest.json": "874b56b1057cddb422a3356ee7201d98a6e77f5f58a0be64d39a25e7b9b900bc",
+    "validation/migration_summary.json": "7e5f8525ce74d980e2df5f2a19a115894dafd6759d0da9ab6fae06d33fde0ba2",
+    "validation/native_fsr_review.json": "3cb2c4921dfc31b7b5fe5528924785c5ae58b0660c4ae3cccef2992aa8b110cc",
+    "validation/production_checks.json": "982adc1e4e06862e35bdbc79cae48a1e127309da6f5f572c55c11419d14d6b9a",
+    "validation/provenance.json": "e88e1b844df8a75361137b01ac2e33af8fca4146dceabb460308d51cccfeddfd",
+    "validation/scale_summary.json": "0a406a4feaa420261b934dae0108e9c181fbd643a2db48aa050f02cd17b9d887",
+    "validation/source_changes.patch.gz": "1911550e2ca59d448e17a21133a89ebca1bc7bee102b19e91bd93122a390f5e6",
+    "validation/summary.json": "fa78a1ef9dc9151f299e7e74c632f853dd68fac7a108f8132f480eb63e669728",
+    "validation/ttbar_event_checks.json": "7bfb768640c12aa83cae5e3368b8606919fe97ddaa37053463ba0100b0ac3d7b"
+  },
+  "git_head": "7031e3e04509b80f61d85e53a1ede8e45fda12a0",
+  "normalized_files": {
+    "inputs/DY/FKS_params.dat": {
+      "normalized_sha256": "24f460082c81127a53c7de6b10bc0807a58b8af7bd5f9afd90158c7fa7a49006",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/inputs/DY/FKS_params.dat",
+      "rule": "Expand indentation tabs to eight columns, strip trailing whitespace, one final newline; token sequence unchanged.",
+      "sha256": "8f9926cd654701ec1d80cfdcb691092071558b2443915330a1bf867ac03654c5"
+    },
+    "inputs/DY/Pythia8.cmd": {
+      "normalized_sha256": "a44b46eb49bc5d3585cb2e27738ff9d8cc220fd0fdc03eebb25897d4daabd9b7",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/inputs/DY/Pythia8.cmd",
+      "rule": "Expand indentation tabs to eight columns, strip trailing whitespace, one final newline; token sequence unchanged.",
+      "sha256": "8032ae305ca7135806a4f363ed75cdb8d3bd11e9282d2f8401117167e41831ea"
+    },
+    "inputs/DY/param_card.dat": {
+      "normalized_sha256": "4abd41508a7497fc08dbab277e248f94f7842442835593a151e56888f2be3dc9",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/inputs/DY/param_card.dat",
+      "rule": "Expand indentation tabs to eight columns, strip trailing whitespace, one final newline; token sequence unchanged.",
+      "sha256": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f"
+    },
+    "inputs/DY/run_card.dat": {
+      "normalized_sha256": "5db6d75570fb9ce4cf0185c9d731c031c8fc669335d1e714403ed625617f9e04",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/inputs/DY/run_card.dat",
+      "rule": "Expand indentation tabs to eight columns, strip trailing whitespace, one final newline; token sequence unchanged.",
+      "sha256": "d486e28158dc3f0c101b682b5d1bed217ef4e2b9c2fb9a6cc5b4789d5d87a9f7"
+    },
+    "inputs/DY/shower_card.dat": {
+      "normalized_sha256": "5a275c4186193e219ec0165a3f83a02ec9e0183d34886096a6c5cc5286ae2833",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/inputs/DY/shower_card.dat",
+      "rule": "Expand indentation tabs to eight columns, strip trailing whitespace, one final newline; token sequence unchanged.",
+      "sha256": "8aebd9f3f356c365f4278320dd707395459d2d48054ca389367bcca944424f9b"
+    },
+    "inputs/H/FKS_params.dat": {
+      "normalized_sha256": "24f460082c81127a53c7de6b10bc0807a58b8af7bd5f9afd90158c7fa7a49006",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/inputs/H/FKS_params.dat",
+      "rule": "Expand indentation tabs to eight columns, strip trailing whitespace, one final newline; token sequence unchanged.",
+      "sha256": "8f9926cd654701ec1d80cfdcb691092071558b2443915330a1bf867ac03654c5"
+    },
+    "inputs/H/Pythia8.cmd": {
+      "normalized_sha256": "e94fb248f5127ef28431da4ecaa6f351705af7fc7d98d259f3938ebf88574b4e",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/inputs/H/Pythia8.cmd",
+      "rule": "Expand indentation tabs to eight columns, strip trailing whitespace, one final newline; token sequence unchanged.",
+      "sha256": "28090a94d7686498efb5836cb7bb9fb47658cdc81646394229ac7f19bd0e23a7"
+    },
+    "inputs/H/param_card.dat": {
+      "normalized_sha256": "1f44d54b7157e824f9d37ffcbd542ea62a792074aed43a38dca7ee2dcc1ace01",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/inputs/H/param_card.dat",
+      "rule": "Expand indentation tabs to eight columns, strip trailing whitespace, one final newline; token sequence unchanged.",
+      "sha256": "61e5e9c88c47757df87347a2f1ece00bd232d5124359183895b69841749b73b5"
+    },
+    "inputs/H/run_card.dat": {
+      "normalized_sha256": "e9059764f4aa2c71526db5e49cb0c68cee501ac22d6f8b70e64b7e2c6af3f97e",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/inputs/H/run_card.dat",
+      "rule": "Expand indentation tabs to eight columns, strip trailing whitespace, one final newline; token sequence unchanged.",
+      "sha256": "b4da7f38322b22c08ad9a7f77974193aa59577bc42c4c4a134218f9e66405eac"
+    },
+    "inputs/H/shower_card.dat": {
+      "normalized_sha256": "5a275c4186193e219ec0165a3f83a02ec9e0183d34886096a6c5cc5286ae2833",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/inputs/H/shower_card.dat",
+      "rule": "Expand indentation tabs to eight columns, strip trailing whitespace, one final newline; token sequence unchanged.",
+      "sha256": "8aebd9f3f356c365f4278320dd707395459d2d48054ca389367bcca944424f9b"
+    },
+    "inputs/ttbar/FKS_params.dat": {
+      "normalized_sha256": "24f460082c81127a53c7de6b10bc0807a58b8af7bd5f9afd90158c7fa7a49006",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/inputs/ttbar/FKS_params.dat",
+      "rule": "Expand indentation tabs to eight columns, strip trailing whitespace, one final newline; token sequence unchanged.",
+      "sha256": "8f9926cd654701ec1d80cfdcb691092071558b2443915330a1bf867ac03654c5"
+    },
+    "inputs/ttbar/Pythia8.cmd": {
+      "normalized_sha256": "a44b46eb49bc5d3585cb2e27738ff9d8cc220fd0fdc03eebb25897d4daabd9b7",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/inputs/ttbar/Pythia8.cmd",
+      "rule": "Expand indentation tabs to eight columns, strip trailing whitespace, one final newline; token sequence unchanged.",
+      "sha256": "8032ae305ca7135806a4f363ed75cdb8d3bd11e9282d2f8401117167e41831ea"
+    },
+    "inputs/ttbar/param_card.dat": {
+      "normalized_sha256": "4abd41508a7497fc08dbab277e248f94f7842442835593a151e56888f2be3dc9",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/inputs/ttbar/param_card.dat",
+      "rule": "Expand indentation tabs to eight columns, strip trailing whitespace, one final newline; token sequence unchanged.",
+      "sha256": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f"
+    },
+    "inputs/ttbar/run_card.dat": {
+      "normalized_sha256": "b99728e87bd0cab918d07d1d8c9e0fcb25d1942d257f2a4ef35a6cfb93a49aac",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/inputs/ttbar/run_card.dat",
+      "rule": "Expand indentation tabs to eight columns, strip trailing whitespace, one final newline; token sequence unchanged.",
+      "sha256": "807c03d8f05b8f06a2e3af4a5af633df1bec3c9eb117cc45b13eedfe7b91913f"
+    },
+    "inputs/ttbar/shower_card.dat": {
+      "normalized_sha256": "5a275c4186193e219ec0165a3f83a02ec9e0183d34886096a6c5cc5286ae2833",
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/inputs/ttbar/shower_card.dat",
+      "rule": "Expand indentation tabs to eight columns, strip trailing whitespace, one final newline; token sequence unchanged.",
+      "sha256": "8aebd9f3f356c365f4278320dd707395459d2d48054ca389367bcca944424f9b"
+    }
+  },
+  "raw_campaign": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031",
+  "renamed_files": {
+    "logs/cleanup_component_protocol_tests.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/logs/cleanup_component_protocol_tests.log",
+      "renamed_to": "logs/cleanup_component_protocol_tests.txt",
+      "sha256": "b294db8047103fda32a41c708c2814ebb533c58d86cd6c34975c495a09056752"
+    },
+    "logs/cleanup_regression_tests.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/logs/cleanup_regression_tests.log",
+      "renamed_to": "logs/cleanup_regression_tests.txt",
+      "sha256": "b1c7c5c5384bc0edbb3cfa52c19c3fba910ef2aa640afc57f036e02ad6315e99"
+    },
+    "logs/regression_tests.log": {
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup/repository_originals/logs/regression_tests.log",
+      "renamed_to": "logs/regression_tests.txt",
+      "sha256": "119149f6285e95ebae0f47ac0aee254e4ae0c21e8b1c30d9261181f09c7059d6"
+    }
+  }
+}

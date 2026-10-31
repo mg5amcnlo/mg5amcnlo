@@ -6,6 +6,7 @@ c partition and Born-flow fraction instead of summing components.
 c The densities are in driver_macnlops.f; macnlops_capi.f exposes the
 c same routines to the in-process first-emission program.
       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      use FKSParams, only: delta_common_scale
       use weight_lines, only: reset_delta_contexts,begin_delta_context,
      $     delta_contexts,delta_context_active,delta_history,
      $     delta_recoil,delta_replay,append_delta_probability,
@@ -87,11 +88,13 @@ c same routines to the in-process first-emission program.
             if(ios.ne.0.or.marker.ne.'COMPONENT_LOCAL_V1'.or.
      $         component_config.lt.1.or.component_graph.lt.1.or.
      $         component_flow.lt.1.or.
-     $         damping_mode.lt.0.or.damping_mode.gt.1.or.
+     $         damping_mode.lt.0.or.damping_mode.gt.3.or.
+     $         damping_mode.eq.2.or.
      $         .not.ieee_is_finite(diagram_symmetry).or.
      $         diagram_symmetry.le.0d0)
      $         stop 'Invalid local component selector'
-            if(mcatnlo_delta.neqv.(damping_mode.eq.1))
+            if((mcatnlo_delta.neqv.(damping_mode.gt.0)).or.
+     $         (delta_common_scale.neqv.(damping_mode.eq.3)))
      $         stop 'Local damping mode differs from source matching'
          elseif(mcatnlo_delta)then
             read(*,'(a)',iostat=ios)request_line

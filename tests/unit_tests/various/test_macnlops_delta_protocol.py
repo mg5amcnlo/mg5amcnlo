@@ -59,6 +59,55 @@ class TestDeltaProtocol(unittest.TestCase):
         with self.assertRaisesRegex(mc.MatchingError, 'Invalid mcatnlo_delta'):
             mc.source_construction({'mcatnlo_delta': 'typo'})
 
+    def test_native_ir_source_policy_is_bound_to_the_generation_fks_card(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'SubProcesses').mkdir()
+            path = root / 'SubProcesses/FKS_params.dat'
+            card = {'mcatnlo_delta': True}
+            self.assertEqual(mc.configured_source_construction(root, card), mc.DELTA_SOURCE)
+            path.write_text('#DeltaCommonScale\n.true.\n')
+            self.assertEqual(mc.configured_source_construction(root, card), mc.NATIVE_IR_DELTA_SOURCE)
+            with self.assertRaisesRegex(mc.MatchingError, 'requires mcatnlo_delta'):
+                mc.configured_source_construction(root, {'mcatnlo_delta': False})
+            path.write_text('#DeltaCommonScale\n.false.\n')
+            self.assertEqual(mc.configured_source_construction(root, card), mc.DELTA_SOURCE)
+            path.write_text('#DeltaCommonScale\n.true. ! common cutoff\n')
+            self.assertEqual(mc.configured_source_construction(root, card), mc.NATIVE_IR_DELTA_SOURCE)
+            path.write_text('#DeltaCommonScale\ntypo\n')
+            with self.assertRaisesRegex(mc.MatchingError, 'Invalid DeltaCommonScale'):
+                mc.configured_source_construction(root, card)
+
+    def test_winner_source_annotation_cannot_be_relabelled_as_old_delta(self):
+        block = delta_event().replace('source="delta"', 'source="delta_winner"')
+        self.assertEqual(mc.Event(block).hard.source, 'delta_winner')
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'winner.lhe'
+            path.write_text(HEADER + block + '</LesHouchesEvents>\n')
+            self.assertEqual(mc.hard_source_contract(path, mc.WINNER_DELTA_SOURCE)['counts'],
+                             {'H': 1})
+            with self.assertRaises(mc.MatchingError):
+                mc.hard_source_contract(path, mc.DELTA_SOURCE)
+            missing = delta_event(context=False).replace(
+                'source="delta"', 'source="delta_winner"')
+            path.write_text(HEADER + missing + '</LesHouchesEvents>\n')
+            with self.assertRaisesRegex(mc.MatchingError, 'replay context'):
+                mc.hard_source_contract(path, mc.WINNER_DELTA_SOURCE)
+
+    def test_native_ir_source_cannot_reuse_winner_or_old_delta_events(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'source.lhe'
+            for source, construction in (('delta', mc.DELTA_SOURCE),
+                    ('delta_winner', mc.WINNER_DELTA_SOURCE),
+                    ('delta_native_ir', mc.NATIVE_IR_DELTA_SOURCE)):
+                block = delta_event().replace('source="delta"', 'source="%s"' % source)
+                path.write_text(HEADER + block + '</LesHouchesEvents>\n')
+                self.assertEqual(mc.hard_source_contract(path, construction)['counts'], {'H': 1})
+                for other in mc.DELTA_SOURCES:
+                    if other != construction:
+                        with self.assertRaisesRegex(mc.MatchingError, 'different counterterm'):
+                            mc.hard_source_contract(path, other)
+
     def test_run_card_accepts_delta_and_rejects_the_legacy_combination(self):
         from madgraph.various.banner import InvalidRunCard, RunCardNLO
         card = RunCardNLO()

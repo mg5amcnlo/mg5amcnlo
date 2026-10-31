@@ -73,6 +73,68 @@ also for initial-final colour connections. The sentinel values are kept:
 raw 1e-6 is live, raw 1e-5 is dead, raw 1e10 is stored as 0 and dead, and
 zero is dead. MG5 then imposes its starting-scale veto and table bounds.
 The low-level pythia_pt_lund routine exposes the raw scalar calculation.
+Its optional trailing z_out argument also returns the reconstructed momentum
+fraction; z_out=-1 marks a sentinel with no reconstructed splitting.
+The tiny-virtuality t=1e-6 sentinel keeps the finite collinear-limit z from
+spectator invariants, so a genuine singular reconstruction remains valid.
+For DeltaCommonScale, an emitted gluon with energy within 32 machine epsilons
+of the largest real-particle energy is treated as the zero-Sudakov soft
+boundary. This prevents a numerically rounded z=1 from being mistaken for
+unsupported hard phase space, whose separate source fallback is one.
+
+DeltaCommonScale: native continuation and global infrared damping
+----------------------------------------------------------------
+
+The opt-in source keeps the native FKS/recoil/colour component c and
+continues H at t_c=get_qMC(xi_c,y_c), including global-recoil FSR when no
+local inverse-dipole map exists. No auxiliary history or emission-rate/PDF
+prior is sampled. For each valid inverse scale t_i and the supported native
+scale, compute the all-Born-radiator Sudakov using each radiator's allowed
+start, existing source tables, grouped PDFs and optional DeltaBackwardISR:
+
+  P_c(Q) = min(1, Delta_all(Q,t_c) [if supported],
+                  Delta_all(Q,t_i) for each valid inverse reconstruction).
+
+The actual corrected factors need not be monotonic. A valid infrared zero
+therefore forces P_c=0 continuously even if another factor remains finite.
+The same P_c enters H, S, MC and G weights before unweighting, removing H
+and moving its paired real/MC contribution to S. At fixed resolved
+kinematics P_c=1+O(alpha_s). This source damping is not a shower-history
+posterior or a physical finite-cutoff no-emission identity.
+
+The support-only helper is
+
+  call delta_history_scale(pr, pe, pk, id_rad, id_emt, id_born, &
+                           rad_final, rec_final, charm_mass, bottom_mass, &
+                           t, supported, status)
+
+For ISR, id_rad is the real incoming parent and id_born the Born daughter;
+the emitted final quark is crossed in the flavour test. For FSR, id_rad is
+the outgoing daughter and id_born its Born parent. The helper requires a
+valid reconstructed fraction 0<z<1 and supported QCD flavour crossing.
+It returns supported=false for invalid kinematic sentinels or flavours.
+The caller also requires a connected colour line and finite positive t_i
+no larger than its start. Emitted-quark candidates use the native radiator;
+gluon emission can use other connected radiators in the fixed Born context.
+There is no emission PDF or rate-normalization gate.
+
+The native factor requires a live colour-line start at or above t_c,
+independently of local inverse support. A connected native radiator at
+zero scale gives P_c=0. With neither native nor alternative support, P_c=1.
+All active H caps use finite positive t_c. Only nonpositive t_c uses
+max(1.01,compute_pTparton(p)); a hard H remainder without a passing Born
+counterevent shares its initial maximum positive cap. Neither fallback
+changes its weight. Absent connections and dead sentinels retain their
+meaning. The soft-gluon guard and source-table continuation below 1.01 GeV
+are described above.
+
+Fresh events identify source="delta_native_ir" and construction
+mcatnlo-delta-native-ir-v1 (C API/local damping mode 3, writer tag 4).
+Archived delta_winner/mcatnlo-delta-winner-v1 events remain readable but are
+incompatible with the current evaluator. Matching recomputes the same P_c
+at every unconditional source-scale quadrature node; the competing shower
+retains resolved flavours and its Q>t_c conditional average. Full formulae,
+configuration and validation results are in docs/macnlops_derivation.md.
 
 S-event starting scales
 -----------------------

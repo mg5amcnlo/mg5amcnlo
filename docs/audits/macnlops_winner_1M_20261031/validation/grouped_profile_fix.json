@@ -1,0 +1,30 @@
+{
+  "problem": "Source average passed resolved real flavours to representative Born kernel; nonrepresentative grouped flavours became false unsupported hard remainders.",
+  "fix": "Evaluate source prior with exact representative source real IDs, while keeping shower denominator flavours resolved.",
+  "source_generation_routines_unchanged": {
+    "DY": {
+      "compute_delta": "5d46d04ae9d3fdde72daccf5305c548ec87e98a8f77d762f0842855bbc46b32a",
+      "delta_winner_mixture": "feb55ed120756024599a66feb006222b26e1220e57f109534cfda5fad5ad0f9a",
+      "get_delta_connections": "47c6232125568746e8b9dcda79521e180abc911aac7dd064bf49d9c234df6687",
+      "delta_leg_probability": "1d24f204605eee03471a03a9fa538f2adab80e1490902dd51591d8e0a22fed7b",
+      "delta_backward_leg": "557fe6b136e2ea37d6181da276105d855df30c3dcf59e331a7570c1d72a5f8af"
+    },
+    "H": {
+      "compute_delta": "5d46d04ae9d3fdde72daccf5305c548ec87e98a8f77d762f0842855bbc46b32a",
+      "delta_winner_mixture": "feb55ed120756024599a66feb006222b26e1220e57f109534cfda5fad5ad0f9a",
+      "get_delta_connections": "47c6232125568746e8b9dcda79521e180abc911aac7dd064bf49d9c234df6687",
+      "delta_leg_probability": "1d24f204605eee03471a03a9fa538f2adab80e1490902dd51591d8e0a22fed7b",
+      "delta_backward_leg": "557fe6b136e2ea37d6181da276105d855df30c3dcf59e331a7570c1d72a5f8af"
+    },
+    "ttbar": {
+      "compute_delta": "5d46d04ae9d3fdde72daccf5305c548ec87e98a8f77d762f0842855bbc46b32a",
+      "delta_winner_mixture": "feb55ed120756024599a66feb006222b26e1220e57f109534cfda5fad5ad0f9a",
+      "get_delta_connections": "47c6232125568746e8b9dcda79521e180abc911aac7dd064bf49d9c234df6687",
+      "delta_leg_probability": "1d24f204605eee03471a03a9fa538f2adab80e1490902dd51591d8e0a22fed7b",
+      "delta_backward_leg": "557fe6b136e2ea37d6181da276105d855df30c3dcf59e331a7570c1d72a5f8af"
+    }
+  },
+  "source_events_regenerated": false,
+  "regression_tests": "22 native tests passed including charm/representative source-average equality",
+  "matching_file_sha256": "ac10aec012e1820d2be1aa26b427273c38c38920a4e605600a0a9cca95c216bc"
+}

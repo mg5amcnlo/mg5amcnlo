@@ -276,7 +276,7 @@ c
       use fks_phase_space, only: fks_phase_space_point,
      $     generate_born_contribution,generate_real_phase_space
       use mc_native_context, only: mc_begin_real_point,mc_end_real_point
-      use FKSParams, only: MCSubtractionAtFixedFlow
+      use FKSParams, only: MCSubtractionAtFixedFlow,delta_common_scale
       use weight_lines
       use mint_module
       use mc_counterterms, only: fksfather,gfactsf,gfactcl,
@@ -650,6 +650,11 @@ c Check the sampled Born before native H histories change active data.
      $                 =shower_scale_n1body(1:ndelH,1:ndelH)
                endif
             endif
+c A real hard remainder can fail the Born cuts and skip compute_delta.
+c Initialize its common cap here; compute_delta sets the native cap later.
+            if(mcatnlo_delta.and.delta_common_scale)
+     $           call common_H_hard_scale(
+     $           emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH))
 c Compute the n1-body prefactors
             call compute_prefactors_n1body(vegas_wgt,jac)
 ! This flow was drawn with q_c=p_c at the common outer Born point.

@@ -1,0 +1,97 @@
+{
+  "DY": {
+    "events": 1000000,
+    "channels": 104,
+    "all_channels_complete": true,
+    "shower_jobs": 50,
+    "shower_tried_selected_accepted": [
+      1000000,
+      1000000,
+      1000000
+    ],
+    "shower_messages": {
+      "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 50,
+      "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 50,
+      "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 50,
+      "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 50,
+      "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 14,
+      "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 9991,
+      "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 18
+    },
+    "first_emission_messages": {
+      "native_trial_errors": {},
+      "native_trial_warnings": {
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 697
+      }
+    },
+    "weight_sum_relative_error": {
+      "baseline": 1.461704396893957e-08,
+      "macnlops": 7.993058032959856e-09,
+      "removal_only": 3.14719689663214e-08,
+      "veto_only": 3.878657713173411e-08
+    },
+    "split_sum_relative_error": 4.542554719310417e-08
+  },
+  "H": {
+    "events": 1000000,
+    "channels": 100,
+    "all_channels_complete": true,
+    "shower_jobs": 50,
+    "shower_tried_selected_accepted": [
+      1000000,
+      1000000,
+      1000000
+    ],
+    "shower_messages": {
+      "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 50,
+      "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 50,
+      "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 50,
+      "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 50,
+      "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 972
+    },
+    "first_emission_messages": {
+      "native_trial_errors": {},
+      "native_trial_warnings": {
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 19
+      }
+    },
+    "weight_sum_relative_error": {
+      "baseline": 2.249323872523707e-08,
+      "macnlops": 6.290277380004625e-09,
+      "removal_only": 3.1170793831826716e-09,
+      "veto_only": 1.313202920629125e-08
+    },
+    "split_sum_relative_error": 3.045407680270104e-08
+  },
+  "ttbar": {
+    "events": 1000000,
+    "channels": 102,
+    "all_channels_complete": true,
+    "shower_jobs": 50,
+    "shower_tried_selected_accepted": [
+      1000000,
+      1000000,
+      1000000
+    ],
+    "shower_messages": {
+      "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 50,
+      "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 50,
+      "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 50,
+      "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 50,
+      "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 7
+    },
+    "first_emission_messages": {
+      "native_trial_errors": {},
+      "native_trial_warnings": {
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 3
+      }
+    },
+    "weight_sum_relative_error": {
+      "baseline": 5.758772753973507e-08,
+      "macnlops": 1.6662756581727402e-08,
+      "removal_only": 1.0942969622720801e-08,
+      "veto_only": 1.0927403205383287e-08
+    },
+    "split_sum_relative_error": 1.7671293567142534e-08
+  }
+}

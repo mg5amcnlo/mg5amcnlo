@@ -1,0 +1,74 @@
+{
+  "DY": {
+    "H": 140177,
+    "S": 859823,
+    "change_percent": 0.04860830190638321,
+    "events": 1000000,
+    "expected_H_pb": 19.6026104013,
+    "expected_S_pb": 18.443816780017364,
+    "expected_net_pb": 1.158793621282627,
+    "expected_net_sampling_error_pb": 0.21126729959961493,
+    "matched_pb": 1931.5887845606987,
+    "native_H_cap_checks": 9337,
+    "native_H_max_relative_error": 1.0521769289723213e-12,
+    "paired_migration": {
+      "path": "migration_summary.json",
+      "process": "DY"
+    },
+    "saturated_S": 0,
+    "source_pb": 1930.6503282204008,
+    "transfer_comparison": {
+      "path": "../plots/native_transfer_comparison.json",
+      "process": "DY"
+    },
+    "zero_shower_density_H": 0
+  },
+  "H": {
+    "H": 120778,
+    "S": 879222,
+    "change_percent": -0.011732728446034457,
+    "events": 1000000,
+    "expected_H_pb": 0.13480640409599995,
+    "expected_S_pb": 0.13852487369138486,
+    "expected_net_pb": -0.003718469595384879,
+    "expected_net_sampling_error_pb": 0.002191420353457372,
+    "matched_pb": 30.772570806431993,
+    "native_H_cap_checks": 4032,
+    "native_H_max_relative_error": 1.8105034431654026e-13,
+    "paired_migration": {
+      "path": "migration_summary.json",
+      "process": "H"
+    },
+    "saturated_S": 0,
+    "source_pb": 30.776181692256003,
+    "transfer_comparison": {
+      "path": "../plots/native_transfer_comparison.json",
+      "process": "H"
+    },
+    "zero_shower_density_H": 0
+  },
+  "ttbar": {
+    "H": 150857,
+    "S": 849143,
+    "change_percent": -0.5550008342890655,
+    "events": 1000000,
+    "expected_H_pb": 51.55782631386426,
+    "expected_S_pb": 55.163187781242215,
+    "expected_net_pb": -3.6053614673779255,
+    "expected_net_sampling_error_pb": 0.23874974203537053,
+    "matched_pb": 633.1209594504596,
+    "native_H_cap_checks": 61156,
+    "native_H_max_relative_error": 1.6262381294700254e-13,
+    "paired_migration": {
+      "path": "migration_summary.json",
+      "process": "ttbar"
+    },
+    "saturated_S": 0,
+    "source_pb": 636.6543966634799,
+    "transfer_comparison": {
+      "path": "../plots/native_transfer_comparison.json",
+      "process": "ttbar"
+    },
+    "zero_shower_density_H": 0
+  }
+}

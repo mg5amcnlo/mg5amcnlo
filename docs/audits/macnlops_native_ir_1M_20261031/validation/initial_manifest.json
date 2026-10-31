@@ -1,0 +1,61 @@
+{
+  "created_utc": "2026-10-31T12:12:07.725565+00:00",
+  "events_per_process": 1000000,
+  "git_head": "7031e3e04509b80f61d85e53a1ede8e45fda12a0",
+  "processes": [
+    "DY",
+    "H",
+    "ttbar"
+  ],
+  "pythia_library_sha256": {
+    "libpythia8.so": "35203dfab4e20b044fe6e669b8170f5905f56c43c6dad6e762ceff86158a283c",
+    "libpythia8amcatnloHooks.so": "95913dec94ff37c8255832e8a652dd7ff821467f6636ad76de1e7842a8196bce",
+    "libpythia8colourReconnectionHooks.so": "abafd0e305f41f5b8150943eff6c17c3b2c1d3c80eb0c4e2aa3fbec3f2c3de1a",
+    "libpythia8jetMatchingHooks.so": "885beedf340c726de7fb6c2f0b13b7766540895fe7091cb9f84990c72f688384",
+    "libpythia8lhapdf6.so": "6d024e50492bb6d065f4a5e2ad47f894fec2730ce700431b8bd6a9123d15815b",
+    "libpythia8lhefHooks.so": "15b705c3ce9db69a9dc7e7584f4afd2a1f9d8b144f99f65ec1c5b18ab9645496",
+    "libpythia8powhegHooks.so": "7782fb751ce9759a3fed56b65fa54ba92323b6664dbf6c5c9d3299b7552878d6",
+    "libpythia8resonanceDecayFilterHooks.so": "50ae1d857bad71282d429c717db4f2a4bf51353a8f5acd506a3b657105756bce",
+    "libpythia8setLHEDecayProductHooks.so": "522b081175494e616d095e44ceaaeeabf14a30eb92d67ccc7b0ca63e5043fe49"
+  },
+  "pythia_modified": false,
+  "run": "run_1M_native_ir",
+  "seeds": {
+    "DY": 3220101,
+    "H": 3220201,
+    "ttbar": 3220301
+  },
+  "source": "delta_native_ir",
+  "source_construction": "mcatnlo-delta-native-ir-v1",
+  "source_sha256": {
+    "Template/NLO/Cards/FKS_params.dat": "4bbca084b24e017cc53574969d1d4bfea5222c15dd5aee4c7823850a536d7c3f",
+    "Template/NLO/MCatNLO/srcPythia8/MacNLOPS.h": "2b131759747c9163ad20a082c348848f95663178ad2b8624180990c72e05c0be",
+    "Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc": "43575d214a0a1b90f18cf2f2a15deae3819c7cfd7fd651a069e170d5d4856ed5",
+    "Template/NLO/SubProcesses/FKSParams.f90": "6482b19623c96569c06516de66d63a3993a92a090faab8bece97d3c162c8e758",
+    "Template/NLO/SubProcesses/add_write_info.f": "811f4678040aeced738e0d5d27cd28bca608af4558e8eaf7086575e839650891",
+    "Template/NLO/SubProcesses/driver_macnlops.f": "e4003b2864a7ea4a73e1b9c62a6116df4c2d4989dbad7b99d96406f5cbf57ed5",
+    "Template/NLO/SubProcesses/driver_mintMC.f": "977bc69f6a2afbb9a5fbfea659505f92cfcb8736abb2488a319582899cd1dbea",
+    "Template/NLO/SubProcesses/handling_lhe_events.f": "f99b7fe02030d0544e66f8a95fce2c6b2952734e649a483e79809d90bd88398a",
+    "Template/NLO/SubProcesses/macnlops_capi.f": "8cfa8cf53f5a2a468393edebeffc0624f7766b84256d4983de7abafdf6369454",
+    "Template/NLO/SubProcesses/macnlops_evaluator.f": "38894be2bb09cc143c0f7995ceb678c60f82794e7fa14a189c67019448bfd849",
+    "Template/NLO/SubProcesses/mc_matching_runtime.f": "3ba36b5f628b110891e93cbbe2e805328b7788e12a81bcb9420532bc856dc26e",
+    "Template/NLO/SubProcesses/mcatnlo_delta_scales.README": "d639220c149ed775514ad9baed6760404a657d1246b17d8e496b7d134c5d0669",
+    "Template/NLO/SubProcesses/mcatnlo_delta_scales.f90": "54a5055068aa397c6a04fe3de0c2f00a3ff1fddec2a216ea5420f5895ae44c0d",
+    "Template/NLO/SubProcesses/montecarlocounter.f": "c08fd612011803ed3cd0d08c7f303cb6122677a216b46477bd4d87d80192dc20",
+    "Template/NLO/SubProcesses/scale_module.f90": "81602cf5ab49954843d93ec0a07d50404b1b738c9103f5ed922f563f5c09e567",
+    "docs/macnlops_derivation.md": "65f8a4fd72a36a000179b30b761837e6cb1834745e22b00b421698df82f2a0aa",
+    "madgraph/various/macnlops.py": "33e1aa765d49e5316972a16905ffe6cc81fd0c0b723d8f564feb846a1b32848f",
+    "tests/input_files/born_flow_rejection_context.f90": "11f37df64cfc0387f1464906c8fe85cf4e3deb449278c153c1f1bc78dceab431",
+    "tests/input_files/check_macnlops_delta_context.f90": "d8b5df64c89d220f2d7ac8e3f447b45bbbf18b00fbe62b5095c1ba8634b62682",
+    "tests/input_files/check_mcatnlo_delta_matching.f90": "0789a1950c85fe226a03aac204a4bd8e5b3caa831c73a93692c38cc17635d222",
+    "tests/unit_tests/fks/test_born_flow_rejection.py": "8b5433cf60be11623ab1222d8ddca7d57a44ae7b8e2b8352f19ae8dc29155f5d",
+    "tests/unit_tests/fks/test_delta_common_scale_config.py": "1dbfba4a5a4d9973272bdd075d522b25886d39cf891df775b2c00dd562dc9bfc",
+    "tests/unit_tests/fks/test_delta_winner_kernels.py": "9864a47b843deba78435f218ae557c74756e099f0464bb48d1ff0cf411ad730a",
+    "tests/unit_tests/fks/test_macnlops_delta_context.py": "6b8372cfe7241f2322f276dd0fabffeed17a0a0027c315af32bb2b656facccd5",
+    "tests/unit_tests/fks/test_macnlops_sudakov_profile.py": "6cc193aa0ea4ad338e354b19944dc167be8728d05014375a1f725498beaa0ace",
+    "tests/unit_tests/fks/test_mcatnlo_delta_scales.py": "35611475c4055de8b37b135deb21a6efe5b9bd05005d20603fa5ce9510703f47",
+    "tests/unit_tests/various/test_macnlops_delta_protocol.py": "d2637b8f1b8a92ce9573cc8a9b7f6c2d9e04abc919f248953ed379a135c158b7",
+    "tests/unit_tests/various/test_macnlops_first_emission.py": "8eb23f547ff3355a56b96a13ad28c4e24a2a3d42766762b5a92019f34c86a298",
+    "tests/unit_tests/various/test_macnlops_sudakov_kernel.py": "fac1ce805ac2c0d7eae6e43f001a1931f3d9161e48e98859dc55da4bb2747330"
+  }
+}

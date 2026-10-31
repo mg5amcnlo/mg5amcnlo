@@ -1,0 +1,122 @@
+{
+  "time": "2026-10-31T11:06:59.922042+00:00",
+  "policy": "collapse positive hard-remainder H dipole scales to existing maximum",
+  "source_event_count": 1000000,
+  "modified_events": 5,
+  "modified_files": 5,
+  "all_weights_momenta_flavours_and_non_scale_XML_unchanged": true,
+  "events": [
+    {
+      "index": 0,
+      "source": "SubProcesses/P0_gg_ttx/GF1.0_9/events.lhe",
+      "raw_weight": 0.00086213923,
+      "global_pair_max_GeV": 914.3958097994486,
+      "old_pair_min_GeV": 891.7309202149528,
+      "before_event_sha256": "6c7495f9ff3477e13c6cb4f23e6cfcfa77c1fd956fde8c981c7f51ca19a2fcd7",
+      "after_event_sha256": "fed7235b0406228711b451ed9adb6c8c00a4e397dad7de4d0bce8bbec172304d",
+      "without_scales_sha256": "5d5f08155c061e3096b6bf9bf883d6071479fbeb6fc0de3fb0038a86c5b3ca4a"
+    },
+    {
+      "index": 1,
+      "source": "SubProcesses/P0_gg_ttx/GF2.0_8/events.lhe",
+      "raw_weight": 0.00086213923,
+      "global_pair_max_GeV": 243.8289604367702,
+      "old_pair_min_GeV": 231.55283407782156,
+      "before_event_sha256": "ac35d3f92338ed1a563851562e16f338f4c8a30bafbbe1ecbb81aeb216f541e6",
+      "after_event_sha256": "f7faec0a831d8b776c2f15199d608377cb5ffee9dbe8badaa8b5f5a91722c6b7",
+      "without_scales_sha256": "5b43082889dba0dfc65c1c3b53d752ecc66138178877c8eac1fa61218365766c"
+    },
+    {
+      "index": 2,
+      "source": "SubProcesses/P0_gg_ttx/GF2.0_29/events.lhe",
+      "raw_weight": 0.00086213923,
+      "global_pair_max_GeV": 656.3417052302675,
+      "old_pair_min_GeV": 624.3858224756586,
+      "before_event_sha256": "604672af3e14a7592ae401b71a8b7952db592def9ee2a96ee11c616e0482e480",
+      "after_event_sha256": "0aa2659d98b6716da15e7d082a9d9ec485d3b5d866e02f1a1b9b66081aa5b22a",
+      "without_scales_sha256": "4bfe7af23ca881dbdea8ba88c2f0dbbdd66fa4e602c006e4122171d1c8ebfda3"
+    },
+    {
+      "index": 3,
+      "source": "SubProcesses/P0_gg_ttx/GF2.0_40/events.lhe",
+      "raw_weight": 0.00086213923,
+      "global_pair_max_GeV": 836.9816170342258,
+      "old_pair_min_GeV": 796.6505546260169,
+      "before_event_sha256": "9b6fec6a93c6b6e574e9ca524e464d786b6cdac3c9e7785f48b6bf94ff7d52b5",
+      "after_event_sha256": "8e060dc7165b6ad81f28eb2f397dedc713b2e0c507965493a52b5b48329de2fc",
+      "without_scales_sha256": "b96eb138ba5d5c43bdb4d8ca546131948422477ff1ff7d777cc8ed2b7a842537"
+    },
+    {
+      "index": 4,
+      "source": "SubProcesses/P0_gg_ttx/GF3.0_40/events.lhe",
+      "raw_weight": 0.00086213923,
+      "global_pair_max_GeV": 404.64078626745595,
+      "old_pair_min_GeV": 389.38381962052085,
+      "before_event_sha256": "f4b889d62d159d0773aff7ef05f0c31ec00599fa27dff7ad229bbddaecc2c325",
+      "after_event_sha256": "0b7705f344a19ccf8e2068099fe0a3fddb5d2f2f1a6ea7dc973d0173e8158d35",
+      "without_scales_sha256": "53507ce79d629d06f11c912344ef41690423ed87e8a8d58356387759dbd72c1d"
+    }
+  ],
+  "files": [
+    {
+      "path": "/export/slow1/rikkert/macnlops_winner_1M_20261031/processes/TTbar_5FS/SubProcesses/P0_gg_ttx/GF1.0_9/events.lhe",
+      "original_archive": "/export/slow1/rikkert/macnlops_winner_1M_20261031/validation/pre_hard_remainder_cap_fix/ttbar/raw_sources/P0_gg_ttx/GF1.0_9/events.lhe",
+      "before_sha256": "b33b3d8119c54119c3d0288f73d951884e0aa3a63232866996f0ce558a7e55c9",
+      "after_sha256": "184ba665de7cff9da5952e207a1421de78fb7b9c89e710fd0e1e9945ee97095b",
+      "modified_events": 1
+    },
+    {
+      "path": "/export/slow1/rikkert/macnlops_winner_1M_20261031/processes/TTbar_5FS/SubProcesses/P0_gg_ttx/GF2.0_8/events.lhe",
+      "original_archive": "/export/slow1/rikkert/macnlops_winner_1M_20261031/validation/pre_hard_remainder_cap_fix/ttbar/raw_sources/P0_gg_ttx/GF2.0_8/events.lhe",
+      "before_sha256": "ce47cd2cbff55ea2edf57060800d9028bc42ea787fa989eb5a6848ba69822078",
+      "after_sha256": "c7f65fe55ccf86ab44479958c697876bb32379fc9ce96193785a2db863b1b5b4",
+      "modified_events": 1
+    },
+    {
+      "path": "/export/slow1/rikkert/macnlops_winner_1M_20261031/processes/TTbar_5FS/SubProcesses/P0_gg_ttx/GF2.0_29/events.lhe",
+      "original_archive": "/export/slow1/rikkert/macnlops_winner_1M_20261031/validation/pre_hard_remainder_cap_fix/ttbar/raw_sources/P0_gg_ttx/GF2.0_29/events.lhe",
+      "before_sha256": "29bf971cd1ee3258d1b8eec0890a947d9e07342e862622668dca81c52ed78db9",
+      "after_sha256": "87f8aa1d32fef3369f91cbc637f3a0e06e75e1a1214a9317259b2f862cb2f248",
+      "modified_events": 1
+    },
+    {
+      "path": "/export/slow1/rikkert/macnlops_winner_1M_20261031/processes/TTbar_5FS/SubProcesses/P0_gg_ttx/GF2.0_40/events.lhe",
+      "original_archive": "/export/slow1/rikkert/macnlops_winner_1M_20261031/validation/pre_hard_remainder_cap_fix/ttbar/raw_sources/P0_gg_ttx/GF2.0_40/events.lhe",
+      "before_sha256": "8f60d4baf6996d9a8b390a4c03a966fde7d977c9eea0a8c17ddde746b0f15b7d",
+      "after_sha256": "22951babddb6e5987371c8f3e48d3c2c8bb1aed0ddc57cd5bf4de76d6bdce075",
+      "modified_events": 1
+    },
+    {
+      "path": "/export/slow1/rikkert/macnlops_winner_1M_20261031/processes/TTbar_5FS/SubProcesses/P0_gg_ttx/GF3.0_40/events.lhe",
+      "original_archive": "/export/slow1/rikkert/macnlops_winner_1M_20261031/validation/pre_hard_remainder_cap_fix/ttbar/raw_sources/P0_gg_ttx/GF3.0_40/events.lhe",
+      "before_sha256": "a8215c524c01c9815bec3f39a1a789f96ff9d879051f8a781a10a08b4d4ded75",
+      "after_sha256": "3cce3b88150b3f6a283103ba5a19edf069e8838b5b87430c214f2ce4ce6d0759",
+      "modified_events": 1
+    }
+  ],
+  "generator_fix": {
+    "scale_module.f90": {
+      "before_sha256": "18d6c9ea14710aca570200aaa2ec232b3be25391d413b713c1f6d80d9f7bb8b4",
+      "after_sha256": "81602cf5ab49954843d93ec0a07d50404b1b738c9103f5ed922f563f5c09e567"
+    },
+    "mc_matching_runtime.f": {
+      "before_sha256": "c35883817eddc28abbdda981a2440e4987c2fe2437a834ce088d36f05a3dd447",
+      "after_sha256": "3ba36b5f628b110891e93cbbe2e805328b7788e12a81bcb9420532bc856dc26e"
+    }
+  },
+  "new_generator_matches_repair": "common existing maximum for positive entries; zero/inactive entries preserved; all5 repaired packets have only positive entries",
+  "matching_decision_counts_unchanged": true,
+  "matching_weight_sums_unchanged": true,
+  "matching_weight_sums": {
+    "input": 636.7553439364056,
+    "macnlops": 632.7024274161769
+  },
+  "all_1M_first_emission_arrays_bitwise_unchanged": [
+    "pt",
+    "nominal",
+    "macnlops",
+    "is_h",
+    "rule",
+    "rule_names"
+  ]
+}

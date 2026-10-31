@@ -1,0 +1,281 @@
+{
+  "final_process_sources_sha256": {
+    "DY": {
+      "Cards/macnlops_profile.json": "b619d5a1b31a0a6f7146c883ee4d84bc803006beaea48a9aced908cbf7b8db9c",
+      "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+      "Cards/run_card.dat": "dcb5e196c881326853229bdbf5c4402956da76fbe9ce406358479463292cffeb",
+      "Cards/shower_card.dat": "8aebd9f3f356c365f4278320dd707395459d2d48054ca389367bcca944424f9b",
+      "MCatNLO/srcPythia8/MacNLOPSMatch.cc": "c3a5fbdb834121e8b130920ffc5768179ba625efe8bb4f5bf3f8aef7602a4be7",
+      "SubProcesses/FKSParams.f90": "6482b19623c96569c06516de66d63a3993a92a090faab8bece97d3c162c8e758",
+      "SubProcesses/FKS_params.dat": "5014faf3c7339011d39f4921acdfa2afc67429704abdf1ac566c0301cfd880f5",
+      "SubProcesses/driver_macnlops.f": "5e8a1ca9aeb2e4f1e4114fca076441c8ce49a5b958bc4110387d6e1b6b469148",
+      "SubProcesses/mc_matching_runtime.f": "3ba36b5f628b110891e93cbbe2e805328b7788e12a81bcb9420532bc856dc26e",
+      "SubProcesses/mcatnlo_delta_scales.f90": "54a5055068aa397c6a04fe3de0c2f00a3ff1fddec2a216ea5420f5895ae44c0d",
+      "SubProcesses/montecarlocounter.f": "ac10aec012e1820d2be1aa26b427273c38c38920a4e605600a0a9cca95c216bc",
+      "SubProcesses/scale_module.f90": "81602cf5ab49954843d93ec0a07d50404b1b738c9103f5ed922f563f5c09e567",
+      "SubProcesses/sudakov.f": "020c561c3d09fee13ea93c2faae4052206ac64bb2f1250b0ba552af7da63f10a"
+    },
+    "H": {
+      "Cards/macnlops_profile.json": "1b66010103de54a164d9bf883648bd639b3036a00e5544cd722c4579407552f4",
+      "Cards/param_card.dat": "61e5e9c88c47757df87347a2f1ece00bd232d5124359183895b69841749b73b5",
+      "Cards/run_card.dat": "44c53b04a6dc92733f75a8cd7ce03e5efa1dd624d125d5aa0bcafd9df21527d5",
+      "Cards/shower_card.dat": "8aebd9f3f356c365f4278320dd707395459d2d48054ca389367bcca944424f9b",
+      "MCatNLO/srcPythia8/MacNLOPSMatch.cc": "c3a5fbdb834121e8b130920ffc5768179ba625efe8bb4f5bf3f8aef7602a4be7",
+      "SubProcesses/FKSParams.f90": "6482b19623c96569c06516de66d63a3993a92a090faab8bece97d3c162c8e758",
+      "SubProcesses/FKS_params.dat": "5014faf3c7339011d39f4921acdfa2afc67429704abdf1ac566c0301cfd880f5",
+      "SubProcesses/driver_macnlops.f": "5e8a1ca9aeb2e4f1e4114fca076441c8ce49a5b958bc4110387d6e1b6b469148",
+      "SubProcesses/mc_matching_runtime.f": "3ba36b5f628b110891e93cbbe2e805328b7788e12a81bcb9420532bc856dc26e",
+      "SubProcesses/mcatnlo_delta_scales.f90": "54a5055068aa397c6a04fe3de0c2f00a3ff1fddec2a216ea5420f5895ae44c0d",
+      "SubProcesses/montecarlocounter.f": "ac10aec012e1820d2be1aa26b427273c38c38920a4e605600a0a9cca95c216bc",
+      "SubProcesses/scale_module.f90": "81602cf5ab49954843d93ec0a07d50404b1b738c9103f5ed922f563f5c09e567",
+      "SubProcesses/sudakov.f": "020c561c3d09fee13ea93c2faae4052206ac64bb2f1250b0ba552af7da63f10a"
+    },
+    "ttbar": {
+      "Cards/macnlops_profile.json": "0094e3b36842ba7b4a965c7354b8fcf23de3b46aae3717528f4b50cfea505019",
+      "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+      "Cards/run_card.dat": "c6c00e527e2981156ffe83e0bb4362d090fbc69a195964bc6afc7652dff1e221",
+      "Cards/shower_card.dat": "8aebd9f3f356c365f4278320dd707395459d2d48054ca389367bcca944424f9b",
+      "MCatNLO/srcPythia8/MacNLOPSMatch.cc": "c3a5fbdb834121e8b130920ffc5768179ba625efe8bb4f5bf3f8aef7602a4be7",
+      "SubProcesses/FKSParams.f90": "6482b19623c96569c06516de66d63a3993a92a090faab8bece97d3c162c8e758",
+      "SubProcesses/FKS_params.dat": "5014faf3c7339011d39f4921acdfa2afc67429704abdf1ac566c0301cfd880f5",
+      "SubProcesses/driver_macnlops.f": "5e8a1ca9aeb2e4f1e4114fca076441c8ce49a5b958bc4110387d6e1b6b469148",
+      "SubProcesses/mc_matching_runtime.f": "3ba36b5f628b110891e93cbbe2e805328b7788e12a81bcb9420532bc856dc26e",
+      "SubProcesses/mcatnlo_delta_scales.f90": "54a5055068aa397c6a04fe3de0c2f00a3ff1fddec2a216ea5420f5895ae44c0d",
+      "SubProcesses/montecarlocounter.f": "ac10aec012e1820d2be1aa26b427273c38c38920a4e605600a0a9cca95c216bc",
+      "SubProcesses/scale_module.f90": "81602cf5ab49954843d93ec0a07d50404b1b738c9103f5ed922f563f5c09e567",
+      "SubProcesses/sudakov.f": "020c561c3d09fee13ea93c2faae4052206ac64bb2f1250b0ba552af7da63f10a"
+    }
+  },
+  "grouped_profile_fix": {
+    "fix": "Evaluate source prior with exact representative source real IDs, while keeping shower denominator flavours resolved.",
+    "matching_file_sha256": "ac10aec012e1820d2be1aa26b427273c38c38920a4e605600a0a9cca95c216bc",
+    "problem": "Source average passed resolved real flavours to representative Born kernel; nonrepresentative grouped flavours became false unsupported hard remainders.",
+    "regression_tests": "22 native tests passed including charm/representative source-average equality",
+    "source_events_regenerated": false,
+    "source_generation_routines_unchanged": {
+      "DY": {
+        "compute_delta": "5d46d04ae9d3fdde72daccf5305c548ec87e98a8f77d762f0842855bbc46b32a",
+        "delta_backward_leg": "557fe6b136e2ea37d6181da276105d855df30c3dcf59e331a7570c1d72a5f8af",
+        "delta_leg_probability": "1d24f204605eee03471a03a9fa538f2adab80e1490902dd51591d8e0a22fed7b",
+        "delta_winner_mixture": "feb55ed120756024599a66feb006222b26e1220e57f109534cfda5fad5ad0f9a",
+        "get_delta_connections": "47c6232125568746e8b9dcda79521e180abc911aac7dd064bf49d9c234df6687"
+      },
+      "H": {
+        "compute_delta": "5d46d04ae9d3fdde72daccf5305c548ec87e98a8f77d762f0842855bbc46b32a",
+        "delta_backward_leg": "557fe6b136e2ea37d6181da276105d855df30c3dcf59e331a7570c1d72a5f8af",
+        "delta_leg_probability": "1d24f204605eee03471a03a9fa538f2adab80e1490902dd51591d8e0a22fed7b",
+        "delta_winner_mixture": "feb55ed120756024599a66feb006222b26e1220e57f109534cfda5fad5ad0f9a",
+        "get_delta_connections": "47c6232125568746e8b9dcda79521e180abc911aac7dd064bf49d9c234df6687"
+      },
+      "ttbar": {
+        "compute_delta": "5d46d04ae9d3fdde72daccf5305c548ec87e98a8f77d762f0842855bbc46b32a",
+        "delta_backward_leg": "557fe6b136e2ea37d6181da276105d855df30c3dcf59e331a7570c1d72a5f8af",
+        "delta_leg_probability": "1d24f204605eee03471a03a9fa538f2adab80e1490902dd51591d8e0a22fed7b",
+        "delta_winner_mixture": "feb55ed120756024599a66feb006222b26e1220e57f109534cfda5fad5ad0f9a",
+        "get_delta_connections": "47c6232125568746e8b9dcda79521e180abc911aac7dd064bf49d9c234df6687"
+      }
+    }
+  },
+  "hard_remainder_cap_fix": {
+    "all_1M_first_emission_arrays_bitwise_unchanged": [
+      "pt",
+      "nominal",
+      "macnlops",
+      "is_h",
+      "rule",
+      "rule_names"
+    ],
+    "all_weights_momenta_flavours_and_non_scale_XML_unchanged": true,
+    "events": [
+      {
+        "after_event_sha256": "fed7235b0406228711b451ed9adb6c8c00a4e397dad7de4d0bce8bbec172304d",
+        "before_event_sha256": "6c7495f9ff3477e13c6cb4f23e6cfcfa77c1fd956fde8c981c7f51ca19a2fcd7",
+        "global_pair_max_GeV": 914.3958097994486,
+        "index": 0,
+        "old_pair_min_GeV": 891.7309202149528,
+        "raw_weight": 0.00086213923,
+        "source": "SubProcesses/P0_gg_ttx/GF1.0_9/events.lhe",
+        "without_scales_sha256": "5d5f08155c061e3096b6bf9bf883d6071479fbeb6fc0de3fb0038a86c5b3ca4a"
+      },
+      {
+        "after_event_sha256": "f7faec0a831d8b776c2f15199d608377cb5ffee9dbe8badaa8b5f5a91722c6b7",
+        "before_event_sha256": "ac35d3f92338ed1a563851562e16f338f4c8a30bafbbe1ecbb81aeb216f541e6",
+        "global_pair_max_GeV": 243.8289604367702,
+        "index": 1,
+        "old_pair_min_GeV": 231.55283407782156,
+        "raw_weight": 0.00086213923,
+        "source": "SubProcesses/P0_gg_ttx/GF2.0_8/events.lhe",
+        "without_scales_sha256": "5b43082889dba0dfc65c1c3b53d752ecc66138178877c8eac1fa61218365766c"
+      },
+      {
+        "after_event_sha256": "0aa2659d98b6716da15e7d082a9d9ec485d3b5d866e02f1a1b9b66081aa5b22a",
+        "before_event_sha256": "604672af3e14a7592ae401b71a8b7952db592def9ee2a96ee11c616e0482e480",
+        "global_pair_max_GeV": 656.3417052302675,
+        "index": 2,
+        "old_pair_min_GeV": 624.3858224756586,
+        "raw_weight": 0.00086213923,
+        "source": "SubProcesses/P0_gg_ttx/GF2.0_29/events.lhe",
+        "without_scales_sha256": "4bfe7af23ca881dbdea8ba88c2f0dbbdd66fa4e602c006e4122171d1c8ebfda3"
+      },
+      {
+        "after_event_sha256": "8e060dc7165b6ad81f28eb2f397dedc713b2e0c507965493a52b5b48329de2fc",
+        "before_event_sha256": "9b6fec6a93c6b6e574e9ca524e464d786b6cdac3c9e7785f48b6bf94ff7d52b5",
+        "global_pair_max_GeV": 836.9816170342258,
+        "index": 3,
+        "old_pair_min_GeV": 796.6505546260169,
+        "raw_weight": 0.00086213923,
+        "source": "SubProcesses/P0_gg_ttx/GF2.0_40/events.lhe",
+        "without_scales_sha256": "b96eb138ba5d5c43bdb4d8ca546131948422477ff1ff7d777cc8ed2b7a842537"
+      },
+      {
+        "after_event_sha256": "0b7705f344a19ccf8e2068099fe0a3fddb5d2f2f1a6ea7dc973d0173e8158d35",
+        "before_event_sha256": "f4b889d62d159d0773aff7ef05f0c31ec00599fa27dff7ad229bbddaecc2c325",
+        "global_pair_max_GeV": 404.64078626745595,
+        "index": 4,
+        "old_pair_min_GeV": 389.38381962052085,
+        "raw_weight": 0.00086213923,
+        "source": "SubProcesses/P0_gg_ttx/GF3.0_40/events.lhe",
+        "without_scales_sha256": "53507ce79d629d06f11c912344ef41690423ed87e8a8d58356387759dbd72c1d"
+      }
+    ],
+    "files": [
+      {
+        "after_sha256": "184ba665de7cff9da5952e207a1421de78fb7b9c89e710fd0e1e9945ee97095b",
+        "before_sha256": "b33b3d8119c54119c3d0288f73d951884e0aa3a63232866996f0ce558a7e55c9",
+        "modified_events": 1,
+        "original_archive": "/export/slow1/rikkert/macnlops_winner_1M_20261031/validation/pre_hard_remainder_cap_fix/ttbar/raw_sources/P0_gg_ttx/GF1.0_9/events.lhe",
+        "path": "/export/slow1/rikkert/macnlops_winner_1M_20261031/processes/TTbar_5FS/SubProcesses/P0_gg_ttx/GF1.0_9/events.lhe"
+      },
+      {
+        "after_sha256": "c7f65fe55ccf86ab44479958c697876bb32379fc9ce96193785a2db863b1b5b4",
+        "before_sha256": "ce47cd2cbff55ea2edf57060800d9028bc42ea787fa989eb5a6848ba69822078",
+        "modified_events": 1,
+        "original_archive": "/export/slow1/rikkert/macnlops_winner_1M_20261031/validation/pre_hard_remainder_cap_fix/ttbar/raw_sources/P0_gg_ttx/GF2.0_8/events.lhe",
+        "path": "/export/slow1/rikkert/macnlops_winner_1M_20261031/processes/TTbar_5FS/SubProcesses/P0_gg_ttx/GF2.0_8/events.lhe"
+      },
+      {
+        "after_sha256": "87f8aa1d32fef3369f91cbc637f3a0e06e75e1a1214a9317259b2f862cb2f248",
+        "before_sha256": "29bf971cd1ee3258d1b8eec0890a947d9e07342e862622668dca81c52ed78db9",
+        "modified_events": 1,
+        "original_archive": "/export/slow1/rikkert/macnlops_winner_1M_20261031/validation/pre_hard_remainder_cap_fix/ttbar/raw_sources/P0_gg_ttx/GF2.0_29/events.lhe",
+        "path": "/export/slow1/rikkert/macnlops_winner_1M_20261031/processes/TTbar_5FS/SubProcesses/P0_gg_ttx/GF2.0_29/events.lhe"
+      },
+      {
+        "after_sha256": "22951babddb6e5987371c8f3e48d3c2c8bb1aed0ddc57cd5bf4de76d6bdce075",
+        "before_sha256": "8f60d4baf6996d9a8b390a4c03a966fde7d977c9eea0a8c17ddde746b0f15b7d",
+        "modified_events": 1,
+        "original_archive": "/export/slow1/rikkert/macnlops_winner_1M_20261031/validation/pre_hard_remainder_cap_fix/ttbar/raw_sources/P0_gg_ttx/GF2.0_40/events.lhe",
+        "path": "/export/slow1/rikkert/macnlops_winner_1M_20261031/processes/TTbar_5FS/SubProcesses/P0_gg_ttx/GF2.0_40/events.lhe"
+      },
+      {
+        "after_sha256": "3cce3b88150b3f6a283103ba5a19edf069e8838b5b87430c214f2ce4ce6d0759",
+        "before_sha256": "a8215c524c01c9815bec3f39a1a789f96ff9d879051f8a781a10a08b4d4ded75",
+        "modified_events": 1,
+        "original_archive": "/export/slow1/rikkert/macnlops_winner_1M_20261031/validation/pre_hard_remainder_cap_fix/ttbar/raw_sources/P0_gg_ttx/GF3.0_40/events.lhe",
+        "path": "/export/slow1/rikkert/macnlops_winner_1M_20261031/processes/TTbar_5FS/SubProcesses/P0_gg_ttx/GF3.0_40/events.lhe"
+      }
+    ],
+    "generator_fix": {
+      "mc_matching_runtime.f": {
+        "after_sha256": "3ba36b5f628b110891e93cbbe2e805328b7788e12a81bcb9420532bc856dc26e",
+        "before_sha256": "c35883817eddc28abbdda981a2440e4987c2fe2437a834ce088d36f05a3dd447"
+      },
+      "scale_module.f90": {
+        "after_sha256": "81602cf5ab49954843d93ec0a07d50404b1b738c9103f5ed922f563f5c09e567",
+        "before_sha256": "18d6c9ea14710aca570200aaa2ec232b3be25391d413b713c1f6d80d9f7bb8b4"
+      }
+    },
+    "matching_decision_counts_unchanged": true,
+    "matching_weight_sums": {
+      "input": 636.7553439364056,
+      "macnlops": 632.7024274161769
+    },
+    "matching_weight_sums_unchanged": true,
+    "modified_events": 5,
+    "modified_files": 5,
+    "new_generator_matches_repair": "common existing maximum for positive entries; zero/inactive entries preserved; all5 repaired packets have only positive entries",
+    "policy": "collapse positive hard-remainder H dipole scales to existing maximum",
+    "source_event_count": 1000000,
+    "time": "2026-10-31T11:06:59.922042+00:00"
+  },
+  "initial": {
+    "base": "/export/slow1/rikkert/macnlops_winner_1M_20261031",
+    "cores_per_process": 40,
+    "events_per_process": 1000000,
+    "git_head": "7031e3e04509b80f61d85e53a1ede8e45fda12a0",
+    "pythia_library_sha256": {
+      "libpythia8.so": "35203dfab4e20b044fe6e669b8170f5905f56c43c6dad6e762ceff86158a283c",
+      "libpythia8amcatnloHooks.so": "95913dec94ff37c8255832e8a652dd7ff821467f6636ad76de1e7842a8196bce",
+      "libpythia8colourReconnectionHooks.so": "abafd0e305f41f5b8150943eff6c17c3b2c1d3c80eb0c4e2aa3fbec3f2c3de1a",
+      "libpythia8jetMatchingHooks.so": "885beedf340c726de7fb6c2f0b13b7766540895fe7091cb9f84990c72f688384",
+      "libpythia8lhapdf6.so": "6d024e50492bb6d065f4a5e2ad47f894fec2730ce700431b8bd6a9123d15815b",
+      "libpythia8lhefHooks.so": "15b705c3ce9db69a9dc7e7584f4afd2a1f9d8b144f99f65ec1c5b18ab9645496",
+      "libpythia8powhegHooks.so": "7782fb751ce9759a3fed56b65fa54ba92323b6664dbf6c5c9d3299b7552878d6",
+      "libpythia8resonanceDecayFilterHooks.so": "50ae1d857bad71282d429c717db4f2a4bf51353a8f5acd506a3b657105756bce",
+      "libpythia8setLHEDecayProductHooks.so": "522b081175494e616d095e44ceaaeeabf14a30eb92d67ccc7b0ca63e5043fe49"
+    },
+    "run": "run_1M_winner",
+    "seeds": {
+      "DY": 3120101,
+      "H": 3120201,
+      "ttbar": 3120301
+    },
+    "source_sha256": {
+      "Template/NLO/Cards/FKS_params.dat": "239698beac7e2ecc1e1aefa265a29c4ef80c1e4c7b7ac53c9abef61788ddc7fd",
+      "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "5746c83f5ac8dffb591f5d020bd950c4b89cdcf70aa9771e1964d718ce043c28",
+      "Template/NLO/MCatNLO/srcPythia8/MacNLOPS.cc": "b704507b48ac0729eba1ced377e8a35fa227217ff740bb74944e8bdcf6faa280",
+      "Template/NLO/MCatNLO/srcPythia8/MacNLOPS.h": "fd1f731451a34a6f33241a63fa122ddeac1d13a4f8487c919d6dd8a7968d0164",
+      "Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc": "98503898e119434966808aeafbcd19fbc50e4a28302a97f19d49dab2a12e3725",
+      "Template/NLO/SubProcesses/FKSParams.f90": "6482b19623c96569c06516de66d63a3993a92a090faab8bece97d3c162c8e758",
+      "Template/NLO/SubProcesses/add_write_info.f": "57365cbbc91918d195c869a7a8c7e0b62d8b8505b5b787e2304d63c465c6ed7c",
+      "Template/NLO/SubProcesses/driver_macnlops.f": "5e8a1ca9aeb2e4f1e4114fca076441c8ce49a5b958bc4110387d6e1b6b469148",
+      "Template/NLO/SubProcesses/driver_mintMC.f": "977bc69f6a2afbb9a5fbfea659505f92cfcb8736abb2488a319582899cd1dbea",
+      "Template/NLO/SubProcesses/fks_singular.f": "37fb815c887703ffc7570d48186a00f5b1e7eeb2c4c92b6d7e9ad095eeb989dc",
+      "Template/NLO/SubProcesses/handling_lhe_events.f": "a187cb57574dc5bd261fcf23af9313d9f2be868c5e61450d337493b445e2d1e7",
+      "Template/NLO/SubProcesses/macnlops_capi.f": "affb48d36c44205b930ddf3af6bb096d098b33915440d96223886aea97fc7883",
+      "Template/NLO/SubProcesses/macnlops_evaluator.f": "daff2044dbf8cf7cfec00ee5c025f09b3b22546fc37b72a4039941ad93738896",
+      "Template/NLO/SubProcesses/mc_matching_runtime.f": "c35883817eddc28abbdda981a2440e4987c2fe2437a834ce088d36f05a3dd447",
+      "Template/NLO/SubProcesses/mcatnlo_delta_scales.README": "f0e5469836f1d4b7107e88702ffff9b708dbbfd198fcb4eeb53cd85187ea53fd",
+      "Template/NLO/SubProcesses/mcatnlo_delta_scales.f90": "54a5055068aa397c6a04fe3de0c2f00a3ff1fddec2a216ea5420f5895ae44c0d",
+      "Template/NLO/SubProcesses/montecarlocounter.f": "f0454186a74f7aef29ab8bec8531c5b35fba56249b6670445700f2f5f39f7f9e",
+      "Template/NLO/SubProcesses/weight_lines.f": "c63af2df7e0e8c52a547c87c3300d620e75b2f9b16488dc786a7bc6595a79804",
+      "docs/macnlops_derivation.md": "ec93da79a4b0005aea7e9acac534b4076519dbc230a9747b9157b67bb7ec57df",
+      "madgraph/various/macnlops.py": "5d4a3683a1a821591d46e7864aca302fa123f5774fa5b0e6dffc6c7aeacabc4f",
+      "tests/input_files/check_macnlops_delta_context.f90": "04be4cb20618dbdf48dec8fb1f5c4959c1fc98f76a01ed3f7ac8aa245ebb0fa0",
+      "tests/input_files/check_mcatnlo_delta_matching.f90": "9b0fcfb6ad81f1c774ef1b12b5ce2e428b4a3225fe37bf1cfd654502e89b6cdb",
+      "tests/unit_tests/fks/test_macnlops_delta_context.py": "89de2406a46434897c90d8d2aaa7929167c66aac6b4587163350be74c9012a49",
+      "tests/unit_tests/fks/test_macnlops_sudakov_profile.py": "bfc6b85a1491e6adad27a6cf44954410008e6355524017b7ce7021889a3f770e",
+      "tests/unit_tests/fks/test_mcatnlo_delta_scales.py": "5a795fdaa754eb0cd6c0088bae3065bc8dc0096f391dfa219497871ba0c29e0e",
+      "tests/unit_tests/various/test_macnlops_delta_protocol.py": "089dcd19e1e38b67e200b3e9be040ad733c92dfb5f51f4ec0daf5aac05e8c7bd",
+      "tests/unit_tests/various/test_macnlops_first_emission.py": "881f0e39267f72c4a34738f4504502cc78663cbc1ccfb1d90ae0e3b21975037a"
+    }
+  },
+  "pythia_libraries_unchanged": true,
+  "pythia_library_sha256": {
+    "libpythia8.so": "35203dfab4e20b044fe6e669b8170f5905f56c43c6dad6e762ceff86158a283c",
+    "libpythia8amcatnloHooks.so": "95913dec94ff37c8255832e8a652dd7ff821467f6636ad76de1e7842a8196bce",
+    "libpythia8colourReconnectionHooks.so": "abafd0e305f41f5b8150943eff6c17c3b2c1d3c80eb0c4e2aa3fbec3f2c3de1a",
+    "libpythia8jetMatchingHooks.so": "885beedf340c726de7fb6c2f0b13b7766540895fe7091cb9f84990c72f688384",
+    "libpythia8lhapdf6.so": "6d024e50492bb6d065f4a5e2ad47f894fec2730ce700431b8bd6a9123d15815b",
+    "libpythia8lhefHooks.so": "15b705c3ce9db69a9dc7e7584f4afd2a1f9d8b144f99f65ec1c5b18ab9645496",
+    "libpythia8powhegHooks.so": "7782fb751ce9759a3fed56b65fa54ba92323b6664dbf6c5c9d3299b7552878d6",
+    "libpythia8resonanceDecayFilterHooks.so": "50ae1d857bad71282d429c717db4f2a4bf51353a8f5acd506a3b657105756bce",
+    "libpythia8setLHEDecayProductHooks.so": "522b081175494e616d095e44ceaaeeabf14a30eb92d67ccc7b0ca63e5043fe49"
+  },
+  "zero_support_fix": {
+    "example": {
+      "d": 1258672154209.456,
+      "k": 1258672154209.456,
+      "kernel_scale": 0.0,
+      "r": 1249686376664.813,
+      "shower_sudakov": 0.028761,
+      "source": 1.0
+    },
+    "fix": "Finite zero kernel scale gives T=min(C*A,F)=0 and H acceptance1. Negative/nonfinite scales remain errors.",
+    "matcher_sha256": "c3a5fbdb834121e8b130920ffc5768179ba625efe8bb4f5bf3f8aef7602a4be7",
+    "problem": "Negative H source hard remainder with zero resolved shower PDF has F=0; old matcher incorrectly required strictly positive normalization.",
+    "pythia_modified": false,
+    "source_events_regenerated": false,
+    "tests": "4 tests in test_macnlops_sudakov_kernel, including zero support and bounded-transfer grid"
+  }
+}

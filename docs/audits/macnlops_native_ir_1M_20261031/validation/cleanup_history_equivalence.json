@@ -1,0 +1,33 @@
+{
+  "born_flavour_trials": 597584,
+  "current_scale_module_sha256": "6c8954e0d95b34d409f547bf3da001b929cf09f11f018d1f11b569e2cdbc7f1e",
+  "events": 11218,
+  "inputs": {
+    "DY": {
+      "events": 4121,
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/scale_audit/DY_sample.lhe",
+      "records": 8242,
+      "sha256": "47466e4a40a61643422202c171c58bbd722d455ae470d3272d333d080259bae1"
+    },
+    "H": {
+      "events": 3175,
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/scale_audit/H_sample.lhe",
+      "records": 6350,
+      "sha256": "b9171b8591459b91bd0989dfab2a2043287818ec3da223d77031f52f1f4c4ec3"
+    },
+    "ttbar": {
+      "events": 3922,
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/scale_audit/ttbar_sample.lhe",
+      "records": 31376,
+      "sha256": "6da46abf0e47e1ddd79781ae54d9bc0ba4c0cb0cb97e32268099f32d81748ce3"
+    }
+  },
+  "kinematic_reconstructions": 45968,
+  "method": "All saved transfer-endpoint probes; all QCD radiators/recoilers, ISR opposite-beam recoil, and 13 Born flavours; exact support/scale/status comparison. No emission-rate/PDF factors changed.",
+  "scale_mismatches": 0,
+  "status_mismatches": 0,
+  "support_mismatches": 0,
+  "supported_trials": 43559,
+  "validated_source_archive": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/validation/source_state.tar.gz",
+  "validated_source_archive_sha256": "eaaa8e6b8603bfd71fc5d4040ad8348104d5f5408594f9a22d326ed6be681842"
+}

@@ -1,0 +1,60 @@
+{
+  "DY": {
+    "max_relative_errors": {
+      "dipole_error": 0.0,
+      "global_error": 0.0,
+      "production_error": 0.0
+    },
+    "native_import_full_continuation_events": 4121,
+    "written": {
+      "counts": {
+        "H": 140177,
+        "S": 859823,
+        "emitted": 859786,
+        "exhausted": 37,
+        "unshowered": 140177
+      },
+      "events": 1000000,
+      "path": "../scale_audit/DY_written_scales.json",
+      "sampled_events": 4121
+    }
+  },
+  "H": {
+    "max_relative_errors": {
+      "dipole_error": 0.0,
+      "global_error": 0.0,
+      "production_error": 0.0
+    },
+    "native_import_full_continuation_events": 3175,
+    "written": {
+      "counts": {
+        "H": 120778,
+        "S": 879222,
+        "emitted": 879222,
+        "unshowered": 120778
+      },
+      "events": 1000000,
+      "path": "../scale_audit/H_written_scales.json",
+      "sampled_events": 3175
+    }
+  },
+  "ttbar": {
+    "max_relative_errors": {
+      "dipole_error": 0.0,
+      "global_error": 0.0,
+      "production_error": 0.0
+    },
+    "native_import_full_continuation_events": 3922,
+    "written": {
+      "counts": {
+        "H": 150857,
+        "S": 849143,
+        "emitted": 849143,
+        "unshowered": 150857
+      },
+      "events": 1000000,
+      "path": "../scale_audit/ttbar_written_scales.json",
+      "sampled_events": 3922
+    }
+  }
+}

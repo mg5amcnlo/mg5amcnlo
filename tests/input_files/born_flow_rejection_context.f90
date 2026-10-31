@@ -113,4 +113,9 @@ module scale_module
   integer :: born_flow_picked=0
   double precision :: emsca_H(1,8,5,5)=1d0
   double precision :: shower_scale_n1body(5,5)=1d0,shower_scale_nbody(4,4)=1d0
+contains
+  subroutine common_H_hard_scale(scales)
+    double precision, intent(inout) :: scales(:,:)
+    error stop 'Unexpected common H scale assignment in rejection fixture'
+  end subroutine
 end module

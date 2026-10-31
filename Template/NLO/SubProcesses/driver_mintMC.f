@@ -121,6 +121,8 @@ c
       enddo
 
       call setrun                !Sets up run parameters
+      call validate_delta_common_scale(mcatnlo_delta,shower_mc,
+     $     ickkw,nincoming)
       if(macnlops)then
          call macnlops_validate_profile
 c Both supported source laws keep their own sign classification. Do not

@@ -1174,9 +1174,11 @@ c
 c Delta matching: no-emission probability and H-event scales.
       subroutine compute_delta(p,probne)
 c     Assemble the no-emission probability and the H-event start scales.
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       use FKSParams, only: delta_backward_isr,delta_backward_alphas,
-     $     delta_backward_alphas_order
-      use fks_phase_space_data, only: xbjrk_cnt
+     $     delta_backward_alphas_order,delta_common_scale
+      use fks_phase_space_data, only: xbjrk_cnt,p1_cnt,
+     $     xi_i_fks_ev,y_ij_fks_ev
       use process_module, only: valid_dipole_n1,ndelH
       use scale_module, only: born_flow_picked,shower_scale_nbody,
      $     force_II_connection,emsca_H
@@ -1215,6 +1217,8 @@ c     The first Sudakov call initializes these fitted table bounds.
       logical*1 dzones_nbody(nexternal-1,nexternal-1)
       type(delta_connections) leg_connections(nexternal-1)
       integer i,j
+      integer history_count
+      double precision history_t((nexternal-1)**2),native_scale
       double precision mcmass(21),deltanum,leg_probability
 c     DeltaBackwardISR: Lambda_3,4,5 of the card's shower coupling.
       double precision backward_lambda(3:5),backward_alpha
@@ -1271,6 +1275,29 @@ c     Fill selected color configuration into jpart array.
       call get_delta_stopping_scales(p,idup_h,icolup_s,
      $     Sevent_starting_scales,cxmupp,Sevent_stopping_scales,
      $     xmasses_nbody,dzones_nbody)
+      if(delta_common_scale)then
+c The native matching component c also fixes its continuation scale.
+c Apply the SAME deterministic global-IR source factor to H/S/G before
+c unweighting; no independent continuation-history draw is introduced.
+         native_scale=get_qMC(xi_i_fks_ev,y_ij_fks_ev)
+         if(.not.ieee_is_finite(native_scale))
+     $        stop 'Nonfinite native H continuation scale'
+         call delta_native_ir_probability(p,p1_cnt(:,1:nexternal-1,0),
+     $        idup_h,Sevent_starting_scales,native_scale,wgt_sudakov,
+     $        history_count,history_t)
+         if(native_scale.le.0d0)then
+c A nonpositive native scale cannot define a continuation cap.
+c At the exact soft boundary the common source factor is zero anyway.
+            native_scale=max(1.01d0,compute_pTparton(p))
+         endif
+         Hevent_starting_scales=-1d0
+         where(valid_dipole_n1)
+            Hevent_starting_scales=native_scale
+         endwhere
+         emsca_H(nFKSprocess,ifold_counter,1:ndelH,1:ndelH)=
+     $        Hevent_starting_scales
+         goto 815
+      endif
       call get_Hevent_starting_scales(Sevent_stopping_scales
      $     ,dzones_nbody,p,Hevent_starting_scales)
 
@@ -1362,6 +1389,7 @@ c     probability; -1 keeps the forward table.
          wgt_sudakov=wgt_sudakov*leg_probability
       enddo
 
+ 815  continue
       if (btest(MCcntcalled,3)) then
          write (*,*) 'Fourth bit of MCcntcalled should not '/
      $        /'have been set yet',MCcntcalled
@@ -1386,6 +1414,163 @@ c
 
       return
       end subroutine compute_delta
+
+      subroutine delta_native_ir_probability(p,pborn,real_ids,start,
+     $     native_pt,prob,history_count,history_t)
+c Global infrared damping on the fixed native Born/colour state. Take
+c the lower envelope of all-radiator Sudakov factors at every valid
+c singular reconstruction and at the native continuation scale t_c.
+c The envelope preserves P=1+O(alpha_s) at resolved fixed kinematics and
+c vanishes continuously if ANY valid reconstruction becomes infrared.
+c In particular, PDF-zero emission rates never hide a singular history.
+c These scales define damping only: the surviving H event stays at t_c.
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      use mcatnlo_delta_scales, only: delta_history_scale,delta_ok
+      use process_module, only: valid_dipole_n,iRtoB
+      use scale_module, only: born_flow_picked
+      implicit none
+      include 'genps.inc'
+      integer real_ids(nexternal),history_count,i,j,ir,jr,kr,
+     $     local_status,i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      integer idup(nexternal-1,maxproc),
+     $     mothup(2,nexternal-1,maxproc),
+     $     icolup(2,nexternal-1,max_bcol)
+      include 'born_leshouche.inc'
+      double precision p(0:3,nexternal),pborn(0:3,nexternal-1),
+     $     start(nexternal-1,nexternal-1),native_pt,prob,
+     $     history_t((nexternal-1)**2),t,mc,mb,
+     $     get_mass_from_id
+      external get_mass_from_id
+      logical native_supported,supported
+
+      history_count=0
+      prob=1d0
+      history_t=0d0
+      i=iRtoB(j_fks)
+      if(.not.ieee_is_finite(native_pt).or.native_pt.lt.0d0)
+     $     stop 'Invalid native Delta evolution scale'
+      native_supported=any(valid_dipole_n(i,:,born_flow_picked).and.
+     $     start(i,:).ge.native_pt)
+c At the exact soft-gluon boundary z rounds to one in every inverse
+c map. This is the zero-Sudakov limit, not an unsupported hard remainder.
+      if(real_ids(i_fks).eq.21.and.p(0,i_fks).le.
+     $     32d0*epsilon(1d0)*maxval(abs(p(0,:))))then
+         prob=0d0
+         return
+      endif
+      if(native_supported.and.native_pt.eq.0d0)then
+         prob=0d0
+         return
+      endif
+      mc=get_mass_from_id(4)
+      mb=get_mass_from_id(5)
+      do ir=1,nexternal
+         if(ir.eq.i_fks)cycle
+c A quark changes flavour: only the native radiator has a certified
+c flavour-changing inverse Born map in this fixed-source construction.
+         if(real_ids(i_fks).ne.21.and.ir.ne.j_fks)cycle
+         i=iRtoB(ir)
+         do jr=1,nexternal
+            if(jr.eq.i_fks.or.jr.eq.ir)cycle
+            j=iRtoB(jr)
+            if(.not.valid_dipole_n(i,j,born_flow_picked))cycle
+            kr=jr
+            if(ir.le.nincoming)kr=3-ir
+            call delta_history_scale(p(:,ir),p(:,i_fks),p(:,kr),
+     $           real_ids(ir),real_ids(i_fks),idup(i,1),
+     $           ir.gt.nincoming,kr.gt.nincoming,mc,mb,
+     $           t,supported,local_status)
+            if(local_status.ne.delta_ok.or..not.supported)cycle
+            if(.not.ieee_is_finite(t).or.t.le.0d0)cycle
+            if(t.gt.start(i,j))cycle
+            history_count=history_count+1
+            history_t(history_count)=t
+            prob=min(prob,delta_common_probability(pborn,start,t))
+         enddo
+      enddo
+c get_qMC is the actual native evolution scale, including global FSR
+c recoil. Its validity does not require a local colour-dipole inverse
+c to exist: that inverse must never veto the native damping or cap.
+      if(native_supported.and.native_pt.gt.0d0)prob=min(prob,
+     $     delta_common_probability(pborn,start,native_pt))
+      if(.not.ieee_is_finite(prob).or.prob.lt.0d0.or.prob.gt.1d0)
+     $     stop 'Invalid native-history global-IR Delta'
+      end subroutine delta_native_ir_probability
+
+      double precision function delta_common_probability(pborn,start,t)
+c All live Born radiators evolve down to one common stopping scale.
+c Rebuild the live mask at this cutoff, independently of the inverse
+c reconstruction that supplied it. The configured source PDF and
+c backward-evolution corrections are exactly the legacy Delta factors.
+      use FKSParams, only: delta_backward_isr,delta_backward_alphas,
+     $     delta_backward_alphas_order
+      use process_module, only: valid_dipole_n
+      use scale_module, only: born_flow_picked
+      use fks_phase_space_data, only: xbjrk_cnt
+      implicit none
+      include 'genps.inc'
+      include 'run.inc'
+      integer i,j,k
+      integer idup(nexternal-1,maxproc),
+     $     mothup(2,nexternal-1,maxproc),
+     $     icolup(2,nexternal-1,max_bcol)
+      include 'born_leshouche.inc'
+      double precision pborn(0:3,nexternal-1),
+     $     start(nexternal-1,nexternal-1),t,
+     $     stop(nexternal-1,nexternal-1),
+     $     masses(nexternal-1,nexternal-1),lambda(3:5),mcmass(21),
+     $     legprob,cstlow,cstupp,cxmlow,cxmupp
+      common/cstxmbds/cstlow,cstupp,cxmlow,cxmupp
+      logical*1 dead(nexternal-1,nexternal-1)
+      type(delta_connections) conn(nexternal-1)
+      mcmass=0d0
+      include 'MCmasses_PYTHIA8.inc'
+      if(delta_backward_isr)call delta_alphas_lambdas(
+     $     delta_backward_alphas,delta_backward_alphas_order,lambda)
+      stop=t
+      masses=-1d0
+      dead=.true.
+      do i=1,nexternal-1
+         do j=1,nexternal-1
+            if(.not.valid_dipole_n(i,j,born_flow_picked))cycle
+            k=j
+            if(i.le.nincoming)k=3-i
+            masses(i,j)=min(cxmupp,sqrt(abs(sumdot(pborn(:,i),
+     $           pborn(:,k),merge(-1d0,1d0,
+     $           (i.le.nincoming).neqv.(k.le.nincoming))))))
+            if(start(i,j).gt.t)dead(i,j)=.false.
+         enddo
+      enddo
+      call get_delta_connections(start,stop,dead,masses,
+     $     idup(:,1),born_flow_picked,.false.,1.01d0,cstupp,conn)
+      do i=1,nexternal-1
+c A Born gluon can have two colour ends with the same partner.
+         if(idup(i,1).ne.21.or.conn(i)%count.ne.1)cycle
+         if(count(valid_dipole_n(i,:,born_flow_picked)).ne.1)cycle
+         conn(i)%count=2
+         conn(i)%partner(2)=conn(i)%partner(1)
+         conn(i)%start(2)=conn(i)%start(1)
+         conn(i)%stop(2)=conn(i)%stop(1)
+         conn(i)%mass(2)=conn(i)%mass(1)
+         conn(i)%sudakov_type(2)=conn(i)%sudakov_type(1)
+      enddo
+      delta_common_probability=1d0
+      do i=1,nexternal-1
+         if(conn(i)%count.eq.0)cycle
+         legprob=-1d0
+         if(i.le.nincoming.and.delta_backward_isr)
+     $        legprob=delta_backward_leg(idup(i,1),
+     $        idup(i,1:iproc_born),lpp(i),xbjrk_cnt(i,0),
+     $        conn(i),lambda,delta_backward_alphas_order)
+         if(legprob.lt.0d0)legprob=delta_leg_probability(i,
+     $        idup(i,1),idup(i,1:iproc_born),
+     $        merge(lpp(min(i,nincoming)),0,i.le.nincoming),
+     $        merge(xbjrk_cnt(min(i,nincoming),0),0d0,
+     $        i.le.nincoming),conn(i),mcmass)
+         delta_common_probability=delta_common_probability*legprob
+      enddo
+      end function delta_common_probability
 
       subroutine get_delta_stopping_scales(p,idup_h,icolup_s,
      $     Sevent_starting_scales,mass_upper,Sevent_stopping_scales,
@@ -1488,17 +1673,37 @@ c     Checks
       enddo
       end subroutine get_delta_stopping_scales
 
+      subroutine delta_source_flavours(source_ids)
+c The source sums grouped flavours before unweighting. Reproduce its
+c representative real IDs when evaluating its source Sudakov law.
+c Resolved event IDs belong to the competing shower, not this source law.
+      implicit none
+      include 'genps.inc'
+      include 'nFKSconfigs.inc'
+      integer source_ids(nexternal),nFKSprocess
+      common/c_NFKSPROCESS/nFKSprocess
+      include 'leshouche_decl.inc'
+      save idup_d,mothup_d,icolup_d,niprocs_d
+      logical,save :: first=.true.
+      if(first)then
+         call read_leshouche_info(idup_d,mothup_d,icolup_d,niprocs_d)
+         first=.false.
+      endif
+      source_ids=idup_d(nFKSprocess,:,1)
+      end subroutine delta_source_flavours
+
       subroutine macnlops_delta_profile(p,pborn,real_ids,pt,
      $     source_mean,nnode,qnode,wnode,fsrnode,cdf,status)
-c Matching only. Integrate the ORIGINAL source Delta over its scalar
+c Matching only. Integrate the configured source Delta over its scalar
 c D(mu) starting-scale law. Return quadrature nodes for the competing
 c shower's conditional no-emission probability E[Delta_PS | Q>pt].
 c K already contains P(Q>pt), so that CDF must not be counted twice.
-c All source-table/PDF choices remain those of compute_delta. Only the
-c denominator uses Born dipole masses and a common evolution cutoff.
+c Source-table/PDF choices follow compute_delta, including its optional
+c native-history global-IR prescription. The denominator uses Born masses
+c and a common evolution cutoff.
       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       use FKSParams, only: delta_backward_isr,delta_backward_alphas,
-     $     delta_backward_alphas_order
+     $     delta_backward_alphas_order,delta_common_scale
       use fks_phase_space_data, only: xbjrk_cnt
       use process_module, only: valid_dipole_n,mass_n
       use scale_module, only: born_flow_picked,shower_scale_nbody_min,
@@ -1509,8 +1714,9 @@ c denominator uses Born dipole masses and a common evolution cutoff.
       implicit none
       include 'genps.inc'
       include 'run.inc'
-      integer real_ids(nexternal),nnode,status,i,j,k,l,nc,partners(2),
-     $     nbreak,part,local_status,sudtype
+      integer real_ids(nexternal),source_ids(nexternal),
+     $     nnode,status,i,j,k,l,nc,partners(2),
+     $     nbreak,part,local_status,sudtype,history_count
       integer idup(nexternal-1,maxproc),
      $     mothup(2,nexternal-1,maxproc),
      $     icolup(2,nexternal-1,max_bcol)
@@ -1519,11 +1725,13 @@ c denominator uses Born dipole masses and a common evolution cutoff.
      $     source_mean,qnode(macnlops_sudakov_max),
      $     wnode(macnlops_sudakov_max),fsrnode(macnlops_sudakov_max),
      $     cdf,lo,hi,q,a,b,u,weight,total_weight,prob,legprob,tmp,
-     $     boundaries(4*nexternal+8),mcmass(21),lambda(3:5),
+     $     boundaries((nexternal-1)**2+4*nexternal+10),
+     $     mcmass(21),lambda(3:5),
      $     start(nexternal-1,nexternal-1),
      $     stop(nexternal-1,nexternal-1),
      $     masses(nexternal-1,nexternal-1),
-     $     born_mass(nexternal-1,nexternal-1)
+     $     born_mass(nexternal-1,nexternal-1),
+     $     history_t((nexternal-1)**2)
       double precision rec(0:3),whole(0:3)
       logical connected(nexternal-1,nexternal-1)
       logical*1 dead(nexternal-1,nexternal-1),
@@ -1559,6 +1767,7 @@ c denominator uses Born dipole masses and a common evolution cutoff.
       if(.not.(hi.gt.lo.and.lo.gt.0d0))return
       u=min(max((pt-lo)/(hi-lo),0d0),1d0)
       cdf=1d0-u*u/(u*u+(1d0-u)**2)
+      if(delta_common_scale)call delta_source_flavours(source_ids)
       connected=valid_dipole_n(:,:,born_flow_picked)
       call pythia8_starting_scales(nexternal-1,pborn,mass_n,
      $     connected,hi,start,local_status)
@@ -1609,6 +1818,17 @@ c This includes discontinuous colour-line mixtures in the source Delta.
             endif
          enddo
       enddo
+      if(delta_common_scale)then
+c The global envelope changes its set of valid reconstructions when Q
+c crosses any candidate's start threshold; split there as well as at t_c.
+         call delta_native_ir_probability(p,pborn,source_ids,start,
+     $        pt,prob,history_count,history_t)
+         do i=1,history_count
+            if(history_t(i).le.lo.or.history_t(i).ge.hi)cycle
+            nbreak=nbreak+1
+            boundaries(nbreak)=history_t(i)
+         enddo
+      endif
       if(pt.gt.lo.and.pt.lt.hi)then
          nbreak=nbreak+1
          boundaries(nbreak)=pt
@@ -1637,6 +1857,12 @@ c This includes discontinuous colour-line mixtures in the source Delta.
             call pythia8_starting_scales(nexternal-1,pborn,mass_n,
      $           connected,q,start,local_status)
             if(local_status.ne.delta_ok)return
+            if(delta_common_scale)then
+c Use exactly the generation-time global-IR factor at THIS Q node.
+c The source average includes unsupported hard-remainder nodes.
+               call delta_native_ir_probability(p,pborn,source_ids,
+     $              start,pt,prob,history_count,history_t)
+            else
             node_dead=dead.or.stop.gt.start
             call get_delta_connections(start,stop,node_dead,masses,
      $           idup(:,1),born_flow_picked,
@@ -1656,6 +1882,7 @@ c This includes discontinuous colour-line mixtures in the source Delta.
      $              i.le.nincoming),conn(i),mcmass)
                prob=prob*legprob
             enddo
+            endif
             source_mean=source_mean+weight*prob
             if(q.le.pt)cycle
             if(nnode.eq.macnlops_sudakov_max)return
@@ -1806,7 +2033,7 @@ c     Keep the PDF flavour average and the order of Sudakov-table calls.
       type(delta_connections), intent(in) :: connections
       integer in_con,out_con,isudtype,ip,lp,id
       double precision deltanum,deltaden,delta(2,2),gl(2),Fk(2)
-      double precision pdfnum,pdfden,PIk
+      double precision pdfnum,pdfden,PIk,glsum
       double precision pdg2pdf
       external pdg2pdf
 
@@ -1872,9 +2099,16 @@ c     Loop over gamma in eq.3.34.
       enddo
 c     Sum the colour-line contributions in eq.3.34 and bound the result
 c     to interpret it as a probability at the accuracy used here.
+      glsum=sum(gl(1:connections%count))
+      if(glsum.le.0d0)then
+c At a rounded unit Sudakov ratio neither line evolves. Preserve its
+c finite probability by weighing the identical stopping lines equally.
+         gl=1d0
+         glsum=connections%count
+      endif
       PIk=0d0
       do out_con=1,connections%count
-         PIk=PIk+gl(out_con)/sum(gl(1:connections%count))*Fk(out_con)
+         PIk=PIk+gl(out_con)/glsum*Fk(out_con)
      $        *product(delta(out_con,1:connections%count))
       enddo
       delta_leg_probability=min(max(PIk,0d0),1d0)

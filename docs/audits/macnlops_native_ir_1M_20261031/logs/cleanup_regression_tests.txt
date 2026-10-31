@@ -1,0 +1,324 @@
+test_common_hard_scale_without_a_passing_born (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_common_hard_scale_without_a_passing_born) ... ok
+test_common_scale_global_ir_weight_and_native_handoff (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_common_scale_global_ir_weight_and_native_handoff) ... ok
+test_common_scale_gluon_colour_multiplicities (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_common_scale_gluon_colour_multiplicities) ... ok
+test_common_scale_retains_deep_collinear_damping (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_common_scale_retains_deep_collinear_damping) ... ok
+test_native_global_fsr_does_not_require_local_inverse (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_native_global_fsr_does_not_require_local_inverse) ... ok
+test_native_scales_feed_sudakov_and_h_event_assignment (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_native_scales_feed_sudakov_and_h_event_assignment) ... ok
+test_reconstruction_error_is_fatal (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaMatching.test_reconstruction_error_is_fatal) ... ok
+test_charm_mass_model_uses_both_heavy_flavour_thresholds (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaModelMasses.test_charm_mass_model_uses_both_heavy_flavour_thresholds) ... /export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/check_param_card.py:336: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/loop_sm/restrict_c_mass.dat' mode='r' encoding='UTF-8'>
+  self.read(input_path)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1488: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/template_files/get_mass_width_fcts.inc' mode='r' encoding='UTF-8'>
+  'iolibs/template_files/get_mass_width_fcts.inc')).read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1495: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_u_knl4qh/makeinc.inc' mode='r' encoding='UTF-8'>
+  makeinc_content = open(makeinc).read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1497: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_u_knl4qh/makeinc.inc' mode='w' encoding='UTF-8'>
+  open(makeinc, 'w').write(makeinc_content)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_default_model_has_massless_charm_and_massive_bottom (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaModelMasses.test_default_model_has_massless_charm_and_massive_bottom) ... /export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/check_param_card.py:336: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/loop_sm/restrict_default.dat' mode='r' encoding='UTF-8'>
+  self.read(input_path)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1495: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_dim1otd2/makeinc.inc' mode='r' encoding='UTF-8'>
+  makeinc_content = open(makeinc).read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1497: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_dim1otd2/makeinc.inc' mode='w' encoding='UTF-8'>
+  open(makeinc, 'w').write(makeinc_content)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_five_flavour_model_has_massless_charm_and_bottom (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaModelMasses.test_five_flavour_model_has_massless_charm_and_bottom) ... /export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/check_param_card.py:336: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/loop_sm/restrict_no_b_mass.dat' mode='r' encoding='UTF-8'>
+  self.read(input_path)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1495: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_lsgfdc41/makeinc.inc' mode='r' encoding='UTF-8'>
+  makeinc_content = open(makeinc).read()
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/iolibs/export_fks.py:1497: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/mg5_delta_model_masses_lsgfdc41/makeinc.inc' mode='w' encoding='UTF-8'>
+  open(makeinc, 'w').write(makeinc_content)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_dead_zone_and_small_virtuality_conventions (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_dead_zone_and_small_virtuality_conventions) ... ok
+test_final_dipoles_and_emission_remapping (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_final_dipoles_and_emission_remapping) ... ok
+test_heavy_flavour_thresholds (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_heavy_flavour_thresholds) ... ok
+test_initial_double_colour_connection (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_initial_double_colour_connection) ... ok
+test_invalid_colours_arguments_and_pair_threshold (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_invalid_colours_arguments_and_pair_threshold) ... ok
+test_mixed_dipoles_and_lorentz_invariance (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_mixed_dipoles_and_lorentz_invariance) ... ok
+test_pythia_starting_limits_and_lorentz_invariance (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_pythia_starting_limits_and_lorentz_invariance) ... ok
+test_starting_threshold_and_invalid_input (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestMCatNLODeltaScales.test_starting_threshold_and_invalid_input) ... ok
+test_delta_scales_and_fold_selection_use_same_hard_scale (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestStartingScaleIntegration.test_delta_scales_and_fold_selection_use_same_hard_scale) ... ok
+test_herwig_scalar_matches_effective_dipoles_and_subtractions (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestStartingScaleIntegration.test_herwig_scalar_matches_effective_dipoles_and_subtractions) ... ok
+test_ordinary_scalar_matches_effective_dipoles_and_subtractions (tests.unit_tests.fks.test_mcatnlo_delta_scales.TestStartingScaleIntegration.test_ordinary_scalar_matches_effective_dipoles_and_subtractions) ... ok
+test_alpha_s_reproduces_pythia (tests.unit_tests.fks.test_delta_backward_isr.TestDeltaBackwardISR.test_alpha_s_reproduces_pythia) ... ok
+test_first_order_running (tests.unit_tests.fks.test_delta_backward_isr.TestDeltaBackwardISR.test_first_order_running) ... ok
+test_fixed_rules_reproduce_the_identity (tests.unit_tests.fks.test_delta_backward_isr.TestDeltaBackwardISR.test_fixed_rules_reproduce_the_identity) ... ok
+test_gluon_lines (tests.unit_tests.fks.test_delta_backward_isr.TestDeltaBackwardISR.test_gluon_lines) ... ok
+test_if_connections_use_the_ii_dipole (tests.unit_tests.fks.test_delta_backward_isr.TestDeltaBackwardISR.test_if_connections_use_the_ii_dipole) ... ok
+test_no_evolution_and_table_fallbacks (tests.unit_tests.fks.test_delta_backward_isr.TestDeltaBackwardISR.test_no_evolution_and_table_fallbacks) ... ok
+test_deep_collinear_sentinel_retains_singular_history (tests.unit_tests.fks.test_delta_history_scales.TestDeltaHistoryScales.test_deep_collinear_sentinel_retains_singular_history) ... ok
+test_flavour_incompatible_candidates_are_unsupported (tests.unit_tests.fks.test_delta_history_scales.TestDeltaHistoryScales.test_flavour_incompatible_candidates_are_unsupported) ... ok
+test_flavour_preserving_quark_and_gluon (tests.unit_tests.fks.test_delta_history_scales.TestDeltaHistoryScales.test_flavour_preserving_quark_and_gluon) ... ok
+test_fsr_pair_creation_and_reordered_quark (tests.unit_tests.fks.test_delta_history_scales.TestDeltaHistoryScales.test_fsr_pair_creation_and_reordered_quark) ... ok
+test_isr_crossing (tests.unit_tests.fks.test_delta_history_scales.TestDeltaHistoryScales.test_isr_crossing) ... ok
+test_native_lund_scale_and_kinematic_support (tests.unit_tests.fks.test_delta_history_scales.TestDeltaHistoryScales.test_native_lund_scale_and_kinematic_support) ... ok
+test_soft_limit_and_invalid_kinematic_support (tests.unit_tests.fks.test_delta_history_scales.TestDeltaHistoryScales.test_soft_limit_and_invalid_kinematic_support) ... ok
+test_capi_identifies_native_ir_as_a_distinct_source_mode (tests.unit_tests.fks.test_delta_common_scale_config.TestDeltaCommonScaleConfig.test_capi_identifies_native_ir_as_a_distinct_source_mode) ... ok
+test_default_override_old_card_reset_and_valid_policy (tests.unit_tests.fks.test_delta_common_scale_config.TestDeltaCommonScaleConfig.test_default_override_old_card_reset_and_valid_policy) ... ok
+test_incompatible_source_policies_fail_before_integration (tests.unit_tests.fks.test_delta_common_scale_config.TestDeltaCommonScaleConfig.test_incompatible_source_policies_fail_before_integration) ... ok
+test_grouped_source_average_uses_representative_flavours (tests.unit_tests.fks.test_macnlops_sudakov_profile.TestSudakovMarginal.test_grouped_source_average_uses_representative_flavours) ... ok
+test_native_source_average_includes_unsupported_start_nodes (tests.unit_tests.fks.test_macnlops_sudakov_profile.TestSudakovMarginal.test_native_source_average_includes_unsupported_start_nodes) ... ok
+test_original_source_average_and_conditional_start_cdf (tests.unit_tests.fks.test_macnlops_sudakov_profile.TestSudakovMarginal.test_original_source_average_and_conditional_start_cdf) ... ok
+test_complete_and_empty_packets_preserved_by_generic_reader (tests.unit_tests.fks.test_macnlops_delta_context.TestMacNLOPSDeltaContext.test_complete_and_empty_packets_preserved_by_generic_reader) ... ok
+test_context_growth_replay_and_zero_mid_one_transfer (tests.unit_tests.fks.test_macnlops_delta_context.TestMacNLOPSDeltaContext.test_context_growth_replay_and_zero_mid_one_transfer) ... ok
+test_delta_scales_accept_old_inline_and_full_precision_multiline (tests.unit_tests.fks.test_macnlops_delta_context.TestMacNLOPSDeltaContext.test_delta_scales_accept_old_inline_and_full_precision_multiline) ... ok
+test_malformed_probability_or_registry_fails (tests.unit_tests.fks.test_macnlops_delta_context.TestMacNLOPSDeltaContext.test_malformed_probability_or_registry_fails) ... ok
+test_missing_duplicate_nonfinite_or_repeated_keys_fail (tests.unit_tests.fks.test_macnlops_delta_context.TestMacNLOPSDeltaContext.test_missing_duplicate_nonfinite_or_repeated_keys_fail) ... ok
+test_native_ir_source_survives_native_collect_roundtrip (tests.unit_tests.fks.test_macnlops_delta_context.TestMacNLOPSDeltaContext.test_native_ir_source_survives_native_collect_roundtrip) ... ok
+test_winner_source_survives_native_collect_roundtrip (tests.unit_tests.fks.test_macnlops_delta_context.TestMacNLOPSDeltaContext.test_winner_source_survives_native_collect_roundtrip) ... ok
+test_native_wrapper_preserves_delta_compensation_and_ordinary_limit (tests.unit_tests.fks.test_macnlops_delta_context.TestMacNLOPSDeltaSource.test_native_wrapper_preserves_delta_compensation_and_ordinary_limit) ... ok
+test_born_only_rejection (tests.unit_tests.fks.test_born_flow_rejection.TestBornFlowRejection.test_born_only_rejection) ... ok
+test_calibration_rejects_the_complete_nonfinite_s_point (tests.unit_tests.fks.test_born_flow_rejection.TestBornFlowRejection.test_calibration_rejects_the_complete_nonfinite_s_point) ... ok
+test_calibration_uses_s_weights_and_restores_production (tests.unit_tests.fks.test_born_flow_rejection.TestBornFlowRejection.test_calibration_uses_s_weights_and_restores_production) ... ok
+test_kinematic_failure_with_explicit_outer_sum (tests.unit_tests.fks.test_born_flow_rejection.TestBornFlowRejection.test_kinematic_failure_with_explicit_outer_sum) ... ok
+test_later_kinematic_failure_discards_earlier_folds (tests.unit_tests.fks.test_born_flow_rejection.TestBornFlowRejection.test_later_kinematic_failure_discards_earlier_folds) ... ok
+test_later_native_failure_discards_earlier_folds (tests.unit_tests.fks.test_born_flow_rejection.TestBornFlowRejection.test_later_native_failure_discards_earlier_folds) ... ok
+test_massive_reference_without_soft_endpoint_keeps_shared_flow (tests.unit_tests.fks.test_born_flow_rejection.TestBornFlowRejection.test_massive_reference_without_soft_endpoint_keeps_shared_flow) ... ok
+test_nonfinite_and_zero_colour_weights (tests.unit_tests.fks.test_born_flow_rejection.TestBornFlowRejection.test_nonfinite_and_zero_colour_weights) ... ok
+test_nonfinite_weights_discard_all_folds_and_recover (tests.unit_tests.fks.test_born_flow_rejection.TestBornFlowRejection.test_nonfinite_weights_discard_all_folds_and_recover) ... ok
+test_outer_rejection_discards_all_contributions (tests.unit_tests.fks.test_born_flow_rejection.TestBornFlowRejection.test_outer_rejection_discards_all_contributions) ... ok
+test_outer_rejection_with_native_sector_matching (tests.unit_tests.fks.test_born_flow_rejection.TestBornFlowRejection.test_outer_rejection_with_native_sector_matching) ... ok
+test_rejection_below_born_cuts (tests.unit_tests.fks.test_born_flow_rejection.TestBornFlowRejection.test_rejection_below_born_cuts) ... ok
+test_rejection_with_explicit_outer_fks_sum (tests.unit_tests.fks.test_born_flow_rejection.TestBornFlowRejection.test_rejection_with_explicit_outer_fks_sum) ... ok
+test_virtual_only_rejection (tests.unit_tests.fks.test_born_flow_rejection.TestBornFlowRejection.test_virtual_only_rejection) ... ok
+test_default_override_and_old_card_reset (tests.unit_tests.fks.test_mc_flow_sum.TestMCFlowCard.test_default_override_and_old_card_reset) ... ok
+test_native_sum_and_event_owner_restoration (tests.unit_tests.fks.test_mc_flow_sum.TestMCFlowSum.test_native_sum_and_event_owner_restoration) ... ok
+test_contribution_storage_growth_and_reuse (tests.unit_tests.fks.test_mc_event_colours.TestMCEventColours.test_contribution_storage_growth_and_reuse) ... ok
+test_sector_fold_and_native_colour_ownership (tests.unit_tests.fks.test_mc_event_colours.TestMCEventColours.test_sector_fold_and_native_colour_ownership) ... ok
+test_native_born_cuts_scale_reuse_and_real_state_restoration (tests.unit_tests.fks.test_mc_born_cuts.TestMCBornCuts.test_native_born_cuts_scale_reuse_and_real_state_restoration) ... ok
+test_reordered_rows_group_before_sign_and_preserve_reweighting (tests.unit_tests.fks.test_macnlops_h_flavour_groups.TestMacNLOPSHFlavourGroups.test_reordered_rows_group_before_sign_and_preserve_reweighting) ... ok
+test_changed_registry_content_is_rejected_before_a_build (tests.unit_tests.various.test_macnlops_delta_protocol.TestDeltaProtocol.test_changed_registry_content_is_rejected_before_a_build) ... ok
+test_construction_keeps_normal_delta_and_legacy_sources_distinct (tests.unit_tests.various.test_macnlops_delta_protocol.TestDeltaProtocol.test_construction_keeps_normal_delta_and_legacy_sources_distinct) ... ok
+test_context_round_trip_and_fail_closed_validation (tests.unit_tests.various.test_macnlops_delta_protocol.TestDeltaProtocol.test_context_round_trip_and_fail_closed_validation) ... ok
+test_delta_probe_passes_the_native_scale_mode (tests.unit_tests.various.test_macnlops_delta_protocol.TestDeltaProtocol.test_delta_probe_passes_the_native_scale_mode) ... ok
+test_different_joint_owner_laws_require_an_explicit_source_mixture (tests.unit_tests.various.test_macnlops_delta_protocol.TestDeltaProtocol.test_different_joint_owner_laws_require_an_explicit_source_mixture) ... ok
+test_equal_histogram_means_do_not_justify_duplicate_independent_draws (tests.unit_tests.various.test_macnlops_delta_protocol.TestDeltaProtocol.test_equal_histogram_means_do_not_justify_duplicate_independent_draws) ... ok
+test_h_replay_routes_to_exact_registry_and_keeps_the_full_context (tests.unit_tests.various.test_macnlops_delta_protocol.TestDeltaProtocol.test_h_replay_routes_to_exact_registry_and_keeps_the_full_context) ... ok
+test_native_ir_source_cannot_reuse_winner_or_old_delta_events (tests.unit_tests.various.test_macnlops_delta_protocol.TestDeltaProtocol.test_native_ir_source_cannot_reuse_winner_or_old_delta_events) ... ok
+test_native_ir_source_policy_is_bound_to_the_generation_fks_card (tests.unit_tests.various.test_macnlops_delta_protocol.TestDeltaProtocol.test_native_ir_source_policy_is_bound_to_the_generation_fks_card) ... ok
+test_original_h_requires_context_but_original_s_does_not (tests.unit_tests.various.test_macnlops_delta_protocol.TestDeltaProtocol.test_original_h_requires_context_but_original_s_does_not) ... ok
+test_owner_certificate_composes_the_full_external_permutation (tests.unit_tests.various.test_macnlops_delta_protocol.TestDeltaProtocol.test_owner_certificate_composes_the_full_external_permutation) ... ok
+test_randomized_collection_preserves_the_signed_delta_packet (tests.unit_tests.various.test_macnlops_delta_protocol.TestDeltaProtocol.test_randomized_collection_preserves_the_signed_delta_packet) ... ok
+test_run_card_accepts_delta_and_rejects_the_legacy_combination (tests.unit_tests.various.test_macnlops_delta_protocol.TestDeltaProtocol.test_run_card_accepts_delta_and_rejects_the_legacy_combination) ... /export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/various/banner.py:2953: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/Template/Common/Source/PDF/lep_densities/isrbetmll/info' mode='r' encoding='UTF-8'>
+  for line in open(pjoin(check_dir, name, 'info')):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+run_card missed argument run_tag. Takes default: tag_1
+run_card missed argument req_acc. Takes default: -1.0
+run_card missed argument nevt_job. Takes default: -1
+run_card missed argument time_of_flight. Takes default: -1.0
+run_card missed argument req_acc_fo. Takes default: 0.01
+run_card missed argument npoints_fo_grid. Takes default: 5000
+run_card missed argument niters_fo_grid. Takes default: 4
+run_card missed argument npoints_fo. Takes default: 10000
+run_card missed argument niters_fo. Takes default: 6
+run_card missed argument folding. Takes default: [1, 1, 1]
+run_card missed argument custom_fcts. Takes default: []
+run_card missed argument pt_min_pdg. Takes default: {}
+run_card missed argument pt_max_pdg. Takes default: {}
+run_card missed argument mxx_min_pdg. Takes default: {}
+run_card missed argument run_tag. Takes default: tag_1
+run_card missed argument req_acc. Takes default: -1.0
+run_card missed argument nevt_job. Takes default: -1
+run_card missed argument time_of_flight. Takes default: -1.0
+run_card missed argument req_acc_fo. Takes default: 0.01
+run_card missed argument npoints_fo_grid. Takes default: 5000
+run_card missed argument niters_fo_grid. Takes default: 4
+run_card missed argument npoints_fo. Takes default: 10000
+run_card missed argument niters_fo. Takes default: 6
+run_card missed argument folding. Takes default: [1, 1, 1]
+run_card missed argument custom_fcts. Takes default: []
+run_card missed argument pt_min_pdg. Takes default: {}
+run_card missed argument pt_max_pdg. Takes default: {}
+run_card missed argument mxx_min_pdg. Takes default: {}
+ok
+test_run_card_stores_hard_momenta_only_for_macnlops (tests.unit_tests.various.test_macnlops_delta_protocol.TestDeltaProtocol.test_run_card_stores_hard_momenta_only_for_macnlops) ... run_card missed argument run_tag. Takes default: tag_1
+run_card missed argument req_acc. Takes default: -1.0
+run_card missed argument nevt_job. Takes default: -1
+run_card missed argument time_of_flight. Takes default: -1.0
+run_card missed argument req_acc_fo. Takes default: 0.01
+run_card missed argument npoints_fo_grid. Takes default: 5000
+run_card missed argument niters_fo_grid. Takes default: 4
+run_card missed argument npoints_fo. Takes default: 10000
+run_card missed argument niters_fo. Takes default: 6
+run_card missed argument folding. Takes default: [1, 1, 1]
+run_card missed argument custom_fcts. Takes default: []
+run_card missed argument pt_min_pdg. Takes default: {}
+run_card missed argument pt_max_pdg. Takes default: {}
+run_card missed argument mxx_min_pdg. Takes default: {}
+run_card missed argument run_tag. Takes default: tag_1
+run_card missed argument req_acc. Takes default: -1.0
+run_card missed argument nevt_job. Takes default: -1
+run_card missed argument time_of_flight. Takes default: -1.0
+run_card missed argument req_acc_fo. Takes default: 0.01
+run_card missed argument npoints_fo_grid. Takes default: 5000
+run_card missed argument niters_fo_grid. Takes default: 4
+run_card missed argument npoints_fo. Takes default: 10000
+run_card missed argument niters_fo. Takes default: 6
+run_card missed argument folding. Takes default: [1, 1, 1]
+run_card missed argument custom_fcts. Takes default: []
+run_card missed argument pt_min_pdg. Takes default: {}
+run_card missed argument pt_max_pdg. Takes default: {}
+run_card missed argument mxx_min_pdg. Takes default: {}
+run_card missed argument run_tag. Takes default: tag_1
+run_card missed argument req_acc. Takes default: -1.0
+run_card missed argument nevt_job. Takes default: -1
+run_card missed argument time_of_flight. Takes default: -1.0
+run_card missed argument req_acc_fo. Takes default: 0.01
+run_card missed argument npoints_fo_grid. Takes default: 5000
+run_card missed argument niters_fo_grid. Takes default: 4
+run_card missed argument npoints_fo. Takes default: 10000
+run_card missed argument niters_fo. Takes default: 6
+run_card missed argument folding. Takes default: [1, 1, 1]
+run_card missed argument custom_fcts. Takes default: []
+run_card missed argument pt_min_pdg. Takes default: {}
+run_card missed argument pt_max_pdg. Takes default: {}
+run_card missed argument mxx_min_pdg. Takes default: {}
+run_card missed argument run_tag. Takes default: tag_1
+run_card missed argument req_acc. Takes default: -1.0
+run_card missed argument nevt_job. Takes default: -1
+run_card missed argument time_of_flight. Takes default: -1.0
+run_card missed argument req_acc_fo. Takes default: 0.01
+run_card missed argument npoints_fo_grid. Takes default: 5000
+run_card missed argument niters_fo_grid. Takes default: 4
+run_card missed argument npoints_fo. Takes default: 10000
+run_card missed argument niters_fo. Takes default: 6
+run_card missed argument folding. Takes default: [1, 1, 1]
+run_card missed argument custom_fcts. Takes default: []
+run_card missed argument pt_min_pdg. Takes default: {}
+run_card missed argument pt_max_pdg. Takes default: {}
+run_card missed argument mxx_min_pdg. Takes default: {}
+ok
+test_s_samples_fresh_reproducible_auxiliary_independently_of_source_scales (tests.unit_tests.various.test_macnlops_delta_protocol.TestDeltaProtocol.test_s_samples_fresh_reproducible_auxiliary_independently_of_source_scales) ... ok
+test_winner_source_annotation_cannot_be_relabelled_as_old_delta (tests.unit_tests.various.test_macnlops_delta_protocol.TestDeltaProtocol.test_winner_source_annotation_cannot_be_relabelled_as_old_delta) ... ok
+test_every_event_is_written_with_its_macnlops_weight (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionNative.test_every_event_is_written_with_its_macnlops_weight) ... ok
+test_native_ir_source_uses_matching_policy_and_rejects_winner_backend (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionNative.test_native_ir_source_uses_matching_policy_and_rejects_winner_backend) ... ok
+test_previous_v3_prescription_remains_reproducible (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionNative.test_previous_v3_prescription_remains_reproducible) ... ok
+test_probability_cap_reduces_h_removal_together_with_s_veto (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionNative.test_probability_cap_reduces_h_removal_together_with_s_veto) ... ok
+test_v2_has_no_pdf_ratio_and_dropped_rejections_are_omitted (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionNative.test_v2_has_no_pdf_ratio_and_dropped_rejections_are_omitted) ... ok
+test_zero_source_sudakov_protects_both_s_and_negative_h (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionNative.test_zero_source_sudakov_protects_both_s_and_negative_h) ... ok
+test_collector_carries_the_marker_and_weight_declaration (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionPython.test_collector_carries_the_marker_and_weight_declaration) ... ok
+test_dropped_rejections_restate_the_retained_cross_sections (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionPython.test_dropped_rejections_restate_the_retained_cross_sections) ... ok
+test_kept_rejections_collect_the_channel_files_unchanged (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionPython.test_kept_rejections_collect_the_channel_files_unchanged) ... ok
+test_marker_gives_the_shower_hand_off (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionPython.test_marker_gives_the_shower_hand_off) ... ok
+test_route_table_exports_sectors_and_certified_born_transports (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionPython.test_route_table_exports_sectors_and_certified_born_transports) ... /export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/check_param_card.py:336: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/sm/restrict_default.dat' mode='r' encoding='UTF-8'>
+  self.read(input_path)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_route_table_requires_a_matching_registry (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionPython.test_route_table_requires_a_matching_registry) ... ok
+test_table_coupling_is_shared_by_python_c_and_the_backward_correction (tests.unit_tests.various.test_macnlops_first_emission.TestFirstEmissionPython.test_table_coupling_is_shared_by_python_c_and_the_backward_correction) ... ok
+test_massive_support_and_reduced_transverse_momentum_cutoff (tests.unit_tests.various.test_macnlops_sudakov_kernel.TestMassiveShowerRate.test_massive_support_and_reduced_transverse_momentum_cutoff) ... ok
+test_finite_transfer_remains_bounded_by_both_densities (tests.unit_tests.various.test_macnlops_sudakov_kernel.TestSudakovTransferSupport.test_finite_transfer_remains_bounded_by_both_densities) ... ok
+test_negative_shower_density_still_fails (tests.unit_tests.various.test_macnlops_sudakov_kernel.TestSudakovTransferSupport.test_negative_shower_density_still_fails) ... ok
+test_zero_shower_support_retains_the_source_hard_remainder (tests.unit_tests.various.test_macnlops_sudakov_kernel.TestSudakovTransferSupport.test_zero_shower_support_retains_the_source_hard_remainder) ... ok
+test_delta_generation_matching_collection_and_normal_shower_dispatch (tests.unit_tests.various.test_macnlops_delta_workflow.TestDeltaWorkflow.test_delta_generation_matching_collection_and_normal_shower_dispatch) ... run_card missed argument run_tag. Takes default: tag_1
+run_card missed argument req_acc. Takes default: -1.0
+run_card missed argument nevt_job. Takes default: -1
+run_card missed argument time_of_flight. Takes default: -1.0
+run_card missed argument req_acc_fo. Takes default: 0.01
+run_card missed argument npoints_fo_grid. Takes default: 5000
+run_card missed argument niters_fo_grid. Takes default: 4
+run_card missed argument npoints_fo. Takes default: 10000
+run_card missed argument niters_fo. Takes default: 6
+run_card missed argument folding. Takes default: [1, 1, 1]
+run_card missed argument custom_fcts. Takes default: []
+run_card missed argument pt_min_pdg. Takes default: {}
+run_card missed argument pt_max_pdg. Takes default: {}
+run_card missed argument mxx_min_pdg. Takes default: {}
+ok
+test_missing_h_replay_packet_prevents_channel_processing_and_collection (tests.unit_tests.various.test_macnlops_delta_workflow.TestDeltaWorkflow.test_missing_h_replay_packet_prevents_channel_processing_and_collection) ... run_card missed argument run_tag. Takes default: tag_1
+run_card missed argument req_acc. Takes default: -1.0
+run_card missed argument nevt_job. Takes default: -1
+run_card missed argument time_of_flight. Takes default: -1.0
+run_card missed argument req_acc_fo. Takes default: 0.01
+run_card missed argument npoints_fo_grid. Takes default: 5000
+run_card missed argument niters_fo_grid. Takes default: 4
+run_card missed argument npoints_fo. Takes default: 10000
+run_card missed argument niters_fo. Takes default: 6
+run_card missed argument folding. Takes default: [1, 1, 1]
+run_card missed argument custom_fcts. Takes default: []
+run_card missed argument pt_min_pdg. Takes default: {}
+run_card missed argument pt_max_pdg. Takes default: {}
+run_card missed argument mxx_min_pdg. Takes default: {}
+ok
+test_native_failure_after_successful_channel_never_publishes_combined_sample (tests.unit_tests.various.test_macnlops_delta_workflow.TestDeltaWorkflow.test_native_failure_after_successful_channel_never_publishes_combined_sample) ... run_card missed argument run_tag. Takes default: tag_1
+run_card missed argument req_acc. Takes default: -1.0
+run_card missed argument nevt_job. Takes default: -1
+run_card missed argument time_of_flight. Takes default: -1.0
+run_card missed argument req_acc_fo. Takes default: 0.01
+run_card missed argument npoints_fo_grid. Takes default: 5000
+run_card missed argument niters_fo_grid. Takes default: 4
+run_card missed argument npoints_fo. Takes default: 10000
+run_card missed argument niters_fo. Takes default: 6
+run_card missed argument folding. Takes default: [1, 1, 1]
+run_card missed argument custom_fcts. Takes default: []
+run_card missed argument pt_min_pdg. Takes default: {}
+run_card missed argument pt_max_pdg. Takes default: {}
+run_card missed argument mxx_min_pdg. Takes default: {}
+ok
+test_ordinary_source_uses_same_multistep_workflow_without_delta_replay (tests.unit_tests.various.test_macnlops_delta_workflow.TestDeltaWorkflow.test_ordinary_source_uses_same_multistep_workflow_without_delta_replay) ... run_card missed argument run_tag. Takes default: tag_1
+run_card missed argument req_acc. Takes default: -1.0
+run_card missed argument nevt_job. Takes default: -1
+run_card missed argument time_of_flight. Takes default: -1.0
+run_card missed argument req_acc_fo. Takes default: 0.01
+run_card missed argument npoints_fo_grid. Takes default: 5000
+run_card missed argument niters_fo_grid. Takes default: 4
+run_card missed argument npoints_fo. Takes default: 10000
+run_card missed argument niters_fo. Takes default: 6
+run_card missed argument folding. Takes default: [1, 1, 1]
+run_card missed argument custom_fcts. Takes default: []
+run_card missed argument pt_min_pdg. Takes default: {}
+run_card missed argument pt_max_pdg. Takes default: {}
+run_card missed argument mxx_min_pdg. Takes default: {}
+ok
+test_wrong_source_mode_is_rejected_before_channel_processing (tests.unit_tests.various.test_macnlops_delta_workflow.TestDeltaWorkflow.test_wrong_source_mode_is_rejected_before_channel_processing) ... run_card missed argument run_tag. Takes default: tag_1
+run_card missed argument req_acc. Takes default: -1.0
+run_card missed argument nevt_job. Takes default: -1
+run_card missed argument time_of_flight. Takes default: -1.0
+run_card missed argument req_acc_fo. Takes default: 0.01
+run_card missed argument npoints_fo_grid. Takes default: 5000
+run_card missed argument niters_fo_grid. Takes default: 4
+run_card missed argument npoints_fo. Takes default: 10000
+run_card missed argument niters_fo. Takes default: 6
+run_card missed argument folding. Takes default: [1, 1, 1]
+run_card missed argument custom_fcts. Takes default: []
+run_card missed argument pt_min_pdg. Takes default: {}
+run_card missed argument pt_max_pdg. Takes default: {}
+run_card missed argument mxx_min_pdg. Takes default: {}
+ok
+/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/check_param_card.py:336: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/sm/restrict_default.dat' mode='r' encoding='UTF-8'>
+  self.read(input_path)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+test_actual_gggg_diagram_and_flow_transport_is_an_involution (tests.unit_tests.various.test_macnlops_components.TestBornBasisTransport.test_actual_gggg_diagram_and_flow_transport_is_an_involution) ... ok
+test_basis_configurations_match_the_actual_fortran_writer (tests.unit_tests.various.test_macnlops_components.TestBornBasisTransport.test_basis_configurations_match_the_actual_fortran_writer) ... ok
+test_distinct_tagged_states_cannot_be_exchanged (tests.unit_tests.various.test_macnlops_components.TestBornBasisTransport.test_distinct_tagged_states_cannot_be_exchanged) ... ok
+test_missing_or_ambiguous_transport_is_not_a_copied_ordinal (tests.unit_tests.various.test_macnlops_components.TestBornBasisTransport.test_missing_or_ambiguous_transport_is_not_a_copied_ordinal) ... ok
+test_second_identical_emitter_transports_the_born_basis (tests.unit_tests.various.test_macnlops_components.TestBornBasisTransport.test_second_identical_emitter_transports_the_born_basis) ... ok
+test_ambiguous_original_identical_legs_require_explicit_ancestry (tests.unit_tests.various.test_macnlops_components.TestComponentBranchMapping.test_ambiguous_original_identical_legs_require_explicit_ancestry) ... ok
+test_colour_topology_preserves_orientation_and_ignores_tag_names (tests.unit_tests.various.test_macnlops_components.TestComponentBranchMapping.test_colour_topology_preserves_orientation_and_ignores_tag_names) ... ok
+test_duplicate_flavour_rows_do_not_duplicate_components (tests.unit_tests.various.test_macnlops_components.TestComponentBranchMapping.test_duplicate_flavour_rows_do_not_duplicate_components) ... ok
+test_five_processes_and_massive_fsr_saved_prefixes (tests.unit_tests.various.test_macnlops_components.TestComponentBranchMapping.test_five_processes_and_massive_fsr_saved_prefixes) ... ok
+test_gluon_quark_pair_returns_only_exported_orientations (tests.unit_tests.various.test_macnlops_components.TestComponentBranchMapping.test_gluon_quark_pair_returns_only_exported_orientations) ... ok
+test_identical_gluon_daughters_return_both_certified_orientations (tests.unit_tests.various.test_macnlops_components.TestComponentBranchMapping.test_identical_gluon_daughters_return_both_certified_orientations) ... ok
+test_identical_zz_spectators_follow_ancestry_after_reordering (tests.unit_tests.various.test_macnlops_components.TestComponentBranchMapping.test_identical_zz_spectators_follow_ancestry_after_reordering) ... ok
+test_integration_owner_is_not_a_shower_restriction (tests.unit_tests.various.test_macnlops_components.TestComponentBranchMapping.test_integration_owner_is_not_a_shower_restriction) ... ok
+test_missing_source_route_fails_instead_of_using_the_owner (tests.unit_tests.various.test_macnlops_components.TestComponentBranchMapping.test_missing_source_route_fails_instead_of_using_the_owner) ... ok
+test_qed_or_missing_snapshot_is_not_silently_relabelled (tests.unit_tests.various.test_macnlops_components.TestComponentBranchMapping.test_qed_or_missing_snapshot_is_not_silently_relabelled) ... ok
+test_source_provider_and_born_order_are_required (tests.unit_tests.various.test_macnlops_components.TestComponentBranchMapping.test_source_provider_and_born_order_are_required) ... ok
+test_wrong_beam_and_corrupt_endpoint_are_rejected (tests.unit_tests.various.test_macnlops_components.TestComponentBranchMapping.test_wrong_beam_and_corrupt_endpoint_are_rejected) ... ok
+test_complementary_gg_orientations_match_pythia_unlabelled_kernel (tests.unit_tests.various.test_macnlops_components.TestComponentOrbitMeasure.test_complementary_gg_orientations_match_pythia_unlabelled_kernel) ... ok
+test_noninteger_emitter_orbit_is_rejected (tests.unit_tests.various.test_macnlops_components.TestComponentOrbitMeasure.test_noninteger_emitter_orbit_is_rejected) ... ok
+test_reduced_orbit_and_actual_emitter_normalizations (tests.unit_tests.various.test_macnlops_components.TestComponentOrbitMeasure.test_reduced_orbit_and_actual_emitter_normalizations) ... ok
+
+----------------------------------------------------------------------
+Ran 126 tests in 39.909s
+
+OK

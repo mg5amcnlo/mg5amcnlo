@@ -1,0 +1,46 @@
+{
+  "DY": {
+    "events": 4152,
+    "max_errors": {
+      "global_error": 0.0,
+      "production_error": 0.0,
+      "dipole_error": 0.0
+    },
+    "missing_fsr_pairs": 0,
+    "above_global_cap": 0,
+    "photons": 0
+  },
+  "H": {
+    "events": 3455,
+    "max_errors": {
+      "global_error": 0.0,
+      "production_error": 0.0,
+      "dipole_error": 0.0
+    },
+    "missing_fsr_pairs": 0,
+    "above_global_cap": 0,
+    "photons": 0
+  },
+  "ttbar": {
+    "events": 4304,
+    "max_errors": {
+      "global_error": 0.0,
+      "production_error": 0.0,
+      "dipole_error": 0.0
+    },
+    "missing_fsr_pairs": 0,
+    "above_global_cap": 0,
+    "photons": 0
+  },
+  "ttbar_hard_fallback": {
+    "events": 5,
+    "max_errors": {
+      "global_error": 0.0,
+      "production_error": 0.0,
+      "dipole_error": 0.0
+    },
+    "missing_fsr_pairs": 0,
+    "above_global_cap": 0,
+    "photons": 0
+  }
+}

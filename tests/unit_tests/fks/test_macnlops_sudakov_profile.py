@@ -32,6 +32,7 @@ STUBS='''
       end module
       module FKSParams
       logical,parameter :: delta_backward_isr=.false.
+      logical :: delta_common_scale=.false.
       double precision,parameter :: delta_backward_alphas=.1365d0
       integer,parameter :: delta_backward_alphas_order=1
       end module
@@ -43,6 +44,22 @@ STUBS='''
 '''
 
 HELPERS='''
+      subroutine delta_source_flavours(ids)
+      integer ids(4)
+      ids=[2,-2,25,21]
+      end subroutine
+      subroutine delta_native_ir_probability(p,pb,ids,start,pt,prob,n,t)
+      double precision p(0:3,4),pb(0:3,3),start(3,3),pt,prob,t(9),q
+      integer ids(4),n
+      q=start(1,2)
+      prob=1d0
+      if(q.gt.7.5d0)prob=(7.5d0/q)**2
+c A resolved charm event must use the SAME representative source law.
+      if(any(ids.ne.[2,-2,25,21]))prob=1d0
+      n=0
+      t=0d0
+      end subroutine
+
       subroutine get_delta_stopping_scales(p,ids,col,start,upper,
      $ stop,mass,dead)
       double precision p(0:3,4),start(3,3),upper,stop(3,3),mass(3,3)
@@ -102,11 +119,15 @@ EXTERNAL='''
       use process_module
       use scale_module
       use fks_phase_space_data
+      use FKSParams
       implicit none
       include 'run.inc'
       double precision p(0:3,4),pb(0:3,3),pt,source,
      $ q(512),w(512),fsr(512),cdf,mc(21)
       integer n,status,ids(4)
+      character*16 mode
+      call get_command_argument(1,mode)
+      delta_common_scale=index(trim(mode),'native').eq.1
       lpp=1
       valid_dipole_n=.false.
       valid_dipole_n(1,2,1)=.true.
@@ -125,6 +146,7 @@ EXTERNAL='''
       pb(:,3)=[125d0,0d0,0d0,0d0]
       p=0d0
       ids=[2,-2,25,21]
+      if(trim(mode).eq.'native_charm')ids=[4,-4,25,21]
       mc=0d0
       do
          read(*,*,end=10)pt
@@ -192,6 +214,33 @@ class TestSudakovMarginal(unittest.TestCase):
             self.assertAlmostEqual(physical_cut,.5/125.,delta=2e-15)
             self.assertEqual(source_cut,0.)
             self.assertEqual(n>0,pt<20.)
+
+
+    def test_native_source_average_includes_unsupported_start_nodes(self):
+        def integrand(q):
+            u=(q-3.)/17.
+            rho=2.*u*(1.-u)/(17.*(u*u+(1.-u)**2)**2)
+            return rho*(1. if q<=7.5 else (7.5/q)**2)
+        expected=0.
+        for a,b in [(3.,7.5),(7.5,20.)]:
+            n=4000; h=(b-a)/n
+            expected+=h/3.*(integrand(a)+integrand(b)+sum(
+                (4 if k%2 else 2)*integrand(a+k*h) for k in range(1,n)))
+        result=subprocess.run([str(self.exe),'native'],input='5\n10\n',
+                              capture_output=True,text=True,check=True)
+        for line in result.stdout.splitlines():
+            status,n,source,cdf,weight,_,_=map(float,line.split())
+            self.assertEqual(status,0)
+            self.assertAlmostEqual(source,expected,delta=2e-10)
+            self.assertAlmostEqual(weight,1.,delta=2e-10)
+
+
+    def test_grouped_source_average_uses_representative_flavours(self):
+        reference=subprocess.run([str(self.exe),'native'],input='5\n10\n',
+                                 capture_output=True,text=True,check=True)
+        resolved=subprocess.run([str(self.exe),'native_charm'],input='5\n10\n',
+                                capture_output=True,text=True,check=True)
+        self.assertEqual(resolved.stdout,reference.stdout)
 
 
 if __name__=='__main__':unittest.main()

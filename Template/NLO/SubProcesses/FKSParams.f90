@@ -26,6 +26,8 @@ module FKSParams
   ! MC@NLO-Delta prototype: backward no-emission probability for incoming
   ! quarks and gluons, with the shower's alpha_s(MZ) and its running order
   ! (1 or 2).
+  ! Native-history continuation with global source damping before unweighting.
+  logical :: delta_common_scale=.false.
   logical :: delta_backward_isr=.false.
   real*8 :: delta_backward_alphas=0.1365d0
   integer :: delta_backward_alphas_order=1
@@ -119,6 +121,8 @@ contains
              read(68,*,end=999) MCSubtractionAtFixedFlow
           else if (buff .eq. '#FxFxPythia8FiniteTerms') then
              read(68,*,end=999) FxFxPythia8FiniteTerms
+          else if (buff .eq. '#DeltaCommonScale') then
+             read(68,*,end=999) delta_common_scale
           else if (buff .eq. '#DeltaBackwardISR') then
              read(68,*,end=999) delta_backward_isr
           else if (buff .eq. '#DeltaBackwardAlphaS') then
@@ -279,6 +283,7 @@ contains
        write(*,*) ' > MCSubtractionAtFixedFlow  = ',MCSubtractionAtFixedFlow
        write(*,*) ' > FKSExplicitSum            = ',FKSExplicitSum
        write(*,*) ' > FxFxPythia8FiniteTerms     = ',FxFxPythia8FiniteTerms
+       write(*,*) ' > DeltaCommonScale          = ',delta_common_scale
        write(*,*) ' > DeltaBackwardISR          = ',delta_backward_isr
        write(*,*) ' > DeltaBackwardAlphaS       = ',delta_backward_alphas
        write(*,*) ' > DeltaBackwardAlphaSOrder  = ',delta_backward_alphas_order
@@ -291,6 +296,17 @@ contains
     HasReadOnce=.TRUE.
 901 continue
   end subroutine FKSParamReader
+
+  subroutine validate_delta_common_scale(delta,shower,merging,nincoming)
+    ! Source weights and the exported H continuation implement one policy.
+    logical, intent(in) :: delta
+    character(*), intent(in) :: shower
+    integer, intent(in) :: merging,nincoming
+    if (.not.delta_common_scale) return
+    if (.not.delta.or.shower.ne.'PYTHIA8'.or.merging.ne.0.or.nincoming.ne.2) then
+       error stop 'DeltaCommonScale requires unmerged two-beam PYTHIA8 MC@NLO-Delta'
+    endif
+  end subroutine validate_delta_common_scale
 
   subroutine DefaultFKSParam() 
     ! Sets the default parameters
@@ -313,6 +329,7 @@ contains
     MCSubtractionAtFixedFlow=.true.
     FKSExplicitSum=.false.
     FxFxPythia8FiniteTerms=.false.
+    delta_common_scale=.false.
     delta_backward_isr=.false.
     delta_backward_alphas=0.1365d0
     delta_backward_alphas_order=1

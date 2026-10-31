@@ -23,9 +23,22 @@ module scale_module
   public :: compute_shower_scale_nbody,compute_shower_scale_n1body, &
        init_scale_module,Bornonly_shower_scale,get_random_shower_dipole_scale, &
        determine_partner,save_shower_scale_nbody,pythia8_S_scales, &
-       herwig7_S_scales,scalar_S_scales,set_FxFx_shower_scale_nbody
+       herwig7_S_scales,scalar_S_scales,set_FxFx_shower_scale_nbody, &
+       common_H_hard_scale
   private
 contains
+
+  subroutine common_H_hard_scale(scales)
+    ! A real hard remainder need not have a passing Born counterevent, so
+    ! compute_delta may never replace its initial H scale packet. Retain
+    ! its existing global maximum as a common cap on every active dipole.
+    ! Zero stops and absent (-1) entries keep their original meaning.
+    double precision, intent(inout) :: scales(:,:)
+    double precision :: hard_scale
+    if (.not.any(scales > 0d0)) return
+    hard_scale=maxval(scales,mask=scales > 0d0)
+    where (scales > 0d0) scales=hard_scale
+  end subroutine common_H_hard_scale
   
   subroutine init_scale_module(nexternal,shower_scale_factor_in,nfks,nfold)
     implicit none

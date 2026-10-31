@@ -50,9 +50,14 @@ class MatchingError(RuntimeError):
 ORDINARY_SOURCE = 'ordinary-mcatnlo-v1'
 RESOLVED_SOURCE = 'resolved-convex-v1'
 DELTA_SOURCE = 'mcatnlo-delta-v1'
+WINNER_DELTA_SOURCE = 'mcatnlo-delta-winner-v1'  # Legacy, readable for audits.
+NATIVE_IR_DELTA_SOURCE = 'mcatnlo-delta-native-ir-v1'
+DELTA_SOURCES = (DELTA_SOURCE, WINNER_DELTA_SOURCE, NATIVE_IR_DELTA_SOURCE)
 SOURCE_NAMES = {ORDINARY_SOURCE: 'ordinary', RESOLVED_SOURCE: 'resolved',
-                DELTA_SOURCE: 'delta'}
+                DELTA_SOURCE: 'delta', WINNER_DELTA_SOURCE: 'delta_winner',
+                NATIVE_IR_DELTA_SOURCE: 'delta_native_ir'}
 SOURCE_CONSTRUCTIONS = {name: construction for construction, name in SOURCE_NAMES.items()}
+DELTA_SOURCE_NAMES = tuple(SOURCE_NAMES[construction] for construction in DELTA_SOURCES)
 # v2 normalises the S veto to beta*K_sh; v1 divided by the bare K.
 UNDAMPED_DELTA_POLICY = 'component-undamped-delta-v2'
 LEGACY_UNDAMPED_DELTA_POLICY = 'component-undamped-delta-v1'
@@ -129,7 +134,7 @@ print('HARD_MODEL_MASSES_V1 ' + json.dumps(masses))
         return dict(_model_mass_cache[key])
 
 
-def source_construction(card):
+def source_construction(card, common_scale=False):
     """Keep source physics separate from common-input preparation."""
     # RunCardNLO's get is an alias of __getitem__, rather than dict.get.
     def flag(key):
@@ -145,7 +150,31 @@ def source_construction(card):
     resolved, delta = flag('macnlops_resolved_source'), flag('mcatnlo_delta')
     if resolved and delta:
         raise MatchingError('MC@NLO-Delta requires macnlops_resolved_source=False')
-    return DELTA_SOURCE if delta else RESOLVED_SOURCE if resolved else ORDINARY_SOURCE
+    if common_scale and not delta:
+        raise MatchingError("DeltaCommonScale requires mcatnlo_delta=True")
+    if delta:
+        return NATIVE_IR_DELTA_SOURCE if common_scale else DELTA_SOURCE
+    return RESOLVED_SOURCE if resolved else ORDINARY_SOURCE
+
+
+def configured_source_construction(process_dir, card):
+    """Bind source provenance to the FKS policy used before integration."""
+    process_dir = Path(process_dir)
+    path = process_dir / 'SubProcesses/FKS_params.dat'
+    if not path.is_file():
+        path = process_dir / 'Cards/FKS_params.dat'
+    common_scale = False
+    if path.is_file():
+        lines = path.read_text().splitlines()
+        for index, line in enumerate(lines):
+            if line.strip() == '#DeltaCommonScale':
+                values = [row.split('!', 1)[0].strip() for row in lines[index + 1:]
+                          if row.split('!', 1)[0].strip()]
+                if not values or values[0].lower() not in (
+                        '.true.', 'true', 't', '.false.', 'false', 'f'):
+                    raise MatchingError('Invalid DeltaCommonScale FKS parameter')
+                common_scale = values[0].lower() in ('.true.', 'true', 't')
+    return source_construction(card, common_scale=common_scale)
 
 
 def hard_source_name(construction):
@@ -159,7 +188,7 @@ def matching_prescription(construction, partition):
     if partition == 'sampled':
         if construction == RESOLVED_SOURCE:
             raise MatchingError('The legacy resolved source requires a global H sum')
-        return (UNDAMPED_DELTA_POLICY if construction == DELTA_SOURCE
+        return (UNDAMPED_DELTA_POLICY if construction in DELTA_SOURCES
                 else 'component-source-v1')
     if partition == 'global_sum':
         return 'global-source-v1'
@@ -592,7 +621,7 @@ class Event:
                 raise MatchingError('S component packet must not pretend to be a source-H Delta context')
         self.delta = DeltaContext.from_block(self.block)
         if self.delta is not None:
-            if self.hard is None or self.hard.source != 'delta':
+            if self.hard is None or self.hard.source not in DELTA_SOURCE_NAMES:
                 raise MatchingError('Delta context requires a Delta hard-event annotation')
             if self.delta.owner != self.hard.metadata[2]:
                 raise MatchingError('Delta context owner disagrees with the source annotation')
@@ -636,7 +665,8 @@ class Event:
         # supplies the physical starts. Keep that sentinel as provenance;
         # the written endpoint still has strictly positive current scales.
         if (continuation.source_scalup < 0 and
-                (self.kind != 'H' or self.hard is None or self.hard.source != 'delta')):
+                (self.kind != 'H' or self.hard is None or
+                 self.hard.source not in DELTA_SOURCE_NAMES)):
             raise MatchingError('Negative source SCALUP requires a Delta H endpoint')
         if ((self.kind == 'H') != (continuation.state == 'unshowered') or
                 not math.isclose(self.scale, continuation.scale, rel_tol=2.e-14)):
@@ -823,7 +853,8 @@ def hard_source_contract(filename, construction):
             if event.hard.partition == 'sampled' and event.component is None:
                 raise MatchingError('Source event %d has a sampled H partition; its '
                                     'qualified conditional component packet is required' % sequence)
-            if (expected == 'delta' and event.kind == 'H' and event.delta is None and
+            if (expected in DELTA_SOURCE_NAMES and
+                    event.kind == 'H' and event.delta is None and
                     event.hard.partition == 'global_sum'):
                 raise MatchingError('Source H event %d lacks its conditional Delta replay context; '
                                     'generate a fresh annotated MC@NLO-Delta source' % sequence)
@@ -896,7 +927,7 @@ def continuation_physics(profile):
     """
     try:
         if (profile['schema'] != 'macnlops-generation-profile-v1' or
-                profile['construction'] not in (ORDINARY_SOURCE, RESOLVED_SOURCE, DELTA_SOURCE) or
+                profile['construction'] not in SOURCE_NAMES or
                 profile['shower_backend'] != 'stock-pythia8'):
             raise ValueError('profile identity')
         support = profile['support']
@@ -1053,12 +1084,12 @@ class NativeEvaluator:
         self.delta_law_certificates = {}
         self._route_cache = {}
         self._component_basis_cache = {}
-        self.construction = source_construction(run_card_values(
+        self.construction = configured_source_construction(self.process_dir, run_card_values(
             (self.process_dir / 'Cards/run_card.dat').read_text()))
         matching_prescription(self.construction, self.partition)
         self.model_masses = hard_model_masses(self.process_dir)
         for filename in sorted((self.process_dir / 'SubProcesses').glob('P*/leshouche_info.dat')):
-            if self.construction == DELTA_SOURCE or self.partition == 'sampled':
+            if self.construction in DELTA_SOURCES or self.partition == 'sampled':
                 registry_file = filename.with_name('mc_histories.json')
                 if not registry_file.is_file():
                     raise MatchingError('Missing Delta history registry; export a fresh process: %s' % registry_file)
@@ -1116,7 +1147,7 @@ class NativeEvaluator:
 
     def _route(self, external, delta=None):
         ids = tuple(pdg for pdg, _ in external)
-        if self.construction == DELTA_SOURCE and delta is None:
+        if self.construction in DELTA_SOURCES and delta is None:
             self._certify_delta_auxiliary_law(ids)
         # Generated flavour tables are fixed for this evaluator. Cache only
         # their discrete route/permutation, never momenta or density values.
@@ -1128,7 +1159,7 @@ class NativeEvaluator:
             return directory, sector, [external[i] for i in permutation]
         final_flavours = Counter(ids[2:])
         for directory, sector, labels in self.routes:
-            if self.construction == DELTA_SOURCE:
+            if self.construction in DELTA_SOURCES:
                 registry = self.registries[directory]
                 if not registry['registry']['flavour_complete']:
                     continue
@@ -1201,7 +1232,7 @@ class NativeEvaluator:
 
     def _request(self, event, request_id):
         """Construct the native protocol without starting or building a worker."""
-        delta_mode = self.construction == DELTA_SOURCE
+        delta_mode = self.construction in DELTA_SOURCES
         replay = event.delta if delta_mode and event.kind == 'H' else None
         if delta_mode and event.kind == 'H':
             if replay is None:
@@ -1232,6 +1263,9 @@ class NativeEvaluator:
         component = event.component
         if component is None or event.hard.partition != 'sampled':
             raise MatchingError('Local matching requires a qualified component packet')
+        if (self.construction == WINNER_DELTA_SOURCE or
+                event.hard.source == SOURCE_NAMES[WINNER_DELTA_SOURCE]):
+            raise MatchingError('Legacy winner sources require their archived evaluator')
         directories = self._registry_routes.get(component.registry, ())
         if len(directories) != 1:
             raise MatchingError('No unique native Born provider for the component registry')
@@ -1258,7 +1292,8 @@ class NativeEvaluator:
                 raise MatchingError('Cannot identify sampled shower component: %s' % exc) from exc
             choices = [(choice.sector, choice.permutation, choice.born_permutation,
                         choice.orientation) for choice in candidates]
-        mode = int(self.construction == DELTA_SOURCE)
+        mode = 3 if self.construction == NATIVE_IR_DELTA_SOURCE else int(
+            self.construction == DELTA_SOURCE)
         requests = []
         for sector, permutation, born_permutation, orientation in choices:
             config, graph, flow = component.config, component.graph, component.flow
@@ -2166,7 +2201,7 @@ def prepare_generation(process_dir, run_card, pythia8):
     threshold into a previously generated hard sample.
     """
     process_dir = Path(process_dir).resolve()
-    construction = source_construction(run_card)
+    construction = configured_source_construction(process_dir, run_card)
     if not pythia8:
         raise MatchingError('macnlops=True requires pythia8_path before generation')
     if any(abs(run_card[key]) != 1 for key in ('lpp1', 'lpp2')):
@@ -2193,7 +2228,7 @@ def prepare_generation(process_dir, run_card, pythia8):
         [run_card[key] for key in ('ebeam1', 'ebeam2')], pdf, alpha, order, settings,
         shower_environment(pythia8, info), process_dir / 'macnlops_probe.log',
         flavour_count=run_card['macnlops_flavour_count'],
-        mcatnlo_delta=construction == DELTA_SOURCE)
+        mcatnlo_delta=construction in DELTA_SOURCES)
     profile = dict(schema='macnlops-generation-profile-v1', shower_backend='stock-pythia8',
                    construction=construction, support=support,
                    shower_libraries=shower_library_hashes(pythia8),
@@ -2217,10 +2252,10 @@ def generation_profile(process_dir):
         raise MatchingError('Missing measured generation profile; generate a fresh macnlops=True sample')
     profile = json.loads(path.read_text())
     if (profile.get('schema') != 'macnlops-generation-profile-v1' or
-            profile.get('construction') not in (ORDINARY_SOURCE, RESOLVED_SOURCE, DELTA_SOURCE)):
+            profile.get('construction') not in SOURCE_NAMES):
         raise MatchingError('Unknown MAcNLOPS source construction')
     card = run_card_values((Path(process_dir) / 'Cards/run_card.dat').read_text())
-    if profile['construction'] != source_construction(card):
+    if profile['construction'] != configured_source_construction(process_dir, card):
         raise MatchingError('Generation profile and run-card source constructions differ; generate a fresh common input')
     return profile
 
@@ -2339,7 +2374,7 @@ def prepare_first_emission(process_dir, run_card, pythia8, inputs, seed,
     process_dir = Path(process_dir).resolve()
     if not pythia8:
         raise MatchingError('macnlops=True requires pythia8_path')
-    if source_construction(run_card) != DELTA_SOURCE:
+    if configured_source_construction(process_dir, run_card) not in DELTA_SOURCES:
         raise MatchingError('The MAcNLOPS first emission matches MC@NLO-Delta sources')
     ids = run_card['lhaid']
     ids = ids if isinstance(ids, (list, tuple)) else [ids]
@@ -2608,7 +2643,7 @@ def run_file(filename, process_dir, job, driver, args, seed):
         profile['support']['beam_energies_lab'], central_pdf, alpha_s, alpha_order,
         settings, environment, job / 'probe.log',
         flavour_count=profile['support']['flavour_count'],
-        mcatnlo_delta=profile['construction'] == DELTA_SOURCE)
+        mcatnlo_delta=profile['construction'] in DELTA_SOURCES)
     if support != profile['support']:
         raise MatchingError('Actual Pythia profile differs from the generation profile')
     proposal = job / 'proposals.lhe'
@@ -2626,7 +2661,7 @@ def run_file(filename, process_dir, job, driver, args, seed):
                    '--pdf', central_pdf, '--alpha-s-mz', str(alpha_s),
                    '--alpha-s-order', str(alpha_order), '--settings', str(settings),
                    '--flavour-count', str(support['flavour_count'])]
-        if profile['construction'] == DELTA_SOURCE:
+        if profile['construction'] in DELTA_SOURCES:
             command.append('--mcatnlo-delta')
         with open(job / 'shower.log', 'w') as log:
             subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, check=True, env=environment)
@@ -2640,7 +2675,7 @@ def run_file(filename, process_dir, job, driver, args, seed):
                                   beta=normalisation['beta'] if normalisation else None)
         report['shower_support'] = evaluator.configuration
         report['channel_normalisation'] = normalisation
-        if profile['construction'] == DELTA_SOURCE and contract['partition'] == 'global_sum':
+        if profile['construction'] in DELTA_SOURCES and contract['partition'] == 'global_sum':
             report['delta_auxiliary'] = dict(seed=seed,
                 sampling='independent conditional source-H law; bounded C/K_g',
                 owner_law_certificates=[dict(pdgs=list(ids), sha256=digest)

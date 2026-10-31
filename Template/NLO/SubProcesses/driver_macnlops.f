@@ -36,6 +36,8 @@ c (macnlops_capi.f).
       nlo_ps=.true.
       call FKSParamReader(paramFileName,.true.,.false.)
       call setrun
+      call validate_delta_common_scale(mcatnlo_delta,shower_mc,
+     $     ickkw,nincoming)
       if(macnlops)call macnlops_validate_profile
       if(nincoming.ne.2.or.shower_mc.ne.'PYTHIA8'.or.
      $     ickkw.ne.0.or.(mcatnlo_delta.and.
@@ -131,6 +133,7 @@ c H before its physical Delta multiplier, without evaluating a Delta.
      $     local_component,component_config,component_graph,component_flow,
      $     damping_mode,diagram_symmetry,has_component_born,born_ids,
      $     born_colours,born_lab,born_masses,r,d,k,status)
+      use FKSParams, only: delta_common_scale
       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       use fks_phase_space, only: generate_native_momenta,
      $     fks_phase_space_point
@@ -244,8 +247,9 @@ c at event scale while still resolving physical heavy-mass shifts.
          if(component_flow.lt.1.or.component_flow.gt.max_bcol.or.
      $      component_config.lt.1.or.component_graph.lt.1.or.
      $      damping_mode.lt.0.or.
-     $      damping_mode.gt.1.or.
-     $      (mcatnlo_delta_mod.neqv.(damping_mode.eq.1)).or.
+     $      damping_mode.gt.3.or.damping_mode.eq.2.or.
+     $      (mcatnlo_delta_mod.neqv.(damping_mode.gt.0)).or.
+     $      (delta_common_scale.neqv.(damping_mode.eq.3)).or.
      $      .not.ieee_is_finite(diagram_symmetry).or.
      $      diagram_symmetry.le.0d0)then
             status=30
@@ -387,7 +391,7 @@ c local H uses only its scalar bogus P. Avoid unused H clustering.
                call include_born_flow_weight(flows(flow)/total,1d0)
                MCcntcalled=0
                icontr=0
-               if(local_component.and.damping_mode.eq.1.and.
+               if(local_component.and.damping_mode.gt.0.and.
      $            cuts_born)then
 c A unit replay removes only Delta. Switching to ordinary matching
 c here would incorrectly introduce its separate bogus Sudakov P.

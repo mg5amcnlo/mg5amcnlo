@@ -1,0 +1,99 @@
+Native-history MC@NLO-Delta with global infrared damping: 1M-event validation
+
+Fresh generation: 1,000,000 events each for DY, gluon-fusion Higgs in HEFT and stable ttbar.
+Source: delta_native_ir / mcatnlo-delta-native-ir-v1. Pythia source/libraries unchanged.
+13 TeV pp; NNPDF40_nlo_as_01180/0 (331700); DY mee>60 GeV, mH125, mt173.
+Seeds DY3220101, H3220201, ttbar3220301. DeltaCommonScale=true, DeltaBackwardISR=false.
+First emission: stock Pythia8.318, alpha_s(MZ)=0.1365, one loop/noCMW, cutoffs0.5GeV.
+Full shower: alpha_s(MZ)=0.118, one loop; MPI, hadronization, primordial kT, all QED,
+and top/Higgs decays off. The setup matches the auxiliary-winner baseline.
+
+Construction:
+H keeps the native matching component c and starts at its get_qMC scale t_c, including
+global-recoil FSR even when a local inverse map is invalid. No second history is drawn.
+The common pre-unweighting source factor is the lower envelope of all-radiator Sudakovs
+at native t_c and every valid singular reconstruction scale in its fixed Born context.
+It reuses the source tables and PDF corrections without an emission-rate/PDF support gate.
+A valid zero-Sudakov history gives exactly P=0 continuously, eliminating H and retaining
+the paired real/MC contribution in S; H, S and G use the same P. Invalid sentinels do not
+supply IR zeros. Unsupported hard remainders retain P=1; hard events without a passing
+Born counterevent use the existing common maximum cap. Legacy winner samples cannot be relabelled.
+
+Inclusive weights (pb):
+process      source             matched            change          expected net +/- sample error
+DY         1930.65032822    1931.58878456  +0.04861%   +1.1587936 +/- 0.2112673
+H            30.77618169      30.77257081  -0.01173%   -0.0037185 +/- 0.0021914
+ttbar       636.65439666     633.12095945  -0.55500%   -3.6053615 +/- 0.2387497
+
+H addition / S rejection, hard-system pT5-20GeV:
+process/source      first expected         first realized          full realized
+DY     /v4     1.048732 +/- 0.012325    1.050515 +/- 0.016893    1.050418 +/- 0.017129
+DY     /winner 1.063147 +/- 0.013830    1.043651 +/- 0.018791    1.052202 +/- 0.017685
+DY     /native 1.052215 +/- 0.014098    1.040184 +/- 0.019320    1.030364 +/- 0.017498
+H      /v4     0.993811 +/- 0.014487    0.993371 +/- 0.019823    1.037898 +/- 0.022921
+H      /winner 0.991058 +/- 0.016548    0.996397 +/- 0.023105    1.139194 +/- 0.035466
+H      /native 0.980329 +/- 0.017932    0.972808 +/- 0.024692    0.990526 +/- 0.028454
+ttbar  /v4     0.958590 +/- 0.008455    0.963971 +/- 0.010713    0.892630 +/- 0.011426
+ttbar  /winner 0.966929 +/- 0.010552    0.957417 +/- 0.013694    0.942051 +/- 0.013338
+ttbar  /native 0.977429 +/- 0.011922    0.988993 +/- 0.016218    0.963680 +/- 0.014962
+
+Paired full-minus-first realized H/S drift, pT5-20GeV:
+process    native drift +/- paired error     winner drift +/- paired error     native S/H mean starts [GeV]
+DY      -0.009820 +/- 0.012356          +0.008551 +/- 0.010628          19.413 / 19.409
+H       +0.017718 +/- 0.021418          +0.142797 +/- 0.026615          28.873 / 28.533
+ttbar   -0.025314 +/- 0.018749          -0.015366 +/- 0.014241          24.157 / 24.208
+
+Paired errors retain first/full covariance across the same 50 jobs. All 450 job/chunk
+mappings (3 processes x 3 campaigns x 50 jobs) pass all four inclusive-weight checks
+within each printed HwU token's half-last-digit rounding precision. Higgs shower drift
+decreases by 0.12508+/-0.03416 versus the winner sample (3.66sigma conditional MC error).
+Native/winner DY and ttbar drift changes are not statistically significant.
+Before-shower uncertainties are finite-event sampling estimates; first realized also
+includes rejection draws. Full-shower errors use correlated differences over 50 split jobs.
+Channel integration and beta-normalization errors are separate. Samples are independent;
+both source damping and continuation changed, so the campaign contrast alone is not a
+controlled causal test. Sparse unsampled transfer numerators do not establish physical
+zero rates with zero error; their Gaussian ratio inference is suppressed in migration_summary.
+The archived original-v4 ttbar shower had QEDByOther on; winner/native have all QED off.
+Thus original-v4 ttbar comparisons also include that setting correction.
+
+Checks:
+DY: 104 complete first-emission channels, 50 full-shower jobs, tried/selected/accepted=[1000000, 1000000, 1000000].
+  All 1M written scales checked; 140177 common H caps, 9337 evaluated H native-scale comparisons (max error 1.05e-12).
+  4121 actual stock imports/full continuations: global/production/dipole errors all zero, no above-cap emission.
+  Max cross-stage four-weight sum relative difference 3.88e-08.
+H: 100 complete first-emission channels, 50 full-shower jobs, tried/selected/accepted=[1000000, 1000000, 1000000].
+  All 1M written scales checked; 120778 common H caps, 4032 evaluated H native-scale comparisons (max error 1.81e-13).
+  3175 actual stock imports/full continuations: global/production/dipole errors all zero, no above-cap emission.
+  Max cross-stage four-weight sum relative difference 2.25e-08.
+ttbar: 102 complete first-emission channels, 50 full-shower jobs, tried/selected/accepted=[1000000, 1000000, 1000000].
+  All 1M written scales checked; 150857 common H caps, 61156 evaluated H native-scale comparisons (max error 1.63e-13).
+  3922 actual stock imports/full continuations: global/production/dipole errors all zero, no above-cap emission.
+  Max cross-stage four-weight sum relative difference 5.76e-08.
+126 targeted regression tests pass, including globalIR, actual ttbar global FSR/local inverse failure, sourceprofile, sourceidentity, native first emission and flow ownership.
+Stock Pythia libraries and frozen production code have unchanged SHA256 hashes.
+
+Interpretation:
+This removes the auxiliary continuation-history mismatch and substantially improves the
+Higgs shower migration. It does not establish exact cancellation. ttbar still has a
+0.555% inclusive shift and full H/S=0.93895+/-0.00763 at 20-50GeV and 0.93344+/-0.00935
+at 50-100GeV; expected first-emission ratios there are 0.93773+/-0.00585 and 0.91696+/-0.00762.
+These are substantial pre-existing transfer deficits, rather than statistically resolved
+new shower drifts. DY retains a statistically resolved expected inclusive transfer too.
+This validation does not determine the remaining residuals' cause. Assess the measured
+tables/plots. The source damping is a
+fixed-native-Born prescription; the source tables differ from the exact competing shower,
+and channel-average beta plus integration errors remain approximations. The IR endpoint
+at 0.5 GeV is a source-table continuation, not a finite-cutoff shower probability identity.
+
+Artifacts:
+plots/hard_pt_run_1M_native_ir.pdf: source, S-veto-only, H-removal-only, matched at both stages.
+plots/native_transfer_comparison.pdf/json: original v4 / auxiliary winner / native history.
+validation/summary.json, scale_summary.json, production_checks.json, provenance.json, migration_summary.json.
+validation/*_event_checks.json and *_decisions.npz; scale_audit/*_written_scales.json and *_native.csv.
+backup/*_events.lhe.gz: matching output; processes/*/Events/run_1M_native_ir/: shower inputs.
+logs/: complete generation/matching/shower/audit logs. Source patch/archive frozen in validation/.
+
+Reproduce: python run_1M.py KEY --events 1000000 --run run_1M_native_ir --seed-offset 210000
+(KEY=DY,H,ttbar.) Then validate_events.py, scan_scales.py,
+plot_hard_pt.py, analyse_native.py, check_production.py, native probes and build_report.py.

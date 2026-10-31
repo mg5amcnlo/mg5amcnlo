@@ -58,6 +58,22 @@ class TestMacNLOPSDeltaContext(unittest.TestCase):
                 self.assertEqual(replayed.returncode, 0, replayed.stderr)
                 self.assertEqual(replayed.stdout, written.stdout)
 
+    def test_winner_source_survives_native_collect_roundtrip(self):
+        written = self.invoke(10)
+        self.assertEqual(written.returncode, 0, written.stderr)
+        self.assertIn('source="delta_winner"', written.stdout)
+        replayed = self.invoke(6, written.stdout)
+        self.assertEqual(replayed.returncode, 0, replayed.stderr)
+        self.assertEqual(replayed.stdout, written.stdout)
+
+    def test_native_ir_source_survives_native_collect_roundtrip(self):
+        written = self.invoke(11)
+        self.assertEqual(written.returncode, 0, written.stderr)
+        self.assertIn('source="delta_native_ir"', written.stdout)
+        replayed = self.invoke(6, written.stdout)
+        self.assertEqual(replayed.returncode, 0, replayed.stderr)
+        self.assertEqual(replayed.stdout, written.stdout)
+
     def test_malformed_probability_or_registry_fails(self):
         source = self.invoke(7).stdout
         rows = source.splitlines()

@@ -240,6 +240,9 @@ STUB = r"""
 #include <string.h>
 #include <math.h>
 static const char* registry = "%(registry)s";
+void macnlops_c_source_mode(int* mode) {
+  *mode = getenv("MACNLOPS_STUB_MODE") ? atoi(getenv("MACNLOPS_STUB_MODE")) : 1;
+}
 void macnlops_c_setup(int* nlegs, char* reg) { *nlegs = 5; memcpy(reg, registry, 64); }
 void macnlops_c_profile(double* cutoffs, double* xmax, double* masses, int* flavours) {
   FILE* f = fopen("stub_profile.txt", "r");
@@ -267,7 +270,7 @@ void macnlops_c_density(int owner, const int* ids, const double* lab, int config
   int graph, int flow, int damping, double symmetry, int has_born, const int* born_ids,
   const int* born_colours, const double* born_lab, const double* born_masses,
   double* r, double* d, double* k, double* alphas, double* q2fact, int* status) {
-  if (owner < 1 || owner > 4 || damping != 1 || symmetry <= 0.) exit(4);
+  if (owner < 1 || owner > 4 || damping != (getenv("MACNLOPS_STUB_MODE") ? atoi(getenv("MACNLOPS_STUB_MODE")) : 1) || symmetry <= 0.) exit(4);
   *r = 1.; *d = 3.; *k = has_born ? 4. : 1.; *alphas = 0.118;
   for (int side=0;side<2;++side) {
     profile_ids[side]=has_born?born_ids[side]:ids[side];
@@ -363,6 +366,39 @@ class TestFirstEmissionNative(unittest.TestCase):
         with mc.LHEStream(self.work / (name + '.lhe')) as stream:
             header, blocks = stream.header, list(stream)
         return header, blocks, json.loads((self.work / (name + '.json')).read_text())
+
+    def test_native_ir_source_uses_matching_policy_and_rejects_winner_backend(self):
+        path = self.work / 'events.lhe'
+        original = path.read_text()
+        try:
+            path.write_text(original.replace('source="delta"', 'source="delta_native_ir"'))
+            rejected = subprocess.run(['./match.exe', '--input', 'events.lhe', '--output',
+                'mismatch.lhe', '--summary', 'mismatch.json', '--routes', 'routes.dat',
+                '--settings', str(self.settings), '--pdf', self.pdf, '--seed', '7349'],
+                cwd=self.work, env=self.env, capture_output=True, text=True)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn('Source Sudakov policy differs', rejected.stdout + rejected.stderr)
+            self.env['MACNLOPS_STUB_MODE'] = '3'
+            _, blocks, report = self.run_match('native_ir_policy')
+            self.assertEqual(report['status'], 'complete')
+            self.assertTrue(all(mc.Event(block).hard.source == 'delta_native_ir' for block in blocks))
+            path.write_text(original.replace('source="delta"', 'source="delta_winner"'))
+            rejected = subprocess.run(['./match.exe', '--input', 'events.lhe', '--output',
+                'winner_mismatch.lhe', '--summary', 'winner_mismatch.json', '--routes', 'routes.dat',
+                '--settings', str(self.settings), '--pdf', self.pdf, '--seed', '7349'],
+                cwd=self.work, env=self.env, capture_output=True, text=True)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn('Source Sudakov policy differs', rejected.stdout + rejected.stderr)
+            self.env['MACNLOPS_STUB_MODE'] = '2'
+            rejected = subprocess.run(['./match.exe', '--input', 'events.lhe', '--output',
+                'legacy_backend.lhe', '--summary', 'legacy_backend.json', '--routes', 'routes.dat',
+                '--settings', str(self.settings), '--pdf', self.pdf, '--seed', '7349'],
+                cwd=self.work, env=self.env, capture_output=True, text=True)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn('compiled MC@NLO-Delta source', rejected.stdout + rejected.stderr)
+        finally:
+            path.write_text(original)
+            self.env.pop('MACNLOPS_STUB_MODE', None)
 
     def check_event(self, block, beta, pdf_ratio):
         decision = mc.xml_attributes(re.search(

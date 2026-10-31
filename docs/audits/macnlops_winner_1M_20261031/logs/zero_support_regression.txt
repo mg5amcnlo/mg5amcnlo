@@ -1,0 +1,8 @@
+............../export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/check_param_card.py:336: ResourceWarning: unclosed file <_io.TextIOWrapper name='/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/models/sm/restrict_default.dat' mode='r' encoding='UTF-8'>
+  self.read(input_path)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+...
+----------------------------------------------------------------------
+Ran 17 tests in 13.382s
+
+OK

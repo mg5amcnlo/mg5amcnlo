@@ -76,6 +76,13 @@ class TestComponentProtocol(unittest.TestCase):
         self.assertIsNone(parsed.delta)
         self.assertEqual(parsed.component, mc.Component.from_block(parsed.block))
 
+    def test_legacy_winner_component_requires_its_archived_evaluator(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            evaluator, registry = self.evaluator(Path(tmp))
+            parsed = mc.Event(annotated(source='delta_winner', registry=registry))
+            with self.assertRaisesRegex(mc.MatchingError, 'archived evaluator'):
+                evaluator._component_requests(parsed, 1)
+
     def test_invalid_or_incomplete_component_cannot_select_a_native_density(self):
         base = annotated()
         controls = [
