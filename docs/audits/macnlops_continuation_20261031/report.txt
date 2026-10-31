@@ -1,0 +1,114 @@
+MAcNLOPS continuation scale audit — 31 October 2026
+
+Result: S continuation updates and stock-Pythia scale imports are correct.
+The S/H continuation kernels differ because H keeps the source directed
+dipole starts, while emitted S events continue below the winning scale.
+This is a difference of the current shower prescription, not a lost or
+misindexed LHE scale. No continuation starting-scale prescription was changed.
+
+The competing evolution selects pTnow=max(pT_ISR,pT_FSR,...) in
+PartonLevel.cc. FirstEmission records info.pTnow after the first accepted
+branch. continuationState writes that value to the S event SCALUP, caps
+every active continuation entry there and retains native tighter caps.
+It is the winning evolution scale, not the physical hard-system pT and
+not the largest scale from reconstructing alternative histories of a
+fixed real point. Raising S above the winner would violate its ordering.
+
+Stock LesHouches.cc resets SCALUP from the scale attributes and sets
+each production scale to the minimum strictly positive input for that
+leg. The positive scalup_i anchors preserve the desired global maximum.
+Initial shower ends use the incoming production scales. Final shower
+ends use directed scalup_i_j when present, including zero stops, and
+are also bounded by the global evolution scale and local phase space.
+The original macnlops_source_scales tag is inert provenance.
+
+Checks:
+DY: checked 1,000,000 written events; 18,028 native stock-reader/ISR/FSR imports.
+  Written header/marker, S winner/SCALUP and H directed-pair relabel/cap errors: {'header_vs_marker': 0.0, 'S_scalup_vs_winning_evolution': 0.0, 'H_pair_vs_source_pair': 0.0}
+  Native global/production/dipole maximum relative errors: {'global_error': 0.0, 'production_error': 0.0, 'dipole_error': 0.0}
+  Missing FSR scale keys: 0. No replayed full-shower branching exceeded its imported global cap.
+H: checked 1,000,000 written events; 14,673 native stock-reader/ISR/FSR imports.
+  Written header/marker, S winner/SCALUP and H directed-pair relabel/cap errors: {'header_vs_marker': 0.0, 'S_scalup_vs_winning_evolution': 0.0, 'H_pair_vs_source_pair': 0.0}
+  Native global/production/dipole maximum relative errors: {'global_error': 0.0, 'production_error': 0.0, 'dipole_error': 0.0}
+  Missing FSR scale keys: 0. No replayed full-shower branching exceeded its imported global cap.
+ttbar: checked 1,000,000 written events; 19,248 native stock-reader/ISR/FSR imports.
+  Written header/marker, S winner/SCALUP and H directed-pair relabel/cap errors: {'header_vs_marker': 0.0, 'H_pair_vs_source_pair': 0.0, 'S_scalup_vs_winning_evolution': 0.0}
+  Native global/production/dipole maximum relative errors: {'global_error': 0.0, 'production_error': 0.0, 'dipole_error': 0.0}
+  Missing FSR scale keys: 0. No replayed full-shower branching exceeded its imported global cap.
+Total: 3,000,000 written events and 51,949 actual native imports.
+
+Transfer-weighted mean starts at FIRST-EMISSION hard-system pT=2–3 GeV.
+All entries below are in GeV. These are ensemble averages, not paired
+S/H copies of a single phase-space point.
+Process side  component-t   global      ISR-A      ISR-B      max-FSR
+DY      S    8.47762    8.47762    8.47762    8.47762    8.47762
+DY      H    8.21781    9.69768    6.08979    6.33977    8.09006
+H       S   11.69843   11.69843   11.69843   11.69843   11.69843
+H       H   11.16203   10.70676    6.75652    6.71062   10.49984
+ttbar   S   10.83631   10.83631   10.83631   10.83631   10.83631
+ttbar   H   11.58136   42.91190   14.04939   14.77627   40.44482
+
+Controlled showers:
+Uniform reservoirs of up to 1,000 transfer-eligible S/H points per
+original pT bin. Transfer weights include inverse sampling factors.
+Original matching probabilities, momenta, colours, couplings and PDF
+are held fixed. Per-event random seeds are shared across controls;
+S full-shower outcomes are bitwise identical in the scale variants.
+capped: H global=t, each original dipole=min(original,t).
+common: H global, production and all directed dipole starts=t.
+t is the source component inverse-evolution scale recorded by the matcher.
+These are diagnostic controls, not newly implemented matching schemes.
+Errors include stratified event/shower sampling, not the separate
+original source-integration uncertainty.
+
+Final pT range 5–20 GeV:
+DY:
+  sample : H/S=1.00470 +/- 0.02231; paired H-transfer change=+0 +/- 0 pb
+  capped : H/S=1.00722 +/- 0.02233; paired H-transfer change=+0.0423744 +/- 0.0389613 pb
+  common : H/S=0.99709 +/- 0.02225; paired H-transfer change=-0.128238 +/- 0.131353 pb
+H:
+  sample : H/S=1.04708 +/- 0.03382; paired H-transfer change=+0 +/- 0 pb
+  capped : H/S=1.05399 +/- 0.03401; paired H-transfer change=+0.000848649 +/- 0.00029819 pb
+  common : H/S=0.93124 +/- 0.03070; paired H-transfer change=-0.0142335 +/- 0.00190289 pb
+ttbar:
+  sample : H/S=0.93034 +/- 0.04528; paired H-transfer change=+0 +/- 0 pb
+  capped : H/S=1.06702 +/- 0.05056; paired H-transfer change=+1.81934 +/- 0.326058 pb
+  common : H/S=1.02704 +/- 0.04878; paired H-transfer change=+1.28708 +/- 0.404404 pb
+
+A separate real configuration defect:
+The continuation card disabled QEDshowerByQ/L/Gamma but left the
+default TimeShower:QEDshowerByOther=on. Stable tops still count as
+charged resonances for this switch. The original ttbar replay emitted
+392 final photons in 19,248 sampled transfer events; explicitly setting ByOther=off emitted 0.
+The generated-card template now ties ByOther to the QED_SHOWER card
+switch too. No Pythia code or library was changed. The prior archived
+million-event full-shower results predate this fix; their description
+as entirely QED-free was inaccurate for stable tops. This defect is
+reported separately from the S/H starting-scale difference.
+
+Interpretation:
+The same pT histogram before showering does not imply equal conditional
+shower kernels. H nonuniform starts and S common ordered starts move the
+two transferred populations differently. The controls demonstrate a
+statistically resolved effect from those starts. Exact full-shower
+cancellation also needs pointwise transfer equality, including colours
+and other kinematics; common scales alone do not prove it. The existing
+channel-averaged normalization approximation remains independent.
+
+Full inputs, raw native-cap CSVs, selected LHE points and logs:
+/export/slow1/rikkert/macnlops_sudakov_1M_20261030/scale_audit_20261031
+summary.json records all bins, controls and native import maxima.
+continuation_scale_controls.pdf shows the first/full-shower comparison.
+Original campaign inputs were read only.
+
+Primary Pythia 8.318 reference sources:
+https://gitlab.com/Pythia8/releases/-/raw/pythia8318/src/LesHouches.cc  SHA256 282d99994fc814eb7fed958f0669fa0e2b0614f66d89e29eae2fb40e130dc662
+https://gitlab.com/Pythia8/releases/-/raw/pythia8318/src/PartonLevel.cc  SHA256 c4fc69098e1eb75c9cc0ee684810b04cb9799e749baedafabe08d3ea5a2557e6
+https://gitlab.com/Pythia8/releases/-/raw/pythia8318/src/ProcessContainer.cc  SHA256 34095656cee8ecebe2c8dcd1abe77c21e09f92bb3f40a2a5219236f484ed1d70
+https://gitlab.com/Pythia8/releases/-/raw/pythia8318/src/SimpleSpaceShower.cc  SHA256 79b9f2334af443005b7c4722dc629ca4facdce6663b73815c1fa0278aacfa789
+https://gitlab.com/Pythia8/releases/-/raw/pythia8318/src/SimpleTimeShower.cc  SHA256 f20a26c9d6a52ea2330288b9558140cc70abb88cd5158c249c9221417120e49b
+
+Regression checks: 57 continuation, consumer, presentation and shower tests
+plus three new stock-reader/native-dipole tests: all 60 pass. The native
+4F smoke uses MACNLOPS_TEST_PDF_4F=LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0,
+which is installed in this environment.

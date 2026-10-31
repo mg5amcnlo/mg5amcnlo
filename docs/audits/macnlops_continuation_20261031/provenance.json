@@ -1,0 +1,70 @@
+{
+  "base_commit": "a5599cba0d1ae255e524ded8ad3a58b2f9d30bad",
+  "source_sha256": {
+    "docs/audits/check_macnlops_continuation_scales.py": "6b4841d81069ee97072018cc298a984536096521b68765b4ca61d69c62db0646",
+    "docs/audits/macnlops_continuation_scale_probe.cc": "fd059b73680e2b33ffd50b207f70b2bd45bd7dafabaacd6875f43de4f6ee59f6",
+    "docs/audits/summarize_macnlops_scale_audit.py": "cacae2b1827da829cfc83570f1c58e8d6363a66ed493d1bb7e97d81b5d62c784",
+    "Template/NLO/MCatNLO/srcPythia8/MacNLOPS.h": "9bcc07155efbc1d1816030339bb85536e7608b0555d785dcfba4948621801db0",
+    "Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc": "26251e15662ef71bacc9dfa858b5cd63c35cc892b9a2c4abf47abcb45f87c639",
+    "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "5746c83f5ac8dffb591f5d020bd950c4b89cdcf70aa9771e1964d718ce043c28",
+    "tests/unit_tests/various/test_macnlops_continuation.py": "8f5e7727dab014405e48b08640f38c12831e17af015edfa8ea5fffb0bf07f04d",
+    "tests/unit_tests/various/test_macnlops_continuation_scales.py": "42407787ac44607a078e5ee504fded167b74f627a766fd67009bb5ed17a7a175"
+  },
+  "point_counts": {},
+  "pythia_libraries_unchanged": {
+    "libpythia8.a": true,
+    "libpythia8.so": true,
+    "libpythia8amcatnloHooks.so": true,
+    "libpythia8colourReconnectionHooks.so": true,
+    "libpythia8jetMatchingHooks.so": true,
+    "libpythia8lhapdf6.so": true,
+    "libpythia8lhefHooks.so": true,
+    "libpythia8powhegHooks.so": true,
+    "libpythia8resonanceDecayFilterHooks.so": true,
+    "libpythia8setLHEDecayProductHooks.so": true
+  },
+  "samples": {
+    "DY": {
+      "lhe_sha256": "fbe0bacb802bf4c8bd1f1c21bf0ee3a95caee602995c40184f18f5e0c2e4358a",
+      "metadata_sha256": "3d87bc2d6186f874edb450d47fcc0bc2b0de480f569ff6a41dc4910c6575d3fa",
+      "original_card_sha256": "c9f0014fe4c9b947d20eaaa16b6b4823248ba8b558a6f4a1525f087ad25aab21"
+    },
+    "H": {
+      "lhe_sha256": "68881a3d2a271f7e02548e4cc837ee17ef85d8f67184a608a1826fdb79df5824",
+      "metadata_sha256": "4ac7c4ab33d4152ff39d6082f90047d281cb27447b6fcea168c4d6587c5732c7",
+      "original_card_sha256": "3e8f81b2acccae699eb35221d1ae67bf2777f12e1d80279f217c72f8c79feed6"
+    },
+    "ttbar": {
+      "lhe_sha256": "60a8de4019435e8776a9e64e24b81687c81910eb1b835dbd9027ec5c23f70e45",
+      "metadata_sha256": "3e4a0dfa9f95ed30b956bf1558b716167bd68fb43cd52cac9d05224082ac7d96",
+      "original_card_sha256": "c9f0014fe4c9b947d20eaaa16b6b4823248ba8b558a6f4a1525f087ad25aab21"
+    }
+  },
+  "native_output_sha256": {
+    "DY_sample_full.csv": "0d79b07326b6609c5a83798e7524e49283c91b195921f74a0cfd04ecd46032f0",
+    "DY_capped_full.csv": "28946b42c637ff497bdf79f71406bc75149558f0f9951d49e752d6136211cb10",
+    "DY_common_full.csv": "13b6a550c4afd5647a1b27f0f5d7e16517256957110a448660a449d797fad4f6",
+    "DY_import.csv": "8dcfc1d0a4b83c16ceb8371a5e624662db1603c8b7aec5b85dadca047679f224",
+    "H_sample_full.csv": "63aa9b491165773346678dd770f6796c1deda053de20a496cfa0728b33dd0c2d",
+    "H_capped_full.csv": "f0f41c4c7252997fddaac13265d8ac04a0fba1de369d6f791fb2c7329a506f8e",
+    "H_common_full.csv": "b4e27e77ffa92245ffa7d395b32226f84c0b703d3e99e0a11e24f276b83430f4",
+    "H_import.csv": "9b6406b64c4c1244b18b19f7c9b773ec5f0d1d3816f49d1ad07cee5e4de28204",
+    "ttbar_sample_full.csv": "c8267df47cf6e0c79af8bc1fff34161c4921203e3f883e818f0f6a49f238ee8a",
+    "ttbar_capped_full.csv": "24c5df06f9252666204ab5f638dbc723448810915184cc4861e7dec8a2ae136f",
+    "ttbar_common_full.csv": "362b721c301ba370e6b0a9e05e33624f2e86ff89b3e7c3cacc75f27ac455ebcf",
+    "ttbar_import.csv": "f86d281a02049dcefdf825e8b8211925feb4cbdae6d7a35e2c4a284461499b7c"
+  },
+  "continuation_scale_production_code_unchanged": true,
+  "regression": {
+    "tests": 60,
+    "passed": 60,
+    "environment": {
+      "MACNLOPS_TEST_PDF_4F": "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0"
+    },
+    "log_sha256": "d3b1262583b575a2d454340b494957a83c9c768d00d96572bba86681b8bd2875",
+    "native_scale_tests": 3,
+    "native_scale_log_sha256": "4293de0dba6499d330bc2ea061b056befd055ad833023d61aaa387816dea914c"
+  },
+  "full_shower_replays": 175095,
+  "qed_off_output_sha256": "ec29dc0cb85e19aa2fee2531b113e54e7a68eb21740490dfd6e8b8004d107872"
+}

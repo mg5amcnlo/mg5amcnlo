@@ -1,5 +1,43 @@
 # MAcNLOPS from the generated measures
 
+## Continuation-scale audit: 31 October
+
+The full-shower cancellation audit finds no error in exporting the S-event
+winning scale or importing the active S/H scale matrices. All three million
+written events pass the scale checks; 51,949 sampled transfer endpoints pass
+an actual stock-Pythia import and native ISR/FSR dipole-limit comparison,
+with zero missing FSR keys and zero scale differences. The S `SCALUP` is
+the maximum of the actual competing ISR/FSR proposals, recorded after the
+first accepted emission. Every continuation cap is bounded there.
+
+The source H prescription is nevertheless different: H retains its
+directed real-state dipole scales, whereas S evolves below a common winning
+scale, with any native tighter limits. For transfer events at first-emission
+hard-system pT of 2–3 GeV, the ttbar mean S winning scale is 10.84 GeV;
+the H component evolution scale is 11.58 GeV but its mean global limit is
+42.91 GeV and its mean largest FSR limit is 40.44 GeV. Thus correct scale
+import does not imply identical subsequent shower kernels.
+
+Paired controls change only H starts, leaving matching weights and all S
+shower outcomes fixed. In the ttbar final-pT interval 5–20 GeV the H/S
+transfer ratio changes from 0.930 +/- 0.045 to 1.027 +/- 0.049 with common
+H starts. Other bins retain differences: equality of one pre-shower pT
+histogram does not establish pointwise equality in the full real-state
+kinematics and colours. These controls are diagnostic prescriptions;
+the production continuation-scale rules are unchanged. See the
+[audit report](audits/macnlops_continuation_20261031/report.txt) and
+[control plots](audits/macnlops_continuation_20261031/continuation_scale_controls.pdf).
+
+The audit also identifies a separate configuration error in the earlier
+full-shower validation: `qed_shower=False` disabled QED radiation by
+quarks, leptons and photons but left `TimeShower:QEDshowerByOther=on`.
+Stable tops remain charged resonances for this switch. The stock-shower
+replay produces 392 final photons in 19,248 sampled ttbar transfer events;
+explicitly turning this switch off produces none. The shower-card generator
+now sets it from the QED switch too. The archived 30 October numerical
+results below predate this fix; their description as fully QED-free was
+inaccurate for stable tops. Pythia code and libraries are unchanged.
+
 ## Source/shower Sudakov ratio: 30 October (`component-sudakov-ratio-v4`)
 
 The default per-channel matcher now retains the original MC@NLO-Delta

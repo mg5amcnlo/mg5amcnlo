@@ -332,6 +332,27 @@ class TestContinuation(unittest.TestCase):
                     fake.set_run_name.assert_called_once_with('run_01', level='shower')
                     self.assertEqual(Path(args[0]), directory)
 
+    def test_qed_card_switch_also_controls_radiation_from_stable_tops(self):
+        template = Path(__file__).resolve().parents[3] / (
+            'Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script')
+        text = template.read_text()
+        start = text.index('# set QED showering')
+        end = text.index('\nEOF', text.index('! 6) Initial-state shower.', start)) + len('\nEOF')
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            script, output = root / 'qed.sh', root / 'qed.cmnd'
+            script.write_text(text[start:end])
+            for enabled, expected in [('.FALSE.', 'off'), ('.TRUE.', 'on')]:
+                with self.subTest(qed_shower=enabled):
+                    output.write_text('')
+                    env = dict(os.environ, QED_SHOWER=enabled, ifile=str(output), PY8_MMAXGAMMA='10')
+                    subprocess.run(['bash', str(script)], env=env, check=True, capture_output=True)
+                    settings = dict((k.strip(), v.split('!')[0].strip())
+                                    for line in output.read_text().splitlines() if '=' in line
+                                    for k, v in [line.split('=', 1)])
+                    for suffix in ['ByQ', 'ByL', 'ByGamma', 'ByOther']:
+                        self.assertEqual(settings['TimeShower:QEDshower'+suffix], expected)
+
     def test_normal_consumer_settings_read_current_caps_with_local_recoil(self):
         template = Path(__file__).resolve().parents[3] / (
             'Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script')

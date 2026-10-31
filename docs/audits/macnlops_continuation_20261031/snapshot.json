@@ -1,0 +1,12 @@
+{
+  "original_audit": "/export/slow1/rikkert/macnlops_sudakov_1M_20261030/scale_audit_20261031",
+  "copied_files_sha256": {
+    "report.txt": "7d78209bd553996acd5fd0c2eaeec6b0ee4ae0e18d1b88c3deba575b5d8f70b2",
+    "summary.json": "8846973e0a3ce703a7bebf778d2b3859f1463376b144547c74b375170e67d635",
+    "provenance.json": "9ccacbc3075d6fb8ae6935af6485bc41cc7826108029321def64d067e3d72fc0",
+    "continuation_scale_controls.pdf": "cb0c96dbdea95463f9235b419a0c8cf96c52a1be700412da3c39272a0e742a4c",
+    "DY_written_scales.json": "ca7818691e65678ec5740e288ca09016d1b52e31751b53ee70dac43069879af8",
+    "H_written_scales.json": "80c8272ec4a707106720efc4f6bd122e778e4e5bcb78451533b597261bba479a",
+    "ttbar_written_scales.json": "028a0d863396b0088f2a582936916c6a3e3f650b5c73055a5d2c4673d6dde87a"
+  }
+}
