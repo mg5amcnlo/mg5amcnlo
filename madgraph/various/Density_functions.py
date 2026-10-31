@@ -214,8 +214,12 @@ class DensityMatrixObservables(list):
         A class is defined for single qubits and qutrits, for qubit-qubit systems, as well as qubit-qutrit and qutrit-qutrit systems. 
         In these classes we defined the observables specific to these systems like concurrence.
         This class redirects to the specific classes based on the user input. One should always call this generic class.
+        All the observables are defined in the default helicity basis: (+1, -1) or (+1, 0, -1) for each particle.
+        A density matrix computed with another order_helicities is put back in this basis
+        when the order is given: DensityMatrixObservables(density_input, order_helicities=allowed_helicities), with
+        allowed_helicities as written in the MGDensity block of the banner.
     """
-    def __new__(cls, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None):
+    def __new__(cls, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None, order_helicities=None):
         """ 
         This method determines the dimension of the user input and decides which subclass to instanciate.
         For now, there are classes for density matrices of single qubits and qutrits, and of 2x2, 2x3, 3x3, 2x2x2 and 2x2x3 systems.
@@ -264,12 +268,15 @@ class DensityMatrixObservables(list):
         return super(DensityMatrixObservables, cls).__new__(subclass, user_input, len_user_input)
         
               
-    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None) -> None:
+    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None, order_helicities=None) -> None:
         """ 
             This method stores the density matrix and its dimension in a form that depends on the input of the user.
             If the input comes from Fortran, as a line matrix, we store it in line matrix form.
             If the input is directly a square matrix, we store it as is.
             The different functions of the class will adapt to the type the density matrix is stored in.
+            order_helicities: the helicity combinations of the basis of user_input (the input order_helicities of the density mode,
+            flattened as allowed_helicities in the banner, e.g. [-1, 1, -1, -1, 1, 1, 1, -1]). If given, the density matrix
+            is put back in the default basis, in which all the observables are defined. None or [0] means the default basis.
         """
         self.density_matrix = []
         self.density_matrix_dimension = 0
@@ -832,9 +839,9 @@ class DensityMatrixObservables2(DensityMatrixObservables):
         The basis is the one of the helicities given by MadGraph: (+1/2, -1/2).
         The density matrix is rho = (1 + B.sigma)/2, with B the polarisation (Bloch) vector, B_i = <sigma_i>.
     """
-    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None) -> None:
+    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None, order_helicities=None) -> None:
         """The initialisation is the same as the parent class because it needs to accept the same input"""
-        super().__init__(user_input, len_user_input)
+        super().__init__(user_input, len_user_input, order_helicities)
         if self.density_matrix_dimension != 2:
             raise ValueError("The dimension of a qubit density matrix should be 2.")
 
@@ -868,9 +875,9 @@ class DensityMatrixObservables3(DensityMatrixObservables):
         The density matrix is rho = 1/3 + P_a lambda_a, with lambda_a the Gell-Mann matrices and P_a = <lambda_a>/2,
         the same normalisation as DensityMatrixObservables33.
     """
-    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None) -> None:
+    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None, order_helicities=None) -> None:
         """The initialisation is the same as the parent class because it needs to accept the same input"""
-        super().__init__(user_input, len_user_input)
+        super().__init__(user_input, len_user_input, order_helicities)
         if self.density_matrix_dimension != 3:
             raise ValueError("The dimension of a qutrit density matrix should be 3.")
 
@@ -906,9 +913,9 @@ class DensityMatrixObservables22(DensityMatrixObservables):
         It is a child of the generic class and thus inherits its methods.
         We define here the observables specific to qubit-qubit systems.
     """
-    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None) -> None:
+    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None, order_helicities=None) -> None:
         """The initialisation is the same as the parent class because it needs to accept the same input"""
-        super().__init__(user_input, len_user_input)
+        super().__init__(user_input, len_user_input, order_helicities)
         if self.density_matrix_dimension != 4:
             raise ValueError("The dimension of a qubit-qubit density matrix should be 4.")
 
@@ -1048,13 +1055,16 @@ class DensityMatrixObservables22(DensityMatrixObservables):
     def Get_Dcoef(self) -> tuple[float, float, float, float, bool]:
             """
             Input:  self -> density matrix
-            Output: D1, Dr, Dn, Dk -> the 4 D-coefficients
+            Output: D1, Dn, Dr, Dk -> the 4 D-coefficients
                     boolD -> True if there entanglement
             In MadGraph we use the momenta referential as: {n, r, k} with:
             k : top direction, r = (p - k cos(theta))/sin(theta), n = p x k/sin(theta)
             So C_nn = C[0][0], C_rr = C[1][1], C_kk = C[2][2]
+            The D-coefficients are defined with both spins on the common axes (n, r, k).
+            In the MadGraph basis the second particle, a spin-1/2 particle moving along -k, has its own axes (-n, r, -k):
+            C_common = C_MG . diag(-1, 1, -1) is used here, e.g. D1 = -1 for a spin singlet.
             """
-            Correlations = self.Get_Correlations()[0]
+            Correlations = np.dot(self.Get_Correlations()[0], np.diag([-1., 1., -1.])) #second particle on the common axes
             if len(Correlations) != 3:
                     raise ValueError('The length of the correlation matrix is not correct. This function only handles systems of 2 qubits!')
 
@@ -1240,9 +1250,9 @@ class DensityMatrixObservables23(DensityMatrixObservables):
         We define here the observables specific to qubit-qutrit systems.
     """
 
-    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None) -> None:
+    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None, order_helicities=None) -> None:
         """The initialisation is the same as the parent class because it needs to accept the same input"""
-        super().__init__(user_input, len_user_input)
+        super().__init__(user_input, len_user_input, order_helicities)
         if self.density_matrix_dimension != 6:
             raise ValueError("The dimension of a qubit-qutrit density matrix should be 6.")
     
@@ -1390,9 +1400,9 @@ class DensityMatrixObservables33(DensityMatrixObservables):
         We define here the observables specific to qutrit-qutrit systems.
     """
     
-    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None) -> None:
+    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None, order_helicities=None) -> None:
         """The initialisation is the same as the parent class because it needs to accept the same input"""
-        super().__init__(user_input, len_user_input)
+        super().__init__(user_input, len_user_input, order_helicities)
         if self.density_matrix_dimension != 9:
             raise ValueError("The dimension of a qutrit-qutrit density matrix should be 9.")
 
@@ -1562,9 +1572,9 @@ class DensityMatrixObservables222(DensityMatrixObservables):
         We define here the observables specific to qubit-qubit-qubit systems.
     """
 
-    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None) -> None:
+    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None, order_helicities=None) -> None:
         """The initialisation is the same as the parent class because it needs to accept the same input"""
-        super().__init__(user_input, len_user_input)
+        super().__init__(user_input, len_user_input, order_helicities)
         if self.density_matrix_dimension != 8:
             raise ValueError("The dimension of a qubit-qubit-qubit density matrix should be 8.")
 
@@ -1651,9 +1661,9 @@ class DensityMatrixObservables223(DensityMatrixObservables):
         As for the qubit-qutrit and qutrit-qutrit classes, each Gell-Mann matrix in an expectation value comes with a factor 1/2.
     """
 
-    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None) -> None:
+    def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None, order_helicities=None) -> None:
         """The initialisation is the same as the parent class because it needs to accept the same input"""
-        super().__init__(user_input, len_user_input)
+        super().__init__(user_input, len_user_input, order_helicities)
         if self.density_matrix_dimension != 12:
             raise ValueError("The dimension of a qubit-qubit-qutrit density matrix should be 12.")
 

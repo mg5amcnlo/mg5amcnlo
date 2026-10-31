@@ -2632,6 +2632,10 @@ class ReweightInterface(extended_cmd.Cmd):
 class DensityInterface(ReweightInterface):
     """Basic interface for computing density matrix"""
 
+    # default basis of helicities for each number of spin degrees of freedom.
+    # If you want to have particles with higher spin, you need to add it here
+    helicity_basis = {2: [1, -1], 3: [1, 0, -1]}
+
     def __init__(self, *args, **opts):
         """init the class"""
 
@@ -2642,7 +2646,8 @@ class DensityInterface(ReweightInterface):
         self.helicity_direction = [[0], '', []] #pid of the particle chosen as reference for the helicity frame
         self.particle_in_density_matrix = None #pid of the particles selected for the study
         self.momenta_boost = [[0], '', []] #pid of the particles in whose center of mass frame the system will be boosted
-        self.allowed_helicities = [0] #basis of helicities
+        self.order_helicities = None #basis of helicities chosen by the user, None for the default one
+        self.allowed_helicities = [0] #basis of helicities passed to Fortran, filled by set_allowed_helicities
         self.axis_referential = [0]
         self.symmetrise_initial_state = False
         self.matrix_normalisation = True
@@ -2782,35 +2787,64 @@ class DensityInterface(ReweightInterface):
 
 
     def do_change_order_helicities(self, line):
-        """Change the order of the basis of helicities. It accepts inputs for density matrices full and partial"""
+        """Change the order of the basis of helicities. It accepts inputs for density matrices full and partial:
+           either all the helicity combinations, e.g. [+1, +1, +1, -1, -1, +1, -1, -1] for 2 qubits,
+           or the basis of each particle one after the other, e.g. [-1, +1] [+1, 0, -1].
+           [0] or None keeps the default basis. The order is checked against the particles in the
+           density matrix, whichever of the two options is read first."""
 
-        if len(line) == 1 and line[0] == '[0]': # if order_helicitites [0], we take the default value
-            return
-        
-        for i in range(len(line)):
-            aux = line[i].strip("[],()")
-            if aux != 'None':
-                line[i] = int(aux)
-            else:
-                return #if "change order_helicities None" is the option, we do not change the default value 
+        values = [elem for elem in re.split(r'[\s,\[\]\(\)]+', ' '.join(line)) if elem]
+        if values in ([], ['0'], ['None']): # if order_helicitites [0], we take the default value
+            self.order_helicities = None
+        else:
+            try:
+                self.order_helicities = [int(elem) for elem in values]
+            except ValueError:
+                raise self.InvalidCmd('order_helicities only accepts integers, got: %s' % ' '.join(line))
 
-        #Let the user enter the allowed_helicities in the complex form ie. [+1, +1, +1, -1, -1, +1, -1, -1] for 2 qubits for instance
-        if len(line) == self.number_changing_helicities * self.number_combinations:
-            self.allowed_helicities = line
-        else: #this part deals with input of the form [basis for particle1] [basis for particle2] 
-            cutted_line = []
+        if self.spins is not None: #otherwise it is done when reading particle_in_density_matrix
+            self.set_allowed_helicities()
+
+    def set_allowed_helicities(self):
+        """Fills self.allowed_helicities, the helicity combinations passed to Fortran as ALLOW_HEL,
+           from self.order_helicities, or the default basis if the user did not choose one.
+           The combinations are flattened, the first particle in the density matrix being the first index:
+           [+1, +1, +1, -1, -1, +1, -1, -1] for 2 qubits, i.e. {|++>, |+->, |-+>, |-->}.
+           Any order is accepted as long as it contains each helicity combination exactly once,
+           since the density matrix is then the same matrix in a permuted basis."""
+        import itertools
+
+        try:
+            bases = [self.helicity_basis[spin] for spin in self.spins]
+        except KeyError as error:
+            raise self.InvalidCmd('The density matrix can not handle particles with %s spin degrees of freedom' % error)
+        n_particles = len(self.spins)
+        all_combinations = list(itertools.product(*bases))
+        order = self.order_helicities
+
+        if order is None:
+            combinations = all_combinations
+        elif len(order) == n_particles * self.number_combinations: #all the combinations
+            combinations = [tuple(order[i:i + n_particles]) for i in range(0, len(order), n_particles)]
+        elif len(order) == sum(self.spins): #the basis of each particle
+            per_particle = []
             counter = 0
-            for i in range(len(self.spins)):
-                cutted_line.append(line[counter: counter + self.spins[i]])
-                counter += self.spins[i]
-            
-            allowed_hel = []
-            for i in range(len(cutted_line[0])):
-                for j in range(len(cutted_line[1])):
-                    allowed_hel.append(cutted_line[0][i])
-                    allowed_hel.append(cutted_line[1][j])
-                self.allowed_helicities = allowed_hel
-    
+            for spin in self.spins:
+                per_particle.append(order[counter: counter + spin])
+                counter += spin
+            combinations = list(itertools.product(*per_particle))
+        else:
+            raise self.InvalidCmd('order_helicities %s has %d elements, expected %d (all the helicity combinations) or %d (the basis of each particle)'
+                                  % (order, len(order), n_particles * self.number_combinations, sum(self.spins)))
+
+        # each combination exactly once: no duplicates, none missing, and no helicity that the particle does
+        # not have (like 0 for a massless vector boson), which would give a zero row in the density matrix
+        if sorted(combinations) != sorted(all_combinations):
+            raise self.InvalidCmd('order_helicities %s is not an ordering of the helicity combinations. The helicities of the particles in the density matrix are %s, and each combination should appear exactly once.'
+                                  % (order, ', '.join(str(basis) for basis in bases)))
+
+        self.allowed_helicities = [helicity for combination in combinations for helicity in combination]
+
     def do_change_symmetrise_initial_state(self, line):
         """
         Chooses whether the initial state should be symmetrised according to 2307.09675. For each event the production matrix calculated is
@@ -2860,7 +2894,6 @@ class DensityInterface(ReweightInterface):
     def do_change_particle_in_density_matrix(self, line):
         """change the particle in the density matrix, calculates the number of particles changes,
            their spins and the number of combinations"""
-        import itertools
 
         pdg_codes = []
         lambda_function = ''
@@ -2914,24 +2947,8 @@ class DensityInterface(ReweightInterface):
             n_comb *= self.spins[i]
         self.number_combinations = n_comb
 
-        #if the user didn't use the option or if it has not been read yet, fill it automatically here
-        if self.allowed_helicities == None or self.allowed_helicities == [0]:
-            base = {"2": [1, -1], "3": [1, 0, -1]} #if you want to have particles with higher spin, you need to add it here
-            list_base = []
-            for spin in self.spins:
-                list_base.append(base[str(spin)])
-                        
-            new_combination = list_base[0]
-            for i in range(1, len(list_base)):
-                new_combination = list(itertools.product(new_combination, list_base[i]))
-            aux = str(new_combination)
-            new_combination_corrected = aux[1:-1].replace("(", "").replace(")", "").split(",")
-            self.allowed_helicities = [int(elem) for elem in new_combination_corrected]
-
-        # the default values for allowed_helicities are:
-        # [+1, +1, +1, -1, -1, +1, -1, -1]
-        # [+1, +1, +1, 0, +1, -1, 0, +1, 0, 0, 0, -1, -1, +1, -1, 0, -1, -1]
-        # ....
+        # recomputed each time, to follow a change of the particles in the density matrix
+        self.set_allowed_helicities()
 
         self.flag_particle_in_density_matrix = True
 
@@ -3025,27 +3042,14 @@ class DensityInterface(ReweightInterface):
         running_time = misc.format_timer(time.time()-start)
         logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))     
         
-        # Compute the average density matrix on write it on a .txt file
-        rho_avg = [0 for i in range(len(self.average_rho))]
-        if self.matrix_normalisation:
-            for i in range(len(rho_avg)):
-                rho_avg[i] = self.average_rho[i] / self.total_wgt
+        # Compute the average density matrix and write it on a .txt file
+        norm = self.total_wgt if self.matrix_normalisation else self.nevents
+        if self.multicore in ['create', 'wait']:
+            # this job only has one chunk of the events: the sums are combined with the ones of the other chunks
+            # once they are all done (combine_average_density), to get the average on the full event file
+            self.write_density_sum(self.lhe_input.name, self.average_rho, norm, self.allowed_helicities)
         else:
-            for i in range(len(rho_avg)):
-                rho_avg[i] = self.average_rho[i] / self.nevents
-
-        rho_avg_instance = dens.DensityMatrixObservables(rho_avg)
-        rho_avg_square = rho_avg_instance.square_matrix()
-
-        logger.info("Average density matrix:")
-        for i in range(len(rho_avg_square)):
-            print("\t",list(rho_avg_square[i]))
-        file_density = open(pjoin(os.path.dirname(self.event_path), f"Average_density_matrix_{os.path.basename(self.lhe_input.name)[:-4]}.txt"), 'w')
-        file_density.write(f'Average density matrix of LHE file {os.path.basename(self.lhe_input.name)[:-4]}:\n')
-        for i in range(len(rho_avg_square)):
-                file_density.write('\t' + str(list(rho_avg_square[i])) + '\n')
-        file_density.close()
-
+            self.write_average_density(self.event_path, self.average_rho, norm, self.allowed_helicities)
 
         if self.output_type == "default":
             output.write('</LesHouchesEvents>\n')
@@ -3243,6 +3247,60 @@ class DensityInterface(ReweightInterface):
         return new_value
 
 
+
+    @staticmethod
+    def write_average_density(event_file, rho_sum, norm, allowed_helicities):
+        """Writes the average density matrix rho_sum/norm in Average_density_matrix_<name>.txt, next to the event file
+           <name>.lhe(.gz). rho_sum is the (weighted) sum of the density matrices in line form, norm the sum of the
+           weights (matrix_normalisation True) or the number of events."""
+        import madgraph.various.Density_functions as dens
+
+        rho_avg = [elem / norm for elem in rho_sum]
+        rho_avg_square = dens.DensityMatrixObservables(rho_avg).square_matrix()
+
+        logger.info("Average density matrix:")
+        for i in range(len(rho_avg_square)):
+            print("\t",list(rho_avg_square[i]))
+
+        name = os.path.basename(event_file)
+        for extension in ['.gz', '.lhe']:
+            if name.endswith(extension):
+                name = name[:-len(extension)]
+        file_density = open(pjoin(os.path.dirname(event_file), f"Average_density_matrix_{name}.txt"), 'w')
+        file_density.write(f'Average density matrix of LHE file {name} (helicity basis {allowed_helicities}):\n')
+        for i in range(len(rho_avg_square)):
+                file_density.write('\t' + str(list(rho_avg_square[i])) + '\n')
+        file_density.close()
+
+    @staticmethod
+    def write_density_sum(chunk_file, rho_sum, norm, allowed_helicities):
+        """Saves, next to one chunk of the events of a multicore run, what is needed to combine the average density matrices"""
+        import json
+        with open(chunk_file + '.density_sum.json', 'w') as fsock:
+            json.dump({'rho_sum': [[complex(elem).real, complex(elem).imag] for elem in rho_sum],
+                       'norm': float(norm), 'allowed_helicities': list(allowed_helicities)}, fsock)
+
+    @staticmethod
+    def combine_average_density(chunk_files, event_file):
+        """Adds the sums saved by write_density_sum for each chunk of a multicore run, and writes the average density
+           matrix of the full event file. The intermediate files are removed."""
+        import json
+        import numpy as np
+        rho_sum, norm, allowed_helicities = 0, 0., None
+        for chunk_file in chunk_files:
+            path = chunk_file + '.density_sum.json'
+            if not os.path.exists(path): # no event in this chunk
+                continue
+            with open(path) as fsock:
+                data = json.load(fsock)
+            rho_sum = rho_sum + np.array([complex(re, im) for re, im in data['rho_sum']])
+            norm += data['norm']
+            allowed_helicities = data['allowed_helicities']
+            os.remove(path)
+        if allowed_helicities is None:
+            logger.warning('No average density matrix computed: the density matrices of the chunks of events were not found')
+            return
+        DensityInterface.write_average_density(event_file, rho_sum, norm, allowed_helicities)
 
     def calculate_weight(self, event, sud_mod=None):
         """ This method overwrites the method of the same name in the class ReweightInterface.

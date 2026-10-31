@@ -448,11 +448,22 @@ class TestDensityLibrary(unittest.TestCase):
 
         #Get_Dcoef
         D_coeff = rho22_concurrence_instance.Get_Dcoef()
-        D_coeff_ref = [-0.18230476389205083, 0.25072899881622657, 0.3333333333333333, -0.40175756825750913]
+        D_coeff_ref = [0.3333333333333333, -0.40175756825750913, -0.18230476389205083, 0.25072899881622657]
         self.assertTrue(D_coeff[4])
         for i in range(4):
             self.assertAlmostEqual(D_coeff[i], D_coeff_ref[i], places=7)
-        
+
+        #Get_Dcoef with the second particle in its own helicity basis (axes rotated by pi around y), as in MadGraph:
+        #the D-coefficients are those of the common axes, D1 = -1 for the singlet
+        import numpy as np
+        singlet = (np.eye(4) - sum(np.kron(s, s) for s in dens.sigma)) / 4.
+        U = np.kron(dens.Identity2, -1j * dens.sigma2)
+        singlet_helicity_basis = np.dot(np.conjugate(U).T, np.dot(singlet, U))
+        D_coeff_singlet = dens.DensityMatrixObservables22(singlet_helicity_basis).Get_Dcoef()
+        for i, D_ref in enumerate([-1., 1./3., 1./3., 1./3.]):
+            self.assertAlmostEqual(D_coeff_singlet[i], D_ref, places=7)
+        self.assertTrue(D_coeff_singlet[4])
+
         #Get_Entanglement_Formation
         entf_ref = 0.026420446091385563
         self.assertAlmostEqual(rho22_concurrence_instance.Get_Entanglement_Formation(), entf_ref, places=7)

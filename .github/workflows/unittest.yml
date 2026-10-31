@@ -625,6 +625,23 @@ jobs:
             sudo pip install scipy cvxpy
             ./tests/test_manager.py test_DensityMatrixObservables test_DensityMatrixObservables22 test_additional_steering test_DensityMatrixObservables23 test_DensityMatrixObservables33 test_DensityMatrixObservables2_3 test_DensityMatrixObservables222 test_DensityMatrixObservables223 test_utilities test_density_selection_not_used test_density_selection_default_order test_density_selection_observable_order test_density_selection_observable_ranks test_density_selection_tie test_density_selection_wrong_inputs -t0
 
+  unittest_30:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/restore-pip-cache
+
+      # Runs a set of commands using the runners shell
+      - name: test one of the test TestDensityOrderHelicities and TestDensityAverageFile test_order_helicities_default test_order_helicities_inputs test_order_helicities_read_before_particles test_order_helicities_wrong_inputs test_average_density_file_name test_average_density_multicore
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_order_helicities_default test_order_helicities_inputs test_order_helicities_read_before_particles test_order_helicities_wrong_inputs test_average_density_file_name test_average_density_multicore -t0
+
 
 
   unittest_new_coverage:
