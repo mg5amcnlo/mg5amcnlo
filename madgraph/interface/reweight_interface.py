@@ -3256,11 +3256,13 @@ class DensityInterface(ReweightInterface):
         import madgraph.various.Density_functions as dens
 
         rho_avg = [elem / norm for elem in rho_sum]
-        rho_avg_square = dens.DensityMatrixObservables(rho_avg).square_matrix()
+        # python complex numbers: with numpy >= 2, str() of numpy scalars gives np.complex128(...)
+        rho_avg_square = [[complex(elem) for elem in row]
+                          for row in dens.DensityMatrixObservables(rho_avg).square_matrix()]
 
         logger.info("Average density matrix:")
         for i in range(len(rho_avg_square)):
-            print("\t",list(rho_avg_square[i]))
+            print("\t", rho_avg_square[i])
 
         name = os.path.basename(event_file)
         for extension in ['.gz', '.lhe']:
@@ -3269,7 +3271,7 @@ class DensityInterface(ReweightInterface):
         file_density = open(pjoin(os.path.dirname(event_file), f"Average_density_matrix_{name}.txt"), 'w')
         file_density.write(f'Average density matrix of LHE file {name} (helicity basis {allowed_helicities}):\n')
         for i in range(len(rho_avg_square)):
-                file_density.write('\t' + str(list(rho_avg_square[i])) + '\n')
+                file_density.write('\t' + str(rho_avg_square[i]) + '\n')
         file_density.close()
 
     @staticmethod
