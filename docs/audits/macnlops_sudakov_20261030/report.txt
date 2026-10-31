@@ -1,0 +1,141 @@
+MAcNLOPS source/shower Sudakov correction — 30 October 2026
+
+Implemented policy: component-sudakov-ratio-v4 (default).
+Legacy --s-veto v3 and v2 remain available.
+Pythia and the production source Delta are unchanged.
+
+The source keeps its per-connection reconstructed stopping scales and shipped
+Sudakov tables. Its Delta is averaged over the unconditional native starting-
+scale distribution. The shower denominator uses a common winning evolution
+scale on every Born radiator and the conditional start distribution Q > t;
+K already contains the probability of Q > t.
+
+A = E[Delta_src(real;Q)], P = E[Delta_PS(Born;t,Q) | Q>t].
+u=max(D_G-R,0), C=min(u,K), F=beta*K_sh*P, T=min(C*A,F).
+S rejection=T/F, H removal=T/(u*A), with explicit zero-source handling.
+The common bound reduces H removal whenever the S rejection saturates.
+
+ISR uses the resolved-flavour backward PDF convolution, finite-z support,
+actual shower PDF freezing and shower alpha_s. It includes the difference
+between NLO PDF evolution and the LO shower, beyond an endpoint PDF ratio.
+Final quarks use the massive global-recoil Pqq integral, including the
+post-branch mass-reduced-pT cutoff. This is required for top quarks.
+The remaining final-gluon denominator uses the existing tables; none of
+these three processes has a final Born gluon.
+
+Independent quark-shower reference:
+https://gitlab.com/Pythia8/releases/-/raw/pythia8318/src/SimpleTimeShower.cc
+Only a read-only reference was downloaded; installed Pythia was not edited.
+
+Validation setup:
+Fresh independent 1,000,000-event MC@NLO-Delta sources per process, then
+50 split full-shower jobs per process. 13 TeV pp; NNPDF40_nlo_as_01180/0;
+DY mee>60 GeV; gluon-fusion Higgs in HEFT, mH=125 GeV; stable tops, mt=173 GeV.
+First step: stock Pythia 8.318, alpha_s(MZ)=0.1365, one loop, no CMW,
+ISR/FSR cutoffs 0.5 GeV. Continuation: the same shower-card settings as
+the previous campaign (alpha_s(MZ)=0.118, one loop), local recoil from
+the written endpoints. MPI, hadronisation, primordial kT, QED showers
+and top/Higgs decays are disabled. All original input cards and seeds
+are in each process Events/run_1M_v4 banner and RunMaterial archive.
+
+Cross sections and transfer totals (pb):
+process   source          matched         change       S rejected   H added
+DY       1932.61678489  1934.13181927  +0.07839%   26.2824609   27.7974953
+H          30.77034424    30.76617843  -0.01354%    0.2263311    0.2221653
+ttbar     637.53631591   633.04334929  -0.70474%   78.2813374   73.7883708
+
+Expected transfers on the common fresh events (before rejection draws):
+process   S rejection    H addition     v4 net       v3 net
+DY         26.3202482    27.7974953   +1.4772471  -15.8769902
+H           0.2273120     0.2221653   -0.0051467   -0.1860087
+ttbar      78.8344115    73.7907620   -5.0436495   +9.6718313
+
+Low-pT balance: expected H addition / expected S rejection.
+Both v3 and v4 probabilities are applied to the same fresh events.
+v4 errors below are finite-event integration errors; the source hard-
+integration uncertainty is separate. Sparse H bins have large errors.
+process   pT [GeV]       v3         v4 +/- MC error
+DY         2-3       0.31618    1.00525 +/- 0.04079
+DY         5-7       0.57992    0.99094 +/- 0.02633
+DY         7-10      0.74119    1.05065 +/- 0.02388
+H          2-3       0.12482    0.92163 +/- 0.10338
+H          5-7       0.44923    1.00105 +/- 0.03831
+H          7-10      0.57812    1.01720 +/- 0.02978
+ttbar      2-3       0.19024    1.05655 +/- 0.17428
+ttbar      5-7       0.71640    0.87578 +/- 0.03736
+ttbar      7-10      1.02847    0.95217 +/- 0.02344
+
+Numerical checks:
+DY: 104 complete first-emission channels; 1,000,000 shower trials/selected/accepted events; 50 completed shower jobs.
+  Max cross-stage weight-sum relative difference 1.26e-08 (HwU text precision); max probability reconstruction error 3.11e-15.
+  S rejection pull -0.164; 0 eligible S points hit the common probability bound.
+H: 100 complete first-emission channels; 1,000,000 shower trials/selected/accepted events; 50 completed shower jobs.
+  Max cross-stage weight-sum relative difference 1.86e-08 (HwU text precision); max probability reconstruction error 1.78e-15.
+  S rejection pull -0.358; 0 eligible S points hit the common probability bound.
+ttbar: 101 complete first-emission channels; 1,000,000 shower trials/selected/accepted events; 50 completed shower jobs.
+  Max cross-stage weight-sum relative difference 8.9e-08 (HwU text precision); max probability reconstruction error 7.44e-15.
+  S rejection pull -2.320; 536 eligible S points hit the common probability bound.
+All per-event weights equal the nominal weight or zero, as required.
+All channel source copies match the implementation used for the run.
+compute_delta itself is identical to the pre-change version; all source
+Sudakov tables, PDF inputs, parameter cards and installed Pythia-library
+hashes match the previous campaign. Full hashes are in provenance.json.
+The DY continuation logs contain 21 internal xPDF=0 near-threshold
+diagnostics; all shower inputs were nevertheless accepted exactly once.
+There were no first-step native trial errors and no lost events.
+The full message counts, including ordinary Pythia warnings, are retained
+in validation/production_checks.json.
+
+Independent FSR validation: 6,174 actual Born points, 2,000 stock-Pythia trials each.
+Pull mean -0.01316, width 0.99667; median predicted/measured probability 1.000000.
+The native low-order FSR quadrature differs from an independent 192-point
+rule by 0.00061 relative RMS, 0.00391 maximum over those Born points.
+The earlier independent backward-ISR and full ISR+FSR replay validation
+is preserved in the original campaign investigation_lowpt directory.
+
+Regression suite: 78 tests run, 77 passed, one optional local audit
+artifact test skipped. Includes native first emission, original source
+averaging, conditional Q normalization, backward ISR, massive FSR phase
+space/cutoff, zero-source protection, paired saturation and legacy v3.
+
+Physics scope and remaining discrepancy:
+The large small-pT Sudakov imbalance is removed. This does not establish
+exact local transfer closure: beta=sigma_S/sigma_B is still a channel
+average; local S/B variations and Born hard-scale coupling/luminosity
+conversions remain approximations, as in v3. The independent Sudakov
+checks do not validate those other factors.
+
+The ttbar expected net is -5.0436 pb; the realized net is -4.4930 pb.
+The expected difference is statistically resolved, so it must not be
+described as a fluctuation or complete normalization closure.
+Its ISR and FSR contributions are -4.7915 and -0.2521 pb, respectively.
+It is concentrated at larger first-emission pT; shower migration also
+leaves a residual low-pT shape difference (see range table and plots).
+The correction is therefore validated as a Sudakov correction, with
+the remaining transfer-normalization approximation stated explicitly.
+
+Artifacts (relative to this campaign):
+  plots/hard_pt_run_1M_v4.pdf — all four weights, first step/full shower
+  plots/sudakov_fix_comparison.pdf — previous/fresh v3/v4 ratio comparison
+  plots/transfer_balance.pdf — v3/v4 expected transfers on common events
+  plots/hard_pt_1M_ranges.json — correlated errors in broad pT ranges
+  validation/*_event_checks.json — event counts, probability and bin checks
+  validation/*_decisions.npz — cached per-event probabilities and v3 replay
+  validation/massive_fsr_validation.{json,npz} — independent stock trials
+  validation/native_fsr_quadrature.json — production quadrature check
+  validation/production_checks.json — channels, all shower events, messages
+  validation/provenance.json — source/table/library hashes and inputs
+  logs/final_tests.log — regression suite
+  results/*_run_1M_v4_lhe.{npz,json} — first-emission weights and kinematics
+  backup/*_run_1M_v4_events.lhe.gz — collected matching output before diagnostics
+  processes/*/Events/run_1M_v4/events.lhe.gz — four-weight shower input
+
+Reproduction:
+  python run_1M.py KEY --events 1000000 --run run_1M_v4 --seed-offset 10000
+  python validate_events.py KEY
+  python plot_hard_pt.py run_1M_v4
+  python check_production.py
+  python compare_prescriptions.py
+  python build_report.py
+KEY is DY, H or ttbar; exports and full process inputs are retained.
+The old campaign at /export/slow1/rikkert/macnlops_1M_20261030 is untouched.

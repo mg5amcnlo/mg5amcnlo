@@ -1,0 +1,127 @@
+{
+  "git_head": "ee73a7afadc19dfc91198ce37c4c280d01437034",
+  "source_sha256": {
+    "/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/Template/NLO/SubProcesses/montecarlocounter.f": "4614692f5267e19625091a9cc85c8d4173476d9a261d341c9d92a2c7a1fdcc88",
+    "/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/Template/NLO/SubProcesses/driver_macnlops.f": "33807c614c42a1b7eda06d64c833593688e697618ece39b8bde31aa6bbbdba46",
+    "/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/Template/NLO/SubProcesses/weight_lines.f": "c63af2df7e0e8c52a547c87c3300d620e75b2f9b16488dc786a7bc6595a79804",
+    "/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/Template/NLO/SubProcesses/macnlops_capi.f": "c5fe63db0791c503ca9240a511c1ae0693911658f9770a65451eb70172359a11",
+    "/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/Template/NLO/SubProcesses/makefile_fks_dir": "bda93871fa9665b85e495a45fdb066dc48f24cb916a8f88913baa4bb4d3b7675",
+    "/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc": "26251e15662ef71bacc9dfa858b5cd63c35cc892b9a2c4abf47abcb45f87c639",
+    "/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/madgraph/various/macnlops.py": "e36c75eb3dbac2fbd37d912a03092354083fd57e7ef8aa7f8a8ce8a283e1f036",
+    "/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/docs/macnlops_derivation.md": "2d19b63a1357e539b4b60dfa97423777f6fc92a2f68d5ed013f83db74e41546e",
+    "/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/tests/unit_tests/fks/test_macnlops_sudakov_profile.py": "a40bdf4ce059230d1e22ccf197715e9c2a1e6180b4791302da4cfa5e14c5dcc4",
+    "/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/tests/unit_tests/various/test_macnlops_first_emission.py": "b938489453b1b12fea0d7025c4a35991d48a89b775c86086733f4238cc576e6b",
+    "/export/slow1/rikkert/MCcntRefactor_Sfun_MacNLOPS/tests/unit_tests/various/test_macnlops_sudakov_kernel.py": "f9b50e26fd8dc7b7a1ae6bafed48dd7f6bb0e7cd714c27b57ab80c2ca474bb48"
+  },
+  "processes": {
+    "DY": {
+      "profile": "/export/slow1/rikkert/macnlops_sudakov_1M_20261030/processes/DY_5FS/Cards/macnlops_profile.json",
+      "frozen_source_sha256": {
+        "SubProcesses/montecarlocounter.f": "4614692f5267e19625091a9cc85c8d4173476d9a261d341c9d92a2c7a1fdcc88",
+        "SubProcesses/driver_macnlops.f": "33807c614c42a1b7eda06d64c833593688e697618ece39b8bde31aa6bbbdba46",
+        "SubProcesses/weight_lines.f": "c63af2df7e0e8c52a547c87c3300d620e75b2f9b16488dc786a7bc6595a79804",
+        "SubProcesses/macnlops_capi.f": "c5fe63db0791c503ca9240a511c1ae0693911658f9770a65451eb70172359a11",
+        "SubProcesses/makefile_fks_dir": "bda93871fa9665b85e495a45fdb066dc48f24cb916a8f88913baa4bb4d3b7675",
+        "MCatNLO/srcPythia8/MacNLOPSMatch.cc": "26251e15662ef71bacc9dfa858b5cd63c35cc892b9a2c4abf47abcb45f87c639"
+      },
+      "pythia_library_hashes_unchanged": {
+        "libpythia8.a": true,
+        "libpythia8.so": true,
+        "libpythia8amcatnloHooks.so": true,
+        "libpythia8colourReconnectionHooks.so": true,
+        "libpythia8jetMatchingHooks.so": true,
+        "libpythia8lhapdf6.so": true,
+        "libpythia8lhefHooks.so": true,
+        "libpythia8powhegHooks.so": true,
+        "libpythia8resonanceDecayFilterHooks.so": true,
+        "libpythia8setLHEDecayProductHooks.so": true
+      },
+      "table_sha256": "020c561c3d09fee13ea93c2faae4052206ac64bb2f1250b0ba552af7da63f10a",
+      "pdf_same_as_original": true,
+      "param_card_same_as_original": true
+    },
+    "H": {
+      "profile": "/export/slow1/rikkert/macnlops_sudakov_1M_20261030/processes/Higgs_HEFT_5FS/Cards/macnlops_profile.json",
+      "frozen_source_sha256": {
+        "SubProcesses/montecarlocounter.f": "4614692f5267e19625091a9cc85c8d4173476d9a261d341c9d92a2c7a1fdcc88",
+        "SubProcesses/driver_macnlops.f": "33807c614c42a1b7eda06d64c833593688e697618ece39b8bde31aa6bbbdba46",
+        "SubProcesses/weight_lines.f": "c63af2df7e0e8c52a547c87c3300d620e75b2f9b16488dc786a7bc6595a79804",
+        "SubProcesses/macnlops_capi.f": "c5fe63db0791c503ca9240a511c1ae0693911658f9770a65451eb70172359a11",
+        "SubProcesses/makefile_fks_dir": "bda93871fa9665b85e495a45fdb066dc48f24cb916a8f88913baa4bb4d3b7675",
+        "MCatNLO/srcPythia8/MacNLOPSMatch.cc": "26251e15662ef71bacc9dfa858b5cd63c35cc892b9a2c4abf47abcb45f87c639"
+      },
+      "pythia_library_hashes_unchanged": {
+        "libpythia8.a": true,
+        "libpythia8.so": true,
+        "libpythia8amcatnloHooks.so": true,
+        "libpythia8colourReconnectionHooks.so": true,
+        "libpythia8jetMatchingHooks.so": true,
+        "libpythia8lhapdf6.so": true,
+        "libpythia8lhefHooks.so": true,
+        "libpythia8powhegHooks.so": true,
+        "libpythia8resonanceDecayFilterHooks.so": true,
+        "libpythia8setLHEDecayProductHooks.so": true
+      },
+      "table_sha256": "020c561c3d09fee13ea93c2faae4052206ac64bb2f1250b0ba552af7da63f10a",
+      "pdf_same_as_original": true,
+      "param_card_same_as_original": true
+    },
+    "ttbar": {
+      "profile": "/export/slow1/rikkert/macnlops_sudakov_1M_20261030/processes/TTbar_5FS/Cards/macnlops_profile.json",
+      "frozen_source_sha256": {
+        "SubProcesses/montecarlocounter.f": "4614692f5267e19625091a9cc85c8d4173476d9a261d341c9d92a2c7a1fdcc88",
+        "SubProcesses/driver_macnlops.f": "33807c614c42a1b7eda06d64c833593688e697618ece39b8bde31aa6bbbdba46",
+        "SubProcesses/weight_lines.f": "c63af2df7e0e8c52a547c87c3300d620e75b2f9b16488dc786a7bc6595a79804",
+        "SubProcesses/macnlops_capi.f": "c5fe63db0791c503ca9240a511c1ae0693911658f9770a65451eb70172359a11",
+        "SubProcesses/makefile_fks_dir": "bda93871fa9665b85e495a45fdb066dc48f24cb916a8f88913baa4bb4d3b7675",
+        "MCatNLO/srcPythia8/MacNLOPSMatch.cc": "26251e15662ef71bacc9dfa858b5cd63c35cc892b9a2c4abf47abcb45f87c639"
+      },
+      "pythia_library_hashes_unchanged": {
+        "libpythia8.a": true,
+        "libpythia8.so": true,
+        "libpythia8amcatnloHooks.so": true,
+        "libpythia8colourReconnectionHooks.so": true,
+        "libpythia8jetMatchingHooks.so": true,
+        "libpythia8lhapdf6.so": true,
+        "libpythia8lhefHooks.so": true,
+        "libpythia8powhegHooks.so": true,
+        "libpythia8resonanceDecayFilterHooks.so": true,
+        "libpythia8setLHEDecayProductHooks.so": true
+      },
+      "table_sha256": "020c561c3d09fee13ea93c2faae4052206ac64bb2f1250b0ba552af7da63f10a",
+      "pdf_same_as_original": true,
+      "param_card_same_as_original": true
+    }
+  },
+  "compute_delta_unchanged": true,
+  "regression_tests": {
+    "run": 78,
+    "passed": 77,
+    "skipped": 1,
+    "log": "/export/slow1/rikkert/macnlops_sudakov_1M_20261030/logs/final_tests.log"
+  },
+  "artifact_sha256": {
+    "report.txt": "1bd328ec78110ed4c8af84f5faf8a2898912852960c963a0fb3de0c944febff2",
+    "validation/summary.json": "736d5d575cb83ce45864e89a7fd012996d67f0df03c7facfa32f2034ea0d4bfb",
+    "validation/production_checks.json": "ee6d7e1fe4bc133b97f4c874c06ef53b6b28092255605b6f7cb92fb314347d69",
+    "validation/massive_fsr_validation.json": "b64e595545c31ca07c30901e4f56ba071443a9a4572adfa93aafdcf8c2f14f45",
+    "validation/native_fsr_quadrature.json": "696a9877944ab72fa2da4273f1ba348c81010f8d2b256a42cd89e5cc34b1a1a1",
+    "plots/hard_pt_run_1M_v4.pdf": "3e984f37c52d28c312c1abdb7f9594641b347e525f6708f62f283088ef023fa7",
+    "plots/sudakov_fix_comparison.pdf": "f77290af97a760a0e527a4b819415e47c8926e0652b77fe8ac222491eb1651f5",
+    "plots/transfer_balance.pdf": "cdf447a62da953a31f4d22fdfe150b2751d77dff6ab99ec3281e3590d3138f48",
+    "logs/final_tests.log": "d10e0249bc21a73590fe2ce76c6aacf0eec3963be11d90c9e93c0e6a283bdeb4",
+    "run_1M.py": "23b0ba0326606277cf3b4ecdc81a786a9dc3a986eb0c2bbf71d5fb26f844db30",
+    "validate_events.py": "1d2f897ade986dfd863a4a7adc08a7642bed2a81dba71466c23d2dd527312eb7",
+    "check_production.py": "70bf1b5f0692c73fe6e245a0a3556f0020c95d4b7f2028973b43f0fc521a0e13",
+    "compare_prescriptions.py": "9beecbe35fdf810ef341a749c44ac34b6ba9c50740d034aee907de78ea4fa3ea",
+    "build_report.py": "da5458e5bb8a5510d8b8cd587d2eae7ace07fe7f00096fc29ce94ad4e25c1d4d",
+    "validation/DY_event_checks.json": "2d85de2aab4cd7cd19a28d558bdc981a8d6ac4043424be6ab52bafd9a798a639",
+    "validation/H_event_checks.json": "93d943d07ef4a16bca5f048fb72ea3230b8172f52453976938a489cc114b9b6c",
+    "validation/ttbar_event_checks.json": "54b5266ce3e8580f7b3570f34fa96183d83fa404b215e36b3c943e91eb647d86"
+  },
+  "fresh_event_hashes": {
+    "DY": "d013fc907aa4190dec62c00381dbdc6a74612a8069cc4e16131c3648f0d546f0",
+    "H": "1e781d8f1f4f8fc7b865484aacc538d4bfbe33f4cee5f7ab9e1f8b32c1bfa333",
+    "ttbar": "ca3d91cebf26ad9dc65de483589d789e601e25fdef3e8230b415c34ef7343102"
+  }
+}

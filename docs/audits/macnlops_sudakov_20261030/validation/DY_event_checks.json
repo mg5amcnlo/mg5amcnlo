@@ -1,0 +1,330 @@
+{
+  "process": "DY",
+  "run": "run_1M_v4",
+  "events": 1000000,
+  "S": 854716,
+  "H": 145284,
+  "source": "/export/slow1/rikkert/macnlops_sudakov_1M_20261030/backup/DY_run_1M_v4_events.lhe.gz",
+  "uncompressed_sha256": "d013fc907aa4190dec62c00381dbdc6a74612a8069cc4e16131c3648f0d546f0",
+  "nominal": 1932.6167848904004,
+  "matched": 1934.1318192671995,
+  "probability_max_error": 3.1086244689504383e-15,
+  "inclusive": {
+    "S": {
+      "expected": 26.320248207237686,
+      "realized": 26.282460885799985,
+      "sampling_error": 0.08359959147050135,
+      "rejection_error": 0.23009040153236318,
+      "rejection_pull": -0.1642281520047945
+    },
+    "H": {
+      "expected": 27.797495262600005,
+      "realized": 27.797495262600005,
+      "sampling_error": 0.24252558729194923,
+      "rejection_error": 0.0,
+      "rejection_pull": null
+    },
+    "net_expected": 1.4772470553623094,
+    "net_sampling_error": 0.25652982708710387,
+    "v3_S_expected": 43.6744854559197,
+    "v3_H_expected": 27.797495262600005
+  },
+  "bins": [
+    {
+      "S": {
+        "expected": 1.1488198166557453e-07,
+        "realized": 0.0,
+        "sampling_error": 2.7516051871448572e-08,
+        "rejection_error": 1.5781538315357863e-05,
+        "rejection_pull": -0.0072795173303084595
+      },
+      "H": {
+        "expected": 0.0,
+        "realized": 0.0,
+        "sampling_error": 0.0,
+        "rejection_error": 0.0,
+        "rejection_pull": null
+      },
+      "net_expected": -1.1488198166557453e-07,
+      "net_sampling_error": 2.7516051871448572e-08,
+      "v3_S_expected": 0.3436993216520859,
+      "v3_H_expected": 0.0,
+      "lo": 0.0,
+      "hi": 0.5
+    },
+    {
+      "S": {
+        "expected": 0.042605480658067796,
+        "realized": 0.0486673054,
+        "sampling_error": 0.0010860321279258704,
+        "rejection_error": 0.00978668857567734,
+        "rejection_pull": 0.6193948744826246
+      },
+      "H": {
+        "expected": 0.04655133559999999,
+        "realized": 0.04655133559999999,
+        "sampling_error": 0.00992477809723043,
+        "rejection_error": 0.0,
+        "rejection_pull": null
+      },
+      "net_expected": 0.00394585494193221,
+      "net_sampling_error": 0.00998402153754448,
+      "v3_S_expected": 1.001286907247996,
+      "v3_H_expected": 0.04655133559999999,
+      "lo": 0.5,
+      "hi": 1.0
+    },
+    {
+      "S": {
+        "expected": 0.2273973654808848,
+        "realized": 0.24756846659999998,
+        "sampling_error": 0.0039067398281136855,
+        "rejection_error": 0.02238476867733855,
+        "rejection_pull": 0.90110831207899
+      },
+      "H": {
+        "expected": 0.22640876859999998,
+        "realized": 0.22640876859999998,
+        "sampling_error": 0.021887761804551608,
+        "rejection_error": 0.0,
+        "rejection_pull": null
+      },
+      "net_expected": -0.0009885968808847935,
+      "net_sampling_error": 0.022233684645091057,
+      "v3_S_expected": 1.5538434414756397,
+      "v3_H_expected": 0.22640876859999998,
+      "lo": 1.0,
+      "hi": 1.5
+    },
+    {
+      "S": {
+        "expected": 0.4641778477341242,
+        "realized": 0.5162966312,
+        "sampling_error": 0.007821938640594155,
+        "rejection_error": 0.03153684033848874,
+        "rejection_pull": 1.652631744539992
+      },
+      "H": {
+        "expected": 0.4993688728,
+        "realized": 0.4993688728,
+        "sampling_error": 0.03250614486377677,
+        "rejection_error": 0.0,
+        "rejection_pull": null
+      },
+      "net_expected": 0.035191025065875806,
+      "net_sampling_error": 0.03343399733806984,
+      "v3_S_expected": 2.032111510167284,
+      "v3_H_expected": 0.4993688728,
+      "lo": 1.5,
+      "hi": 2.0
+    },
+    {
+      "S": {
+        "expected": 1.389246790598592,
+        "realized": 1.2992054571999998,
+        "sampling_error": 0.015911987533687555,
+        "rejection_error": 0.05380455026781248,
+        "rejection_pull": -1.6734891928361229
+      },
+      "H": {
+        "expected": 1.3965400679999997,
+        "realized": 1.3965400679999997,
+        "sampling_error": 0.054360248420863067,
+        "rejection_error": 0.0,
+        "rejection_pull": null
+      },
+      "net_expected": 0.007293277401408057,
+      "net_sampling_error": 0.05664122134673804,
+      "v3_S_expected": 4.416984114746603,
+      "v3_H_expected": 1.3965400679999997,
+      "lo": 2.0,
+      "hi": 3.0
+    },
+    {
+      "S": {
+        "expected": 3.4858104754443717,
+        "realized": 3.4998140491999994,
+        "sampling_error": 0.029691769666167333,
+        "rejection_error": 0.0837414894872,
+        "rejection_pull": 0.16722384377660404
+      },
+      "H": {
+        "expected": 3.5929167203999994,
+        "realized": 3.5929167203999994,
+        "sampling_error": 0.08719233495142481,
+        "rejection_error": 0.0,
+        "rejection_pull": null
+      },
+      "net_expected": 0.10710624495562794,
+      "net_sampling_error": 0.09210919856447666,
+      "v3_S_expected": 7.7324169013237904,
+      "v3_H_expected": 3.5929167203999994,
+      "lo": 3.0,
+      "hi": 5.0
+    },
+    {
+      "S": {
+        "expected": 3.4463909829155184,
+        "realized": 3.3622760121999993,
+        "sampling_error": 0.03200691817743217,
+        "rejection_error": 0.08251350900300529,
+        "rejection_pull": -1.0194084790704452
+      },
+      "H": {
+        "expected": 3.4151752571999996,
+        "realized": 3.4151752571999996,
+        "sampling_error": 0.08500828021988471,
+        "rejection_error": 0.0,
+        "rejection_pull": null
+      },
+      "net_expected": -0.031215725715518196,
+      "net_sampling_error": 0.09083419244513206,
+      "v3_S_expected": 5.88908742374208,
+      "v3_H_expected": 3.4151752571999996,
+      "lo": 5.0,
+      "hi": 7.0
+    },
+    {
+      "S": {
+        "expected": 4.50320812995802,
+        "realized": 4.5810746170000005,
+        "sampling_error": 0.03754317727830856,
+        "rejection_error": 0.09441668795310706,
+        "rejection_pull": 0.8247110625258685
+      },
+      "H": {
+        "expected": 4.731308472799999,
+        "realized": 4.731308472799999,
+        "sampling_error": 0.1000565132459099,
+        "rejection_error": 0.0,
+        "rejection_pull": null
+      },
+      "net_expected": 0.22810034284198002,
+      "net_sampling_error": 0.10686812435464307,
+      "v3_S_expected": 6.3833863063761775,
+      "v3_H_expected": 4.731308472799999,
+      "lo": 7.0,
+      "hi": 10.0
+    },
+    {
+      "S": {
+        "expected": 5.418379284990759,
+        "realized": 5.448622235,
+        "sampling_error": 0.03912103034133825,
+        "rejection_error": 0.10398511914886699,
+        "rejection_pull": 0.2908392110023456
+      },
+      "H": {
+        "expected": 5.795641282199999,
+        "realized": 5.795641282199999,
+        "sampling_error": 0.11074024528042417,
+        "rejection_error": 0.0,
+        "rejection_pull": null
+      },
+      "net_expected": 0.37726199720924014,
+      "net_sampling_error": 0.11744725173343316,
+      "v3_S_expected": 6.571136281952115,
+      "v3_H_expected": 5.795641282199999,
+      "lo": 10.0,
+      "hi": 15.0
+    },
+    {
+      "S": {
+        "expected": 3.2897037667873277,
+        "realized": 3.237433794,
+        "sampling_error": 0.027342967281695562,
+        "rejection_error": 0.08221664560703652,
+        "rejection_pull": -0.635759004778151
+      },
+      "H": {
+        "expected": 3.5273216566,
+        "realized": 3.5273216566,
+        "sampling_error": 0.08639274333097417,
+        "rejection_error": 0.0,
+        "rejection_pull": null
+      },
+      "net_expected": 0.23761788981267232,
+      "net_sampling_error": 0.0906164662741792,
+      "v3_S_expected": 3.587544724940499,
+      "v3_H_expected": 3.5273216566,
+      "lo": 15.0,
+      "hi": 20.0
+    },
+    {
+      "S": {
+        "expected": 3.9949244265046757,
+        "realized": 3.9780232239999993,
+        "sampling_error": 0.032172328831793814,
+        "rejection_error": 0.08967826563120843,
+        "rejection_pull": -0.18846486811175264
+      },
+      "H": {
+        "expected": 4.4922038853999995,
+        "realized": 4.4922038853999995,
+        "sampling_error": 0.09749547557168528,
+        "rejection_error": 0.0,
+        "rejection_pull": null
+      },
+      "net_expected": 0.49727945889532366,
+      "net_sampling_error": 0.10266657927198194,
+      "v3_S_expected": 4.1039747378176825,
+      "v3_H_expected": 4.4922038853999995,
+      "lo": 20.0,
+      "hi": 50.0
+    },
+    {
+      "S": {
+        "expected": 0.052770142333570774,
+        "realized": 0.05924715439999999,
+        "sampling_error": 0.00512413256494444,
+        "rejection_error": 0.009805414242650969,
+        "rejection_pull": 0.6605546595120803
+      },
+      "H": {
+        "expected": 0.0677110336,
+        "realized": 0.0677110336,
+        "sampling_error": 0.011969732754927541,
+        "rejection_error": 0.0,
+        "rejection_pull": null
+      },
+      "net_expected": 0.014940891266429224,
+      "net_sampling_error": 0.013020416151855875,
+      "v3_S_expected": 0.05334124041190461,
+      "v3_H_expected": 0.0677110336,
+      "lo": 50.0,
+      "hi": 100.0
+    },
+    {
+      "S": {
+        "expected": 0.005633398949795057,
+        "realized": 0.0042319396,
+        "sampling_error": 0.001770037225880196,
+        "rejection_error": 0.0029642992878784013,
+        "rejection_pull": -0.47277930252383704
+      },
+      "H": {
+        "expected": 0.0063479094,
+        "realized": 0.0063479094,
+        "sampling_error": 0.0036649672008813557,
+        "rejection_error": 0.0,
+        "rejection_pull": null
+      },
+      "net_expected": 0.0007145104502049424,
+      "net_sampling_error": 0.004070014295372656,
+      "v3_S_expected": 0.005672544065840176,
+      "v3_H_expected": 0.0063479094,
+      "lo": 100.0,
+      "hi": null
+    }
+  ],
+  "S_sudakov_ratio_quantiles": [
+    0.0,
+    0.0024417065541739616,
+    0.34116711284039564,
+    0.8849181648542636,
+    1.6275994256337047,
+    5.4021805775288225,
+    1142.2823011410076
+  ],
+  "saturated_S": 0
+}

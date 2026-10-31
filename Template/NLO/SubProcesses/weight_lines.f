@@ -21,6 +21,25 @@
 ! and the squared factorisation scales of that point's kernel PDFs.
          double precision :: macnlops_kernel_alphas=0d0
          double precision :: macnlops_kernel_q2fact(2)=0d0
+! Optional first-emission Sudakov request. Source integration never enables
+! it. The matching driver returns a deterministic marginal over its native
+! starting-scale law, with the source Delta unchanged.
+         integer, parameter :: macnlops_sudakov_max=512
+         logical :: macnlops_sudakov_enabled=.false.,
+     $        macnlops_sudakov_ready=.false.
+         double precision :: macnlops_sudakov_requested_pt=0d0,
+     $        macnlops_sudakov_pt=0d0,macnlops_sudakov_source=1d0,
+     $        macnlops_sudakov_cdf=1d0,
+     $        macnlops_sudakov_x(2)=0d0,
+     $        macnlops_sudakov_mass=0d0,
+     $        macnlops_sudakov_q(macnlops_sudakov_max)=0d0,
+     $        macnlops_sudakov_w(macnlops_sudakov_max)=0d0,
+     $        macnlops_sudakov_fsr(macnlops_sudakov_max)=1d0
+         integer :: macnlops_sudakov_n=0,
+     $        macnlops_sudakov_ids(2)=0
+         integer :: macnlops_sudakov_nquarks=0
+! Per global-recoil quark radiator: m_rad, m_rec, m_dip, maximum start.
+         double precision :: macnlops_sudakov_quarks(4,64)=0d0
 ! Per contribution: qMC**2, shat_Born, xBorn(1:2), connection z,
 ! and a flag: 1=legacy resolved-source gate, 2=physical proposal support.
          double precision, allocatable :: macnlops_meta(:,:)

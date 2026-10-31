@@ -1,0 +1,20 @@
+{
+  "campaign": "/export/slow1/rikkert/macnlops_sudakov_1M_20261030",
+  "copied_files_sha256": {
+    "plots/hard_pt_1M_ranges.json": "eea24eba1ab85d58d80a1fe263c80262fe164ade052ee89f36e8c09dbf94bc81",
+    "plots/hard_pt_run_1M_v4.json": "d35b4cab430c8b871bcea4bbb2a6ff2147f7d434f6803e8c44bc5fb95b298823",
+    "plots/hard_pt_run_1M_v4.pdf": "3e984f37c52d28c312c1abdb7f9594641b347e525f6708f62f283088ef023fa7",
+    "plots/sudakov_fix_comparison.json": "5a385b6b109267ca1e56339df5ab83386ef8c5843e517fc2a9a5eddeb0660193",
+    "plots/sudakov_fix_comparison.pdf": "f77290af97a760a0e527a4b819415e47c8926e0652b77fe8ac222491eb1651f5",
+    "plots/transfer_balance.pdf": "cdf447a62da953a31f4d22fdfe150b2751d77dff6ab99ec3281e3590d3138f48",
+    "report.txt": "1bd328ec78110ed4c8af84f5faf8a2898912852960c963a0fb3de0c944febff2",
+    "validation/DY_event_checks.json": "2d85de2aab4cd7cd19a28d558bdc981a8d6ac4043424be6ab52bafd9a798a639",
+    "validation/H_event_checks.json": "93d943d07ef4a16bca5f048fb72ea3230b8172f52453976938a489cc114b9b6c",
+    "validation/massive_fsr_validation.json": "b64e595545c31ca07c30901e4f56ba071443a9a4572adfa93aafdcf8c2f14f45",
+    "validation/native_fsr_quadrature.json": "696a9877944ab72fa2da4273f1ba348c81010f8d2b256a42cd89e5cc34b1a1a1",
+    "validation/production_checks.json": "ee6d7e1fe4bc133b97f4c874c06ef53b6b28092255605b6f7cb92fb314347d69",
+    "validation/provenance.json": "b4c1d67b01752445b0cfd3e5fbf1a4ede165163ba08ad27c8f2848bba25f44b8",
+    "validation/summary.json": "736d5d575cb83ce45864e89a7fd012996d67f0df03c7facfa32f2034ea0d4bfb",
+    "validation/ttbar_event_checks.json": "54b5266ce3e8580f7b3570f34fa96183d83fa404b215e36b3c943e91eb647d86"
+  }
+}

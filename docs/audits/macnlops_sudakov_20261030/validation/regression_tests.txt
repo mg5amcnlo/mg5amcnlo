@@ -1,0 +1,29 @@
+Pre-commit regression check, 31 October 2026
+
+78 tests run; 77 passed; one optional local audit-artifact test skipped.
+Result: OK (skipped=1). Elapsed: 27.450 seconds.
+
+Environment:
+  PYTHIA8=/nfs/home/rikkert/Downloads/pythia8
+  PYTHIA8DATA=$PYTHIA8/share/Pythia8/xmldoc
+  LD_LIBRARY_PATH=/nfs/home/rikkert/LHAPDF/lib:$PYTHIA8/lib
+  OPENBLAS_NUM_THREADS=1
+
+Command: python -m unittest, with these modules:
+  tests.unit_tests.fks.test_macnlops_sudakov_profile
+  tests.unit_tests.various.test_macnlops_first_emission
+  tests.unit_tests.various.test_macnlops_s_veto_normalisation
+  tests.unit_tests.fks.test_delta_backward_isr
+  tests.unit_tests.fks.test_mcatnlo_delta_scales
+  tests.unit_tests.fks.test_macnlops_delta_context
+  tests.unit_tests.fks.test_macnlops_weight_lines
+  tests.unit_tests.various.test_macnlops_delta_workflow
+  tests.unit_tests.various.test_macnlops_native_environment
+  tests.unit_tests.various.test_macnlops_sudakov_kernel
+  tests.unit_tests.various.test_macnlops_provenance
+  tests.unit_tests.various.test_macnlops_packaging
+
+The three new Python diagnostic scripts also pass ast.parse; git diff --check
+is clean. Production code is byte-identical to the implementation validated
+by the archived million-event campaigns; cleanup only changes documentation,
+the archive, and an unused test import.

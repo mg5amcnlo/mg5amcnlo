@@ -56,8 +56,9 @@ SOURCE_CONSTRUCTIONS = {name: construction for construction, name in SOURCE_NAME
 # v2 normalises the S veto to beta*K_sh; v1 divided by the bare K.
 UNDAMPED_DELTA_POLICY = 'component-undamped-delta-v2'
 LEGACY_UNDAMPED_DELTA_POLICY = 'component-undamped-delta-v1'
-# v3 (MacNLOPSMatch.cc) also gives K_sh the shower's PDF ratio for ISR.
-FIRST_EMISSION_POLICY = 'component-undamped-delta-v3'
+# v4 keeps v3's emission-PDF correction and includes the source/shower
+# Sudakov ratio, averaged with the appropriate starting-scale measures.
+FIRST_EMISSION_POLICY = 'component-sudakov-ratio-v4'
 # The archived MC@NLO-Delta Sudakov tables behave as Pythia's default shower
 # coupling: alpha_s(MZ) = 0.1365 at one loop, no CMW, pT0Ref = 0
 # (docs/macnlops_parameter_consistency.md). They are never regenerated, so

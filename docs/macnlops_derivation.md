@@ -1,5 +1,122 @@
 # MAcNLOPS from the generated measures
 
+## Source/shower Sudakov ratio: 30 October (`component-sudakov-ratio-v4`)
+
+The default per-channel matcher now retains the original MC@NLO-Delta
+source and corrects the S veto for its different no-emission factor.
+The source uses the reconstructed stopping scale of each live colour
+connection. The first competing shower instead requires **every** Born
+radiator to have no accepted emission above the winning evolution scale
+\(t=p_{T,\mathrm{evol}}\). These are different probabilities, including
+in collinear configurations. Cutting the source evolution at the winner
+would therefore change the source rather than correct the matching.
+
+The random scalar starting scale \(Q\) also has to be averaged with the
+right measure. Write its source distribution as \(\rho(Q)\), and let
+\(D(t)=P(Q>t)\). The generated counterterm \(K\) already contains
+\(D(t)\). The two factors used by the matcher are consequently
+
+\[
+ A(\Phi_R)=\int dQ\,\rho(Q)\,
+       \Delta_{\rm src}(\Phi_R;Q),\qquad
+ P(\Phi_B,t)=\frac{1}{D(t)}\int_{Q>t}dQ\,\rho(Q)\,
+       \Delta_{\rm PS}(\Phi_B;t,Q).
+\]
+
+The source average is unconditional, whereas the shower average is
+conditional on being able to emit at \(t\). Dividing by the Sudakov at
+the sampled S-event starting scale would bias that average. The source
+starting-scale law is the existing smooth \(D\) function between its
+native lower and upper bounds. A 12-point Gaussian rule integrates each
+interval, split at all connection stopping scales, FSR ceilings and
+\(t\), including changes in the source's live colour-line mixtures.
+
+Let \(u=\max(D_G-R,0)\), \(C=\min(u,K)\), and
+\(F=\beta_c K_{\rm sh}P\), where \(K_{\rm sh}/K\) retains v3's
+coupling and resolved-flavour emission-PDF correction. The common,
+bounded transfer density is
+
+\[
+ T=\min(CA,F),\qquad
+ v_S=\frac{T}{F},\qquad
+ r_H=\frac{T}{uA}.
+\]
+
+The program evaluates these ratios in logarithms. Without saturation,
+\(v_S=C A/(\beta_c K_{\rm sh}P)\) and \(r_H=C/u\).
+If the required S rejection would exceed one, H removal is reduced by
+the same bound. A zero source average protects both samples; a zero
+shower probability permits no H removal. Thus clipping only the S veto
+cannot introduce an unmatched H transfer. This addresses the Sudakov
+factor; the channel-averaged \(\beta_c=\sigma_{S,c}/\sigma_{B,c}\)
+remains an approximation to the local S/B density ratio.
+
+The implementation reuses the shipped tables for **all source factors**,
+with the same grouped PDFs, beam types, real-state dipole masses,
+stopping scales and optional `DeltaBackwardISR` setting as `compute_delta`.
+Neither the source weights nor Pythia are changed. The denominator
+uses the Born state and a common lower evolution scale:
+
+* Incoming legs use a numerical integral of the resolved-flavour backward
+  kernel with the actual shower PDF, its freezing behaviour, the
+  massless-II finite-z boundary, and the shower coupling. This includes
+  the NLO-PDF/LO-shower evolution difference that an endpoint PDF ratio
+  alone does not recover.
+* Final quarks use the analytic integral of \(P_{qq}\) over the massive
+  first-global-recoil phase space. The recoiler is the sum of all other
+  hard final particles. The integration also includes the rejection in
+  stock `SimpleTimeShower::branch`: for a virtual mass \(m_v\),
+  \(t(1-m_q^2/m_v^2)>p_{T,\min}^{\rm FSR}\) must hold. For tops this
+  restricts radiation well above the nominal evolution cutoff. The
+  ordinary local colour-partner ceiling still limits the start.
+* Remaining final gluon legs use the existing FSR tables at the common
+  cutoff and Born dipole masses. Below the table grid, the denominator
+  continues its finite logarithmic slope rather than using the
+  artificial source zero at 0.5 GeV. This is a table approximation for
+  such Born states; the DY, inclusive Higgs and stable-top validation
+  processes have no final Born gluons.
+
+The native helper `macnlops_delta_profile` exposes the source average
+and conditional starting-scale nodes through `macnlops_c_sudakov_profile`.
+The matcher computes the denominator, uses the paired bound for S and H,
+and records `delta_source_mean`, `delta_shower_mean` and `starting_cdf`
+in each evaluated `<macnlops_decision>`. The default marker and summaries
+identify `component-sudakov-ratio-v4`; `--s-veto v3` and `v2` retain the
+earlier prescriptions for reproducibility. The separate older Python
+proposal/rejection chain retains its explicit v2 policy.
+
+An independent massive-FSR check uses 6,174 actual top-pair Born points
+with 2,000 stock-Pythia FSR trials each. The corrected conditional
+probabilities have pull mean -0.013 and width 0.997, including the
+sub-3-GeV evolution bins. Native regression checks separately exercise
+the source average, conditional starting-scale normalization, zero
+source, paired saturation, backward ISR, massive-quark support and
+legacy v3 behaviour. The [validation report](audits/macnlops_sudakov_20261030/report.txt),
+[before/after plots](audits/macnlops_sudakov_20261030/plots/sudakov_fix_comparison.pdf)
+and [transfer balance](audits/macnlops_sudakov_20261030/plots/transfer_balance.pdf)
+are archived with their numerical checks and provenance in
+[`docs/audits/macnlops_sudakov_20261030`](audits/macnlops_sudakov_20261030/README.txt).
+The full event samples remain in
+`/export/slow1/rikkert/macnlops_sudakov_1M_20261030`:
+
+| Process | Source [pb] | Matched [pb] | Relative change |
+| --- | ---: | ---: | ---: |
+| DY, mee > 60 GeV | 1932.616785 | 1934.131819 | +0.0784% |
+| ggH, HEFT | 30.770344 | 30.766178 | -0.0135% |
+| stable ttbar | 637.536316 | 633.043349 | -0.7047% |
+
+All 3,000,000 events complete the subsequent stock shower. Weight sums
+agree across the hand-off to better than 9e-8 relative, limited by HwU
+text precision. In the 2–3 GeV first-emission hard-system-pT bin, the
+expected H-addition/S-rejection ratio changes from v3 to v4 as follows:
+DY 0.316 to 1.005, Higgs 0.125 to 0.922, and ttbar 0.190 to 1.057.
+These comparisons apply both prescriptions to the same fresh events.
+The remaining ttbar transfer difference is statistically resolved and
+predominantly in ISR at larger pT. The Sudakov correction does not make
+the channel-averaged S/B normalization and omitted local Born-scale
+conversions exact. The report therefore retains this residual as a
+limitation, rather than claiming complete local transfer closure.
+
 ## Per-channel first emission: 29 October (`component-undamped-delta-v3`)
 
 With `macnlops = True`, which requires `MCatNLO_DELTA = True`, a matched

@@ -233,7 +233,7 @@ add_write_info.o analysis_lhe.o BinothLHA.o BinothLHA_user.o \
 
 process_module.o : qed_shower_support.o
 scale_module.o : process_module.o genps_fks_helpers.o mcatnlo_delta_scales.o herwig7_scales.o
-montecarlocounter.o : scale_module.o genps_fks_helpers.o process_module.o mcatnlo_delta_scales.o FKSParams.o
+montecarlocounter.o : scale_module.o genps_fks_helpers.o process_module.o mcatnlo_delta_scales.o FKSParams.o weight_lines.o
 montecarlocounter.o : nexternal.inc born_nhel.inc orders.inc
 montecarlocounter.o : fks_powers.inc
 # Build the counterterm module before its callers need mc_counterterms.mod.

@@ -1,0 +1,41 @@
+{
+  "DY": {
+    "events": 1000000,
+    "source_pb": 1932.6167848904004,
+    "matched_pb": 1934.1318192671995,
+    "relative_change_percent": 0.07839290171978153,
+    "expected_S_transfer_pb": 26.320248207237686,
+    "expected_H_transfer_pb": 27.797495262600005,
+    "expected_net_pb": 1.4772470553623094,
+    "realized_net_pb": 1.5150343767991217,
+    "realized_net_MC_error_pb": 0.344599978326557,
+    "v3_common_event_expected_net_pb": -15.876990193319696,
+    "saturated_S": 0
+  },
+  "H": {
+    "events": 1000000,
+    "source_pb": 30.770344237962004,
+    "matched_pb": 30.76617842907,
+    "relative_change_percent": -0.013538388975398163,
+    "expected_S_transfer_pb": 0.2273119951839763,
+    "expected_H_transfer_pb": 0.22216527582900006,
+    "expected_net_pb": -0.005146719354976364,
+    "realized_net_pb": -0.004165808892004463,
+    "realized_net_MC_error_pb": 0.003970515906695571,
+    "v3_common_event_expected_net_pb": -0.18600870564007096,
+    "saturated_S": 0
+  },
+  "ttbar": {
+    "events": 1000000,
+    "source_pb": 637.5363159113004,
+    "matched_pb": 633.0433492935501,
+    "relative_change_percent": -0.7047389310408159,
+    "expected_S_transfer_pb": 78.83441146512375,
+    "expected_H_transfer_pb": 73.79076195835768,
+    "expected_net_pb": -5.043649506766104,
+    "realized_net_pb": -4.492966617750312,
+    "realized_net_MC_error_pb": 0.38573898944686014,
+    "v3_common_event_expected_net_pb": 9.671831252933487,
+    "saturated_S": 536
+  }
+}

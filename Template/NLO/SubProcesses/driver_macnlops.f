@@ -135,12 +135,13 @@ c H before its physical Delta multiplier, without evaluating a Delta.
       use fks_phase_space, only: generate_native_momenta,
      $     fks_phase_space_point
       use fks_phase_space_data, only: p_born,p1_cnt,xinorm_ev,
-     $     xi_i_fks_ev,y_ij_fks_ev
+     $     xi_i_fks_ev,y_ij_fks_ev,xbjrk_cnt
       use fks_phase_space_helpers, only: apply_momentum_permutation
       use mc_native_context, only: set_native_history,native_mapping,
      $     mc_begin_real_point,mc_end_real_point,active_context,
      $     local_context
-      use mc_counterterms, only: fksfather,mc_shower_scale_mass
+      use mc_counterterms, only: fksfather,mc_shower_scale_mass,
+     $     get_qMC,macnlops_delta_profile
       use process_module
       use scale_module
       use weight_lines
@@ -158,7 +159,7 @@ c H before its physical Delta multiplier, without evaluating a Delta.
      $     leg,hist_first,hist_last,recoil_first,recoil_last,
      $     component_config,component_graph,component_flow,damping_mode,
      $     born_ids(nexternal-1),born_colours(2,nexternal-1),
-     $     equivalent_emitters
+     $     equivalent_emitters,mother,sister
       common/fks_indices/i_fks,j_fks
       common/c_MCcntcalled/MCcntcalled
       double precision lab(0:3,nexternal),r,d,k,h,
@@ -193,6 +194,7 @@ c H before its physical Delta multiplier, without evaluating a Delta.
 
       status=1
       r=0d0
+      macnlops_sudakov_ready=.false.
       h=0d0
       d=0d0
       k=0d0
@@ -447,6 +449,44 @@ c source construction. It never receives source G or bogus P factors.
          enddo
       enddo
       d=r-h
+      if(local_component.and.macnlops_sudakov_enabled.and.
+     $     h.lt.0d0.and.k.gt.0d0)then
+         macnlops_sudakov_pt=get_qMC(xi_i_fks_ev,y_ij_fks_ev)
+         if(macnlops_sudakov_requested_pt.gt.0d0)then
+            if(abs(macnlops_sudakov_pt-
+     $           macnlops_sudakov_requested_pt).gt.
+     $           1d-5*max(1d0,macnlops_sudakov_pt))then
+               status=40
+               goto 900
+            endif
+            macnlops_sudakov_pt=macnlops_sudakov_requested_pt
+         endif
+         call macnlops_delta_profile(p,p_born,ids,
+     $        macnlops_sudakov_pt,macnlops_sudakov_source,
+     $        macnlops_sudakov_n,macnlops_sudakov_q,
+     $        macnlops_sudakov_w,macnlops_sudakov_fsr,
+     $        macnlops_sudakov_cdf,kernel_status)
+         if(kernel_status.ne.0)then
+            status=41
+            goto 900
+         endif
+         macnlops_sudakov_x=xbjrk_cnt(1:2,0)
+         macnlops_sudakov_mass=sqrt(max(0d0,
+     $        (p_born(0,1)+p_born(0,2))**2-
+     $        sum((p_born(1:3,1)+p_born(1:3,2))**2)))
+         macnlops_sudakov_ids=ids(1:2)
+         if(j_fks.le.nincoming)then
+            mother=ids(j_fks)
+            sister=ids(i_fks)
+            if(mother.eq.21)then
+               if(sister.ne.21)
+     $              macnlops_sudakov_ids(j_fks)=-sister
+            elseif(sister.ne.21)then
+               macnlops_sudakov_ids(j_fks)=21
+            endif
+         endif
+         macnlops_sudakov_ready=.true.
+      endif
       if(local_component)then
 c The generated native Born is in the real-state statistical measure.
 c For an actual, ancestry-labelled shower emission, restore I_R/I_B.

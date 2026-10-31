@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from madgraph.various import collect_events
 from madgraph.various import macnlops as mc
@@ -237,6 +238,7 @@ STUB = r"""
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 static const char* registry = "%(registry)s";
 void macnlops_c_setup(int* nlegs, char* reg) { *nlegs = 5; memcpy(reg, registry, 64); }
 void macnlops_c_profile(double* cutoffs, double* xmax, double* masses, int* flavours) {
@@ -246,12 +248,31 @@ void macnlops_c_profile(double* cutoffs, double* xmax, double* masses, int* flav
   fclose(f);
 }
 void macnlops_c_configure(double* xmax, double* isr, double* fsr) {}
+static double requested_pt=0., profile_x[2]={.01,.01};
+static int profile_ids[2]={2,-2};
+void macnlops_c_sudakov_request(int enabled,double pt) { requested_pt=pt; }
+void macnlops_c_sudakov_profile(int* ready,int* n,int* ids,double* x,
+  double* mass,double* pt,double* source,double* cdf,double* q,double* w,double* fsr,
+  int* nquarks,double* quarks) {
+  *nquarks=0;
+  *ready=1; *n=1; *pt=requested_pt>0.?requested_pt:10.;
+  *source=getenv("MACNLOPS_STUB_SOURCE")?atof(getenv("MACNLOPS_STUB_SOURCE")):.25;
+  *cdf=.8; q[0]=*pt; w[0]=1.;
+  fsr[0]=getenv("MACNLOPS_STUB_PS")?atof(getenv("MACNLOPS_STUB_PS")):.5;
+  ids[0]=profile_ids[0]; ids[1]=profile_ids[1];
+  x[0]=profile_x[0]; x[1]=profile_x[1];
+  *mass=13000.*sqrt(x[0]*x[1]);
+}
 void macnlops_c_density(int owner, const int* ids, const double* lab, int config,
   int graph, int flow, int damping, double symmetry, int has_born, const int* born_ids,
   const int* born_colours, const double* born_lab, const double* born_masses,
   double* r, double* d, double* k, double* alphas, double* q2fact, int* status) {
   if (owner < 1 || owner > 4 || damping != 1 || symmetry <= 0.) exit(4);
   *r = 1.; *d = 3.; *k = has_born ? 4. : 1.; *alphas = 0.118;
+  for (int side=0;side<2;++side) {
+    profile_ids[side]=has_born?born_ids[side]:ids[side];
+    profile_x[side]=(has_born?born_lab[4*side]:lab[4*side])/6500.;
+  }
   q2fact[0] = q2fact[1] = 1.e4; *status = 0;
 }
 """
@@ -367,7 +388,10 @@ class TestFirstEmissionNative(unittest.TestCase):
                 self.assertEqual(ratio, 1.)
             scale = mc.number(decision['kernel_scale'])
             self.assertAlmostEqual(scale, beta * alpha / .118 * ratio, delta=1.e-12 * scale)
-            self.assertAlmostEqual(keep, 1. - min(.5 / scale, 1.), delta=1.e-14)
+            sudakov = (mc.number(decision['delta_source_mean']) /
+                       mc.number(decision['delta_shower_mean'])
+                       if 'delta_source_mean' in decision else 1.)
+            self.assertAlmostEqual(keep, 1. - min(.5 * sudakov / scale, 1.), delta=1.e-14)
         else:
             self.assertEqual((decision['rule'], keep), ('exhausted', 1.))
         return decision, accepted
@@ -406,6 +430,42 @@ class TestFirstEmissionNative(unittest.TestCase):
                          summary['counts'].get('accepted_H', 0))
         for block in blocks:
             self.assertTrue(self.check_event(block, 1.2, True)[1])
+
+    def test_zero_source_sudakov_protects_both_s_and_negative_h(self):
+        with patch.dict(self.env, {'MACNLOPS_STUB_SOURCE':'0'}):
+            _,blocks,summary=self.run_match('zero_source')
+        for block in blocks:
+            decision=mc.xml_attributes(re.search(r'<macnlops_decision\b([^<>]*?)/>',block)[1])
+            self.assertEqual(mc.number(decision['keep']),1.)
+        self.assertEqual(summary['weight_sums']['input'],summary['weight_sums']['macnlops'])
+
+    def test_probability_cap_reduces_h_removal_together_with_s_veto(self):
+        with patch.dict(self.env, {'MACNLOPS_STUB_SOURCE':'1','MACNLOPS_STUB_PS':'0.000001'}):
+            _,blocks,_=self.run_match('bounded_transfer')
+        checked=0
+        for block in blocks:
+            d=mc.xml_attributes(re.search(r'<macnlops_decision\b([^<>]*?)/>',block)[1])
+            if d['rule']=='h_removal':
+                # H and S must transfer the SAME marginal density after
+                # saturation, rather than merely clipping the S veto.
+                u=mc.number(d['d'])-mc.number(d['r'])
+                h_transfer=mc.number(d['delta_source_mean'])*u*(1-mc.number(d['keep']))
+                available_s=(mc.number(d['k'])*mc.number(d['kernel_scale'])*
+                             mc.number(d['delta_shower_mean']))
+                self.assertAlmostEqual(h_transfer,available_s,delta=2e-15)
+                self.assertGreater(mc.number(d['keep']),.99)
+                checked+=1
+            elif d['rule']=='s_veto':
+                self.assertEqual(mc.number(d['keep']),0.)
+        self.assertEqual(checked,3)
+
+    def test_previous_v3_prescription_remains_reproducible(self):
+        header,blocks,_=self.run_match('legacy_v3','--s-veto','v3')
+        self.assertEqual(mc.first_emission_header(header)['prescription'],
+                         'component-undamped-delta-v3')
+        for block in blocks:
+            self.assertNotIn('delta_source_mean=',block)
+            self.check_event(block,1.2,True)
 
 
 if __name__ == '__main__':

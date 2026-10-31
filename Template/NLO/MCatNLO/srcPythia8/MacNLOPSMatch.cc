@@ -7,6 +7,7 @@
 #include "MacNLOPS.h"
 
 #include <cstdint>
+#include <array>
 
 extern "C" {
 void macnlops_c_setup(int* nlegs, char* registry);
@@ -16,6 +17,10 @@ void macnlops_c_density(int owner, const int* ids, const double* lab, int config
   int graph, int flow, int damping, double symmetry, int hasBorn, const int* bornIds,
   const int* bornColours, const double* bornLab, const double* bornMasses,
   double* r, double* d, double* k, double* alphas, double* q2fact, int* status);
+void macnlops_c_sudakov_request(int enabled, double pt);
+void macnlops_c_sudakov_profile(int* ready, int* n, int* ids, double* x,
+  double* mass, double* pt, double* source, double* cdf, double* q, double* w, double* fsr,
+  int* nquarks, double* quarks);
 }
 
 namespace {
@@ -29,11 +34,12 @@ const double tableAlphaS = 0.1365;
 const int tableAlphaSOrder = 1;
 const char* prescriptionV3 = "component-undamped-delta-v3";
 const char* prescriptionV2 = "component-undamped-delta-v2";
+const char* prescriptionV4 = "component-sudakov-ratio-v4";
 
 struct MatchOptions {
   std::string input, output, summary, routes, settings, pdf, res;
   int seed = 1;
-  bool dropRejected = false, pdfCorrection = true;
+  bool dropRejected = false, pdfCorrection = true, sudakovCorrection = true;
 };
 
 MatchOptions matchOptions(int argc, char** argv) {
@@ -44,7 +50,7 @@ MatchOptions matchOptions(int argc, char** argv) {
       std::cout << "macnlops_onestep --input IN.lhe --output OUT.lhe --summary OUT.json\n"
                 << " --routes macnlops_routes.dat --settings macnlops_shower.cmnd\n"
                 << " --pdf LHAPDF6:SET/MEMBER --seed N [--res res_1]\n"
-                << " [--drop-rejected] [--s-veto v3|v2]\n"
+                << " [--drop-rejected] [--s-veto v4|v3|v2] (default v4)\n"
                 << "Showers one step with alpha_s(MZ) = 0.1365 at one loop, applies the\n"
                 << "H removal and S veto, and writes all events with a 'macnlops' weight.\n";
       std::exit(0);
@@ -61,9 +67,10 @@ MatchOptions matchOptions(int argc, char** argv) {
     else if (arg == "--res") m.res = value;
     else if (arg == "--seed") m.seed = std::stoi(value);
     else if (arg == "--s-veto") {
-      if (value != "v2" && value != "v3")
-        throw std::runtime_error("--s-veto must be v2 or v3");
-      m.pdfCorrection = value == "v3";
+      if (value != "v2" && value != "v3" && value != "v4")
+        throw std::runtime_error("--s-veto must be v2, v3 or v4");
+      m.pdfCorrection = value != "v2";
+      m.sudakovCorrection = value == "v4";
     } else throw std::runtime_error("Unknown option: " + arg);
   }
   if (m.input.empty() || m.output.empty() || m.summary.empty() || m.routes.empty() ||
@@ -212,8 +219,18 @@ ComponentPacket componentPacket(const InputEvent& input) {
 
 // R, the subtraction D (R - H) and the leading kernel K of one component,
 // with K's emission coupling and squared factorisation scales.
+struct SudakovProfile {
+  static const int maximum = 512;
+  int ready = 0, count = 0, ids[2] = {0, 0};
+  double x[2] = {0., 0.}, mass = 0., pt = 0., source = 1., cdf = 1.;
+  std::array<double, maximum> q{}, w{}, fsr{};
+  int nquarks = 0;
+  std::array<double, 256> quarks{};
+};
+
 struct Density {
   double r = 0., d = 0., k = 0., alphaK = 0., q2fact[2] = {0., 0.};
+  SudakovProfile sudakov;
   bool transfers() const {return d > r && k > 0.;}
 };
 
@@ -239,7 +256,8 @@ double hAcceptance(const Density& x) {
 }
 
 Density evaluate(const std::vector<LHEParticle>& legs, int sector, const ComponentPacket& c,
-                 int config, int graph, int flow, const std::vector<LHEParticle>* born) {
+                 int config, int graph, int flow, const std::vector<LHEParticle>* born,
+                 bool sudakov = false, double pt = 0.) {
   const int n = legs.size();
   std::vector<int> ids(n), bornIds(n - 1, 0), bornColours(2 * (n - 1), 0);
   std::vector<double> lab(4 * n), bornLab(4 * (n - 1), 0.), bornMasses(n - 1, 0.);
@@ -258,6 +276,7 @@ Density evaluate(const std::vector<LHEParticle>& legs, int sector, const Compone
   }
   Density x;
   int status = 1;
+  macnlops_c_sudakov_request(sudakov ? 1 : 0, pt);
   macnlops_c_density(sector, ids.data(), lab.data(), config, graph, flow, 1, c.symmetry,
     born ? 1 : 0, bornIds.data(), bornColours.data(), bornLab.data(), bornMasses.data(),
     &x.r, &x.d, &x.k, &x.alphaK, x.q2fact, &status);
@@ -271,6 +290,16 @@ Density evaluate(const std::vector<LHEParticle>& legs, int sector, const Compone
     throw std::runtime_error("Native density evaluator failed with status " + std::to_string(status));
   if (!std::isfinite(x.r) || !std::isfinite(x.d) || !std::isfinite(x.k))
     throw std::runtime_error("Nonfinite native density");
+  if (sudakov && x.transfers()) {
+    auto& p = x.sudakov;
+    macnlops_c_sudakov_profile(&p.ready, &p.count, p.ids, p.x, &p.mass,
+      &p.pt, &p.source, &p.cdf, p.q.data(), p.w.data(), p.fsr.data(),
+      &p.nquarks, p.quarks.data());
+    if (!p.ready || p.count < 0 || p.count > SudakovProfile::maximum ||
+        !(p.pt > 0. && p.mass > 0.) || !std::isfinite(p.source) ||
+        p.source < 0. || p.source > 1. + 1.e-12 || p.nquarks<0 || p.nquarks>64)
+      throw std::runtime_error("Invalid native Sudakov marginal");
+  }
   return x;
 }
 
@@ -487,6 +516,8 @@ struct Decision {
   std::string rule;
   double keep = 1., pt = 0., matchingScale = 0., kernelScale = 1.;
   double alphaShower = 0., pdfRatio = 1., marking = 1., totalKernel = 0.;
+  double deltaSource = 1., deltaShower = 1.;
+  bool sudakov = false;
   bool evaluated = false;
   int candidates = 0, sector = 0;
   std::string orientation;
@@ -497,10 +528,167 @@ struct Context {
   RouteTable routes;
   ChannelNormalisation normalisation;
   double cutoffs[2] = {0., 0.}, floors[2] = {0., 0.};
-  bool pdfCorrection = true;
+  bool pdfCorrection = true, sudakovCorrection = true;
   Pythia* engine = nullptr;
+  FirstEmission* hook = nullptr;
+  int flavours = 5;
   double eBeam[2] = {0., 0.};
 };
+
+struct GaussRule {
+  std::vector<double> x, w;
+  explicit GaussRule(int n) : x(n), w(n) {
+    for (int i=0; i<(n+1)/2; ++i) {
+      double z=std::cos(std::acos(-1.)*(i+.75)/(n+.5)), derivative=0.;
+      for (int iteration=0; iteration<40; ++iteration) {
+        double p=1., previous=0.;
+        for (int j=1; j<=n; ++j) {
+          const double old=previous; previous=p;
+          p=((2.*j-1.)*z*previous-(j-1.)*old)/j;
+        }
+        derivative=n*(z*p-previous)/(z*z-1.);
+        const double change=p/derivative; z-=change;
+        if (std::abs(change)<2.e-15) break;
+      }
+      x[i]=-z; x[n-1-i]=z;
+      w[i]=w[n-1-i]=2./((1.-z*z)*derivative*derivative);
+    }
+  }
+};
+
+// Exact massless-II backward PDF convolution, rather than the forward
+// table times a grouped PDF ratio. This includes both the finite-z boundary
+// and the PDF/shower evolution mismatch; the production source is untouched.
+double backwardRate(const Context& c, const SudakovProfile& p, double logT) {
+  static const GaussRule rule(24);
+  const double t=std::exp(logT), r=t/(p.mass*p.mass);
+  const double omz=.5*r*(std::sqrt(1.+4./r)-1.), Z=1.-omz;
+  double rate=0.;
+  for (int side=0; side<2; ++side) {
+    const double x=p.x[side]; const int pid=p.ids[side];
+    if (!(x>0. && x<1. && Z>x)) continue;
+    const double denominator=c.hook->beamXf(side,pid,x,t);
+    if (!(denominator>0.)) continue;
+    const double a=std::log(x/(1.-x)), b=std::log(Z/omz);
+    double integral=0.;
+    for (int j=0; j<int(rule.x.size()); ++j) {
+      const double v=.5*(a+b)+.5*(b-a)*rule.x[j];
+      const double z=1./(1.+std::exp(-v)), y=x/z;
+      double real;
+      if (pid==21) {
+        double quarks=0.;
+        for (int f=1; f<=c.flavours; ++f)
+          quarks+=c.hook->beamXf(side,f,y,t)+c.hook->beamXf(side,-f,y,t);
+        const double pgg=6.*std::pow(1.-z+z*z,2)/(z*(1.-z));
+        real=pgg*c.hook->beamXf(side,21,y,t)
+          +(4./3.)*(1.+(1.-z)*(1.-z))/z*quarks;
+      } else {
+        real=(4./3.)*(1.+z*z)/(1.-z)*c.hook->beamXf(side,pid,y,t)
+          +.5*(z*z+(1.-z)*(1.-z))*c.hook->beamXf(side,21,y,t);
+      }
+      integral+=.5*(b-a)*rule.w[j]*z*(1.-z)*real/denominator;
+    }
+    rate+=integral;
+  }
+  rate*=c.hook->isrAlphaS.alphaS(t)/(2.*std::acos(-1.));
+  if (!std::isfinite(rate) || rate<0.)
+    throw std::runtime_error("Invalid backward ISR no-emission rate");
+  return rate;
+}
+
+double quarkFsrRate(const Context& c, const SudakovProfile& p, double logT) {
+  const double t=std::exp(logT);
+  double rate=0.;
+  for (int i=0; i<p.nquarks; ++i) {
+    const double* d=p.quarks.data()+4*i;
+    if (t>=d[3]*d[3]) continue;
+    const double mr2=d[0]*d[0], mk2=d[1]*d[1], M2=d[2]*d[2];
+    const double corrected=(d[2]-d[1])*(d[2]-d[1])-mr2;
+    const double A=M2+mr2-mk2;
+    if (!(corrected>0. && A>0.)) continue;
+    // SimpleTimeShower::pT2nextQCD: m_virtual^2=m_rad^2+t/[z(1-z)].
+    // Integrate Pqq over the exact massive/global-recoil z support.
+    const double discriminant=M2*M2*mr2*mr2+4.*A*t*M2*(M2-mk2);
+    const double smin=std::max(t/corrected,
+      (M2*mr2-2.*A*t+std::sqrt(std::max(0.,discriminant)))/(2.*A*A));
+    // branch() also rejects q -> qg if the mass-reduced evolution pT,
+    // sqrt(t)*(1-m_rad^2/m_virtual^2), falls below the shower cutoff.
+    // This matters for heavy quarks even well above the nominal cutoff.
+    const double smax=mr2>0. ? std::min(.25,
+      t*(std::sqrt(t)/c.hook->cutoffFSR-1.)/mr2) : .25;
+    if (!(smin>0. && smin<smax)) continue;
+    const double z=2.*smin/(1.+std::sqrt(1.-4.*smin));
+    const double zcut=2.*smax/(1.+std::sqrt(std::max(0.,1.-4.*smax)));
+    rate+=(4./3.)*(2.*std::log((1.-z)*zcut/(z*(1.-zcut)))
+      -3.*(zcut-z));
+  }
+  return rate*c.hook->fsrAlphaS.alphaS(t)/(2.*std::acos(-1.));
+}
+
+double backwardIntegral(const Context& c, const SudakovProfile& p, double lo, double hi) {
+  if (!(hi>lo)) return 0.;
+  static const GaussRule rule(4);
+  std::vector<double> edges{lo};
+  // Resolve running-coupling thresholds and the common PDF freezing scales.
+  for (double q : {1.,1.5,1.65,4.,4.8}) {
+    const double u=2.*std::log(q);
+    if (u>lo && u<hi) edges.push_back(u);
+  }
+  for (int i=0; i<p.nquarks; ++i) {
+    const double* d=p.quarks.data()+4*i;
+    for (double q : {d[3], .5*std::sqrt(std::max(0.,
+        (d[2]-d[1])*(d[2]-d[1])-d[0]*d[0]))}) {
+      if (!(q>0.)) continue;
+      const double u=2.*std::log(q);
+      if (u>lo && u<hi) edges.push_back(u);
+    }
+  }
+  edges.push_back(hi);
+  std::sort(edges.begin(),edges.end());
+  edges.erase(std::unique(edges.begin(),edges.end()),edges.end());
+  double result=0.;
+  for (int k=1; k<int(edges.size()); ++k) {
+    const int panels=std::max(1,int(std::ceil((edges[k]-edges[k-1])/.5)));
+    for (int panel=0; panel<panels; ++panel) {
+      const double a=edges[k-1]+(edges[k]-edges[k-1])*panel/panels;
+      const double b=edges[k-1]+(edges[k]-edges[k-1])*(panel+1)/panels;
+      for (int j=0; j<int(rule.x.size()); ++j)
+        result+=.5*(b-a)*rule.w[j]*(backwardRate(c,p,.5*(a+b)+.5*(b-a)*rule.x[j])+
+          quarkFsrRate(c,p,.5*(a+b)+.5*(b-a)*rule.x[j]));
+    }
+  }
+  return result;
+}
+
+double showerMarginal(const Context& c, const SudakovProfile& p) {
+  if (p.count==0 || p.cdf<=0.) return 0.;
+  double previous=2.*std::log(p.pt), exponent=0., probability=0., weights=0.;
+  for (int i=0; i<p.count; ++i) {
+    const double next=2.*std::log(p.q[i]);
+    if (next<previous || !(p.w[i]>=0. && p.fsr[i]>=0. && p.fsr[i]<=1.))
+      throw std::runtime_error("Invalid Sudakov quadrature node");
+    exponent+=backwardIntegral(c,p,previous,next);
+    probability+=p.w[i]*p.fsr[i]*std::exp(-exponent);
+    weights+=p.w[i]; previous=next;
+  }
+  if (!std::isfinite(probability) || probability<0. || probability>1.+1.e-5 ||
+      std::abs(weights-1.)>2.e-5)
+    throw std::runtime_error("Invalid conditional shower Sudakov marginal");
+  return std::min(probability,1.);
+}
+
+double sudakovAcceptance(const Density& x, double scale, double ps, bool hard) {
+  const double u=std::max(x.d-x.r,0.), source=x.sudakov.source;
+  if (u==0. || x.k<=0. || source<=0.) return 1.;
+  if (!(scale>0.) || !std::isfinite(scale) || !std::isfinite(ps) || ps<0.)
+    throw std::runtime_error("Invalid Sudakov transfer density");
+  if (ps==0.) return hard ? 1. : 0.;
+  const double logC=std::log(std::min(u,x.k));
+  const double logH=std::log(source), logS=std::log(x.k)+std::log(scale)+std::log(ps);
+  const double rejection=hard ? std::exp(std::min(logC-std::log(u),logS-logH-std::log(u)))
+    : std::exp(std::min(0.,logC+logH-logS));
+  return 1.-std::min(rejection,1.);
+}
 
 // macnlops.matching_scale: R transfers to S below the actual Born boundary.
 double matchingScale(const Context& c, const InputEvent& input) {
@@ -568,7 +756,8 @@ Decision decideS(const Context& c, Uniform& uniform, const InputEvent& input,
     std::vector<LHEParticle> legs, born;
     for (int k : candidate.permutation) legs.push_back(endpoint[k]);
     for (int k : candidate.bornPermutation) born.push_back(input.hardParticles[k]);
-    densities.push_back(evaluate(legs, candidate.sector, component, config, graph, flow, &born));
+    densities.push_back(evaluate(legs, candidate.sector, component, config, graph, flow, &born,
+                                 c.sudakovCorrection, x.pt));
     sAcceptance(densities.back(), 1.);
   }
   // Equivalent daughter orientations share a signed luminosity. Mark them
@@ -610,6 +799,12 @@ Decision decideS(const Context& c, Uniform& uniform, const InputEvent& input,
     x.kernelScale = c.normalisation.beta * x.alphaShower / x.density.alphaK * x.pdfRatio;
   }
   x.keep = sAcceptance(x.density, x.kernelScale);
+  if (c.sudakovCorrection && x.density.transfers()) {
+    x.sudakov=true;
+    x.deltaSource=x.density.sudakov.source;
+    x.deltaShower=showerMarginal(c,x.density.sudakov);
+    x.keep=sudakovAcceptance(x.density,x.kernelScale,x.deltaShower,false);
+  }
   x.rule = x.keep < 1. ? "s_veto" : "no_transfer";
   return x;
 }
@@ -628,12 +823,32 @@ Decision decideH(const Context& c, const InputEvent& input) {
     throw std::runtime_error("H component registry/sector/ordered flavours disagree");
   checkModelMasses(input.hardParticles, *c.engine);
   x.density = evaluate(input.hardParticles, component.sector, component, component.config,
-                       component.graph, component.flow, nullptr);
+                       component.graph, component.flow, nullptr, c.sudakovCorrection);
   x.evaluated = true;
   x.candidates = 1;
   x.sector = component.sector;
   x.orientation = "source";
   x.keep = hAcceptance(x.density);
+  if (c.sudakovCorrection && x.density.transfers()) {
+    const auto& p=x.density.sudakov;
+    const int radiator=c.routes.sector(component.sector).j-1;
+    const bool isr=radiator<2;
+    x.pt=p.pt; x.sudakov=true; x.deltaSource=p.source;
+    x.deltaShower=showerMarginal(c,p);
+    x.alphaShower=(isr?c.hook->isrAlphaS:c.hook->fsrAlphaS).alphaS(x.pt*x.pt);
+    if (isr) {
+      const auto& real=input.hardParticles[radiator];
+      const double xr=beamX(c,real,radiator), xb=p.x[radiator],
+        q2=x.density.q2fact[radiator];
+      const double shower=c.hook->beamXf(radiator,real.id,xr,x.pt*x.pt)/
+        c.hook->beamXf(radiator,p.ids[radiator],xb,x.pt*x.pt);
+      const double kernel=c.hook->beamXf(radiator,real.id,xr,q2)/
+        c.hook->beamXf(radiator,p.ids[radiator],xb,q2);
+      x.pdfRatio=shower/kernel;
+    }
+    x.kernelScale=c.normalisation.beta*x.alphaShower/x.density.alphaK*x.pdfRatio;
+    x.keep=sudakovAcceptance(x.density,x.kernelScale,x.deltaShower,true);
+  }
   x.rule = "h_removal";
   return x;
 }
@@ -652,6 +867,10 @@ std::string decisionTag(const Decision& x, bool accepted) {
     if (x.alphaShower > 0.)
       out << " kernel_scale=\"" << x.kernelScale << "\" alpha_s_shower=\"" << x.alphaShower
           << "\" alpha_s_kernel=\"" << x.density.alphaK << "\" pdf_ratio=\"" << x.pdfRatio << '"';
+    if (x.sudakov)
+      out << " delta_source_mean=\"" << x.deltaSource
+          << "\" delta_shower_mean=\"" << x.deltaShower
+          << "\" starting_cdf=\"" << x.density.sudakov.cdf << '"';
   }
   out << "/>";
   return out.str();
@@ -664,7 +883,7 @@ const char* weightGroup =
 
 // Declare the 'macnlops' weight and mark the sample in the pre-<header>
 // region, where collect_events picks up these blocks from its first input.
-std::string matchedPreamble(std::string text, bool dropRejected, bool pdfCorrection,
+std::string matchedPreamble(std::string text, bool dropRejected, bool pdfCorrection, bool sudakovCorrection,
                             const double cutoffs[2]) {
   const std::size_t open = text.find("<LesHouchesEvents");
   const std::size_t header = text.find("<header");
@@ -674,7 +893,7 @@ std::string matchedPreamble(std::string text, bool dropRejected, bool pdfCorrect
     throw std::runtime_error("Input is already a MAcNLOPS first-emission sample");
   std::ostringstream marker;
   marker << std::setprecision(17) << "  <macnlops_first_emission version=\"1\" prescription=\""
-         << (pdfCorrection ? prescriptionV3 : prescriptionV2) << "\" weight=\"macnlops\" rejected=\""
+         << (sudakovCorrection ? prescriptionV4 : pdfCorrection ? prescriptionV3 : prescriptionV2) << "\" weight=\"macnlops\" rejected=\""
          << (dropRejected ? "dropped" : "kept") << "\" shower_alpha_s=\"" << tableAlphaS
          << "\" shower_alpha_s_order=\"" << tableAlphaSOrder << "\" pythia=\"8.318\" cutoff_isr=\""
          << cutoffs[0] << "\" cutoff_fsr=\"" << cutoffs[1] << "\"/>\n";
@@ -778,7 +997,7 @@ int main(int argc, char** argv) {
         << ",\"status\":" << jsonString(status) << ",\"error\":" << jsonString(error)
         << ",\"input\":" << jsonString(m.input) << ",\"output\":" << jsonString(m.output)
         << ",\"seed\":" << m.seed << ",\"prescription\":"
-        << jsonString(m.pdfCorrection ? prescriptionV3 : prescriptionV2)
+        << jsonString(m.sudakovCorrection ? prescriptionV4 : m.pdfCorrection ? prescriptionV3 : prescriptionV2)
         << ",\"rejected_events\":" << jsonString(m.dropRejected ? "dropped" : "kept")
         << ",\"shower\":{\"alpha_s_mz\":" << tableAlphaS << ",\"alpha_s_order\":" << tableAlphaSOrder
         << ",\"pdf\":" << jsonString(m.pdf) << ",\"cutoffs\":[" << c.cutoffs[0] << ',' << c.cutoffs[1]
@@ -824,6 +1043,7 @@ int main(int argc, char** argv) {
     macnlops_c_profile(profileCutoffs, profileXmax, profileFloors, profileFlavours);
     c.normalisation = channelNormalisation(m.res);
     c.pdfCorrection = m.pdfCorrection;
+    c.sudakovCorrection = m.sudakovCorrection;
 
     Options o;
     o.input = m.input; o.output = m.output; o.settings = m.settings; o.pdf = m.pdf;
@@ -864,6 +1084,7 @@ int main(int argc, char** argv) {
     double xmax[2] = {hook->beamXMaxA, hook->beamXMaxB};
     macnlops_c_configure(xmax, &hook->cutoffISR, &hook->cutoffFSR);
     c.engine = &pythia;
+    c.hook = hook.get(); c.flavours = o.flavourCount;
     c.eBeam[0] = reader->eBeamA(); c.eBeam[1] = reader->eBeamB();
     Uniform decisions(0x6d61636e6c6f7073ULL ^ std::uint64_t(m.seed));
     Uniform marking(0x6d61726b696e6721ULL ^ std::uint64_t(m.seed));
@@ -874,7 +1095,7 @@ int main(int argc, char** argv) {
     InputEvent input;
     bool header = false;
     while (raw.next(input)) {
-      output << (header ? input.prefix : matchedPreamble(input.prefix, m.dropRejected, m.pdfCorrection, c.cutoffs));
+      output << (header ? input.prefix : matchedPreamble(input.prefix, m.dropRejected, m.pdfCorrection, m.sudakovCorrection, c.cutoffs));
       header = true;
       const int kind = input.kind;
       if (kind != 1 && kind != 2) throw std::runtime_error("Missing #aMCatNLO S/H event kind");
@@ -932,7 +1153,7 @@ int main(int argc, char** argv) {
       }
       if (!output) throw std::runtime_error("Output write failure");
     }
-    output << (header ? input.prefix : matchedPreamble(input.prefix, m.dropRejected, m.pdfCorrection, c.cutoffs));
+    output << (header ? input.prefix : matchedPreamble(input.prefix, m.dropRejected, m.pdfCorrection, m.sudakovCorrection, c.cutoffs));
     output.close();
     if (!output) throw std::runtime_error("Output write failure");
     writeSummary("complete", "");

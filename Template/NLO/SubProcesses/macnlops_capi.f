@@ -21,6 +21,46 @@ c registry fingerprint that every source component packet must carry.
       end
 
 
+      subroutine macnlops_c_sudakov_request(enabled,pt)
+     $     bind(C,name='macnlops_c_sudakov_request')
+      use, intrinsic :: iso_c_binding, only: c_int,c_double
+      use weight_lines, only: macnlops_sudakov_enabled,
+     $     macnlops_sudakov_requested_pt,macnlops_sudakov_ready
+      implicit none
+      integer(c_int), value :: enabled
+      real(c_double), value :: pt
+      macnlops_sudakov_enabled=enabled.ne.0
+      macnlops_sudakov_requested_pt=pt
+      macnlops_sudakov_ready=.false.
+      end
+
+
+      subroutine macnlops_c_sudakov_profile(ready,n,ids,x,mass,pt,
+     $     source,cdf,q,w,fsr,nquarks,quarks)
+     $     bind(C,name='macnlops_c_sudakov_profile')
+      use, intrinsic :: iso_c_binding, only: c_int,c_double
+      use weight_lines
+      implicit none
+      integer(c_int) ready,n,ids(2),nquarks
+      real(c_double) x(2),mass,pt,source,cdf,
+     $     q(macnlops_sudakov_max),w(macnlops_sudakov_max),
+     $     fsr(macnlops_sudakov_max),quarks(4,64)
+      ready=merge(1,0,macnlops_sudakov_ready)
+      n=macnlops_sudakov_n
+      ids=macnlops_sudakov_ids
+      x=macnlops_sudakov_x
+      mass=macnlops_sudakov_mass
+      pt=macnlops_sudakov_pt
+      source=macnlops_sudakov_source
+      cdf=macnlops_sudakov_cdf
+      q=macnlops_sudakov_q
+      w=macnlops_sudakov_w
+      fsr=macnlops_sudakov_fsr
+      nquarks=macnlops_sudakov_nquarks
+      quarks=macnlops_sudakov_quarks
+      end
+
+
       subroutine macnlops_c_profile(cutoffs,xmax,masses,flavours)
      $     bind(C,name='macnlops_c_profile')
 c The shower profile measured before generation and compiled into the
