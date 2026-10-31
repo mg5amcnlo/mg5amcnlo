@@ -498,8 +498,8 @@ class DensityMatrixObservables(list):
         return (self.Get_Purity() - 1/d) * (d / (d - 1))
 
     def Shannon_Entropy(self, x:float) -> float:
-        """ Computes the Shannon entropy of x."""
-        return - x * np.log2(x) - (1 - x) * np.log2(1 - x)
+        """ Computes the Shannon entropy of x (binary entropy, with 0 log 0 = 0)."""
+        return - sum(p * np.log2(p) for p in (x, 1 - x) if p > 0)
     
     def Von_Neumann_entropy(self, rho=None, epsilon=1e-5) -> float:
         "The Von Neumann entropy of a density matrix can be seen as the Shannon entropy of its eigenvalues"
@@ -717,7 +717,7 @@ class DensityMatrixObservables(list):
         if d2 == 0:
             A00 = np.zeros((d1,d1), dtype=np.complex128)
             Displacement_operators = self.Displacement_Operator(d1, epsilon)
-            for i in range(d1):
+            for i in range(len(Displacement_operators)): #sum over the d1^2 displacement operators
                 A00 += Displacement_operators[i]
             
             A00/= d1
@@ -996,20 +996,22 @@ class DensityMatrixObservables22(DensityMatrixObservables):
                     rho_corrected[i][j] = rho_corrected[i][j].real + 0. * 1j
         
         self.density_matrix = rho_corrected
+        return rho_corrected
 
     def CHSH_inequality(self) -> tuple[list[float], bool]:
         '''
             Input: self -> density matrix
             Output: value of the critation, boolean which is True if the inegality is violated
-            This method computes whether the CHSH is violated using the eigenvalues of C^T . C
-            This criterion only works for pair of qubits with no polarisation.
+            This method computes whether the CHSH is violated using the eigenvalues of C^T . C (Horodecki criterion):
+            the maximal violation is 2 sqrt(m1 + m2), with m1, m2 the two largest eigenvalues, so crit = 1 - m1 - m2 < 0 if violated.
+            The criterion does not depend on the polarisations, nor on the axes chosen for each particle.
         '''
         Correlations = self.Get_Correlations()[0]
         CtransposeC = np.dot(np.transpose(Correlations), Correlations)
 
         eigvals, _ = la.eigh(np.array(CtransposeC))
         sorted_eigs = sorted(eigvals, reverse=True)
-        crit = 1 - sorted_eigs[-1] - sorted_eigs[-2]
+        crit = 1 - sorted_eigs[0] - sorted_eigs[1]
         return crit, crit < 0
 
     def Get_Concurrence(self) -> float:
@@ -1482,15 +1484,15 @@ class DensityMatrixObservables33(DensityMatrixObservables):
             Input:  self -> density matrix
                     phases -> list of phases to add to the compoenents of the spinors
                     epsilon -> threshold parameter
-            Output: density matrix with the new definition of spinors
+            Output: density matrix with the new definition of spinors (the instance is also changed)
         """
         alpha = phases[0]
         beta = phases[1]
         gamma = phases[2]
         delta = phases[3]
-        epsilon = phases[4]
+        eta = phases[4]
         tau = phases[5]
-        U = np.diag([np.exp((alpha + tau)*1j), np.exp((alpha + epsilon)*1j), np.exp((alpha + delta)*1j), np.exp((beta + tau)*1j), np.exp((beta + epsilon)*1j), np.exp((beta + delta)*1j), np.exp((gamma + tau)*1j), np.exp((gamma + epsilon)*1j), np.exp((gamma + delta)*1j)])
+        U = np.diag([np.exp((alpha + tau)*1j), np.exp((alpha + eta)*1j), np.exp((alpha + delta)*1j), np.exp((beta + tau)*1j), np.exp((beta + eta)*1j), np.exp((beta + delta)*1j), np.exp((gamma + tau)*1j), np.exp((gamma + eta)*1j), np.exp((gamma + delta)*1j)])
         
         aux = np.dot(self.square_matrix(), U)
         rho_corrected = np.dot(np.conjugate(U), aux)
@@ -1502,6 +1504,7 @@ class DensityMatrixObservables33(DensityMatrixObservables):
                 if abs(rho_corrected[i][j].imag) < epsilon:
                     rho_corrected[i][j] = rho_corrected[i][j].real + 0. * 1j
         
+        self.density_matrix = rho_corrected
         return rho_corrected
 
     def ConcLB2(self, epsilon=1e-10) -> float:

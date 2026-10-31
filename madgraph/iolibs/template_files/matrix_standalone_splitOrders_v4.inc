@@ -634,8 +634,8 @@ C           in BLOCK DATA BEAMPOL_DEFAULT.
           endif
         enddo
  10   enddo
-      return
       deallocate(TMP_INTER)
+      return
       end
 
 

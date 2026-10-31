@@ -536,8 +536,8 @@ C           in BLOCK DATA BEAMPOL_DEFAULT.
            INTER(I) = INTER(I) + POLFACT*TMP_INTER(I)
         enddo
  10   enddo
-      return 
       deallocate(TMP_INTER)
+      return
       end
 
       SUBROUTINE  %(proc_prefix)sGET_ALL_INTER(P, NHEL, POS, N_CHANGING, ALLOW_HEL, N_COMB, INTER)

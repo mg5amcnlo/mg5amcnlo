@@ -130,6 +130,8 @@ class TestDensityLibrary(unittest.TestCase):
         #Shannon_Entropy
         x = 0.3
         self.assertAlmostEqual(rho_line_instance.Shannon_Entropy(x), 0.8812908992306927, places=7)
+        self.assertEqual(rho_line_instance.Shannon_Entropy(0.), 0.) # 0 log 0 = 0
+        self.assertEqual(rho_line_instance.Shannon_Entropy(1.), 0.)
 
         #Von_Neumann_entropy
         self.assertAlmostEqual(dens.DensityMatrixObservables(rho_normalised).Von_Neumann_entropy(), 1.8268234912200536, places=7)
@@ -261,6 +263,13 @@ class TestDensityLibrary(unittest.TestCase):
                     self.assertAlmostEqual(Displacement_operators[o][i][j], Displacement_ref[o][i][j], places=7)
         
         #Discrete_phase_point_operator_00
+        # single qutrit: the parity operator, the same as the first operator of Discrete_phase_point_operators
+        A00_single = rho_line_instance.Discrete_phase_point_operator_00(3, 0)
+        A00_single_ref = [[1, 0, 0], [0, 0, 1], [0, 1, 0]]
+        for i in range(3):
+            for j in range(3):
+                self.assertAlmostEqual(A00_single[i][j], A00_single_ref[i][j], places=7)
+                self.assertAlmostEqual(rho_line_instance.Discrete_phase_point_operators(3, 0)[0][i][j], A00_single_ref[i][j], places=7)
         A00 = rho_line_instance.Discrete_phase_point_operator_00(3, 3)
         A00_ref =  [[1.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j],
                     [0.+0.j, 0.+0.j, 1.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j],
@@ -415,16 +424,21 @@ class TestDensityLibrary(unittest.TestCase):
                                   [-0.03646875-0.02270232j, 0.19671752+0.j, 0.09294963+0.j, -0.03972701+0.02415582j],
                                   [0.03948149+0.02455507j, 0.09294963+0.j, 0.19671752+0.j, 0.03671427-0.02230308j],
                                   [-0.01403486-0.02776092j, -0.03972701-0.02415582j, 0.03671427+0.02230308j, 0.30328248+0.j]]
-        rho22_ref_instance.add_phase_density([0, 3.141592653589, 0, 0])
+        rho22_change_phase = rho22_ref_instance.add_phase_density([0, 3.141592653589, 0, 0])
+        self.assertIs(rho22_change_phase, rho22_ref_instance.density_matrix) #returned and stored in the instance
         for i in range(len(rho22_change_phase_ref)):
             for j in range(len(rho22_change_phase_ref[0])):
                 self.assertAlmostEqual(rho22_change_phase_ref[i][j], rho22_ref_instance.density_matrix[i][j], places=7)
         
         #CHSH_inequality
         rho22_ref_instance = dens.DensityMatrixObservables22(rho22_ref)
-        CHSH_ref = 0.8982721341461017
+        CHSH_ref = 0.8537731564623888 # 1 - m1 - m2 with m1, m2 the two largest eigenvalues of C^T C
         self.assertFalse(rho22_ref_instance.CHSH_inequality()[1])
         self.assertAlmostEqual(rho22_ref_instance.CHSH_inequality()[0], CHSH_ref, places=7)
+        # C^T C with eigenvalues (1, 0.49, 0.49): violated since 1 + 0.49 > 1 (the two smallest ones would give 0.98 < 1)
+        CHSH_violated = dens.DensityMatrixObservables22([0.425, 0, 0, 0.425, 0.075, -0.075, 0, 0.075, 0, 0.425])
+        self.assertTrue(CHSH_violated.CHSH_inequality()[1])
+        self.assertAlmostEqual(CHSH_violated.CHSH_inequality()[0], -0.49, places=7)
         
         #Get_Concurrence
         rho22_concurrence = [0.030976625443915044, -0.07739362425863269j, 0.07739362425863269j, -0.030976625443915044, 0.469023374556085, 0.08229480163704686, -0.07739362425863269j, 0.469023374556085, 0.07739362425863269j, 0.030976625443915044]
@@ -442,6 +456,8 @@ class TestDensityLibrary(unittest.TestCase):
         #Get_Entanglement_Formation
         entf_ref = 0.026420446091385563
         self.assertAlmostEqual(rho22_concurrence_instance.Get_Entanglement_Formation(), entf_ref, places=7)
+        self.assertAlmostEqual(dens.DensityMatrixObservables22([0.25, 0, 0, 0, 0.25, 0, 0, 0.25, 0, 0.25]).Get_Entanglement_Formation(), 0., places=7) #separable
+        self.assertAlmostEqual(Bell_ref_instance.Get_Entanglement_Formation(), 1., places=7)
 
         #get_Pauli_string
         Pauli_string_ref =[[[1, 0, 0, 0],
@@ -749,22 +765,18 @@ class TestDensityLibrary(unittest.TestCase):
                 self.assertAlmostEqual(spinspin[i][j], spinspin_ref[i][j], places=7)
 
         #add_phase_density
-        rho33_ref_instance.add_phase_density([0, 3.14159265, 0, 0, 0, 0])
-        
-        rho_add_density_ref = [[ 1.36494991e-04+0.j, 0.00000000e+00-0.00062553j, -1.39513940e-03-0.j, 0.00000000e+00-0.00062553j, -2.67007643e-03-0.j, -0.00000000e+00+0.00457585j, -1.39513940e-03-0.j, -0.00000000e+00+0.00457585j, -9.09523537e-03-0.j],
-                               [ 0.00000000e+00+0.00062553j, 3.11583464e-03+0.j, 0.00000000e+00-0.00637865j, 3.11583464e-03-0.j, 0.00000000e+00-0.01215947j, -2.09740437e-02-0.j, 0.00000000e+00-0.00637865j, -2.09740437e-02-0.j, 0.00000000e+00-0.04168184j],
-                               [-1.39513940e-03+0.j, 0.00000000e+00+0.00637865j, 1.42608727e-02+0.j, -0.00000000e+00+0.00637865j, 2.72959680e-02-0.j, 0.00000000e+00-0.04677035j, 1.42608727e-02-0.j, 0.00000000e+00-0.04677035j, 9.29640068e-02-0.j],
-                               [ 0.00000000e+00+0.00062553j, 3.11583464e-03+0.j, -0.00000000e+00-0.00637865j, 3.11583464e-03+0.j, 0.00000000e+00-0.01215947j, -2.09740437e-02-0.j, 0.00000000e+00-0.00637865j, -2.09740437e-02-0.j, 0.00000000e+00-0.04168184j],
-                               [-2.67007643e-03+0.j, 0.00000000e+00+0.01215947j, 2.72959680e-02+0.j, 0.00000000e+00+0.01215947j, 5.22550853e-02+0.j, 0.00000000e+00-0.08951034j, 2.72959680e-02-0.j, 0.00000000e+00-0.08951034j, 1.77918424e-01-0.j],
-                               [-0.00000000e+00-0.00457585j, -2.09740437e-02+0.j, 0.00000000e+00+0.04677035j, -2.09740437e-02+0.j, 0.00000000e+00+0.08951034j, 1.53400608e-01+0.j, -0.00000000e+00+0.04677035j, 1.53400608e-01-0.j, -0.00000000e+00+0.30490816j],
-                               [-1.39513940e-03+0.j, 0.00000000e+00+0.00637865j, 1.42608727e-02+0.j, 0.00000000e+00+0.00637865j, 2.72959680e-02+0.j, -0.00000000e+00-0.04677035j, 1.42608727e-02+0.j, 0.00000000e+00-0.04677035j, 9.29640068e-02-0.j],
-                               [-0.00000000e+00-0.00457585j, -2.09740437e-02+0.j, 0.00000000e+00+0.04677035j, -2.09740437e-02+0.j, 0.00000000e+00+0.08951034j, 1.53400608e-01+0.j, 0.00000000e+00+0.04677035j, 1.53400608e-01+0.j, -0.00000000e+00+0.30490816j],
-                               [-9.09523537e-03+0.j, 0.00000000e+00+0.04168184j, 9.29640068e-02+0.j, 0.00000000e+00+0.04168184j, 1.77918424e-01+0.j, -0.00000000e+00-0.30490816j, 9.29640068e-02+0.j, -0.00000000e+00-0.30490816j, 6.06053790e-01+0.j]]
-        
-        rho_add_density = rho33_ref_instance.square_matrix()
-        for i in range(len(rho_add_density_ref)):
-            for j in range(len(rho_add_density_ref[0])):
-                self.assertAlmostEqual(rho_add_density[i][j], rho_add_density_ref[i][j], places=5) #Why does it work only up to 5 digits ?
+        import numpy as np
+        rho33_before = np.array(rho33_ref_instance.square_matrix())
+        rho_add_density = rho33_ref_instance.add_phase_density([0, np.pi, 0, 0, 0, 0])
+        # beta = pi multiplies the states where the first qutrit has helicity 0 (indices 3, 4, 5) by -1
+        signs = [1, 1, 1, -1, -1, -1, 1, 1, 1]
+        for i in range(9):
+            for j in range(9):
+                self.assertAlmostEqual(rho_add_density[i][j], signs[i] * signs[j] * rho33_before[i][j], places=7)
+                self.assertAlmostEqual(rho33_ref_instance.square_matrix()[i][j], rho_add_density[i][j], places=7) #the instance is changed
+        # the phases of the second qutrit are not used as threshold anymore
+        rho_phases = dens.DensityMatrixObservables33(rho33_before.copy()).add_phase_density([0, 0, 0, 0, 0.5, 0])
+        self.assertAlmostEqual(abs(rho_phases[4][4]), abs(rho33_before[4][4]), places=7)
 
         #ConcLB2
         rho33_ref = [0.00013649499087990615, -0.0006255321592898754j, -0.0013951394040219625, -0.000625532159305027j, -0.0026700764297943554, 0.004575850399497401j, -0.0013951394040186487, 0.00457585039940916j, -0.009095235374164576, 0.0031158346387996673, -0.006378646903237555j, 0.0031158346388664984, -0.012159472975998514j, -0.020974043743924517, -0.006378646903222683j, -0.020974043743520084, -0.04168183891712595j, 0.014260872680680886, 0.0063786469033925795j, 0.027295967956988434, -0.04677034940924241j, 0.014260872680646998, -0.046770349408340475j, 0.09296400679286349, 0.00311583463893333, -0.012159472976295712j, -0.02097404374443242, -0.006378646903377708j, -0.020974043744027986, -0.041681838918135566j, 0.05225508534832526, -0.08951033638354483j, 0.027295967956923517, -0.0895103363818187j, 0.1779184235218975, 0.15340060761394816, 0.046770349409131315j, 0.15340060761098998, 0.3049081592819143j, 0.014260872680613107, -0.046770349408229384j, 0.09296400679264268, 0.15340060760803179, 0.3049081592760344j, 0.606053789799788]
