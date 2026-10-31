@@ -1078,3 +1078,43 @@ class TestDensityLibrary(unittest.TestCase):
         for i in range(12):
             for j in range(12):
                 self.assertAlmostEqual(rho223_mixed_instance.square_matrix()[i][j], rho223_mixed[i][j], places=7)
+
+    def test_order_helicities(self):
+        """A density matrix computed with another order_helicities is put back in the default basis, in which the observables are defined"""
+        import itertools
+        import numpy as np
+
+        rng = np.random.default_rng(3)
+        basis = {2: [1, -1], 3: [1, 0, -1]}
+        for dims in [[2], [3], [2, 2], [2, 3], [3, 3], [2, 2, 2], [2, 2, 3]]:
+            default = list(itertools.product(*[basis[d] for d in dims]))
+            n = len(default)
+            a = rng.normal(size=(n, n)) + 1j*rng.normal(size=(n, n))
+            rho = a @ a.conj().T / np.trace(a @ a.conj().T)
+
+            combinations = [default[i] for i in rng.permutation(n)]
+            order = [h for combination in combinations for h in combination]
+            positions = [default.index(combination) for combination in combinations]
+            rho_order = np.array([[rho[i][k] for k in positions] for i in positions]) # rho in the basis order
+            line_order = [rho_order[i][k] for i in range(n) for k in range(i, n)] # as returned by Fortran
+
+            for user_input in [line_order, rho_order.copy(), rho_order.tolist()]:
+                rho_instance = dens.DensityMatrixObservables(user_input, order_helicities=order)
+                self.assertIs(type(rho_instance), dens.DensityMatrixObservables.class_for_dimension(n))
+                self.assertTrue(np.allclose(rho_instance.square_matrix(), rho))
+            # the line form is kept
+            self.assertEqual(rho_instance.square_or_line_or_string(), 'square')
+            self.assertEqual(dens.DensityMatrixObservables(line_order, order_helicities=order).square_or_line_or_string(), 'line')
+
+        # |-> in the basis (-1, +1) is polarised along -z, [0] or None is the default basis
+        self.assertEqual(list(dens.DensityMatrixObservables([1, 0, 0], order_helicities=[-1, 1]).Get_Polarisations()), [0, 0, -1])
+        self.assertEqual(list(dens.DensityMatrixObservables([1, 0, 0], order_helicities=[0]).Get_Polarisations()), [0, 0, 1])
+        self.assertEqual(list(dens.DensityMatrixObservables([1, 0, 0]).Get_Polarisations()), [0, 0, 1])
+        # spin correlations of t t~ in the basis {|-+>, |-->, |++>, |+->}: C_zz of |+-> is -1
+        rho_instance = dens.DensityMatrixObservables([0, 0, 0, 0, 0, 0, 0, 0, 0, 1], order_helicities=[-1, 1, -1, -1, 1, 1, 1, -1])
+        self.assertEqual(rho_instance.Get_Correlations()[0][2][2], -1)
+        self.assertEqual(list(rho_instance.Get_Polarisations()[0]), [0, 0, 1])
+
+        # not an ordering of the helicity combinations
+        for order in [[1, 1], [0, 1], [1, -1, 1]]:
+            self.assertRaises(ValueError, dens.DensityMatrixObservables, [1, 0, 0], None, order) # None: len_user_input

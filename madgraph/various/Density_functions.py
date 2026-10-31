@@ -339,6 +339,51 @@ class DensityMatrixObservables(list):
                 self.density_matrix = rho_temp
                 self.density_matrix_dimension = int(dim_density_matrix)
 
+        if order_helicities is not None and list(order_helicities) != [0]:
+            self.change_to_default_basis(order_helicities)
+
+    def change_to_default_basis(self, order_helicities:list[int]) -> None:
+        """
+            Puts the density matrix, computed in the basis order_helicities, back in the default basis (in place).
+            The form in which the density matrix is stored (line or square) is kept.
+        """
+        n = self.density_matrix_dimension
+        if len(order_helicities) % n != 0:
+            raise ValueError('order_helicities %s does not correspond to a density matrix of dimension %d' % (list(order_helicities), n))
+        perm = self.get_helicity_basis_permutation(order_helicities, len(order_helicities) // n)
+        rho_order = self.square_matrix()
+        rho = np.zeros((n, n), dtype=np.complex128)
+        for i in range(n):
+            for k in range(n):
+                rho[i][k] = rho_order[perm[i]][perm[k]]
+
+        if self.square_or_line_or_string() == 'square':
+            self.density_matrix = rho.tolist() if isinstance(self.density_matrix, list) else rho
+        else: #upper triangle stored row by row, as in square_matrix
+            self.density_matrix = [complex(rho[i][k]) for i in range(n) for k in range(i, n)]
+
+    @staticmethod
+    def get_helicity_basis_permutation(order_helicities:list[int], n_particles:int) -> list[int]:
+        """
+            Input:  order_helicities -> the helicity combinations of a basis, flattened with the first particle as slowest index
+                    n_particles -> number of particles in the density matrix
+            Output: perm -> perm[d] is the position in order_helicities of the d-th state of the default basis,
+                            such that rho_default[i][k] = rho[perm[i]][perm[k]]
+            The default basis is made of (+1, -1) for particles with 2 helicities (fermions, massless vector bosons)
+            and (+1, 0, -1) for particles with 3 helicities (massive vector bosons), the first particle being the slowest index.
+        """
+        import itertools
+        default_basis = {2: [1, -1], 3: [1, 0, -1]}
+        order = [int(h) for h in order_helicities]
+        combinations = [tuple(order[i:i + n_particles]) for i in range(0, len(order), n_particles)]
+        dims = [len({c[p] for c in combinations}) for p in range(n_particles)]
+        if any(d not in default_basis for d in dims):
+            raise ValueError('order_helicities %s does not correspond to particles with 2 or 3 helicities' % order)
+        default = list(itertools.product(*[default_basis[d] for d in dims]))
+        if sorted(combinations) != sorted(default):
+            raise ValueError('order_helicities %s is not an ordering of the helicity combinations %s' % (order, default))
+        return [combinations.index(c) for c in default]
+
     @staticmethod
     def class_for_dimension(dim_density_matrix:int) -> type:
         """Returns the class to use for a density matrix of dimension dim_density_matrix (generic class if no specific one)."""
