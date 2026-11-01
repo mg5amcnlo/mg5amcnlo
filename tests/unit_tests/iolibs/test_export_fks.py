@@ -652,6 +652,48 @@ class TestFKSOutput(unittest.TestCase):
                 self.assertEqual(old_l, new_l)
 
 
+    def test_polarised_partonic_cm_needs_the_process(self):
+        """me_frame = [1, 2], the default of a polarised NLO run_card, has no
+        infrared-safe meaning for p p > w+{0} j: with initial-state QCD
+        radiation the frame the FKS momenta come in depends on the sector
+        (+9.5(4)% when only fks_b changed), and the only frame equal to the
+        partonic c.m. of the Born contains the jet. The output must tell the
+        run_card so, and the run_card must then refuse it."""
+        import madgraph.various.banner as banner_mod
+        path = tempfile.mkdtemp('', 'TMPWPolTest', None)
+        interface = MGCmd.MasterCmd()
+        try:
+            interface.exec_cmd('generate p p > w+{0} j [real=QCD]',
+                               errorhandling=False, printcmd=False,
+                               precmd=True, postcmd=True)
+            interface.exec_cmd('output %s' % os.path.join(path, 'W'),
+                               errorhandling=False, printcmd=False,
+                               precmd=True, postcmd=True)
+
+            charac = banner_mod.ProcCharacteristic(os.path.join(
+                path, 'W', 'SubProcesses', 'proc_characteristics'))
+            self.assertEqual(charac['me_frame_cm_legs'], [3, 4])
+            self.assertEqual(charac['me_frame_unsafe_legs'], [4])
+
+            run_card = banner_mod.RunCardNLO(os.path.join(
+                path, 'W', 'Cards', 'run_card.dat'))
+            self.assertEqual(run_card['me_frame'], [1, 2])
+            run_card.set_me_frame_process(charac)
+            self.assertRaises(banner_mod.InvalidRunCard,
+                              run_card.check_validity)
+            # the Born alone (launch LO) has nothing to be infrared safe for
+            run_card.set_me_frame_process(charac, real_emission=False)
+            run_card.check_validity()
+            # the W alone (its Collins-Soper frame) is fine with real emission
+            run_card.set_me_frame_process(charac)
+            run_card.set('me_frame', [3], user=True)
+            run_card.check_validity()
+            run_card.update_system_parameter_for_include()
+            self.assertEqual(run_card['frame_id'], 8)
+        finally:
+            shutil.rmtree(path, ignore_errors=True)
+
+
     @test_manager.bypass_for_py3
     def test_w_nlo_gen_gosam(self):
         """check that the new generation mode works when gosam is set 

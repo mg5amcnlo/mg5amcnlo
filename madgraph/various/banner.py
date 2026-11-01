@@ -1965,7 +1965,12 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('single_qcd_order', -1)
         # default of real_channels_x0 chosen from the real-emission diagrams
         self.add_param('real_channels_x0', -1.0)
-    
+        # NLO me_frame (polarisation), in the user's leg numbering: what
+        # [1, 2] (the partonic c.m.) means, and the legs that are not
+        # infrared safe in a frame. See fks_common.me_frame_characteristics.
+        self.add_param('me_frame_cm_legs', [], typelist=int)
+        self.add_param('me_frame_unsafe_legs', [], typelist=int)
+
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
            a file object, a str with the content of the file."""
@@ -4217,6 +4222,21 @@ template_on = \
 template_off = ""
 frame_block = RunBlock('frame', template_on=template_on, template_off=template_off)
 
+# the NLO meaning of [1,2]: see RunCardNLO.get_me_frame_legs
+template_on = \
+"""#*********************************************************************
+# Frame where to evaluate the matrix-element (not the cut!) for polarization
+#*********************************************************************
+  %(me_frame)s  = me_frame     ! list of particles to sum-up to define the rest-frame
+                               ! in which to evaluate the matrix-element
+                               ! [1,2] means the partonic center of mass; with
+                               ! initial-state QCD radiation, the rest frame of
+                               ! the Born final state (refused if it has a jet)
+                               ! in a collision a single particle is held at
+                               ! rest, spin along the Collins-Soper axis
+"""
+frame_block_nlo = RunBlock('frame', template_on=template_on, template_off=template_off)
+
 
 
 # Momentum reshuffling ------------------------------------------------------------------------------------
@@ -5963,7 +5983,7 @@ class RunCardNLO(RunCard):
      
     LO = False
     
-    blocks = [heavy_ion_block, frame_block, running_block_nlo]
+    blocks = [heavy_ion_block, frame_block_nlo, running_block_nlo]
 
     dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
                       "user_dynamical_scale": pjoin("SubProcesses","dummy_fct.f"),
@@ -6080,8 +6100,15 @@ class RunCardNLO(RunCard):
         self.add_param('systematics_arguments', [''], include=False, hidden=True, comment='Choose the arguments to pass to the systematics command, like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
 
         #frame in which to evaluate the matrix-element (polarization)
-        self.add_param("me_frame", [1,2], hidden=True, include=False, comment="choose lorentz frame where to evaluate the matrix-element [for non lorentz invariant matrix-element/polarization]:\n  the entries are the leg numbers of the process as written by the user; the rest-frame of their momentum sum is used.\n  [1,2] (the initial state) and the full final state both mean the partonic center of mass, and are skipped rather than applied.\n  Define the frame from final-state particles only: a frame built from the initial state is not infrared safe at NLO.\n  The rest frame is reached by a boost along the beam and then a transverse one, so it does not depend on the frame the momenta come in; in a collision a single particle (e.g. [3] for a W or a Z) is held at rest with its spin quantised along the Collins-Soper axis.")
+        self.add_param("me_frame", [1,2], hidden=True, include=False, comment="choose lorentz frame where to evaluate the matrix-element [for non lorentz invariant matrix-element/polarization]:\n  the entries are the leg numbers of the process as written by the user; the rest-frame of their momentum sum is used.\n  [1,2] means the partonic center of mass. With initial-state QCD radiation (p p collisions) it is evaluated as the rest frame of the Born final state, which is the partonic c.m. of the Born and, unlike the c.m. of the real emission, infrared safe. It is refused when that final state contains a massless coloured parton (a jet), since no infrared-safe NLO version of it exists then.\n  Define the frame from colourless or massive final-state particles only: a frame containing an initial-state leg or a jet is not infrared safe at NLO.\n  The rest frame is reached by a boost along the beam and then a transverse one, so it does not depend on the frame the momenta come in; in a collision a single particle (e.g. [3] for a W or a Z) is held at rest with its spin quantised along the Collins-Soper axis.")
         self.add_param('frame_id', 6, system=True)
+        # Set by the run interface from the proc_characteristics, for the run
+        # being compiled (see get_me_frame_legs). Empty = no information,
+        # me_frame is then taken literally.
+        self.add_param('me_frame_cm_legs', [], typelist=int, hidden=True,
+                       system=True, include=False)
+        self.add_param('me_frame_unsafe_legs', [], typelist=int, hidden=True,
+                       system=True, include=False)
 
         #technical
         self.add_param('folding', [1,1,1], include=False)
@@ -6148,14 +6175,14 @@ class RunCardNLO(RunCard):
         # the real emission and the reduced Born carry different momentum
         # fractions, by a finite amount even in the singular limit, so the
         # frame jumps across that limit and the subtraction stops cancelling.
-        # Selecting exactly the initial state (or, equivalently, exactly the
-        # whole final state) is the partonic c.m. and is simply skipped; any
-        # other use of an initial-state leg is a genuine mistake.
+        # Selecting exactly the initial state is the partonic c.m., which
+        # get_me_frame_legs resolves against the process; any other use of
+        # an initial-state leg is a genuine mistake.
         if 'me_frame' in self.user_set:
             initial = [n for n in self['me_frame'] if n in (1, 2)]
-            # Exactly the initial state is the partonic c.m. and is skipped
-            # downstream; anything else that names an initial-state leg is
-            # the mistake this guard is for. Testing only for a *mix* let a
+            # Exactly the initial state is the partonic c.m. (see
+            # get_me_frame_legs); anything else that names an initial-state
+            # leg is the mistake this guard is for. Testing only for a *mix* let a
             # bare me_frame=[1] through: for a massless beam that dies later
             # in get_me_frame_boost with an opaque 'not timelike' stop, and
             # for a massive one (a DIS-like e- b{+} > e- b [QCD]) m2 > 0, so
@@ -6177,6 +6204,9 @@ class RunCardNLO(RunCard):
                     'collinear limit, so the frame is discontinuous there. '
                     'Define the frame from final-state particles only.'
                     % self['me_frame'])
+
+        # needs the process: raises if the frame contains a jet
+        self.get_me_frame_legs()
 
         # if heavy ion mode use for one beam, forbid lpp!=1
         if self['lpp1'] not in [1,2]:
@@ -6394,6 +6424,73 @@ class RunCardNLO(RunCard):
         except Exception:
             pass
 
+    def set_me_frame_process(self, proc_characteristics, real_emission=True):
+        """Copy in what the process says about me_frame, from its
+        proc_characteristics (fks_common.me_frame_characteristics). A run
+        without real emission (the Born alone) has no infrared limit to be
+        safe in, so no leg is unsafe for it."""
+        self.set('me_frame_cm_legs', proc_characteristics['me_frame_cm_legs'],
+                 user=False)
+        self.set('me_frame_unsafe_legs',
+                 proc_characteristics['me_frame_unsafe_legs']
+                 if real_emission else [], user=False)
+
+    def get_me_frame_legs(self):
+        """The legs, in the user's numbering, whose rest frame the matrix
+        elements are evaluated in: me_frame resolved against the process.
+
+        me_frame_cm_legs and me_frame_unsafe_legs come from the process
+        (set_me_frame_process, called by the run interface). Without them --
+        no process information, or a process whose matrix elements are
+        Lorentz invariant -- me_frame is taken literally.
+
+        With them, me_frame = [1, 2] (or empty, or not set) is the partonic
+        c.m. and becomes me_frame_cm_legs. For a collision with initial-state
+        QCD radiation that is the Born final state: the partonic c.m. for
+        every Born-like configuration, and infrared safe for the real
+        emission. Leaving it to the frame the FKS momenta come in made the
+        result depend on the subtraction partition: +9.5(4)% on
+        p p > w+{0} j [QCD] and +11.3(4)% on p p > z{0} j [QCD] when only fks_b
+        changes (docs/nlo_polarisation_boost_plan.md, B13).
+
+        Raises InvalidRunCard when the frame contains a massless coloured
+        final-state parton: a collinear splitting moves it by a finite
+        amount, so the frame is not infrared safe.
+        """
+        me_frame = list(self['me_frame']) if 'me_frame' in self.user_set else []
+        cm_legs = list(self['me_frame_cm_legs'])
+        if not cm_legs:
+            return me_frame
+
+        partonic_cm = not me_frame or sorted(me_frame) == [1, 2]
+        legs = cm_legs if partonic_cm else me_frame
+        unsafe = [n for n in legs if n in self['me_frame_unsafe_legs']]
+        if not unsafe:
+            return legs
+
+        safe = [n for n in legs if n not in unsafe]
+        hint = (', e.g. me_frame = %s' % safe) if safe else ''
+        if partonic_cm:
+            raise InvalidRunCard(
+                'me_frame = [1, 2] (the partonic c.m.) has no infrared-safe '
+                'definition at NLO for this process. With initial-state QCD '
+                'radiation the c.m. of the real emission moves by a finite '
+                'boost in the collinear limit, and the frame that is the '
+                'partonic c.m. of the Born, the rest frame of its final state '
+                '%s, contains the massless coloured parton(s) %s, which a '
+                'collinear splitting changes by a finite amount. Evaluating '
+                'in the frame the FKS momenta come in instead makes the '
+                'result depend on the subtraction partition (by about 10%% '
+                'for p p > w+{0} j [QCD]). Set me_frame to colourless or '
+                'massive final-state particles%s; for a single boson this is '
+                'its Collins-Soper frame.' % (legs, unsafe, hint))
+        raise InvalidRunCard(
+            'me_frame = %s contains the massless coloured parton(s) %s. A '
+            'collinear splitting changes such a leg by a finite amount, so '
+            'the frame is not infrared safe at NLO. Define it from '
+            'colourless or massive final-state particles only%s.'
+            % (me_frame, unsafe, hint))
+
     def update_system_parameter_for_include(self):
 
         # polarization: rest-frame in which to evaluate the matrix-element.
@@ -6410,11 +6507,9 @@ class RunCardNLO(RunCard):
         # [1,2] literally would apply a longitudinal boost to every unpolarised
         # run. That is an identity for |M|^2 but not bit for bit, and it is
         # enough to send the adaptive grids down a different path. So the boost
-        # runs only when a frame was actually asked for.
-        if 'me_frame' in self.user_set:
-            self['frame_id'] = sum(2**(n) for n in self['me_frame'])
-        else:
-            self['frame_id'] = 0
+        # runs only when a frame was actually asked for, or when the process
+        # needs one (get_me_frame_legs).
+        self['frame_id'] = sum(2**(n) for n in self.get_me_frame_legs())
 
         # set the pdg_for_cut fortran parameter
         pdg_to_cut = set(list(self['pt_min_pdg'].keys()) +list(self['pt_max_pdg'].keys())+

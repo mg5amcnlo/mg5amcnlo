@@ -675,14 +675,23 @@ c       - the selection is exactly the initial state;
 c       - the selection is exactly the whole final state;
 c       - the selected system already has exactly zero 3-momentum.
 c
-c     The middle two are both "the partonic c.m.". Note they are *not*
-c     identity boosts here the way they are at LO: MadFKS works in a frame
-c     boosted along z (the two initial momenta carry different energies),
-c     so honouring them literally would apply a real longitudinal boost. It
-c     would also not be infrared safe -- a frame defined from the initial
-c     state jumps between the real emission and the reduced Born, because
-c     their momentum fractions differ by a finite amount even in the
-c     singular limit. Skipping is both the safe and the meaningful choice.
+c     The middle two are both "the partonic c.m.", and skipping them means
+c     "the frame the momenta come in". For the Born, the virtual and every
+c     counter-event that is the Born c.m., so the whole-final-state skip is
+c     exact there. For the real emission it is the FKS 'tilde' frame: the
+c     real's own c.m. in a final-state sector, but the c.m. of the
+c     underlying Born in an initial-state one, a boost along z away. So
+c     with initial-state QCD radiation, skipping the initial-state
+c     selection made the real depend on the FKS sector, and the polarised
+c     result on the subtraction partition (+9.5% on p p > w+{0} j [QCD]
+c     when only fks_b changes). Honouring it literally is no better: the
+c     real's own c.m. jumps by a finite boost across the initial-state
+c     collinear limit, so it is not infrared safe. The run_card therefore
+c     never sends the initial state here for such a process:
+c     RunCardNLO.get_me_frame_legs replaces [1,2] by the Born final state
+c     (refusing it when that contains a jet). What still reaches this skip
+c     is a process without initial-state QCD splittings (e+ e-), where the
+c     tilde frame is the partonic c.m. in every sector.
 c
 c     input:  p(0:3,npart)  momenta of this configuration
 c             ids(npart)    0/1 mask, bit n of frame_id = leg n+1

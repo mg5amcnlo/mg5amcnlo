@@ -737,6 +737,83 @@ class TestRunCardNLOMeFrame(unittest.TestCase):
                 self._card(me_frame).check_validity()
 
 
+class TestRunCardNLOMeFramePartonicCM(unittest.TestCase):
+    """What me_frame = [1, 2] means at NLO depends on the process
+    (RunCardNLO.get_me_frame_legs). With initial-state QCD radiation the
+    frame the FKS momenta come in depends on the FKS sector, so leaving the
+    real emission there made the polarised NLO result depend on the
+    subtraction partition: +9.5(4)% on p p > w+{0} j [QCD], +11.3(4)% on
+    p p > z{0} j [QCD], when only fks_b changed. It must become the rest
+    frame of the Born final state, or be refused when that contains a jet."""
+
+    def _card(self, me_frame, cm_legs, unsafe_legs, real_emission=True):
+        run_card = bannermod.RunCardNLO()
+        if me_frame is not None:
+            run_card.set('me_frame', me_frame, user=True)
+        charac = bannermod.ProcCharacteristic()
+        charac['me_frame_cm_legs'] = cm_legs
+        charac['me_frame_unsafe_legs'] = unsafe_legs
+        run_card.set_me_frame_process(charac, real_emission=real_emission)
+        return run_card
+
+    def _frame_id(self, run_card):
+        run_card.check_validity()
+        run_card.update_system_parameter_for_include()
+        return run_card['frame_id']
+
+    def test_initial_state_radiation_uses_the_born_final_state(self):
+        # p p > w+{0} w- [QCD]: the W W rest frame, frame_id 2**3 + 2**4.
+        # Not set, set to [1, 2] or left empty all mean the partonic c.m.
+        for me_frame in ([1, 2], [2, 1], [], None):
+            self.assertEqual(self._frame_id(self._card(me_frame, [3, 4], [])),
+                             24, me_frame)
+        # an explicit final-state frame is kept
+        self.assertEqual(self._frame_id(self._card([3], [3, 4], [])), 8)
+
+    def test_partonic_cm_with_a_jet_is_refused(self):
+        # p p > w+{0} j [QCD]: leg 4 is a jet, so [1, 2] has no infrared-safe
+        # NLO version, at launch time or when the include file is written
+        card = self._card([1, 2], [3, 4], [4])
+        with self.assertRaises(bannermod.InvalidRunCard):
+            card.check_validity()
+        # ... and the message offers the colourless part of it
+        with self.assertRaisesRegex(bannermod.InvalidRunCard,
+                                    r'me_frame = \[3\]'):
+            card.update_system_parameter_for_include()
+        # the boson alone (Collins-Soper frame) is fine
+        self.assertEqual(self._frame_id(self._card([3], [3, 4], [4])), 8)
+
+    def test_a_jet_in_an_explicit_frame_is_refused(self):
+        # the whole final state of p p > w+{0} j, spelled out
+        with self.assertRaises(bannermod.InvalidRunCard):
+            self._card([3, 4], [3, 4], [4]).check_validity()
+        # p p > w+{0} w- j: the jet is leg 5
+        with self.assertRaises(bannermod.InvalidRunCard):
+            self._card([3, 5], [3, 4, 5], [5]).check_validity()
+        self.assertEqual(self._frame_id(self._card([3, 4], [3, 4, 5], [5])),
+                         24)
+
+    def test_no_real_emission_no_refusal(self):
+        # a run of the Born alone (launch LO): no infrared limit
+        card = self._card([1, 2], [3, 4], [4], real_emission=False)
+        self.assertEqual(self._frame_id(card), 24)
+
+    def test_without_initial_state_radiation_the_cm_is_kept(self):
+        # e+ e- > t{L} t~ [QCD]: unchanged, skipped in the fortran
+        self.assertEqual(self._frame_id(self._card([1, 2], [1, 2], [])), 6)
+
+    def test_decay_is_the_rest_frame_of_the_decaying_particle(self):
+        # t > w+{0} b [QCD]: frame_id 6 used to select the top AND leg 2,
+        # the first decay product, and boost to the rest frame of the pair
+        self.assertEqual(self._frame_id(self._card([1, 2], [1], [3])), 2)
+
+    def test_without_process_information_me_frame_is_literal(self):
+        # unpolarised processes, or a card read outside a launch
+        self.assertEqual(self._frame_id(self._card([1, 2], [], [])), 6)
+        self.assertEqual(self._frame_id(self._card([3, 4], [], [])), 24)
+        self.assertEqual(self._frame_id(self._card(None, [], [])), 0)
+
+
 class TestRunCard(unittest.TestCase):
     """ A class to test the TestConfig functionality """
     # a lot of the functionality is actually already tested in the child

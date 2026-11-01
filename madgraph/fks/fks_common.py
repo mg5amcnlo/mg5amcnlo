@@ -869,6 +869,77 @@ def get_user_leg_order(process, pert = 'QCD'):
     return [leg['number'] for leg in leglist]
 
 
+def me_frame_characteristics(processes):
+    """What the run_card me_frame may mean for these NLO processes, in the
+    leg numbering of the process as the user wrote it (the numbering of
+    me_frame). Returns (cm_legs, unsafe_legs), both sorted lists.
+
+    cm_legs: the legs whose rest frame stands for the partonic c.m., which
+    is how me_frame = [1, 2] is read.
+      - A decay: the decaying particle, [1].
+      - A collision with no initial-state QCD splitting (e+ e-): [1, 2].
+        Every FKS sector then hands the real emission its momenta in its
+        own c.m., so the partonic c.m. is one well defined frame.
+      - A collision with one: the Born final state. FKS hands the real of
+        an initial-state sector its momenta in the c.m. of that sector's
+        underlying Born, and that differs between sectors by a boost along
+        z, so 'the frame the momenta come in' depends on the subtraction
+        partition (+9.5% on p p > w+{0} j [QCD] when only fks_b changes).
+        The real's own c.m. is no way out: it moves by a finite boost when
+        an initial-state parton goes collinear, so it is not infrared safe.
+        The rest frame of the Born final state is the partonic c.m. for
+        the Born, the virtual and every counterterm, and for the real it
+        is a function of its physical momenta alone.
+
+    unsafe_legs: massless coloured final-state legs. A collinear splitting
+    changes such a leg by a finite amount, so a frame containing it is not
+    infrared safe once real emission is computed. When cm_legs contains
+    one, me_frame = [1, 2] has no infrared-safe NLO definition at all.
+
+    Both lists are empty when no massive particle is polarised: the matrix
+    elements are then Lorentz invariant, and the frame does not matter.
+    Legs of a multiparticle label count as coloured or massless if any of
+    its particles is. If only some processes have an initial-state QCD
+    splitting (a photon in the proton), the Born final state is used for
+    all: it is the partonic c.m. of every Born too.
+    """
+    cm_legs = set()
+    cm_legs_isr = set()
+    unsafe_legs = set()
+    for proc in processes:
+        model = proc.get('model')
+        legs = proc.get('legs')
+        particles = []
+        for leg in legs:
+            ids = leg.get('ids') if 'ids' in leg else [leg.get('id')]
+            particles.append([model.get_particle(i) for i in ids])
+
+        if not any(leg.get('polarization') and
+                   any(p.get('mass').lower() != 'zero' for p in parts)
+                   for leg, parts in zip(legs, particles)):
+            continue
+
+        initial = [n for n, leg in enumerate(legs, 1) if not leg.get('state')]
+        final = [n for n, leg in enumerate(legs, 1) if leg.get('state')]
+        # [LOonly=...]: no real emission, so nothing to be infrared safe for
+        has_real = proc.get('NLO_mode') != 'LOonly'
+        initial_coloured = any(p.get('color') != 1
+                               for n in initial for p in particles[n - 1])
+
+        if len(initial) == 2 and has_real and initial_coloured:
+            cm_legs_isr.update(final)
+        else:
+            cm_legs.update(initial)
+
+        if has_real:
+            unsafe_legs.update(
+                n for n in final if any(p.get('color') != 1 and
+                                        p.get('mass').lower() == 'zero'
+                                        for p in particles[n - 1]))
+
+    return sorted(cm_legs_isr or cm_legs), sorted(unsafe_legs)
+
+
 def sort_proc(process,pert = 'QCD'):
     """Given a process, this function returns the same process 
     but with sorted FKSLegs.

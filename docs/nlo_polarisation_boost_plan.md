@@ -237,11 +237,77 @@ GeV), f0 goes from 0.212 to 0.250 at LO and from 0.223 to 0.258 at NLO.
 Decays keep the single boost from the parent's rest frame: no beam, no
 initial-state sector.
 
-**Still open:** the partonic-c.m. frame itself (`[1,2]`, the default for a
-polarised process, i.e. helicities in the partonic c.m.) has the same
-dependence and no such fix, since the partonic c.m. of the real is exactly
-what is not infrared safe. `p p > w+{0} j [QCD]` in the default frame moved by
-+9.5 +- 0.4% under the same `fks_b` change.
+**The partonic c.m. (`[1,2]`, the default) -- resolved 2026-11-01.** It had
+the same dependence and no fix of this kind, since the c.m. of the real is
+exactly what is not infrared safe. `me_frame = [1,2]` was skipped, i.e. the
+real was evaluated in whatever tilde frame its sector supplied. Measured,
+`fks_b` 1.5 -> 3.0 only, 5 seeds each (15 for WW), `req_acc_FO` 0.005, 13
+TeV, nn23nlo, anti-kT 0.4, pT(j) > 30 GeV:
+
+| process, `me_frame = [1,2]` | `fks_b` 1.5 | `fks_b` 3.0 | shift |
+|---|---|---|---|
+| `p p > w+{0} j [QCD]` | 2588.6(6.0) pb | 2835.5(8.3) pb | **+9.5(4)%** |
+| `p p > z{0} j [QCD]` | 1521.6(2.6) pb | 1694.0(6.1) pb | **+11.3(4)%** |
+| `p p > w+{0} w- [QCD]` | 17.712(16) pb | 17.716(14) pb | +0.02(12)% |
+| `e+ e- > t{L} t~ [QCD]`, 1 TeV | 0.10865(19) pb | 0.10867(25) pb | +0.02(29)% |
+
+The lepton collider has no initial-state sector, so every real comes in its
+own c.m. and nothing moves, as expected. The diboson does not move visibly
+either, which does not make its frame a definition: the real is still
+evaluated in a frame that depends on its sector. For a single boson at rest in the
+Born it is worse than a partition dependence: `p p > z{T} [QCD]` with `[1,2]`
+fails `test_ME` on 100% of the soft and collinear points, since the real's
+spin axis is the direction of a momentum that goes to zero from any
+direction.
+
+Candidates:
+
+- **The lab frame.** Infrared safe and the same in every sector (the real's
+  lab momenta are physical, and they tend to the Born's), and already mg7's
+  default `[]`. But madevent's LO default is the partonic c.m., so LO/NLO
+  consistency would change the LO polarised default too (madevent, MadSpin,
+  the reweighting): every LO polarised number in the default frame since
+  arXiv:1912.01725. Lab helicities also change under a boost along z, so they
+  depend on the beam energies, and analyses of diboson polarisation use the
+  diboson rest frame, of single bosons the Collins-Soper or helicity frame.
+- **Refuse `[1,2]` whenever there is initial-state QCD radiation.** LO is
+  unchanged, but every polarised `p p` run with the default card stops,
+  including dibosons and single bosons, where an exact continuation exists.
+- **Keep it, with a warning.** The result stays a function of an internal
+  parameter at the 10% level, and Drell-Yan does not even pass `test_ME`.
+
+**Decision:** `[1,2]` is resolved against the process when the run is
+launched (`RunCardNLO.get_me_frame_legs`, from what
+`fks_common.me_frame_characteristics` recorded in `proc_characteristics` at
+output). LO does not change.
+
+- No initial-state QCD splitting (`e+ e-`): unchanged. The tilde frame is the
+  partonic c.m. in every sector.
+- A decay: the decaying particle, `[1]`. `frame_id` 6 used to select it
+  *and* leg 2, the first decay product, so the frame depended on the order
+  the final state was written in: `t > b w+{0} QED=1 [QCD]` came out
+  0.04% below `t > w+{0} b QED=1 [QCD]` at NLO, at matched seeds. Both are
+  now bit-identical.
+- Initial-state QCD radiation, no massless coloured parton in the Born final
+  state: **the rest frame of the Born final state**. For the Born, the
+  virtual and every counter-event this is the partonic c.m. exactly (they
+  stay skipped, bit for bit); for the real it depends only on its physical
+  momenta, so it is infrared safe and the same in every sector. It is the
+  diboson rest frame of the literature. `p p > w+{0} w- [QCD]`: 18.484(15) ->
+  18.472(19) pb under the `fks_b` change (-0.06(13)%), **+4.35(13)% above
+  the old `[1,2]` value**: a change of definition of the real emission, the
+  Born being identical. `p p > z{T} [QCD]` now passes `test_ME`, 49012(199)
+  pb.
+- Initial-state QCD radiation and a jet in the Born final state (`p p >
+  w+{0} j`): **refused** at launch, with a warning at output. No frame equal
+  to the Born's partonic c.m. is infrared safe: it would have to contain the
+  jet, which a final-state collinear splitting changes by a finite amount.
+  Choose e.g. `[3]`, the Collins-Soper frame of the W.
+
+For the same reason any `me_frame` containing a massless coloured
+final-state parton is refused (`[3,4]` on `p p > w+{0} j` used to pass and
+build the rest frame of the W and `j_fks`). Runs of the Born alone (`launch
+LO`, `aMC@LO`) refuse nothing.
 
 ## 3. Milestones
 
@@ -1739,12 +1805,13 @@ marker. Run via `./tests/test_manager.py`, not pytest.
   spinors themselves (the component now comes from `pT^2`, no cancellation),
   in every backend, so the guard is gone; the split-order soft test that
   failed 0.43 without it passes at 0.02. See M2 step 2.
-- **B13 — single-leg frames RESOLVED, partonic c.m. OPEN.** The FKS tilde
-  frame differs between sectors by a boost along z, so a frame reached by a
-  single boost from it depended on the FKS partition. Single-leg frames now go
-  along the beam first (Collins-Soper); the default `[1,2]` frame is still
-  mapping-dependent at NLO (+9.5% under a change of `fks_b` in
-  `p p > w+{0} j`). See D3.
+- **B13 — RESOLVED.** The FKS tilde frame differs between sectors by a
+  boost along z, so a frame reached by a single boost from it depended on
+  the FKS partition. Single-leg frames now go along the beam first
+  (Collins-Soper). The default `[1,2]` frame (+9.5% on `p p > w+{0} j`,
+  +11.3% on `p p > z{0} j` under a change of `fks_b`) is now the rest frame
+  of the Born final state when there is initial-state QCD radiation, and
+  refused when that final state has a jet. See D3.
 - **B12 — RESOLVED here, and it has a twin that must land with it.**
   `ProcessDefinition.__iter__` dropped `polarization` when expanding
   multiparticles, so any polarised MadLoop-standalone process written with

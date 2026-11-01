@@ -933,6 +933,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             perturbation_order.append('QCD')
         self.proc_characteristic['perturbation_order'] = perturbation_order 
         self.set_real_channels_default()
+        self.set_me_frame_characteristics()
 
         self.create_proc_charac()
 
@@ -2083,6 +2084,26 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                         'default: %d hard channels (more than %d).'
                         % (n_hard_channels,
                            fks_real_channels_auto.MAX_HARD_CHANNELS))
+
+    def set_me_frame_characteristics(self):
+        """Record, for the run interface, what me_frame = [1, 2] means for
+        these processes at NLO and which legs may not enter an me_frame once
+        real emission is computed (fks_common.me_frame_characteristics).
+        RunCardNLO.get_me_frame_legs resolves the run_card against them."""
+        cm_legs, unsafe_legs = fks_common.me_frame_characteristics(
+                                            getattr(self, 'proc_defs', None) or [])
+        self.proc_characteristic['me_frame_cm_legs'] = cm_legs
+        self.proc_characteristic['me_frame_unsafe_legs'] = unsafe_legs
+        unsafe = [n for n in cm_legs if n in unsafe_legs]
+        if unsafe:
+            safe = [n for n in cm_legs if n not in unsafe_legs]
+            logger.warning(
+                'me_frame = [1, 2], the partonic c.m. and the run_card default, '
+                'has no infrared-safe NLO definition for this process: leg(s) '
+                '%s of the final state are massless coloured partons. Set '
+                'me_frame in the run_card before launching a run with real '
+                'emission%s.' % (', '.join(str(n) for n in unsafe),
+                (', e.g. me_frame = %s' % safe) if safe else ''))
 
     def write_real_channels_file(self, writer, matrix_element):
         """Write compact hard-channel IDs without a Born-channel factor."""
