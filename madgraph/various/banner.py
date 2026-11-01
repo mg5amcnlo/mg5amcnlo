@@ -785,6 +785,27 @@ def recover_banner(results_object, level, run=None, tag=None):
 class InvalidRunCard(InvalidCmd):
     pass
 
+# energy units understood in a card entry, as a multiple of the GeV in which
+# every energy is stored
+energy_units = {'ev': 1e-9, 'kev': 1e-6, 'mev': 1e-3,
+                'gev': 1.0, 'tev': 1e3, 'pev': 1e6}
+
+def parse_energy_unit(value):
+    """The energy in GeV of a string made of a number and an energy unit
+    (``"13 TeV"`` -> 13000.0, ``"500MeV"`` -> 0.5), or None when ``value`` is
+    anything else (no unit, a unit that is not an energy, not a string)."""
+    if not isinstance(value, str):
+        return None
+    m = re.match(r'^\s*([-+]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][-+]?\d+)?)\s*([a-zA-Z]+)\s*$',
+                 value)
+    if not m or m.group(2).lower() not in energy_units:
+        return None
+    number = float(m.group(1).replace('d', 'e').replace('D', 'e'))
+    return number * energy_units[m.group(2).lower()]
+
+class UnknownPDFSet(InvalidRunCard):
+    """A PDF label or LHAPDF id that no PDF set of the installation matches."""
+
 class ProcCard(list):
     """Basic Proccard object"""
     
@@ -1049,6 +1070,9 @@ class ConfigFile(dict):
         self.allowed_value = {}
         # allow nickname for some parameter to avoid integer mapping for some var
         self.shortcut_values = {}
+        # parameters carrying an energy dimension (stored in GeV): the only ones
+        # accepting a value with a unit, e.g. "13 TeV"
+        self.energy_parameter = set()
         
         self.default_setup()
 
@@ -1249,7 +1273,8 @@ class ConfigFile(dict):
                 return self.warn(text, 'critical', raiseerror)
 
             #format each entry    
-            values =[self.format_variable(v, targettype, name=name) 
+            values =[self.format_variable(self.apply_energy_unit(name, v, targettype),
+                                          targettype, name=name)
                                                                  for v in value]
             
             # ensure that each entry are in the allowed list
@@ -1302,7 +1327,9 @@ class ConfigFile(dict):
 
             if isinstance(value, dict):
                 for key in value:
-                    value[key] = self.format_variable(value[key], targettype, name=name)
+                    value[key] = self.format_variable(
+                        self.apply_energy_unit(name, value[key], targettype),
+                        targettype, name=name)
                 if full_reset:
                     dict.__setitem__(self, lower_name, value)
                 else:
@@ -1330,6 +1357,7 @@ class ConfigFile(dict):
                 self.user_set.add(lower_name)
             return self.post_set(lower_name, None, change_userdefine, raiseerror)
         
+        value = self.apply_energy_unit(name, value, targettype)
         value = self.format_variable(value, targettype, name=name)
         #check that the value is allowed:
         if lower_name in self.allowed_value and '*' not in self.allowed_value[lower_name]:
@@ -1364,8 +1392,11 @@ class ConfigFile(dict):
 
     def add_param(self, name, value, system=False, comment=False, typelist=None,
                   allowed=[],
-                  shortcut={}):
-        """add a default parameter to the class"""
+                  shortcut={}, energy=False):
+        """add a default parameter to the class.
+        energy: the parameter is an energy (stored in GeV), so it accepts a
+                value with a unit ("13 TeV"); any other numeric parameter
+                refuses one."""
 
         lower_name = name.lower()
         if __debug__:
@@ -1412,6 +1443,23 @@ class ConfigFile(dict):
             self.system_only.add(lower_name)
         if comment:
             self.comments[lower_name] = comment
+        if energy:
+            self.energy_parameter.add(lower_name)
+
+    def apply_energy_unit(self, name, value, targettype):
+        """Convert a value given with an energy unit ("13 TeV") to GeV for an
+        energy parameter, and refuse a unit on any other numeric parameter.
+        Any other value is returned unchanged (a string parameter may well
+        hold "13TeV")."""
+        if not isinstance(value, str) or targettype not in (int, float):
+            return value
+        energy = parse_energy_unit(value)
+        if energy is None:
+            return value
+        if name.lower() in getattr(self, 'energy_parameter', ()):
+            return energy
+        raise InvalidCardEdition("%s is not an energy: '%s' can not carry a unit"
+                                 % (name, value.strip()))
 
     def do_help(self, name):
         """return a minimal help for the parameter"""
@@ -4563,8 +4611,8 @@ class RunCardLO(RunCard):
         self.add_param("lpp2", 1, fortran_name="lpp(2)", allowed=[-1,1,0,2,3,9,-2,-3,4,-4],
                        shortcut={'p':1,"p~":-1,'e-':3,'e+':-3,'mu-':4,'mu+':-4, 'no':0},
                        comment='second beam energy distribution:\n 0: fixed energy\n 1: PDF of proton\n -1: PDF of antiproton\n 2:elastic photon from proton, +/-3:PDF of electron/positron, +/-4:PDF of muon/antimuon, 9: PLUGIN MODE')
-        self.add_param("ebeam1", 6500.0, fortran_name="ebeam(1)")
-        self.add_param("ebeam2", 6500.0, fortran_name="ebeam(2)")
+        self.add_param("ebeam1", 6500.0, fortran_name="ebeam(1)", energy=True)
+        self.add_param("ebeam2", 6500.0, fortran_name="ebeam(2)", energy=True)
         self.add_param("polbeam1", 0.0, fortran_name="pb1", hidden=True,
                                               comment="Beam polarization from -100 (left-handed) to 100 (right-handed) --use lpp=0 for this parameter--")
         self.add_param("polbeam2", 0.0, fortran_name="pb2", hidden=True,
@@ -4584,11 +4632,11 @@ class RunCardLO(RunCard):
         self.add_param('mass_ion1', -1.0, hidden=True, fortran_name="mass_ion(1)",
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        shortcut={'proton':0.938,'lead':207.9766521*0.938,'electron':0.000511,'muon':0.105},
-                       comment='For heavy ion physics mass in GeV of the ion (of beam 1)')
+                       comment='For heavy ion physics mass in GeV of the ion (of beam 1)', energy=True)
         self.add_param('mass_ion2', -1.0, hidden=True, fortran_name="mass_ion(2)",
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        shortcut={'proton':0.938,'lead':207.9766521*0.938,'electron':0.000511,'muon':0.105},
-                       comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
+                       comment='For heavy ion physics mass in GeV of the ion (of beam 2)', energy=True)
         valid_pdf = ['lhapdf', 'cteq6_m','cteq6_l', 'cteq6l1','nn23lo', 'nn23lo1', 'nn23nlo','iww','eva','edff','chff','none','mixed']+\
                        sum(self.allowed_lep_densities.values(),[])
         self.add_param("pdlabel", "lhapdf", hidden=True, allowed=valid_pdf)
@@ -4602,10 +4650,10 @@ class RunCardLO(RunCard):
         self.add_param("fixed_fac_scale1", False, hidden=True)
         self.add_param("fixed_fac_scale2", False, hidden=True)
         self.add_param("fixed_extra_scale", False, hidden=True)
-        self.add_param("scale", 91.1880, shortcut={'mz':91.1880, 'mh':125.0, 'mt':173.0, 'mtau':1.77686})
-        self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1", shortcut={'mz':91.1880, 'mh':125.0, 'mt':173.0, 'mtau':1.77686})
-        self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2", shortcut={'mz':91.1880, 'mh':125.0, 'mt':173.0, 'mtau':1.77686})
-        self.add_param("mue_ref_fixed", 91.1880, hidden=True)
+        self.add_param("scale", 91.1880, shortcut={'mz':91.1880, 'mh':125.0, 'mt':173.0, 'mtau':1.77686}, energy=True)
+        self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1", shortcut={'mz':91.1880, 'mh':125.0, 'mt':173.0, 'mtau':1.77686}, energy=True)
+        self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2", shortcut={'mz':91.1880, 'mh':125.0, 'mt':173.0, 'mtau':1.77686}, energy=True)
+        self.add_param("mue_ref_fixed", 91.1880, hidden=True, energy=True)
         self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy\n'0' allows to use the user_hook definition (need to be defined via custom_fct entry) ",
                                                 allowed=[-1,0,1,2,3,4,10],
                                                 shortcut={'ckkw':-1,'ht':2,'ht/2':3,'et':1,'shat':4},
@@ -4650,32 +4698,32 @@ class RunCardLO(RunCard):
         self.add_param("auto_ptj_mjj", True, hidden=True)
         self.add_param("bwcutoff", 15.0)
         self.add_param("cut_decays", False, cut='d')
-        self.add_param('dsqrt_shat',0., cut=True)
-        self.add_param('dsqrt_shatmax', -1.0, cut=True) 
+        self.add_param('dsqrt_shat',0., cut=True, energy=True)
+        self.add_param('dsqrt_shatmax', -1.0, cut=True, energy=True) 
         self.add_param("nhel", 0, include=False)
         self.add_param("limhel", 1e-8, hidden=True, comment="threshold to determine if an helicity contributes when not MC over helicity.")
         #pt cut
-        self.add_param("ptj", 20.0, cut='j')
-        self.add_param("ptb", 0.0, cut='b')
-        self.add_param("pta", 10.0, cut='a')
-        self.add_param("ptl", 10.0, cut='l')
-        self.add_param("misset", 0.0, cut='n')
-        self.add_param("ptheavy", 0.0, cut='H',                                comment='this cut apply on particle heavier than 10 GeV')
-        self.add_param("ptonium", 1.0, legacy=True)
-        self.add_param("ptjmax", -1.0, cut='j')
-        self.add_param("ptbmax", -1.0, cut='b')
-        self.add_param("ptamax", -1.0, cut='a')
-        self.add_param("ptlmax", -1.0, cut='l')
-        self.add_param("missetmax", -1.0, cut='n')
+        self.add_param("ptj", 20.0, cut='j', energy=True)
+        self.add_param("ptb", 0.0, cut='b', energy=True)
+        self.add_param("pta", 10.0, cut='a', energy=True)
+        self.add_param("ptl", 10.0, cut='l', energy=True)
+        self.add_param("misset", 0.0, cut='n', energy=True)
+        self.add_param("ptheavy", 0.0, cut='H',                                comment='this cut apply on particle heavier than 10 GeV', energy=True)
+        self.add_param("ptonium", 1.0, legacy=True, energy=True)
+        self.add_param("ptjmax", -1.0, cut='j', energy=True)
+        self.add_param("ptbmax", -1.0, cut='b', energy=True)
+        self.add_param("ptamax", -1.0, cut='a', energy=True)
+        self.add_param("ptlmax", -1.0, cut='l', energy=True)
+        self.add_param("missetmax", -1.0, cut='n', energy=True)
         # E cut
-        self.add_param("ej", 0.0, cut='j', hidden=True)
-        self.add_param("eb", 0.0, cut='b', hidden=True)
-        self.add_param("ea", 0.0, cut='a', hidden=True)
-        self.add_param("el", 0.0, cut='l', hidden=True)
-        self.add_param("ejmax", -1.0, cut='j', hidden=True)
-        self.add_param("ebmax", -1.0, cut='b', hidden=True)
-        self.add_param("eamax", -1.0, cut='a', hidden=True)
-        self.add_param("elmax", -1.0, cut='l', hidden=True)
+        self.add_param("ej", 0.0, cut='j', hidden=True, energy=True)
+        self.add_param("eb", 0.0, cut='b', hidden=True, energy=True)
+        self.add_param("ea", 0.0, cut='a', hidden=True, energy=True)
+        self.add_param("el", 0.0, cut='l', hidden=True, energy=True)
+        self.add_param("ejmax", -1.0, cut='j', hidden=True, energy=True)
+        self.add_param("ebmax", -1.0, cut='b', hidden=True, energy=True)
+        self.add_param("eamax", -1.0, cut='a', hidden=True, energy=True)
+        self.add_param("elmax", -1.0, cut='l', hidden=True, energy=True)
         # Eta cut
         self.add_param("etaj", 5.0, cut='j')
         self.add_param("etab", -1.0, cut='b')
@@ -4708,67 +4756,67 @@ class RunCardLO(RunCard):
         self.add_param("drblmax", -1.0, cut='bl')
         self.add_param("dralmax", -1.0, cut='al')
         # invariant mass
-        self.add_param("mmjj", 0.0, cut='jj')
-        self.add_param("mmbb", 0.0, cut='bb')
-        self.add_param("mmaa", 0.0, cut='aa')
-        self.add_param("mmll", 0.0, cut='ll')
-        self.add_param("mmjjmax", -1.0, cut='jj')
-        self.add_param("mmbbmax", -1.0, cut='bb')                
-        self.add_param("mmaamax", -1.0, cut='aa')
-        self.add_param("mmllmax", -1.0, cut='ll')
-        self.add_param("mmnl", 0.0, cut='LL')
-        self.add_param("mmnlmax", -1.0, cut='LL')
+        self.add_param("mmjj", 0.0, cut='jj', energy=True)
+        self.add_param("mmbb", 0.0, cut='bb', energy=True)
+        self.add_param("mmaa", 0.0, cut='aa', energy=True)
+        self.add_param("mmll", 0.0, cut='ll', energy=True)
+        self.add_param("mmjjmax", -1.0, cut='jj', energy=True)
+        self.add_param("mmbbmax", -1.0, cut='bb', energy=True)                
+        self.add_param("mmaamax", -1.0, cut='aa', energy=True)
+        self.add_param("mmllmax", -1.0, cut='ll', energy=True)
+        self.add_param("mmnl", 0.0, cut='LL', energy=True)
+        self.add_param("mmnlmax", -1.0, cut='LL', energy=True)
         #minimum/max pt for sum of leptons
-        self.add_param("ptllmin", 0.0, cut='ll')
-        self.add_param("ptllmax", -1.0, cut='ll')
-        self.add_param("xptj", 0.0, cut='jj')
-        self.add_param("xptb", 0.0, cut='bb')
-        self.add_param("xpta", 0.0, cut='aa') 
-        self.add_param("xptl", 0.0, cut='ll')
+        self.add_param("ptllmin", 0.0, cut='ll', energy=True)
+        self.add_param("ptllmax", -1.0, cut='ll', energy=True)
+        self.add_param("xptj", 0.0, cut='jj', energy=True)
+        self.add_param("xptb", 0.0, cut='bb', energy=True)
+        self.add_param("xpta", 0.0, cut='aa', energy=True) 
+        self.add_param("xptl", 0.0, cut='ll', energy=True)
         # ordered pt jet 
-        self.add_param("ptj1min", 0.0, cut='jj')
-        self.add_param("ptj1max", -1.0, cut='jj')
-        self.add_param("ptj2min", 0.0, cut='jj')
-        self.add_param("ptj2max", -1.0, cut='jj')
-        self.add_param("ptj3min", 0.0, cut='jjj')
-        self.add_param("ptj3max", -1.0, cut='jjj')
-        self.add_param("ptj4min", 0.0, cut='j'*4)
-        self.add_param("ptj4max", -1.0, cut='j'*4)                
+        self.add_param("ptj1min", 0.0, cut='jj', energy=True)
+        self.add_param("ptj1max", -1.0, cut='jj', energy=True)
+        self.add_param("ptj2min", 0.0, cut='jj', energy=True)
+        self.add_param("ptj2max", -1.0, cut='jj', energy=True)
+        self.add_param("ptj3min", 0.0, cut='jjj', energy=True)
+        self.add_param("ptj3max", -1.0, cut='jjj', energy=True)
+        self.add_param("ptj4min", 0.0, cut='j'*4, energy=True)
+        self.add_param("ptj4max", -1.0, cut='j'*4, energy=True)                
         self.add_param("cutuse", 0, cut='jj')
         # ordered pt lepton
-        self.add_param("ptl1min", 0.0, cut='l'*2)
-        self.add_param("ptl1max", -1.0, cut='l'*2)
-        self.add_param("ptl2min", 0.0, cut='l'*2)
-        self.add_param("ptl2max", -1.0, cut='l'*2)
-        self.add_param("ptl3min", 0.0, cut='l'*3)
-        self.add_param("ptl3max", -1.0, cut='l'*3)        
-        self.add_param("ptl4min", 0.0, cut='l'*4)
-        self.add_param("ptl4max", -1.0, cut='l'*4)
+        self.add_param("ptl1min", 0.0, cut='l'*2, energy=True)
+        self.add_param("ptl1max", -1.0, cut='l'*2, energy=True)
+        self.add_param("ptl2min", 0.0, cut='l'*2, energy=True)
+        self.add_param("ptl2max", -1.0, cut='l'*2, energy=True)
+        self.add_param("ptl3min", 0.0, cut='l'*3, energy=True)
+        self.add_param("ptl3max", -1.0, cut='l'*3, energy=True)        
+        self.add_param("ptl4min", 0.0, cut='l'*4, energy=True)
+        self.add_param("ptl4max", -1.0, cut='l'*4, energy=True)
         # Ht sum of jets
-        self.add_param("htjmin", 0.0, cut='j'*2)
-        self.add_param("htjmax", -1.0, cut='j'*2)
-        self.add_param("ihtmin", 0.0, cut='J'*2)
-        self.add_param("ihtmax", -1.0, cut='J'*2)
-        self.add_param("ht2min", 0.0, cut='J'*3) 
-        self.add_param("ht3min", 0.0, cut='J'*3)
-        self.add_param("ht4min", 0.0, cut='J'*4)
-        self.add_param("ht2max", -1.0, cut='J'*3)
-        self.add_param("ht3max", -1.0, cut='J'*3)
-        self.add_param("ht4max", -1.0, cut='J'*4)
+        self.add_param("htjmin", 0.0, cut='j'*2, energy=True)
+        self.add_param("htjmax", -1.0, cut='j'*2, energy=True)
+        self.add_param("ihtmin", 0.0, cut='J'*2, energy=True)
+        self.add_param("ihtmax", -1.0, cut='J'*2, energy=True)
+        self.add_param("ht2min", 0.0, cut='J'*3, energy=True) 
+        self.add_param("ht3min", 0.0, cut='J'*3, energy=True)
+        self.add_param("ht4min", 0.0, cut='J'*4, energy=True)
+        self.add_param("ht2max", -1.0, cut='J'*3, energy=True)
+        self.add_param("ht3max", -1.0, cut='J'*3, energy=True)
+        self.add_param("ht4max", -1.0, cut='J'*4, energy=True)
         # photon isolation
-        self.add_param("ptgmin", 0.0, cut='aj')
+        self.add_param("ptgmin", 0.0, cut='aj', energy=True)
         self.add_param("r0gamma", 0.4, hidden=True)
         self.add_param("xn", 1.0, hidden=True)
         self.add_param("epsgamma", 1.0, hidden=True) 
         self.add_param("isoem", True, hidden=True)
         self.add_param("xetamin", 0.0, cut='jj')
         self.add_param("deltaeta", 0.0, cut='j'*2)
-        self.add_param("ktdurham", -1.0, fortran_name="kt_durham", cut='j')
+        self.add_param("ktdurham", -1.0, fortran_name="kt_durham", cut='j', energy=True)
         self.add_param("dparameter", 0.4, fortran_name="d_parameter", cut='j')
-        self.add_param("ptlund", -1.0, fortran_name="pt_lund", cut='j')
+        self.add_param("ptlund", -1.0, fortran_name="pt_lund", cut='j', energy=True)
         self.add_param("pdgs_for_merging_cut", [21, 1, 2, 3, 4, 5, 6], hidden=True)
         self.add_param("maxjetflavor", 4)
-        self.add_param("xqcut", 0.0, cut=True)
+        self.add_param("xqcut", 0.0, cut=True, energy=True)
         self.add_param("use_syst", True, comment='Add in the lhef file information needed for the computation of systematic uncertainty (scale variation and pdf)')
         self.add_param('systematics_program', 'systematics', include=False, hidden=True, comment='Choose which program to use for systematics computation: none, systematics, syscalc')
         self.add_param('systematics_arguments', ['--mur=0.5,1,2', '--muf=0.5,1,2', '--pdf=errorset'], include=False, hidden=True, comment='Choose the arguments to pass to the systematics command, like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
@@ -4783,7 +4831,7 @@ class RunCardLO(RunCard):
         self.add_param('gridrun', False, hidden=True)
         self.add_param('fixed_couplings', True, hidden=True)
         self.add_param('mc_grouped_subproc', True, hidden=True)
-        self.add_param('xmtcentral', 0.0, hidden=True, fortran_name="xmtc")
+        self.add_param('xmtcentral', 0.0, hidden=True, fortran_name="xmtc", energy=True)
         self.add_param('d', 1.0, hidden=True)
         self.add_param('gseed', 0, hidden=True, include=False)
         self.add_param('issgridfile', '', hidden=True)
@@ -4818,23 +4866,23 @@ class RunCardLO(RunCard):
 
         # parameter allowing to define simple cut via the pdg
         # Special syntax are related to those. (can not be edit directly)
-        self.add_param('pt_min_pdg',{'__type__':0.}, include=False, cut=True)
-        self.add_param('pt_max_pdg',{'__type__':0.}, include=False, cut=True)
-        self.add_param('E_min_pdg',{'__type__':0.}, include=False, hidden=True,cut=True)
-        self.add_param('E_max_pdg',{'__type__':0.}, include=False, hidden=True,cut=True)
+        self.add_param('pt_min_pdg',{'__type__':0.}, include=False, cut=True, energy=True)
+        self.add_param('pt_max_pdg',{'__type__':0.}, include=False, cut=True, energy=True)
+        self.add_param('E_min_pdg',{'__type__':0.}, include=False, hidden=True,cut=True, energy=True)
+        self.add_param('E_max_pdg',{'__type__':0.}, include=False, hidden=True,cut=True, energy=True)
         self.add_param('eta_min_pdg',{'__type__':0.}, include=False,cut=True)
         self.add_param('eta_max_pdg',{'__type__':0.}, include=False,cut=True)
-        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False,cut=True)
+        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False,cut=True, energy=True)
         self.add_param('mxx_only_part_antipart', {'default':False}, include=False)
         
         self.add_param('pdg_cut',[0],  system=True) # store which PDG are tracked
-        self.add_param('ptmin4pdg',[0.], system=True) # store pt min
-        self.add_param('ptmax4pdg',[-1.], system=True)
-        self.add_param('Emin4pdg',[0.], system=True) # store pt min
-        self.add_param('Emax4pdg',[-1.], system=True)  
+        self.add_param('ptmin4pdg',[0.], system=True, energy=True) # store pt min
+        self.add_param('ptmax4pdg',[-1.], system=True, energy=True)
+        self.add_param('Emin4pdg',[0.], system=True, energy=True) # store pt min
+        self.add_param('Emax4pdg',[-1.], system=True, energy=True)  
         self.add_param('etamin4pdg',[0.], system=True) # store pt min
         self.add_param('etamax4pdg',[-1.], system=True)   
-        self.add_param('mxxmin4pdg',[-1.], system=True)
+        self.add_param('mxxmin4pdg',[-1.], system=True, energy=True)
         self.add_param('mxxpart_antipart', [False], system=True)
                      
         
@@ -6002,8 +6050,8 @@ class RunCardNLO(RunCard):
                        shortcut={'p':1, 'p~':-1,  'e-': 3, 'e+':-3, 'mu-':4, 'mu+':-4})        
         self.add_param('lpp2', 1, fortran_name='lpp(2)',
                        shortcut={'p':1, 'p~':-1,  'e-': 3, 'e+':-3, 'mu-':4, 'mu+':-4})                        
-        self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)')
-        self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
+        self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)', energy=True)
+        self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)', energy=True)        
         self.add_param('nb_proton1', 1, hidden=True, allowed=[1,0, 82 , '*'],fortran_name="nb_proton(1)",
                        comment='For heavy ion physics nb of proton in the ion (for both beam but if group_subprocess was False)')
         self.add_param('nb_proton2', 1, hidden=True, allowed=[1,0, 82 , '*'],fortran_name="nb_proton(2)",
@@ -6014,10 +6062,10 @@ class RunCardNLO(RunCard):
                        comment='For heavy ion physics nb of neutron in the ion (of beam 2 if group_subprocess was False )')
         self.add_param('mass_ion1', -1.0, hidden=True, fortran_name="mass_ion(1)",
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
-                       comment='For heavy ion physics mass in GeV of the ion (of beam 1)')
+                       comment='For heavy ion physics mass in GeV of the ion (of beam 1)', energy=True)
         self.add_param('mass_ion2', -1.0, hidden=True, fortran_name="mass_ion(2)",
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
-                       comment='For heavy ion physics mass in GeV of the ion (of beam 2)')
+                       comment='For heavy ion physics mass in GeV of the ion (of beam 2)', energy=True)
         self.add_param('pdlabel', 'lhapdf', allowed=['lhapdf', 'emela', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo','ct14q00','ct14q07','ct14q14','ct14q21','edff','chff'] +\
              sum(self.allowed_lep_densities.values(),[]) )                
         # NNPDF40_nlo_as_01180; create_default_for_process swaps in the
@@ -6046,17 +6094,17 @@ class RunCardNLO(RunCard):
         self.add_param('fixed_ren_scale', False)
         self.add_param('fixed_fac_scale', False)
         self.add_param('fixed_extra_scale', True, hidden=True) # False: the extra (EFT) running scale follows muR event by event
-        self.add_param('mur_ref_fixed', 91.118, shortcut={'mz':91.118, 'mw':80.419, 'mt':172.5, 'mh':125.0})                       
-        self.add_param('muf1_ref_fixed', -1.0, hidden=True)
-        self.add_param('muf_ref_fixed', 91.118, shortcut={'mz':91.118, 'mw':80.419, 'mt':172.5, 'mh':125.0})                       
-        self.add_param('muf2_ref_fixed', -1.0, hidden=True)
-        self.add_param('mue_ref_fixed', 91.118, hidden=True, shortcut={'mz':91.118, 'mw':80.419, 'mt':172.5, 'mh':125.0}) 
+        self.add_param('mur_ref_fixed', 91.118, shortcut={'mz':91.118, 'mw':80.419, 'mt':172.5, 'mh':125.0}, energy=True)                       
+        self.add_param('muf1_ref_fixed', -1.0, hidden=True, energy=True)
+        self.add_param('muf_ref_fixed', 91.118, shortcut={'mz':91.118, 'mw':80.419, 'mt':172.5, 'mh':125.0}, energy=True)                       
+        self.add_param('muf2_ref_fixed', -1.0, hidden=True, energy=True)
+        self.add_param('mue_ref_fixed', 91.118, hidden=True, shortcut={'mz':91.118, 'mw':80.419, 'mt':172.5, 'mh':125.0}, energy=True) 
         self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale', 
             allowed = [-2,-1,0,1,2,3,10],
             shortcut={  'ht/2':3,'ht':2,'et':1},
             comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2, '0' allows to use the user_hook definition (need to be defined via custom_fct entry) ")
         self.add_param('fixed_qes_scale', False, hidden=True)
-        self.add_param('qes_ref_fixed', -1.0, hidden=True)
+        self.add_param('qes_ref_fixed', -1.0, hidden=True, energy=True)
         self.add_param('mur_over_ref', 1.0)
         self.add_param('muf_over_ref', 1.0)                       
         self.add_param('muf1_over_ref', -1.0, hidden=True)                       
@@ -6093,20 +6141,20 @@ class RunCardNLO(RunCard):
         #cuts        
         self.add_param('jetalgo', 1.0)
         self.add_param('jetradius', 0.7)         
-        self.add_param('ptj', 10.0 , cut=True)
+        self.add_param('ptj', 10.0 , cut=True, energy=True)
         self.add_param('etaj', -1.0, cut=True)        
         self.add_param('gamma_is_j', True)        
-        self.add_param('ptl', 0.0, cut=True)
+        self.add_param('ptl', 0.0, cut=True, energy=True)
         self.add_param('etal', -1.0, cut=True) 
         self.add_param('drll', 0.0, cut=True)
         self.add_param('drll_sf', 0.0, cut=True)        
-        self.add_param('mll', 0.0, cut=True)
-        self.add_param('mll_sf', 30.0, cut=True) 
+        self.add_param('mll', 0.0, cut=True, energy=True)
+        self.add_param('mll_sf', 30.0, cut=True, energy=True) 
         self.add_param('rphreco', 0.1) 
         self.add_param('etaphreco', -1.0) 
         self.add_param('lepphreco', True) 
         self.add_param('quarkphreco', True) 
-        self.add_param('ptgmin', 20.0, cut=True)
+        self.add_param('ptgmin', 20.0, cut=True, energy=True)
         self.add_param('etagamma', -1.0)        
         self.add_param('r0gamma', 0.4)
         self.add_param('xn', 1.0)                         
@@ -6125,16 +6173,16 @@ class RunCardNLO(RunCard):
                        hidden=True, system=True, include=False)
     
         # parameter allowing to define simple cut via the pdg
-        self.add_param('pt_min_pdg',{'__type__':0.}, include=False,cut=True)
-        self.add_param('pt_max_pdg',{'__type__':0.}, include=False,cut=True)
-        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False,cut=True)
+        self.add_param('pt_min_pdg',{'__type__':0.}, include=False,cut=True, energy=True)
+        self.add_param('pt_max_pdg',{'__type__':0.}, include=False,cut=True, energy=True)
+        self.add_param('mxx_min_pdg',{'__type__':0.}, include=False,cut=True, energy=True)
         self.add_param('mxx_only_part_antipart', {'default':False}, include=False, hidden=True)
         
         #hidden parameter that are transfer to the fortran code
         self.add_param('pdg_cut',[0], hidden=True, system=True) # store which PDG are tracked
-        self.add_param('ptmin4pdg',[0.], hidden=True, system=True) # store pt min
-        self.add_param('ptmax4pdg',[-1.], hidden=True, system=True)
-        self.add_param('mxxmin4pdg',[0.], hidden=True, system=True)
+        self.add_param('ptmin4pdg',[0.], hidden=True, system=True, energy=True) # store pt min
+        self.add_param('ptmax4pdg',[-1.], hidden=True, system=True, energy=True)
+        self.add_param('mxxmin4pdg',[0.], hidden=True, system=True, energy=True)
         self.add_param('mxxpart_antipart', [False], hidden=True, system=True)
         
     def check_validity(self):
@@ -6700,13 +6748,16 @@ class RunCardMG7(RunCard):
     # fixed typed parameters
     dynamic_section_names = ('multiparticles', 'cuts', 'histograms')
 
-    # energy units, expressed in GeV (the unit everything is stored in)
-    energy_units = {'ev': 1e-9, 'kev': 1e-6, 'mev': 1e-3,
-                    'gev': 1.0, 'tev': 1e3, 'pev': 1e6}
-    # typed parameters carrying an energy dimension (stored in GeV); a value
-    # like "13 TeV" is converted to 13000.0 when assigned to one of these.
-    energy_params = ('beam.ebeam1', 'beam.ebeam2', 'beam.e_cm', 'beam.ren_scale',
-                     'beam.fact_scale1', 'beam.fact_scale2')
+    # energy units, expressed in GeV (the unit everything is stored in); the
+    # typed parameters carrying an energy dimension are declared energy=True
+    energy_units = energy_units
+    # the observables of a [cuts] entry (<group>[-<group>]-<observable>) that
+    # are energies, stored in GeV, and those without a dimension, which refuse
+    # a value with a unit
+    energy_observables = ('e', 'px', 'py', 'pz', 'mass', 'pt', 'p_mag',
+                          'pair_mass', 'sfos_pair_mass', 'sqrt_s')
+    dimensionless_observables = ('phi', 'theta', 'y', 'y_abs', 'eta', 'eta_abs',
+                                 'delta_eta', 'delta_phi', 'delta_r')
     # name -> pdg for masses that can be referenced in expressions (e.g. a scale
     # set to "mz/2"); resolved against the param_card by get_mass_shortcuts.
     mass_shortcuts = {'mz': 23, 'mw': 24, 'mh': 25, 'mt': 6, 'mb': 5,
@@ -6882,9 +6933,9 @@ class RunCardMG7(RunCard):
         # ----------------------------- [beam] -------------------------
         self.add_toml_param('beam', 'ebeam1', 6500.0,
             comment="energy of beam 1 (moving along +z) in GeV; units are accepted. "
-                    "Events and eta cuts are in this lab frame; set e_cm X sets both beams to X/2")
+                    "Events and eta cuts are in this lab frame; set e_cm X sets both beams to X/2", energy=True)
         self.add_toml_param('beam', 'ebeam2', 6500.0,
-            comment="energy of beam 2 (moving along -z) in GeV; units are accepted")
+            comment="energy of beam 2 (moving along -z) in GeV; units are accepted", energy=True)
         self.add_toml_param('beam', 'leptonic', False,
             comment="lepton collider: no PDFs, beam energy fixed")
         self.add_toml_param('beam', 'pdf1', "NNPDF40_lo_as_01180",
@@ -6896,11 +6947,11 @@ class RunCardMG7(RunCard):
         self.add_toml_param('beam', 'fixed_fact_scale', False,
             comment="use fact_scale1 and fact_scale2 instead of the dynamical scale")
         self.add_toml_param('beam', 'ren_scale', 91.188,
-            comment="fixed renormalization scale in GeV")
+            comment="fixed renormalization scale in GeV", energy=True)
         self.add_toml_param('beam', 'fact_scale1', 91.188,
-            comment="fixed factorization scale of beam 1 in GeV")
+            comment="fixed factorization scale of beam 1 in GeV", energy=True)
         self.add_toml_param('beam', 'fact_scale2', 91.188,
-            comment="fixed factorization scale of beam 2 in GeV")
+            comment="fixed factorization scale of beam 2 in GeV", energy=True)
         self.add_toml_param('beam', 'scale_factor', 1.0,
             comment="multiplies the dynamical scale; fixed scales are unaffected")
         self.add_toml_param('beam', 'dynamical_scale_choice', "half_transverse_mass",
@@ -7034,7 +7085,7 @@ class RunCardMG7(RunCard):
         # dropped instead, as madevent's setclscales does at 2 GeV. Ignored
         # for a run without beam PDFs (lepton collider, decay). 0 disables it.
         self.add_toml_param('beam', 'min_scale', 2.0,
-            comment="floor on mu_R and mu_F (0 disables it)")
+            comment="floor on mu_R and mu_F (0 disables it)", energy=True)
 
         # -------------------------- [generation] ----------------------
         self.add_toml_param('generation', 'events', 100000, gridpack=True,
@@ -7146,7 +7197,7 @@ class RunCardMG7(RunCard):
         # the parton shower, so the event is dropped. Only used with
         # dynamical_scale_choice = "mlm"; 0 disables it.
         self.add_toml_param('phasespace', 'xqcut', 0.0,
-            comment="MLM merging cut on the kt of matrix-element jets (0 disables it)")
+            comment="MLM merging cut on the kt of matrix-element jets (0 disables it)", energy=True)
         # Counterpart of madevent's auto_ptj_mjj. With a merging cut in place
         # the matrix-element jets are already bounded from below by xqcut, so
         # the jet pt and pair-mass cuts are raised to it - free physically, and
@@ -7565,16 +7616,8 @@ class RunCardMG7(RunCard):
         returned unchanged so that the normal numeric parsing (including the
         ``k``/``M`` suffixes handled by :func:`ConfigFile.format_variable`)
         still applies."""
-        if not isinstance(value, str):
-            return value
-        m = re.match(r'^\s*([-+]?(?:\d+\.?\d*|\.\d+)(?:[eEdD][-+]?\d+)?)\s*([a-zA-Z]+)\s*$',
-                     value)
-        if not m:
-            return value
-        if m.group(2).lower() not in cls.energy_units:
-            return value
-        number = float(m.group(1).replace('d', 'e').replace('D', 'e'))
-        return number * cls.energy_units[m.group(2).lower()]
+        energy = parse_energy_unit(value)
+        return value if energy is None else energy
 
     def set(self, name, value, *args, **opts):
         """Like :meth:`ConfigFile.set` but understands energy units for the
@@ -7582,12 +7625,13 @@ class RunCardMG7(RunCard):
         resolves bare key names (e.g. ``set events 1000``) when unambiguous
         across all sections."""
         if isinstance(name, str):
+            raiseerror = opts.get('raiseerror', args[2] if len(args) > 2 else False)
             lname = name.lower()
             if lname == 'e_cm':
                 lname = name = 'beam.e_cm'
             if lname == 'pdf':
-                logger.warning("Ambiguous key 'pdf' — use beam.pdf (both beams), "
-                               "beam.pdf1, beam.pdf2 or systematics.pdf")
+                self.warn("Ambiguous key 'pdf' — use beam.pdf (both beams), "
+                          "beam.pdf1, beam.pdf2 or systematics.pdf", 'warning', raiseerror)
                 return
             if lname == 'beam.e_cm':
                 value = self.parse_energy(value)
@@ -7612,16 +7656,15 @@ class RunCardMG7(RunCard):
                     name = matches[0]
                     lname = name
                 elif len(matches) > 1:
-                    logger.warning(
-                        "Ambiguous key %r — use the full section.key form, e.g.: %s",
-                        name, ' or '.join(matches))
+                    self.warn(
+                        "Ambiguous key %r — use the full section.key form, e.g.: %s"
+                        % (name, ' or '.join(matches)), 'warning', raiseerror)
                     return
-            if lname in self.energy_params:
-                value = self.parse_energy(value)
             parts = lname.split('.')
             if len(parts) == 3 and parts[0] == 'custom_functions':
-                # set custom_functions.cut_parameters.pt_min 30
-                self.set_custom_parameter(parts[1], parts[2], value)
+                # set custom_functions.cut_parameters.pt_min 30: the custom
+                # function matches the parameter name as written, case included
+                self.set_custom_parameter(parts[1], name.split('.')[2], value)
                 return
         return super(RunCardMG7, self).set(name, value, *args, **opts)
 
@@ -7666,7 +7709,22 @@ class RunCardMG7(RunCard):
         base = name.rsplit('.', 1)[0] if '.' in name else name
         return base in self.dynamic_sections['cuts']
 
-    def set_cut(self, name, value):
+    def is_energy_observable(self, observable):
+        """True if the [cuts] observable is an energy (GeV), False if it has no
+        dimension, None if it is not a known observable."""
+        observable = observable.lower()
+        if observable in self.energy_observables:
+            return True
+        if observable in self.dimensionless_observables:
+            return False
+        return None
+
+    def is_energy_cut(self, cut):
+        """:meth:`is_energy_observable` of the observable of a [cuts] entry
+        (``jet-pt`` -> True, ``jet-lepton-delta_r`` -> False)."""
+        return self.is_energy_observable(cut.rsplit('-', 1)[-1])
+
+    def set_cut(self, name, value, masses=None):
         """Set a value in the ``[cuts]`` section. ``name`` is of the form
         ``<cut>.<bound>`` (bound = min/max/mode), optionally prefixed with
         ``cuts.``. Numeric bounds accept energy units and are stored in GeV.
@@ -7676,14 +7734,16 @@ class RunCardMG7(RunCard):
             name = name[len('cuts.'):]
         if '.' in name:
             cut, bound = name.rsplit('.', 1)
+            if bound not in ('min', 'max', 'mode'):
+                raise InvalidRunCard(
+                    "unknown bound %r of cut %s: use min, max or mode" % (bound, cut))
         else:
-            cut, bound = name, 'min'
-        if bound not in ('min', 'max', 'mode'):
             cut, bound = name, 'min'
         if bound == 'mode':
             value = str(value).strip()
         else:
-            value = self.parse_energy(value)
+            value = self.evaluate(value, masses, energy=self.is_energy_cut(cut),
+                                  name='cuts.%s.%s' % (cut, bound))
             if isinstance(value, str):
                 value = self.format_variable(value, float, name=name)
         self.dynamic_sections['cuts'].setdefault(cut, collections.OrderedDict())[bound] = value
@@ -7695,7 +7755,7 @@ class RunCardMG7(RunCard):
         positive, a maximum non-negative (-1 is madevent's "no cut")."""
         return (bound == 'min' and value > 0) or (bound == 'max' and value >= 0)
 
-    def set_lo_cut(self, name, value):
+    def set_lo_cut(self, name, value, masses=None):
         """Set a cut from its madevent run_card name (``ptj``, ``mmll``,
         ``etaj``, ``mmllmax``, ... see ``_LO_CUT_MAP``) in the ``[cuts]``
         section, with the same conventions as :meth:`from_LO`: a "no cut"
@@ -7706,7 +7766,7 @@ class RunCardMG7(RunCard):
         Returns ``(cut, bound, value)``, with value None when the bound was
         removed."""
         cut, bound = self._LO_CUT_MAP[name.lower()]
-        value = self.parse_energy(value)
+        value = self.evaluate(value, masses, energy=self.is_energy_cut(cut), name=name)
         if isinstance(value, str):
             value = self.format_variable(value, float, name=name)
         value = self._put_lo_cut(cut, bound, float(value))
@@ -7821,7 +7881,8 @@ class RunCardMG7(RunCard):
         for the caller to set as usual. Otherwise returns ``(changes,
         warnings)``: the {mg7 key: new value} written (None for a removed
         cut) and what of the request could not be followed. Raises
-        InvalidCmd for a value of the wrong type."""
+        InvalidCmd for a value of the wrong type or a code that does not
+        exist."""
         name = name.lower()
         text = str(value).split('#')[0].strip()
         beam = self['beam']
@@ -7831,8 +7892,8 @@ class RunCardMG7(RunCard):
             self.set(key, val, user=True)
             changes[key] = self[key]
 
-        def number(val):
-            val = self.evaluate(val, masses)
+        def number(val, energy=None):
+            val = self.evaluate(val, masses, energy=energy, name=name)
             if isinstance(val, str):
                 val = self.format_variable(val, float, name=name)
             return float(val)
@@ -7849,18 +7910,19 @@ class RunCardMG7(RunCard):
                     put('phasespace.sde_strategy',
                         'denominators' if code == 2 else 'diagrams')
                 else:
-                    warnings.append(
-                        'sde_strategy %d does not exist (1 = diagrams, '
-                        '2 = denominators): keeping %s'
-                        % (code, self['phasespace.sde_strategy']))
+                    raise InvalidCmd('sde_strategy %d does not exist '
+                                     '(1 = diagrams, 2 = denominators)' % code)
             elif code in self._LO_DYNSCALE_MAP:
                 put('beam.dynamical_scale_choice', self._LO_DYNSCALE_MAP[code])
-            else:
+            elif code in (-1, 0):
+                # madevent's own choices: a ported launch script keeps running
                 what = {-1: ' (CKKW back-clustering)',
-                        0: ' (user-defined scale)'}.get(code, '')
+                        0: ' (user-defined scale)'}[code]
                 warnings.append(
                     'dynamical_scale_choice %d%s has no mg7 equivalent: '
                     'keeping %s' % (code, what, beam['dynamical_scale_choice']))
+            else:
+                raise InvalidCmd('dynamical_scale_choice %d does not exist' % code)
 
         elif name in ('fixed_fac_scale', 'fixed_fac_scale1', 'fixed_fac_scale2'):
             flag = self.format_variable(text, bool, name=name)
@@ -7924,7 +7986,9 @@ class RunCardMG7(RunCard):
                     else:
                         observable, bound = self._LO_PDG_CUT_MAP[name]
                     cut = '%s-%s' % (group, observable)
-                    if self._put_lo_cut(cut, bound, number(val)) is not None:
+                    if self._put_lo_cut(cut, bound,
+                                        number(val, self.is_energy_observable(observable))) \
+                            is not None:
                         multiparticles[group] = pids
                     changes['cuts.' + cut] = cuts.get(cut)
         return changes, warnings
@@ -7976,20 +8040,27 @@ class RunCardMG7(RunCard):
 
         return ev(ast.parse(expr, mode='eval'))
 
-    def evaluate(self, value, masses=None):
+    def evaluate(self, value, masses=None, energy=None, name=None):
         """Resolve a user-supplied value into a number when possible.
 
         Handles, in order: energy units (``13 TeV`` -> 13000), then arithmetic
         expressions possibly referencing masses (``mz/2``, ``2*mh``). If the
         value cannot be turned into a number it is returned unchanged, so plain
-        strings, ``k``/``M`` suffixes, ``default``/``auto`` etc. keep working."""
+        strings, ``k``/``M`` suffixes, ``default``/``auto`` etc. keep working.
+
+        ``energy`` says whether the target (``name``, for the message) is an
+        energy: False refuses a value with a unit (InvalidRunCard), None (not
+        known) converts it like True."""
         if not isinstance(value, str):
             return value
         v = value.strip()
         if not v:
             return value
-        converted = self.parse_energy(v)
-        if not isinstance(converted, str):
+        converted = parse_energy_unit(v)
+        if converted is not None:
+            if energy is False:
+                raise InvalidRunCard("%s is not an energy: '%s' can not carry a unit"
+                                     % (name or 'this value', v))
             return converted
         try:
             return float(self._safe_eval(v, masses or {}))
@@ -8102,7 +8173,7 @@ class RunCardMG7(RunCard):
                 return 'beam.leptonic = True'
         pdf = self._resolve_pdf_label(label, lhaid, [], data_paths)
         if pdf is None:
-            raise InvalidRunCard('%s = %s: unknown %s' % (
+            raise UnknownPDFSet('%s = %s: unknown %s' % (
                 name, value, 'LHAPDF id' if name == 'lhaid' else 'PDF label'))
         for beam in beams:
             self.set('beam.pdf' + beam, pdf, user=True)

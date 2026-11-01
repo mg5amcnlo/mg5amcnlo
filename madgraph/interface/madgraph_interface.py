@@ -13674,7 +13674,8 @@ in the MadGraph7 option 'samurai' (instead of leaving it to its default 'auto').
         result_file = pjoin(decay_dir, 'decay_widths.json')
         log_file = pjoin(decay_dir, 'decay_widths.log')
         cmd = [sys.executable, pjoin(decay_dir, 'bin', 'generate_events'),
-               '--decay-widths=%s' % result_file, '--precision=%s' % precision]
+               '--decay-widths=%s' % result_file, '--precision=%s' % precision,
+               '--allow-stdin']
         if self.options['nb_core']:
             cmd.append('--nb-core=%s' % self.options['nb_core'])
         with open(log_file, 'w') as log:
