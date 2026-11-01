@@ -3,7 +3,8 @@
 # Called by gpu_manneback_cuda.yml and gpu_lemaitre4_hip.yml; see .github/gpu_ci/README.md.
 #
 #   start_runner    vmadgraph       ask ceci-gate, on the vmadgraph VM, to sbatch the runner
-#                                   on the GPU partition; wait until it is online
+#                                   on the GPU partition; wait until it is online. If cancelled
+#                                   (or timed out, or failed) before that, scancel the runner job
 #   build_madspace  cluster runner  madspace with the CUDA/HIP backend (cached on the cluster)
 #   pp_ttx          cluster runner  p p > t t~ with mg7 on the GPU
 #   pp_jj           cluster runner  p p > j j with mg7 on the GPU (cuts on several jets)
@@ -123,10 +124,18 @@ jobs:
       # ceci-gate starts the runner `runner_label` of the cluster (fixed in ceci-gate), with the
       # cluster scripts installed on the VM, not the ones of this checkout
       - name: start the runner in a Slurm job and wait until it is online
+        id: start
         run: |
           sudo -n -u ceci /usr/local/sbin/ceci-gate start-runner "$CLUSTER" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" \
             --partition="$PARTITION" --gres="$GRES" --cpus="$CPUS" --mem="$MEM" --time="$TIME_LIMIT" \
             --extra="$EXTRA_SBATCH"
+      # The run was cancelled, or this job timed out or failed, before the runner was online:
+      # stop_runner will not run, and the runner job could stay queued for hours (the partition
+      # is full), holding back every later run of the cluster (--dependency=singleton). Once the
+      # runner is online, stop_runner ends the allocation instead, even in a cancelled run.
+      - name: cancel the runner job
+        if: always() && steps.start.outcome != 'success'
+        run: sudo -n -u ceci /usr/local/sbin/ceci-gate cancel-runner "$CLUSTER" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"
 
   build_madspace:
     needs: start_runner

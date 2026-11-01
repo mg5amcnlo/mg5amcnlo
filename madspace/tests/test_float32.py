@@ -224,6 +224,40 @@ def test_structural_ops_backward(gen):
     torch.testing.assert_close(x.grad, x_ref.grad)
 
 
+@pytest.mark.parametrize("precision", DTYPES.keys())
+@pytest.mark.parametrize("op", ["stack", "cat", "batch_cat"])
+def test_structural_ops_backward_repeated_input(op, precision):
+    """An input passed several times to one structural op gets every gradient.
+
+    On the CPU each gradient add is a separate thread pool job, so adds into the
+    same gradient tensor used to race and lose updates now and then. The batch is
+    large and the input repeated many times so that racing adds overlap.
+    """
+    ms_dtype, torch_dtype, _ = DTYPES[precision]
+    repeats = 16
+    in_type = batch_type(ms_dtype, [3])
+    out_shape = {"stack": [repeats, 3], "cat": [3 * repeats], "batch_cat": [3]}[op]
+    fb = ms.FunctionBuilder(
+        ms.NamedTypes([("in", in_type)]),
+        ms.NamedTypes([("out", batch_type(ms_dtype, out_shape))]),
+    )
+    x = fb.input(0)
+    if op == "stack":
+        out = fb.stack([x] * repeats)
+    elif op == "cat":
+        out = fb.cat([x] * repeats)
+    else:
+        out, _ = fb.batch_cat([x] * repeats)
+    fb.output(0, out)
+    module = FunctionModule(fb.function(), default_context())
+
+    x = torch.zeros((100_000, 3), dtype=torch_dtype, requires_grad=True)
+    for _ in range(5):
+        x.grad = None
+        module(x).sum().backward()
+        torch.testing.assert_close(x.grad, torch.full_like(x, repeats), rtol=0, atol=0)
+
+
 def test_random_int_gather(gen):
     """random_int returns int32 indices, as used when sampling the replay buffer."""
     io_type = batch_type(ms.DataType.float64, [])

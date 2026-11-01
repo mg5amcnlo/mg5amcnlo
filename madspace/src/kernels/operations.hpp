@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include "madspace/compgraphs/function.hpp"
 #include "madspace/driver/tensor.hpp"
 #include "madspace/util.hpp"
@@ -110,6 +112,54 @@ inline bool skip_int_grad(const I& instruction, const TensorVec& locals) {
     return !is_float(locals[instruction.input_indices[0]].dtype());
 }
 
+// Adds the i-th source tensor to the gradient of the i-th input of a structural op.
+// On the concurrent CPU device every add is a separate job, so adds into the
+// gradient of an input that is passed more than once would race and lose updates.
+// The adds into such a gradient are chained in a single job instead.
+template <typename I, typename D>
+void add_input_grads(
+    const I& instruction,
+    TensorVec& local_grads,
+    const TensorVec& sources,
+    const D& device
+) {
+    auto& input_indices = instruction.input_indices;
+    for (std::size_t i = 0; i < input_indices.size(); ++i) {
+        auto first =
+            std::find(input_indices.begin(), input_indices.end(), input_indices[i]);
+        if (first != input_indices.begin() + i) {
+            continue; // already added together with its first occurrence
+        }
+        auto& input_grad = local_grads[input_indices[i]];
+        if (std::find(first + 1, input_indices.end(), input_indices[i]) ==
+            input_indices.end()) {
+            input_grad.add(sources[i], device);
+            continue;
+        }
+        TensorVec repeated_sources;
+        for (std::size_t j = i; j < input_indices.size(); ++j) {
+            if (input_indices[j] == input_indices[i]) {
+                repeated_sources.push_back(sources[j]);
+            }
+        }
+        if constexpr (requires { D::is_concurrent; }) {
+            if constexpr (D::is_concurrent) {
+                device.submit([input_grad, repeated_sources]() mutable {
+                    // synchronous adds on the tensor's own device
+                    for (auto& source : repeated_sources) {
+                        input_grad.add(source);
+                    }
+                });
+                continue;
+            }
+        }
+        // devices that run the adds in order
+        for (auto& source : repeated_sources) {
+            input_grad.add(source, device);
+        }
+    }
+}
+
 template <typename I, typename D>
 void op_stack(const I& instruction, TensorVec& locals, const D& device) {
     auto& first_shape = locals[instruction.input_indices[0]].shape();
@@ -154,11 +204,11 @@ void backward_op_stack(
     }
 
     device.sync_barrier();
-    for (std::size_t index = 0; auto input_index : instruction.input_indices) {
-        auto& input_grad = local_grads[input_index];
-        input_grad.add(output_grad.select(1, index), device);
-        ++index;
+    TensorVec sources;
+    for (std::size_t index = 0; index < instruction.input_indices.size(); ++index) {
+        sources.push_back(output_grad.select(1, index));
     }
+    add_input_grads(instruction, local_grads, sources, device);
 }
 
 template <typename I, typename D>
@@ -296,12 +346,13 @@ void backward_op_batch_cat(
         ++i;
     }
     device.sync_barrier();
+    TensorVec sources;
     for (std::size_t offset = 0; auto input_index : instruction.input_indices) {
-        auto& input_grad = local_grads[input_index];
-        auto next_offset = offset + input_grad.size(0);
-        input_grad.add(output_grad.slice(0, offset, next_offset), device);
+        auto next_offset = offset + local_grads[input_index].size(0);
+        sources.push_back(output_grad.slice(0, offset, next_offset));
         offset = next_offset;
     }
+    add_input_grads(instruction, local_grads, sources, device);
 }
 
 template <typename I, typename D>
@@ -391,12 +442,13 @@ void backward_op_cat(
     }
 
     device.sync_barrier();
+    TensorVec sources;
     for (std::size_t offset = 0; auto input_index : instruction.input_indices) {
-        auto& input_grad = local_grads[input_index];
-        auto next_offset = offset + input_grad.size(1);
-        input_grad.add(output_grad.slice(1, offset, next_offset), device);
+        auto next_offset = offset + local_grads[input_index].size(1);
+        sources.push_back(output_grad.slice(1, offset, next_offset));
         offset = next_offset;
     }
+    add_input_grads(instruction, local_grads, sources, device);
 }
 
 template <typename I, typename D>

@@ -46,7 +46,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
       - uses: ./.github/actions/install_madspace
-      - uses: ./.github/actions/restore_heptools
+      - uses: ./.github/actions/restore_heptools_core
       - uses: ./.github/actions/restore-pip-cache
       - name: install torch and madnis (CPU wheel)
         run: >
