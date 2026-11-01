@@ -5,9 +5,11 @@
 // Spin-density matrices of the decaying particles of a process, the quantity
 // MadSpin contracts production and decay with. C++ backends (scalar, simd) only.
 //
-// The library of each subprocess exports these next to the UMAMI functions, and
-// umami_initialize (param card, couplings, helicity table) must have been called
-// once before any of them. Momenta are event major: momenta[count][npar][4],
+// The library of each subprocess exports these next to the UMAMI functions. They
+// take a handle of umami_initialize, whose parameters (param card,
+// umami_set_parameter) they are evaluated with, and which keeps their helicity
+// filters and beam polarisation: the instances of a library are independent.
+// Momenta are event major: momenta[count][npar][4],
 // (E, px, py, pz) per particle, in the leg order of the process. alpha_s and
 // flavor are per event, flavor being the index of the flavor combination
 // (ProcessData::flavorPDGs) of that event.
@@ -38,7 +40,8 @@ extern "C"
 #endif
 
   // Returns 0, or non-zero (nothing written) for an invalid request.
-  int madmatrix_density( size_t count,
+  int madmatrix_density( void* handle,
+                         size_t count,
                          const double* momenta,
                          const double* alpha_s,
                          const unsigned int* flavor,
@@ -51,7 +54,8 @@ extern "C"
   // madmatrix_density for momenta given in the rest frame of a boost:
   // boosts[count][4] is, per event, the lab momentum of the frame its momenta are
   // in (a MadSpin decay is generated at rest, and boosted along its parent).
-  int madmatrix_density_boosted( size_t count,
+  int madmatrix_density_boosted( void* handle,
+                                 size_t count,
                                  const double* momenta,
                                  const double* boosts,
                                  const double* alpha_s,
@@ -65,17 +69,18 @@ extern "C"
   // |M|^2 summed over helicities and colors, averaged as the Fortran SMATRIX:
   // divided by iden, times the identical-particle factor of the flavor and with
   // the beam polarisation. Returns 0, or non-zero for an invalid request.
-  int madmatrix_matrix_element( size_t count,
+  int madmatrix_matrix_element( void* handle,
+                                size_t count,
                                 const double* momenta,
                                 const double* alpha_s,
                                 const unsigned int* flavor,
                                 double* me );
 
-  // Beam polarisation of the two incoming legs, constant over a run. Same
+  // Beam polarisation of the two incoming legs for the calls on handle. Same
   // convention as madevent and the Fortran density: 1 (or anything with
   // |pol| <= 1) is unpolarised, |pol| grows to 2 for a fully polarised beam and
   // its sign gives the favoured helicity. Ignored for a 1 -> N process.
-  void madmatrix_set_beampol( double pol1, double pol2 );
+  void madmatrix_set_beampol( void* handle, double pol1, double pol2 );
 
   // Process constants: npar, npari, ncomb, nmaxflavor, ncolor, iden (in this order).
   void madmatrix_process_info( int* info );

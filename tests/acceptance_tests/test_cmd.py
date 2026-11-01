@@ -1572,8 +1572,8 @@ class TestCmdShell2(unittest.TestCase,
           alternate, leaving partial pages, gives the |M|^2 of single-event
           calls, event by event.
 
-        The helicities are chosen once per loaded library, so each first call
-        runs in its own process.
+        The helicities are chosen once per instance (umami_initialize), so each
+        first call runs in its own process, with an instance of its own.
         """
         self._check_umami_first_call([('scalar', 'd', 1e-12),
                                       ('simd_128', 'd', 1e-12),
@@ -1683,7 +1683,7 @@ class TestCmdShell2(unittest.TestCase,
                 evaluate(first, [k % 2 if k != 'forward' else 1 for k in first])
                 flavors = [0, 1, 1, 0, 1, 0, 0]
                 print(json.dumps({
-                    'good': lib.madmatrix_good_helicity_count(),
+                    'good': lib.madmatrix_good_helicity_count(handle),
                     'batch': evaluate(range(7), flavors),
                     'single': [evaluate([k], [f])[0] for k, f in enumerate(flavors)]}))
                 '''))
