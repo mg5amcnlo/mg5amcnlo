@@ -21,6 +21,12 @@ ANNOUNCEMENT:
       first point tied them was a matter of the seed; p p > w+ j [QCD] (fixed order) came out
       +0.6% to +4.5% too high (u d~ > w+ g up to +25%), p p > z j [QCD] is affected the same way.
       A tie is now kept only if it also holds at a Lorentz transform of the first point.
+  OM: MadLoop: the helicity filter is now disabled for all 2>1 and 1>2 processes (it was for spin-2 only),
+      as for the tree-level standalone output. A particle is at rest in the c.m. frame and which helicities
+      vanish depends on the frame: with the filter learned in one frame, u d~ > w+ returned a virtual
+      41% too low, or exactly zero, in another, flagged as stable. aMC@NLO is not affected (the virtual
+      always comes in the c.m. frame of the Born); a 2>1 MadLoop called outside its c.m. frame
+      (standalone/OLP with lab-frame momenta, reweighting with a boost or me_frame) could be.
 
 3.5.17 (9/10/26):
   RF: Fixed a bug in FxFx merging: MG side used inclusive-kT measure, PY side used exclusive.  This mismatch resulted in an
