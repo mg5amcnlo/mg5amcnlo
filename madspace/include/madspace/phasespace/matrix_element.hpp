@@ -150,10 +150,17 @@ public:
     /// Per-particle 0/1 selector built from me_frame, empty if no boost is
     /// applied.
     const std::vector<me_int_t>& frame_mask() const { return _frame_mask; }
-    /// Per-particle 0/1 selector of the incoming particles, whose rest frame
-    /// the me_frame boost starts from; empty when no boost is applied or when
-    /// it is already the frame me_frame asks for.
+    /// Per-particle 0/1 selector of the incoming particle of a decay, whose
+    /// rest frame the me_frame boost starts from; empty when no boost is
+    /// applied, when it is already the frame me_frame asks for, and for a
+    /// collision, whose me_frame is reached along the beam instead
+    /// (along_beam()).
     const std::vector<me_int_t>& reference_mask() const { return _reference_mask; }
+    /// Whether the me_frame boost starts with a boost along the beam axis to
+    /// zero rapidity of the selected particles, which makes the frame the
+    /// same from any frame along the beam (two incoming particles, and a
+    /// frame other than their own rest frame).
+    bool along_beam() const { return _along_beam; }
 
 private:
     NamedVector<Value> build_function_impl(
@@ -168,6 +175,7 @@ private:
     bool _sample_random_inputs;
     std::vector<me_int_t> _frame_mask;
     std::vector<me_int_t> _reference_mask;
+    bool _along_beam;
 };
 
 } // namespace madspace

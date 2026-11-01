@@ -210,6 +210,39 @@ non-transverse `boostwdir2(chybst,…)` to spectators
 (`genps_fks.f:2324-2339`). Confirm `shybst -> 0` in the collinear limit before
 assuming FSR inherits the same property.
 
+**Equivariance is not enough: the frame must not depend on the FKS sector
+(B13, 2026-11-01).** The tilde frame makes each sector consistent with its own
+counterterms, but it is not the same frame in every sector: for a final-state
+emission it is the real's own c.m., for an initial-state one the c.m. of that
+sector's underlying Born, a boost along z away. The same real event therefore
+had its single-leg spin axis tilted by 5 degrees on average (up to 70) from
+one sector to the next in `p p > w+{0} j`, and changing only the FKS
+partition (`fks_b` 1.5 -> 3.0 in `fks_powers.inc`, which leaves any
+well-defined NLO observable alone) moved the polarised NLO cross-section by
++2.25 +- 0.30% (`w+{0}`) and -0.9 +- 0.3% (`w+{L}`), against -0.14 +- 0.44%
+unpolarised. The real's own c.m. is no fix: it is not infrared safe (test_ME
+fails the initial-state collinear tests at 73-94%).
+
+The fix is a frame that does not depend on which boost along z the momenta
+come in: boost along the beam to zero rapidity of the selected system, then
+transversely to its rest frame (`get_me_frame_boosts`,
+`Template/Common/Source/impose_frame_rest.f`). For a single leg this is the
+Collins-Soper frame. It depends only on the momentum of the selected system,
+so it is infrared safe, the same in every sector (partition shift -0.35 +-
+0.22%), and the same from the partonic c.m. (madevent), the lab (madspace,
+MadSpin, the reweighting) and the FKS frames -- so LO, NLO and the decay and
+reweighting tools now share one definition. It changes the single-leg
+polarisation fractions: for `p p > w+ j` at 13 TeV (anti-kT 0.4, pT(j) > 30
+GeV), f0 goes from 0.212 to 0.250 at LO and from 0.223 to 0.258 at NLO.
+Decays keep the single boost from the parent's rest frame: no beam, no
+initial-state sector.
+
+**Still open:** the partonic-c.m. frame itself (`[1,2]`, the default for a
+polarised process, i.e. helicities in the partonic c.m.) has the same
+dependence and no such fix, since the partonic c.m. of the real is exactly
+what is not infrared safe. `p p > w+{0} j [QCD]` in the default frame moved by
++9.5 +- 0.4% under the same `fks_b` change.
+
 ## 3. Milestones
 
 ### M0 — Plumbing, no physics — **DONE**
@@ -1706,6 +1739,12 @@ marker. Run via `./tests/test_manager.py`, not pytest.
   spinors themselves (the component now comes from `pT^2`, no cancellation),
   in every backend, so the guard is gone; the split-order soft test that
   failed 0.43 without it passes at 0.02. See M2 step 2.
+- **B13 — single-leg frames RESOLVED, partonic c.m. OPEN.** The FKS tilde
+  frame differs between sectors by a boost along z, so a frame reached by a
+  single boost from it depended on the FKS partition. Single-leg frames now go
+  along the beam first (Collins-Soper); the default `[1,2]` frame is still
+  mapping-dependent at NLO (+9.5% under a change of `fks_b` in
+  `p p > w+{0} j`). See D3.
 - **B12 — RESOLVED here, and it has a twin that must land with it.**
   `ProcessDefinition.__iter__` dropped `polarization` when expanding
   multiparticles, so any polarised MadLoop-standalone process written with

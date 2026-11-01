@@ -1308,6 +1308,41 @@ kernel_momenta_to_x1x2(FIn<T, 2> p_ext, FSIn<T, 0> e_cm, FOut<T, 0> x1, FOut<T, 
     x2 = 2. * p_ext[1][0] / e_cm;
 }
 
+// Boost every external momentum along the beam axis into the frame where the
+// sum of the momenta selected by frame_mask has zero rapidity. Followed by
+// kernel_boost_to_frame on the same mask, which is then a transverse boost, it
+// reaches the rest frame of the selection in a way that does not depend on the
+// frame along the beam the momenta come in (lab, partonic CM, the frames of
+// aMC@NLO). The single boost straight to the rest frame does: from two frames
+// related by a boost along z it lands in two rest frames that differ by a
+// (Wigner) rotation, which turns the spin axis of a single selected particle
+// held at rest. For a single particle the composite is the Collins-Soper
+// frame. Same as get_me_frame_boosts in
+// Template/Common/Source/impose_frame_rest.f.
+template <typename T>
+KERNELSPEC void
+kernel_boost_to_zero_rapidity(FIn<T, 2> p_ext, ISIn<T, 1> frame_mask, FOut<T, 2> p_out) {
+    FourMom<T> p_long{0., 0., 0., 0.};
+    std::size_t selected_count = 0;
+    for (std::size_t i = 0; i < p_ext.size(); ++i) {
+        if (single_index(frame_mask[i]) == 0) {
+            continue;
+        }
+        auto p_i = p_ext[i];
+        p_long[0] = p_long[0] + p_i[0];
+        p_long[3] = p_long[3] + p_i[3];
+        ++selected_count;
+    }
+    for (std::size_t i = 0; i < p_ext.size(); ++i) {
+        if (selected_count == 0) {
+            // nothing defines a frame, see kernel_boost_to_frame
+            store_mom<T>(p_out[i], load_mom<T>(p_ext[i]));
+        } else {
+            store_mom<T>(p_out[i], boost<T>(load_mom<T>(p_ext[i]), p_long, -1.));
+        }
+    }
+}
+
 // Boost every external momentum into the rest frame of the sum of the momenta
 // selected by frame_mask. This is the frame the matrix element is evaluated in
 // when the run card asks for one (me_frame); it only makes a difference for an

@@ -681,28 +681,49 @@ class TestFrameBoost(unittest.TestCase):
         boost = self._stub(6)._frame_boost(_MomentaEvent(self.MOMENTA))
         self.assertIsNone(boost.rest_leg)
 
-    def test_single_leg_frame_goes_through_the_partonic_cms(self):
-        """madevent's boost_to_frame acts on partonic-CM momenta (genps.f;
-        unwgt.f boosts to the lab only when it writes the event). The beams of
-        MOMENTA are unequal, so boosting to leg 3 straight from the lab lands
-        in a frame rotated from madevent's (Wigner rotation), and the
-        quantisation axis of the leg at rest turns with it."""
+    def test_single_leg_frame_is_reached_along_the_beam(self):
+        """A collision reaches the rest frame of the selected legs by a boost
+        along z, to zero rapidity of the selection, and then a transverse one
+        (get_me_frame_boosts in Template/Common/Source/impose_frame_rest.f),
+        the frame madevent, madspace, aMC@NLO and driver.f all use. It is the
+        same from the lab the events come in and from the partonic CM
+        madevent works in; the single boost from either is not (Wigner
+        rotation), and the quantisation axis of the leg at rest turns with
+        it."""
+        def tup(p):
+            return (p.E, p.px, p.py, p.pz)
+
+        def close(moms, refs):
+            for new, want in zip(moms, refs):
+                for x, y in zip(new, want):
+                    self.assertAlmostEqual(x, y, places=8)
+
         stub = self._stub(8)
-        boost = stub._frame_boost(_MomentaEvent(self.MOMENTA))
-        out = stub._boost_momenta(self.MOMENTA, boost)
-        # madevent's route, written out: z boost to the partonic CM, then to leg 3
+        out = stub._boost_momenta(
+            self.MOMENTA, stub._frame_boost(_MomentaEvent(self.MOMENTA)))
+        # the two steps, written out
+        p3 = lhe_parser.FourMomentum(*self.MOMENTA[2])
+        along_z = [lhe_parser.FourMomentum(p).boost(
+                       lhe_parser.FourMomentum(p3.E, 0., 0., -p3.pz))
+                   for p in self.MOMENTA]
+        transverse = lhe_parser.FourMomentum(
+            math.sqrt(p3.E**2 - p3.pz**2), -p3.px, -p3.py, 0.)
+        close(out, [tup(p.boost(transverse)) for p in along_z])
+        # the same frame from the partonic CM
         pcm = lhe_parser.FourMomentum(700., 0., 0., 300.)
-        cm = [lhe_parser.FourMomentum(p).zboost(pcm) for p in self.MOMENTA]
-        neg = lhe_parser.FourMomentum(cm[2].E, -cm[2].px, -cm[2].py, -cm[2].pz)
-        ref = [p.boost(neg) for p in cm]
-        for new, want in zip(out, ref):
-            for x, y in zip(new, (want.E, want.px, want.py, want.pz)):
-                self.assertAlmostEqual(x, y, places=8)
-        # which is not the frame reached from the lab
-        lab3 = lhe_parser.FourMomentum(*self.MOMENTA[2])
-        neg = lhe_parser.FourMomentum(lab3.E, -lab3.px, -lab3.py, -lab3.pz)
-        direct = lhe_parser.FourMomentum(*self.MOMENTA[0]).boost(neg)
-        self.assertGreater(abs(direct.px - out[0][1]), 1.)
+        cm = [tup(lhe_parser.FourMomentum(p).zboost(pcm)) for p in self.MOMENTA]
+        close(stub._boost_momenta(cm, stub._frame_boost(_MomentaEvent(cm))),
+              out)
+        # which the single boost from the partonic CM is not
+        neg = lhe_parser.FourMomentum(cm[2][0], -cm[2][1], -cm[2][2], -cm[2][3])
+        single = lhe_parser.FourMomentum(*cm[0]).boost(neg)
+        self.assertGreater(abs(single.px - out[0][1]), 1.)
+        # the Collins-Soper frame: z bisects beam 1 and minus beam 2
+        n1 = [x / math.sqrt(sum(y**2 for y in out[0][1:])) for x in out[0][1:]]
+        n2 = [-x / math.sqrt(sum(y**2 for y in out[1][1:])) for x in out[1][1:]]
+        self.assertAlmostEqual(n1[0] + n2[0], 0., places=12)
+        self.assertAlmostEqual(n1[1] + n2[1], 0., places=12)
+        self.assertGreater(n1[2] + n2[2], 0.)
 
     def test_massless_frame_is_refused(self):
         """a single massless leg has no rest frame: this used to be a

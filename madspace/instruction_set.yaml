@@ -2288,6 +2288,20 @@ boost_to_frame:
       desc: "all momenta boosted into that rest frame"
   desc: "Boosts the external momenta into the rest frame of the selected particles, the frame the run card's me_frame asks the matrix element to be evaluated in; a single selected particle comes out exactly at rest. See @ref MatrixElement."
 
+boost_to_zero_rapidity:
+  inputs:
+    - name: p_ext
+      type: [float, n, 4]
+      desc: "external four-momenta"
+    - name: frame_mask
+      type: [int, single, n]
+      desc: "1 for every particle whose momenta are summed up to define the frame, 0 for the others"
+  outputs:
+    - name: p_frame
+      type: [float, n, 4]
+      desc: "all momenta boosted along the beam axis into that frame"
+  desc: "Boosts the external momenta along the beam axis into the frame where the selected particles have zero rapidity. Followed by boost_to_frame with the same mask it reaches their rest frame in a way that does not depend on the frame along the beam the momenta come in. See @ref MatrixElement."
+
 
 ---
 title: Invariants

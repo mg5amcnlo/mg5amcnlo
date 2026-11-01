@@ -4211,6 +4211,8 @@ template_on = \
   %(me_frame)s  = me_frame     ! list of particles to sum-up to define the rest-frame
                                ! in which to evaluate the matrix-element
                                ! [1,2] means the partonic center of mass 
+                               ! in a collision a single particle is held at
+                               ! rest, spin along the Collins-Soper axis
 """
 template_off = ""
 frame_block = RunBlock('frame', template_on=template_on, template_off=template_off)
@@ -6078,7 +6080,7 @@ class RunCardNLO(RunCard):
         self.add_param('systematics_arguments', [''], include=False, hidden=True, comment='Choose the arguments to pass to the systematics command, like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
 
         #frame in which to evaluate the matrix-element (polarization)
-        self.add_param("me_frame", [1,2], hidden=True, include=False, comment="choose lorentz frame where to evaluate the matrix-element [for non lorentz invariant matrix-element/polarization]:\n  the entries are the leg numbers of the process as written by the user; the rest-frame of their momentum sum is used.\n  [1,2] (the initial state) and the full final state both mean the partonic center of mass, and are skipped rather than applied.\n  Define the frame from final-state particles only: a frame built from the initial state is not infrared safe at NLO.")
+        self.add_param("me_frame", [1,2], hidden=True, include=False, comment="choose lorentz frame where to evaluate the matrix-element [for non lorentz invariant matrix-element/polarization]:\n  the entries are the leg numbers of the process as written by the user; the rest-frame of their momentum sum is used.\n  [1,2] (the initial state) and the full final state both mean the partonic center of mass, and are skipped rather than applied.\n  Define the frame from final-state particles only: a frame built from the initial state is not infrared safe at NLO.\n  The rest frame is reached by a boost along the beam and then a transverse one, so it does not depend on the frame the momenta come in; in a collision a single particle (e.g. [3] for a W or a Z) is held at rest with its spin quantised along the Collins-Soper axis.")
         self.add_param('frame_id', 6, system=True)
 
         #technical
@@ -6850,7 +6852,9 @@ class RunCardMG7(RunCard):
                     "rest frame in which to evaluate the matrix element; [] (the "
                     "default) applies no boost, [1,2] is the partonic centre of "
                     "mass (what madevent evaluates in). Only matters for a non "
-                    "Lorentz invariant (polarised) matrix element")
+                    "Lorentz invariant (polarised) matrix element. In a "
+                    "collision a single particle is held at rest with its spin "
+                    "along the Collins-Soper axis")
 
         # ---------------------------- [gridpack] ----------------------
         self.add_toml_param('gridpack', 'save_gridpack', False,
