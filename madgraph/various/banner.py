@@ -6862,6 +6862,14 @@ class RunCardMG7(RunCard):
         self.add_toml_param('run', 'precision', "color32", gridpack=True,
             allowed=['all64', 'all32', 'color32', 'denom64'],
             comment="matrix element precision: all64, all32, color32 (FP32 color sum) or denom64 (FP64 momenta and propagator denominators)")
+        # --hel_recycling outputs (madmatrix, cpu only): the size of the recycled
+        # tables per SIMD page above which the build takes the plain matrix
+        # element (HRMAXMB of madmatrix.mk; -1: the build's default, 0: no
+        # limit), and a row-by-row color sum instead of BLAS (HRNOBLAS)
+        self.add_toml_param('run', 'hel_recycling_max_mb', -1, hidden=True,
+            comment="--hel_recycling: table size (MB per SIMD page) above which the cpu build uses the plain matrix element; -1 build default (10, tuned for one thread per core on every core), 0 no limit; lower it with two threads per core (SMT), raise it with few busy cores")
+        self.add_toml_param('run', 'hel_recycling_row_color_sum', False, hidden=True,
+            comment="--hel_recycling: make the color sum row by row even where BLAS would be used")
         self.add_toml_param('run', 'cpu_thread_pool_size', -1, gridpack=True,
             comment="threads for the cpu devices; -1 chooses automatically")
         self.add_toml_param('run', 'use_pigz', False, gridpack=True, auto=True,
@@ -8273,6 +8281,9 @@ class RunCardMG7(RunCard):
                 lines.append('%s = %s' % (key, self.format_toml_value(value)))
         return '\n'.join(lines)
 
+    # hidden parameters that are read from old cards but never written back
+    LEGACY_ALIASES = {'generation.systematics'}
+
     def write(self, output_file, template=None, python_template=True, **opt):
         """Write a valid ``run_card.toml``.
 
@@ -8335,7 +8346,8 @@ class RunCardMG7(RunCard):
         for section, keys in self.toml_sections.items():
             for key in keys:
                 internal = '%s.%s' % (section, key)
-                if internal in in_template or internal not in self.hidden_param:
+                if internal in in_template or internal not in self.hidden_param \
+                        or internal in self.LEGACY_ALIASES:
                     continue
                 if internal not in self.user_set and \
                         self[internal] == self.toml_defaults.get(internal):

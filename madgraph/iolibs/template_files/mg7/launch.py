@@ -1630,13 +1630,44 @@ class MadgraphProcess:
             nb_core = os.cpu_count() or 1
 
         log_path = os.path.join(self.run_path, "compile_subprocesses.log")
+        # --hel_recycling is a CPU build: on a cuda/hip device the same output
+        # compiles the plain matrix element (see backend/gpu/SigmaKin.cc)
+        recycled = [
+            os.path.basename(meta["path"]) for meta in self.subprocess_data
+            if os.path.isfile(os.path.join(meta["path"], "HelRecycling.inc"))
+        ]
+        gpu_backends = [b for b in resolved if b.startswith(("cuda", "hip"))]
+        if recycled and gpu_backends:
+            logger.info(
+                "--hel_recycling is CPU only: the %s build of %s uses the plain "
+                "matrix element", "/".join(gpu_backends), ", ".join(recycled)
+            )
+        # On a CPU the recycled build itself falls back to the plain matrix
+        # element when its tables are too big for the SIMD width (see
+        # hrUseRecycling in backend/{cpu,simd}/SigmaKin.cc, which prints so when
+        # it runs). The limit and the row-by-row color sum are the hidden
+        # run-card entries hel_recycling_max_mb / hel_recycling_row_color_sum
+        # (else HRMAXMB / HRNOBLAS from the environment), passed to make.
+        hr_args = self.hel_recycling_make_args()
+        if recycled and len(gpu_backends) < len(resolved):
+            limit = hr_args[0].split("=", 1)[1]
+            logger.info(
+                "--hel_recycling: %s use the recycled matrix element on the cpu "
+                "unless its tables exceed %s MB per SIMD page (run.hel_recycling_max_mb, "
+                "0 for no limit)", ", ".join(recycled),
+                {"": "10 (default)", "0": "<no limit>"}.get(limit, limit)
+            )
+        hr_flags = ":".join(arg.split("=", 1)[1] for arg in hr_args)
         for backend in resolved:
-            # by library: the flavours of a split subprocess share one
+            # by library: the flavours of a split subprocess share one; a library
+            # built with other recycling settings is rebuilt too: its SigmaKin.o
+            # records them in build.<backend>/.hrflags (madmatrix.mk)
             missing = list({
                 meta["me_path"]: meta for meta in self.subprocess_data
                 if not os.path.isfile(
                     meta["me_path"].format(device=backend, fptype=fptype)
                 )
+                or self.hel_recycling_flags_changed(meta["path"], backend, hr_flags)
             }.values())
             if not missing:
                 continue
@@ -1647,7 +1678,7 @@ class MadgraphProcess:
             )
             start_time = time.time()
             make_args = [f"BACKEND={backend}", f"FPTYPE={fptype}", "USEBUILDDIR=1"]
-            make_args += self.extra_make_args
+            make_args += self.extra_make_args + hr_args
             if (len(missing) >= PCH_MIN_SUBPROCESSES
                     and not any(arg.startswith("PCH=") for arg in make_args)):
                 make_args.append("PCH=1")
@@ -1656,6 +1687,33 @@ class MadgraphProcess:
                 f"Compilation of SubProcesses done in {time.time() - start_time:.1f} s"
             )
         return resolved
+
+    def hel_recycling_make_args(self) -> list[str]:
+        """HRMAXMB=... and HRNOBLAS=... for make (madmatrix.mk), from the hidden
+        run-card entries, else from the environment; empty values are the
+        build's defaults."""
+        run = self.run_card["run"]
+        max_mb = run.get("hel_recycling_max_mb", -1)
+        max_mb = str(max_mb) if max_mb is not None and max_mb >= 0 \
+            else os.environ.get("HRMAXMB", "")
+        no_blas = "1" if run.get("hel_recycling_row_color_sum", False) \
+            else os.environ.get("HRNOBLAS", "")
+        return [f"HRMAXMB={max_mb}", f"HRNOBLAS={no_blas}"]
+
+    @staticmethod
+    def hel_recycling_flags_changed(proc_path: str, backend: str, hr_flags: str) -> bool:
+        """Whether a --hel_recycling subprocess was built for this backend with
+        other recycling settings than hr_flags (see .hrflags in madmatrix.mk)."""
+        if backend.startswith(("cuda", "hip")):
+            return False
+        if not os.path.isfile(os.path.join(proc_path, "HelRecycling.inc")):
+            return False
+        marker = os.path.join(proc_path, f"build.{backend}", ".hrflags")
+        try:
+            with open(marker) as fsock:
+                return fsock.read().strip() != hr_flags
+        except OSError:
+            return False
 
     @staticmethod
     def make_subprocesses(

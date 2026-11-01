@@ -1299,6 +1299,26 @@ class AxialGaugeReferenceTest(unittest.TestCase):
              'CALL VXXXXXR(P(0,3),ZERO,NHEL(3),+1,P(0,1),W(3))',
              'CALL VXXXXXR(P(0,4),ZERO,NHEL(4),+1,P(0,1),W(4))'])
 
+    def test_madmatrix_vxxxxxr_call(self):
+        """madmatrix: the 0-based particle number of the reference comes last"""
+
+        from madmatrix import model_handling
+        me = self.matrix_element('g g > g g')
+        writer = model_handling.MadMatrixUFOHelasCallWriter(self.model)
+        writer.axial_gauge = True
+        writer.axial_gauge_refs = helas_call_writers.get_axial_gauge_refs(me)
+        externals = sorted([wf for wf in me.get_all_wavefunctions()
+                            if not wf.get('mothers')],
+                           key=lambda wf: wf.get('number_external'))
+        self.assertEqual(
+            writer.get_external(externals[0], externals[0]).strip(),
+            'vxxxxxr<M_ACCESS, W_ACCESS>( momenta, 0., hel_sv[0], -1, '
+            'cFlavors[iflavor][0], aloha_obj[0], 0, 1 );')
+        self.assertEqual(
+            writer.get_external(externals[2], externals[2]).strip(),
+            'vxxxxxr<M_ACCESS, W_ACCESS>( momenta, 0., hel_sv[2], +1, '
+            'cFlavors[iflavor][2], aloha_obj[2], 2, 0 );')
+
     def test_massive_vector_keeps_vxxxxx(self):
         """Only a vector that got a reference is written as VXXXXXR: the W of
         u u~ > w+ w- g has none (the shift needs p^2 = 0), while it shares the
@@ -1317,6 +1337,23 @@ class AxialGaugeReferenceTest(unittest.TestCase):
              'CALL VXXXXX(P(0,4),mdl_MW,NHEL(4),+1,W(4))',
              'CALL VXXXXXR(P(0,5),ZERO,NHEL(5),+1,P(0,1),W(5))'])
 
+    def test_madmatrix_massive_vector_keeps_vxxxxx(self):
+        """madmatrix: the W of u u~ > w+ w- g has no reference, the gluon has"""
+
+        from madmatrix import model_handling
+        me = self.matrix_element('u u~ > w+ w- g')
+        writer = model_handling.MadMatrixUFOHelasCallWriter(self.model)
+        writer.axial_gauge = True
+        writer.axial_gauge_refs = helas_call_writers.get_axial_gauge_refs(me)
+        externals = sorted([wf for wf in me.get_all_wavefunctions()
+                            if not wf.get('mothers')],
+                           key=lambda wf: wf.get('number_external'))
+        lines = [writer.get_external(wf, wf).strip() for wf in externals[2:]]
+        self.assertTrue(lines[0].startswith('vxxxxx<'), lines[0])
+        self.assertTrue(lines[1].startswith('vxxxxx<'), lines[1])
+        self.assertTrue(lines[2].startswith('vxxxxxr<'), lines[2])
+        self.assertTrue(lines[2].endswith('aloha_obj[4], 4, 0 );'), lines[2])
+
     def test_axial_gauge_requested(self):
         """the output option, and its refusal in the FD gauge (no vxxxxxr in
         the five-component HELAS library)"""
@@ -1329,7 +1366,13 @@ class AxialGaugeReferenceTest(unittest.TestCase):
         old = aloha.unitary_gauge
         try:
             aloha.unitary_gauge = 3
-            self.assertFalse(requested({'axial_gauge': 'True'}))
+            # silent when asked per matrix element, and it warns every time it
+            # is asked to -- once per output, not once per session
+            with self.assertNoLogs('madgraph.helas_call_writers', 'WARNING'):
+                self.assertFalse(requested({'axial_gauge': 'True'}))
+            for _ in range(2):
+                with self.assertLogs('madgraph.helas_call_writers', 'WARNING'):
+                    self.assertFalse(requested({'axial_gauge': 'True'}, warn=True))
         finally:
             aloha.unitary_gauge = old
 

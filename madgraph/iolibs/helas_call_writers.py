@@ -38,11 +38,13 @@ class HelasWriterError(Exception):
 #===============================================================================
 # Axial-gauge reference vectors
 #===============================================================================
-def axial_gauge_requested(output_options):
+def axial_gauge_requested(output_options, warn=False):
     """Whether --axial_gauge=True was given on the output line.
 
     The FD gauge has its own five-component vxxxxx and no vxxxxxr, so the
-    option is dropped there (with a warning)."""
+    option is dropped there. This is asked once per matrix element; the
+    exporters ask it once more with warn=True when they are built, so that
+    every output command that drops the option says so, once."""
 
     value = (output_options or {}).get('axial_gauge', False)
     if isinstance(value, str):
@@ -50,13 +52,11 @@ def axial_gauge_requested(output_options):
     if not value:
         return False
     if aloha.unitary_gauge == 3:
-        if not axial_gauge_requested.warned:
+        if warn:
             logger.warning('axial_gauge is not available in the FD gauge: '
                            'the option is ignored.')
-            axial_gauge_requested.warned = True
         return False
     return True
-axial_gauge_requested.warned = False
 
 
 def get_axial_gauge_refs(matrix_element):
