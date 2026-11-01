@@ -1970,6 +1970,8 @@ class ProcCharacteristic(ConfigFile):
         # infrared safe in a frame. See fks_common.me_frame_characteristics.
         self.add_param('me_frame_cm_legs', [], typelist=int)
         self.add_param('me_frame_unsafe_legs', [], typelist=int)
+        # and the run_card default (empty: [1, 2])
+        self.add_param('me_frame_default_legs', [], typelist=int)
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -4229,9 +4231,11 @@ template_on = \
 #*********************************************************************
   %(me_frame)s  = me_frame     ! list of particles to sum-up to define the rest-frame
                                ! in which to evaluate the matrix-element
-                               ! [1,2] means the partonic center of mass; with
-                               ! initial-state QCD radiation, the rest frame of
-                               ! the Born final state (refused if it has a jet)
+                               ! default: the massive final-state particles
+                               ! (p p), or [1,2] = the partonic c.m. (e+ e-)
+                               ! [1,2] with initial-state QCD radiation is the
+                               ! rest frame of the Born final state (refused if
+                               ! that has a jet: it is not infrared safe)
                                ! in a collision a single particle is held at
                                ! rest, spin along the Collins-Soper axis
 """
@@ -6100,7 +6104,7 @@ class RunCardNLO(RunCard):
         self.add_param('systematics_arguments', [''], include=False, hidden=True, comment='Choose the arguments to pass to the systematics command, like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
 
         #frame in which to evaluate the matrix-element (polarization)
-        self.add_param("me_frame", [1,2], hidden=True, include=False, comment="choose lorentz frame where to evaluate the matrix-element [for non lorentz invariant matrix-element/polarization]:\n  the entries are the leg numbers of the process as written by the user; the rest-frame of their momentum sum is used.\n  [1,2] means the partonic center of mass. With initial-state QCD radiation (p p collisions) it is evaluated as the rest frame of the Born final state, which is the partonic c.m. of the Born and, unlike the c.m. of the real emission, infrared safe. It is refused when that final state contains a massless coloured parton (a jet), since no infrared-safe NLO version of it exists then.\n  Define the frame from colourless or massive final-state particles only: a frame containing an initial-state leg or a jet is not infrared safe at NLO.\n  The rest frame is reached by a boost along the beam and then a transverse one, so it does not depend on the frame the momenta come in; in a collision a single particle (e.g. [3] for a W or a Z) is held at rest with its spin quantised along the Collins-Soper axis.")
+        self.add_param("me_frame", [1,2], hidden=True, include=False, comment="choose lorentz frame where to evaluate the matrix-element [for non lorentz invariant matrix-element/polarization]:\n  the entries are the leg numbers of the process as written by the user; the rest-frame of their momentum sum is used.\n  The default depends on the process: with initial-state QCD radiation (p p collisions) the massive final-state particles, e.g. [3,4] for p p > w+{0} w- or [3] (the Collins-Soper frame) for p p > w+{0} j; otherwise (e+ e-, decays) [1,2].\n  [1,2] means the partonic center of mass. With initial-state QCD radiation it is evaluated as the rest frame of the Born final state, which is the partonic c.m. of the Born and, unlike the c.m. of the real emission, infrared safe. It is refused when that final state contains a massless coloured parton (a jet), since no infrared-safe NLO version of it exists then.\n  Define the frame from colourless or massive final-state particles only: a frame containing an initial-state leg or a jet is not infrared safe at NLO.\n  The rest frame is reached by a boost along the beam and then a transverse one, so it does not depend on the frame the momenta come in; in a collision a single particle (e.g. [3] for a W or a Z) is held at rest with its spin quantised along the Collins-Soper axis.")
         self.add_param('frame_id', 6, system=True)
         # Set by the run interface from the proc_characteristics, for the run
         # being compiled (see get_me_frame_legs). Empty = no information,
@@ -6108,6 +6112,8 @@ class RunCardNLO(RunCard):
         self.add_param('me_frame_cm_legs', [], typelist=int, hidden=True,
                        system=True, include=False)
         self.add_param('me_frame_unsafe_legs', [], typelist=int, hidden=True,
+                       system=True, include=False)
+        self.add_param('me_frame_default_legs', [], typelist=int, hidden=True,
                        system=True, include=False)
 
         #technical
@@ -6434,24 +6440,31 @@ class RunCardNLO(RunCard):
         self.set('me_frame_unsafe_legs',
                  proc_characteristics['me_frame_unsafe_legs']
                  if real_emission else [], user=False)
+        self.set('me_frame_default_legs',
+                 proc_characteristics['me_frame_default_legs'], user=False)
 
     def get_me_frame_legs(self):
         """The legs, in the user's numbering, whose rest frame the matrix
         elements are evaluated in: me_frame resolved against the process.
 
-        me_frame_cm_legs and me_frame_unsafe_legs come from the process
-        (set_me_frame_process, called by the run interface). Without them --
-        no process information, or a process whose matrix elements are
-        Lorentz invariant -- me_frame is taken literally.
+        me_frame_cm_legs, me_frame_unsafe_legs and me_frame_default_legs come
+        from the process (set_me_frame_process, called by the run interface).
+        Without them -- no process information, or a process whose matrix
+        elements are Lorentz invariant -- me_frame is taken literally.
 
-        With them, me_frame = [1, 2] (or empty, or not set) is the partonic
-        c.m. and becomes me_frame_cm_legs. For a collision with initial-state
-        QCD radiation that is the Born final state: the partonic c.m. for
-        every Born-like configuration, and infrared safe for the real
-        emission. Leaving it to the frame the FKS momenta come in made the
-        result depend on the subtraction partition: +9.5(4)% on
-        p p > w+{0} j [QCD] and +11.3(4)% on p p > z{0} j [QCD] when only fks_b
-        changes (docs/nlo_polarisation_boost_plan.md, B13).
+        With them, an empty or unset me_frame is the default of the process
+        (the one create_default_for_process writes in the card): the rest
+        frame of the massive final-state particles when the initial state
+        radiates, the partonic c.m. otherwise.
+
+        me_frame = [1, 2] is the partonic c.m. and becomes me_frame_cm_legs.
+        For a collision with initial-state QCD radiation that is the Born
+        final state: the partonic c.m. for every Born-like configuration,
+        and infrared safe for the real emission. Leaving it to the frame the
+        FKS momenta come in made the result depend on the subtraction
+        partition: +9.5(4)% on p p > w+{0} j [QCD] and +11.3(4)% on
+        p p > z{0} j [QCD] when only fks_b changes
+        (docs/nlo_polarisation_boost_plan.md, B13).
 
         Raises InvalidRunCard when the frame contains a massless coloured
         final-state parton: a collinear splitting moves it by a finite
@@ -6462,13 +6475,16 @@ class RunCardNLO(RunCard):
         if not cm_legs:
             return me_frame
 
+        if not me_frame:
+            me_frame = list(self['me_frame_default_legs'])
         partonic_cm = not me_frame or sorted(me_frame) == [1, 2]
         legs = cm_legs if partonic_cm else me_frame
         unsafe = [n for n in legs if n in self['me_frame_unsafe_legs']]
         if not unsafe:
             return legs
 
-        safe = [n for n in legs if n not in unsafe]
+        safe = list(self['me_frame_default_legs']) or \
+               [n for n in legs if n not in unsafe]
         hint = (', e.g. me_frame = %s' % safe) if safe else ''
         if partonic_cm:
             raise InvalidRunCard(
@@ -6482,8 +6498,9 @@ class RunCardNLO(RunCard):
                 'in the frame the FKS momenta come in instead makes the '
                 'result depend on the subtraction partition (by about 10%% '
                 'for p p > w+{0} j [QCD]). Set me_frame to colourless or '
-                'massive final-state particles%s; for a single boson this is '
-                'its Collins-Soper frame.' % (legs, unsafe, hint))
+                'massive final-state particles%s, the default: the rest '
+                'frame of the massive final state (for a single boson, its '
+                'Collins-Soper frame).' % (legs, unsafe, hint))
         raise InvalidRunCard(
             'me_frame = %s contains the massless coloured parton(s) %s. A '
             'collinear splitting changes such a leg by a finite amount, so '
@@ -6638,6 +6655,14 @@ class RunCardNLO(RunCard):
             else:
                 continue
             break
+
+        # ... and its default: with an initial-state QCD splitting the rest
+        # frame of the massive final-state particles, since the partonic c.m.
+        # is not infrared safe at NLO (fks_common.me_frame_characteristics);
+        # [1, 2] otherwise (e+ e-, decays)
+        default_legs = proc_characteristic.get('me_frame_default_legs')
+        if default_legs and 'me_frame' not in self.user_set:
+            self['me_frame'] = list(default_legs)
 
         # 4-flavour scheme: a massive b is not a parton of the proton, so the
         # default PDF has to be the nf_4 set rather than the 5-flavour one.

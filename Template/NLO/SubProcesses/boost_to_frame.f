@@ -687,9 +687,10 @@ c     result on the subtraction partition (+9.5% on p p > w+{0} j [QCD]
 c     when only fks_b changes). Honouring it literally is no better: the
 c     real's own c.m. jumps by a finite boost across the initial-state
 c     collinear limit, so it is not infrared safe. The run_card therefore
-c     never sends the initial state here for such a process:
-c     RunCardNLO.get_me_frame_legs replaces [1,2] by the Born final state
-c     (refusing it when that contains a jet). What still reaches this skip
+c     never sends the initial state here for such a process: its default
+c     is the massive final state, and RunCardNLO.get_me_frame_legs
+c     replaces an explicit [1,2] by the Born final state (refusing it when
+c     that contains a jet). What still reaches this skip
 c     is a process without initial-state QCD splittings (e+ e-), where the
 c     tilde frame is the partonic c.m. in every sector.
 c

@@ -652,13 +652,14 @@ class TestFKSOutput(unittest.TestCase):
                 self.assertEqual(old_l, new_l)
 
 
-    def test_polarised_partonic_cm_needs_the_process(self):
-        """me_frame = [1, 2], the default of a polarised NLO run_card, has no
-        infrared-safe meaning for p p > w+{0} j: with initial-state QCD
-        radiation the frame the FKS momenta come in depends on the sector
-        (+9.5(4)% when only fks_b changed), and the only frame equal to the
-        partonic c.m. of the Born contains the jet. The output must tell the
-        run_card so, and the run_card must then refuse it."""
+    def test_polarised_default_frame_is_the_massive_final_state(self):
+        """The partonic c.m., me_frame = [1, 2], has no infrared-safe meaning
+        for p p > w+{0} j at NLO: with initial-state QCD radiation the frame
+        the FKS momenta come in depends on the sector (+9.5(4)% when only
+        fks_b changed), and the only frame equal to the partonic c.m. of the
+        Born contains the jet. So the output must write the rest frame of the
+        massive final state, [3], as the run_card default, and the run_card
+        must still refuse [1, 2] when asked for explicitly."""
         import madgraph.various.banner as banner_mod
         path = tempfile.mkdtemp('', 'TMPWPolTest', None)
         interface = MGCmd.MasterCmd()
@@ -674,22 +675,23 @@ class TestFKSOutput(unittest.TestCase):
                 path, 'W', 'SubProcesses', 'proc_characteristics'))
             self.assertEqual(charac['me_frame_cm_legs'], [3, 4])
             self.assertEqual(charac['me_frame_unsafe_legs'], [4])
+            self.assertEqual(charac['me_frame_default_legs'], [3])
 
+            # the card as written: the W rest frame, accepted at launch
             run_card = banner_mod.RunCardNLO(os.path.join(
                 path, 'W', 'Cards', 'run_card.dat'))
-            self.assertEqual(run_card['me_frame'], [1, 2])
+            self.assertEqual(run_card['me_frame'], [3])
             run_card.set_me_frame_process(charac)
+            run_card.check_validity()
+            run_card.update_system_parameter_for_include()
+            self.assertEqual(run_card['frame_id'], 8)
+            # [1, 2] by hand: refused with real emission
+            run_card.set('me_frame', [1, 2], user=True)
             self.assertRaises(banner_mod.InvalidRunCard,
                               run_card.check_validity)
             # the Born alone (launch LO) has nothing to be infrared safe for
             run_card.set_me_frame_process(charac, real_emission=False)
             run_card.check_validity()
-            # the W alone (its Collins-Soper frame) is fine with real emission
-            run_card.set_me_frame_process(charac)
-            run_card.set('me_frame', [3], user=True)
-            run_card.check_validity()
-            run_card.update_system_parameter_for_include()
-            self.assertEqual(run_card['frame_id'], 8)
         finally:
             shutil.rmtree(path, ignore_errors=True)
 

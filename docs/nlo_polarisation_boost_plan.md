@@ -276,38 +276,60 @@ Candidates:
 - **Keep it, with a warning.** The result stays a function of an internal
   parameter at the 10% level, and Drell-Yan does not even pass `test_ME`.
 
-**Decision:** `[1,2]` is resolved against the process when the run is
-launched (`RunCardNLO.get_me_frame_legs`, from what
-`fks_common.me_frame_characteristics` recorded in `proc_characteristics` at
-output). LO does not change.
+**Decision.** LO does not change.
+
+**The default `me_frame` of the NLO run_card depends on the process**
+(`fks_common.me_frame_characteristics`, written into the card by
+`RunCardNLO.create_default_for_process`):
+
+- **With initial-state QCD radiation (`p p`): the rest frame of the massive
+  final-state particles.** For example `[3,4]` for `p p > w+{0} w- [QCD]` (the
+  diboson rest frame of the literature), `[3]` for `p p > w+{0} j [QCD]` (the
+  Collins-Soper frame of the W), and `[3,4]` for `p p > t{+} t~ j [QCD]`. It
+  depends only on the physical momenta of those particles, so it is infrared
+  safe and the same in every sector. It is the same for `[LOonly=QCD]`, so the
+  multiplicities of a merged sample share one frame.
+- **Otherwise (`e+ e-`, decays): `[1,2]`, the partonic c.m.**
+
+What `[1,2]` means is resolved when the run is launched
+(`RunCardNLO.get_me_frame_legs`, from `proc_characteristics`). That covers the
+default of `e+ e-` and decays, and anyone who sets it by hand:
 
 - No initial-state QCD splitting (`e+ e-`): unchanged. The tilde frame is the
   partonic c.m. in every sector.
 - A decay: the decaying particle, `[1]`. `frame_id` 6 used to select it
   *and* leg 2, the first decay product, so the frame depended on the order
-  the final state was written in: `t > b w+{0} QED=1 [QCD]` came out
-  0.04% below `t > w+{0} b QED=1 [QCD]` at NLO, at matched seeds. Both are
-  now bit-identical.
+  the final state was written in. At NLO, at matched seeds,
+  `t > b w+{0} QED=1 [QCD]` came out 0.04% below `t > w+{0} b QED=1 [QCD]`.
+  The two are now bit-identical.
 - Initial-state QCD radiation, no massless coloured parton in the Born final
-  state: **the rest frame of the Born final state**. For the Born, the
-  virtual and every counter-event this is the partonic c.m. exactly (they
-  stay skipped, bit for bit); for the real it depends only on its physical
-  momenta, so it is infrared safe and the same in every sector. It is the
-  diboson rest frame of the literature. `p p > w+{0} w- [QCD]`: 18.484(15) ->
-  18.472(19) pb under the `fks_b` change (-0.06(13)%), **+4.35(13)% above
-  the old `[1,2]` value**: a change of definition of the real emission, the
-  Born being identical. `p p > z{T} [QCD]` now passes `test_ME`, 49012(199)
-  pb.
-- Initial-state QCD radiation and a jet in the Born final state (`p p >
-  w+{0} j`): **refused** at launch, with a warning at output. No frame equal
-  to the Born's partonic c.m. is infrared safe: it would have to contain the
+  state: **the rest frame of the Born final state**.
+  - For the Born, the virtual and every counter-event this is exactly the
+    partonic c.m.; they stay skipped, bit for bit.
+  - For the real it depends only on its physical momenta, so it is infrared
+    safe and the same in every sector.
+  - When the whole final state is massive (dibosons), this is also the default.
+  - `p p > w+{0} w- [QCD]` (15 seeds): 18.484(15) pb at `fks_b` 1.5 and
+    18.472(19) pb at 3.0, a -0.06(13)% shift.
+  - That is **+4.35(13)% above the old `[1,2]` value**. This is a change of
+    definition of the real emission; the Born is identical.
+  - `p p > z{T} [QCD]` now passes `test_ME`, 49012(199) pb.
+- Initial-state QCD radiation and a jet in the Born final state, with `[1,2]`
+  set by hand (`p p > w+{0} j`): **refused** at launch. No frame equal to the
+  partonic c.m. of the Born is infrared safe: it would have to contain the
   jet, which a final-state collinear splitting changes by a finite amount.
-  Choose e.g. `[3]`, the Collins-Soper frame of the W.
+  The message points to the default, e.g. `[3]`.
 
 For the same reason any `me_frame` containing a massless coloured
-final-state parton is refused (`[3,4]` on `p p > w+{0} j` used to pass and
-build the rest frame of the W and `j_fks`). Runs of the Born alone (`launch
+final-state parton is refused. `[3,4]` on `p p > w+{0} j` used to pass and
+built the rest frame of the W and `j_fks`. Runs of the Born alone (`launch
 LO`, `aMC@LO`) refuse nothing.
+
+**LO/NLO consistency.** For a process whose final state is all massive, the
+NLO default equals the LO default `[1,2]` at the Born level. For one with a
+jet or another massless particle it does not. For example, `p p > w+{0} j`
+is `[3]` at NLO and `[1,2]` in madevent. A K-factor needs `me_frame = [3]`
+set in the LO run as well.
 
 ## 3. Milestones
 
@@ -1808,10 +1830,10 @@ marker. Run via `./tests/test_manager.py`, not pytest.
 - **B13 — RESOLVED.** The FKS tilde frame differs between sectors by a
   boost along z, so a frame reached by a single boost from it depended on
   the FKS partition. Single-leg frames now go along the beam first
-  (Collins-Soper). The default `[1,2]` frame (+9.5% on `p p > w+{0} j`,
-  +11.3% on `p p > z{0} j` under a change of `fks_b`) is now the rest frame
-  of the Born final state when there is initial-state QCD radiation, and
-  refused when that final state has a jet. See D3.
+  (Collins-Soper). The old default `[1,2]` (+9.5% on `p p > w+{0} j`,
+  +11.3% on `p p > z{0} j` under a change of `fks_b`) is replaced, for `p p`,
+  by the rest frame of the massive final state; `[1,2]` set by hand is the
+  rest frame of the Born final state, refused when that has a jet. See D3.
 - **B12 — RESOLVED here, and it has a twin that must land with it.**
   `ProcessDefinition.__iter__` dropped `polarization` when expanding
   multiparticles, so any polarised MadLoop-standalone process written with

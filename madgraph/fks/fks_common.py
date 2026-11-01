@@ -872,7 +872,16 @@ def get_user_leg_order(process, pert = 'QCD'):
 def me_frame_characteristics(processes):
     """What the run_card me_frame may mean for these NLO processes, in the
     leg numbering of the process as the user wrote it (the numbering of
-    me_frame). Returns (cm_legs, unsafe_legs), both sorted lists.
+    me_frame). Returns (cm_legs, unsafe_legs, default_legs), sorted lists.
+
+    default_legs: the default me_frame of the run_card. For a collision
+    with an initial-state QCD splitting, the massive final-state legs: e.g.
+    [3, 4] for p p > w+{0} w- [QCD], [3] for p p > w+{0} j [QCD] (the
+    Collins-Soper frame of the W). Infrared safe and the same in every FKS
+    sector, unlike the partonic c.m. (see cm_legs). Empty otherwise
+    (e+ e-, decays), meaning the partonic c.m., [1, 2], is kept. It does
+    not depend on whether real emission is computed, so that [LOonly=QCD]
+    and [QCD] samples of a merged set share one frame.
 
     cm_legs: the legs whose rest frame stands for the partonic c.m., which
     is how me_frame = [1, 2] is read.
@@ -896,16 +905,18 @@ def me_frame_characteristics(processes):
     infrared safe once real emission is computed. When cm_legs contains
     one, me_frame = [1, 2] has no infrared-safe NLO definition at all.
 
-    Both lists are empty when no massive particle is polarised: the matrix
+    All three are empty when no massive particle is polarised: the matrix
     elements are then Lorentz invariant, and the frame does not matter.
     Legs of a multiparticle label count as coloured or massless if any of
-    its particles is. If only some processes have an initial-state QCD
-    splitting (a photon in the proton), the Born final state is used for
-    all: it is the partonic c.m. of every Born too.
+    its particles is, and as massive if all of them are. If only some
+    processes have an initial-state QCD splitting (a photon in the
+    proton), the Born final state is used for all: it is the partonic c.m.
+    of every Born too.
     """
     cm_legs = set()
     cm_legs_isr = set()
     unsafe_legs = set()
+    default_legs = set()
     for proc in processes:
         model = proc.get('model')
         legs = proc.get('legs')
@@ -931,13 +942,19 @@ def me_frame_characteristics(processes):
         else:
             cm_legs.update(initial)
 
+        if len(initial) == 2 and initial_coloured:
+            default_legs.update(
+                n for n in final if all(p.get('mass').lower() != 'zero'
+                                        for p in particles[n - 1]))
+
         if has_real:
             unsafe_legs.update(
                 n for n in final if any(p.get('color') != 1 and
                                         p.get('mass').lower() == 'zero'
                                         for p in particles[n - 1]))
 
-    return sorted(cm_legs_isr or cm_legs), sorted(unsafe_legs)
+    return (sorted(cm_legs_isr or cm_legs), sorted(unsafe_legs),
+            sorted(default_legs))
 
 
 def sort_proc(process,pert = 'QCD'):

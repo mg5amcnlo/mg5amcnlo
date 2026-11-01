@@ -744,15 +744,19 @@ class TestRunCardNLOMeFramePartonicCM(unittest.TestCase):
     real emission there made the polarised NLO result depend on the
     subtraction partition: +9.5(4)% on p p > w+{0} j [QCD], +11.3(4)% on
     p p > z{0} j [QCD], when only fks_b changed. It must become the rest
-    frame of the Born final state, or be refused when that contains a jet."""
+    frame of the Born final state, or be refused when that contains a jet.
+    The default of such a process is not [1, 2] but the rest frame of its
+    massive final-state particles."""
 
-    def _card(self, me_frame, cm_legs, unsafe_legs, real_emission=True):
+    def _card(self, me_frame, cm_legs, unsafe_legs, real_emission=True,
+              default_legs=()):
         run_card = bannermod.RunCardNLO()
         if me_frame is not None:
             run_card.set('me_frame', me_frame, user=True)
         charac = bannermod.ProcCharacteristic()
         charac['me_frame_cm_legs'] = cm_legs
         charac['me_frame_unsafe_legs'] = unsafe_legs
+        charac['me_frame_default_legs'] = list(default_legs)
         run_card.set_me_frame_process(charac, real_emission=real_emission)
         return run_card
 
@@ -769,6 +773,19 @@ class TestRunCardNLOMeFramePartonicCM(unittest.TestCase):
                              24, me_frame)
         # an explicit final-state frame is kept
         self.assertEqual(self._frame_id(self._card([3], [3, 4], [])), 8)
+
+    def test_default_is_the_massive_final_state(self):
+        # p p > w+{0} j [QCD]: an unset or empty me_frame is the W alone
+        # (Collins-Soper), not the partonic c.m., so it is not refused
+        for me_frame in ([], None):
+            self.assertEqual(self._frame_id(self._card(
+                me_frame, [3, 4], [4], default_legs=[3])), 8, me_frame)
+        # [1, 2] asked for explicitly still is, pointing at the default
+        with self.assertRaisesRegex(bannermod.InvalidRunCard,
+                                    r'me_frame = \[3\]'):
+            self._card([1, 2], [3, 4], [4], default_legs=[3]).check_validity()
+        # e+ e- > t{L} t~ [QCD]: no default of its own, the partonic c.m.
+        self.assertEqual(self._frame_id(self._card(None, [1, 2], [])), 6)
 
     def test_partonic_cm_with_a_jet_is_refused(self):
         # p p > w+{0} j [QCD]: leg 4 is a jet, so [1, 2] has no infrared-safe
