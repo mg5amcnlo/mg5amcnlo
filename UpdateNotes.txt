@@ -14,6 +14,13 @@ ANNOUNCEMENT:
       - cutuse=1 (only one of the ptjNmin has to be satisfied);
       - mmll for non same-flavour opposite-sign leptons, ptllmin without a pair to apply it to,
         mmnl for more than two leptons/neutrinos.
+  OM: NLO: the real emission reused the matrix element of one helicity for another whenever the two agreed
+      on the first phase-space point. Some only agree when the momenta come in the c.m. frame of the real
+      (final-state FKS sectors), not in that of the Born (initial-state ones): helicities of massive
+      particles are not boost invariant. E.g. (W0,g-,g-) and (W0,g+,g+) of u d~ > w+ g g. Whether the
+      first point tied them was a matter of the seed; p p > w+ j [QCD] (fixed order) came out
+      +0.6% to +4.5% too high (u d~ > w+ g up to +25%), p p > z j [QCD] is affected the same way.
+      A tie is now kept only if it also holds at a Lorentz transform of the first point.
 
 3.5.17 (9/10/26):
   RF: Fixed a bug in FxFx merging: MG side used inclusive-kT measure, PY side used exclusive.  This mismatch resulted in an
