@@ -21,7 +21,8 @@ SQRT_S = 13000.0
 N = 100000
 
 
-def boost_beam_inverse(p, masses, x1, x2):
+def boost_beam_inverse(p, x1, x2, masses):
+    """the partonic momenta from the lab momenta, as torch tensors"""
     n = p.shape[1]
     vec = ms.batch_four_vec_array(n)
     fb = ms.FunctionBuilder(
@@ -33,8 +34,7 @@ def boost_beam_inverse(p, masses, x1, x2):
         fb.boost_beam_inverse(fb.input(0), ms.Value(masses), fb.input(1), fb.input(2)),
     )
     runtime = ms.FunctionRuntime(fb.function(), default_context())
-    tensors = [torch.as_tensor(np.asarray(x), dtype=torch.float64) for x in (p, x1, x2)]
-    return to_numpy(runtime.call(tensors)[0])
+    return to_numpy(runtime.call([p, x1, x2])[0])
 
 
 def light_cone_boost(p, masses, y):
@@ -62,13 +62,15 @@ def test_partonic_frame_from_the_lab(masses, y_far):
         masses, SQRT_S, mode=ms.PhaseSpaceMapping.TChannelMode.rambo
     )
     r = np.random.default_rng(7).random((N, mapping.random_dim()))
-    p, x1, x2, det = map(to_numpy, mapping.map_forward([r], []))
+    # torch in, torch out: numpy inputs give read-only numpy outputs
+    lab = mapping.map_forward([torch.as_tensor(r)], [])
+    p, x1, x2, det = map(to_numpy, lab)
     rapidity = 0.5 * np.log(x1 / x2)
     sqrt_s_hat = SQRT_S * np.sqrt(x1 * x2)
     ok = det > 0
 
     # the partonic frame comes back as precisely as an exact boost gives it
-    partonic = boost_beam_inverse(p, masses, x1, x2)
+    partonic = boost_beam_inverse(*lab[:3], masses)
     exact = light_cone_boost(p, masses, -rapidity)
     error = np.abs(partonic - exact).max((1, 2)) / sqrt_s_hat
     assert error[ok].max() < 1e-14
@@ -76,7 +78,7 @@ def test_partonic_frame_from_the_lab(masses, y_far):
     # and with it the random numbers at large rapidities, to the conditioning
     # of RAMBO itself (below 1e-10 on two million events; it was 4e-9 for
     # |y| > 6)
-    r_inv, det_inv = map(to_numpy, mapping.map_inverse([p, x1, x2], []))
+    r_inv, det_inv = map(to_numpy, mapping.map_inverse(lab[:3], []))
     far = ok & (np.abs(rapidity) > y_far)
     assert far.sum() > 100
     assert np.abs(r_inv - r)[far].max() < 1e-9
