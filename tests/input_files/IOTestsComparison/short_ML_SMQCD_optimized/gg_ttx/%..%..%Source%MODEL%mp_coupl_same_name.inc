@@ -8,7 +8,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       COMPLEX*32 GAL(2)
       COMMON/MP_WEAK/ GAL
 
-      COMPLEX*32 MU_R
+      REAL*16 MU_R
       COMMON/MP_RSCALE/ MU_R
 
 
