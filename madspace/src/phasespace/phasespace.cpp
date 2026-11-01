@@ -902,6 +902,14 @@ Mapping::Result PhaseSpaceMapping::build_forward_impl(
         auto p_ext_lab = to_lab(fb, p_ext_stack, x1, x2, conditions);
         dets.push_back(_cuts.build_function(fb, {p_ext_lab}).at(0));
         auto ps_weight = fb.cut_unphysical(fb.product(dets), p_ext_lab, x1, x2);
+        if (_leptonic) {
+            // x1 = x2 = 1 without PDFs, returned with the batch dimension of
+            // their type like every output, so that the outputs of channels
+            // can be concatenated (MultiChannelMapping)
+            auto batch_size = fb.batch_size({p_ext_lab});
+            auto ones = fb.full({Value(1.), batch_size});
+            return {{{"momenta", p_ext_lab}, {"x1", ones}, {"x2", ones}}, ps_weight};
+        }
         return {{{"momenta", p_ext_lab}, {"x1", x1}, {"x2", x2}}, ps_weight};
     };
 
