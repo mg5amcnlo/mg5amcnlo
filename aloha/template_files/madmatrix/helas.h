@@ -647,17 +647,25 @@
     // the shift is for the transverse helicities, the only ones of a massless vector
     if( vmass != 0. || iref == ipar ) return;
     mgDebug( 0, __FUNCTION__ );
-    const fptype_amp_sv r0 = fpamp_of_mom( M_ACCESS::kernelAccessIp4IparConst( momenta, 0, iref ) );
-    const fptype_amp_sv r1 = fpamp_of_mom( M_ACCESS::kernelAccessIp4IparConst( momenta, 1, iref ) );
-    const fptype_amp_sv r2 = fpamp_of_mom( M_ACCESS::kernelAccessIp4IparConst( momenta, 2, iref ) );
-    const fptype_amp_sv r3 = fpamp_of_mom( M_ACCESS::kernelAccessIp4IparConst( momenta, 3, iref ) );
-    // vc.pvec is nsv * p: the sign cancels between r.p and the shift along p
+    const fptype_momenta_sv rm0 = M_ACCESS::kernelAccessIp4IparConst( momenta, 0, iref );
+    const fptype_momenta_sv rm1 = M_ACCESS::kernelAccessIp4IparConst( momenta, 1, iref );
+    const fptype_momenta_sv rm2 = M_ACCESS::kernelAccessIp4IparConst( momenta, 2, iref );
+    const fptype_momenta_sv rm3 = M_ACCESS::kernelAccessIp4IparConst( momenta, 3, iref );
+    // vc.pvec is nsv * p: the sign cancels between r.p and the shift along p.
+    // r.p of two lightlike momenta cancels between its terms when they are close
+    // to collinear, as p^2 does: it is made in the precision of the momenta (FP64
+    // in FPTYPE=v, as the propagator denominators), the shift in that of the amplitudes
+    const fptype_momenta_sv rdotp_mom = rm0 * vc.pvec[0] - rm1 * vc.pvec[1] - rm2 * vc.pvec[2] - rm3 * vc.pvec[3];
+    const fptype_amp_sv rdotp = fpamp_of_mom( rdotp_mom );
+    const fptype_amp_sv r0 = fpamp_of_mom( rm0 );
+    const fptype_amp_sv r1 = fpamp_of_mom( rm1 );
+    const fptype_amp_sv r2 = fpamp_of_mom( rm2 );
+    const fptype_amp_sv r3 = fpamp_of_mom( rm3 );
     const fptype_amp_sv p0 = fpamp_of_mom( vc.pvec[0] );
     const fptype_amp_sv p1 = fpamp_of_mom( vc.pvec[1] );
     const fptype_amp_sv p2 = fpamp_of_mom( vc.pvec[2] );
     const fptype_amp_sv p3 = fpamp_of_mom( vc.pvec[3] );
     cxtype_amp_sv* w = W_ACCESS::kernelAccess( vc.w );
-    const fptype_amp_sv rdotp = r0 * p0 - r1 * p1 - r2 * p2 - r3 * p3;
     const cxtype_amp_sv rdote = w[0] * r0 - w[1] * r1 - w[2] * r2 - w[3] * r3;
 #ifndef MGONGPU_CPPSIMD
     if( rdotp == 0. )

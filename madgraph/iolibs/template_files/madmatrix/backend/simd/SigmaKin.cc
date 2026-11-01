@@ -478,16 +478,17 @@ namespace madmatrix
 
   // The rows that were built are the rows that contributed AT THE PARAMETERS THE
   // WARM-UP RAN AT. getGoodHel still runs at run time, so when it finds a row that
-  // is not in the table -- a different param_card, typically -- say so rather than
-  // silently contributing zero.
+  // is not in the table -- a different param_card, typically -- that helicity is
+  // computed with the plain code instead (hr_row_or_plain): complete, but not
+  // recycled, so say so once.
   inline void
   hr_unbaked_row( int ihel )
   {
-    static std::atomic<bool> warned{ false }; // the helicity loop runs in OpenMP/madspace threads
-    if( warned.exchange( true ) ) return;
-    printf( "*** WARNING: helicity row %d contributes at these parameters but was\n"
-            "*** never built: the --hel_recycling table was measured at others.\n"
-            "*** This matrix element is INCOMPLETE -- regenerate the process.\n",
+    static std::atomic<bool> said{ false }; // the helicity loop runs in OpenMP/madspace threads
+    if( said.exchange( true ) ) return;
+    printf( "INFO: helicity row %d contributes at these parameters but is not in the --hel_recycling\n"
+            "INFO: table (measured at others): it is computed without recycling. Regenerate the\n"
+            "INFO: process at these parameters to recycle it too.\n",
             ihel );
   }
 
@@ -573,14 +574,12 @@ namespace madmatrix
     for( int iwf = 0; iwf < hrNwf; iwf++ )
       aloha_obj[iwf] = ALOHAOBJ{ pvec_sv + (size_t)iwf * np4, w_sv + (size_t)iwf * nw6 };
     cxtype_amp_sv amp_sv[1]; // every amplitude goes through this one scratch, then into the tables
-    fptype_amp* amp_fp = reinterpret_cast<fptype_amp*>( amp_sv );
+    [[maybe_unused]] fptype_amp* amp_fp = reinterpret_cast<fptype_amp*>( amp_sv );
     // the vertex with one leg left off, shared by every row that differs only in
     // that leg (the P1N amplitude split)
     fptype_momenta_sv p1n_pvec_sv[np4];
     cxtype_amp_sv p1n_w_sv[nw6];
-    ALOHAOBJ _p1n = ALOHAOBJ{ p1n_pvec_sv, p1n_w_sv };
-    (void)_p1n;
-    (void)amp_fp;
+    [[maybe_unused]] ALOHAOBJ _p1n = ALOHAOBJ{ p1n_pvec_sv, p1n_w_sv };
     // The fold and expanded modes add into their tables, which start every page
     // at zero. The rows mode stores into its amplitude table, and every page
     // stores the same (row, amplitude) entries: those it never stores (an
@@ -604,8 +603,7 @@ namespace madmatrix
     // fold: the color flows of each row out of its shared sub-expressions
     for( int slot = 0; slot < nHrRows * nParity; slot++ )
     {
-      cxtype_amp_sv* jamp_sv = jampAll_sv + (size_t)slot * njampso;
-      (void)jamp_sv;
+      [[maybe_unused]] cxtype_amp_sv* jamp_sv = jampAll_sv + (size_t)slot * njampso;
 #include "HelRecyclingJamps.inc"
     }
 #endif
@@ -622,9 +620,9 @@ namespace madmatrix
   // color flows of one row at a time are all that is kept.
   inline void
   hr_row( int ihel,
-          const cxtype_amp_sv* ampAll_sv,  // input: amplitudes of every row (rows mode)
-          const cxtype_amp_sv* jampAll_sv, // input: jamps of every row (fold, expanded)
-          const fptype_amp_sv* numAll_sv,  // input: |amp|^2 by diagram of every row (fold, expanded)
+          [[maybe_unused]] const cxtype_amp_sv* ampAll_sv,  // input: amplitudes of every row (rows mode)
+          [[maybe_unused]] const cxtype_amp_sv* jampAll_sv, // input: jamps of every row (fold, expanded)
+          [[maybe_unused]] const fptype_amp_sv* numAll_sv,  // input: |amp|^2 by diagram of every row (fold, expanded)
           cxtype_amp_sv* allJamp_sv,       // output: jamp_sv[nParity*njampso] for this helicity
           bool storeChannelWeights,
           fptype_amp* allNumerators,       // input/output: multichannel numerators[nevt], add helicity ihel
@@ -632,20 +630,15 @@ namespace madmatrix
           const int ievt00 )               // input: first event number in current C++ event page
   {
     using NUM_ACCESS = HostAccessNumerators;
-    (void)ampAll_sv;
-    (void)jampAll_sv;
-    (void)numAll_sv;
-    const int row = cHrRow[ihel];
-    if( row < 0 ) hr_unbaked_row( ihel );
+    const int row = cHrRow[ihel]; // >= 0: hr_page computes a row that was not built with calculate_jamps
     for( int iParity = 0; iParity < nParity; ++iParity )
     {
       const int ievt0 = ievt00 + iParity * neppV;
       const size_t slot = (size_t)( row < 0 ? 0 : row ) * nParity + iParity;
       cxtype_amp_sv* jamp_sv = allJamp_sv + iParity * njampso;
-      fptype_amp_sv* numerators_sv = storeChannelWeights
+      [[maybe_unused]] fptype_amp_sv* numerators_sv = storeChannelWeights
         ? NUM_ACCESS::kernelAccessP( NUM_ACCESS::ieventAccessRecord( allNumerators, ievt0 * ndiagrams ) )
         : nullptr;
-      (void)numerators_sv;
       if( row >= 0 )
       {
 #ifdef MGONGPU_HR_ROWS
@@ -665,6 +658,35 @@ namespace madmatrix
     }
   }
 
+  // One good helicity of the page: out of the recycled tables (hr_row), or, for
+  // a helicity the warm-up did not find (another param_card, typically) and so
+  // did not build, with the plain code of that helicity (calculate_jamps): the
+  // matrix element stays complete, that helicity is just not recycled.
+  inline void
+  hr_row_or_plain( int ihel,
+                   const fptype_momenta* allmomenta,
+                   const fptype* allcouplings,
+                   const unsigned int* iflavorVec,
+                   const cxtype_amp_sv* ampAll_sv,
+                   const cxtype_amp_sv* jampAll_sv,
+                   const fptype_amp_sv* numAll_sv,
+                   cxtype_amp_sv* allJamp_sv,
+                   bool storeChannelWeights,
+                   fptype_amp* allNumerators,
+                   fptype_amp* allDenominators,
+                   fptype_amp_sv* jamp2_sv,
+                   const int ievt00 )
+  {
+    if( cHrRow[ihel] >= 0 )
+    {
+      hr_row( ihel, ampAll_sv, jampAll_sv, numAll_sv, allJamp_sv, storeChannelWeights, allNumerators, jamp2_sv, ievt00 );
+      return;
+    }
+    hr_unbaked_row( ihel );
+    calculate_jamps( cHel[ihel], nullptr, allmomenta, allcouplings, iflavorVec, allJamp_sv, storeChannelWeights,
+                     allNumerators, allDenominators, jamp2_sv, ievt00 );
+  }
+
   // The whole page: the recycled block (calculate_all_jamps), then the helicity
   // loop of sigmaKin over the good helicities, one row at a time (hr_row), with
   // its color sum. MEs_ighel[ighel] (and MEs_ighel2 for the second page in mixed
@@ -675,14 +697,14 @@ namespace madmatrix
            const unsigned int* iflavorVec,
            fptype* allMEs,
            fptype_amp* allNumerators,
+           fptype_amp* allDenominators,
            fptype_amp_sv* jamp2_sv,
            fptype_sv* MEs_ighel,
-           fptype_sv* MEs_ighel2,
+           [[maybe_unused]] fptype_sv* MEs_ighel2,
            const bool storeChannelWeights,
            const int ievt00 )
   {
     using E_ACCESS = HostAccessMatrixElements;
-    (void)MEs_ighel2;
     // The tables of the page, the wavefunction slots and the jamps of every
     // helicity for BLAS: MBs for a big process, in this thread's scratch area
     // (HelRecyclingScratch.h), which every recycled subprocess library of the
@@ -735,7 +757,8 @@ namespace madmatrix
       {
         cxtype_sv* jamp_sv = ghelJamp_sv + (size_t)ighel * nParity * ncolor;
         for( int i = 0; i < nParity * ncolor; i++ ) jamp_sv[i] = cxzero_sv<cxtype_sv>();
-        hr_row( cGoodHel[ighel], ampAll_sv, jampAll_sv, numAll_sv, jamp_sv, storeChannelWeights, allNumerators, jamp2_sv, ievt00 );
+        hr_row_or_plain( cGoodHel[ighel], allmomenta, allcouplings, iflavorVec, ampAll_sv, jampAll_sv, numAll_sv, jamp_sv,
+                         storeChannelWeights, allNumerators, allDenominators, jamp2_sv, ievt00 );
       }
       color_sum_cpu_blas( allMEs, MEs_ighel, MEs_ighel2, ghelJamp_sv, cNGoodHel, ievt00 );
       return;
@@ -744,7 +767,8 @@ namespace madmatrix
     for( int ighel = 0; ighel < cNGoodHel; ighel++ )
     {
       cxtype_amp_sv jamp_sv[nParity * njampso] = {};
-      hr_row( cGoodHel[ighel], ampAll_sv, jampAll_sv, numAll_sv, jamp_sv, storeChannelWeights, allNumerators, jamp2_sv, ievt00 );
+      hr_row_or_plain( cGoodHel[ighel], allmomenta, allcouplings, iflavorVec, ampAll_sv, jampAll_sv, numAll_sv, jamp_sv,
+                       storeChannelWeights, allNumerators, allDenominators, jamp2_sv, ievt00 );
       color_sum_cpu( allMEs, jamp_sv, ievt00 );
       MEs_ighel[ighel] = E_ACCESS::kernelAccess( E_ACCESS::ieventAccessRecord( allMEs, ievt00 ) );
 #if defined MGONGPU_CPPSIMD and defined MGONGPU_FPTYPE_DOUBLE and defined MGONGPU_FPTYPE2_FLOAT
@@ -1100,7 +1124,7 @@ namespace madmatrix
       // for the good helicities, not per SIMD lane)
       if( hrUseRecycling && allihel == nullptr )
       {
-        hr_page( allmomenta, allcouplings, iflavorVec, allMEs, allNumerators, jamp2_sv, MEs_ighel,
+        hr_page( allmomenta, allcouplings, iflavorVec, allMEs, allNumerators, allDenominators, jamp2_sv, MEs_ighel,
 #if defined MGONGPU_CPPSIMD and defined MGONGPU_FPTYPE_DOUBLE and defined MGONGPU_FPTYPE2_FLOAT
                  MEs_ighel2,
 #else
