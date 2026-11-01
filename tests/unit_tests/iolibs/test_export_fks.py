@@ -652,6 +652,44 @@ class TestFKSOutput(unittest.TestCase):
                 self.assertEqual(old_l, new_l)
 
 
+    def test_low_mem_gen_with_respawning_pool(self):
+        """the low-memory NLO generation reuses a maxtasksperchild=1 pool for
+        several map_async calls. Between two calls its workers have exited and
+        are replaced by the pool's handler thread, so len(pool._pool) can be
+        zero, and without an explicit chunksize CPython divides by it
+        (intermittent ZeroDivisionError). Simulate that state for every
+        map_async call: the generation must not depend on it.
+        """
+        import multiprocessing.pool
+        from unittest import mock
+
+        map_async = multiprocessing.pool.Pool._map_async
+        def map_async_while_respawning(pool, *args, **opts):
+            workers, pool._pool = pool._pool, []
+            try:
+                return map_async(pool, *args, **opts)
+            finally:
+                pool._pool = workers
+
+        path = tempfile.mkdtemp('', 'TMPWTest', None)
+
+        def run_cmd(cmd):
+            interface.exec_cmd(cmd, errorhandling=False, printcmd=False,
+                               precmd=True, postcmd=True)
+
+        interface = MGCmd.MasterCmd()
+        try:
+            run_cmd('set low_mem_multicore_nlo_generation True')
+            run_cmd('generate p p > w+ [QCD]')
+            with mock.patch.object(multiprocessing.pool.Pool, '_map_async',
+                                   map_async_while_respawning):
+                run_cmd('output %s' % os.path.join(path, 'W-newway'))
+            self.assertTrue(glob.glob(os.path.join(path, 'W-newway',
+                                                   'SubProcesses', 'P0*', 'V0*')))
+        finally:
+            run_cmd('set low_mem_multicore_nlo_generation False')
+            shutil.rmtree(path)
+
     @test_manager.bypass_for_py3
     def test_w_nlo_gen_gosam(self):
         """check that the new generation mode works when gosam is set 
