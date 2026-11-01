@@ -1,0 +1,235 @@
+{
+  "fields": [
+    "primary_scale",
+    "system_mass",
+    "system_y",
+    "bb_pt",
+    "bb_mass",
+    "bb_y",
+    "w_pt",
+    "w_y",
+    "b_pt",
+    "b_y",
+    "bbar_pt",
+    "bbar_y",
+    "bb_delta_phi",
+    "bb_delta_y",
+    "bb_delta_r",
+    "radiation_jet1_pt",
+    "radiation_jet2_pt",
+    "all_jet1_pt",
+    "all_jet2_pt"
+  ],
+  "histograms": [
+    {
+      "id": 1,
+      "name": "total raw",
+      "field": null,
+      "bins": 1,
+      "lo": 0.0,
+      "hi": 1.0,
+      "transform": "total"
+    },
+    {
+      "id": 2,
+      "name": "primary scale 0-100",
+      "field": "primary_scale",
+      "bins": 100,
+      "lo": 0.0,
+      "hi": 100.0,
+      "transform": "linear"
+    },
+    {
+      "id": 3,
+      "name": "primary log10 scale",
+      "field": "primary_scale",
+      "bins": 140,
+      "lo": -4.0,
+      "hi": 3.0,
+      "transform": "log10"
+    },
+    {
+      "id": 4,
+      "name": "system pT 0-500",
+      "field": "primary_scale",
+      "bins": 100,
+      "lo": 0.0,
+      "hi": 500.0,
+      "transform": "linear"
+    },
+    {
+      "id": 5,
+      "name": "Wbb invariant mass",
+      "field": "system_mass",
+      "bins": 100,
+      "lo": 80.0,
+      "hi": 2080.0,
+      "transform": "linear"
+    },
+    {
+      "id": 6,
+      "name": "Wbb rapidity",
+      "field": "system_y",
+      "bins": 80,
+      "lo": -8.0,
+      "hi": 8.0,
+      "transform": "linear"
+    },
+    {
+      "id": 7,
+      "name": "bb pT 0-500",
+      "field": "bb_pt",
+      "bins": 100,
+      "lo": 0.0,
+      "hi": 500.0,
+      "transform": "linear"
+    },
+    {
+      "id": 8,
+      "name": "bb invariant mass",
+      "field": "bb_mass",
+      "bins": 100,
+      "lo": 0.0,
+      "hi": 1000.0,
+      "transform": "linear"
+    },
+    {
+      "id": 9,
+      "name": "bb rapidity",
+      "field": "bb_y",
+      "bins": 80,
+      "lo": -8.0,
+      "hi": 8.0,
+      "transform": "linear"
+    },
+    {
+      "id": 10,
+      "name": "W pT 0-500",
+      "field": "w_pt",
+      "bins": 100,
+      "lo": 0.0,
+      "hi": 500.0,
+      "transform": "linear"
+    },
+    {
+      "id": 11,
+      "name": "W rapidity",
+      "field": "w_y",
+      "bins": 80,
+      "lo": -8.0,
+      "hi": 8.0,
+      "transform": "linear"
+    },
+    {
+      "id": 12,
+      "name": "bottom pT 0-500",
+      "field": "b_pt",
+      "bins": 100,
+      "lo": 0.0,
+      "hi": 500.0,
+      "transform": "linear"
+    },
+    {
+      "id": 13,
+      "name": "bottom rapidity",
+      "field": "b_y",
+      "bins": 80,
+      "lo": -8.0,
+      "hi": 8.0,
+      "transform": "linear"
+    },
+    {
+      "id": 14,
+      "name": "antibottom pT 0-500",
+      "field": "bbar_pt",
+      "bins": 100,
+      "lo": 0.0,
+      "hi": 500.0,
+      "transform": "linear"
+    },
+    {
+      "id": 15,
+      "name": "antibottom rapidity",
+      "field": "bbar_y",
+      "bins": 80,
+      "lo": -8.0,
+      "hi": 8.0,
+      "transform": "linear"
+    },
+    {
+      "id": 16,
+      "name": "bb delta phi",
+      "field": "bb_delta_phi",
+      "bins": 64,
+      "lo": 0.0,
+      "hi": 3.141592653589793,
+      "transform": "linear"
+    },
+    {
+      "id": 17,
+      "name": "bb delta rapidity",
+      "field": "bb_delta_y",
+      "bins": 100,
+      "lo": -10.0,
+      "hi": 10.0,
+      "transform": "linear"
+    },
+    {
+      "id": 18,
+      "name": "bb delta R",
+      "field": "bb_delta_r",
+      "bins": 120,
+      "lo": 0.0,
+      "hi": 12.0,
+      "transform": "linear"
+    },
+    {
+      "id": 19,
+      "name": "radiation jet1 pT 0-500",
+      "field": "radiation_jet1_pt",
+      "bins": 100,
+      "lo": 0.0,
+      "hi": 500.0,
+      "transform": "linear"
+    },
+    {
+      "id": 20,
+      "name": "radiation jet1 pT 0-50",
+      "field": "radiation_jet1_pt",
+      "bins": 100,
+      "lo": 0.0,
+      "hi": 50.0,
+      "transform": "linear"
+    },
+    {
+      "id": 21,
+      "name": "radiation jet2 pT 0-500",
+      "field": "radiation_jet2_pt",
+      "bins": 100,
+      "lo": 0.0,
+      "hi": 500.0,
+      "transform": "linear"
+    },
+    {
+      "id": 22,
+      "name": "all jet1 pT 0-500",
+      "field": "all_jet1_pt",
+      "bins": 100,
+      "lo": 0.0,
+      "hi": 500.0,
+      "transform": "linear"
+    },
+    {
+      "id": 23,
+      "name": "all jet2 pT 0-500",
+      "field": "all_jet2_pt",
+      "bins": 100,
+      "lo": 0.0,
+      "hi": 500.0,
+      "transform": "linear"
+    }
+  ],
+  "definition": "No generation or analysis acceptance cuts. Exactly one stable W+, b and bbar; primary pT(W+b+bbar). anti-kT R=0.5 E-scheme jets on stable quarks1..5/gluons. Radiation jets exclude stable b/bbar before clustering; all jets retain them. No jet pT or rapidity threshold. Absent jets have pT=0. All original signed events/weights retained, with no normalization to survivors or plotted range.",
+  "missing": "Undefined rapidities are NaN coordinates, separately counted; never event vetoes. Log primary spectrum has separately accounted exact zeros and underflows.",
+  "full_binary": "wbb_observables.bin starts with two native int32 values (nobs,nweights), then float64 rows [observables,weights] in input event order. wbb_weight_names.txt gives weight labels. This stream retains every event, including zero matching weight, while nominal remains nonzero."
+}

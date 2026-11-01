@@ -1,0 +1,169 @@
+{
+  "PDF_QMin_GeV": 1.65,
+  "born_x": 0.022904539932296634,
+  "cause": "At the actual first ISR g->c cbar endpoint, the NNPDF4 nf4 charm daughter PDF is negative inside the tabulated Q domain. Native Pythia PDF::xf clamps it to zero. Dividing the positive gluon mother PDF by that zero creates an infinite shower/kernel PDF ratio.",
+  "charm_positive_support_crossing": {
+    "lower_GeV": 1.7095262866722023,
+    "upper_GeV": 1.7095262866722025,
+    "xf_lower": -1e-17,
+    "xf_upper": 1e-17
+  },
+  "emission_t2_GeV2": 2.8995639072761987,
+  "emission_t_GeV": 1.7028105905461708,
+  "existing_mass_only_matching_boundary_GeV": 1.697056274847714,
+  "inputs": {
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/pdf_ratio_failure/exact_pdf": {
+      "bytes": 126072,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/pdf_ratio_failure/exact_pdf",
+      "sha256": "390bf13359605cce228d69e58122449662716df95d3b2b0f227c9f561d0d536d"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/pdf_ratio_failure/exact_pdf.cc": {
+      "bytes": 1008,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/pdf_ratio_failure/exact_pdf.cc",
+      "sha256": "4cc22bc2cc89d7c7b65a43573f1bef91b8703aba47153fe212e8dbbb39d30d1f"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/pdf_ratio_failure/exact_pdf.log": {
+      "bytes": 4942,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/pdf_ratio_failure/exact_pdf.log",
+      "sha256": "b9c1af1c9493e7876e589053efcd733dc803fedc3c2a8a2281433be72237d1cb"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/pdf_ratio_failure/scan_pdf.cc": {
+      "bytes": 863,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/pdf_ratio_failure/scan_pdf.cc",
+      "sha256": "0d85aaaa3753a67f68ea04914775a6f5e7e2e675d95a9d093fa2205d9942f4c2"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/pdf_ratio_failure/scan_pdf.log": {
+      "bytes": 15896,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/pdf_ratio_failure/scan_pdf.log",
+      "sha256": "2105fb5c7e48e9b9dfad645b5d425e192a0176ada94ca18ee305d5e605dd0039"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/pdf_ratio_failure/source_event_5294.lhefragment": {
+      "bytes": 3239,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/pdf_ratio_failure/source_event_5294.lhefragment",
+      "sha256": "cd9a7c8a8c51087da24f124156091ead705591cdae9cd788486ed7b3627b6727"
+    },
+    "/nfs/home/rikkert/Downloads/pythia8/lib/libpythia8.so": {
+      "bytes": 12796904,
+      "path": "/nfs/home/rikkert/Downloads/pythia8/lib/libpythia8.so",
+      "sha256": "35203dfab4e20b044fe6e669b8170f5905f56c43c6dad6e762ceff86158a283c"
+    },
+    "/nfs/home/rikkert/LHAPDF/share/LHAPDF/NNPDF40_nlo_as_01180_nf_4/NNPDF40_nlo_as_01180_nf_4.info": {
+      "bytes": 2463,
+      "path": "/nfs/home/rikkert/LHAPDF/share/LHAPDF/NNPDF40_nlo_as_01180_nf_4/NNPDF40_nlo_as_01180_nf_4.info",
+      "sha256": "b535f5c24e1e23fc13affea12cd2745ef83e537ed74193b02d34bcc9f660d4e1"
+    },
+    "/nfs/home/rikkert/LHAPDF/share/LHAPDF/NNPDF40_nlo_as_01180_nf_4/NNPDF40_nlo_as_01180_nf_4_0000.dat": {
+      "bytes": 1326512,
+      "path": "/nfs/home/rikkert/LHAPDF/share/LHAPDF/NNPDF40_nlo_as_01180_nf_4/NNPDF40_nlo_as_01180_nf_4_0000.dat",
+      "sha256": "29c91090491239552c5ac24cfa07a3592adffc976d33ea275153b1b02ce875d7"
+    }
+  },
+  "interpretation": "The x-dependent PDF zero is above the mass-only protected boundary. It is not an out-of-grid extrapolation, floating-point near-zero artefact, or a bottom PDF entry. A fixed charm threshold alone does not describe the native positive shower PDF support.",
+  "kernel_Q2_GeV2": 2283.313521912757,
+  "limits": "This independently diagnoses the exact failed point, not the population frequency or a generic proof of forced-heavy shower treatment. Any matching fix must act consistently on H and S and keep the original source events.",
+  "matching_gate_caution": "A conservative common zero-transfer policy must explicitly retain both H and S. Merely returning pdfRatio=0 is insufficient: the current saturated S acceptance at scale=0 is zero.",
+  "native_tiny_PDF_semantics": {
+    "TINYPDF": 1e-10,
+    "classification": "The point is above the mass-only forced-heavy threshold; its support problem must not automatically be labelled a forced-massive conversion.",
+    "daughter_floor_line": 1518,
+    "description": "The native regular ISR branch uses max(TINYPDF, beam.xfISR) in the accepted daughter denominator. This permits a realized g->c cbar branch even though plain beam.xf returns zero.",
+    "failed_t2": 2.8995639072761987,
+    "forced_mass_threshold_t2": 2.88,
+    "reference_path": "/export/slow1/rikkert/macnlops_sudakov_1M_20261030/scale_audit_20261031/reference/SimpleSpaceShower.cc",
+    "reference_sha256": "79b9f2334af443005b7c4722dc629ca4facdce6663b73815c1fa0278aacfa789"
+  },
+  "queries": [
+    {
+      "LHAPDF_xf": -0.00071824890601728,
+      "Q_GeV": 1.697056274847714,
+      "id": 4,
+      "native_Pythia_xf": 0.0,
+      "x": 0.02290453993229663
+    },
+    {
+      "LHAPDF_xf": 2.0039197209886335,
+      "Q_GeV": 1.697056274847714,
+      "id": 21,
+      "native_Pythia_xf": 2.0039197209886335,
+      "x": 0.05824264110719798
+    },
+    {
+      "LHAPDF_xf": -0.00038605536778315,
+      "Q_GeV": 1.7028105905461708,
+      "id": 4,
+      "native_Pythia_xf": 0.0,
+      "x": 0.02290453993229663
+    },
+    {
+      "LHAPDF_xf": 2.005076188159679,
+      "Q_GeV": 1.7028105905461708,
+      "id": 21,
+      "native_Pythia_xf": 2.005076188159679,
+      "x": 0.05824264110719798
+    },
+    {
+      "LHAPDF_xf": 2.716191890459e-05,
+      "Q_GeV": 1.71,
+      "id": 4,
+      "native_Pythia_xf": 2.716191890459e-05,
+      "x": 0.02290453993229663
+    },
+    {
+      "LHAPDF_xf": 2.0065127182885365,
+      "Q_GeV": 1.71,
+      "id": 21,
+      "native_Pythia_xf": 2.0065127182885365,
+      "x": 0.05824264110719798
+    },
+    {
+      "LHAPDF_xf": 0.00059827519822069,
+      "Q_GeV": 1.72,
+      "id": 4,
+      "native_Pythia_xf": 0.00059827519822069,
+      "x": 0.02290453993229663
+    },
+    {
+      "LHAPDF_xf": 2.00849201111942,
+      "Q_GeV": 1.72,
+      "id": 21,
+      "native_Pythia_xf": 2.00849201111942,
+      "x": 0.05824264110719798
+    },
+    {
+      "LHAPDF_xf": 0.00228238428345878,
+      "Q_GeV": 1.75,
+      "id": 4,
+      "native_Pythia_xf": 0.00228238428345878,
+      "x": 0.02290453993229663
+    },
+    {
+      "LHAPDF_xf": 2.0142519441167375,
+      "Q_GeV": 1.75,
+      "id": 21,
+      "native_Pythia_xf": 2.0142519441167375,
+      "x": 0.05824264110719798
+    },
+    {
+      "LHAPDF_xf": 0.15848364625057942,
+      "Q_GeV": 47.7840299881954,
+      "id": 4,
+      "native_Pythia_xf": 0.15848364625057942,
+      "x": 0.02290453993229663
+    },
+    {
+      "LHAPDF_xf": 1.9027968202964785,
+      "Q_GeV": 47.7840299881954,
+      "id": 21,
+      "native_Pythia_xf": 1.9027968202964785,
+      "x": 0.05824264110719798
+    }
+  ],
+  "real_mother_id": 21,
+  "real_x": 0.05824264110719798,
+  "source_event_index": 5294,
+  "source_flavours": [
+    4,
+    -3
+  ],
+  "source_weight": 0.00064370681
+}

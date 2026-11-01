@@ -1,0 +1,25 @@
+{
+  "negative_H_events": 24003,
+  "transfer_capable_H_contexts": 23980,
+  "other_H_retained": 23,
+  "all_positive_Born_support": true,
+  "combined_G_range": [
+    0.9382605591951961,
+    1.3498382919581045
+  ],
+  "muBorn_range": [
+    44.928790432996806,
+    944.1126312947442
+  ],
+  "max_alpha_real_relative_error": 2.0627943797535409e-13,
+  "max_original_keep_replay_difference": 0.0,
+  "changed_H_removal_probabilities": 0,
+  "old_removed_weight_pb": 15.416451607902488,
+  "new_removed_weight_pb": 15.416451607902488,
+  "minimum_native_bound_over_C": 2.356710087895582,
+  "minimum_corrected_bound_over_C": 2.627698538758028,
+  "extra_local_beta_factor_lower_bound_to_preserve_all_H": 0.38056115846251004,
+  "inputs": {
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/run_manifest.json": "93a6e23adaae9d21b0483d8d14656d6aebb039cc57e6b5ae6c4ffe449c4c3e2f"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "first_arrays": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/run_1M_wbb4fs_nocuts_lhe.npz",
+  "first_arrays_sha256": "1567f10774465e2d60392de90d67a7ed3563257690e2ef70b3d1c8d2fad3ee6e",
+  "native_csv_sha256": "ef64d3db4c87e20c229dc53480e29ee81723fbc0a5e15a2d9882bfbf5acee952",
+  "native_log_sha256": "a2c505353b6bc2761c44fc58cacc743aa14119b9d807cafef56f4fe54c715174",
+  "probe_executable_sha256": "c2152647f4b5a8d88ea126631d81c38a454c5c92e14c77bec45f3656865c1e8a",
+  "probe_source_sha256": "fd059b73680e2b33ffd50b207f70b2bd45bd7dafabaacd6875f43de4f6ee59f6",
+  "pythia_library_sha256": "35203dfab4e20b044fe6e669b8170f5905f56c43c6dad6e762ceff86158a283c",
+  "scan_script_sha256": "5c89d02230b0acbc9bb05541636fc150ce07de033a51e7a4efd160fffcd352e2",
+  "settings": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/Pythia8.cmd",
+  "settings_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50",
+  "source": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/backup/run_1M_wbb4fs_nocuts_events.lhe.gz",
+  "source_sha256": "414f98c6d3ca1bd279205a66ec045327ccdd0e1a47eab6f4c924aedd62540543"
+}

@@ -1,0 +1,28 @@
+{
+  "scope": "Independent targeted raw-event and DY-provenance review; full19,812-event parsing and TT/HEFT investigations owned separately.",
+  "all_reviewed_physical_payloads_unchanged": true,
+  "Wj_density_invariance": "Within6.43e-16 relative, up to5ULP; strict byte identity ofRDK is not claimed.",
+  "active_H_bound": "Production C++ compiled regression test test_active_common_bound_changes_h_removal_with_the_same_factor independently exercised and passed; prevents Wbb source-limited H from hiding one-sided G wiring.",
+  "files": [
+    {
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/independent_review/dy_review.json",
+      "sha256": "1467fb80397cf1a68b183d4f3dead624307e3d458f1ef27f613219d9e57002b7",
+      "bytes": 2013
+    },
+    {
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/independent_review/raw_review.json",
+      "sha256": "3dc04dfa852d107131fa033d19cc77fb28d63203b63e0833189c9c52fe7a5b19",
+      "bytes": 35470
+    },
+    {
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/independent_review/review_dy.py",
+      "sha256": "c30bfb0c4ea7373736b0698de7e77c35a99b68dc738bda1fb5790700cff05989",
+      "bytes": 2817
+    },
+    {
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/independent_review/review_raw.py",
+      "sha256": "0a093e8b6d00a65fba2f6e9968911c77812921a2f322b567977c73d916cd7a0d",
+      "bytes": 3880
+    }
+  ]
+}

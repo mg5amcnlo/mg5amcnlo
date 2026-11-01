@@ -1,0 +1,38 @@
+{
+  "command": [
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnostics/pdf_ratio/guard/macnlops_onestep",
+    "--input",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnostics/pdf_ratio/before/failed_shard/events.lhe",
+    "--output",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnostics/pdf_ratio/guard/events.lhe",
+    "--summary",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnostics/pdf_ratio/guard/summary.json",
+    "--routes",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/macnlops_routes.dat",
+    "--settings",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Cards/macnlops_shower.cmnd",
+    "--pdf",
+    "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+    "--seed",
+    "4020127",
+    "--res",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_26/res_1"
+  ],
+  "cwd": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_26",
+  "returncode": 0,
+  "compile_command": [
+    "g++",
+    "-O",
+    "-std=c++17",
+    "-I/nfs/home/rikkert/Downloads/pythia8/include",
+    "-c",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnostics/pdf_ratio/guard/MacNLOPSMatch.cc",
+    "-o",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnostics/pdf_ratio/guard/MacNLOPSMatch.o"
+  ],
+  "link_command": "gfortran -lstdc++ -o /export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnostics/pdf_ratio/guard/macnlops_onestep analysis_dummy.o dbook.o open_output_files_dummy.o HwU_dummy.o parton_lum_1.o parton_lum_2.o parton_lum_3.o parton_lum_chooser.o qed_shower_support.o process_module.o scale_module.o matrix_1.o matrix_2.o matrix_3.o FKSParams.o real_me_chooser.o chooser_functions.o recmom.o fks_phase_space_data.o genps_fks_helpers.o genps_fks_sampling.o genps_fks_radiation.o genps_fks.o resonance_recoil.o initial_recoil.o recoil_selection.o resonance_histories.o setcuts.o setscales.o veto_xsec.o  born.o sborn_sf.o extra_cnt_wrapper.o born_support.o mc_native_context.o mc_native_runtime.o mc_native_props.o  ewsudakov_functions_dummy.o ewsudakov_wrapper.o  momentum_reshuffling.o rescale_alpha_tagged.o fks_Sij.o fastjetfortran_madfks_core.o fjcore.o fastjet_wrapper.o fks_singular.o montecarlocounter.o mc_pythia8_kernel.o mcatnlo_delta_scales.o herwig7_scales.o boostwdir2.o cluster.o splitorders_stuff.o reweight_xsec.o get_color.o iproc_map.o sudakov.o MC_integer.o  pineappl_interface_dummy.o weight_lines.o mint_module.o virtual_approximation.o virtual_surrogate.o polfit.o cuts.o dummy_fct.o pythia_unlops.o recluster.o fill_MC_mshell.o born_hel.o open_output_files.o add_write_info.o madfks_plot.o driver_macnlops.o mc_matching_runtime.o handling_lhe_events.o write_event.o BinothLHADummy.o macnlops_capi.o /export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnostics/pdf_ratio/guard/MacNLOPSMatch.o \\\n   -L/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/lib/ -ldhelas -lgeneric -lmodel -lpdf -lgammaUPC -lcernlib -L/nfs/home/rikkert/LHAPDF/lib -lLHAPDF -L/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/lib/ -lmc_born_support -Wl,-rpath,'$ORIGIN' -Wl,-rpath,'$ORIGIN/../../lib'   -lstdc++ \\\n  -L/nfs/home/rikkert/Downloads/pythia8/lib -Wl,-rpath,/nfs/home/rikkert/Downloads/pythia8/lib -lpythia8 -ldl -lstdc++\n",
+  "source_guard_before_sha256": "e0ea3bdddc4891ee5b212a16c1d21f45b174f079cc63ec077bc17608bb66e8e5",
+  "source_guard_after_sha256": "0e2bbd496540ed2692cb0d2665544aba8380add65771776a9baaaec7312dc7e1",
+  "input_sha256": "8493c2c59fb3a8eb48e1f5d971604b1f9d0bf575677f50abfd5fac3be187ac50",
+  "output_sha256": "dd766cbfb9a9e41a3b8d00b454b2ece4dd9ff70c44f50c76c166c26fcc50c3b8"
+}

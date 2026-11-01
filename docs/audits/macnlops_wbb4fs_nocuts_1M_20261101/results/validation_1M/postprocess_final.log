@@ -1,0 +1,3 @@
+first recoil5-20 {"S_pb": 9.947201334930005, "H_pb": 9.098152052539998, "H_over_S": 0.9146444056170316, "ratio_error": 0.012183826281308392, "net_H_minus_S_pb": -0.8490492823900073, "matched_source_minus1": -0.003898871721503938}
+full recoil5-20 {"S_pb": 9.074334900570001, "H_pb": 8.28579405832, "H_over_S": 0.9131020784564091, "ratio_error": 0.012807988473731356, "net_H_minus_S_pb": -0.7885408422500007, "matched_source_minus1": -0.0038868035879160434}
+Output: /export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/validation_1M

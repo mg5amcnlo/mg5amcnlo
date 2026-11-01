@@ -1,0 +1,55 @@
+{
+  "audit_code_sha256": {
+    "scale_audit/audit_scales.py": "8c4ee7919a4312b5090e4d7af42b2e0a1256aded82eade408dc390c50f5dc6b1",
+    "validation/audit_matching_events.py": "ce4bfa2c28ec2894b87a2a5892711c32900d2207a4f9164a5657caae36da76e4"
+  },
+  "counts": {
+    "H": 253556,
+    "H_negative": 24003,
+    "H_zero_dipole_pairs": 0,
+    "S": 746444,
+    "S_negative": 106705,
+    "S_zero_dipole_pairs": 0,
+    "continuation_emitted": 746440,
+    "continuation_exhausted": 4,
+    "continuation_unshowered": 253556,
+    "events": 1000000,
+    "incoming_-1": 582268,
+    "incoming_-3": 105414,
+    "incoming_2": 786744,
+    "incoming_21": 442399,
+    "incoming_4": 83175,
+    "protected_below_boundary": 67,
+    "rule_below_matching_scale": 67,
+    "rule_exhausted": 4,
+    "rule_h_removal": 24003,
+    "rule_no_transfer": 274821,
+    "rule_pdf_support_no_transfer": 3,
+    "rule_positive_h": 229553,
+    "rule_s_veto": 471549
+  },
+  "expected_events": 1000000,
+  "input": {
+    "bytes": 684762206,
+    "canonical_backup_path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/backup/run_1M_wbb4fs_nocuts_events.lhe.gz",
+    "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/scale_audit/main/source_snapshot.lhe.gz",
+    "sha256": "414f98c6d3ca1bd279205a66ec045327ccdd0e1a47eab6f4c924aedd62540543",
+    "snapshot_and_backup_same_inode": true
+  },
+  "limits": "First-endpoint structural/probability/scale checks; not a transfer-closure or native-envelope certificate.",
+  "maximum_errors": {
+    "H_cap_relative_error": 0.0,
+    "S_winning_scale_relative_error": 0.0,
+    "bottom_mass_error_GeV": 0.0,
+    "bottom_shell_error_over_energy2": 2.6534185381395053e-12,
+    "header_vs_continuation_relative": 0.0
+  },
+  "passed": true,
+  "pdf_support_protection_source_indices_zero_based": [
+    212896,
+    649237,
+    824283
+  ],
+  "sum_matched_pb": 473.68967992918,
+  "sum_source_pb": 475.43155055704
+}

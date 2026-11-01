@@ -1,0 +1,20 @@
+{
+  "created_utc": "2026-11-01T08:51:21.712134+00:00",
+  "original_epoch": "analysis_epoch.json",
+  "original_analyzer_sha256": "a34137f73d76d1fb67e6cb14f17bd6ba31e6c9ade1706c2a71349fe4f52e8255",
+  "files": {
+    "analysis/jet_tools.py": "eefb154c88392b3bea582176e75b74036b3949a7eb49d933f2722745e06fcbe5",
+    "analysis/check_analysis.py": "47f933beaf168fdae6135ea0a41077f523474ead3174263264ee935fa4ffc1e5",
+    "analysis/py8an_HwU_wbb.f": "6908ac49870f1ad1e62c75ad2fa43a305844bd6e90d8d29e685a9233cfdb715e",
+    "analysis/diag_weights.py": "cba7ee818526a708dc4ba67050a57fb3638fb9b54a28d33bc59c0f8dd70779e2",
+    "analysis/observables.json": "7ac93362e040ec1fac4d825b8913f43e1a29b9caa1660dd81a63d591847876e2",
+    "analysis/finalize_full_streams.py": "ce27b259fae05683bfee42d6369778a8b7f8857cc9581ea0f21613383fd81254",
+    "analysis/README.txt": "c2e929b760356af6cedb0fc93655c05c9c92075efe2621f3b2172c375fc195a6",
+    "analysis/analysis_checks.json": "aa49255e49f9893005ae6b56b728685dc2d4e6b314baea1ae8c875d8228a7bfe",
+    "analysis/analyse.py": "51196f812855e85cb3658f88d76eeab941f6662f726c503fd7d90bed4c1376af",
+    "analysis/wbb_observables.cc": "c6ff940a8f74cbb20e00b4bb183764682699c03d485ddd1eb2f8769197459ad3",
+    "analysis/replay_full_streams.py": "b20e058f8cea33a53a30bab040cfe85adcf84e6222cda2411fde48543b0e3666",
+    "analysis/plot_from_comparison.py": "be826789cdfc419ec159392dcc4044fae72a71bf4ceb7fa8ed4b4d9581072f3e"
+  },
+  "diagnostic_lifecycle_change": "PYAEND close(97) -> flush(97); complete isolated replay; numerical comparison unchanged by plot-only polish."
+}

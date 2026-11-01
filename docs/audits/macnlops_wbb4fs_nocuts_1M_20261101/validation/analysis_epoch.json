@@ -1,0 +1,26 @@
+{
+  "created_utc": "2026-11-01T07:51:09.073803+00:00",
+  "no_analysis_cuts": true,
+  "files": {
+    "py8an_HwU_wbb.f": {
+      "analysis_sha256": "a34137f73d76d1fb67e6cb14f17bd6ba31e6c9ade1706c2a71349fe4f52e8255",
+      "exported_sha256": "a34137f73d76d1fb67e6cb14f17bd6ba31e6c9ade1706c2a71349fe4f52e8255"
+    },
+    "wbb_observables.cc": {
+      "analysis_sha256": "c6ff940a8f74cbb20e00b4bb183764682699c03d485ddd1eb2f8769197459ad3",
+      "exported_sha256": "c6ff940a8f74cbb20e00b4bb183764682699c03d485ddd1eb2f8769197459ad3"
+    },
+    "observables.json": {
+      "sha256": "7ac93362e040ec1fac4d825b8913f43e1a29b9caa1660dd81a63d591847876e2"
+    },
+    "jet_tools.py": {
+      "sha256": "eefb154c88392b3bea582176e75b74036b3949a7eb49d933f2722745e06fcbe5"
+    },
+    "diag_weights.py": {
+      "sha256": "cba7ee818526a708dc4ba67050a57fb3638fb9b54a28d33bc59c0f8dd70779e2"
+    },
+    "analyse.py": {
+      "sha256": "af70fc7ed3a645072629f347f2354dd1313a8f43c04ff2ec6fb58b0ce96c380b"
+    }
+  }
+}

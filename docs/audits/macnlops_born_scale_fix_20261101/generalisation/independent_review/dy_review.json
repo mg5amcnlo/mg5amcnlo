@@ -1,0 +1,45 @@
+{
+  "passed": true,
+  "source_prefix_events": 1500,
+  "prefix_header_and_events_exact": true,
+  "source_file_sha256": "24a0054ec87e754975ff298ad3deccee799455342acb2095d6bd4909425094ab",
+  "subset_sha256": "563662d8084ff7d1fc0670d29dac725a7681b38d47cb6ef0deabea48dd5343c5",
+  "evaluated_unique_points": 441,
+  "all_recorded_RDK_A_alpha_exact": true,
+  "all_repeated_requests_exact": true,
+  "Born_coupling_factor_exactly_one": true,
+  "pdf_factor_range": [
+    0.3332551047235764,
+    0.999641591661869
+  ],
+  "max_real_HT2_scale_relative_error": 1.2480017019811385e-12,
+  "native_cpp_sha256": "ec129d1eacfa27d7a4e0a442205847ba85a17751b7edcd263d97aeabb7acc39b",
+  "probe_cpp_sha256": "94ee7aa264f3badbe6ad10332e13864a3d9d1b27091005dd19db4ed70889ac06",
+  "providers": [
+    {
+      "provider": "P0_uxu_emep",
+      "records": 123,
+      "log_sha256": "2b3fd5eb61762b115730d9ca67b2344e43e7cc6ccc1b41f07dc46a9c8a267bdf",
+      "exe_sha256": "387722b1fe6b1c75f7d814d97c04bf7dd537f82da57b590bef9fee814e08f00a"
+    },
+    {
+      "provider": "P0_dxd_emep",
+      "records": 98,
+      "log_sha256": "c8eb575353a299181b14e4dd91983edca13abddde4acd6463e51cae4b98e3d89",
+      "exe_sha256": "7e6e8115ea965d06f67baf2dc599d16ae223073c01286cb1d795a4cb6c555524"
+    },
+    {
+      "provider": "P0_ddx_emep",
+      "records": 121,
+      "log_sha256": "379373533033f0f823fde3d677474168961271123620d9d0e6a074c501c2d94e",
+      "exe_sha256": "96514e6bfc61bc0efdc82f533cba91a896aea2faf3cf1a5d9564009a6cb66a26"
+    },
+    {
+      "provider": "P0_uux_emep",
+      "records": 99,
+      "log_sha256": "7cb13db47ae008a376f1ea87f1897b07a27e3ae4684fc6e2cca32ef874a04fd3",
+      "exe_sha256": "4db853078f6306de50e433b127930b046d13aa77be9770c17c290a937f459081"
+    }
+  ],
+  "limits": "Direct native reevaluation of pre-existing first endpoints, not a new DY first-emission/shower run. It confirms provider factors/state and unchanged old densities at441 supported selected contexts; no source regeneration or validation-distribution claim."
+}

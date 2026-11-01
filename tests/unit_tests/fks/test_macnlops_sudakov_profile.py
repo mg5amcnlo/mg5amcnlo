@@ -251,6 +251,9 @@ class TestGlobalGluonProfile(unittest.TestCase):
         stubs=stubs.replace('      integer macnlops_sudakov_ngluons', '''
       logical macnlops_sudakov_enabled,macnlops_sudakov_ready
       double precision macnlops_sudakov_requested_pt
+      logical macnlops_born_scale_ready
+      double precision macnlops_born_scale_coupling,
+     $     macnlops_born_scale_pdf
       integer macnlops_sudakov_ngluons''')
         helpers='''
       subroutine delta_source_flavours(ids)
@@ -385,7 +388,13 @@ c Between the two colour-end caps only the second line can evolve.
       call macnlops_c_gluon_profile(ng,packed)
       if(ng.ne.1.or.packed(4,1).ge.30d0.or.
      $     packed(5,1).le.30d0)stop 16
+      macnlops_born_scale_ready=.true.
+      macnlops_born_scale_coupling=2d0
+      macnlops_born_scale_pdf=3d0
       call macnlops_c_sudakov_request(0,0d0)
+      if(macnlops_born_scale_ready.or.
+     $   macnlops_born_scale_coupling.ne.1d0.or.
+     $   macnlops_born_scale_pdf.ne.1d0)stop 24
       call macnlops_c_gluon_profile(ng,packed)
       if(ng.ne.0.or.any(packed.ne.0d0))stop 17
 c A failed/new profile must not expose gluons from the previous event.

@@ -24,6 +24,7 @@ void macnlops_c_sudakov_profile(int* ready, int* n, int* ids, double* x,
   double* mass, double* pt, double* source, double* cdf, double* q, double* w, double* fsr,
   int* nquarks, double* quarks);
 void macnlops_c_gluon_profile(int* n, double* gluons);
+void macnlops_c_born_scale_factor(int* ready, double* coupling, double* pdf);
 }
 
 namespace {
@@ -237,8 +238,26 @@ struct SudakovProfile {
 struct Density {
   double r = 0., d = 0., k = 0., alphaK = 0., q2fact[2] = {0., 0.};
   SudakovProfile sudakov;
+  struct BornScale {
+    int ready = 0;
+    double coupling = 1., pdf = 1.;
+  } bornScale;
   bool transfers() const {return d > r && k > 0.;}
 };
+
+// The provider evaluates the same canonical Born contribution with its
+// native Born and real scale choices, including model-specific couplings
+// and both hard-beam PDFs. No process-wide alpha_s power is assumed here.
+double bornScaleFactor(const Density& x) {
+  const auto& p = x.bornScale;
+  if (p.ready != 1 || !std::isfinite(p.coupling) || !std::isfinite(p.pdf) ||
+      p.coupling < 0. || p.pdf < 0.)
+    throw std::runtime_error("Invalid native Born-scale factor");
+  const double factor = p.coupling * p.pdf;
+  if (!std::isfinite(factor))
+    throw std::runtime_error("Nonfinite native Born-scale factor");
+  return factor;
+}
 
 // Signed-residual acceptances of macnlops.Densities. A nonpositive K
 // transfers nothing; kernelScale rescales only the S denominator.
@@ -302,6 +321,9 @@ Density evaluate(const std::vector<LHEParticle>& legs, int sector, const Compone
       &p.pt, &p.source, &p.cdf, p.q.data(), p.w.data(), p.fsr.data(),
       &p.nquarks, p.quarks.data());
     macnlops_c_gluon_profile(&p.ngluons, p.gluons.data());
+    macnlops_c_born_scale_factor(&x.bornScale.ready, &x.bornScale.coupling,
+                                &x.bornScale.pdf);
+    bornScaleFactor(x);
     if (!p.ready || p.count < 0 || p.count > SudakovProfile::maximum ||
         !(p.pt > 0. && p.mass > 0.) || !std::isfinite(p.source) ||
         p.source < 0. || p.source > 1. + 1.e-12 || p.nquarks<0 || p.nquarks>64 ||
@@ -527,6 +549,7 @@ struct Decision {
   std::string rule;
   double keep = 1., pt = 0., matchingScale = 0., kernelScale = 1.;
   double alphaShower = 0., pdfRatio = 1., marking = 1., totalKernel = 0.;
+  double bornScale = 1.;
   double deltaSource = 1., deltaShower = 1.;
   bool sudakov = false;
   bool evaluated = false;
@@ -545,6 +568,27 @@ struct Context {
   int flavours = 5;
   double eBeam[2] = {0., 0.};
 };
+
+// The ordinary PDF-ratio/Sudakov density does not describe native branches
+// whose Born PDF is clipped to zero. Protect the same canonical Born state
+// on both sides of the transfer, including a spectator beam with no support.
+bool hasBornPdfSupport(const Context& c, const SudakovProfile& p) {
+  const double q2 = p.pt * p.pt;
+  if (!(q2 > 0.) || !std::isfinite(q2))
+    throw std::runtime_error("Invalid Born PDF support scale");
+  bool supported = true;
+  for (int side = 0; side < 2; ++side) {
+    const int id = p.ids[side];
+    if (id != 21 && (std::abs(id) < 1 || std::abs(id) > c.flavours)) continue;
+    if (!(p.x[side] > 0. && p.x[side] < 1.))
+      throw std::runtime_error("Invalid Born PDF support momentum fraction");
+    const double value = c.hook->beamXf(side, id, p.x[side], q2);
+    if (!std::isfinite(value))
+      throw std::runtime_error("Nonfinite native Born PDF support");
+    supported = supported && value > 0.;
+  }
+  return supported;
+}
 
 struct GaussRule {
   std::vector<double> x, w;
@@ -927,6 +971,19 @@ double pdfRatio(const Context& c, const FirstEmission& hook, const InputEvent& i
   return ratio;
 }
 
+// Both sides of the transfer use the same reference and support policy.
+bool prepareTransfer(const Context& c, Decision& x) {
+  if (!c.sudakovCorrection || !x.density.transfers()) return true;
+  x.bornScale = bornScaleFactor(x.density);
+  if (!hasBornPdfSupport(c, x.density.sudakov))
+    x.rule = "pdf_support_no_transfer";
+  else if (x.bornScale == 0.)
+    x.rule = "born_scale_no_transfer";
+  else
+    return true;
+  return false;
+}
+
 Decision decideS(const Context& c, Uniform& uniform, const InputEvent& input,
                  const FirstEmission& hook, const std::vector<LHEParticle>& endpoint) {
   Decision x;
@@ -991,15 +1048,17 @@ Decision decideS(const Context& c, Uniform& uniform, const InputEvent& input,
   x.sector = candidates[selected].sector;
   x.orientation = candidates[selected].orientation;
   x.density = densities[selected];
+  if (!prepareTransfer(c, x)) return x;
   if (x.density.transfers()) {
-    // K_sh: K with the shower's emission coupling and PDF ratio; the S
-    // events carry beta = sigma_S/sigma_B times the Born density.
+    // Replace K's emission factors and restore the canonical Born-scale
+    // density. The S model is beta = sigma_S/sigma_B times that Born.
     x.alphaShower = hook.emissionAlphaS;
     if (!(x.alphaShower > 0.) || !(x.density.alphaK > 0.) || !std::isfinite(x.alphaShower) ||
         !std::isfinite(x.density.alphaK))
       throw std::runtime_error("The S veto needs positive shower and kernel emission couplings");
     x.pdfRatio = pdfRatio(c, hook, input, endpoint, branch, x.density);
-    x.kernelScale = c.normalisation.beta * x.alphaShower / x.density.alphaK * x.pdfRatio;
+    x.kernelScale = c.normalisation.beta * x.alphaShower / x.density.alphaK *
+      x.pdfRatio * x.bornScale;
   }
   x.keep = sAcceptance(x.density, x.kernelScale);
   if (c.sudakovCorrection && x.density.transfers()) {
@@ -1031,6 +1090,10 @@ Decision decideH(const Context& c, const InputEvent& input) {
   x.candidates = 1;
   x.sector = component.sector;
   x.orientation = "source";
+  if (!prepareTransfer(c, x)) {
+    x.pt = x.density.sudakov.pt;
+    return x;
+  }
   x.keep = hAcceptance(x.density);
   if (c.sudakovCorrection && x.density.transfers()) {
     const auto& p=x.density.sudakov;
@@ -1049,7 +1112,7 @@ Decision decideH(const Context& c, const InputEvent& input) {
         c.hook->beamXf(radiator,p.ids[radiator],xb,q2);
       x.pdfRatio=shower/kernel;
     }
-    x.kernelScale=c.normalisation.beta*x.alphaShower/x.density.alphaK*x.pdfRatio;
+    x.kernelScale=c.normalisation.beta*x.alphaShower/x.density.alphaK*x.pdfRatio*x.bornScale;
     x.keep=sudakovAcceptance(x.density,x.kernelScale,x.deltaShower,true);
   }
   x.rule = "h_removal";
@@ -1067,6 +1130,10 @@ std::string decisionTag(const Decision& x, bool accepted) {
         << "\" sector=\"" << x.sector << "\" orientation=\"" << x.orientation
         << "\" candidates=\"" << x.candidates << "\" marking=\"" << x.marking << '"';
     if (x.candidates > 1) out << " total_k=\"" << x.totalKernel << '"';
+    if (x.density.bornScale.ready)
+      out << " born_scale_factor=\"" << x.bornScale
+          << "\" born_coupling_factor=\"" << x.density.bornScale.coupling
+          << "\" born_pdf_factor=\"" << x.density.bornScale.pdf << '"';
     if (x.alphaShower > 0.)
       out << " kernel_scale=\"" << x.kernelScale << "\" alpha_s_shower=\"" << x.alphaShower
           << "\" alpha_s_kernel=\"" << x.density.alphaK << "\" pdf_ratio=\"" << x.pdfRatio << '"';
@@ -1099,7 +1166,9 @@ std::string matchedPreamble(std::string text, bool dropRejected, bool pdfCorrect
          << (sudakovCorrection ? prescriptionV4 : pdfCorrection ? prescriptionV3 : prescriptionV2) << "\" weight=\"macnlops\" rejected=\""
          << (dropRejected ? "dropped" : "kept") << "\" shower_alpha_s=\"" << tableAlphaS
          << "\" shower_alpha_s_order=\"" << tableAlphaSOrder << "\" pythia=\"8.318\" cutoff_isr=\""
-         << cutoffs[0] << "\" cutoff_fsr=\"" << cutoffs[1] << "\"/>\n";
+         << cutoffs[0] << "\" cutoff_fsr=\"" << cutoffs[1] << '"';
+  if (sudakovCorrection) marker << " born_scale_correction=\"native-born-v1\"";
+  marker << "/>\n";
   std::size_t close = text.find("</initrwgt>");
   std::string blocks = marker.str();
   if (close != std::string::npos && close < header) {
@@ -1201,6 +1270,7 @@ int main(int argc, char** argv) {
         << ",\"input\":" << jsonString(m.input) << ",\"output\":" << jsonString(m.output)
         << ",\"seed\":" << m.seed << ",\"prescription\":"
         << jsonString(m.sudakovCorrection ? prescriptionV4 : m.pdfCorrection ? prescriptionV3 : prescriptionV2)
+        << ",\"born_scale_correction\":" << jsonString(m.sudakovCorrection ? "native-born-v1" : "none")
         << ",\"rejected_events\":" << jsonString(m.dropRejected ? "dropped" : "kept")
         << ",\"shower\":{\"alpha_s_mz\":" << tableAlphaS << ",\"alpha_s_order\":" << tableAlphaSOrder
         << ",\"pdf\":" << jsonString(m.pdf) << ",\"cutoffs\":[" << c.cutoffs[0] << ',' << c.cutoffs[1]

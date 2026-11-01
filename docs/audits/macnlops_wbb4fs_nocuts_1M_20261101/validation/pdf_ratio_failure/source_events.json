@@ -1,0 +1,106 @@
+{
+  "events": {
+    "5293": {
+      "SH_annotation": "#aMCatNLO 1  0  0  0  0 0.00000000D+00 0.00000000D+00   0  0  0 0.00000000D+00 0.00000000D+00 0.00000000D+00 0.00000000D+00 0.00000000D+00",
+      "annotations": [
+        "  <scales muf='-.1E+01' mur='-.1E+01'",
+        "  <macnlops_hard_event version=\"1\" frame=\"lab\" source=\"delta_native_ir\" partition=\"sampled\">",
+        "  <macnlops_component version=\"1\" registry=\"f5897d0fc5ebb718adb3abc98b13c81a901ebf8835a28f7ddb64777dac5cb676\">"
+      ],
+      "beam_ids": [
+        2,
+        -1
+      ],
+      "fragment_sha256": "11ea2793f39314f3becfc847313c44db97b2a933ded6830154f1e5d318cb1edb",
+      "hard_beam_masses_GeV": [
+        0.0,
+        0.0
+      ],
+      "hard_beam_x": [
+        0.2112545574186907,
+        0.0013782401445627168
+      ],
+      "header": [
+        "5",
+        "0",
+        "0.64370681E-03",
+        "0.23630682E+02",
+        "0.75467711E-02",
+        "0.11137500E+00"
+      ],
+      "reshuffled_beam_x": [
+        0.21125408988033983,
+        0.001378237094308411
+      ]
+    },
+    "5294": {
+      "SH_annotation": "#aMCatNLO 1  0  0  0  0 0.00000000D+00 0.00000000D+00   0  0  0 0.00000000D+00 0.00000000D+00 0.00000000D+00 0.00000000D+00 0.00000000D+00",
+      "annotations": [
+        "  <scales muf='-.1E+01' mur='-.1E+01'",
+        "  <macnlops_hard_event version=\"1\" frame=\"lab\" source=\"delta_native_ir\" partition=\"sampled\">",
+        "  <macnlops_component version=\"1\" registry=\"f5897d0fc5ebb718adb3abc98b13c81a901ebf8835a28f7ddb64777dac5cb676\">"
+      ],
+      "beam_ids": [
+        4,
+        -3
+      ],
+      "fragment_sha256": "cd9a7c8a8c51087da24f124156091ead705591cdae9cd788486ed7b3627b6727",
+      "hard_beam_masses_GeV": [
+        0.0,
+        0.0
+      ],
+      "hard_beam_x": [
+        0.022904539932296634,
+        0.0023282091262723254
+      ],
+      "header": [
+        "5",
+        "0",
+        "0.64370681E-03",
+        "0.67088473E+02",
+        "0.75467711E-02",
+        "0.12588508E+00"
+      ],
+      "reshuffled_beam_x": [
+        0.022903904396876323,
+        0.0023276278450533342
+      ]
+    },
+    "5295": {
+      "SH_annotation": "#aMCatNLO 1  0  0  0  0 0.00000000D+00 0.00000000D+00   0  0  0 0.00000000D+00 0.00000000D+00 0.00000000D+00 0.00000000D+00 0.00000000D+00",
+      "annotations": [
+        "  <scales muf='-.1E+01' mur='-.1E+01'",
+        "  <macnlops_hard_event version=\"1\" frame=\"lab\" source=\"delta_native_ir\" partition=\"sampled\">",
+        "  <macnlops_component version=\"1\" registry=\"f5897d0fc5ebb718adb3abc98b13c81a901ebf8835a28f7ddb64777dac5cb676\">"
+      ],
+      "beam_ids": [
+        2,
+        -1
+      ],
+      "fragment_sha256": "8461a97be8e43e1a96d9d3cf5860ce3742ad1b1ec6ba0aef2c3e8cf6b898f579",
+      "hard_beam_masses_GeV": [
+        0.0,
+        0.0
+      ],
+      "hard_beam_x": [
+        0.0007792267500157002,
+        0.06826894538954238
+      ],
+      "header": [
+        "5",
+        "0",
+        "0.64370681E-03",
+        "0.34997058E+02",
+        "0.75467711E-02",
+        "0.12217740E+00"
+      ],
+      "reshuffled_beam_x": [
+        0.0007792173110753441,
+        0.06826811843319905
+      ]
+    }
+  },
+  "source": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_26/events.lhe",
+  "source_index_convention": "1-based source-event index",
+  "source_sha256": "8493c2c59fb3a8eb48e1f5d971604b1f9d0bf575677f50abfd5fac3be187ac50"
+}

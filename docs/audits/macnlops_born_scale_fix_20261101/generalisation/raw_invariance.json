@@ -1,0 +1,246 @@
+{
+  "failed_processes": [
+    "Wj"
+  ],
+  "method": "Exact event bytes after masking only decision XML and matched weight; exact recorded R/D/K,A,CDF,emission/fixed-order couplings and PDF ratios, native first endpoints/source packets/continuation caps. G and decisions intentionally differ; fixed ee G=1 and every decision must match.",
+  "passed": false,
+  "processes": [
+    {
+      "G_quantiles": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "changes": {},
+      "coupling_quantiles": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "events": 1163,
+      "factors_recorded": 586,
+      "fixed_ee_G_and_decisions_exact": true,
+      "invariant_failures": {},
+      "kernel_scale_equals_old_times_G_max_relative_difference": 0.0,
+      "pdf_quantiles": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "process": "EE2",
+      "protected_pdf_point": null,
+      "rules": {
+        "exhausted": 1,
+        "h_removal": 38,
+        "no_transfer": 562,
+        "positive_h": 15,
+        "s_veto": 547
+      }
+    },
+    {
+      "G_quantiles": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "changes": {},
+      "coupling_quantiles": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "events": 853,
+      "factors_recorded": 616,
+      "fixed_ee_G_and_decisions_exact": true,
+      "invariant_failures": {},
+      "kernel_scale_equals_old_times_G_max_relative_difference": 0.0,
+      "pdf_quantiles": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "process": "EE3",
+      "protected_pdf_point": null,
+      "rules": {
+        "h_removal": 49,
+        "no_transfer": 184,
+        "positive_h": 66,
+        "s_veto": 554
+      }
+    },
+    {
+      "G_quantiles": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "changes": {},
+      "coupling_quantiles": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "events": 2223,
+      "factors_recorded": 1476,
+      "fixed_ee_G_and_decisions_exact": true,
+      "invariant_failures": {},
+      "kernel_scale_equals_old_times_G_max_relative_difference": 0.0,
+      "pdf_quantiles": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "process": "EE4",
+      "protected_pdf_point": null,
+      "rules": {
+        "h_removal": 83,
+        "no_transfer": 480,
+        "positive_h": 308,
+        "s_veto": 1352
+      }
+    },
+    {
+      "G_quantiles": [
+        0.9852729929245372,
+        0.9947884518050968,
+        1.001979690329746,
+        1.0401704591619414,
+        1.0927678406204226
+      ],
+      "changes": {
+        "accepted": 5,
+        "keep": 1645
+      },
+      "coupling_quantiles": [
+        0.9707995664770901,
+        0.9935595177064559,
+        1.0100630597248568,
+        1.062514820045124,
+        1.0910136368011079
+      ],
+      "events": 3600,
+      "factors_recorded": 1820,
+      "fixed_ee_G_and_decisions_exact": null,
+      "invariant_failures": {
+        "d": 18,
+        "k": 15,
+        "marking": 19,
+        "r": 8,
+        "total_k": 18
+      },
+      "kernel_scale_equals_old_times_G_max_relative_difference": 0.0,
+      "pdf_quantiles": [
+        0.9235234520581818,
+        0.9557120893183811,
+        0.993500510019222,
+        1.007538512377421,
+        1.0321461648579258
+      ],
+      "process": "Wj",
+      "protected_pdf_point": null,
+      "rules": {
+        "h_removal": 175,
+        "no_transfer": 983,
+        "positive_h": 797,
+        "s_veto": 1645
+      }
+    },
+    {
+      "G_quantiles": [
+        0.9532380986785058,
+        0.9969315948313034,
+        1.016088054645277,
+        1.1216330523604203,
+        1.3123547554908914
+      ],
+      "changes": {
+        "accepted": 11,
+        "keep": 5614
+      },
+      "coupling_quantiles": [
+        0.9307194242486165,
+        0.9956407701814938,
+        1.0278550081614184,
+        1.1531356952591403,
+        1.2499292383318037
+      ],
+      "events": 11973,
+      "factors_recorded": 5904,
+      "fixed_ee_G_and_decisions_exact": null,
+      "invariant_failures": {},
+      "kernel_scale_equals_old_times_G_max_relative_difference": 0.0,
+      "pdf_quantiles": [
+        0.8670068744984959,
+        0.9383399501100941,
+        0.9905889368033758,
+        1.007635250969983,
+        1.093223821643533
+      ],
+      "process": "Wbb",
+      "protected_pdf_point": {
+        "after": {
+          "accepted": "1",
+          "born_coupling_factor": "1.0066181224385702",
+          "born_pdf_factor": "0.99435514235980671",
+          "born_scale_factor": "1.0009359064393657",
+          "candidates": "1",
+          "d": "108953999822.92107",
+          "k": "158346523876.98438",
+          "keep": "1",
+          "marking": "1",
+          "matching_scale": "1.697056274847714",
+          "orientation": "native",
+          "pt": "1.7028105905461708",
+          "r": "108389747741.06812",
+          "rule": "pdf_support_no_transfer",
+          "sector": "5",
+          "version": "1"
+        },
+        "before": {
+          "accepted": "1",
+          "candidates": "1",
+          "d": "108953999822.92107",
+          "k": "158346523876.98438",
+          "keep": "1",
+          "marking": "1",
+          "matching_scale": "1.697056274847714",
+          "orientation": "native",
+          "pt": "1.7028105905461708",
+          "r": "108389747741.06812",
+          "rule": "pdf_support_no_transfer",
+          "sector": "5",
+          "version": "1"
+        },
+        "physical_event_bytes_unchanged": true
+      },
+      "rules": {
+        "below_matching_scale": 2,
+        "h_removal": 275,
+        "no_transfer": 3276,
+        "pdf_support_no_transfer": 1,
+        "positive_h": 2803,
+        "s_veto": 5616
+      }
+    }
+  ],
+  "script_sha256": "9987fc4c86b17e181c3906654f583b03af35217334440e08d96f92edbf105eba",
+  "total_events": 19812
+}

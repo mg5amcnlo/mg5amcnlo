@@ -1,0 +1,53 @@
+{
+  "points_with_any_drift": 790,
+  "fields": {
+    "r": {
+      "count": 349,
+      "max_absolute": 0.00030517578125,
+      "max_relative": 1.1864992901289105e-15,
+      "max_ulp": 8.0
+    },
+    "d": {
+      "count": 672,
+      "max_absolute": 0.0015869140625,
+      "max_relative": 3.22818481546247e-15,
+      "max_ulp": 23.0
+    },
+    "k": {
+      "count": 670,
+      "max_absolute": 0.002197265625,
+      "max_relative": 2.9286620050712355e-15,
+      "max_ulp": 23.0
+    },
+    "alphaK": {
+      "count": 0,
+      "max_absolute": 0.0,
+      "max_relative": 0.0,
+      "max_ulp": 0.0
+    },
+    "q2fact1": {
+      "count": 0,
+      "max_absolute": 0.0,
+      "max_relative": 0.0,
+      "max_ulp": 0.0
+    },
+    "A": {
+      "count": 0,
+      "max_absolute": 0.0,
+      "max_relative": 0.0,
+      "max_ulp": 0.0
+    },
+    "coupling": {
+      "count": 541,
+      "max_absolute": 1.1102230246251565e-15,
+      "max_relative": 1.0917747923211801e-15,
+      "max_ulp": 8.0
+    },
+    "pdf": {
+      "count": 0,
+      "max_absolute": 0.0,
+      "max_relative": 0.0,
+      "max_ulp": 0.0
+    }
+  }
+}

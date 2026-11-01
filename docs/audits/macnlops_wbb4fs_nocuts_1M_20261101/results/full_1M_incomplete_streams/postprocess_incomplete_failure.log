@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/analysis/analyse.py", line 253, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/analysis/analyse.py", line 215, in main
+    fullobs,fullweights,group,verification=read_full(args.full_root,data,args.out);ng=verification['jobs']
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/analysis/analyse.py", line 95, in read_full
+    proof=verify_hwu(path.parent/'MADatNLO.HwU',values,names)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/analysis/analyse.py", line 68, in verify_hwu
+    raise RuntimeError('HwU vs binary mismatch '+str(path)+' '+title+' '+name+' '+str(float(difference.max())))
+RuntimeError: HwU vs binary mismatch /export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_1/MADatNLO.HwU total raw central value 7.095579755689998

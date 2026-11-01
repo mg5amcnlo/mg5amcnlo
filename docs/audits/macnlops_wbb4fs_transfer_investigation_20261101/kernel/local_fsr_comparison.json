@@ -1,0 +1,132 @@
+{
+  "events": 138252,
+  "support_violations": 0,
+  "cdf_range": [
+    1.78161071289878e-06,
+    0.9999988325418188
+  ],
+  "max_support_deviation": 0,
+  "formula": "Native z transformed by normalized integral of (1+z^2)/(1-z) over exact global-recoil massive-quark support and physical reduced-pT cutoff at each actual t; no survival factor or Born matrix element enters this conditional shape test.",
+  "groups": [
+    {
+      "label": "all",
+      "events": 138252,
+      "mean": 0.5002371984238965,
+      "mean_error": 0.0007763787959223161,
+      "KS_statistic": 0.0020267104418770776,
+      "KS_p": 0.6203962549802751,
+      "decile_counts": [
+        13993,
+        13779,
+        13785,
+        13663,
+        13747,
+        13919,
+        13812,
+        13720,
+        13752,
+        14082
+      ]
+    },
+    {
+      "label": "b",
+      "events": 62332,
+      "mean": 0.49983049602573065,
+      "mean_error": 0.0011562555915932953,
+      "KS_statistic": 0.0036330221905701565,
+      "KS_p": 0.3821859710521416,
+      "decile_counts": [
+        6408,
+        6201,
+        6262,
+        6134,
+        6070,
+        6288,
+        6278,
+        6017,
+        6274,
+        6400
+      ]
+    },
+    {
+      "label": "bbar",
+      "events": 75920,
+      "mean": 0.5005711100925276,
+      "mean_error": 0.001047686329772347,
+      "KS_statistic": 0.0022538330695805464,
+      "KS_p": 0.8344344131321406,
+      "decile_counts": [
+        7585,
+        7578,
+        7523,
+        7529,
+        7677,
+        7631,
+        7534,
+        7703,
+        7478,
+        7682
+      ]
+    },
+    {
+      "label": "pt<5",
+      "events": 71545,
+      "mean": 0.49977756509200383,
+      "mean_error": 0.0010792442238308948,
+      "KS_statistic": 0.0021850077444788285,
+      "KS_p": 0.8834186473478858,
+      "decile_counts": [
+        7221,
+        7187,
+        7150,
+        7019,
+        7133,
+        7269,
+        7158,
+        7059,
+        7081,
+        7268
+      ]
+    },
+    {
+      "label": "pt5-20",
+      "events": 51394,
+      "mean": 0.5004225437419139,
+      "mean_error": 0.001273365757373533,
+      "KS_statistic": 0.002885637554928988,
+      "KS_p": 0.7843618041471982,
+      "decile_counts": [
+        5225,
+        5074,
+        5105,
+        5133,
+        5098,
+        5103,
+        5202,
+        5132,
+        5106,
+        5216
+      ]
+    },
+    {
+      "label": "pt>=20",
+      "events": 15313,
+      "mean": 0.5017626231908315,
+      "mean_error": 0.0023328092877078752,
+      "KS_statistic": 0.008669388775838338,
+      "KS_p": 0.19880697830376604,
+      "decile_counts": [
+        1547,
+        1518,
+        1530,
+        1511,
+        1516,
+        1547,
+        1452,
+        1529,
+        1565,
+        1598
+      ]
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+--- a/Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc
++++ b/Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc
+@@ -971,6 +971,19 @@
+   return ratio;
+ }
+ 
++// Both sides of the transfer use the same reference and support policy.
++bool prepareTransfer(const Context& c, Decision& x) {
++  if (!c.sudakovCorrection || !x.density.transfers()) return true;
++  x.bornScale = bornScaleFactor(x.density);
++  if (!hasBornPdfSupport(c, x.density.sudakov))
++    x.rule = "pdf_support_no_transfer";
++  else if (x.bornScale == 0.)
++    x.rule = "born_scale_no_transfer";
++  else
++    return true;
++  return false;
++}
++
+ Decision decideS(const Context& c, Uniform& uniform, const InputEvent& input,
+                  const FirstEmission& hook, const std::vector<LHEParticle>& endpoint) {
+   Decision x;
+@@ -1035,17 +1048,7 @@
+   x.sector = candidates[selected].sector;
+   x.orientation = candidates[selected].orientation;
+   x.density = densities[selected];
+-  if (c.sudakovCorrection && x.density.transfers())
+-    x.bornScale = bornScaleFactor(x.density);
+-  if (c.sudakovCorrection && x.density.transfers() &&
+-      !hasBornPdfSupport(c, x.density.sudakov)) {
+-    x.rule = "pdf_support_no_transfer";
+-    return x;
+-  }
+-  if (c.sudakovCorrection && x.density.transfers() && x.bornScale == 0.) {
+-    x.rule = "born_scale_no_transfer";
+-    return x;
+-  }
++  if (!prepareTransfer(c, x)) return x;
+   if (x.density.transfers()) {
+     // Replace K's emission factors and restore the canonical Born-scale
+     // density. The S model is beta = sigma_S/sigma_B times that Born.
+@@ -1087,17 +1090,8 @@
+   x.candidates = 1;
+   x.sector = component.sector;
+   x.orientation = "source";
+-  if (c.sudakovCorrection && x.density.transfers())
+-    x.bornScale = bornScaleFactor(x.density);
+-  if (c.sudakovCorrection && x.density.transfers() &&
+-      !hasBornPdfSupport(c, x.density.sudakov)) {
++  if (!prepareTransfer(c, x)) {
+     x.pt = x.density.sudakov.pt;
+-    x.rule = "pdf_support_no_transfer";
+-    return x;
+-  }
+-  if (c.sudakovCorrection && x.density.transfers() && x.bornScale == 0.) {
+-    x.pt = x.density.sudakov.pt;
+-    x.rule = "born_scale_no_transfer";
+     return x;
+   }
+   x.keep = hAcceptance(x.density);
+--- a/Template/NLO/SubProcesses/montecarlocounter.f
++++ b/Template/NLO/SubProcesses/montecarlocounter.f
+@@ -2977,7 +2977,6 @@
+      $     shat,sqrtshat,ybst_til_tocm,ybst_til_tolab
+       use extra_weights, only: cpower_pos
+       implicit none
+-      include 'genps.inc'
+       include 'run.inc'
+       include 'orders.inc'
+       double precision, intent(in) :: p(0:3,nexternal),
+@@ -2988,7 +2987,7 @@
+       double precision reference(0:3,nexternal),
+      $     weights(amp_split_size),spin(amp_split_size),
+      $     scalar(2),densities(2,2),total(0:3),
+-     $     cms_saved(4),scales_saved(9),mu2(2),power,factor,
++     $     cms_saved(4),scales_saved(9),mu2,power,factor,
+      $     fractions(2),
+      $     pdg2pdf,rwgt_muR_dep_fac
+       integer i,j,leg,point,parton,orders(nsplitorders)
+@@ -3044,7 +3043,7 @@
+             call set_cms_stuff(-100)
+             call set_alphaS(p)
+          endif
+-         mu2(point)=muR2_current
++         mu2=muR2_current
+          call get_mbar(p,xi_i_fks_ev,y_ij_fks_ev,pborn,ileg,flow,
+      $        qcd_pos,weights,spin)
+          do i=1,amp_split_size
+@@ -3052,8 +3051,7 @@
+             call amp_split_pos_to_orders(i,orders)
+             power=0d0
+             if(cpower_pos.gt.0)power=dble(orders(max(1,cpower_pos)))
+-            factor=rwgt_muR_dep_fac(sqrt(mu2(point)),
+-     $           sqrt(mu2(point)),power)
++            factor=rwgt_muR_dep_fac(sqrt(mu2),sqrt(mu2),power)
+             scalar(point)=scalar(point)+weights(i)*factor
+          enddo
+          do j=1,2

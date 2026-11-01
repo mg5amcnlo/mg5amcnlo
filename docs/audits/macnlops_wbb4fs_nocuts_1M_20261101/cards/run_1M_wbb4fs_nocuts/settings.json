@@ -1,0 +1,60 @@
+{
+  "PDF_ID": 334700,
+  "events": 1000000,
+  "no_analysis_cuts": true,
+  "no_generation_cuts": true,
+  "nsplit_jobs": 50,
+  "seed": 4020101,
+  "values": {
+    "custom_fcts": [],
+    "drll": 0.0,
+    "drll_sf": 0.0,
+    "dynamical_scale_choice": [
+      3
+    ],
+    "ebeam1": 6500.0,
+    "ebeam2": 6500.0,
+    "etagamma": -1.0,
+    "etaj": -1.0,
+    "etal": -1.0,
+    "event_norm": "sum",
+    "fixed_fac_scale": false,
+    "fixed_ren_scale": false,
+    "folding": [
+      1,
+      1,
+      1
+    ],
+    "ickkw": 0,
+    "iseed": 4020101,
+    "lhaid": [
+      334700
+    ],
+    "lhe_version": 3,
+    "macnlops": true,
+    "macnlops_flavour_count": 4,
+    "macnlops_resolved_source": false,
+    "maxjetflavor": 4,
+    "mcatnlo_delta": true,
+    "mll": 0.0,
+    "mll_sf": 0.0,
+    "mxx_min_pdg": {},
+    "nevents": 1000000,
+    "nevt_job": 10000,
+    "parton_shower": "PYTHIA8",
+    "pdlabel": "lhapdf",
+    "pt_max_pdg": {},
+    "pt_min_pdg": {},
+    "ptgmin": 0.0,
+    "ptj": 0.0,
+    "ptl": 0.0,
+    "req_acc": -1,
+    "reweight_pdf": [
+      false
+    ],
+    "reweight_scale": [
+      false
+    ],
+    "store_hard_momenta": true
+  }
+}

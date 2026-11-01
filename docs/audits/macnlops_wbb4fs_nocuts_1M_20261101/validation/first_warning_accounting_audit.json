@@ -1,0 +1,897 @@
+{
+  "created_utc": "2026-11-01T08:29:10.886374+00:00",
+  "first": {
+    "channel_bindings": [
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_1",
+        "input_H": 2695,
+        "input_S": 7279,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020102
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_2",
+        "input_H": 2573,
+        "input_S": 7401,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 5
+        },
+        "seed": 4020103
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_3",
+        "input_H": 2671,
+        "input_S": 7303,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020104
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_4",
+        "input_H": 2615,
+        "input_S": 7359,
+        "native_trial_warnings": {},
+        "seed": 4020105
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_5",
+        "input_H": 2651,
+        "input_S": 7323,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 6
+        },
+        "seed": 4020106
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_6",
+        "input_H": 2681,
+        "input_S": 7293,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 3
+        },
+        "seed": 4020107
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_7",
+        "input_H": 2625,
+        "input_S": 7349,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 3
+        },
+        "seed": 4020108
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_8",
+        "input_H": 2647,
+        "input_S": 7327,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020109
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_9",
+        "input_H": 2679,
+        "input_S": 7295,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 6
+        },
+        "seed": 4020110
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_10",
+        "input_H": 2683,
+        "input_S": 7291,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 5
+        },
+        "seed": 4020111
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_11",
+        "input_H": 2656,
+        "input_S": 7318,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 6
+        },
+        "seed": 4020112
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_12",
+        "input_H": 2600,
+        "input_S": 7374,
+        "native_trial_warnings": {},
+        "seed": 4020113
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_13",
+        "input_H": 2609,
+        "input_S": 7365,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020114
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_14",
+        "input_H": 2677,
+        "input_S": 7297,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020115
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_15",
+        "input_H": 2662,
+        "input_S": 7312,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 3
+        },
+        "seed": 4020116
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_16",
+        "input_H": 2661,
+        "input_S": 7313,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 5
+        },
+        "seed": 4020117
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_17",
+        "input_H": 2636,
+        "input_S": 7338,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 4
+        },
+        "seed": 4020118
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_18",
+        "input_H": 2626,
+        "input_S": 7348,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020119
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_19",
+        "input_H": 2662,
+        "input_S": 7312,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 4
+        },
+        "seed": 4020120
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_20",
+        "input_H": 2657,
+        "input_S": 7317,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020121
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_21",
+        "input_H": 2648,
+        "input_S": 7326,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020122
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_22",
+        "input_H": 2753,
+        "input_S": 7221,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 4
+        },
+        "seed": 4020123
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_23",
+        "input_H": 2659,
+        "input_S": 7315,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 5
+        },
+        "seed": 4020124
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_24",
+        "input_H": 2631,
+        "input_S": 7343,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020125
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_25",
+        "input_H": 2655,
+        "input_S": 7318,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020126
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_26",
+        "input_H": 2580,
+        "input_S": 7393,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 4
+        },
+        "seed": 4020127
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_1",
+        "input_H": 2364,
+        "input_S": 7490,
+        "native_trial_warnings": {},
+        "seed": 4020128
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_2",
+        "input_H": 2382,
+        "input_S": 7471,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 3
+        },
+        "seed": 4020129
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_3",
+        "input_H": 2394,
+        "input_S": 7459,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 5
+        },
+        "seed": 4020130
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_4",
+        "input_H": 2292,
+        "input_S": 7561,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 5
+        },
+        "seed": 4020131
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_5",
+        "input_H": 2324,
+        "input_S": 7529,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 3
+        },
+        "seed": 4020132
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_6",
+        "input_H": 2456,
+        "input_S": 7397,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 3
+        },
+        "seed": 4020133
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_7",
+        "input_H": 2379,
+        "input_S": 7474,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 5
+        },
+        "seed": 4020134
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_8",
+        "input_H": 2401,
+        "input_S": 7452,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 5
+        },
+        "seed": 4020135
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_9",
+        "input_H": 2344,
+        "input_S": 7509,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 3
+        },
+        "seed": 4020136
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_10",
+        "input_H": 2387,
+        "input_S": 7466,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 3
+        },
+        "seed": 4020137
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_11",
+        "input_H": 2398,
+        "input_S": 7455,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020138
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_12",
+        "input_H": 2389,
+        "input_S": 7464,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 4
+        },
+        "seed": 4020139
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_13",
+        "input_H": 2304,
+        "input_S": 7549,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 3
+        },
+        "seed": 4020140
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_14",
+        "input_H": 2337,
+        "input_S": 7516,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 4
+        },
+        "seed": 4020141
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_15",
+        "input_H": 2436,
+        "input_S": 7417,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020142
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_16",
+        "input_H": 2343,
+        "input_S": 7510,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 5
+        },
+        "seed": 4020143
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_17",
+        "input_H": 2269,
+        "input_S": 7584,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020144
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_18",
+        "input_H": 2356,
+        "input_S": 7497,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020145
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_19",
+        "input_H": 2327,
+        "input_S": 7526,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 4
+        },
+        "seed": 4020146
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_20",
+        "input_H": 2385,
+        "input_S": 7468,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020147
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_21",
+        "input_H": 2395,
+        "input_S": 7458,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 6
+        },
+        "seed": 4020148
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_22",
+        "input_H": 2367,
+        "input_S": 7486,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 3
+        },
+        "seed": 4020149
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_23",
+        "input_H": 2376,
+        "input_S": 7477,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 3
+        },
+        "seed": 4020150
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_24",
+        "input_H": 2319,
+        "input_S": 7534,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020151
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_25",
+        "input_H": 2322,
+        "input_S": 7531,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020152
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_1",
+        "input_H": 2432,
+        "input_S": 7480,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020153
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_2",
+        "input_H": 2469,
+        "input_S": 7443,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020154
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_3",
+        "input_H": 2479,
+        "input_S": 7433,
+        "native_trial_warnings": {},
+        "seed": 4020155
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_4",
+        "input_H": 2328,
+        "input_S": 7584,
+        "native_trial_warnings": {},
+        "seed": 4020156
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_5",
+        "input_H": 2393,
+        "input_S": 7519,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020157
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_6",
+        "input_H": 2444,
+        "input_S": 7468,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020158
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_7",
+        "input_H": 2384,
+        "input_S": 7528,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020159
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_8",
+        "input_H": 2333,
+        "input_S": 7579,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020160
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_9",
+        "input_H": 2420,
+        "input_S": 7492,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020161
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_10",
+        "input_H": 2453,
+        "input_S": 7459,
+        "native_trial_warnings": {},
+        "seed": 4020162
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_11",
+        "input_H": 2408,
+        "input_S": 7504,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020163
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_12",
+        "input_H": 2494,
+        "input_S": 7418,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020164
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_13",
+        "input_H": 2366,
+        "input_S": 7546,
+        "native_trial_warnings": {},
+        "seed": 4020165
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_14",
+        "input_H": 2379,
+        "input_S": 7533,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020166
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_15",
+        "input_H": 2453,
+        "input_S": 7459,
+        "native_trial_warnings": {},
+        "seed": 4020167
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_16",
+        "input_H": 2383,
+        "input_S": 7529,
+        "native_trial_warnings": {},
+        "seed": 4020168
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_17",
+        "input_H": 2405,
+        "input_S": 7507,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020169
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_18",
+        "input_H": 2492,
+        "input_S": 7420,
+        "native_trial_warnings": {},
+        "seed": 4020170
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_19",
+        "input_H": 2375,
+        "input_S": 7537,
+        "native_trial_warnings": {},
+        "seed": 4020171
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_20",
+        "input_H": 2447,
+        "input_S": 7465,
+        "native_trial_warnings": {},
+        "seed": 4020172
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_21",
+        "input_H": 2434,
+        "input_S": 7478,
+        "native_trial_warnings": {},
+        "seed": 4020173
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_22",
+        "input_H": 2457,
+        "input_S": 7455,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020174
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_23",
+        "input_H": 2352,
+        "input_S": 7559,
+        "native_trial_warnings": {},
+        "seed": 4020175
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_24",
+        "input_H": 2432,
+        "input_S": 7479,
+        "native_trial_warnings": {},
+        "seed": 4020176
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_1",
+        "input_H": 2612,
+        "input_S": 7253,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020177
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_2",
+        "input_H": 2581,
+        "input_S": 7284,
+        "native_trial_warnings": {},
+        "seed": 4020178
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_3",
+        "input_H": 2599,
+        "input_S": 7265,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 4
+        },
+        "seed": 4020179
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_4",
+        "input_H": 2620,
+        "input_S": 7244,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020180
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_5",
+        "input_H": 2600,
+        "input_S": 7264,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020181
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_6",
+        "input_H": 2616,
+        "input_S": 7248,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020182
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_7",
+        "input_H": 2594,
+        "input_S": 7270,
+        "native_trial_warnings": {},
+        "seed": 4020183
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_8",
+        "input_H": 2572,
+        "input_S": 7292,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020184
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_9",
+        "input_H": 2620,
+        "input_S": 7244,
+        "native_trial_warnings": {},
+        "seed": 4020185
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_10",
+        "input_H": 2625,
+        "input_S": 7239,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020186
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_11",
+        "input_H": 2650,
+        "input_S": 7214,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020187
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_12",
+        "input_H": 2613,
+        "input_S": 7251,
+        "native_trial_warnings": {},
+        "seed": 4020188
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_13",
+        "input_H": 2596,
+        "input_S": 7268,
+        "native_trial_warnings": {},
+        "seed": 4020189
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_14",
+        "input_H": 2617,
+        "input_S": 7247,
+        "native_trial_warnings": {},
+        "seed": 4020190
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_15",
+        "input_H": 2676,
+        "input_S": 7188,
+        "native_trial_warnings": {},
+        "seed": 4020191
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_16",
+        "input_H": 2651,
+        "input_S": 7213,
+        "native_trial_warnings": {},
+        "seed": 4020192
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_17",
+        "input_H": 2600,
+        "input_S": 7264,
+        "native_trial_warnings": {},
+        "seed": 4020193
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_18",
+        "input_H": 2605,
+        "input_S": 7259,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020194
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_19",
+        "input_H": 2568,
+        "input_S": 7296,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020195
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_20",
+        "input_H": 2624,
+        "input_S": 7240,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 2
+        },
+        "seed": 4020196
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_21",
+        "input_H": 2571,
+        "input_S": 7293,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020197
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_22",
+        "input_H": 2550,
+        "input_S": 7314,
+        "native_trial_warnings": {},
+        "seed": 4020198
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_23",
+        "input_H": 2582,
+        "input_S": 7282,
+        "native_trial_warnings": {},
+        "seed": 4020199
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_24",
+        "input_H": 2504,
+        "input_S": 7360,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020200
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_25",
+        "input_H": 2581,
+        "input_S": 7283,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 3
+        },
+        "seed": 4020201
+      },
+      {
+        "directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_26",
+        "input_H": 2579,
+        "input_S": 7285,
+        "native_trial_warnings": {
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1
+        },
+        "seed": 4020202
+      }
+    ],
+    "channels": 101,
+    "channels_with_warnings": 75,
+    "counts": {
+      "accepted_H": 229606,
+      "accepted_S": 709822,
+      "below_matching_scale_S": 67,
+      "evaluated_H": 24003,
+      "evaluated_S": 746373,
+      "exhausted_S": 4,
+      "h_removal_H": 24003,
+      "input_H": 253556,
+      "input_S": 746444,
+      "no_transfer_S": 274821,
+      "pdf_support_no_transfer_S": 3,
+      "positive_h_H": 229553,
+      "rejected_H": 23950,
+      "rejected_S": 36622,
+      "s_veto_S": 471549
+    },
+    "native_trial_warning_occurrences": {
+      "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 201
+    },
+    "source_summary": {
+      "bytes": 175858,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/macnlops_first_emission.json",
+      "sha256": "f1023c8acbae3cdc86bfcf5bea17c951658928bfe0acdc630092e95ea76a0008"
+    }
+  },
+  "limits": "Warning occurrence counts are not distinct affected-event counts or a bound on proposal bias. Native ISR warning suppression below 1 GeV can hide trial-envelope violations. Conditional sampling errors elsewhere do not include this effect. All species/mass/coupling settings must be read from the separate profile audit.",
+  "method": "First counts are native logger counter deltas around actual S-event next() calls, aggregated from complete matching-channel summaries. Full counts come only from complete native error-statistics tables, not from a count of printed warning lines.",
+  "passed": true,
+  "requested_events": 1000000,
+  "run": "run_1M_wbb4fs_nocuts",
+  "warning_policy": "Native warnings are retained. No warning-based event removal, retry or reseeding is performed."
+}

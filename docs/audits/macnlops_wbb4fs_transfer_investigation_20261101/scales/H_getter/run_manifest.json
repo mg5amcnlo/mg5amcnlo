@@ -1,0 +1,113 @@
+{
+  "runs": [
+    {
+      "group": "P0_dxu_bbxwp/GF1.0",
+      "command": [
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/extract_P0_dxu_bbxwp",
+        "--input",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF1.0/events.lhe",
+        "--output",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/P0_dxu_bbxwp_GF1.0_events.lhe",
+        "--summary",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/P0_dxu_bbxwp_GF1.0_summary.json",
+        "--routes",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/macnlops_routes.dat",
+        "--settings",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Cards/macnlops_shower.cmnd",
+        "--pdf",
+        "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+        "--seed",
+        "4930401",
+        "--res",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF1.0/res_1"
+      ],
+      "cwd": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/P0_dxu_bbxwp/GF1",
+      "output": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/P0_dxu_bbxwp_GF1.0.jsonl",
+      "source_index": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF1.0/source_index.npz",
+      "returncode": 0,
+      "source_events": 6110
+    },
+    {
+      "group": "P0_dxu_bbxwp/GF2.0",
+      "command": [
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/extract_P0_dxu_bbxwp",
+        "--input",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF2.0/events.lhe",
+        "--output",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/P0_dxu_bbxwp_GF2.0_events.lhe",
+        "--summary",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/P0_dxu_bbxwp_GF2.0_summary.json",
+        "--routes",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/macnlops_routes.dat",
+        "--settings",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Cards/macnlops_shower.cmnd",
+        "--pdf",
+        "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+        "--seed",
+        "4930401",
+        "--res",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF2.0/res_1"
+      ],
+      "cwd": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/P0_dxu_bbxwp/GF2",
+      "output": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/P0_dxu_bbxwp_GF2.0.jsonl",
+      "source_index": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF2.0/source_index.npz",
+      "returncode": 0,
+      "source_events": 5926
+    },
+    {
+      "group": "P0_udx_bbxwp/GF1.0",
+      "command": [
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/extract_P0_udx_bbxwp",
+        "--input",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF1.0/events.lhe",
+        "--output",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/P0_udx_bbxwp_GF1.0_events.lhe",
+        "--summary",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/P0_udx_bbxwp_GF1.0_summary.json",
+        "--routes",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/macnlops_routes.dat",
+        "--settings",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Cards/macnlops_shower.cmnd",
+        "--pdf",
+        "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+        "--seed",
+        "4930401",
+        "--res",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF1.0/res_1"
+      ],
+      "cwd": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/P0_udx_bbxwp/GF1",
+      "output": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/P0_udx_bbxwp_GF1.0.jsonl",
+      "source_index": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF1.0/source_index.npz",
+      "returncode": 0,
+      "source_events": 5945
+    },
+    {
+      "group": "P0_udx_bbxwp/GF2.0",
+      "command": [
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/extract_P0_udx_bbxwp",
+        "--input",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF2.0/events.lhe",
+        "--output",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/P0_udx_bbxwp_GF2.0_events.lhe",
+        "--summary",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/P0_udx_bbxwp_GF2.0_summary.json",
+        "--routes",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/macnlops_routes.dat",
+        "--settings",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Cards/macnlops_shower.cmnd",
+        "--pdf",
+        "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+        "--seed",
+        "4930401",
+        "--res",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF2.0/res_1"
+      ],
+      "cwd": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/P0_udx_bbxwp/GF2",
+      "output": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/P0_udx_bbxwp_GF2.0.jsonl",
+      "source_index": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF2.0/source_index.npz",
+      "returncode": 0,
+      "source_events": 6022
+    }
+  ],
+  "original_inputs_unmodified": true
+}

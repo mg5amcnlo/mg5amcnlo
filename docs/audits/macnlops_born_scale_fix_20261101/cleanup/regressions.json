@@ -1,0 +1,37 @@
+{
+  "command": [
+    "/usr/bin/python",
+    "-m",
+    "unittest",
+    "tests.unit_tests.various.test_macnlops_gluon_sudakov",
+    "tests.unit_tests.various.test_macnlops_sudakov_kernel",
+    "tests.unit_tests.fks.test_macnlops_sudakov_profile",
+    "tests.unit_tests.various.test_macnlops_first_emission",
+    "tests.unit_tests.fks.test_macnlops_weight_lines",
+    "tests.unit_tests.fks.test_macnlops_delta_context",
+    "tests.unit_tests.fks.test_macnlops_source_modes",
+    "tests.unit_tests.fks.test_mcatnlo_delta_scales",
+    "tests.unit_tests.various.test_macnlops_component_protocol",
+    "tests.unit_tests.various.test_macnlops_fixed_beams",
+    "tests.unit_tests.various.test_macnlops_s_veto_normalisation",
+    "tests.unit_tests.various.test_macnlops_continuation_scales",
+    "tests.unit_tests.various.test_macnlops_continuation",
+    "tests.unit_tests.various.test_macnlops_run_card",
+    "tests.unit_tests.various.test_macnlops_native_environment",
+    "tests.unit_tests.various.test_macnlops_pdf_support",
+    "tests.unit_tests.various.test_macnlops_born_scales",
+    "tests.unit_tests.fks.test_macnlops_born_scale_factor",
+    "-v"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 67.48625543899834,
+  "sources_sha256": {
+    "Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc": "52d5bcd5eb59a458c21af72488f1e164576fe341e67c757d3200d9fdfd826dd4",
+    "Template/NLO/SubProcesses/driver_macnlops.f": "736cc3f224a51c5e99a66c9ab0a0a0ed5a576e8d36e25639df20280aeba9f71d",
+    "Template/NLO/SubProcesses/montecarlocounter.f": "2c3c7edf134d9fed2927be057c3d9aecc28ae18ae4cba40428229b452b81027a",
+    "Template/NLO/SubProcesses/weight_lines.f": "bddc733f75c6d2b7af8a7b4c03a2bc89436df546bcfeef94c6960f66d7c632bd",
+    "Template/NLO/SubProcesses/macnlops_capi.f": "aea779e1fd9ac6f3811cbdaf4e9c1e443b57378327cb2fcc2b6930e948b49c52",
+    "madgraph/various/macnlops.py": "340975199b9e727bcb530a379a219851ce4428ebd339e780926545c132b2cf5f"
+  },
+  "log_sha256": "239bb75968aa9de4e7117ce0db5bc7d6ab7b7fe724d1dc9444f8fa019880831e"
+}

@@ -1,0 +1,53 @@
+#************************************************************
+#*                     MadGraph5_aMC@NLO                    *
+#*                                                          *
+#*                *                       *                 *
+#*                  *        * *        *                   *
+#*                    * * * * 5 * * * *                     *
+#*                  *        * *        *                   *
+#*                *                       *                 *
+#*                                                          *
+#*                                                          *
+#*         VERSION 3.8.0                 2026-09-15         *
+#*         GIT r996-266-g795c54bbf  MCcntRefactor_Sfun_MacNLOPS         *
+#*                                                          *
+#*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *
+#*                                                          *
+#************************************************************
+#*                                                          *
+#*               Command File for MadGraph5_aMC@NLO         *
+#*                                                          *
+#*     run as ./bin/mg5_aMC  filename                       *
+#*                                                          *
+#************************************************************
+set group_subprocesses Auto
+set ignore_six_quark_processes False
+set low_mem_multicore_nlo_generation False
+set complex_mass_scheme False
+set include_lepton_initiated_processes False
+set gauge unitary
+set loop_optimized_output True
+set loop_color_flows False
+set max_npoint_for_channel 0
+set default_unset_couplings 99
+set max_t_for_channel 99
+set zerowidth_tchannel True
+set nlo_mixed_expansion True
+set automatic_html_opening False --no_save
+set auto_update 0 --no_save
+set nb_core 16 --no_save
+set run_mode 2 --no_save
+set lhapdf /nfs/home/rikkert/LHAPDF/bin/lhapdf-config --no_save
+import model loop_sm
+define p = g u c d s u~ c~ d~ s~
+define j = g u c d s u~ c~ d~ s~
+define l+ = e+ mu+
+define l- = e- mu-
+define vl = ve vm vt
+define vl~ = ve~ vm~ vt~
+define p = g u d s c u~ d~ s~ c~
+define j = g u d s c u~ d~ s~ c~
+generate p p > w+ b b~ QCD=2 QED=1
+output /export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagno\
+sis_transfer_20261101/normalisation/Wbb_Born_LO -nojpeg

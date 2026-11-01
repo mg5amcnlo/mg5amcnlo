@@ -1,0 +1,58 @@
+
+ *------------------------------------------------------------------------------------* 
+ |                                                                                    | 
+ |  *------------------------------------------------------------------------------*  | 
+ |  |                                                                              |  | 
+ |  |                                                                              |  | 
+ |  |   PPP   Y   Y  TTTTT  H   H  III    A      Welcome to the Lund Monte Carlo!  |  | 
+ |  |   P  P   Y Y     T    H   H   I    A A     This is PYTHIA version 8.318      |  | 
+ |  |   PPP     Y      T    HHHHH   I   AAAAA    Last date of change: 16 Sep 2026  |  | 
+ |  |   P       Y      T    H   H   I   A   A                                      |  | 
+ |  |   P       Y      T    H   H  III  A   A    Now is 01 Nov 2026 at 08:12:11    |  | 
+ |  |                                                                              |  | 
+ |  |   Program documentation and an archive of historic versions is found on:     |  | 
+ |  |                                                                              |  | 
+ |  |                               https://pythia.org/                            |  | 
+ |  |                                                                              |  | 
+ |  |   PYTHIA is authored by a collaboration consisting of:                       |  | 
+ |  |                                                                              |  | 
+ |  |   Javira Altmann, Christian Bierlich, Naomi Cooke, Nishita Desai,            |  | 
+ |  |   Ilkka Helenius, Philip Ilten, Joni Laulainen, Leif Lonnblad,               |  | 
+ |  |   Stephen Mrenna, Christian Preuss, Torbjorn Sjostrand, and Peter Skands.    |  | 
+ |  |                                                                              |  | 
+ |  |   The complete list of authors, including contact information and            |  | 
+ |  |   affiliations, can be found on https://pythia.org/.                         |  | 
+ |  |   Problems or bugs should be reported on email at authors@pythia.org.        |  | 
+ |  |                                                                              |  | 
+ |  |   The main program reference is C. Bierlich et al,                           |  | 
+ |  |   'A comprehensive guide to the physics and usage of Pythia 8.3',            |  | 
+ |  |   SciPost Phys. Codebases 8-r8.3 (2022) [arXiv:2203.11601 [hep-ph]]          |  | 
+ |  |                                                                              |  | 
+ |  |   PYTHIA is released under the GNU General Public Licence version 2          |  | 
+ |  |   or later. Please respect the MCnet Guidelines for Generator Authors        |  | 
+ |  |   and Users.                                                                 |  | 
+ |  |                                                                              |  | 
+ |  |   Disclaimer: this program comes without any guarantees.                     |  | 
+ |  |   Beware of errors and use common sense when interpreting results.           |  | 
+ |  |                                                                              |  | 
+ |  |   Copyright (C) 2026 Torbjorn Sjostrand                                      |  | 
+ |  |                                                                              |  | 
+ |  |                                                                              |  | 
+ |  *------------------------------------------------------------------------------*  | 
+ |                                                                                    | 
+ *------------------------------------------------------------------------------------* 
+
+EXACT 1.69705627484771404 4 0.02290453993229663 -0.00071824890601728 0.00000000000000000
+EXACT 1.69705627484771404 21 0.05824264110719798 2.00391972098863347 2.00391972098863347
+EXACT 1.70281059054617079 4 0.02290453993229663 -0.00038605536778315 0.00000000000000000
+EXACT 1.70281059054617079 21 0.05824264110719798 2.00507618815967881 2.00507618815967881
+EXACT 1.70999999999999996 4 0.02290453993229663 0.00002716191890459 0.00002716191890459
+EXACT 1.70999999999999996 21 0.05824264110719798 2.00651271828853650 2.00651271828853650
+EXACT 1.71999999999999997 4 0.02290453993229663 0.00059827519822069 0.00059827519822069
+EXACT 1.71999999999999997 21 0.05824264110719798 2.00849201111942000 2.00849201111942000
+EXACT 1.75000000000000000 4 0.02290453993229663 0.00228238428345878 0.00228238428345878
+EXACT 1.75000000000000000 21 0.05824264110719798 2.01425194411673747 2.01425194411673747
+EXACT 47.78402998819539960 4 0.02290453993229663 0.15848364625057942 0.15848364625057942
+EXACT 47.78402998819539960 21 0.05824264110719798 1.90279682029647845 1.90279682029647845
+ROOT 1.70952628667220230 1.70952628667220252 -0.00000000000000001 0.00000000000000001
+INFO 1.64999999999999991 100000.00000000000000000

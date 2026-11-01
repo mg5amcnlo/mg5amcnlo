@@ -1,0 +1,44 @@
+{
+  "runs": [
+    {
+      "mode": "ALL",
+      "command": [
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/conditional_survival",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/points_ALL.dat",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/native_ALL.csv",
+        "6000",
+        "4011227",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Cards/macnlops_shower.cmnd",
+        "ALL"
+      ],
+      "returncode": 0
+    },
+    {
+      "mode": "ISR",
+      "command": [
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/conditional_survival",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/points_ISR.dat",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/native_ISR.csv",
+        "6000",
+        "4011227",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Cards/macnlops_shower.cmnd",
+        "ISR"
+      ],
+      "returncode": 0
+    },
+    {
+      "mode": "FSR",
+      "command": [
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/conditional_survival",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/points_FSR.dat",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/native_FSR.csv",
+        "6000",
+        "4011227",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Cards/macnlops_shower.cmnd",
+        "FSR"
+      ],
+      "returncode": 0
+    }
+  ],
+  "library_sha256": "35203dfab4e20b044fe6e669b8170f5905f56c43c6dad6e762ceff86158a283c"
+}

@@ -1,0 +1,8 @@
+{
+  "measured": {
+    "points": 2000,
+    "max_relative_alpha_error": 4.896365766171584e-07
+  },
+  "definition": "Recorded LO emission alpha_s vs native LHAPDF alpha_s at exact HT/2 reconstructed from hard final momenta, every100th event; header precision limits comparison.",
+  "passed": true
+}

@@ -186,6 +186,29 @@ class TestFirstEmissionPython(unittest.TestCase):
                                   counts=dict(accepted_S=accepted, accepted_H=0)))
         return jobs, summaries
 
+    def test_collection_does_not_mix_born_reference_corrections(self):
+        for corrections in ((None, None), ('native-born-v1', 'native-born-v1'),
+                            (None, 'native-born-v1')):
+            with self.subTest(corrections=corrections):
+                jobs = []
+                for i, correction in enumerate(corrections):
+                    output = self.work / ('correction_%d.lhe' % i)
+                    output.write_text('<LesHouchesEvents>\n</LesHouchesEvents>\n')
+                    summary = output.with_suffix('.json')
+                    record = dict(status='complete', prescription=mc.FIRST_EMISSION_POLICY,
+                                  rejected_events='kept', counts={}, weight_sums={})
+                    if correction is not None:
+                        record['born_scale_correction'] = correction
+                    summary.write_text(json.dumps(record))
+                    jobs.append(dict(cwd=str(self.work), input='source', output=str(output),
+                                     summary=str(summary)))
+                if corrections[0] != corrections[1]:
+                    with self.assertRaisesRegex(mc.MatchingError, 'different.*prescriptions'):
+                        mc.check_first_emission(jobs)
+                else:
+                    _, result = mc.check_first_emission(jobs)
+                    self.assertEqual(result['born_scale_correction'], corrections[0] or 'none')
+
     def test_kept_rejections_collect_the_channel_files_unchanged(self):
         jobs, summaries = self.channels('kept')
         banner = self.work / 'banner.txt'
@@ -269,6 +292,11 @@ void macnlops_c_sudakov_profile(int* ready,int* n,int* ids,double* x,
 void macnlops_c_gluon_profile(int* n,double* gluons) {
   *n=0;
   for (int i=0;i<320;++i) gluons[i]=0.;
+}
+void macnlops_c_born_scale_factor(int* ready,double* coupling,double* pdf) {
+  *ready=getenv("MACNLOPS_STUB_BORN_READY")?atoi(getenv("MACNLOPS_STUB_BORN_READY")):1;
+  *coupling=getenv("MACNLOPS_STUB_BORN_COUPLING")?atof(getenv("MACNLOPS_STUB_BORN_COUPLING")):1.;
+  *pdf=getenv("MACNLOPS_STUB_BORN_PDF")?atof(getenv("MACNLOPS_STUB_BORN_PDF")):1.;
 }
 void macnlops_c_density(int owner, const int* ids, const double* lab, int config,
   int graph, int flow, int damping, double symmetry, int has_born, const int* born_ids,

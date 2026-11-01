@@ -1,0 +1,62 @@
+{
+  "events": 24003,
+  "groups": [
+    {
+      "group": "P0_dxu_bbxwp/GF1.0",
+      "registry": 0,
+      "config": 1,
+      "beta": 1.8509634009159779,
+      "events": 6110,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF1.0/events.lhe",
+      "input_sha256": "f00b96942d5b18552fde0b5fbe43cad949e4d25f97620fa8f4e3af4371b600d5",
+      "res_original": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF1.0_1/res_1",
+      "res_local": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF1.0/res_1",
+      "source_index": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF1.0/source_index.npz",
+      "mapping": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF1.0/mapping.json"
+    },
+    {
+      "group": "P0_dxu_bbxwp/GF2.0",
+      "registry": 0,
+      "config": 2,
+      "beta": 1.872966389206205,
+      "events": 5926,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF2.0/events.lhe",
+      "input_sha256": "cb5f5f701996852c0bcf854ef4b5e64e2de6582a75209a338199b4167830405c",
+      "res_original": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_dxu_bbxwp/GF2.0_1/res_1",
+      "res_local": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF2.0/res_1",
+      "source_index": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF2.0/source_index.npz",
+      "mapping": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF2.0/mapping.json"
+    },
+    {
+      "group": "P0_udx_bbxwp/GF1.0",
+      "registry": 1,
+      "config": 1,
+      "beta": 1.8896397912613465,
+      "events": 5945,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF1.0/events.lhe",
+      "input_sha256": "359d5995cfe0266872e9c7a037515d30f43317f3a6a4305b7a80391168cfcea9",
+      "res_original": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_1/res_1",
+      "res_local": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF1.0/res_1",
+      "source_index": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF1.0/source_index.npz",
+      "mapping": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF1.0/mapping.json"
+    },
+    {
+      "group": "P0_udx_bbxwp/GF2.0",
+      "registry": 1,
+      "config": 2,
+      "beta": 1.8493480948125967,
+      "events": 6022,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF2.0/events.lhe",
+      "input_sha256": "4d0e32999a601ff61c28130089dda733833540b46ab338426a1eeec7d7e58470",
+      "res_original": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF2.0_1/res_1",
+      "res_local": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF2.0/res_1",
+      "source_index": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF2.0/source_index.npz",
+      "mapping": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF2.0/mapping.json"
+    }
+  ],
+  "all_source_indices_unambiguous_unique": true,
+  "weight_and_original_hard_component_key_exact": true,
+  "production_inputs_untouched": true,
+  "header": "Each group retains the complete original header of its first contributing source file.",
+  "source_index_sha256": "a9cfba16fc68c335797c94749054865ebc2c0399ab35dc02c9c63ad24afcf14e"
+}

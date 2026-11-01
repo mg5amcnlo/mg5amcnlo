@@ -10,7 +10,7 @@ c and shower invariants stay local.
      $     bogus_probne_fun
       public :: prepare_mc_kinematics,fill_father_and_ileg,get_qMC,
      $     mc_shower_scale_mass,fksfather,gfactsf,gfactcl,gfactazi
-      public :: macnlops_delta_profile
+      public :: macnlops_delta_profile,macnlops_born_scale_factor
 
 c Shower state for the active FKS history. General momentum utilities
 c remain in fks_phase_space_helpers, independent of subtraction and matching.
@@ -2964,6 +2964,140 @@ c Preserve the zero-sum diagnostics even for a different selected flow.
      $        dble(amp_split_borntilde(iamp))*iden_comp
       enddo
       end subroutine get_mbar
+
+
+      subroutine macnlops_born_scale_factor(p,pborn,ids,bjorken,
+     $     flow,coupling,pdf,status)
+c Change only the Born reference of the scalar shower density. Native
+c model updates and split Born amplitudes retain effective interactions,
+c mixed coupling orders and the selected flow. The source graph partition,
+c R/D/K, Sudakov profile and shower endpoint are not recomputed.
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      use fks_phase_space_data, only: xi_i_fks_ev,y_ij_fks_ev,
+     $     shat,sqrtshat,ybst_til_tocm,ybst_til_tolab
+      use extra_weights, only: cpower_pos
+      implicit none
+      include 'run.inc'
+      include 'orders.inc'
+      double precision, intent(in) :: p(0:3,nexternal),
+     $     pborn(0:3,nexternal-1),bjorken(2)
+      integer, intent(in) :: ids(2),flow
+      double precision, intent(out) :: coupling,pdf
+      integer, intent(out) :: status
+      double precision reference(0:3,nexternal),
+     $     weights(amp_split_size),spin(amp_split_size),
+     $     scalar(2),densities(2,2),total(0:3),
+     $     cms_saved(4),scales_saved(9),mu2,power,factor,
+     $     fractions(2),
+     $     pdg2pdf,rwgt_muR_dep_fac
+      integer i,j,leg,point,parton,orders(nsplitorders)
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      external pdg2pdf,rwgt_muR_dep_fac
+      logical finite
+
+      status=1
+      coupling=0d0
+      pdf=0d0
+      if(i_fks.le.nincoming.or.i_fks.gt.nexternal)return
+      if(.not.all(ieee_is_finite(pborn)).or.
+     $     .not.all(ieee_is_finite(bjorken)))return
+      if(any(abs(lpp).gt.1))return
+      fractions=1d0
+      do j=1,2
+         if(lpp(j).eq.0)cycle
+         if(bjorken(j).le.0d0.or.bjorken(j).gt.1d0)return
+         fractions(j)=bjorken(j)
+      enddo
+c The native S reference is the compact Born with a zero FKS slot.
+c Construct it directly: a valid massive inverse Born can exist even
+c when its soft counterevent slot is unavailable.
+      reference=0d0
+      leg=0
+      do i=1,nexternal
+         if(i.eq.i_fks)cycle
+         leg=leg+1
+         reference(:,i)=pborn(:,leg)
+      enddo
+      cms_saved=[shat,sqrtshat,ybst_til_tocm,ybst_til_tolab]
+      scales_saved=[scale,muR2_current,muF12_current,
+     $     muF22_current,QES2_current,q2fact(1:2),xbk(1:2)]
+      total=sum(pborn(:,1:nincoming),dim=2)
+      scalar=0d0
+      densities=1d0
+      finite=.true.
+      do point=1,2
+         if(point.eq.1)then
+            shat=total(0)**2-sum(total(1:3)**2)
+            if(shat.le.0d0)then
+               finite=.false.
+               exit
+            endif
+            sqrtshat=sqrt(shat)
+            ybst_til_tocm=0d0
+            ybst_til_tolab=-0.5d0*log(
+     $           fractions(1)*ebeam(1)/(fractions(2)*ebeam(2)))
+            xbk=bjorken
+            call set_alphaS(reference)
+         else
+            call set_cms_stuff(-100)
+            call set_alphaS(p)
+         endif
+         mu2=muR2_current
+         call get_mbar(p,xi_i_fks_ev,y_ij_fks_ev,pborn,ileg,flow,
+     $        qcd_pos,weights,spin)
+         do i=1,amp_split_size
+            if(weights(i).eq.0d0)cycle
+            call amp_split_pos_to_orders(i,orders)
+            power=0d0
+            if(cpower_pos.gt.0)power=dble(orders(max(1,cpower_pos)))
+            factor=rwgt_muR_dep_fac(sqrt(mu2),sqrt(mu2),power)
+            scalar(point)=scalar(point)+weights(i)*factor
+         enddo
+         do j=1,2
+            if(lpp(j).eq.0)cycle
+            parton=ids(j)
+            if(parton.eq.21)parton=0
+c include_PDF_and_alphas applies the first stored factorization scale
+c to both legs. Preserve that native convention, including asymmetric
+c requested muF multipliers, without changing any source weight.
+            densities(j,point)=pdg2pdf(lpp(j),parton,j,bjorken(j),
+     $           sqrt(q2fact(1)))
+         enddo
+         finite=finite.and.all(ieee_is_finite(weights)).and.
+     $        ieee_is_finite(scalar(point)).and.
+     $        all(ieee_is_finite(densities(:,point)))
+      enddo
+c Restore the real reference and its Born cache even on an invalid Born
+c value. These are the settings and amplitudes used by the original K.
+      if(.not.finite)then
+         call set_cms_stuff(-100)
+         call set_alphaS(p)
+         call get_mbar(p,xi_i_fks_ev,y_ij_fks_ev,pborn,ileg,flow,
+     $        qcd_pos,weights,spin)
+      endif
+      shat=cms_saved(1)
+      sqrtshat=cms_saved(2)
+      ybst_til_tocm=cms_saved(3)
+      ybst_til_tolab=cms_saved(4)
+      scale=scales_saved(1)
+      muR2_current=scales_saved(2)
+      muF12_current=scales_saved(3)
+      muF22_current=scales_saved(4)
+      QES2_current=scales_saved(5)
+      q2fact=scales_saved(6:7)
+      xbk=scales_saved(8:9)
+      if(.not.finite)return
+      status=0
+c Nonpositive reference support disables the same transfer on S and H.
+c Do not turn it into an artificial positive PDF or Born amplitude.
+      if(any(scalar.le.0d0))return
+      coupling=scalar(1)/scalar(2)
+      if(all(densities.gt.0d0))
+     $     pdf=product(densities(:,1)/densities(:,2))
+      if(.not.ieee_is_finite(coupling).or.
+     $     .not.ieee_is_finite(pdf))status=1
+      end subroutine macnlops_born_scale_factor
 
 
       double complex function mc_born_azimuth_phase(p,xi_i_fks,

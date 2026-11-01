@@ -1,0 +1,30 @@
+{
+  "all_processes_succeeded": false,
+  "direct_input": {
+    "events": 1500,
+    "mode": "Direct native G/RDK reevaluation on already-sampled frozen endpoint+hardBorn records; raw source channels removed by campaign cleanup.",
+    "source": {
+      "bytes": 378252796,
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/backup/H_run_1M_native_ir_events.lhe.gz",
+      "sha256": "bd8cd340d19d6ea040184c8deaa7f10bacb72960904117b5f5a5e6939a2140df"
+    },
+    "subset": {
+      "bytes": 5158914,
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/direct_inputs/H_HEFT/events.lhe",
+      "sha256": "b9a541dc82271d494ca1e7ba550b3af8b3e7df48b4b04135388833117069c64d"
+    }
+  },
+  "probe_sha256": "94ee7aa264f3badbe6ad10332e13864a3d9d1b27091005dd19db4ed70889ac06",
+  "process": "H_HEFT",
+  "providers": [
+    {
+      "exe_sha256": "3e8a77395c880957985d1d80f8ae407c47e0cf2427f7e8769c91486fb69c94fd",
+      "log_sha256": "e7c40df4f62a32878f754aa6eb05833967bc52a7aacafbef72a4661821f38f2a",
+      "provider": "P0_gg_x0_no_t",
+      "records": [],
+      "returncode": 1
+    }
+  ],
+  "records": 0,
+  "source_native_CPP_sha256": "ec129d1eacfa27d7a4e0a442205847ba85a17751b7edcd263d97aeabb7acc39b"
+}

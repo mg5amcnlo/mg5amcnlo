@@ -1,0 +1,79 @@
+diff --git a/Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc b/Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc
+index 65a9d99c3..841494587 100644
+--- a/Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc
++++ b/Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc
+@@ -546,6 +546,27 @@ struct Context {
+   double eBeam[2] = {0., 0.};
+ };
+ 
++// The ordinary PDF-ratio/Sudakov density does not describe native branches
++// whose Born PDF is clipped to zero. Protect the same canonical Born state
++// on both sides of the transfer, including a spectator beam with no support.
++bool hasBornPdfSupport(const Context& c, const SudakovProfile& p) {
++  const double q2 = p.pt * p.pt;
++  if (!(q2 > 0.) || !std::isfinite(q2))
++    throw std::runtime_error("Invalid Born PDF support scale");
++  bool supported = true;
++  for (int side = 0; side < 2; ++side) {
++    const int id = p.ids[side];
++    if (id != 21 && (std::abs(id) < 1 || std::abs(id) > c.flavours)) continue;
++    if (!(p.x[side] > 0. && p.x[side] < 1.))
++      throw std::runtime_error("Invalid Born PDF support momentum fraction");
++    const double value = c.hook->beamXf(side, id, p.x[side], q2);
++    if (!std::isfinite(value))
++      throw std::runtime_error("Nonfinite native Born PDF support");
++    supported = supported && value > 0.;
++  }
++  return supported;
++}
++
+ struct GaussRule {
+   std::vector<double> x, w;
+   explicit GaussRule(int n) : x(n), w(n) {
+@@ -991,6 +1012,11 @@ Decision decideS(const Context& c, Uniform& uniform, const InputEvent& input,
+   x.sector = candidates[selected].sector;
+   x.orientation = candidates[selected].orientation;
+   x.density = densities[selected];
++  if (c.sudakovCorrection && x.density.transfers() &&
++      !hasBornPdfSupport(c, x.density.sudakov)) {
++    x.rule = "pdf_support_no_transfer";
++    return x;
++  }
+   if (x.density.transfers()) {
+     // K_sh: K with the shower's emission coupling and PDF ratio; the S
+     // events carry beta = sigma_S/sigma_B times the Born density.
+@@ -1031,6 +1057,12 @@ Decision decideH(const Context& c, const InputEvent& input) {
+   x.candidates = 1;
+   x.sector = component.sector;
+   x.orientation = "source";
++  if (c.sudakovCorrection && x.density.transfers() &&
++      !hasBornPdfSupport(c, x.density.sudakov)) {
++    x.pt = x.density.sudakov.pt;
++    x.rule = "pdf_support_no_transfer";
++    return x;
++  }
+   x.keep = hAcceptance(x.density);
+   if (c.sudakovCorrection && x.density.transfers()) {
+     const auto& p=x.density.sudakov;
+diff --git a/docs/macnlops_derivation.md b/docs/macnlops_derivation.md
+index 7ebb827ce..98593a79a 100644
+--- a/docs/macnlops_derivation.md
++++ b/docs/macnlops_derivation.md
+@@ -387,6 +387,17 @@ cannot introduce an unmatched H transfer. This addresses the Sudakov
+ factor; the channel-averaged \(\beta_c=\sigma_{S,c}/\sigma_{B,c}\)
+ remains an approximation to the local S/B density ratio.
+ 
++The ordinary PDF-ratio model also needs a support condition. A native Born
++PDF can be clipped to zero while Pythia still produces an ISR branch using
++its internal daughter-PDF floor. In default v4, both S and H evaluate the
++same condition on the canonical Born flavours, momentum fractions and
++emission scale. If either incoming QCD Born PDF is nonpositive, the transfer
++is disabled and **both original contributions are retained**. Nonfinite
++PDF values remain errors. This adds no generation or analysis cut, changes
++no source weight or shower endpoint, and does not replace the native PDF
++floor by an inferred emission density. Positive-support decisions and the
++legacy v2/v3 prescriptions retain their previous definitions.
++
+ The implementation reuses the shipped tables for **all source factors**,
+ with the same grouped PDFs, beam types, real-state dipole masses,
+ stopping scales and optional `DeltaBackwardISR` setting as `compute_delta`.

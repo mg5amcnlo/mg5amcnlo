@@ -1,0 +1,7 @@
+{
+  "created_utc": "2026-11-01T08:25:25.943394+00:00",
+  "old_process_matcher_sha256": "e0ea3bdddc4891ee5b212a16c1d21f45b174f079cc63ec077bc17608bb66e8e5",
+  "new_matcher_sha256": "0e2bbd496540ed2692cb0d2665544aba8380add65771776a9baaaec7312dc7e1",
+  "scope": "Post-generation paired-transfer eligibility only; no source reweight or Pythia change.",
+  "source_generation_epoch": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/source_epoch.json"
+}

@@ -1,0 +1,166 @@
+{
+  "passed": true,
+  "scenarios": 11,
+  "successful_event_records": 140,
+  "source_events_per_scenario": 14,
+  "results": [
+    {
+      "scenario": "unit",
+      "events": 14,
+      "complete_LHE_bytes_identical": true,
+      "sha256": "c010d7b334af5b96f4d9fa7b6ab173abb8e97a86a9a4b8b85bcf12b720c3a428",
+      "rules": {
+        "h_removal": 3,
+        "s_veto": 8,
+        "positive_h": 3
+      },
+      "error": null,
+      "returncode": 0
+    },
+    {
+      "scenario": "G_product6",
+      "events": 14,
+      "complete_LHE_bytes_identical": true,
+      "sha256": "fc42891387095795b5a4d391f27b7419605c1d9b74a89f97ed0e5a4aeb533c2d",
+      "rules": {
+        "h_removal": 3,
+        "s_veto": 8,
+        "positive_h": 3
+      },
+      "error": null,
+      "returncode": 0
+    },
+    {
+      "scenario": "active_bound_unit",
+      "events": 14,
+      "complete_LHE_bytes_identical": true,
+      "sha256": "e28f04e1a4352029ee1b2872c9ebed384077fd356eeeabd539b5ec31ce0686cd",
+      "rules": {
+        "h_removal": 3,
+        "s_veto": 8,
+        "positive_h": 3
+      },
+      "error": null,
+      "returncode": 0
+    },
+    {
+      "scenario": "active_bound_G6",
+      "events": 14,
+      "complete_LHE_bytes_identical": true,
+      "sha256": "e5d2dbe9a87512241030ba0a521f65ae85acca1e2369f3a5792bc5cd861ab228",
+      "rules": {
+        "h_removal": 3,
+        "s_veto": 8,
+        "positive_h": 3
+      },
+      "error": null,
+      "returncode": 0
+    },
+    {
+      "scenario": "zero_coupling_negativeS",
+      "events": 14,
+      "complete_LHE_bytes_identical": true,
+      "sha256": "9dcfb63c059f7e4882fdf4537d71fb58149d7511d85866d4ed5bf9c18acfb651",
+      "rules": {
+        "born_scale_no_transfer": 11,
+        "positive_h": 3
+      },
+      "error": null,
+      "returncode": 0
+    },
+    {
+      "scenario": "zero_pdf_negativeS",
+      "events": 14,
+      "complete_LHE_bytes_identical": true,
+      "sha256": "f3384b2485a565806beb801fdc5273167dfb6c488e3b3c5e1ce472f4a9e8a1bc",
+      "rules": {
+        "born_scale_no_transfer": 11,
+        "positive_h": 3
+      },
+      "error": null,
+      "returncode": 0
+    },
+    {
+      "scenario": "unsupported_pdf",
+      "events": 14,
+      "complete_LHE_bytes_identical": true,
+      "sha256": "203c3fee102177f954659f14b1a785c802a1444b7d051687251bccde11b45216",
+      "rules": {
+        "pdf_support_no_transfer": 11,
+        "positive_h": 3
+      },
+      "error": null,
+      "returncode": 0
+    },
+    {
+      "scenario": "unsupported_pdf_and_Gzero",
+      "events": 14,
+      "complete_LHE_bytes_identical": true,
+      "sha256": "794cc1d28d29ff96b5e21b199c80edb755df29373ee90d003854fa3141bd9b5f",
+      "rules": {
+        "pdf_support_no_transfer": 11,
+        "positive_h": 3
+      },
+      "error": null,
+      "returncode": 0
+    },
+    {
+      "scenario": "legacy_v2_invalid_reference",
+      "events": 14,
+      "complete_LHE_bytes_identical": true,
+      "sha256": "2085f839a9ce215dd583f7b939d17a89118497c6a634c6a9d591b66f3535fb72",
+      "rules": {
+        "h_removal": 3,
+        "s_veto": 8,
+        "positive_h": 3
+      },
+      "error": null,
+      "returncode": 0
+    },
+    {
+      "scenario": "legacy_v3_invalid_reference",
+      "events": 14,
+      "complete_LHE_bytes_identical": true,
+      "sha256": "53fcf64be8add9fc7188360e21b46e8bbb393aeb7eac6bff3204d0f2fb403035",
+      "rules": {
+        "h_removal": 3,
+        "s_veto": 8,
+        "positive_h": 3
+      },
+      "error": null,
+      "returncode": 0
+    },
+    {
+      "scenario": "invalid_reference",
+      "events": 0,
+      "complete_LHE_bytes_identical": false,
+      "sha256": null,
+      "rules": null,
+      "error": "Born-scale factor",
+      "returncode": 1
+    }
+  ],
+  "fixture_bindings": [
+    {
+      "epoch": "before",
+      "cpp_source_sha256": "ec129d1eacfa27d7a4e0a442205847ba85a17751b7edcd263d97aeabb7acc39b",
+      "compiled_cpp_sha256": "ec129d1eacfa27d7a4e0a442205847ba85a17751b7edcd263d97aeabb7acc39b",
+      "executable_sha256": "55b592bbb3fe8306d7498f321840867cadd0024f0484d87101d44fe70b550a1c"
+    },
+    {
+      "epoch": "after",
+      "cpp_source_sha256": "52d5bcd5eb59a458c21af72488f1e164576fe341e67c757d3200d9fdfd826dd4",
+      "compiled_cpp_sha256": "52d5bcd5eb59a458c21af72488f1e164576fe341e67c757d3200d9fdfd826dd4",
+      "executable_sha256": "907081dc19cef9587a56c9a276a795a803e2237d4cfe8a25efe526d4cf0a7868"
+    }
+  ],
+  "environment": {
+    "PYTHIA8": "/nfs/home/rikkert/Downloads/pythia8",
+    "PYTHIA8DATA": "/nfs/home/rikkert/Downloads/pythia8/share/Pythia8/xmldoc",
+    "MACNLOPS_TEST_PDF": "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+    "LD_LIBRARY_PATH": "/nfs/home/rikkert/Downloads/pythia8/lib:/nfs/home/rikkert/LHAPDF/lib"
+  },
+  "script_sha256": "7edd20c6f285db71f409f13f081253e7fe6590715297b8b6b1b1ea53c81755ab",
+  "commands_sha256": "48a02e4f54d9b567534a2b67037602aa3b3f51a0eeff7b65d8750ea834e3a057",
+  "production_sources_modified": false
+}

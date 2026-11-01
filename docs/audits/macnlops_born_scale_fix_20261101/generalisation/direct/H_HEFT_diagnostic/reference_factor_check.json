@@ -1,0 +1,24 @@
+{
+  "points": 321,
+  "S": 314,
+  "H": 7,
+  "max_coupling_relative_error": 6.661338147750939e-16,
+  "max_pdf_relative_error": 3.4305891460917337e-13,
+  "max_combined_relative_error": 3.4372504842394846e-13,
+  "max_alpha_real_relative_error": 7.12430114901963e-13,
+  "expected": "Native HEFT GHGG proportional to G^2 implies Born |ME|^2 proportional to alpha_s^2; native dynamic Born H_T/2=125/2=62.5 GeV, including H inverse Born. Separate LHAPDF hard factors and independent incoming-x projection.",
+  "library_sha256": "35203dfab4e20b044fe6e669b8170f5905f56c43c6dad6e762ceff86158a283c",
+  "compile_command": [
+    "g++",
+    "-O2",
+    "-shared",
+    "-fPIC",
+    "-I/nfs/home/rikkert/LHAPDF/include",
+    "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/direct/H_HEFT_diagnostic/reference_factor.cc",
+    "-L/nfs/home/rikkert/LHAPDF/lib",
+    "-Wl,-rpath,/nfs/home/rikkert/LHAPDF/lib",
+    "-lLHAPDF",
+    "-o",
+    "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/direct/H_HEFT_diagnostic/reference_factor.so"
+  ]
+}

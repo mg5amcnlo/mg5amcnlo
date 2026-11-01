@@ -1,0 +1,363 @@
+{
+  "actual": {
+    "1:m0": 0.0,
+    "21:m0": 0.0,
+    "23:m0": 91.188,
+    "24:m0": 80.41900244575616,
+    "24:mayDecay": 0,
+    "2:m0": 0.0,
+    "3:m0": 0.0,
+    "4:m0": 0.0,
+    "5:m0": 4.7,
+    "6:m0": 173.0,
+    "Beams:setDipoleShowerStartingScalesFromLHEF": 1,
+    "Beams:setProductionScalesFromLHEF": 1,
+    "HadronLevel:Hadronize": 0,
+    "PartonLevel:MPI": 0,
+    "SpaceShower:alphaSorder": 1,
+    "SpaceShower:alphaSuseCMW": 0,
+    "SpaceShower:alphaSvalue": 0.118,
+    "SpaceShower:nQuarkIn": 4,
+    "SpaceShower:pT0Ref": 0.0,
+    "SpaceShower:pTmin": 0.5000000000000001,
+    "StandardModel:alphaSnfmax": 5,
+    "TimeShower:alphaSorder": 1,
+    "TimeShower:alphaSuseCMW": 0,
+    "TimeShower:alphaSvalue": 0.118,
+    "TimeShower:globalRecoil": 0,
+    "TimeShower:nGluonToQuark": 4,
+    "TimeShower:pTmin": 0.5000000000000001
+  },
+  "actual_pdf": {
+    "PDF:extrapolate": "off",
+    "PDF:pSet": "LHAPDF6:NNPDF40_nlo_as_01180_nf_4",
+    "PDF:useHard": "off"
+  },
+  "all_job_physics_cards_identical": true,
+  "command": [
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/probe_continuation",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_1/Pythia8.cmd",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/events.lhe_0.lhe",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/main_full_effective_settings.cmnd"
+  ],
+  "created_utc": "2026-11-01T08:35:09.227136+00:00",
+  "expected": {
+    "1:m0": 0.0,
+    "21:m0": 0.0,
+    "23:m0": 91.188,
+    "24:m0": 80.41900244575616,
+    "24:mayDecay": 0,
+    "2:m0": 0.0,
+    "3:m0": 0.0,
+    "4:m0": 0.0,
+    "5:m0": 4.7,
+    "6:m0": 173.0,
+    "Beams:setDipoleShowerStartingScalesFromLHEF": 1,
+    "Beams:setProductionScalesFromLHEF": 1,
+    "HadronLevel:Hadronize": 0,
+    "PartonLevel:MPI": 0,
+    "SpaceShower:alphaSorder": 1,
+    "SpaceShower:alphaSuseCMW": 0,
+    "SpaceShower:alphaSvalue": 0.118,
+    "SpaceShower:nQuarkIn": 4,
+    "SpaceShower:pT0Ref": 0.0,
+    "SpaceShower:pTmin": 0.5,
+    "StandardModel:alphaSnfmax": 5,
+    "TimeShower:alphaSorder": 1,
+    "TimeShower:alphaSuseCMW": 0,
+    "TimeShower:alphaSvalue": 0.118,
+    "TimeShower:globalRecoil": 0,
+    "TimeShower:nGluonToQuark": 4,
+    "TimeShower:pTmin": 0.5
+  },
+  "first_emission_alpha_s_MZ": 0.1365,
+  "first_emission_alpha_s_order": 1,
+  "full_alpha_s_MZ": 0.118,
+  "full_run_directory": "RUN_PYTHIA8_3",
+  "generated_events": 0,
+  "hard_PDF_alpha_s_at91_1876": 0.11261770402106505,
+  "hard_PDF_alpha_s_at91_188": 0.11261762576566925,
+  "inputs": {
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/events.lhe_0.lhe": {
+      "bytes": 94841451,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/events.lhe_0.lhe",
+      "sha256": "885ee562302834cf473ee9374432e19bf5b21deba63faa67ae85c29a87aa8059"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_1/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_1/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_10/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_10/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_11/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_11/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_12/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_12/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_13/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_13/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_14/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_14/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_15/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_15/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_16/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_16/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_17/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_17/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_18/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_18/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_19/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_19/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_2/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_2/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_20/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_20/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_21/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_21/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_22/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_22/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_23/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_23/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_24/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_24/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_25/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_25/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_26/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_26/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_27/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_27/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_28/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_28/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_29/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_29/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_3/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_3/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_30/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_30/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_31/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_31/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_32/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_32/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_33/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_33/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_34/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_34/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_35/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_35/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_36/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_36/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_37/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_37/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_38/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_38/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_39/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_39/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_4/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_4/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_40/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_40/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_41/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_41/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_42/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_42/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_43/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_43/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_44/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_44/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_45/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_45/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_46/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_46/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_47/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_47/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_48/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_48/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_49/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_49/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_5/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_5/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_50/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_50/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_6/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_6/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_7/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_7/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_8/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_8/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_9/Pythia8.cmd": {
+      "bytes": 6458,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_9/Pythia8.cmd",
+      "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/main_full_effective_settings.cmnd": {
+      "bytes": 62181,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/main_full_effective_settings.cmnd",
+      "sha256": "88b5ec1f1ae975739ed730765af4059cd3d140cf24132e65e9fcc325752bb531"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/probe_continuation": {
+      "bytes": 124440,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/probe_continuation",
+      "sha256": "870c0dc9b455ca2da7f590cb8de7d5ab67816a7297700410ce9402e10dd785f4"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/probe_continuation.cc": {
+      "bytes": 1318,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/probe_continuation.cc",
+      "sha256": "01dac6054d2b1c248fbd7f7fc5e78f964d181915ac46ea6cff9d3075099d747c"
+    },
+    "/nfs/home/rikkert/Downloads/pythia8/lib/libpythia8.so": {
+      "bytes": 12796904,
+      "path": "/nfs/home/rikkert/Downloads/pythia8/lib/libpythia8.so",
+      "sha256": "35203dfab4e20b044fe6e669b8170f5905f56c43c6dad6e762ceff86158a283c"
+    }
+  },
+  "jobs": 50,
+  "limits": "Hard/PDF four-flavour scheme and four physical shower flavours, with stock nfmax5 coupling/trial running. This does not claim the historical patched fully nf4 shower. This initialization check does not test shower distributions.",
+  "passed": true,
+  "probe": "Read the actual first continuation card, replace only its relative LHE path by the absolute same split input, restore zero pT0Ref as in the full driver, initialize stock Pythia without next(), inspect effective settings/masses.",
+  "run": "run_1M_wbb4fs_nocuts",
+  "stock_alphaSnfmax": 5
+}

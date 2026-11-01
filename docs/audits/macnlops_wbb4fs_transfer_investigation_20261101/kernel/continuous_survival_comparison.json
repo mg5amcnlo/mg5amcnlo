@@ -1,0 +1,35 @@
+{
+  "ALL": {
+    "points": 26,
+    "trials": 156000,
+    "weighted_native_over_pred": 1.0001070830349887,
+    "weighted_native_over_pred_error": 0.003455101557556228,
+    "mean_ratio": 0.9925242236407452,
+    "pull_mean": 0.02347966465620294,
+    "pull_rms": 1.129490783106807,
+    "max_abs_pull": 2.6918292812001083,
+    "warnings": 22
+  },
+  "ISR": {
+    "points": 26,
+    "trials": 156000,
+    "weighted_native_over_pred": 1.0004016080306268,
+    "weighted_native_over_pred_error": 0.0027094035641807694,
+    "mean_ratio": 1.001405355330771,
+    "pull_mean": 0.01975929015633487,
+    "pull_rms": 1.031395930518951,
+    "max_abs_pull": 2.446357150540144,
+    "warnings": 72
+  },
+  "FSR": {
+    "points": 26,
+    "trials": 156000,
+    "weighted_native_over_pred": 1.001390684071147,
+    "weighted_native_over_pred_error": 0.0009636568573473279,
+    "mean_ratio": 1.0023621521136166,
+    "pull_mean": 0.23685117710499481,
+    "pull_rms": 0.6445480598213335,
+    "max_abs_pull": 1.394843831802647,
+    "warnings": 0
+  }
+}

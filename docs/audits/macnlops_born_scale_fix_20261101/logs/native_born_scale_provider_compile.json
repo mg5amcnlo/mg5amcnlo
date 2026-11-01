@@ -1,0 +1,78 @@
+[
+  {
+    "file": "weight_lines.f",
+    "command": [
+      "gfortran",
+      "-O",
+      "-fPIC",
+      "-ffixed-line-length-132",
+      "-I/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/born_implementation_compile",
+      "-I/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp",
+      "-I/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/lib",
+      "-J/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/born_implementation_compile",
+      "-c",
+      "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/born_implementation_compile/weight_lines.f",
+      "-o",
+      "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/born_implementation_compile/weight_lines.o"
+    ],
+    "returncode": 0,
+    "source_sha256": "bddc733f75c6d2b7af8a7b4c03a2bc89436df546bcfeef94c6960f66d7c632bd"
+  },
+  {
+    "file": "montecarlocounter.f",
+    "command": [
+      "gfortran",
+      "-O",
+      "-fPIC",
+      "-ffixed-line-length-132",
+      "-I/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/born_implementation_compile",
+      "-I/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp",
+      "-I/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/lib",
+      "-J/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/born_implementation_compile",
+      "-c",
+      "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/born_implementation_compile/montecarlocounter.f",
+      "-o",
+      "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/born_implementation_compile/montecarlocounter.o"
+    ],
+    "returncode": 0,
+    "source_sha256": "ef6f4411adccfff9f633fcbabd6f72e28ccce7d106c1750c9e060c936cc7fc16"
+  },
+  {
+    "file": "driver_macnlops.f",
+    "command": [
+      "gfortran",
+      "-O",
+      "-fPIC",
+      "-ffixed-line-length-132",
+      "-I/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/born_implementation_compile",
+      "-I/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp",
+      "-I/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/lib",
+      "-J/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/born_implementation_compile",
+      "-c",
+      "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/born_implementation_compile/driver_macnlops.f",
+      "-o",
+      "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/born_implementation_compile/driver_macnlops.o"
+    ],
+    "returncode": 0,
+    "source_sha256": "736cc3f224a51c5e99a66c9ab0a0a0ed5a576e8d36e25639df20280aeba9f71d"
+  },
+  {
+    "file": "macnlops_capi.f",
+    "command": [
+      "gfortran",
+      "-O",
+      "-fPIC",
+      "-ffixed-line-length-132",
+      "-I/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/born_implementation_compile",
+      "-I/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp",
+      "-I/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/lib",
+      "-J/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/born_implementation_compile",
+      "-c",
+      "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/born_implementation_compile/macnlops_capi.f",
+      "-o",
+      "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/born_implementation_compile/macnlops_capi.o"
+    ],
+    "returncode": 0,
+    "source_sha256": "aea779e1fd9ac6f3811cbdaf4e9c1e443b57378327cb2fcc2b6930e948b49c52"
+  }
+]

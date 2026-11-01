@@ -1,0 +1,68 @@
+{
+  "all_processes_succeeded": false,
+  "direct_input": {
+    "events": 1500,
+    "mode": "Direct native G/RDK reevaluation on already-sampled frozen endpoint+hardBorn records; raw source channels removed by campaign cleanup.",
+    "source": {
+      "bytes": 603965675,
+      "path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/backup/ttbar_run_1M_native_ir_events.lhe.gz",
+      "sha256": "67c278ede512ff9fd80d49ac7544438e8db4d710bd2047d83b2cc561678970db"
+    },
+    "subset": {
+      "bytes": 6409461,
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/direct_inputs/TTbar/events.lhe",
+      "sha256": "524189fd5ecc656b3fc3f350488cc1a1f67433fdf7dc28daca75f16c96ad3792"
+    }
+  },
+  "probe_sha256": "94ee7aa264f3badbe6ad10332e13864a3d9d1b27091005dd19db4ed70889ac06",
+  "process": "TTbar",
+  "providers": [
+    {
+      "exe_sha256": "417652c6a8e30c06ecbeae7a0bf1ce759e373fd5960eb746aa3c1053a091db29",
+      "log_sha256": "360a17134d06741836e104adab6a327cc3795e4b024c987d24a04d15db9dc186",
+      "provider": "P0_uux_ttx",
+      "records": [
+        {
+          "A": 0.06169729166287343,
+          "alphaK": 0.10490887467953441,
+          "coupling": 1.0062865915824377,
+          "d": 1760468365.4814808,
+          "index": 71,
+          "k": 1760468365.481481,
+          "kind": 1,
+          "muBorn_HT2": 204.18038198057653,
+          "muReal_HT2": 209.0240103933931,
+          "old_A": 0.06169729166287343,
+          "old_alphaK": 0.10490887467953441,
+          "old_d": 1760468365.4814808,
+          "old_k": 1760468365.481481,
+          "old_r": 1702872306.9193513,
+          "pdf": 0.9999512603046149,
+          "q2fact1": 43691.036920937295,
+          "q2fact2": 43691.036920937295,
+          "r": 1702872306.9193513,
+          "ready": 1,
+          "repeat_identical": true,
+          "sector": 2
+        }
+      ],
+      "returncode": 1
+    },
+    {
+      "exe_sha256": "ed976af2ab95d1613d1f54b4655f2befc6e0b48259486b436686314e385fcf2e",
+      "log_sha256": "5e97917ba391d33d332ef80cec3a2732348b8a5629f650b61d1918ec48ee189c",
+      "provider": "P0_gg_ttx",
+      "records": [],
+      "returncode": 1
+    },
+    {
+      "exe_sha256": "c20b015df161e19295ec2708e492686e6f399615065427eda10ee5e0a43ee621",
+      "log_sha256": "48b653292da7b163727ee41435c414251d8ec9cdf7e7ad865a43cb415c5b4910",
+      "provider": "P0_uxu_ttx",
+      "records": [],
+      "returncode": 1
+    }
+  ],
+  "records": 1,
+  "source_native_CPP_sha256": "ec129d1eacfa27d7a4e0a442205847ba85a17751b7edcd263d97aeabb7acc39b"
+}

@@ -144,7 +144,7 @@ c H before its physical Delta multiplier, without evaluating a Delta.
      $     mc_begin_real_point,mc_end_real_point,active_context,
      $     local_context
       use mc_counterterms, only: fksfather,mc_shower_scale_mass,
-     $     get_qMC,macnlops_delta_profile
+     $     get_qMC,macnlops_delta_profile,macnlops_born_scale_factor
       use process_module
       use scale_module
       use weight_lines
@@ -198,6 +198,9 @@ c H before its physical Delta multiplier, without evaluating a Delta.
       status=1
       r=0d0
       macnlops_sudakov_ready=.false.
+      macnlops_born_scale_ready=.false.
+      macnlops_born_scale_coupling=1d0
+      macnlops_born_scale_pdf=1d0
       h=0d0
       d=0d0
       k=0d0
@@ -489,6 +492,15 @@ c source construction. It never receives source G or bogus P factors.
                macnlops_sudakov_ids(j_fks)=21
             endif
          endif
+         call macnlops_born_scale_factor(p,p_born,
+     $        macnlops_sudakov_ids,macnlops_sudakov_x,component_flow,
+     $        macnlops_born_scale_coupling,macnlops_born_scale_pdf,
+     $        kernel_status)
+         if(kernel_status.ne.0)then
+            status=42
+            goto 900
+         endif
+         macnlops_born_scale_ready=.true.
          macnlops_sudakov_ready=.true.
       endif
       if(local_component)then
@@ -722,7 +734,8 @@ c including their tags and helicities, rather than a PDG-only factorial.
       use extra_weights
       use weight_lines, only: macnlops_gate_active,
      $     macnlops_current_z,macnlops_proposal_active,
-     $     macnlops_kernel_alphas,macnlops_kernel_q2fact
+     $     macnlops_kernel_alphas,macnlops_kernel_q2fact,
+     $     macnlops_sudakov_enabled
       implicit none
       include 'nexternal.inc'
       include 'orders.inc'
@@ -754,6 +767,11 @@ c at these scales. The S veto replaces one power by the shower's
 c emission alpha_s and the emission's PDF ratio by the shower's.
       macnlops_kernel_alphas=g**2/(4d0*pi)
       macnlops_kernel_q2fact=q2fact
+c Native weight lines store one factorization scale and apply it to
+c both beams. Report the scales actually used by v4's kernel PDFs;
+c retain the older metadata for the reproducible v2/v3 prescriptions.
+      if(macnlops_sudakov_enabled)
+     $     macnlops_kernel_q2fact(2)=q2fact(1)
       sevmc=fks_Hij(p,i_fks,j_fks)
       call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p,pcms,
      $     p_born,.false.,z,nconnect,amps,.true.)

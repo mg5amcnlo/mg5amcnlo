@@ -1,0 +1,758 @@
+[
+  {
+    "epoch": "before",
+    "phase": "fixture_build",
+    "argv": [
+      "gcc",
+      "-c",
+      "stub.c",
+      "-o",
+      "stub.o"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_anl0bu86",
+    "returncode": 0
+  },
+  {
+    "epoch": "before",
+    "phase": "fixture_build",
+    "argv": [
+      "g++",
+      "-std=c++11",
+      "-O1",
+      "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/cleanup/parity/before/source_tree/Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc",
+      "stub.o",
+      "-o",
+      "match.exe",
+      "-I/nfs/home/rikkert/Downloads/pythia8/include",
+      "-L/nfs/home/rikkert/Downloads/pythia8/lib",
+      "-Wl,-rpath,/nfs/home/rikkert/Downloads/pythia8/lib",
+      "-lpythia8",
+      "-ldl"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_anl0bu86",
+    "returncode": 0
+  },
+  {
+    "epoch": "before",
+    "phase": "fixture_build",
+    "argv": [
+      "g++",
+      "-std=c++11",
+      "-O1",
+      "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/cleanup/parity/before/source_tree/Template/NLO/MCatNLO/srcPythia8/MacNLOPS.cc",
+      "-o",
+      "probe.exe",
+      "-I/nfs/home/rikkert/Downloads/pythia8/include",
+      "-L/nfs/home/rikkert/Downloads/pythia8/lib",
+      "-Wl,-rpath,/nfs/home/rikkert/Downloads/pythia8/lib",
+      "-lpythia8",
+      "-ldl"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_anl0bu86",
+    "returncode": 0
+  },
+  {
+    "epoch": "before",
+    "phase": "fixture_build",
+    "argv": [
+      "./probe.exe",
+      "--probe-config",
+      "/tmp/macnlops_first_emission_native_anl0bu86/probe.json",
+      "--beam-id-a",
+      "2212",
+      "--beam-id-b",
+      "2212",
+      "--beam-energy-a",
+      "6500",
+      "--beam-energy-b",
+      "6500",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--alpha-s-mz",
+      "0.1365",
+      "--alpha-s-order",
+      "1",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_anl0bu86/shower.cmnd",
+      "--flavour-count",
+      "5",
+      "--mcatnlo-delta"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_anl0bu86",
+    "returncode": 0
+  },
+  {
+    "epoch": "before",
+    "phase": "unit",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "unit.lhe",
+      "--summary",
+      "unit.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_anl0bu86/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_anl0bu86",
+    "environment_changes": {},
+    "returncode": 0
+  },
+  {
+    "epoch": "before",
+    "phase": "G_product6",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "G_product6.lhe",
+      "--summary",
+      "G_product6.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_anl0bu86/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_anl0bu86",
+    "environment_changes": {
+      "MACNLOPS_STUB_BORN_COUPLING": "2",
+      "MACNLOPS_STUB_BORN_PDF": "3"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "before",
+    "phase": "active_bound_unit",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "active_bound_unit.lhe",
+      "--summary",
+      "active_bound_unit.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_anl0bu86/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_anl0bu86",
+    "environment_changes": {
+      "MACNLOPS_STUB_SOURCE": "1",
+      "MACNLOPS_STUB_PS": "0.000001"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "before",
+    "phase": "active_bound_G6",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "active_bound_G6.lhe",
+      "--summary",
+      "active_bound_G6.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_anl0bu86/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_anl0bu86",
+    "environment_changes": {
+      "MACNLOPS_STUB_SOURCE": "1",
+      "MACNLOPS_STUB_PS": "0.000001",
+      "MACNLOPS_STUB_BORN_COUPLING": "2",
+      "MACNLOPS_STUB_BORN_PDF": "3"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "before",
+    "phase": "zero_coupling_negativeS",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "zero_coupling_negativeS.lhe",
+      "--summary",
+      "zero_coupling_negativeS.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_anl0bu86/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_anl0bu86",
+    "environment_changes": {
+      "MACNLOPS_STUB_BORN_COUPLING": "0"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "before",
+    "phase": "zero_pdf_negativeS",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "zero_pdf_negativeS.lhe",
+      "--summary",
+      "zero_pdf_negativeS.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_anl0bu86/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_anl0bu86",
+    "environment_changes": {
+      "MACNLOPS_STUB_BORN_PDF": "0"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "before",
+    "phase": "unsupported_pdf",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "unsupported_pdf.lhe",
+      "--summary",
+      "unsupported_pdf.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_anl0bu86/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_anl0bu86",
+    "environment_changes": {
+      "MACNLOPS_STUB_FORCE_PDF_ZERO": "1"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "before",
+    "phase": "unsupported_pdf_and_Gzero",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "unsupported_pdf_and_Gzero.lhe",
+      "--summary",
+      "unsupported_pdf_and_Gzero.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_anl0bu86/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_anl0bu86",
+    "environment_changes": {
+      "MACNLOPS_STUB_FORCE_PDF_ZERO": "1",
+      "MACNLOPS_STUB_BORN_COUPLING": "0"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "before",
+    "phase": "legacy_v2_invalid_reference",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "legacy_v2_invalid_reference.lhe",
+      "--summary",
+      "legacy_v2_invalid_reference.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_anl0bu86/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349",
+      "--s-veto",
+      "v2"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_anl0bu86",
+    "environment_changes": {
+      "MACNLOPS_STUB_BORN_READY": "0",
+      "MACNLOPS_STUB_BORN_COUPLING": "nan"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "before",
+    "phase": "legacy_v3_invalid_reference",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "legacy_v3_invalid_reference.lhe",
+      "--summary",
+      "legacy_v3_invalid_reference.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_anl0bu86/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349",
+      "--s-veto",
+      "v3"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_anl0bu86",
+    "environment_changes": {
+      "MACNLOPS_STUB_BORN_READY": "0",
+      "MACNLOPS_STUB_BORN_COUPLING": "nan"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "before",
+    "phase": "invalid_reference",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "invalid_reference.lhe",
+      "--summary",
+      "invalid_reference.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_anl0bu86/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_anl0bu86",
+    "environment_changes": {
+      "MACNLOPS_STUB_BORN_READY": "0"
+    },
+    "returncode": 1
+  },
+  {
+    "epoch": "after",
+    "phase": "fixture_build",
+    "argv": [
+      "gcc",
+      "-c",
+      "stub.c",
+      "-o",
+      "stub.o"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_22p147do",
+    "returncode": 0
+  },
+  {
+    "epoch": "after",
+    "phase": "fixture_build",
+    "argv": [
+      "g++",
+      "-std=c++11",
+      "-O1",
+      "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/cleanup/parity/after/source_tree/Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc",
+      "stub.o",
+      "-o",
+      "match.exe",
+      "-I/nfs/home/rikkert/Downloads/pythia8/include",
+      "-L/nfs/home/rikkert/Downloads/pythia8/lib",
+      "-Wl,-rpath,/nfs/home/rikkert/Downloads/pythia8/lib",
+      "-lpythia8",
+      "-ldl"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_22p147do",
+    "returncode": 0
+  },
+  {
+    "epoch": "after",
+    "phase": "fixture_build",
+    "argv": [
+      "g++",
+      "-std=c++11",
+      "-O1",
+      "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/cleanup/parity/after/source_tree/Template/NLO/MCatNLO/srcPythia8/MacNLOPS.cc",
+      "-o",
+      "probe.exe",
+      "-I/nfs/home/rikkert/Downloads/pythia8/include",
+      "-L/nfs/home/rikkert/Downloads/pythia8/lib",
+      "-Wl,-rpath,/nfs/home/rikkert/Downloads/pythia8/lib",
+      "-lpythia8",
+      "-ldl"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_22p147do",
+    "returncode": 0
+  },
+  {
+    "epoch": "after",
+    "phase": "fixture_build",
+    "argv": [
+      "./probe.exe",
+      "--probe-config",
+      "/tmp/macnlops_first_emission_native_22p147do/probe.json",
+      "--beam-id-a",
+      "2212",
+      "--beam-id-b",
+      "2212",
+      "--beam-energy-a",
+      "6500",
+      "--beam-energy-b",
+      "6500",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--alpha-s-mz",
+      "0.1365",
+      "--alpha-s-order",
+      "1",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_22p147do/shower.cmnd",
+      "--flavour-count",
+      "5",
+      "--mcatnlo-delta"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_22p147do",
+    "returncode": 0
+  },
+  {
+    "epoch": "after",
+    "phase": "unit",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "unit.lhe",
+      "--summary",
+      "unit.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_22p147do/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_22p147do",
+    "environment_changes": {},
+    "returncode": 0
+  },
+  {
+    "epoch": "after",
+    "phase": "G_product6",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "G_product6.lhe",
+      "--summary",
+      "G_product6.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_22p147do/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_22p147do",
+    "environment_changes": {
+      "MACNLOPS_STUB_BORN_COUPLING": "2",
+      "MACNLOPS_STUB_BORN_PDF": "3"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "after",
+    "phase": "active_bound_unit",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "active_bound_unit.lhe",
+      "--summary",
+      "active_bound_unit.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_22p147do/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_22p147do",
+    "environment_changes": {
+      "MACNLOPS_STUB_SOURCE": "1",
+      "MACNLOPS_STUB_PS": "0.000001"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "after",
+    "phase": "active_bound_G6",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "active_bound_G6.lhe",
+      "--summary",
+      "active_bound_G6.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_22p147do/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_22p147do",
+    "environment_changes": {
+      "MACNLOPS_STUB_SOURCE": "1",
+      "MACNLOPS_STUB_PS": "0.000001",
+      "MACNLOPS_STUB_BORN_COUPLING": "2",
+      "MACNLOPS_STUB_BORN_PDF": "3"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "after",
+    "phase": "zero_coupling_negativeS",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "zero_coupling_negativeS.lhe",
+      "--summary",
+      "zero_coupling_negativeS.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_22p147do/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_22p147do",
+    "environment_changes": {
+      "MACNLOPS_STUB_BORN_COUPLING": "0"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "after",
+    "phase": "zero_pdf_negativeS",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "zero_pdf_negativeS.lhe",
+      "--summary",
+      "zero_pdf_negativeS.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_22p147do/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_22p147do",
+    "environment_changes": {
+      "MACNLOPS_STUB_BORN_PDF": "0"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "after",
+    "phase": "unsupported_pdf",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "unsupported_pdf.lhe",
+      "--summary",
+      "unsupported_pdf.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_22p147do/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_22p147do",
+    "environment_changes": {
+      "MACNLOPS_STUB_FORCE_PDF_ZERO": "1"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "after",
+    "phase": "unsupported_pdf_and_Gzero",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "unsupported_pdf_and_Gzero.lhe",
+      "--summary",
+      "unsupported_pdf_and_Gzero.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_22p147do/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_22p147do",
+    "environment_changes": {
+      "MACNLOPS_STUB_FORCE_PDF_ZERO": "1",
+      "MACNLOPS_STUB_BORN_COUPLING": "0"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "after",
+    "phase": "legacy_v2_invalid_reference",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "legacy_v2_invalid_reference.lhe",
+      "--summary",
+      "legacy_v2_invalid_reference.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_22p147do/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349",
+      "--s-veto",
+      "v2"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_22p147do",
+    "environment_changes": {
+      "MACNLOPS_STUB_BORN_READY": "0",
+      "MACNLOPS_STUB_BORN_COUPLING": "nan"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "after",
+    "phase": "legacy_v3_invalid_reference",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "legacy_v3_invalid_reference.lhe",
+      "--summary",
+      "legacy_v3_invalid_reference.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_22p147do/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349",
+      "--s-veto",
+      "v3"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_22p147do",
+    "environment_changes": {
+      "MACNLOPS_STUB_BORN_READY": "0",
+      "MACNLOPS_STUB_BORN_COUPLING": "nan"
+    },
+    "returncode": 0
+  },
+  {
+    "epoch": "after",
+    "phase": "invalid_reference",
+    "argv": [
+      "./match.exe",
+      "--input",
+      "events.lhe",
+      "--output",
+      "invalid_reference.lhe",
+      "--summary",
+      "invalid_reference.json",
+      "--routes",
+      "routes.dat",
+      "--settings",
+      "/tmp/macnlops_first_emission_native_22p147do/shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "7349"
+    ],
+    "cwd": "/tmp/macnlops_first_emission_native_22p147do",
+    "environment_changes": {
+      "MACNLOPS_STUB_BORN_READY": "0"
+    },
+    "returncode": 1
+  }
+]

@@ -1,0 +1,27 @@
+{
+  "command": [
+    "/usr/bin/python",
+    "-m",
+    "unittest",
+    "tests.unit_tests.various.test_macnlops_gluon_sudakov",
+    "tests.unit_tests.various.test_macnlops_sudakov_kernel",
+    "tests.unit_tests.fks.test_macnlops_sudakov_profile",
+    "tests.unit_tests.various.test_macnlops_first_emission",
+    "tests.unit_tests.fks.test_macnlops_weight_lines",
+    "tests.unit_tests.fks.test_macnlops_delta_context",
+    "tests.unit_tests.fks.test_macnlops_source_modes",
+    "tests.unit_tests.fks.test_mcatnlo_delta_scales",
+    "tests.unit_tests.various.test_macnlops_component_protocol",
+    "tests.unit_tests.various.test_macnlops_fixed_beams",
+    "tests.unit_tests.various.test_macnlops_s_veto_normalisation",
+    "tests.unit_tests.various.test_macnlops_continuation_scales",
+    "tests.unit_tests.various.test_macnlops_continuation",
+    "tests.unit_tests.various.test_macnlops_run_card",
+    "tests.unit_tests.various.test_macnlops_native_environment",
+    "-v"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 37.79706717515364,
+  "matcher_sha256": "0e2bbd496540ed2692cb0d2665544aba8380add65771776a9baaaec7312dc7e1",
+  "log_sha256": "b346e7938f495c4bcb776fdb87937c717a5af9b773602b93f9afc4c85506c48a"
+}

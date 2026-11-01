@@ -2505,12 +2505,14 @@ def check_first_emission(jobs):
     for record in summaries:
         counts.update(record['counts'])
         weights.update(record['weight_sums'])
-    modes = {(record['prescription'], record['rejected_events']) for record in summaries}
+    modes = {(record['prescription'], record['rejected_events'],
+              record.get('born_scale_correction', 'none')) for record in summaries}
     if len(modes) != 1:
         raise MatchingError('Channels used different MAcNLOPS prescriptions')
-    prescription, rejected = modes.pop()
+    prescription, rejected, born_scales = modes.pop()
     return summaries, dict(counts=dict(counts), weight_sums=dict(weights),
-                           prescription=prescription, rejected_events=rejected)
+                           prescription=prescription, rejected_events=rejected,
+                           born_scale_correction=born_scales)
 
 
 def first_emission_collection(jobs, summaries, header_template, directory):
@@ -2580,7 +2582,8 @@ def first_emission_contract(filename):
         raise MatchingError('Not a collected MAcNLOPS first-emission sample: %s' % filename)
     return dict(schema='macnlops-first-emission-v1', events=int(run_card_values(card[1])['nevents']),
                 shower_cutoffs=marker['shower_cutoffs'], rejected=marker['rejected'],
-                prescription=marker['prescription'], environment=None)
+                prescription=marker['prescription'], environment=None,
+                born_scale_correction=marker.get('born_scale_correction', 'none'))
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)

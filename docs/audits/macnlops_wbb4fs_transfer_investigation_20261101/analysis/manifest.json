@@ -1,0 +1,236 @@
+{
+  "status": "Final decomposition, negative-H extraction and independent12x12 local-prediction crosscheck complete. Root report review pending.",
+  "production_inputs_untouched": true,
+  "frozen_validation_untouched": true,
+  "external_prediction_bindings": [
+    {
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/normalisation/predictions_flavour_mWbb_20.npz",
+      "sha256": "2a61c92d5c8ddca121a1401a22400f32f3a9b2ec56c951690246e3d79fa09a0a"
+    },
+    {
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/normalisation/predictions_flavour_mWbb_40.npz",
+      "sha256": "0ab08d5ed0ac58396a14ffaf9aeb5370d9ae871786b75de217df1e64bfcbabe7"
+    },
+    {
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/normalisation/predictions_flavour_order_mWbb_20.npz",
+      "sha256": "921e6d7e189f96bcfdadd38440e6cd4b6a88715df1af6ae9ac16612a0fa6b71b"
+    },
+    {
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/normalisation/predictions_mWbb_20.npz",
+      "sha256": "5a69d586a403e574659d1f042bd646d3ee993d4c98cb21763d54eee99da60cff"
+    },
+    {
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/normalisation/predictions_mWbb_40.npz",
+      "sha256": "6da6810dc98b2f38c40b8b672e0823a916c4435b81d352b998ce56fb363b73e5"
+    },
+    {
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/normalisation/predictions_mWbb_HT2_12x12.npz",
+      "sha256": "ef523504a9272aebd83f2a69b500cc1824e9cda2c2f662001025859bab7951d4"
+    },
+    {
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/normalisation/predictions_mWbb_HT2_16x16.npz",
+      "sha256": "01637ea53d480db94fb199efc7811ffb3f0e59dbffd7d51fda27f9916029b078"
+    },
+    {
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/normalisation/predictions_mWbb_HT2_8x8.npz",
+      "sha256": "1b3aef4c3f742d90185439c9bdd7906a25dbd4f487b3c7c64ae23b7a15d42c82"
+    }
+  ],
+  "files": [
+    {
+      "path": "diagnosis_transfer_20261101/analysis/check_local_predictions.py",
+      "bytes": 2925,
+      "sha256": "d4e267150c42e24c0b86c279f84fb4165356318e75ed8e232427378f067aed11"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/decision_metadata.npz",
+      "bytes": 304228102,
+      "sha256": "a9cfba16fc68c335797c94749054865ebc2c0399ab35dc02c9c63ad24afcf14e"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/decompose.py",
+      "bytes": 6196,
+      "sha256": "0fbe8ca6acf40db2aee15e9faf40283fc3ba2bcc96e650a2ea38ab720035d547"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/decomposition.json",
+      "bytes": 185869,
+      "sha256": "0af22fedb06a5286bece97a2080ece41c918e522ad750803bd958271861ec2b8"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/decomposition.log",
+      "bytes": 5605,
+      "sha256": "d0adb7b77b539b4862a179caae8583c0f4806a6c326615a68019fab32b061066"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/extract_metadata.log",
+      "bytes": 297,
+      "sha256": "dbd6e9ac92ba66576ae542848e000fcaad7ce028a2694c81604428041fafa45e"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/extract_metadata.py",
+      "bytes": 6966,
+      "sha256": "7e32815d941d857f44e6bdfa84b26f09edffae09b19d90c0159124ebad4cd584"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/extract_negative_H_inputs.log",
+      "bytes": 4566,
+      "sha256": "502918f2e49b956403a4e92e7d6da8a0fdf29c2ccbfef20d0bedc54bc80927a8"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/extract_negative_H_inputs.py",
+      "bytes": 4913,
+      "sha256": "bbcca4f76ea9847a41d92407c9e1f319a1574909a4965d8d440c305cf8dd4d41"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/findings.md",
+      "bytes": 6662,
+      "sha256": "396899c0d577c7c7222e090e2fa24fa68f7f5931f866449574ea84944d566f6f"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/local_density_control.pdf",
+      "bytes": 24885,
+      "sha256": "39e77ca896ae2ac38bf2fa5b3e3a90ab210b3859a818854b4641fddd179bb911"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/local_density_control.png",
+      "bytes": 125624,
+      "sha256": "895df8f3078f842d3d49f4a7e71631d445a4ddd47dd401420cda452bbc34e840"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/local_prediction_crosscheck.json",
+      "bytes": 41587,
+      "sha256": "9bd1214d2aa248ec54312e141aceb32ae1c1665530632bf06ee51abb337e6aa2"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/local_prediction_crosscheck.log",
+      "bytes": 2097,
+      "sha256": "f5ea96c08d3248b6295a11cbcb03329b8a1a9734930d56eb275720f092116693"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/metadata_manifest.json",
+      "bytes": 2642,
+      "sha256": "e98f28e6373a9348da32b6de5fff001a532c8feb4556fb80ba588ccc2208a1f8"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/phase_profiles.json",
+      "bytes": 208398,
+      "sha256": "1171077f607d3aa37be76960abbbce44ca8512ad111a7fae40c19e7de6e74115"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/phase_profiles.log",
+      "bytes": 5162,
+      "sha256": "1dda6200b3a0d818dd5d6a7ca925c417ff24fcf19351f95cd5c693268fde191b"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/phase_profiles.py",
+      "bytes": 4527,
+      "sha256": "63456bd97fad4a1960d215202316ead34152c90bad426750bfa30bdee52918ff"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/plot_diagnosis.py",
+      "bytes": 2118,
+      "sha256": "e708bdb7e393b1fd5c4cfe2a994a8a4fc3c55a536d550bfc3a1247bbf1e3258c"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/plot_local_control.py",
+      "bytes": 1880,
+      "sha256": "7c8f614bd6334308e97df40d10243a5bbf02e09ae535511e923b66923f904ba3"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/transfer_decomposition.pdf",
+      "bytes": 22830,
+      "sha256": "f1f57d45608bf8729d89ff781aabb0ad6c6b57134e4b4de2e65556bc81b1f0c5"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/analysis/transfer_decomposition.png",
+      "bytes": 115695,
+      "sha256": "ee214c44779e5acc8e8ce2e58db554f93fc1e4f6ff588e2a013db87000b5114d"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF1.0/events.lhe",
+      "bytes": 22998762,
+      "sha256": "f00b96942d5b18552fde0b5fbe43cad949e4d25f97620fa8f4e3af4371b600d5"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF1.0/mapping.json",
+      "bytes": 1859926,
+      "sha256": "fce2cdaa4ffc51983215c6b82177ff30e6554381a55b8ee7e343edbe948de276"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF1.0/res_1",
+      "bytes": 305,
+      "sha256": "7d3bf0fa2ef9f1031c3c9378c0bee8e09644f3a71d7d491bc49856d8df9faacb"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF1.0/source_index.npz",
+      "bytes": 98282,
+      "sha256": "f73735958604961a5d9f353c2c9e25fc00f8d9345cccacb65c8fc77a0d40bec3"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF2.0/events.lhe",
+      "bytes": 22306186,
+      "sha256": "cb5f5f701996852c0bcf854ef4b5e64e2de6582a75209a338199b4167830405c"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF2.0/mapping.json",
+      "bytes": 1804071,
+      "sha256": "209d3ce1344c8cc2d48d09df28b6ae540c9470adcbae496b738dcc0a9cf53d4f"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF2.0/res_1",
+      "bytes": 305,
+      "sha256": "75b37478a5c469c74cceaac4d17d2881354169a7f7440ace2548e6ab2cfcb696"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/scales/negative_H_inputs/P0_dxu_bbxwp_GF2.0/source_index.npz",
+      "bytes": 95338,
+      "sha256": "e7ed4fdf473b41f645347fb916775c64d4919b346eb68339627ec06f16ae73db"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF1.0/events.lhe",
+      "bytes": 22377702,
+      "sha256": "359d5995cfe0266872e9c7a037515d30f43317f3a6a4305b7a80391168cfcea9"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF1.0/mapping.json",
+      "bytes": 1809857,
+      "sha256": "90c5f1c58ddf411a833ee520ede32096215af1b69385ef63c642ebf103820831"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF1.0/res_1",
+      "bytes": 305,
+      "sha256": "c9b4531c71ba3836e07303e4bfb53eb562f8b8477ee6a607539bce65dc432abe"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF1.0/source_index.npz",
+      "bytes": 95642,
+      "sha256": "c4e3f0cb752698d534093a9dfc2978643d1ea99f0cd5b51875c03a4c5685e555"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF2.0/events.lhe",
+      "bytes": 22667530,
+      "sha256": "4d0e32999a601ff61c28130089dda733833540b46ab338426a1eeec7d7e58470"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF2.0/mapping.json",
+      "bytes": 1833197,
+      "sha256": "b61c3740ce3f6ea5761a0103d2c2427b5f33ad16f9263a3c3e4a24384db7d5cf"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF2.0/res_1",
+      "bytes": 305,
+      "sha256": "b737f38b48f4119bdb22a126f5d92e1aa5bc05a062fac1807e0aa11bbff2a290"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/scales/negative_H_inputs/P0_udx_bbxwp_GF2.0/source_index.npz",
+      "bytes": 96874,
+      "sha256": "f7ac7c0d4d392fad6e5789fe4ac440ec2497ebde7a1ae768c4d30b5bb352b2e8"
+    },
+    {
+      "path": "diagnosis_transfer_20261101/scales/negative_H_inputs/manifest.json",
+      "bytes": 4470,
+      "sha256": "67977a684942c321efd1db7075a3fd4b42748b38faa6667efb032716bfb364f1"
+    }
+  ]
+}

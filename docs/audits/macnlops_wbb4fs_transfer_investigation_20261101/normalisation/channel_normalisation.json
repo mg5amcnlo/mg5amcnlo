@@ -1,0 +1,86 @@
+{
+  "covariance_note": "No S/B covariance retained. The sum of relative errors bounds its one-sigma ratio error for arbitrary covariance; independent estimate also given.",
+  "groups": {
+    "P0_dxu_bbxwp:GF1.0": {
+      "beta_relative_error_independent": 0.0031495919077495905,
+      "beta_relative_one_sigma_upper_bound_unknown_covariance": 0.003759137324718201,
+      "input_H": 58012,
+      "input_S": 179874,
+      "jobs": 24,
+      "metadata": {
+        "beta": 1.8509634009159779,
+        "res": "res_1",
+        "sigma_B": 46.06913834428979,
+        "sigma_B_error": 0.03155365862292124,
+        "sigma_S": 85.27228898701532,
+        "sigma_S_error": 0.262145577019222
+      }
+    },
+    "P0_dxu_bbxwp:GF2.0": {
+      "beta_relative_error_independent": 0.002966628399752502,
+      "beta_relative_one_sigma_upper_bound_unknown_covariance": 0.0036320446539709374,
+      "input_H": 67606,
+      "input_S": 188860,
+      "jobs": 26,
+      "metadata": {
+        "beta": 1.872966389206205,
+        "res": "res_1",
+        "sigma_B": 46.05225675861138,
+        "sigma_B_error": 0.03527694857477781,
+        "sigma_S": 86.2543290559734,
+        "sigma_S_error": 0.2472070357352837
+      }
+    },
+    "P0_udx_bbxwp:GF1.0": {
+      "beta_relative_error_independent": 0.0036718573918684415,
+      "beta_relative_one_sigma_upper_bound_unknown_covariance": 0.004355672131138982,
+      "input_H": 68892,
+      "input_S": 190430,
+      "jobs": 26,
+      "metadata": {
+        "beta": 1.8896397912613465,
+        "res": "res_1",
+        "sigma_B": 46.01346601756133,
+        "sigma_B_error": 0.03516460558885596,
+        "sigma_S": 86.94887632063565,
+        "sigma_S_error": 0.3122723594589295
+      }
+    },
+    "P0_udx_bbxwp:GF2.0": {
+      "beta_relative_error_independent": 0.0032725795781415913,
+      "beta_relative_one_sigma_upper_bound_unknown_covariance": 0.003976286578066012,
+      "input_H": 59046,
+      "input_S": 187280,
+      "jobs": 25,
+      "metadata": {
+        "beta": 1.8493480948125967,
+        "res": "res_1",
+        "sigma_B": 46.074390460293415,
+        "sigma_B_error": 0.03704420912432117,
+        "sigma_S": 85.2075862173953,
+        "sigma_S_error": 0.27030214385772866
+      }
+    }
+  },
+  "integrals": {
+    "B_error_uncorrelated_pb": 0.0696341826196417,
+    "B_pb": 184.2092515807559,
+    "S_error_uncorrelated_pb": 0.5480957010631425,
+    "S_pb": 343.6830805810197
+  },
+  "outcome": "Metadata/parser grouping is correct; normal integration uncertainty cannot account for the order10percent transfer mismatch. This does not test the pointwise S~beta B approximation.",
+  "source": {
+    "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/macnlops_first_emission.json",
+    "sha256": "f1023c8acbae3cdc86bfcf5bea17c951658928bfe0acdc630092e95ea76a0008"
+  },
+  "transfer_sensitivity_bound": {
+    "bound_on_one_sigma_change_S_plus_H_pb": 0.17001625476314125,
+    "expected_absolute_H_transfer_pb": 15.416451607902486,
+    "expected_absolute_S_transfer_pb": 23.61684787937619,
+    "max_one_sigma_relative_beta_bound": 0.004355672131138982,
+    "measured_expected_net_H_minus_S_pb": -1.7668520383120434,
+    "method": "Each bounded rejection changes at most proportionally to beta for H or inverse-beta for S. A first-order upper bound on total absolute transfer shift is (sum|w_S|*p_S + sum|w_H|*p_H)*max(relative beta uncertainty). This accounts for signed-S cancellations and is conservative about missing S/B covariance.",
+    "nominal_expected_H_transfer_pb": 15.416451607902482,
+    "nominal_expected_S_transfer_pb": 17.183303646214526
+  }
+}

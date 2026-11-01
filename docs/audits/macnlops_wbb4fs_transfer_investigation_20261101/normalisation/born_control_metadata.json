@@ -1,0 +1,32 @@
+{
+  "beam_bottom_events": 0,
+  "events": 200000,
+  "fields": [
+    "hard_ht_half",
+    "hard_x1",
+    "hard_x2",
+    "hard_system_mass",
+    "hard_system_y",
+    "hard_bb_mass",
+    "hard_bb_pt",
+    "hard_b_pt",
+    "hard_bbar_pt",
+    "hard_w_pt",
+    "hard_bb_delta_phi",
+    "hard_bb_delta_r"
+  ],
+  "init_rows": [
+    "1.837040e+02 8.569438e-02 9.185200e-04 1"
+  ],
+  "minimum_observed_HT2_GeV": 44.91693870512621,
+  "minimum_observed_b_pt_GeV": 0.023736690631453748,
+  "model_bottom_mass_GeV": 4.7,
+  "normalization_note": "LO unweighted conditional-sampling errors do not include the independently estimated hard integration normalization uncertainty.",
+  "positive_weights": true,
+  "scale_HT2_max_relative_difference": 4.97773360900729e-07,
+  "source": {
+    "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/normalisation/Wbb_Born_LO/Events/run_born_control/unweighted_events.lhe.gz",
+    "sha256": "3b14c456045759d9bdad64bc758569a2f3e59d0b23a663a6d567836cbab82cec"
+  },
+  "weight_sum_pb": 183.70400000000004
+}

@@ -1,0 +1,1109 @@
+--- a/Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc
++++ b/Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc
+@@ -24,6 +24,7 @@
+   double* mass, double* pt, double* source, double* cdf, double* q, double* w, double* fsr,
+   int* nquarks, double* quarks);
+ void macnlops_c_gluon_profile(int* n, double* gluons);
++void macnlops_c_born_scale_factor(int* ready, double* coupling, double* pdf);
+ }
+ 
+ namespace {
+@@ -237,8 +238,26 @@
+ struct Density {
+   double r = 0., d = 0., k = 0., alphaK = 0., q2fact[2] = {0., 0.};
+   SudakovProfile sudakov;
++  struct BornScale {
++    int ready = 0;
++    double coupling = 1., pdf = 1.;
++  } bornScale;
+   bool transfers() const {return d > r && k > 0.;}
+ };
++
++// The provider evaluates the same canonical Born contribution with its
++// native Born and real scale choices, including model-specific couplings
++// and both hard-beam PDFs. No process-wide alpha_s power is assumed here.
++double bornScaleFactor(const Density& x) {
++  const auto& p = x.bornScale;
++  if (p.ready != 1 || !std::isfinite(p.coupling) || !std::isfinite(p.pdf) ||
++      p.coupling < 0. || p.pdf < 0.)
++    throw std::runtime_error("Invalid native Born-scale factor");
++  const double factor = p.coupling * p.pdf;
++  if (!std::isfinite(factor))
++    throw std::runtime_error("Nonfinite native Born-scale factor");
++  return factor;
++}
+ 
+ // Signed-residual acceptances of macnlops.Densities. A nonpositive K
+ // transfers nothing; kernelScale rescales only the S denominator.
+@@ -302,6 +321,9 @@
+       &p.pt, &p.source, &p.cdf, p.q.data(), p.w.data(), p.fsr.data(),
+       &p.nquarks, p.quarks.data());
+     macnlops_c_gluon_profile(&p.ngluons, p.gluons.data());
++    macnlops_c_born_scale_factor(&x.bornScale.ready, &x.bornScale.coupling,
++                                &x.bornScale.pdf);
++    bornScaleFactor(x);
+     if (!p.ready || p.count < 0 || p.count > SudakovProfile::maximum ||
+         !(p.pt > 0. && p.mass > 0.) || !std::isfinite(p.source) ||
+         p.source < 0. || p.source > 1. + 1.e-12 || p.nquarks<0 || p.nquarks>64 ||
+@@ -527,6 +549,7 @@
+   std::string rule;
+   double keep = 1., pt = 0., matchingScale = 0., kernelScale = 1.;
+   double alphaShower = 0., pdfRatio = 1., marking = 1., totalKernel = 0.;
++  double bornScale = 1.;
+   double deltaSource = 1., deltaShower = 1.;
+   bool sudakov = false;
+   bool evaluated = false;
+@@ -1012,20 +1035,27 @@
+   x.sector = candidates[selected].sector;
+   x.orientation = candidates[selected].orientation;
+   x.density = densities[selected];
++  if (c.sudakovCorrection && x.density.transfers())
++    x.bornScale = bornScaleFactor(x.density);
+   if (c.sudakovCorrection && x.density.transfers() &&
+       !hasBornPdfSupport(c, x.density.sudakov)) {
+     x.rule = "pdf_support_no_transfer";
+     return x;
+   }
++  if (c.sudakovCorrection && x.density.transfers() && x.bornScale == 0.) {
++    x.rule = "born_scale_no_transfer";
++    return x;
++  }
+   if (x.density.transfers()) {
+-    // K_sh: K with the shower's emission coupling and PDF ratio; the S
+-    // events carry beta = sigma_S/sigma_B times the Born density.
++    // Replace K's emission factors and restore the canonical Born-scale
++    // density. The S model is beta = sigma_S/sigma_B times that Born.
+     x.alphaShower = hook.emissionAlphaS;
+     if (!(x.alphaShower > 0.) || !(x.density.alphaK > 0.) || !std::isfinite(x.alphaShower) ||
+         !std::isfinite(x.density.alphaK))
+       throw std::runtime_error("The S veto needs positive shower and kernel emission couplings");
+     x.pdfRatio = pdfRatio(c, hook, input, endpoint, branch, x.density);
+-    x.kernelScale = c.normalisation.beta * x.alphaShower / x.density.alphaK * x.pdfRatio;
++    x.kernelScale = c.normalisation.beta * x.alphaShower / x.density.alphaK *
++      x.pdfRatio * x.bornScale;
+   }
+   x.keep = sAcceptance(x.density, x.kernelScale);
+   if (c.sudakovCorrection && x.density.transfers()) {
+@@ -1057,10 +1087,17 @@
+   x.candidates = 1;
+   x.sector = component.sector;
+   x.orientation = "source";
++  if (c.sudakovCorrection && x.density.transfers())
++    x.bornScale = bornScaleFactor(x.density);
+   if (c.sudakovCorrection && x.density.transfers() &&
+       !hasBornPdfSupport(c, x.density.sudakov)) {
+     x.pt = x.density.sudakov.pt;
+     x.rule = "pdf_support_no_transfer";
++    return x;
++  }
++  if (c.sudakovCorrection && x.density.transfers() && x.bornScale == 0.) {
++    x.pt = x.density.sudakov.pt;
++    x.rule = "born_scale_no_transfer";
+     return x;
+   }
+   x.keep = hAcceptance(x.density);
+@@ -1081,7 +1118,7 @@
+         c.hook->beamXf(radiator,p.ids[radiator],xb,q2);
+       x.pdfRatio=shower/kernel;
+     }
+-    x.kernelScale=c.normalisation.beta*x.alphaShower/x.density.alphaK*x.pdfRatio;
++    x.kernelScale=c.normalisation.beta*x.alphaShower/x.density.alphaK*x.pdfRatio*x.bornScale;
+     x.keep=sudakovAcceptance(x.density,x.kernelScale,x.deltaShower,true);
+   }
+   x.rule = "h_removal";
+@@ -1099,6 +1136,10 @@
+         << "\" sector=\"" << x.sector << "\" orientation=\"" << x.orientation
+         << "\" candidates=\"" << x.candidates << "\" marking=\"" << x.marking << '"';
+     if (x.candidates > 1) out << " total_k=\"" << x.totalKernel << '"';
++    if (x.density.bornScale.ready)
++      out << " born_scale_factor=\"" << x.bornScale
++          << "\" born_coupling_factor=\"" << x.density.bornScale.coupling
++          << "\" born_pdf_factor=\"" << x.density.bornScale.pdf << '"';
+     if (x.alphaShower > 0.)
+       out << " kernel_scale=\"" << x.kernelScale << "\" alpha_s_shower=\"" << x.alphaShower
+           << "\" alpha_s_kernel=\"" << x.density.alphaK << "\" pdf_ratio=\"" << x.pdfRatio << '"';
+@@ -1131,7 +1172,9 @@
+          << (sudakovCorrection ? prescriptionV4 : pdfCorrection ? prescriptionV3 : prescriptionV2) << "\" weight=\"macnlops\" rejected=\""
+          << (dropRejected ? "dropped" : "kept") << "\" shower_alpha_s=\"" << tableAlphaS
+          << "\" shower_alpha_s_order=\"" << tableAlphaSOrder << "\" pythia=\"8.318\" cutoff_isr=\""
+-         << cutoffs[0] << "\" cutoff_fsr=\"" << cutoffs[1] << "\"/>\n";
++         << cutoffs[0] << "\" cutoff_fsr=\"" << cutoffs[1] << '"';
++  if (sudakovCorrection) marker << " born_scale_correction=\"native-born-v1\"";
++  marker << "/>\n";
+   std::size_t close = text.find("</initrwgt>");
+   std::string blocks = marker.str();
+   if (close != std::string::npos && close < header) {
+@@ -1233,6 +1276,7 @@
+         << ",\"input\":" << jsonString(m.input) << ",\"output\":" << jsonString(m.output)
+         << ",\"seed\":" << m.seed << ",\"prescription\":"
+         << jsonString(m.sudakovCorrection ? prescriptionV4 : m.pdfCorrection ? prescriptionV3 : prescriptionV2)
++        << ",\"born_scale_correction\":" << jsonString(m.sudakovCorrection ? "native-born-v1" : "none")
+         << ",\"rejected_events\":" << jsonString(m.dropRejected ? "dropped" : "kept")
+         << ",\"shower\":{\"alpha_s_mz\":" << tableAlphaS << ",\"alpha_s_order\":" << tableAlphaSOrder
+         << ",\"pdf\":" << jsonString(m.pdf) << ",\"cutoffs\":[" << c.cutoffs[0] << ',' << c.cutoffs[1]
+--- a/Template/NLO/SubProcesses/montecarlocounter.f
++++ b/Template/NLO/SubProcesses/montecarlocounter.f
+@@ -10,7 +10,7 @@
+      $     bogus_probne_fun
+       public :: prepare_mc_kinematics,fill_father_and_ileg,get_qMC,
+      $     mc_shower_scale_mass,fksfather,gfactsf,gfactcl,gfactazi
+-      public :: macnlops_delta_profile
++      public :: macnlops_delta_profile,macnlops_born_scale_factor
+ 
+ c Shower state for the active FKS history. General momentum utilities
+ c remain in fks_phase_space_helpers, independent of subtraction and matching.
+@@ -2966,6 +2966,142 @@
+       end subroutine get_mbar
+ 
+ 
++      subroutine macnlops_born_scale_factor(p,pborn,ids,bjorken,
++     $     flow,coupling,pdf,status)
++c Change only the Born reference of the scalar shower density. Native
++c model updates and split Born amplitudes retain effective interactions,
++c mixed coupling orders and the selected flow. The source graph partition,
++c R/D/K, Sudakov profile and shower endpoint are not recomputed.
++      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
++      use fks_phase_space_data, only: xi_i_fks_ev,y_ij_fks_ev,
++     $     shat,sqrtshat,ybst_til_tocm,ybst_til_tolab
++      use extra_weights, only: cpower_pos
++      implicit none
++      include 'genps.inc'
++      include 'run.inc'
++      include 'orders.inc'
++      double precision, intent(in) :: p(0:3,nexternal),
++     $     pborn(0:3,nexternal-1),bjorken(2)
++      integer, intent(in) :: ids(2),flow
++      double precision, intent(out) :: coupling,pdf
++      integer, intent(out) :: status
++      double precision reference(0:3,nexternal),
++     $     weights(amp_split_size),spin(amp_split_size),
++     $     scalar(2),densities(2,2),total(0:3),
++     $     cms_saved(4),scales_saved(9),mu2(2),power,factor,
++     $     fractions(2),
++     $     pdg2pdf,rwgt_muR_dep_fac
++      integer i,j,leg,point,parton,orders(nsplitorders)
++      integer i_fks,j_fks
++      common/fks_indices/i_fks,j_fks
++      external pdg2pdf,rwgt_muR_dep_fac
++      logical finite
++
++      status=1
++      coupling=0d0
++      pdf=0d0
++      if(i_fks.le.nincoming.or.i_fks.gt.nexternal)return
++      if(.not.all(ieee_is_finite(pborn)).or.
++     $     .not.all(ieee_is_finite(bjorken)))return
++      if(any(abs(lpp).gt.1))return
++      fractions=1d0
++      do j=1,2
++         if(lpp(j).eq.0)cycle
++         if(bjorken(j).le.0d0.or.bjorken(j).gt.1d0)return
++         fractions(j)=bjorken(j)
++      enddo
++c The native S reference is the compact Born with a zero FKS slot.
++c Construct it directly: a valid massive inverse Born can exist even
++c when its soft counterevent slot is unavailable.
++      reference=0d0
++      leg=0
++      do i=1,nexternal
++         if(i.eq.i_fks)cycle
++         leg=leg+1
++         reference(:,i)=pborn(:,leg)
++      enddo
++      cms_saved=[shat,sqrtshat,ybst_til_tocm,ybst_til_tolab]
++      scales_saved=[scale,muR2_current,muF12_current,
++     $     muF22_current,QES2_current,q2fact(1:2),xbk(1:2)]
++      total=sum(pborn(:,1:nincoming),dim=2)
++      scalar=0d0
++      densities=1d0
++      finite=.true.
++      do point=1,2
++         if(point.eq.1)then
++            shat=total(0)**2-sum(total(1:3)**2)
++            if(shat.le.0d0)then
++               finite=.false.
++               exit
++            endif
++            sqrtshat=sqrt(shat)
++            ybst_til_tocm=0d0
++            ybst_til_tolab=-0.5d0*log(
++     $           fractions(1)*ebeam(1)/(fractions(2)*ebeam(2)))
++            xbk=bjorken
++            call set_alphaS(reference)
++         else
++            call set_cms_stuff(-100)
++            call set_alphaS(p)
++         endif
++         mu2(point)=muR2_current
++         call get_mbar(p,xi_i_fks_ev,y_ij_fks_ev,pborn,ileg,flow,
++     $        qcd_pos,weights,spin)
++         do i=1,amp_split_size
++            if(weights(i).eq.0d0)cycle
++            call amp_split_pos_to_orders(i,orders)
++            power=0d0
++            if(cpower_pos.gt.0)power=dble(orders(max(1,cpower_pos)))
++            factor=rwgt_muR_dep_fac(sqrt(mu2(point)),
++     $           sqrt(mu2(point)),power)
++            scalar(point)=scalar(point)+weights(i)*factor
++         enddo
++         do j=1,2
++            if(lpp(j).eq.0)cycle
++            parton=ids(j)
++            if(parton.eq.21)parton=0
++c include_PDF_and_alphas applies the first stored factorization scale
++c to both legs. Preserve that native convention, including asymmetric
++c requested muF multipliers, without changing any source weight.
++            densities(j,point)=pdg2pdf(lpp(j),parton,j,bjorken(j),
++     $           sqrt(q2fact(1)))
++         enddo
++         finite=finite.and.all(ieee_is_finite(weights)).and.
++     $        ieee_is_finite(scalar(point)).and.
++     $        all(ieee_is_finite(densities(:,point)))
++      enddo
++c Restore the real reference and its Born cache even on an invalid Born
++c value. These are the settings and amplitudes used by the original K.
++      if(.not.finite)then
++         call set_cms_stuff(-100)
++         call set_alphaS(p)
++         call get_mbar(p,xi_i_fks_ev,y_ij_fks_ev,pborn,ileg,flow,
++     $        qcd_pos,weights,spin)
++      endif
++      shat=cms_saved(1)
++      sqrtshat=cms_saved(2)
++      ybst_til_tocm=cms_saved(3)
++      ybst_til_tolab=cms_saved(4)
++      scale=scales_saved(1)
++      muR2_current=scales_saved(2)
++      muF12_current=scales_saved(3)
++      muF22_current=scales_saved(4)
++      QES2_current=scales_saved(5)
++      q2fact=scales_saved(6:7)
++      xbk=scales_saved(8:9)
++      if(.not.finite)return
++      status=0
++c Nonpositive reference support disables the same transfer on S and H.
++c Do not turn it into an artificial positive PDF or Born amplitude.
++      if(any(scalar.le.0d0))return
++      coupling=scalar(1)/scalar(2)
++      if(all(densities.gt.0d0))
++     $     pdf=product(densities(:,1)/densities(:,2))
++      if(.not.ieee_is_finite(coupling).or.
++     $     .not.ieee_is_finite(pdf))status=1
++      end subroutine macnlops_born_scale_factor
++
++
+       double complex function mc_born_azimuth_phase(p,xi_i_fks,
+      &     y_ij_fks,rotate_beam)
+ c The spinor ratio <ij>/[ij] common to ISR and FSR barred amplitudes.
+--- a/Template/NLO/SubProcesses/driver_macnlops.f
++++ b/Template/NLO/SubProcesses/driver_macnlops.f
+@@ -144,7 +144,7 @@
+      $     mc_begin_real_point,mc_end_real_point,active_context,
+      $     local_context
+       use mc_counterterms, only: fksfather,mc_shower_scale_mass,
+-     $     get_qMC,macnlops_delta_profile
++     $     get_qMC,macnlops_delta_profile,macnlops_born_scale_factor
+       use process_module
+       use scale_module
+       use weight_lines
+@@ -198,6 +198,9 @@
+       status=1
+       r=0d0
+       macnlops_sudakov_ready=.false.
++      macnlops_born_scale_ready=.false.
++      macnlops_born_scale_coupling=1d0
++      macnlops_born_scale_pdf=1d0
+       h=0d0
+       d=0d0
+       k=0d0
+@@ -489,6 +492,15 @@
+                macnlops_sudakov_ids(j_fks)=21
+             endif
+          endif
++         call macnlops_born_scale_factor(p,p_born,
++     $        macnlops_sudakov_ids,macnlops_sudakov_x,component_flow,
++     $        macnlops_born_scale_coupling,macnlops_born_scale_pdf,
++     $        kernel_status)
++         if(kernel_status.ne.0)then
++            status=42
++            goto 900
++         endif
++         macnlops_born_scale_ready=.true.
+          macnlops_sudakov_ready=.true.
+       endif
+       if(local_component)then
+@@ -722,7 +734,8 @@
+       use extra_weights
+       use weight_lines, only: macnlops_gate_active,
+      $     macnlops_current_z,macnlops_proposal_active,
+-     $     macnlops_kernel_alphas,macnlops_kernel_q2fact
++     $     macnlops_kernel_alphas,macnlops_kernel_q2fact,
++     $     macnlops_sudakov_enabled
+       implicit none
+       include 'nexternal.inc'
+       include 'orders.inc'
+@@ -754,6 +767,11 @@
+ c emission alpha_s and the emission's PDF ratio by the shower's.
+       macnlops_kernel_alphas=g**2/(4d0*pi)
+       macnlops_kernel_q2fact=q2fact
++c Native weight lines store one factorization scale and apply it to
++c both beams. Report the scales actually used by v4's kernel PDFs;
++c retain the older metadata for the reproducible v2/v3 prescriptions.
++      if(macnlops_sudakov_enabled)
++     $     macnlops_kernel_q2fact(2)=q2fact(1)
+       sevmc=fks_Hij(p,i_fks,j_fks)
+       call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p,pcms,
+      $     p_born,.false.,z,nconnect,amps,.true.)
+--- a/Template/NLO/SubProcesses/weight_lines.f
++++ b/Template/NLO/SubProcesses/weight_lines.f
+@@ -21,6 +21,11 @@
+ ! and the squared factorisation scales of that point's kernel PDFs.
+          double precision :: macnlops_kernel_alphas=0d0
+          double precision :: macnlops_kernel_q2fact(2)=0d0
++! The scalar Born and hard-PDF change of reference scale for v4.
++! A zero factor identifies an unsupported reference, not a PDF floor.
++         logical :: macnlops_born_scale_ready=.false.
++         double precision :: macnlops_born_scale_coupling=1d0,
++     $        macnlops_born_scale_pdf=1d0
+ ! Optional first-emission Sudakov request. Source integration never enables
+ ! it. The matching driver returns a deterministic marginal over its native
+ ! starting-scale law, with the source Delta unchanged.
+@@ -767,6 +772,9 @@
+       macnlops_current_z=0d0
+       macnlops_kernel_alphas=0d0
+       macnlops_kernel_q2fact=0d0
++      macnlops_born_scale_ready=.false.
++      macnlops_born_scale_coupling=1d0
++      macnlops_born_scale_pdf=1d0
+       if (allocated(QCDpower)) deallocate(QCDpower)
+       if (allocated(pdg)) deallocate(pdg)
+       if (allocated(pdg_uborn)) deallocate(pdg_uborn)
+--- a/Template/NLO/SubProcesses/macnlops_capi.f
++++ b/Template/NLO/SubProcesses/macnlops_capi.f
+@@ -42,7 +42,9 @@
+       use, intrinsic :: iso_c_binding, only: c_int,c_double
+       use weight_lines, only: macnlops_sudakov_enabled,
+      $     macnlops_sudakov_requested_pt,macnlops_sudakov_ready,
+-     $     macnlops_sudakov_ngluons,macnlops_sudakov_gluons
++     $     macnlops_sudakov_ngluons,macnlops_sudakov_gluons,
++     $     macnlops_born_scale_ready,macnlops_born_scale_coupling,
++     $     macnlops_born_scale_pdf
+       implicit none
+       integer(c_int), value :: enabled
+       real(c_double), value :: pt
+@@ -51,6 +53,24 @@
+       macnlops_sudakov_ready=.false.
+       macnlops_sudakov_ngluons=0
+       macnlops_sudakov_gluons=0d0
++      macnlops_born_scale_ready=.false.
++      macnlops_born_scale_coupling=1d0
++      macnlops_born_scale_pdf=1d0
++      end
++
++
++      subroutine macnlops_c_born_scale_factor(ready,coupling,pdf)
++     $     bind(C,name='macnlops_c_born_scale_factor')
++c Exact selected-flow scalar Born ratio and canonical hard luminosity.
++      use, intrinsic :: iso_c_binding, only: c_int,c_double
++      use weight_lines, only: macnlops_born_scale_ready,
++     $     macnlops_born_scale_coupling,macnlops_born_scale_pdf
++      implicit none
++      integer(c_int) ready
++      real(c_double) coupling,pdf
++      ready=merge(1,0,macnlops_born_scale_ready)
++      coupling=macnlops_born_scale_coupling
++      pdf=macnlops_born_scale_pdf
+       end
+ 
+ 
+@@ -141,7 +161,9 @@
+       use, intrinsic :: iso_c_binding, only: c_int,c_double
+       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+       use weight_lines, only: reset_delta_contexts,
+-     $     macnlops_kernel_alphas,macnlops_kernel_q2fact
++     $     macnlops_kernel_alphas,macnlops_kernel_q2fact,
++     $     macnlops_born_scale_ready,macnlops_born_scale_coupling,
++     $     macnlops_born_scale_pdf
+       implicit none
+       include 'nexternal.inc'
+       include 'nFKSconfigs.inc'
+@@ -159,6 +181,9 @@
+       k=0d0
+       macnlops_kernel_alphas=0d0
+       macnlops_kernel_q2fact=0d0
++      macnlops_born_scale_ready=.false.
++      macnlops_born_scale_coupling=1d0
++      macnlops_born_scale_pdf=1d0
+       if(owner.ge.1.and.owner.le.fks_configs.and.
+      $     all(ieee_is_finite(lab))) then
+          call macnlops_component_density(owner,ids,lab,config,graph,
+--- a/madgraph/various/macnlops.py
++++ b/madgraph/various/macnlops.py
+@@ -2505,12 +2505,14 @@
+     for record in summaries:
+         counts.update(record['counts'])
+         weights.update(record['weight_sums'])
+-    modes = {(record['prescription'], record['rejected_events']) for record in summaries}
++    modes = {(record['prescription'], record['rejected_events'],
++              record.get('born_scale_correction', 'none')) for record in summaries}
+     if len(modes) != 1:
+         raise MatchingError('Channels used different MAcNLOPS prescriptions')
+-    prescription, rejected = modes.pop()
++    prescription, rejected, born_scales = modes.pop()
+     return summaries, dict(counts=dict(counts), weight_sums=dict(weights),
+-                           prescription=prescription, rejected_events=rejected)
++                           prescription=prescription, rejected_events=rejected,
++                           born_scale_correction=born_scales)
+ 
+ 
+ def first_emission_collection(jobs, summaries, header_template, directory):
+@@ -2580,7 +2582,8 @@
+         raise MatchingError('Not a collected MAcNLOPS first-emission sample: %s' % filename)
+     return dict(schema='macnlops-first-emission-v1', events=int(run_card_values(card[1])['nevents']),
+                 shower_cutoffs=marker['shower_cutoffs'], rejected=marker['rejected'],
+-                prescription=marker['prescription'], environment=None)
++                prescription=marker['prescription'], environment=None,
++                born_scale_correction=marker.get('born_scale_correction', 'none'))
+ 
+ def main(argv=None):
+     parser = argparse.ArgumentParser(description=__doc__)
+--- a/docs/macnlops_derivation.md
++++ b/docs/macnlops_derivation.md
+@@ -368,7 +368,7 @@
+ \(t\), including changes in the source's live colour-line mixtures.
+ 
+ Let \(u=\max(D_G-R,0)\), \(C=\min(u,K)\), and
+-\(F=\beta_c K_{\rm sh}P\), where \(K_{\rm sh}/K\) retains v3's
++\(F=\beta_c K_{\rm sh}G_B P\), where \(K_{\rm sh}/K\) retains v3's
+ coupling and resolved-flavour emission-PDF correction. The common,
+ bounded transfer density is
+ 
+@@ -386,6 +386,32 @@
+ cannot introduce an unmatched H transfer. This addresses the Sudakov
+ factor; the channel-averaged \(\beta_c=\sigma_{S,c}/\sigma_{B,c}\)
+ remains an approximation to the local S/B density ratio.
++
++Default v4 also restores the **canonical Born reference scales** through
++\(G_B\). The raw kernel uses the real-point scale choices, while its S
++source carries the Born-point scale choices. The native evaluator takes
++the ratio of the same selected-flow scalar Born contribution at those two
++references, including model coupling updates, mixed Born coupling orders
++and each order's custom scale prefactor. It multiplies this by the ratio
++of both canonical Born-flavour hard PDFs at the corresponding native
++factorization scales. Bare fixed lepton beams contribute unity without
++a PDF lookup. No process-wide power of alpha_s or particular dynamical
++scale formula is assumed.
++The supported reference beams are ordinary hadrons/antihadrons and bare
++fixed leptons; specialized UPC and dressed-lepton beam modes fail explicitly.
++
++The same \(G_B\) multiplies \(F\) for S veto and H removal; \(R,D,K\), the
++source damping and the continuation endpoints retain their definitions.
++Nonpositive Born-reference support retains both original contributions,
++and nonfinite factors remain errors. The native weight-line convention
++stores the first factorization scale for both beams; the correction and
++v4's kernel-PDF metadata follow that actual convention even when requested
++beam scale multipliers differ. The source convention itself is unchanged.
++Decision records expose born_scale_factor, born_coupling_factor and
++born_pdf_factor; corrected samples are marked
++born_scale_correction="native-born-v1". Explicit v2/v3 modes retain their
++historical definitions. The separate channel-average S/B approximation
++is still present; this correction does not introduce a fitted local S/B.
+ 
+ The ordinary PDF-ratio model also needs a support condition. A native Born
+ PDF can be clipped to zero while Pythia still produces an ISR branch using
+--- a/docs/macnlops_parameter_consistency.md
++++ b/docs/macnlops_parameter_consistency.md
+@@ -7,6 +7,12 @@
+ `/export/slow1/rikkert/macnlops_transfer_check_20261027` (NNPDF4.0 NLO,
+ 13 TeV, 10^5 events); see also `docs/macnlops_derivation.md` and
+ `docs/audits/delta_noemission/investigation_report.md`.
++
++Update, 1 November: default v4 also restores the canonical Born coupling
++and both Born-flavour hard-PDF reference scales in the common S/H density.
++It uses native Born amplitudes rather than an assumed alpha_s power.
++See [the current derivation](macnlops_derivation.md) for this correction;
++the dated comparisons and legacy formulas below retain their original scope.
+ 
+ ## Summary
+ 
+--- a/tests/unit_tests/various/test_macnlops_first_emission.py
++++ b/tests/unit_tests/various/test_macnlops_first_emission.py
+@@ -185,6 +185,29 @@
+             summaries.append(dict(rejected_events=rejected, processes=processes,
+                                   counts=dict(accepted_S=accepted, accepted_H=0)))
+         return jobs, summaries
++
++    def test_collection_does_not_mix_born_reference_corrections(self):
++        for corrections in ((None, None), ('native-born-v1', 'native-born-v1'),
++                            (None, 'native-born-v1')):
++            with self.subTest(corrections=corrections):
++                jobs = []
++                for i, correction in enumerate(corrections):
++                    output = self.work / ('correction_%d.lhe' % i)
++                    output.write_text('<LesHouchesEvents>\n</LesHouchesEvents>\n')
++                    summary = output.with_suffix('.json')
++                    record = dict(status='complete', prescription=mc.FIRST_EMISSION_POLICY,
++                                  rejected_events='kept', counts={}, weight_sums={})
++                    if correction is not None:
++                        record['born_scale_correction'] = correction
++                    summary.write_text(json.dumps(record))
++                    jobs.append(dict(cwd=str(self.work), input='source', output=str(output),
++                                     summary=str(summary)))
++                if corrections[0] != corrections[1]:
++                    with self.assertRaisesRegex(mc.MatchingError, 'different.*prescriptions'):
++                        mc.check_first_emission(jobs)
++                else:
++                    _, result = mc.check_first_emission(jobs)
++                    self.assertEqual(result['born_scale_correction'], corrections[0] or 'none')
+ 
+     def test_kept_rejections_collect_the_channel_files_unchanged(self):
+         jobs, summaries = self.channels('kept')
+@@ -269,6 +292,11 @@
+ void macnlops_c_gluon_profile(int* n,double* gluons) {
+   *n=0;
+   for (int i=0;i<320;++i) gluons[i]=0.;
++}
++void macnlops_c_born_scale_factor(int* ready,double* coupling,double* pdf) {
++  *ready=getenv("MACNLOPS_STUB_BORN_READY")?atoi(getenv("MACNLOPS_STUB_BORN_READY")):1;
++  *coupling=getenv("MACNLOPS_STUB_BORN_COUPLING")?atof(getenv("MACNLOPS_STUB_BORN_COUPLING")):1.;
++  *pdf=getenv("MACNLOPS_STUB_BORN_PDF")?atof(getenv("MACNLOPS_STUB_BORN_PDF")):1.;
+ }
+ void macnlops_c_density(int owner, const int* ids, const double* lab, int config,
+   int graph, int flow, int damping, double symmetry, int has_born, const int* born_ids,
+--- a/tests/unit_tests/fks/test_macnlops_sudakov_profile.py
++++ b/tests/unit_tests/fks/test_macnlops_sudakov_profile.py
+@@ -251,6 +251,9 @@
+         stubs=stubs.replace('      integer macnlops_sudakov_ngluons', '''
+       logical macnlops_sudakov_enabled,macnlops_sudakov_ready
+       double precision macnlops_sudakov_requested_pt
++      logical macnlops_born_scale_ready
++      double precision macnlops_born_scale_coupling,
++     $     macnlops_born_scale_pdf
+       integer macnlops_sudakov_ngluons''')
+         helpers='''
+       subroutine delta_source_flavours(ids)
+@@ -385,7 +388,13 @@
+       call macnlops_c_gluon_profile(ng,packed)
+       if(ng.ne.1.or.packed(4,1).ge.30d0.or.
+      $     packed(5,1).le.30d0)stop 16
++      macnlops_born_scale_ready=.true.
++      macnlops_born_scale_coupling=2d0
++      macnlops_born_scale_pdf=3d0
+       call macnlops_c_sudakov_request(0,0d0)
++      if(macnlops_born_scale_ready.or.
++     $   macnlops_born_scale_coupling.ne.1d0.or.
++     $   macnlops_born_scale_pdf.ne.1d0)stop 24
+       call macnlops_c_gluon_profile(ng,packed)
+       if(ng.ne.0.or.any(packed.ne.0d0))stop 17
+ c A failed/new profile must not expose gluons from the previous event.
+--- a/tests/unit_tests/various/test_macnlops_born_scales.py
++++ b/tests/unit_tests/various/test_macnlops_born_scales.py
+@@ -0,0 +1,237 @@
++"""Native Born-scale factors must enter the same S/H transfer density.
++
++The provider owns the exact model-dependent coupling and hard-PDF ratios.
++These tests compile the C++ consumer and exercise its actual decision paths;
++the separate FKS fixture tests how the Fortran provider obtains those ratios.
++"""
++from pathlib import Path
++import re
++import shutil
++import subprocess
++import tempfile
++import unittest
++from unittest.mock import patch
++
++from madgraph.various import macnlops as mc
++from tests.unit_tests.various import test_macnlops_first_emission as first
++
++
++ROOT = Path(__file__).resolve().parents[3]
++SOURCE = ROOT / 'Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc'
++COUPLING = 'MACNLOPS_STUB_BORN_COUPLING'
++PDF = 'MACNLOPS_STUB_BORN_PDF'
++READY = 'MACNLOPS_STUB_BORN_READY'
++
++
++@unittest.skipUnless(shutil.which('g++'), 'requires g++')
++class TestBornScaleConsumerDomain(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        cls.tmp = tempfile.TemporaryDirectory(prefix='macnlops_born_scale_domain_')
++        cls.addClassCleanup(cls.tmp.cleanup)
++        work = Path(cls.tmp.name)
++        source = SOURCE.read_text()
++        function = source[source.index('double bornScaleFactor('):
++                          source.index('// Signed-residual acceptances')]
++        (work / 'factor.cc').write_text(r'''
++#include <cmath>
++#include <iomanip>
++#include <iostream>
++#include <stdexcept>
++#include <string>
++struct Density {
++  struct BornScale {int ready;double coupling,pdf;} bornScale;
++};
++''' + function + r'''
++int main() {
++  int ready;std::string coupling,pdf;
++  while(std::cin>>ready>>coupling>>pdf) {
++    Density x{{ready,std::stod(coupling),std::stod(pdf)}};
++    try {const double value=bornScaleFactor(x);
++      std::cout<<std::setprecision(17)<<value<<"\n";}
++    catch(const std::runtime_error&) {std::cout<<"invalid\n";}
++  }
++}
++''')
++        cls.exe = work / 'factor'
++        subprocess.run(['g++', '-std=c++11', '-O2', str(work / 'factor.cc'),
++                        '-o', str(cls.exe)], check=True, capture_output=True, text=True)
++
++    def factors(self, cases):
++        result = subprocess.run([str(self.exe)], input=''.join(
++            '%s %s %s\n' % case for case in cases), capture_output=True,
++            text=True, check=True)
++        return [float(value) if value != 'invalid' else value
++                for value in result.stdout.splitlines()]
++
++    def test_exact_coupling_ratios_do_not_acquire_an_assumed_qcd_power(self):
++        # Ratios of complete provider Born weights, including a mixed-order
++        # effective coupling. The consumer must use them without re-exponentiation.
++        alpha_born, alpha_real = .17, .23
++        born_weights = [1., alpha_born, alpha_born**2,
++                        (alpha_born + 3*alpha_born**2)**2]
++        real_weights = [1., alpha_real, alpha_real**2,
++                        (alpha_real + 3*alpha_real**2)**2]
++        ratios = [born/real for born, real in zip(born_weights, real_weights)]
++        values = self.factors([(1, ratio, .7) for ratio in ratios])
++        for ratio, value in zip(ratios, values):
++            self.assertAlmostEqual(value, .7*ratio, delta=2.e-15)
++
++    def test_zero_support_and_small_positive_factors_have_distinct_domains(self):
++        values = self.factors([(1, 1., 1.), (1, 0., 2.), (1, 3., 0.),
++                               (1, 1.e-300, 2.), (1, 2., 3.)])
++        self.assertEqual(values[:3], [1., 0., 0.])
++        self.assertEqual(values[3], 2.e-300)
++        self.assertEqual(values[4], 6.)
++
++    def test_unready_nonfinite_negative_and_overflowing_factors_fail(self):
++        cases = [(0, 1., 1.), (2, 1., 1.), (1, -1., 1.), (1, 1., -1.),
++                 (1, 'nan', 1.), (1, 1., 'nan'), (1, 'inf', 1.),
++                 (1, 1., '-inf'), (1, 0., 'nan'), (1, 1.e300, 1.e300)]
++        self.assertEqual(self.factors(cases), ['invalid']*len(cases))
++
++
++class TestPairedBornScaleNative(unittest.TestCase):
++    """Actual native S/H decisions, retaining every original signed event."""
++    REGISTRY = first.TestFirstEmissionNative.REGISTRY
++    run_match = first.TestFirstEmissionNative.run_match
++
++    @classmethod
++    def setUpClass(cls):
++        try:
++            first.TestFirstEmissionNative.setUpClass.__func__(cls)
++        except subprocess.CalledProcessError as error:
++            raise AssertionError((error.stdout or '')+(error.stderr or '')) from error
++        cls.original_input = (cls.work / 'events.lhe').read_text()
++        cls.base_environment = dict(cls.env)
++        for key in (COUPLING, PDF, READY):
++            cls.base_environment.pop(key, None)
++
++    def setUp(self):
++        self.env = dict(self.base_environment, MACNLOPS_STUB_MODE='3')
++        (self.work / 'events.lhe').write_text(
++            self.original_input.replace('source="delta"', 'source="delta_native_ir"'))
++
++    def tearDown(self):
++        (self.work / 'events.lhe').write_text(self.original_input)
++
++    @staticmethod
++    def decision(block):
++        return mc.xml_attributes(re.search(
++            r'<macnlops_decision\b([^<>]*?)/>', block)[1])
++
++    @staticmethod
++    def physical_prefix(block):
++        return block.split('<rwgt>', 1)[0]
++
++    def test_unit_reference_factors_preserve_the_fixed_scale_result(self):
++        before = self.run_match('unit_default')
++        self.env.update({COUPLING: '1', PDF: '1', READY: '1'})
++        after = self.run_match('unit_explicit')
++        self.assertEqual(before[:2], after[:2])
++        evaluated = [self.decision(block) for block in after[1]
++                     if 'born_scale_factor=' in block]
++        self.assertTrue(evaluated)
++        for decision in evaluated:
++            self.assertEqual(float(decision['born_scale_factor']), 1.)
++
++    def test_both_factors_rescale_s_and_h_without_changing_source_endpoints(self):
++        _, before, _ = self.run_match('factor_before')
++        self.env.update({COUPLING: '2', PDF: '1.5'})
++        _, after, _ = self.run_match('factor_after')
++        self.assertEqual(len(before), len(after))
++        checked_s = checked_h = 0
++        for old, new in zip(before, after):
++            self.assertEqual(self.physical_prefix(old), self.physical_prefix(new))
++            a, b = self.decision(old), self.decision(new)
++            if 'born_scale_factor' not in a:
++                continue
++            self.assertEqual(float(b['born_coupling_factor']), 2.)
++            self.assertEqual(float(b['born_pdf_factor']), 1.5)
++            self.assertEqual(float(b['born_scale_factor']), 3.)
++            self.assertAlmostEqual(float(b['kernel_scale'])/float(a['kernel_scale']),
++                                   3., delta=2.e-14)
++            if mc.Event(old).kind == 'S':
++                self.assertAlmostEqual(1.-float(b['keep']),
++                                       (1.-float(a['keep']))/3., delta=3.e-15)
++                checked_s += 1
++            else:
++                # This fixture's ordinary H points are source-limited.
++                self.assertEqual(float(b['keep']), float(a['keep']))
++                checked_h += 1
++        self.assertGreater(checked_s, 0)
++        self.assertGreater(checked_h, 0)
++
++    def test_active_common_bound_changes_h_removal_with_the_same_factor(self):
++        self.env.update({'MACNLOPS_STUB_SOURCE': '1', 'MACNLOPS_STUB_PS': '0.000001'})
++        _, before, _ = self.run_match('active_before')
++        self.env.update({COUPLING: '2', PDF: '3'})
++        _, after, _ = self.run_match('active_after')
++        checked = 0
++        for old, new in zip(before, after):
++            a, b = self.decision(old), self.decision(new)
++            if a['rule'] != 'h_removal':
++                continue
++            u, source = float(b['d'])-float(b['r']), float(b['delta_source_mean'])
++            available = (float(b['k'])*float(b['kernel_scale'])*
++                         float(b['delta_shower_mean']))
++            transferred = u*source*(1.-float(b['keep']))
++            self.assertLess(available, min(u, float(b['k']))*source)
++            self.assertAlmostEqual(transferred, available, delta=3.e-15)
++            self.assertAlmostEqual(1.-float(b['keep']),
++                                   6.*(1.-float(a['keep'])), delta=3.e-15)
++            self.assertNotEqual(float(a['keep']), float(b['keep']))
++            checked += 1
++        self.assertGreater(checked, 0)
++
++    def test_zero_reference_support_retains_both_signed_event_classes(self):
++        path = self.work / 'events.lhe'
++        with mc.LHEStream(path) as stream:
++            header, blocks = stream.header, list(stream)
++        for i, block in enumerate(blocks):
++            if mc.Event(block).kind != 'S':
++                continue
++            lines = block.splitlines(keepends=True)
++            tokens = lines[1].split();tokens[2] = '-' + tokens[2].lstrip('+-')
++            lines[1] = ' '.join(tokens)+'\n';blocks[i] = ''.join(lines)
++        path.write_text(header+''.join(blocks)+'</LesHouchesEvents>\n')
++        for coupling, pdf in [('0', '1'), ('1', '0')]:
++            with self.subTest(coupling=coupling, pdf=pdf):
++                self.env.update({COUPLING: coupling, PDF: pdf})
++                _, output, _ = self.run_match('unsupported_'+coupling+pdf)
++                self.assertEqual(len(output), len(blocks))
++                kinds = set()
++                for block in output:
++                    event, decision = mc.Event(block), self.decision(block)
++                    if decision['rule'] != 'born_scale_no_transfer':
++                        continue
++                    kinds.add(event.kind)
++                    self.assertLess(event.weight, 0.)
++                    self.assertEqual((decision['keep'], decision['accepted']), ('1', '1'))
++                    weight = re.search(r"<wgt id='macnlops'> (\S+) </wgt>", block)[1]
++                    self.assertEqual(mc.number(weight), event.weight)
++                self.assertEqual(kinds, {'S', 'H'})
++
++    def test_legacy_v2_v3_do_not_use_the_v4_reference_factor(self):
++        for version in ('v2', 'v3'):
++            with self.subTest(version=version):
++                self.env.pop(COUPLING, None);self.env.pop(PDF, None);self.env.pop(READY, None)
++                before = self.run_match('legacy_before_'+version, '--s-veto', version)
++                self.env.update({COUPLING: 'nan', PDF: '0', READY: '0'})
++                after = self.run_match('legacy_after_'+version, '--s-veto', version)
++                self.assertEqual(before[:2], after[:2])
++
++    def test_invalid_native_reference_is_fatal_instead_of_unit_fallback(self):
++        for key, value in [(READY, '0'), (COUPLING, 'nan'), (PDF, '-1')]:
++            with self.subTest(key=key, value=value), patch.dict(self.env, {key: value}):
++                result = subprocess.run(['./match.exe', '--input', 'events.lhe',
++                    '--output', 'invalid.lhe', '--summary', 'invalid.json',
++                    '--routes', 'routes.dat', '--settings', str(self.settings),
++                    '--pdf', self.pdf, '--seed', '7349'], cwd=self.work,
++                    env=self.env, capture_output=True, text=True)
++                self.assertNotEqual(result.returncode, 0)
++                self.assertIn('Born-scale factor', result.stdout+result.stderr)
++
++
++if __name__ == '__main__':
++    unittest.main()
+--- a/tests/unit_tests/fks/test_macnlops_born_scale_factor.py
++++ b/tests/unit_tests/fks/test_macnlops_born_scale_factor.py
+@@ -0,0 +1,268 @@
++"""Native Born-reference ratios with controlled scale-dependent amplitudes."""
++from pathlib import Path
++import shutil
++import subprocess
++import tempfile
++import unittest
++
++from tests.unit_tests.fks.test_momentum_maps import TEMPLATE, fortran_routine
++
++
++@unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
++class TestMacnlopsBornScaleFactor(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        cls.tmp = tempfile.TemporaryDirectory(prefix='macnlops_born_scale_')
++        cls.addClassCleanup(cls.tmp.cleanup)
++        work = Path(cls.tmp.name)
++        (work / 'genps.inc').write_text('')
++        run = '''      double precision scale,muR2_current,muF12_current,
++     $     muF22_current,QES2_current,q2fact(2),xbk(2),ebeam(2)
++      integer lpp(2)
++      common/test_run/scale,muR2_current,muF12_current,
++     $     muF22_current,QES2_current,q2fact,xbk,ebeam,lpp
++'''
++        (work / 'run.inc').write_text(run)
++        (work / 'orders.inc').write_text('''      integer,parameter :: amp_split_size=2,nsplitorders=2,
++     $     qcd_pos=1
++''')
++        modules = '''module fks_phase_space_data
++  implicit none
++  real(8) :: xi_i_fks_ev=.2d0,y_ij_fks_ev=.1d0
++  real(8) :: shat=17d0,sqrtshat=19d0,ybst_til_tocm=23d0,ybst_til_tolab=29d0
++end module
++module extra_weights
++  integer,parameter :: cpower_pos=2
++end module
++module fixture_state
++  use, intrinsic :: ieee_arithmetic
++  implicit none
++  real(8) :: scale,muR2_current,muF12_current,muF22_current,QES2_current
++  real(8) :: q2fact(2),xbk(2),ebeam(2)
++  integer :: lpp(2)
++  common/test_run/scale,muR2_current,muF12_current,muF22_current,QES2_current,q2fact,xbk,ebeam,lpp
++  real(8) :: model_coupling=1d0,born_cache=1d0,pdf_scales(4)=0d0
++  integer :: pdf_calls=0,born_calls=0
++  character(32) :: mode
++end module
++subroutine set_alphaS(p)
++  use fixture_state
++  use fks_phase_space_data,only:ybst_til_tolab
++  implicit none
++  real(8) :: p(0:3,5),mu
++  mu=sum(abs(p(1,3:5)))
++  if(mu<100d0)then
++    if(mode=='ee')then
++      if(abs(ybst_til_tolab)>1d-14)stop 22
++    else if(mode=='rapidity')then
++      if(abs(ybst_til_tolab+.34657359027997265d0)>1d-14)stop 23
++    else
++      if(abs(ybst_til_tolab-.34657359027997265d0)>1d-14)stop 24
++    endif
++  endif
++  if(mode=='rapidity')mu=mu*exp(ybst_til_tolab)
++  if(mode=='fixed')mu=120d0
++  scale=mu;muR2_current=mu**2;QES2_current=(2*mu)**2
++  muF12_current=(1.5d0*mu)**2;muF22_current=(5d0*mu)**2
++  q2fact=[muF12_current,muF22_current]
++  model_coupling=120d0/mu
++end subroutine
++subroutine set_cms_stuff(index)
++  use fks_phase_space_data
++  use fixture_state,only:xbk
++  implicit none
++  integer index
++  if(index/=-100)stop 10
++  shat=40000d0;sqrtshat=200d0;ybst_til_tocm=0d0;ybst_til_tolab=0d0
++  xbk=[.1d0,.2d0]
++end subroutine
++subroutine amp_split_pos_to_orders(index,orders)
++  use fixture_state,only:mode
++  implicit none
++  integer index,orders(2)
++  orders=[2*index,0]
++  if(mode=='mixed_cpower')orders(2)=index
++end subroutine
++real(8) function rwgt_muR_dep_fac(mu,reference,power)
++  implicit none
++  real(8) mu,reference,power
++  if(mu/=reference)stop 11
++  rwgt_muR_dep_fac=(mu/120d0)**power
++end function
++real(8) function pdg2pdf(beam,parton,side,x,mu)
++  use fixture_state
++  implicit none
++  integer beam,parton,side
++  real(8) x,mu
++  if(abs(beam)/=1.or.x<=0d0.or.x>=1d0)stop 12
++  if(side==1.and.parton/=0)stop 13
++  if(side==2.and.parton/=-2)stop 14
++  pdf_calls=pdf_calls+1;pdf_scales(pdf_calls)=mu
++  pdg2pdf=(side+1d0)*mu**side
++  if(mu<100d0.and.side==1)then
++    if(mode=='zero_pdf')pdg2pdf=0d0
++    if(mode=='negative_pdf')pdg2pdf=-1d0
++    if(mode=='nan_pdf')pdg2pdf=ieee_value(1d0,ieee_quiet_nan)
++  endif
++end function
++'''
++        (work / 'fixture.f90').write_text(modules)
++        helper = fortran_routine(TEMPLATE / 'montecarlocounter.f',
++                                 'macnlops_born_scale_factor')
++        stub = '''      subroutine get_mbar(p,xi,y,pborn,leg,flow,order,w,s)
++      use fixture_state, only: model_coupling,born_cache,born_calls,
++     $     mode
++      use, intrinsic :: ieee_arithmetic
++      implicit none
++      double precision p(0:3,5),xi,y,pborn(0:3,4),w(2),s(2),g
++      integer leg,flow,order
++      if(leg.ne.3.or.flow.ne.2.or.order.ne.1)stop 15
++      g=model_coupling
++      born_cache=g
++      born_calls=born_calls+1
++      w=0d0
++      s=0d0
++      select case(trim(mode))
++      case('power0','fixed','ee','zero_pdf','negative_pdf','nan_pdf')
++         w(1)=3d0
++      case('power1','rapidity')
++         w(1)=g**2
++      case('power2')
++         w(1)=g**4
++      case('effective')
++         w(1)=g**6
++      case('mixed')
++         w(1)=(1d0+g*g)**2
++      case('mixed_cpower')
++         w(1)=1d0+g*g
++         w(2)=2d0*g**4
++      case('zero_born','negative_born','nan_born')
++         w(1)=1d0
++         if(g.gt.1.5d0)then
++            if(mode.eq.'zero_born')w(1)=0d0
++            if(mode.eq.'negative_born')w(1)=-1d0
++            if(mode.eq.'nan_born')
++     $           w(1)=ieee_value(1d0,ieee_quiet_nan)
++         endif
++      case default
++         stop 16
++      end select
++      end subroutine get_mbar
++'''
++        (work / 'helper.f').write_text(
++            '      module native_helper\n'
++            '      implicit none\n'
++            '      integer,parameter :: nexternal=5,nincoming=2,ileg=3\n'
++            '      contains\n' + helper + '\n' + stub +
++            '      end module native_helper\n')
++        driver = '''program check
++  use fixture_state
++  use fks_phase_space_data
++  use native_helper,only:macnlops_born_scale_factor
++  implicit none
++  real(8) :: p(0:3,5),pb(0:3,4),ratio,pdf,initial(13),after(13)
++  integer :: status,i_fks,j_fks
++  common/fks_indices/i_fks,j_fks
++  call get_command_argument(1,mode)
++  p=0d0;pb=0d0;p(0,1:2)=100d0;pb(0,1:2)=100d0
++  p(3,1)=100d0;p(3,2)=-100d0;pb(3,1:2)=p(3,1:2)
++  p(0,3:5)=[100d0,50d0,50d0];p(1,3:5)=[20d0,40d0,-60d0]
++  pb(0,3:4)=100d0;pb(1,3:4)=[30d0,-30d0]
++  scale=31d0;muR2_current=37d0;muF12_current=41d0
++  muF22_current=43d0;QES2_current=47d0;q2fact=[53d0,59d0]
++  xbk=[.31d0,.37d0];ebeam=1000d0;lpp=[1,-1]
++  if(mode=='ee')lpp=0
++  if(mode=='rapidity')ebeam=[2000d0,500d0]
++  initial=[shat,sqrtshat,ybst_til_tocm,ybst_til_tolab,scale,muR2_current,muF12_current, &
++           muF22_current,QES2_current,q2fact,xbk]
++  i_fks=5;j_fks=3
++  if(mode=='ee')then
++    call macnlops_born_scale_factor(p,pb,[11,-11],[1d0+1d-10,1d0-1d-10],2,ratio,pdf,status)
++  else
++    call macnlops_born_scale_factor(p,pb,[21,-2],[.1d0,.2d0],2,ratio,pdf,status)
++  endif
++  after=[shat,sqrtshat,ybst_til_tocm,ybst_til_tolab,scale,muR2_current,muF12_current, &
++         muF22_current,QES2_current,q2fact,xbk]
++  if(any(initial/=after))stop 17
++  if(model_coupling/=1d0.or.born_cache/=1d0)stop 18
++  if(mode=='ee')then
++    if(pdf_calls/=0)stop 19
++  else
++    if(pdf_calls/=4.or.any(abs(pdf_scales-[90d0,90d0,180d0,180d0])>1d-12))then
++      if(mode=='fixed')then
++        if(any(pdf_scales/=180d0))stop 21
++      else if(mode=='rapidity')then
++        if(any(abs(pdf_scales-[90d0/sqrt(2d0),90d0/sqrt(2d0),180d0,180d0])>1d-12))stop 25
++      else
++        stop 20
++      endif
++    endif
++  endif
++  write(*,*)status,ratio,pdf,born_calls,pdf_calls
++end program
++'''
++        (work / 'check.f90').write_text(driver)
++        cls.exe = work / 'check'
++        result = subprocess.run([
++            shutil.which('gfortran'), '-O1', '-ffixed-line-length-none',
++            '-fcheck=all', '-I', str(work), str(work / 'fixture.f90'),
++            str(work / 'helper.f'), str(work / 'check.f90'),
++            '-o', str(cls.exe)], cwd=work, capture_output=True, text=True)
++        if result.returncode:
++            raise AssertionError(result.stdout + result.stderr)
++
++    def evaluate(self, mode):
++        result = subprocess.run([str(self.exe), mode], capture_output=True, text=True)
++        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
++        status, coupling, pdf, calls, pdf_calls = result.stdout.split()
++        return int(status), float(coupling), float(pdf), int(calls), int(pdf_calls)
++
++    def test_born_qcd_powers_including_zero(self):
++        for mode, expected in [('power0', 1.), ('power1', 4.), ('power2', 16.)]:
++            with self.subTest(mode=mode):
++                status, coupling, pdf, calls, _ = self.evaluate(mode)
++                self.assertEqual(status, 0)
++                self.assertAlmostEqual(coupling, expected)
++                self.assertAlmostEqual(pdf, .125)
++                self.assertEqual(calls, 2)
++
++    def test_effective_and_mixed_model_couplings_use_native_amplitudes(self):
++        for mode, expected in [('effective', 64.), ('mixed', 6.25)]:
++            with self.subTest(mode=mode):
++                self.assertAlmostEqual(self.evaluate(mode)[1], expected)
++
++    def test_each_split_order_retains_custom_running_factor(self):
++        self.assertAlmostEqual(self.evaluate('mixed_cpower')[1], 10.5 / 4.)
++
++    def test_fixed_scales_are_unity_and_state_is_restored(self):
++        self.assertEqual(self.evaluate('fixed')[:3], (0, 1., 1.))
++
++    def test_bare_lepton_beams_do_not_query_pdfs(self):
++        self.assertEqual(self.evaluate('ee'), (0, 1., 1., 2, 0))
++
++    def test_custom_scale_uses_canonical_born_lab_boost(self):
++        result = self.evaluate('rapidity')
++        self.assertEqual(result[0], 0)
++        self.assertAlmostEqual(result[1], 8.)
++        self.assertAlmostEqual(result[2], 1. / (16. * 2. ** .5))
++
++    def test_asymmetric_requested_scales_use_actual_native_common_scale(self):
++        # Fixture checks all four PDF calls: Born muF1=90, real muF1=180;
++        # the requested muF2 values 300 and 600 must never be queried.
++        self.assertAlmostEqual(self.evaluate('power1')[2], .125)
++
++    def test_nonpositive_support_returns_zero_without_floors(self):
++        for mode in ('zero_born', 'negative_born', 'zero_pdf', 'negative_pdf'):
++            with self.subTest(mode=mode):
++                status, coupling, pdf, _, _ = self.evaluate(mode)
++                self.assertEqual(status, 0)
++                self.assertEqual(coupling * pdf, 0.)
++
++    def test_nonfinite_support_fails_and_restores_real_state(self):
++        for mode in ('nan_born', 'nan_pdf'):
++            with self.subTest(mode=mode):
++                self.assertNotEqual(self.evaluate(mode)[0], 0)
++
++
++if __name__ == '__main__':
++    unittest.main()

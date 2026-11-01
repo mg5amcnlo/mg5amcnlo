@@ -1,0 +1,10 @@
+test_global_recoiler_two_caps_source_measure_and_c_api (tests.unit_tests.fks.test_macnlops_sudakov_profile.TestGlobalGluonProfile.test_global_recoiler_two_caps_source_measure_and_c_api)
+A W+g Born separates its two local caps from global recoil. ... ok
+test_grouped_source_average_uses_representative_flavours (tests.unit_tests.fks.test_macnlops_sudakov_profile.TestSudakovMarginal.test_grouped_source_average_uses_representative_flavours) ... ok
+test_native_source_average_includes_unsupported_start_nodes (tests.unit_tests.fks.test_macnlops_sudakov_profile.TestSudakovMarginal.test_native_source_average_includes_unsupported_start_nodes) ... ok
+test_original_source_average_and_conditional_start_cdf (tests.unit_tests.fks.test_macnlops_sudakov_profile.TestSudakovMarginal.test_original_source_average_and_conditional_start_cdf) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 1.337s
+
+OK

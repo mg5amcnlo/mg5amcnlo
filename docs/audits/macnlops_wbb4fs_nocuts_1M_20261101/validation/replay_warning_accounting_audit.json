@@ -1,0 +1,2425 @@
+{
+  "all50_HwU_byte_identical": true,
+  "clean_native_error_statistics": false,
+  "counts": {
+    "accepted": 1000000,
+    "selected": 1000000,
+    "tried": 1000000
+  },
+  "created_utc": "2026-11-01T08:46:36.065805+00:00",
+  "first_emission_native_ISR_warning_occurrences": 201,
+  "job_records": [
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_1/MADatNLO.HwU",
+        "sha256": "32af89df7fb6fc3c88589c5fb21ead84dcbe535bf4865c1724564a74fbf058a4"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 105026,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_1/mcatnlo_run.log",
+        "sha256": "0be493c82ea6be720336396202cd93013cecdd1d1a490096d5a8f37377bdfaad"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_1/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 1,
+      "messages": {
+        "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 1,
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 203
+      },
+      "native_error_statistics": {
+        "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 1
+      },
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_1/wbb_observables.bin",
+        "sha256": "560a2f9fa189fa4a11c1c29af80c85dc623344d8ba0838d2cee1ad8ab04056b3"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 105026,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__1.log",
+        "sha256": "2806cfd6e3a42bd0fbbbbc65c84af9f92a0b6c1dae4b239d9a45cc281b3b5de2"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_2/MADatNLO.HwU",
+        "sha256": "c5b8474c513e46bf166c8b58dd1b0624c6cfd94a56d090fe5d056bfd7ff437e3"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 70930,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_2/mcatnlo_run.log",
+        "sha256": "70f67a69a3e22006bc4c205efc833519d485440bc59e01a5ac90409bd3976df8"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_2/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 2,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 185
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_2/wbb_observables.bin",
+        "sha256": "861bf65b1e1b4af85d4b90dbede1bf6c680f0c6bbc617a0e222828ed3a8e2a1c"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 70930,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__2.log",
+        "sha256": "836044a158f3c01b2c3a5ccaf3fa4fecd93137244ed40adba2f47d23dfa5613b"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_3/MADatNLO.HwU",
+        "sha256": "cac2af70f76ec04d507e264fabf5067dd9de8c07ce2eb18f1d264031b1a46fa3"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 125194,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_3/mcatnlo_run.log",
+        "sha256": "516409341a758d7ebefa0b34b829132646259fd7bdbe376c3ee14914c6bf75a6"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_3/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 3,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 181
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_3/wbb_observables.bin",
+        "sha256": "63709924b4ecc87ef90de9e9f49065de82b01a3c9557f46a5716ad905ec02a93"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 125194,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__3.log",
+        "sha256": "467c5a75b0c6dc6e5f41cd6c9892ecfb6e405ff6a953890a83ebeed07e4bdf28"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_4/MADatNLO.HwU",
+        "sha256": "91e119493bfb4084c44389b368cfb48d0fbc3d4342cc9b9ec3e7774e408a68d9"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 75984,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_4/mcatnlo_run.log",
+        "sha256": "fed45deb8235ae621ddc55e448d883c92b819aa91a8b305d1b1dc02fc5d68a98"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_4/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 4,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 196
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_4/wbb_observables.bin",
+        "sha256": "3077a43a57c86df26092012873a784f0dae8c6f6b749c95b4967b5c6d73a7fa3"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 75984,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__4.log",
+        "sha256": "c4d8ac878f7eff13db830f7e4d080a1306947d4d08a5f9ce1b52d376e64584f6"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_5/MADatNLO.HwU",
+        "sha256": "efabcb32e2553871929b89e5df2c2433dedf270af40fff69d1a8b96af4b3bc90"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 104845,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_5/mcatnlo_run.log",
+        "sha256": "18b0b881450d353c96794be6b803e6ba22327d2b3bd2189d6bbcd102370a0191"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_5/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 5,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 214
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_5/wbb_observables.bin",
+        "sha256": "26c556d2ec4f4e61d1ad8329834f59fbeae07f4a416151b9e9783c65d9beab3f"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 104845,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__5.log",
+        "sha256": "84dcfb3b1ee9d197d524953b51c12fbe108dfa39b0797aa86ddc51a15b2fff23"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_6/MADatNLO.HwU",
+        "sha256": "6c6d882484e748af4ecee05fd412574b30b810f03268cb06dabf8082e86a5148"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 106441,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_6/mcatnlo_run.log",
+        "sha256": "3fb9120c02c7d674a5af959141bed6e676fd9caf708b3aa1d860c81ea0ee4b0f"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_6/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 6,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 185
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_6/wbb_observables.bin",
+        "sha256": "513fb0b61a858b419a670874dd2c8917c4445a0a60a582a8db2a52550a51ba5b"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 106441,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__6.log",
+        "sha256": "f04f84cc2f9300c502d88ccde4671641e03bd24bab6377cf97197b5879ec527f"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_7/MADatNLO.HwU",
+        "sha256": "c4982fb7f28ef45354cefa24e29bef1527649b3b6af6e5a20ba2030c657b70eb"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 72127,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_7/mcatnlo_run.log",
+        "sha256": "117837468950708dd5fc4080e9341cf5caa20baaf8a79c2b0212f5405e488b3a"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_7/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 7,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 179
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_7/wbb_observables.bin",
+        "sha256": "16cbdb2dba31167ec10a06eec4b3f6ec0d2489ad7b59dbfc7fddc54be151ba85"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 72127,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__7.log",
+        "sha256": "93897f6d688894e47028461470dfecf0ecd1e44c7bc8fe88ea3203987ec0ffbe"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_8/MADatNLO.HwU",
+        "sha256": "a52b97086a49948affaf8a624b90399991590fa4819949062fd3924428e47d86"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 108702,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_8/mcatnlo_run.log",
+        "sha256": "ffd0de3421cbe6c050a7fc1c78b07ca1078a604567090d190beb6eb8b5c3fbde"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_8/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 8,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 187
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_8/wbb_observables.bin",
+        "sha256": "32f96df1f6fb2e3079c767ef617fd0f7da9be163c3a98058cbb6449ba119e08a"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 108702,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__8.log",
+        "sha256": "009a66fa1d9f00b71150941acec70d547297e16542fc5a47d27ee736059edf5d"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_9/MADatNLO.HwU",
+        "sha256": "4d936cd52da8d2ae8b4efd8aabbb6bbf10fe2ced60b5bc808e63e2e9aa208ba5"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 84762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_9/mcatnlo_run.log",
+        "sha256": "c6d81fbb97c29583533e130946b03c4fd20a9142d494c82b1438af7f1eb720e4"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_9/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 9,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 197
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_9/wbb_observables.bin",
+        "sha256": "c59b5c0c870c6ac5cac841745d2616042e8d120298f2e6362f16de01ae2dfc14"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 84762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__9.log",
+        "sha256": "5aaa2f6c397e5190172d8e3432a9b12d2922c46b23559400292a5aaeefd255ca"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_10/MADatNLO.HwU",
+        "sha256": "73f564909a40eee1dd17093de1b590d9c229267f96e609ec3bb2aa31dcd4a532"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 159641,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_10/mcatnlo_run.log",
+        "sha256": "9162ad8b5bfeeac5dab73961f728577d6f024500f1f98b6edc7fff8198ddc80b"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_10/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 10,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 199
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_10/wbb_observables.bin",
+        "sha256": "4d687dcff48f9dc350f7775b643a4af5aad14e02d463b1c9fbef8dfcfaf08c80"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 159641,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__10.log",
+        "sha256": "408014a03e66da381a8ac439cc42dc1956e31931df46f3ecae6fd5570360cfe0"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_11/MADatNLO.HwU",
+        "sha256": "71dbe70aec32664190c8379dbccf3131bf246cf4fd82a3fe20cc87ba02dc79b4"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 147139,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_11/mcatnlo_run.log",
+        "sha256": "562509ef4104549171255f503f5b769d5952de7ca15ee60e34d763383cd5f6bc"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_11/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 11,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 178
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_11/wbb_observables.bin",
+        "sha256": "de1ac7c5179fd24d80313312782e32f46976f7f0861e9d5c54c87076a42557d2"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 147139,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__11.log",
+        "sha256": "22a1b7f7e49c3d5ed64f0425f6f1b0a7d03a33acac802fa56c8942df5938e62e"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_12/MADatNLO.HwU",
+        "sha256": "1de11b0ea1e7f6e93da891f6bdd5d8661803a66ee9dfb33ea6e3b93ecf256e1c"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 76516,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_12/mcatnlo_run.log",
+        "sha256": "a304b5709befc80c831b27023250dc27647e9b63098756347ba010c9bce97753"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_12/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 12,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 223
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_12/wbb_observables.bin",
+        "sha256": "a426d8cb302feb647e5de38117e820c69cb1006deee6f33f78c729c66e3e3165"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 76516,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__12.log",
+        "sha256": "6203e94c33d609f230ebcc77a435c0a0f3ba140e81b5808d58235887df90d189"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_13/MADatNLO.HwU",
+        "sha256": "e74b87e6bb932bea4e28697fb0620e8d7ac11d510a47280dcbd839b42a5e1c42"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 144878,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_13/mcatnlo_run.log",
+        "sha256": "069a10a0d6550d2cc0eeae6a376fe8d31066c948e41a57d51011379b3814f0e8"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_13/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 13,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 183
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_13/wbb_observables.bin",
+        "sha256": "bccec7aef009a8b99d8bf4e71eb25436a2d37db4d0c8abea6ce93033a0e90276"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 144878,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__13.log",
+        "sha256": "0ced70cc01a48836ab83bff746d906cc32cfd38d9afc0d1adc2eb5f728bc537a"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_14/MADatNLO.HwU",
+        "sha256": "5ca112e002813d1b360b5c36e8343e605cd1cce5d167b4cf6fe0e730a7dc88f8"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 183581,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_14/mcatnlo_run.log",
+        "sha256": "a8c6b5acc0a5852cd5008b12cc7ed164732863bc9d6d19079de79e6ec788987d"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_14/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 14,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 173
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_14/wbb_observables.bin",
+        "sha256": "463a73c111c59004e804cf8d92789d7464062f50c7d7dc779e42096284d7c807"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 183581,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__14.log",
+        "sha256": "297c078efec6efeff486d03e4384517c5c215d219dd1ae2213b74e1473965518"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_15/MADatNLO.HwU",
+        "sha256": "d092570fb56d8ac3a2cc87db7736db4084cde2cbd694b3bd385e11da899d74fd"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 147804,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_15/mcatnlo_run.log",
+        "sha256": "9f37e5c59e9861d55c2d04a32042c9b8ff7d49407c75d1de814d38a0c78ad27d"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_15/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 15,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 204
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_15/wbb_observables.bin",
+        "sha256": "4371a98879c73ed46d441954392882e6d1ac4619d01008ddfcc40868ed05d6a7"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 147804,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__15.log",
+        "sha256": "ef5d4d825d548eb62062c5accfe3918506ce37f1cd868a2449dd96c919075e60"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_16/MADatNLO.HwU",
+        "sha256": "66cf31659a931ad8a8043d3a1ec857939d356733c06f3e580da07f66d9a8533f"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 338792,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_16/mcatnlo_run.log",
+        "sha256": "eabd6401f0ae90c73b8c214b9f5ff4a3ad7b2a5bdc1fe7f3fad738f54a16bbb5"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_16/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 16,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 186
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_16/wbb_observables.bin",
+        "sha256": "273e449286f0afa880d76b8e9248af8c77c05eedece7a31775e96d26d4734b9e"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 338792,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__16.log",
+        "sha256": "8469cbabbfad67fdcb35777bb773d718eb5fcdf8495a6f048dad4bbe4be3b9d7"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_17/MADatNLO.HwU",
+        "sha256": "56eb3d725f9e7f3e0468384e81c06c8fdd5b3e0491caa7bb4d5066e5e4ae9349"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 249283,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_17/mcatnlo_run.log",
+        "sha256": "c8c7fe1a7e6f0903ece4d1ad9e5f91eaeeff1f029cff9026587f62f16efb4d84"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_17/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 17,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 172
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_17/wbb_observables.bin",
+        "sha256": "887a071e7a94e539cbb15ed1db9dd2a3557b4561f4b068cf200a4dd0d349f3d6"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 249283,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__17.log",
+        "sha256": "ea53381fd171cbdfcdf363ffdb1d628b45e4588f83042c53560405a7f2863da3"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_18/MADatNLO.HwU",
+        "sha256": "c64700b685d8b21bf9e7aa986114dbc6f712247ad0bdb1aaa69def6ad9182d07"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 174138,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_18/mcatnlo_run.log",
+        "sha256": "f91b64c2b15aa3ac4581de9fb2f66b39980affc141cfdaf10bc3729d9a220ea8"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_18/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 18,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 168
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_18/wbb_observables.bin",
+        "sha256": "4187ce10e69f1e385db57027bea21cb937b957c982dc8f57e2874d4f75d1da4c"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 174138,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__18.log",
+        "sha256": "a256dca6418c0f3cc890d11fe7e7b943676a0ed6ccc60d9cb094f0220f0e8427"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_19/MADatNLO.HwU",
+        "sha256": "b6a427dd3734775a1fefd135983a8f50e6f78fb7791d29295741443cd92ba4fb"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 325407,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_19/mcatnlo_run.log",
+        "sha256": "0ed1ecdee6b8f3d483007203b44b34d7cf3d2293e40c24e5c5478c0127b604a1"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_19/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 19,
+      "messages": {
+        "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 3,
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 191
+      },
+      "native_error_statistics": {
+        "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 3
+      },
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_19/wbb_observables.bin",
+        "sha256": "1c19687dc2966df45e500ff6fb1c81871bd48142e568ae20e99a6d211642a243"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 325407,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__19.log",
+        "sha256": "1414936a37db7f9bd481707b141c70703f0657ba8ec6996f4bf8cea9f8ba5690"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_20/MADatNLO.HwU",
+        "sha256": "ac1bd1b42f546c053a2884fdeab39d8a0ec8e53ca8404e48546b0ad15bfd744d"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 52576,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_20/mcatnlo_run.log",
+        "sha256": "e2b761ffd3e2630ee4548d52e8d71b2902480481004c6410d953cf4030c98310"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_20/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 20,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 180
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_20/wbb_observables.bin",
+        "sha256": "e97563e57c7eda3509252cebe6dd45a5715a0cd8f0f59bee21667e27cd61f496"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 52576,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__20.log",
+        "sha256": "067c2d0b8faa0bfe9f2280744c98eeedad8e22b47340569df5e55a3a0f629f1f"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_21/MADatNLO.HwU",
+        "sha256": "ee960a82834a1172e390c70e1642f125d9760582b92929ca9d081bc5a6d61c6d"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 172010,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_21/mcatnlo_run.log",
+        "sha256": "f91ec7764c3b72b7612d395f1bf1deb80f3e0cbd6f6a2619b40dc7a5c0c1b727"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_21/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 21,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 187
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_21/wbb_observables.bin",
+        "sha256": "ad060e4bc622c5759b9c24d9c95aa441d44be4e8a0d1f0e84256177d950787b6"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 172010,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__21.log",
+        "sha256": "f16edf4749c739c4d01a25e546ae41161a5a8989a814906530a10ce0d73a9ae7"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_22/MADatNLO.HwU",
+        "sha256": "2d5edcb0571a539b7e74432621b2eb1941c84c1ce204a63953e8acfcb0dba8e6"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 112692,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_22/mcatnlo_run.log",
+        "sha256": "ba01c1bbb1eca5ec3a13522bcad8ad4f39861d07c31101ab868cbf62c7fc1706"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_22/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 22,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 179
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_22/wbb_observables.bin",
+        "sha256": "1b5901aed178cfdab0764f714dd07e95c97419b75b5623378756088986683214"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 112692,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__22.log",
+        "sha256": "8ae85e7d72353f801810d7b2ad85f9c80a13d4e59ae6ac67d642519972d99e65"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_23/MADatNLO.HwU",
+        "sha256": "f4c40114697bd1a5a77a12efa47f65b4d9fb5bec48c568f138611f5b4c960788"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 245160,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_23/mcatnlo_run.log",
+        "sha256": "4102b46e30d6a7c0558c955a638774439493d57e6d0ee3749790ec047c0e2959"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_23/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 23,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 191
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_23/wbb_observables.bin",
+        "sha256": "140a3184db30b0fc40ad390e4ea0c4f36fcd251f3f55858e546fb69da6ccfa6a"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 245160,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__23.log",
+        "sha256": "be97a9682e04c129af272c0c74d24b805a3c4cdff950bf6a5a81e629ab9d65d4"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_24/MADatNLO.HwU",
+        "sha256": "f806ca6f28797d5aecec7dc7b1c06e2ddb66ab0a850b1b14fa1897d40ffbd98f"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 113272,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_24/mcatnlo_run.log",
+        "sha256": "9d3a0abeca77168f243ad7e7d436d75deeba332e673200a4014bc35eb67dbaa2"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_24/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 24,
+      "messages": {
+        "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 1,
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 202
+      },
+      "native_error_statistics": {
+        "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 1
+      },
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_24/wbb_observables.bin",
+        "sha256": "485c7c3e71ec6a136855a6fa24481fad89800189156413a3fd2a75c2dccb6bb9"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 113272,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__24.log",
+        "sha256": "ed5494e02ea0420192c42a0151751170b7c5abdd4b151844a1e4b892e6e453ca"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_25/MADatNLO.HwU",
+        "sha256": "22fa9b6991a7fdf37ad485e6532dfb05c5508024bd61d670cf76c2012fd4d338"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 175335,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_25/mcatnlo_run.log",
+        "sha256": "5f1ce059c7b943ea11e6a955438e99fd7d9f1c5a25057174a1314026f2f92c58"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_25/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 25,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 195
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_25/wbb_observables.bin",
+        "sha256": "6cea344a675d1db4b4bfea40009f9289f62da276aa68ae47923ecda5b57c964e"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 175335,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__25.log",
+        "sha256": "3c65c6955f790c9770c249e85dee4cbe0947d6b8ff71abf8a0f51b97f88cd924"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_26/MADatNLO.HwU",
+        "sha256": "dc2a817cae4e4a2912a3cd6adc3e5ecebb9a901cdc41e3596e740b9a9301a66c"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 131578,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_26/mcatnlo_run.log",
+        "sha256": "d964356a75d6839be1321d7eb18055118ff073bce40da4cc38d3004cf315e922"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_26/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 26,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 180
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_26/wbb_observables.bin",
+        "sha256": "62438748270bd6abc753b4a5a2764069f6b8fe61de323cd09cadd472c00b5056"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 131578,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__26.log",
+        "sha256": "9b23aed46ad5fff488e61038c09c9af66f4a612ff3d096a382f738ef4c10d34d"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_27/MADatNLO.HwU",
+        "sha256": "35bcae419cbc3c4c121d77800b664341742473ddfdc73696342d7e786d3e85ad"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 317778,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_27/mcatnlo_run.log",
+        "sha256": "38f584733fa5607885535814eab1cd3b951641116b97463d08bd51c92b5aa6dc"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_27/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 27,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 173
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_27/wbb_observables.bin",
+        "sha256": "bf04dfa1425f0f9c20e12e01fc34881ad1df0b036ba704db74c54ce5a2736c56"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 317778,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__27.log",
+        "sha256": "a6eea6a73a3b57fbbba4c7461e05cce9b58187078696acd38901a8533201d5c3"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_28/MADatNLO.HwU",
+        "sha256": "f35c26ab642506a5c29480c02b670651cc0ce139cb7102c07854da43a875e3e3"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 207122,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_28/mcatnlo_run.log",
+        "sha256": "fc1a0787dea4a05379875ab881da37c0463ffd4abbabe41c8377783eb40f6313"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_28/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 28,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 204
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_28/wbb_observables.bin",
+        "sha256": "c947c7baa680bcd53f483986f62386709752b2d1bb6a95214cf45dbd8b7dac13"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 207122,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__28.log",
+        "sha256": "353a763d6863e39b8dbd1abd25ea91fa40fcc5dbba7dce2bbc897a940177d09d"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_29/MADatNLO.HwU",
+        "sha256": "77449e0fa85be760efd1f3be8e1c9336f5cd0935143a5c671fb3592165528162"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 264445,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_29/mcatnlo_run.log",
+        "sha256": "7d92a0b98304a53edec0a5daa634258216e3ce5e333c983df934f324da5e9d16"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_29/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 29,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 180
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_29/wbb_observables.bin",
+        "sha256": "a509b1316cd3793d394008789cc9be8470aaaeee81cd0af823c5c18bfad67108"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 264445,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__29.log",
+        "sha256": "768fc966700c49bc18c1a1ff9eba61f552dd2d48fa7493b6ce54c2f39a515238"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_30/MADatNLO.HwU",
+        "sha256": "09b4c3c673576b78fb2bceb64f5b946c2b6d0ad90d067a82a6166c76f9203503"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 203930,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_30/mcatnlo_run.log",
+        "sha256": "83c133a58885f0d2c7cef3125752c915e8461226e212edbfe5202a335179b9f7"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_30/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 30,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 177
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_30/wbb_observables.bin",
+        "sha256": "8d5ecbf2bc7042501ad6f8ba43578ed04bb39a59daf48606b333c577feea9c8d"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 203930,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__30.log",
+        "sha256": "36aca5068198a3c8f23fa5e4fe9d95e8f3722edc5ce9dc5b0e3fb50919fcd21c"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_31/MADatNLO.HwU",
+        "sha256": "87c01683bf27d8206206ee663a600bac394b879942c7af1c9e7642435590db90"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 134105,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_31/mcatnlo_run.log",
+        "sha256": "6dcf42f40150b6318ffb6f3550ad34462176933fbe3af4c411edac0ff6a70f36"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_31/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 31,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 200
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_31/wbb_observables.bin",
+        "sha256": "ae1b06407df5566a0b87811d199324056c9949a02625b8281eae3c6cb8f77556"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 134105,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__31.log",
+        "sha256": "ab4b0f31aecb6a1e9d6b2dc942b05deb9f7c7cd9ef59b51d27c2c87e32b38c60"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_32/MADatNLO.HwU",
+        "sha256": "d69b34ff0f3d15cd885372e8b877af4a64dc78ae00f30d64170abef1b6a087ce"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 238643,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_32/mcatnlo_run.log",
+        "sha256": "d27305fe92e4358496bd25d3dca288a377a48b6425e08bf24f0d7612cdab8f92"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_32/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 32,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 195
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_32/wbb_observables.bin",
+        "sha256": "7d8f7f2f8562d100dad8160e5653af7bd521018c0f4330d4e6e6f32960f66a29"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 238643,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__32.log",
+        "sha256": "62700fd4c8c950dda546c45aebfc10f1f2c08709f64103ba34e1f41e1f374e37"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_33/MADatNLO.HwU",
+        "sha256": "3a47671a746105cd096972e641194768aa0e4207639aefd2351755d368190afb"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 127322,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_33/mcatnlo_run.log",
+        "sha256": "634c13d0e54f0dc7f811aadf0b50fdf2831de9bc34b9c6f1ac2ab4b8cfcc1de3"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_33/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 33,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 171
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_33/wbb_observables.bin",
+        "sha256": "20fea3e827bd9997de4574a333ad4fd562e890acf113b08215ce8c2da5b4f95f"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 127322,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__33.log",
+        "sha256": "3d2ac2c7dda64b3aa4bb96686a6f31357dd6eb410ddb2e06071cfd271130f13b"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_34/MADatNLO.HwU",
+        "sha256": "06d9df8897009c2072462021135bf43f1358378c53327ea22e21506293d78e7c"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 173207,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_34/mcatnlo_run.log",
+        "sha256": "2cd28171df5597c755769bd7149d927ff0797442a51924b54477b42f05c4a684"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_34/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 34,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 176
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_34/wbb_observables.bin",
+        "sha256": "2fd82e66ccf853f5b5e0d5c1a4bf13f89466a20f32279b7a9240268de36803eb"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 173207,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__34.log",
+        "sha256": "63a50351ac8374eceb606db77444272914402327bea72e9dd2de24f4bb81d35f"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_35/MADatNLO.HwU",
+        "sha256": "e830a9a0a2d7feadc34bef9d754ba4716b6c0939735db5e675c1dfe800cf1795"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 212442,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_35/mcatnlo_run.log",
+        "sha256": "3fb7b924b9e4bd1c9dc12368ae309227ccbf6790fe24d57d6c2ea16840fde14f"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_35/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 35,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 183
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_35/wbb_observables.bin",
+        "sha256": "e167baf72d4f7e2fac4d857a8630cdb18076ed6996f4d13ded9014819f086abe"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 212442,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__35.log",
+        "sha256": "1212466b567a3df4c338cbd574d9b81c6b2aa1be02f7bb9ecc8360eb6b9440d7"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_36/MADatNLO.HwU",
+        "sha256": "cae4a14ee6dc52bb1bd4d5bc7844163b3b571a9095b58ca5a04eb7e63baa65b4"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 113091,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_36/mcatnlo_run.log",
+        "sha256": "590061bcfdaa96e573e7538cd4091a5c79d56ee08219d1bfc99ba4e353b20efd"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_36/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 36,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 180
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_36/wbb_observables.bin",
+        "sha256": "16b5e54de50cf39d3ad18036be4edfff13eca47dcbeb74fd06e4bc4b59637827"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 113091,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__36.log",
+        "sha256": "3fbcaf01e5a2893d3172f20b9265786484a9c278b1f5bcfee59b62e3cc866541"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_37/MADatNLO.HwU",
+        "sha256": "36f9993bba9fa391912f37306ad125cdc0259f775fa8b92fb2dd261021d45060"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 101919,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_37/mcatnlo_run.log",
+        "sha256": "2a239dc68de206d485bb5e9e161ea8e4fa0dd1f591bb6b47d1c8ccdc7e27d386"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_37/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 37,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 190
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_37/wbb_observables.bin",
+        "sha256": "5e4e9dedb97716a990d2d202ce9674f5d2cafe0985217945988194934685c7cc"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 101919,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__37.log",
+        "sha256": "b092d0a5b0a0c963c6d679b6b5da265f6b79ad281e6ee8244616fffbeb964e8c"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_38/MADatNLO.HwU",
+        "sha256": "3c0048a34df2630022f31e2b65e74a84c6d3fe073fac3b599b1e21c55361381c"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 206058,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_38/mcatnlo_run.log",
+        "sha256": "4761517aad1bbc35acc02669050ca4e1c8e44c9c720a23c7f11aead92d71a056"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_38/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 38,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 189
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_38/wbb_observables.bin",
+        "sha256": "51e74e44ad3b0ec562aa869534192bb342cbdd456648e6eaae6e91013c449d5f"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 206058,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__38.log",
+        "sha256": "90e87e3b344f34e7f4c6f10721147d58f54e2c89d4d023ea8caa65586bd7cdf8"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_39/MADatNLO.HwU",
+        "sha256": "fc1868918bb4b03a91d962987fc936373c723b4ab6f9344118b6197c85569b7c"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 143197,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_39/mcatnlo_run.log",
+        "sha256": "614882b96686bc24f5ef9a4c61aa743aaca3e4bac5c0f87c97fe5f82a334cf49"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_39/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 39,
+      "messages": {
+        "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 3,
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 214
+      },
+      "native_error_statistics": {
+        "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 3
+      },
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_39/wbb_observables.bin",
+        "sha256": "25ffbfeb1fc795198a75c8dda16b26400341525835f04c3c109c3ac34ff2fb42"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 143197,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__39.log",
+        "sha256": "1862ba8af6aa83df828901224bedaf279eb2986b67dcdcf43d29e72b5e2e4fb6"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_40/MADatNLO.HwU",
+        "sha256": "8b80036f7a6a15ad2239da84a9e1ae1ec1627a5478234b011b3542188995d270"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 114554,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_40/mcatnlo_run.log",
+        "sha256": "1ee91fdfb4a79f17b63572d8bf882f6beb926ef999fd8a9bc13efc5f8a6c4066"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_40/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 40,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 167
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_40/wbb_observables.bin",
+        "sha256": "2141c95f9ee10f1c55c58d086833765c0cbcc69240e54fb5d4a82e86482e7487"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 114554,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__40.log",
+        "sha256": "2ec128a34434eed6ab3b19243b8ee9fc90171aa108111a7d20f7b0c55a7cb553"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_41/MADatNLO.HwU",
+        "sha256": "cab00b95ab394267bac18a58365157afe2068b496f720d51806b99caa76af9bd"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 192226,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_41/mcatnlo_run.log",
+        "sha256": "0d97edddd0b3c6f8345957570c5bfcd7cdbc37d3265c98fe21ad087f44da4a5f"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_41/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 41,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 154
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_41/wbb_observables.bin",
+        "sha256": "6d87e167bab9cea19dd5c5a682890a6ee02b4c46485762cd1efa765ceaeac538"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 192226,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__41.log",
+        "sha256": "504d81003922df216bab910e9a6f901eaf3b5d3277949e4e98c5054e61becc36"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_42/MADatNLO.HwU",
+        "sha256": "c959b0b87f44ac5f7922a6400907c96ecabd6cc0bd22dbe1913597b34f6bb314"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 216033,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_42/mcatnlo_run.log",
+        "sha256": "ce1ca05241028c3766cd25e1106a2176b321809657f7f0f5a0afb1f14401041d"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_42/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 42,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 189
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_42/wbb_observables.bin",
+        "sha256": "080b4bad8de7c4e50bed654de6807f1faabcc8e91d11e0a0379faf8981324797"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 216033,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__42.log",
+        "sha256": "363359cfdb711d25c1c798a2a39ce40d092a8819b63cff67455bf94dc87f56d5"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_43/MADatNLO.HwU",
+        "sha256": "161eb73cb3b34b6380ec40d8598169813a667c9ff43e68a40b6e3fe0cb33cecc"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 172143,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_43/mcatnlo_run.log",
+        "sha256": "8e3530f7336176ae5ad0b6d2bca54274dc4ba957a0ce6d1e6858ee57e6d9a5d9"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_43/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 43,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 192
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_43/wbb_observables.bin",
+        "sha256": "781fcf971566ef65a29ba170c24774fcda3654fb1b410c2ba9943d67331eee34"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 172143,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__43.log",
+        "sha256": "60674beff7d36914377e1c4ba51d667340883df69317e70860a11a462d078343"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_44/MADatNLO.HwU",
+        "sha256": "b0f5bb532b97f5ecab3364e9fb1438fd424192520b9045e16ca6944ec23d51a3"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 212841,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_44/mcatnlo_run.log",
+        "sha256": "b2f6f6a1625bbda978a0238f97a98bcb2c81bb815993f20853daa45f8c36f886"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_44/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 44,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 192
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_44/wbb_observables.bin",
+        "sha256": "b76ffd180916f0d31eb3072f6f09b0972d0c1d07eca686b167ebbea26a6e9ee1"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 212841,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__44.log",
+        "sha256": "be9b60ca63a681b7a1ff91730b1abcc30819792ffe9d636e2664a4d5854f13e9"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_45/MADatNLO.HwU",
+        "sha256": "44efe666df8e4fb54f1c1d62837820a4e239dc109e691a0779d38c9654355cf2"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 151262,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_45/mcatnlo_run.log",
+        "sha256": "e3bb7ae6a722e5ac88f289d558e3b26afef57c07798aa3f49a4ebc4de26d0a88"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_45/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 45,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 172
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_45/wbb_observables.bin",
+        "sha256": "22322ad0e8f0c07f90bbaede663270d4e528bda8c74e486951823e90804c6ce4"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 151262,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__45.log",
+        "sha256": "9495dbbf61e784b8e4bf90c24555fbff32f45748b1023770f89992352924de96"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_46/MADatNLO.HwU",
+        "sha256": "5c3c8b5430f8f6b9f418166696b235c8f7c930b9c5bf2ce86909981a589f6639"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 191295,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_46/mcatnlo_run.log",
+        "sha256": "00e83d48e6f2d3c6be4e90f668ccc1eb5e68290582ab42e80d691872e95b94c6"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_46/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 46,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 180
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_46/wbb_observables.bin",
+        "sha256": "b708a476d58e8ff1eaa66608d2aa34d34c4f9c02578fd2c001cf8c786942f83b"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 191295,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__46.log",
+        "sha256": "07c85cf738798b7fb42060f15665ae7d69bf51144dbc1f48f94f6b29537200ab"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_47/MADatNLO.HwU",
+        "sha256": "7e41cdff60ed8416a382b45f1eef09fd5699ac91b3976a32998de12e9daffe7d"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 122800,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_47/mcatnlo_run.log",
+        "sha256": "35086674ebdfde1161a0af2983b830c12cb7b26a353e90499db51c215d20b9b9"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_47/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 47,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 190
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_47/wbb_observables.bin",
+        "sha256": "d71bc7f7494214421be7f9a333580b4695c5a168e19e3b6fd295e1596cb560ce"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 122800,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__47.log",
+        "sha256": "2539792b77975cbd4a12becfb4e8cad920ab742f58c4e4207fe904c9f2d6407f"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_48/MADatNLO.HwU",
+        "sha256": "a6a9f9748dfbfdf6a3d53855cd197719f036ff3775cc40225a51c24a08c28dda"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 200605,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_48/mcatnlo_run.log",
+        "sha256": "923bb89e85651a674cf598cf936d2f0d71b92a9e92bab08367c0cdba2d1713e3"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_48/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 48,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 191
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_48/wbb_observables.bin",
+        "sha256": "5b5144ac85139e4e4c60be5c24273ed56183792bd5c768828c128cb55176be84"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 200605,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__48.log",
+        "sha256": "86278605539d97579e61d6456b32571cccbe2c1887a8e075f3a69064e82b0e10"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_49/MADatNLO.HwU",
+        "sha256": "cb9ab090ed28e643fbfd231daad186e735bad7a06538cb7cef9ad325b197d6cc"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 111096,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_49/mcatnlo_run.log",
+        "sha256": "9c5cc5341fb015bd334dc9a604e88f823cf05c12ad847f9b63606ea68b8d34f8"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_49/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 49,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 190
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_49/wbb_observables.bin",
+        "sha256": "6dfa3a0207f4d77476d1efd4e9de9d3d6bea0fb0f68854f9b7e4db1be35514f1"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 111096,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__49.log",
+        "sha256": "959535e1801e7acab053d71c7f6436bc56ae41d328d8661f98279f3fdbee48c4"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "HwU": {
+        "bytes": 243762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_50/MADatNLO.HwU",
+        "sha256": "223825c6ad6842d1203d9e5f0fa3a92bd4f0e812e9d1ec0431dcb4972f63bdce"
+      },
+      "HwU_byte_identical": true,
+      "accepted": 20000,
+      "binding": {
+        "bytes": 123199,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_50/mcatnlo_run.log",
+        "sha256": "01923426fec7520eda8e94550c03ed90c08350091d7275efa402ae33b077edef"
+      },
+      "continuation_card": {
+        "bytes": 6458,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_50/Pythia8.cmd",
+        "sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+      },
+      "job": 50,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 178
+      },
+      "native_error_statistics": {},
+      "native_statistics_identical": true,
+      "nobs": 19,
+      "nweights": 4,
+      "observable_binary": {
+        "bytes": 3680008,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/run_50/wbb_observables.bin",
+        "sha256": "c6087396034b9662cfb98e2d832662ab96ff05146ffdcf20263523bfda05cf24"
+      },
+      "observable_records": 20000,
+      "original_first5001_and_last4999_observable_records_byte_identical": true,
+      "original_log": {
+        "bytes": 123199,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__50.log",
+        "sha256": "29f0e2148679620f4433b8069b6b022343e91d8302cccb8cdaa05b80bae60aa6"
+      },
+      "physics_card_byte_identical": true,
+      "selected": 20000,
+      "tried": 20000
+    }
+  ],
+  "limits": "The diagnostic replay restores full observable streams without changing native shower statistics or histograms. It does not remove the stock threshold/evolution or trial-envelope limitations; their physics effect remains unbounded by these occurrence counts.",
+  "main_full_profile_audit": {
+    "bytes": 23253,
+    "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/main_full_profile_audit.json",
+    "sha256": "6cfbfadec06763053ccfe1ed5fb6147b5735651b2b381152559501b9ca4aa22d"
+  },
+  "method": "Independent read-only comparison of every complete replay native statistics table against its frozen original RUN3 table; exact byte comparison of all50 cards/HwU, original first5001 and last4999 observable records; verify20000 records per replay stream and no fort.97.",
+  "native_ISR_weight_above_unity_occurrences": 9345,
+  "native_abort_occurrences": 0,
+  "native_error_statistics_occurrences": {
+    "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 8
+  },
+  "native_event_accounting_passed": true,
+  "native_statistics_equivalence_passed": true,
+  "native_statistics_occurrences": {
+    "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 8,
+    "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 50,
+    "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 50,
+    "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 50,
+    "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 50,
+    "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 50,
+    "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 9345
+  },
+  "observable_accounting_passed": true,
+  "observable_records": 1000000,
+  "original_audit": {
+    "bytes": 136567,
+    "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/original_full_warning_accounting_audit.json",
+    "sha256": "253e0c1740dc02455330ee2fde46646452f519946b950a4306a05ccdef72406e"
+  },
+  "parser": {
+    "bytes": 6778,
+    "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/audit_warnings_accounting.py",
+    "sha256": "2e71fc5f5c9e30df60fb0aad7c39de835cd8132cf540c00b042e2e11af465f1d"
+  },
+  "physics_cards_byte_identical": true,
+  "replay_directory": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay",
+  "replay_executable": {
+    "bytes": 2412264,
+    "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/Pythia8.exe",
+    "sha256": "b9c1ef28c99fbedb45c7a055081184eeafcc55b1113874161e6cbde39e054956"
+  },
+  "replay_proof": {
+    "bytes": 17383,
+    "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/replay_proof.json",
+    "sha256": "3daae6888997aa3f2e6ed0902d963a248f0fb767d899fa4d83b0f95ab2891854"
+  },
+  "requested_events": 1000000,
+  "run": "run_1M_wbb4fs_nocuts",
+  "warning_policy": "All8 Error-labelled threshold dipole no-candidate diagnostics and9345 ISR envelope warnings are preserved exactly. No warning-based filtering, source-event retry or reseeding."
+}

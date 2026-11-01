@@ -1,0 +1,44 @@
+{
+  "G_and_noG_same_point_sequence": true,
+  "first_density_G_vs_noG": {
+    "A": {
+      "changed_first": 0,
+      "max_absolute": 0.0,
+      "max_relative": 0.0
+    },
+    "alphaK": {
+      "changed_first": 0,
+      "max_absolute": 0.0,
+      "max_relative": 0.0
+    },
+    "d": {
+      "changed_first": 0,
+      "max_absolute": 0.0,
+      "max_relative": 0.0
+    },
+    "k": {
+      "changed_first": 0,
+      "max_absolute": 0.0,
+      "max_relative": 0.0
+    },
+    "q2fact1": {
+      "changed_first": 0,
+      "max_absolute": 0.0,
+      "max_relative": 0.0
+    },
+    "q2fact2": {
+      "changed_first": 0,
+      "max_absolute": 0.0,
+      "max_relative": 0.0
+    },
+    "r": {
+      "changed_first": 0,
+      "max_absolute": 0.0,
+      "max_relative": 0.0
+    }
+  },
+  "interpretation": "A repeated native Born-cache evaluation has pre-existing floating rescaling noise. Comparing full identical sequences with only Born-factor helper disabled measures whether the new helper adds material state drift; no Pythia shower is rerun.",
+  "points": 938,
+  "providers": 3,
+  "repeat_bit_flag_differences": 174
+}

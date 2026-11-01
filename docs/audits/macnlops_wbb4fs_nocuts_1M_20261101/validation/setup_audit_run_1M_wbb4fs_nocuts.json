@@ -1,0 +1,164 @@
+{
+  "analysis_cut_implementation_verified": true,
+  "analysis_no_cut_proof": {
+    "method": "Independent source read: every stable particle enters the helper, jets use inclusive_jets(0), no pT/rapidity acceptance thresholds; undefined rapidities are missing coordinates only; total raw fills every valid event.",
+    "sources": {
+      "analysis/analysis_checks.json": {
+        "bytes": 1316,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/analysis/analysis_checks.json",
+        "sha256": "aa49255e49f9893005ae6b56b728685dc2d4e6b314baea1ae8c875d8228a7bfe"
+      },
+      "analysis/observables.json": {
+        "bytes": 5213,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/analysis/observables.json",
+        "sha256": "7ac93362e040ec1fac4d825b8913f43e1a29b9caa1660dd81a63d591847876e2"
+      },
+      "analysis/py8an_HwU_wbb.f": {
+        "bytes": 6278,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/analysis/py8an_HwU_wbb.f",
+        "sha256": "a34137f73d76d1fb67e6cb14f17bd6ba31e6c9ade1706c2a71349fe4f52e8255"
+      },
+      "analysis/wbb_observables.cc": {
+        "bytes": 3354,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/analysis/wbb_observables.cc",
+        "sha256": "c6ff940a8f74cbb20e00b4bb183764682699c03d485ddd1eb2f8769197459ad3"
+      }
+    }
+  },
+  "created_utc": "2026-11-01T07:44:33.139969+00:00",
+  "first_emission_measured_profile": {
+    "bytes": 19935,
+    "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Cards/macnlops_profile.json",
+    "sha256": "890cace6b1fd09da9c8afa0d20f44379227f19055368cd8992c9ac61ab1c1dd2"
+  },
+  "generation": {
+    "beam_energy_GeV": 6500,
+    "custom_fcts": [],
+    "cuts": {
+      "drll": 0.0,
+      "drll_sf": 0.0,
+      "etaj": -1.0,
+      "etal": -1.0,
+      "mll": 0.0,
+      "mll_sf": 0.0,
+      "mxx_min_pdg": {},
+      "pt_max_pdg": {},
+      "pt_min_pdg": {},
+      "ptgmin": 0.0,
+      "ptj": 0.0,
+      "ptl": 0.0
+    },
+    "events": 1000000,
+    "ickkw": 0,
+    "incoming": "g u d s c u~ d~ s~ c~",
+    "macnlops_flavour_count": 4,
+    "maxjetflavor": 4,
+    "model_masses_GeV": {
+      "1": 0.0,
+      "2": 0.0,
+      "21": 0.0,
+      "23": 91.188,
+      "3": 0.0,
+      "4": 0.0,
+      "5": 4.7
+    }
+  },
+  "hard_coupling_source": {
+    "evolution": "Template/NLO/Source/alfas_functions_lhapdf6.f:89 calls alphasPDFm(iset,Q)",
+    "python_param_update": "madgraph/interface/common_run_interface.py:7636 queries alphasQ(91.1876) when Python bindings are available",
+    "setrun": "Template/NLO/Source/setrun.f:103 calls pdfwrap for hadron beams"
+  },
+  "inputs": {
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/cards/run_1M_wbb4fs_nocuts/FKS_params.dat": {
+      "bytes": 13650,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/cards/run_1M_wbb4fs_nocuts/FKS_params.dat",
+      "sha256": "8f9926cd654701ec1d80cfdcb691092071558b2443915330a1bf867ac03654c5"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/cards/run_1M_wbb4fs_nocuts/param_card.dat": {
+      "bytes": 3332,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/cards/run_1M_wbb4fs_nocuts/param_card.dat",
+      "sha256": "ccbf142ec9dfb368c4a5ea80bc6d7c5dc60951384b470c308896c56da66b70ba"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/cards/run_1M_wbb4fs_nocuts/run_card.dat": {
+      "bytes": 15545,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/cards/run_1M_wbb4fs_nocuts/run_card.dat",
+      "sha256": "bdb63e69b6addb7cfc139fc9bcad0b73160ef0ea4877695aee163f97c287cbf0"
+    },
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Cards/proc_card_mg5.dat": {
+      "bytes": 2589,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Cards/proc_card_mg5.dat",
+      "sha256": "3945680bbd398f815ee8dac79a5e82fb1c76a8e34c92b19fde4ecb5c430de3aa"
+    },
+    "/nfs/home/rikkert/Downloads/pythia8/lib/libpythia8.so": {
+      "bytes": 12796904,
+      "path": "/nfs/home/rikkert/Downloads/pythia8/lib/libpythia8.so",
+      "sha256": "35203dfab4e20b044fe6e669b8170f5905f56c43c6dad6e762ceff86158a283c"
+    },
+    "/nfs/home/rikkert/LHAPDF/lib/libLHAPDF.so": {
+      "bytes": 1166400,
+      "path": "/nfs/home/rikkert/LHAPDF/lib/libLHAPDF.so",
+      "sha256": "5026d03da1881a87aeb2731abc8e1b5abdaada8b648f9401d8c01830d1c59fc9"
+    },
+    "/nfs/home/rikkert/LHAPDF/share/LHAPDF/NNPDF40_nlo_as_01180_nf_4/NNPDF40_nlo_as_01180_nf_4.info": {
+      "bytes": 2463,
+      "path": "/nfs/home/rikkert/LHAPDF/share/LHAPDF/NNPDF40_nlo_as_01180_nf_4/NNPDF40_nlo_as_01180_nf_4.info",
+      "sha256": "b535f5c24e1e23fc13affea12cd2745ef83e537ed74193b02d34bcc9f660d4e1"
+    },
+    "/nfs/home/rikkert/LHAPDF/share/LHAPDF/NNPDF40_nlo_as_01180_nf_4/NNPDF40_nlo_as_01180_nf_4_0000.dat": {
+      "bytes": 1326512,
+      "path": "/nfs/home/rikkert/LHAPDF/share/LHAPDF/NNPDF40_nlo_as_01180_nf_4/NNPDF40_nlo_as_01180_nf_4_0000.dat",
+      "sha256": "29c91090491239552c5ac24cfa07a3592adffc976d33ea275153b1b02ce875d7"
+    }
+  },
+  "limits": "Generation/analysis no-cut definitions, hard four-flavour PDF/masses, and available measured first/continuation settings are checked. Event-level/distribution validation is separate. Stock nfmax5 coupling running is retained.",
+  "no_analysis_cuts_requested": true,
+  "no_generation_cuts": true,
+  "passed": true,
+  "pdf": {
+    "Flavors": "[-4, -3, -2, -1, 21, 1, 2, 3, 4]",
+    "LHAPDF_ID": 334700,
+    "NumFlavors": "4",
+    "alpha_s_Q": {
+      "4.92": 0.21265854620192798,
+      "91.1876": 0.11261770402106505,
+      "91.188": 0.11261762576566925
+    },
+    "has_bottom": false,
+    "has_charm": true,
+    "member": 0,
+    "metadata_AlphaS_MZ": "0.2126584",
+    "metadata_reference_MZ": "4.9199901e+00",
+    "name": "NNPDF40_nlo_as_01180_nf_4",
+    "probe_output": "4.9199999999999999 0.21265854620192798\n91.187600000000003 0.11261770402106505\n91.188000000000002 0.11261762576566925\n0 1\n",
+    "probe_source": "#include \"LHAPDF/LHAPDF.h\"\n#include <iomanip>\n#include <iostream>\nint main(){LHAPDF::setVerbosity(0);auto p=LHAPDF::mkPDF(\"NNPDF40_nlo_as_01180_nf_4\",0);std::cout<<std::setprecision(17);for(double q:{4.92,91.1876,91.188})std::cout<<q<<\" \"<<p->alphasQ(q)<<\"\\n\";std::cout<<p->hasFlavor(5)<<\" \"<<p->hasFlavor(4)<<\"\\n\";delete p;}\n",
+    "reference_note": "The grid MZ/AlphaS_MZ entries specify its low-scale reference anchor; actual alpha_s at physical MZ comes from alphasQ."
+  },
+  "run": "run_1M_wbb4fs_nocuts",
+  "stock_shower": {
+    "alphaSnfmax": 5,
+    "caveat": "Massive-bottom nf4 hard/PDF calculation and four physical incoming/splitting flavours. Unmodified stock Pythia retains nfmax5 coupling/trial running; this is not the historical patched fully-nf4 shower profile.",
+    "continuation_alpha_s_MZ": 0.118,
+    "continuation_alpha_s_order": 1,
+    "continuation_coupling_note": "Measured after stock Pythia initialization from the corrected RUN_PYTHIA8_2 pilot card. Hard PDF, first-step and continuation couplings are distinct intentional inputs.",
+    "continuation_particle_masses_GeV": {
+      "1": 0.0,
+      "2": 0.0,
+      "21": 0.0,
+      "23": 91.188,
+      "24": 80.41900244575616,
+      "3": 0.0,
+      "4": 0.0,
+      "5": 4.7,
+      "6": 173.0
+    },
+    "continuation_profile_audit": {
+      "bytes": 4208,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/validation/pilot_full_profile_audit.json",
+      "sha256": "3ddd0298f7433366406e5a77a2d7970aaa7668477f976753cc502ae666717e15"
+    },
+    "first_emission_alpha_s_MZ": 0.1365,
+    "first_emission_alpha_s_order": 1,
+    "required_nGluonToQuark": 4,
+    "required_nQuarkIn": 4
+  }
+}

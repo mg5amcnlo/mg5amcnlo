@@ -1,0 +1,13 @@
+test_both_competing_beams_need_support (tests.unit_tests.various.test_macnlops_pdf_support.TestBornPdfSupportDomain.test_both_competing_beams_need_support) ... ok
+test_colorless_and_inactive_flavours_do_not_query_hadron_pdfs (tests.unit_tests.various.test_macnlops_pdf_support.TestBornPdfSupportDomain.test_colorless_and_inactive_flavours_do_not_query_hadron_pdfs) ... ok
+test_nonfinite_second_pdf_is_fatal_even_after_a_zero_first_pdf (tests.unit_tests.various.test_macnlops_pdf_support.TestBornPdfSupportDomain.test_nonfinite_second_pdf_is_fatal_even_after_a_zero_first_pdf) ... ok
+test_positive_values_are_not_replaced_by_an_artificial_floor (tests.unit_tests.various.test_macnlops_pdf_support.TestBornPdfSupportDomain.test_positive_values_are_not_replaced_by_an_artificial_floor) ... ok
+test_default_v4_retains_both_s_and_h_using_either_profile_beam (tests.unit_tests.various.test_macnlops_pdf_support.TestPairedBornPdfSupportNative.test_default_v4_retains_both_s_and_h_using_either_profile_beam) ... ok
+test_exact_four_flavour_pdf_failure_and_nearby_positive_support (tests.unit_tests.various.test_macnlops_pdf_support.TestPairedBornPdfSupportNative.test_exact_four_flavour_pdf_failure_and_nearby_positive_support) ... ok
+test_legacy_v2_v3_do_not_acquire_the_new_v4_support_rule (tests.unit_tests.various.test_macnlops_pdf_support.TestPairedBornPdfSupportNative.test_legacy_v2_v3_do_not_acquire_the_new_v4_support_rule) ... ok
+test_negative_s_is_preserved_in_the_same_no_transfer_domain (tests.unit_tests.various.test_macnlops_pdf_support.TestPairedBornPdfSupportNative.test_negative_s_is_preserved_in_the_same_no_transfer_domain) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 16.478s
+
+OK

@@ -1,0 +1,22 @@
+{
+  "first_5293_output_prefix_byte_identical": true,
+  "source_events": 9973,
+  "failing_event_one_based": 5294,
+  "new_rule": "pdf_support_no_transfer",
+  "new_keep": 1,
+  "unsupported_S": 1,
+  "unsupported_H": 0,
+  "output_complete": true,
+  "old_prefix_sha256": "4b984b2515a1e84e879b4749a503ff2c89da3f62141a1e32390b33ee4a481c14",
+  "same_seed": 4020127,
+  "all_9973_physical_records_and_source_packets_byte_identical_to_endpoint_control": true,
+  "all_9972_other_decisions_byte_identical_to_old_source_control": true,
+  "different_decisions_one_based": [
+    5294
+  ],
+  "source_delta_profiles_on_all_ordinary_decisions_unchanged": true,
+  "endpoint_control_diagnostic_only": true,
+  "endpoint_control_manifest": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnostics/pdf_ratio/endpoint_control/manifest.json",
+  "endpoint_control_sha256": "670a98f95fd09c979fc2a7bed9ca0ed3d1946a9b0e9069f54ddfc92441e986f2",
+  "source_delta_generation_or_pythia_changes": false
+}

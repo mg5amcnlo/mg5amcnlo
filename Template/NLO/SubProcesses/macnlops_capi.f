@@ -42,7 +42,9 @@ c Legacy auxiliary-winner mode 2 is incompatible with this generator.
       use, intrinsic :: iso_c_binding, only: c_int,c_double
       use weight_lines, only: macnlops_sudakov_enabled,
      $     macnlops_sudakov_requested_pt,macnlops_sudakov_ready,
-     $     macnlops_sudakov_ngluons,macnlops_sudakov_gluons
+     $     macnlops_sudakov_ngluons,macnlops_sudakov_gluons,
+     $     macnlops_born_scale_ready,macnlops_born_scale_coupling,
+     $     macnlops_born_scale_pdf
       implicit none
       integer(c_int), value :: enabled
       real(c_double), value :: pt
@@ -51,6 +53,24 @@ c Legacy auxiliary-winner mode 2 is incompatible with this generator.
       macnlops_sudakov_ready=.false.
       macnlops_sudakov_ngluons=0
       macnlops_sudakov_gluons=0d0
+      macnlops_born_scale_ready=.false.
+      macnlops_born_scale_coupling=1d0
+      macnlops_born_scale_pdf=1d0
+      end
+
+
+      subroutine macnlops_c_born_scale_factor(ready,coupling,pdf)
+     $     bind(C,name='macnlops_c_born_scale_factor')
+c Exact selected-flow scalar Born ratio and canonical hard luminosity.
+      use, intrinsic :: iso_c_binding, only: c_int,c_double
+      use weight_lines, only: macnlops_born_scale_ready,
+     $     macnlops_born_scale_coupling,macnlops_born_scale_pdf
+      implicit none
+      integer(c_int) ready
+      real(c_double) coupling,pdf
+      ready=merge(1,0,macnlops_born_scale_ready)
+      coupling=macnlops_born_scale_coupling
+      pdf=macnlops_born_scale_pdf
       end
 
 
@@ -141,7 +161,9 @@ c kernel was evaluated).
       use, intrinsic :: iso_c_binding, only: c_int,c_double
       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       use weight_lines, only: reset_delta_contexts,
-     $     macnlops_kernel_alphas,macnlops_kernel_q2fact
+     $     macnlops_kernel_alphas,macnlops_kernel_q2fact,
+     $     macnlops_born_scale_ready,macnlops_born_scale_coupling,
+     $     macnlops_born_scale_pdf
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
@@ -159,6 +181,9 @@ c kernel was evaluated).
       k=0d0
       macnlops_kernel_alphas=0d0
       macnlops_kernel_q2fact=0d0
+      macnlops_born_scale_ready=.false.
+      macnlops_born_scale_coupling=1d0
+      macnlops_born_scale_pdf=1d0
       if(owner.ge.1.and.owner.le.fks_configs.and.
      $     all(ieee_is_finite(lab))) then
          call macnlops_component_density(owner,ids,lab,config,graph,

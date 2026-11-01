@@ -1,0 +1,570 @@
+{
+  "all_negative_H_targeted_reference": {
+    "bytes": 921,
+    "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_bound_all.json",
+    "sha256": "75e733cb334e147e7e3f016a488c37a3e2b7328e5c1f721688ef40e0404c2904"
+  },
+  "code_files": {
+    "check_Wbb_prior.py": "e07539518c8e03705c3de65623d4b05deb6e021fba0037cb2a9155136bef1856",
+    "check_heft_factor.py": "ff94e2d4c07123203bbd2e489b98cd82d864c778b1f073b2bf4df6fbfb493eed",
+    "check_raw.py": "9987fc4c86b17e181c3906654f583b03af35217334440e08d96f92edbf105eba",
+    "complete_input_links.py": "1ab6ebfb7539475cdc7c2af5db3d638cdccb263bb8787451f4d9ef3858972d0d",
+    "consolidate.py": "01882bec8bac0d6c7a036e33344fe8141e5945c977ced0e81feba1738c7f8192",
+    "control_heft_repeat.py": "5f744ae71714463efc1b2f9c0c63379ec3b73701dcaddb612446cfc5e0d71638",
+    "diagnose_heft_repeat.py": "b82e4889a022ee5430859eb5f064134494742236691914ee870a67267eecea29",
+    "direct/H_HEFT_diagnostic/driver_nog.f": "b96f3b859f2728f999d4119eaf538c3f20d23c78c1c7afdc23e63c56e268e426",
+    "direct/H_HEFT_diagnostic/reference_factor.cc": "0af36722572f113895a0cd681e5ac975d27d18322cfa8427238726a589463b34",
+    "direct_TT_noG/driver_macnlops.noG.f": "b96f3b859f2728f999d4119eaf538c3f20d23c78c1c7afdc23e63c56e268e426",
+    "direct_probe.cc": "94ee7aa264f3badbe6ad10332e13864a3d9d1b27091005dd19db4ed70889ac06",
+    "direct_probe_tt.cc": "2c68312dc79bc26c02bde8478a4e8aa9022e670b26d2e5a2d96e4fd14e6adfc3",
+    "independent_review/review_dy.py": "c30bfb0c4ea7373736b0698de7e77c35a99b68dc738bda1fb5790700cff05989",
+    "independent_review/review_raw.py": "0a093e8b6d00a65fba2f6e9968911c77812921a2f322b567977c73d916cd7a0d",
+    "prepare.py": "0f03720a255ddb52bcaed5cebf4e1b7e77f25b0e63c4e77a1c134531162d637f",
+    "run_direct.py": "20123a0ee60b5ebcb7063f5111110bac4455462072e356b6b20c9078f5e5f9e3",
+    "run_direct_tt.py": "da1d20884672746bd3703b87d182369248c2b9a94f5377e31ebafc8791ded981",
+    "run_direct_tt_nog.py": "c4744ceed26bbea9035b7de668ba3eb2e11129490696ed822214396cff52b590",
+    "run_raw_stage.py": "332784e15f272c44fe9ffccd05647b4fab7a61389e2e83f0505d5ecef82251d3"
+  },
+  "created_utc": "2026-11-01T10:10:01.798732+00:00",
+  "direct_invariance": {
+    "HEFT_first_RDK_alphaK_A_bit_exact_to_noG_control": true,
+    "TT_first_RDK_actual_muF_A_bit_exact_to_noG_control": true,
+    "first_RDK_alphaK_sourceA_bit_exact_to_archived_all1700": true,
+    "repeat_noise": "Strict repeated-request bit equality is not promised: pre-existing nativeBorn cache rescaling causes<=3.23e-15 RDK and<=1.10e-15 coupling-ratio differences. No-G controls preserve the samefirst densities and reproduce repeated-request roundoff."
+  },
+  "evidence": {
+    "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/TT_repeat_classification.json": {
+      "bytes": 1112,
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/TT_repeat_classification.json",
+      "sha256": "23847b4beee3717e2482652838ac392c137e2e3675e7c0c591375da4fc31b893"
+    },
+    "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/Wbb_prior_factor_comparison.json": {
+      "bytes": 1042,
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/Wbb_prior_factor_comparison.json",
+      "sha256": "7d6d8c5402eb21cb22c576e9400dcd3b3139683ceb74a8dbaaabe269d05d125b"
+    },
+    "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/baseline_manifest.json": {
+      "bytes": 773460,
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/baseline_manifest.json",
+      "sha256": "aec61e4a3ca87564ca6fc6fab599c0daf30f00fbe4bc4d009d6d2780d3e53c63"
+    },
+    "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/baseline_raw.json": {
+      "bytes": 86489,
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/baseline_raw.json",
+      "sha256": "59c2d6a43d85ecff68731cde3436cd607b8e5b8bd6407cbdb1b3632c39abd97e"
+    },
+    "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/corrected_raw.json": {
+      "bytes": 88913,
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/corrected_raw.json",
+      "sha256": "d509ef15ee5086c28e5cb8b545ea422264b31826260f0d89cd26d11b06e58e0d"
+    },
+    "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/direct/DY/summary.json": {
+      "bytes": 334672,
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/direct/DY/summary.json",
+      "sha256": "e861abcd5bd55637515c6ee427d83209c3f5b2376ed49dbc7c5fa5acec0ee72d"
+    },
+    "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/direct/H_HEFT_diagnostic/evidence_hashes.json": {
+      "bytes": 2184,
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/direct/H_HEFT_diagnostic/evidence_hashes.json",
+      "sha256": "a09dcfccc436e338ea18368340d2ee17918458bb937a465155f5d5cd64ca086d"
+    },
+    "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/direct/H_HEFT_diagnostic/summary.json": {
+      "bytes": 2260,
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/direct/H_HEFT_diagnostic/summary.json",
+      "sha256": "88daa1087e5e66ae2de7b700fb300e951f2e3801d1289af696392f7f011badbf"
+    },
+    "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/direct_TT_instrumented_results.json": {
+      "bytes": 811118,
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/direct_TT_instrumented_results.json",
+      "sha256": "1aeca1d94c09423df3227080115a7f2947495fa8aec55006fd775d16d1848609"
+    },
+    "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/direct_TT_noG_results.json": {
+      "bytes": 779551,
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/direct_TT_noG_results.json",
+      "sha256": "4e4bc686ef17327c11af46975e98afdf4f4bdcd822741fad510f6197ce2cae12"
+    },
+    "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/independent_review/raw_review.json": {
+      "bytes": 35470,
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/independent_review/raw_review.json",
+      "sha256": "3dc04dfa852d107131fa033d19cc77fb28d63203b63e0833189c9c52fe7a5b19"
+    },
+    "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/raw_invariance.json": {
+      "bytes": 5973,
+      "path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/raw_invariance.json",
+      "sha256": "efe287693d3d2c5d5ebab3b5021188439a6230d1ab17b942177b6a499928bd08"
+    }
+  },
+  "frozen_ROOT_six_source_sha256": {
+    "MCatNLO/srcPythia8/MacNLOPSMatch.cc": "ec129d1eacfa27d7a4e0a442205847ba85a17751b7edcd263d97aeabb7acc39b",
+    "SubProcesses/driver_macnlops.f": "736cc3f224a51c5e99a66c9ab0a0a0ed5a576e8d36e25639df20280aeba9f71d",
+    "SubProcesses/macnlops_capi.f": "aea779e1fd9ac6f3811cbdaf4e9c1e443b57378327cb2fcc2b6930e948b49c52",
+    "SubProcesses/macnlops_evaluator.f": "38894be2bb09cc143c0f7995ceb678c60f82794e7fa14a189c67019448bfd849",
+    "SubProcesses/montecarlocounter.f": "ef6f4411adccfff9f633fcbabd6f72e28ccce7d106c1750c9e060c936cc7fc16",
+    "SubProcesses/weight_lines.f": "bddc733f75c6d2b7af8a7b4c03a2bc89436df546bcfeef94c6960f66d7c632bd"
+  },
+  "independent_G": {
+    "DY_Born_coupling_exactly_one": true,
+    "HEFT_effective_Born_and_hard_PDF": {
+      "H": 7,
+      "S": 314,
+      "compile_command": [
+        "g++",
+        "-O2",
+        "-shared",
+        "-fPIC",
+        "-I/nfs/home/rikkert/LHAPDF/include",
+        "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/direct/H_HEFT_diagnostic/reference_factor.cc",
+        "-L/nfs/home/rikkert/LHAPDF/lib",
+        "-Wl,-rpath,/nfs/home/rikkert/LHAPDF/lib",
+        "-lLHAPDF",
+        "-o",
+        "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/direct/H_HEFT_diagnostic/reference_factor.so"
+      ],
+      "expected": "Native HEFT GHGG proportional to G^2 implies Born |ME|^2 proportional to alpha_s^2; native dynamic Born H_T/2=125/2=62.5 GeV, including H inverse Born. Separate LHAPDF hard factors and independent incoming-x projection.",
+      "library_sha256": "35203dfab4e20b044fe6e669b8170f5905f56c43c6dad6e762ceff86158a283c",
+      "max_alpha_real_relative_error": 7.12430114901963e-13,
+      "max_combined_relative_error": 3.4372504842394846e-13,
+      "max_coupling_relative_error": 6.661338147750939e-16,
+      "max_pdf_relative_error": 3.4305891460917337e-13,
+      "points": 321
+    },
+    "Wbb_prior_independent_reference": {
+      "compared_S_points": 5616,
+      "factor_order": [
+        "coupling",
+        "Born_PDF",
+        "combined"
+      ],
+      "max_relative_difference_per_factor": [
+        3.56231266707141e-10,
+        7.791101097609499e-12,
+        3.5358982408695283e-10
+      ],
+      "passed": true,
+      "reference": "Original independentWbb diagnosis computedBorn alpha_s\u00b2 andhardPDF ratios atnativeBornHT/2 versusrealHT/2; currentG usesnative selected-flow Born getter.",
+      "reference_files": [
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/S_born_scale_factors.npz",
+        "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/analysis/decision_metadata.npz"
+      ],
+      "tolerance_note": "Prior independent hard-scale reconstruction already showed up to4.2e-10 relative alpha(realHT)/alphaK disagreement; a squared coupling ratio can amplify this below1e-9. Actual canonicalnativeG difference is retained explicitly, not labelled bit-exact.",
+      "tolerance_relative": 1e-09,
+      "unmatched_unique_raw_points": 0
+    },
+    "unit_fixture_reference": "Root compiledFortran9casefixture separately validatesorders0/1/2,HEFT-like higherpowers,mixedcustomcpower,commonactualmuF,bareee,canonicalboost/fullrestore."
+  },
+  "limitations": [
+    "Controlled event prefixes and cached native density points establish implementation/generalization and preservation, not new1M statistical transfer closure or full-shower validation.",
+    "Local signedS/B density-shape approximation remains separate and is not changed bythisfix.",
+    "No claim thatthe nativefinite emissionkernel or ISR envelope diagnostics are corrected.",
+    "HistoricalDY/HEFT/tt rawGF sources werecleaned; directchecks usefrozen matchedendpoints/hardBorn packets. Currentdependency modules were refreshedonlyinisolatedcopies and exactarchived first densities were required."
+  ],
+  "passed": true,
+  "protected_charm_zero_PDF_point": {
+    "after": {
+      "accepted": "1",
+      "born_coupling_factor": "1.0066181224385702",
+      "born_pdf_factor": "0.99435514235980671",
+      "born_scale_factor": "1.0009359064393657",
+      "candidates": "1",
+      "d": "108953999822.92107",
+      "k": "158346523876.98438",
+      "keep": "1",
+      "marking": "1",
+      "matching_scale": "1.697056274847714",
+      "orientation": "native",
+      "pt": "1.7028105905461708",
+      "r": "108389747741.06812",
+      "rule": "pdf_support_no_transfer",
+      "sector": "5",
+      "version": "1"
+    },
+    "before": {
+      "accepted": "1",
+      "candidates": "1",
+      "d": "108953999822.92107",
+      "k": "158346523876.98438",
+      "keep": "1",
+      "marking": "1",
+      "matching_scale": "1.697056274847714",
+      "orientation": "native",
+      "pt": "1.7028105905461708",
+      "r": "108389747741.06812",
+      "rule": "pdf_support_no_transfer",
+      "sector": "5",
+      "version": "1"
+    },
+    "physical_event_bytes_unchanged": true
+  },
+  "raw_invariance": {
+    "Wj_density_roundoff_max_relative": {
+      "d": 6.42544031262575e-16,
+      "k": 6.029865254939535e-16,
+      "marking": 4.1875413257913127e-16,
+      "r": 3.9732595274650274e-16,
+      "total_k": 4.159149685587629e-16
+    },
+    "fixed_ee_G_equals_one_and_all_decisions_bit_exact": true,
+    "per_process": [
+      {
+        "G_quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "changes": {},
+        "coupling_quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "events": 1163,
+        "factors_recorded": 586,
+        "fixed_ee_G_and_decisions_exact": true,
+        "invariant_failures": {},
+        "kernel_scale_equals_old_times_G_max_relative_difference": 0.0,
+        "pdf_quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "process": "EE2",
+        "protected_pdf_point": null,
+        "rules": {
+          "exhausted": 1,
+          "h_removal": 38,
+          "no_transfer": 562,
+          "positive_h": 15,
+          "s_veto": 547
+        }
+      },
+      {
+        "G_quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "changes": {},
+        "coupling_quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "events": 853,
+        "factors_recorded": 616,
+        "fixed_ee_G_and_decisions_exact": true,
+        "invariant_failures": {},
+        "kernel_scale_equals_old_times_G_max_relative_difference": 0.0,
+        "pdf_quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "process": "EE3",
+        "protected_pdf_point": null,
+        "rules": {
+          "h_removal": 49,
+          "no_transfer": 184,
+          "positive_h": 66,
+          "s_veto": 554
+        }
+      },
+      {
+        "G_quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "changes": {},
+        "coupling_quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "events": 2223,
+        "factors_recorded": 1476,
+        "fixed_ee_G_and_decisions_exact": true,
+        "invariant_failures": {},
+        "kernel_scale_equals_old_times_G_max_relative_difference": 0.0,
+        "pdf_quantiles": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "process": "EE4",
+        "protected_pdf_point": null,
+        "rules": {
+          "h_removal": 83,
+          "no_transfer": 480,
+          "positive_h": 308,
+          "s_veto": 1352
+        }
+      },
+      {
+        "G_quantiles": [
+          0.9852729929245372,
+          0.9947884518050968,
+          1.001979690329746,
+          1.0401704591619414,
+          1.0927678406204226
+        ],
+        "changes": {
+          "accepted": 5,
+          "keep": 1645
+        },
+        "coupling_quantiles": [
+          0.9707995664770901,
+          0.9935595177064559,
+          1.0100630597248568,
+          1.062514820045124,
+          1.0910136368011079
+        ],
+        "events": 3600,
+        "factors_recorded": 1820,
+        "fixed_ee_G_and_decisions_exact": null,
+        "invariant_failures": {
+          "d": 18,
+          "k": 15,
+          "marking": 19,
+          "r": 8,
+          "total_k": 18
+        },
+        "kernel_scale_equals_old_times_G_max_relative_difference": 0.0,
+        "pdf_quantiles": [
+          0.9235234520581818,
+          0.9557120893183811,
+          0.993500510019222,
+          1.007538512377421,
+          1.0321461648579258
+        ],
+        "process": "Wj",
+        "protected_pdf_point": null,
+        "rules": {
+          "h_removal": 175,
+          "no_transfer": 983,
+          "positive_h": 797,
+          "s_veto": 1645
+        }
+      },
+      {
+        "G_quantiles": [
+          0.9532380986785058,
+          0.9969315948313034,
+          1.016088054645277,
+          1.1216330523604203,
+          1.3123547554908914
+        ],
+        "changes": {
+          "accepted": 11,
+          "keep": 5614
+        },
+        "coupling_quantiles": [
+          0.9307194242486165,
+          0.9956407701814938,
+          1.0278550081614184,
+          1.1531356952591403,
+          1.2499292383318037
+        ],
+        "events": 11973,
+        "factors_recorded": 5904,
+        "fixed_ee_G_and_decisions_exact": null,
+        "invariant_failures": {},
+        "kernel_scale_equals_old_times_G_max_relative_difference": 0.0,
+        "pdf_quantiles": [
+          0.8670068744984959,
+          0.9383399501100941,
+          0.9905889368033758,
+          1.007635250969983,
+          1.093223821643533
+        ],
+        "process": "Wbb",
+        "protected_pdf_point": {
+          "after": {
+            "accepted": "1",
+            "born_coupling_factor": "1.0066181224385702",
+            "born_pdf_factor": "0.99435514235980671",
+            "born_scale_factor": "1.0009359064393657",
+            "candidates": "1",
+            "d": "108953999822.92107",
+            "k": "158346523876.98438",
+            "keep": "1",
+            "marking": "1",
+            "matching_scale": "1.697056274847714",
+            "orientation": "native",
+            "pt": "1.7028105905461708",
+            "r": "108389747741.06812",
+            "rule": "pdf_support_no_transfer",
+            "sector": "5",
+            "version": "1"
+          },
+          "before": {
+            "accepted": "1",
+            "candidates": "1",
+            "d": "108953999822.92107",
+            "k": "158346523876.98438",
+            "keep": "1",
+            "marking": "1",
+            "matching_scale": "1.697056274847714",
+            "orientation": "native",
+            "pt": "1.7028105905461708",
+            "r": "108389747741.06812",
+            "rule": "pdf_support_no_transfer",
+            "sector": "5",
+            "version": "1"
+          },
+          "physical_event_bytes_unchanged": true
+        },
+        "rules": {
+          "below_matching_scale": 2,
+          "h_removal": 275,
+          "no_transfer": 3276,
+          "pdf_support_no_transfer": 1,
+          "positive_h": 2803,
+          "s_veto": 5616
+        }
+      }
+    ],
+    "physical_event_payload_source_packets_starting_scales_caps_bit_exact": true,
+    "qualification": "OnlyWj R/D/K,totalK,marking show native-cache floating rescaling noise<=6.43e-16. Strict string-check failure is retained inraw_invariance.json; qualified numerical invariance passes. SourceA,CDF andphysicalpayloads areexact.",
+    "source_A_shower_marginal_CDF_and_emission_factors_bit_exact": true
+  },
+  "scope": {
+    "direct_eligible_points": 1700,
+    "direct_point_counts": {
+      "DY": 441,
+      "H_HEFT": 321,
+      "TTbar": 938
+    },
+    "fresh_source_generation": false,
+    "new_1M_or_full_shower_run": false,
+    "processes": [
+      "DY",
+      "H_HEFT",
+      "TTbar",
+      "EE2",
+      "EE3",
+      "EE4",
+      "Wj",
+      "Wbb"
+    ],
+    "raw_jobs": 41,
+    "raw_paired_events": 19812
+  },
+  "source_checks": [
+    {
+      "all_five_Fortran_sources_and_included_native_CPP_match_frozen_ROOT": true,
+      "final_provider_executables": {
+        "SubProcesses/P0_ddx_emep/macnlops_onestep": "96514e6bfc61bc0efdc82f533cba91a896aea2faf3cf1a5d9564009a6cb66a26",
+        "SubProcesses/P0_dxd_emep/macnlops_onestep": "7e6e8115ea965d06f67baf2dc599d16ae223073c01286cb1d795a4cb6c555524",
+        "SubProcesses/P0_uux_emep/macnlops_onestep": "4db853078f6306de50e433b127930b046d13aa77be9770c17c290a937f459081",
+        "SubProcesses/P0_uxu_emep/macnlops_onestep": "387722b1fe6b1c75f7d814d97c04bf7dd537f82da57b590bef9fee814e08f00a"
+      },
+      "original_generation_sources_unchanged": true,
+      "process": "DY",
+      "selected_source_and_reference_files_unchanged": true
+    },
+    {
+      "all_five_Fortran_sources_and_included_native_CPP_match_frozen_ROOT": true,
+      "final_provider_executables": {
+        "SubProcesses/P0_gg_x0_no_t/macnlops_onestep": "3e8a77395c880957985d1d80f8ae407c47e0cf2427f7e8769c91486fb69c94fd"
+      },
+      "original_generation_sources_unchanged": true,
+      "process": "H_HEFT",
+      "selected_source_and_reference_files_unchanged": true
+    },
+    {
+      "all_five_Fortran_sources_and_included_native_CPP_match_frozen_ROOT": true,
+      "final_provider_executables": {
+        "SubProcesses/P0_gg_ttx/macnlops_onestep": "c2449d452687ba70219ba3b5880ce9bb886538e1041a2dc2ede6f416711bab07",
+        "SubProcesses/P0_uux_ttx/macnlops_onestep": "536ee063f592fd9971a196c3e5c437cd8e63b0eb804be6dd75ce2a263fcc4008",
+        "SubProcesses/P0_uxu_ttx/macnlops_onestep": "2d25713dbb5af0e30ae95c67df13e2b08ba12e2126c9fcfea542d43ad938ff8c"
+      },
+      "original_generation_sources_unchanged": true,
+      "process": "TTbar",
+      "selected_source_and_reference_files_unchanged": true
+    },
+    {
+      "all_five_Fortran_sources_and_included_native_CPP_match_frozen_ROOT": true,
+      "final_provider_executables": {
+        "SubProcesses/P0_epem_ddx/macnlops_onestep": "47c7ec3f5c10fd64295ea64b1a4be5b1481d4770ec2266ddb728baf179d789c0",
+        "SubProcesses/P0_epem_uux/macnlops_onestep": "331193d434e20bdcaea91dc8f2499ed3d4b00ad3e8edea2b2b1d95d2b4c50bc3"
+      },
+      "original_generation_sources_unchanged": true,
+      "process": "EE2",
+      "selected_source_and_reference_files_unchanged": true
+    },
+    {
+      "all_five_Fortran_sources_and_included_native_CPP_match_frozen_ROOT": true,
+      "final_provider_executables": {
+        "SubProcesses/P0_epem_ddxg/macnlops_onestep": "fd074f5a2affb1448deb050abbe35b22cfc10824308aead074b61bcb01ae8226",
+        "SubProcesses/P0_epem_uuxg/macnlops_onestep": "bd223b9a850315244b702359fc8fcd77dbf3d9e549b5c8e4228262dee39146d7"
+      },
+      "original_generation_sources_unchanged": true,
+      "process": "EE3",
+      "selected_source_and_reference_files_unchanged": true
+    },
+    {
+      "all_five_Fortran_sources_and_included_native_CPP_match_frozen_ROOT": true,
+      "final_provider_executables": {
+        "SubProcesses/P0_epem_cuuxcx/macnlops_onestep": "219583e130444835f6e4b02c422e48bd64ccc54e6d8318523b66668bcd235537",
+        "SubProcesses/P0_epem_dddxdx/macnlops_onestep": "b0d6c25ea5c7a595f39fab164b19313320812b4e3c6652684a53734d429eaaf8",
+        "SubProcesses/P0_epem_ddxgg/macnlops_onestep": "e368c3ecb05530f106cb6a722625c6fbb18298326bcc0158b4ce0c51ea695f1d",
+        "SubProcesses/P0_epem_sddxsx/macnlops_onestep": "099bf0322aae3102ada2f35268e8a0a4aa60e691c75ae758e4250a0106225333",
+        "SubProcesses/P0_epem_suuxsx/macnlops_onestep": "3931b237f6d029c5d656161bf803df0639561e0d2a7add271b54891ab986a7a4",
+        "SubProcesses/P0_epem_uddxux/macnlops_onestep": "05eddf2125ae0af112e9e374f310694805c29bcfa7f6f508aecc8e431b807ec8",
+        "SubProcesses/P0_epem_uuuxux/macnlops_onestep": "95656047637c79f8ad2681e3d2f7566c13875baac0414681cc595ad0e9387b5d",
+        "SubProcesses/P0_epem_uuxgg/macnlops_onestep": "1c93703e90aa701d7e245b8d72041d84cafad89deef18ae0caef37920d87152a"
+      },
+      "original_generation_sources_unchanged": true,
+      "process": "EE4",
+      "selected_source_and_reference_files_unchanged": true
+    },
+    {
+      "all_five_Fortran_sources_and_included_native_CPP_match_frozen_ROOT": true,
+      "final_provider_executables": {
+        "SubProcesses/P0_dxg_wpux/macnlops_onestep": "c45c14ba390647f9838f0fffa98f8882217333fccbb992c32a95ceea57b93569",
+        "SubProcesses/P0_dxu_wpg/macnlops_onestep": "926fab65bc4df81d90ca81f24f4814fcf890b2fc72a2747a5aed1da61d37224c",
+        "SubProcesses/P0_gdx_wpux/macnlops_onestep": "d432e870a7a0dfd7f84f31510d15b7efa43823202e605fe8efb0e2445d4981f4",
+        "SubProcesses/P0_gu_wpd/macnlops_onestep": "5f2b3e2d9417d0dfd0066286f926a6e83b491615bf3dbb07c6f2557c76a3c9ff",
+        "SubProcesses/P0_udx_wpg/macnlops_onestep": "1a8a051a6e838df6707bf62b11366231977626d69b7cc23f5d7b42897ed14d90",
+        "SubProcesses/P0_ug_wpd/macnlops_onestep": "90a7dd3117cfae6dbcb0b753ba7e9c21c819eb375600eb3b063c130497400115"
+      },
+      "original_generation_sources_unchanged": true,
+      "process": "Wj",
+      "selected_source_and_reference_files_unchanged": true
+    },
+    {
+      "all_five_Fortran_sources_and_included_native_CPP_match_frozen_ROOT": true,
+      "final_provider_executables": {
+        "SubProcesses/P0_dxu_bbxwp/macnlops_onestep": "2f3ffa2e535a0cb384e7b46f383b6ac23282f1c6cca61ef133dd749a9354d362",
+        "SubProcesses/P0_udx_bbxwp/macnlops_onestep": "b6f8f06ff7ff604587739bdeada89f3eeb869c14eb9fec3e859e01ab4a175e2a"
+      },
+      "original_generation_sources_unchanged": true,
+      "process": "Wbb",
+      "selected_source_and_reference_files_unchanged": true
+    }
+  ],
+  "stock_Pythia_library": {
+    "bytes": 12796904,
+    "path": "/nfs/home/rikkert/Downloads/pythia8/lib/libpythia8.so",
+    "sha256": "35203dfab4e20b044fe6e669b8170f5905f56c43c6dad6e762ceff86158a283c"
+  },
+  "stock_Pythia_unchanged": true
+}

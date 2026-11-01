@@ -1,0 +1,81 @@
+{
+  "created_utc": "2026-11-01T10:18:47.373218+00:00",
+  "passed": true,
+  "scope": "Behavior-preserving cleanup after the general Born-scale implementation; original campaign records and source epochs remain frozen.",
+  "changes": [
+    "Share canonical Born/PDF support checks between S and H without changing precedence or early-return scales.",
+    "Replace an iteration-local two-element array by a scalar; remove unused include.",
+    "Index pending W+jet/Wbb validation and implementation records without deleting frozen evidence."
+  ],
+  "historical_snapshot_sha256": "3e30f997819679faf3bec0501959f9c035bdcc35677f2bd0fbb32b5e212830c7",
+  "before_source_sha256": {
+    "Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc": "ec129d1eacfa27d7a4e0a442205847ba85a17751b7edcd263d97aeabb7acc39b",
+    "Template/NLO/SubProcesses/montecarlocounter.f": "ef6f4411adccfff9f633fcbabd6f72e28ccce7d106c1750c9e060c936cc7fc16",
+    "Template/NLO/SubProcesses/driver_macnlops.f": "736cc3f224a51c5e99a66c9ab0a0a0ed5a576e8d36e25639df20280aeba9f71d",
+    "Template/NLO/SubProcesses/macnlops_capi.f": "aea779e1fd9ac6f3811cbdaf4e9c1e443b57378327cb2fcc2b6930e948b49c52",
+    "Template/NLO/SubProcesses/weight_lines.f": "bddc733f75c6d2b7af8a7b4c03a2bc89436df546bcfeef94c6960f66d7c632bd",
+    "madgraph/various/macnlops.py": "340975199b9e727bcb530a379a219851ce4428ebd339e780926545c132b2cf5f"
+  },
+  "after_source_sha256": {
+    "Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc": "52d5bcd5eb59a458c21af72488f1e164576fe341e67c757d3200d9fdfd826dd4",
+    "Template/NLO/SubProcesses/montecarlocounter.f": "2c3c7edf134d9fed2927be057c3d9aecc28ae18ae4cba40428229b452b81027a",
+    "Template/NLO/SubProcesses/driver_macnlops.f": "736cc3f224a51c5e99a66c9ab0a0a0ed5a576e8d36e25639df20280aeba9f71d",
+    "Template/NLO/SubProcesses/macnlops_capi.f": "aea779e1fd9ac6f3811cbdaf4e9c1e443b57378327cb2fcc2b6930e948b49c52",
+    "Template/NLO/SubProcesses/weight_lines.f": "bddc733f75c6d2b7af8a7b4c03a2bc89436df546bcfeef94c6960f66d7c632bd",
+    "madgraph/various/macnlops.py": "340975199b9e727bcb530a379a219851ce4428ebd339e780926545c132b2cf5f"
+  },
+  "tests": 138,
+  "test_skips": 0,
+  "regression_exit_code": 0,
+  "native_parity_scenarios": 11,
+  "byte_identical_native_event_records": 140,
+  "native_provider_compile_objects": 4,
+  "native_provider_compile_warnings": 0,
+  "external_cleanup_path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/cleanup",
+  "files": {
+    "cleanup/README.md": {
+      "bytes": 815,
+      "sha256": "2ad6bcda36a379621f351ffc91e5283af7a122809684501b38ccd08022e4522e"
+    },
+    "cleanup/before.json": {
+      "bytes": 782,
+      "sha256": "12b9f58b55d7c396edd5da3c6eedbe4ac9fc375ff253258033670233d0f5f5f7"
+    },
+    "cleanup/changes.patch": {
+      "bytes": 3738,
+      "sha256": "8aa73a2f8c054a1a3701ca0d05606ce5ca567e3b70e0e475f810c3bf616135bd"
+    },
+    "cleanup/native_compile.json": {
+      "bytes": 4376,
+      "sha256": "81068bd2bc5b1ad54accf0ce72004f0e8f4ebd99c5ab883e5237d3e540eb229e"
+    },
+    "cleanup/native_compile.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "cleanup/parity.json": {
+      "bytes": 4918,
+      "sha256": "84680ee36d8819ac5f2a37ad53b5ac04d673a7fc6e50dfa38116a6b706b5d08a"
+    },
+    "cleanup/parity_commands.json": {
+      "bytes": 18398,
+      "sha256": "48a02e4f54d9b567534a2b67037602aa3b3f51a0eeff7b65d8750ea834e3a057"
+    },
+    "cleanup/regressions.json": {
+      "bytes": 2021,
+      "sha256": "c0277858638086aaa6e2b4b4e8763dbda77d9d3ea9aaf797dc8f6cd26685f7bd"
+    },
+    "cleanup/regressions.log": {
+      "bytes": 34510,
+      "sha256": "239bb75968aa9de4e7117ce0db5bc7d6ab7b7fe724d1dc9444f8fa019880831e"
+    },
+    "cleanup/run_parity.py": {
+      "bytes": 6988,
+      "sha256": "7edd20c6f285db71f409f13f081253e7fe6590715297b8b6b1b1ea53c81755ab"
+    },
+    "cleanup/run_regressions.py": {
+      "bytes": 1735,
+      "sha256": "58de4ec2ccca0e152c0d33253d3c8b7e12dd821c2bd791fd0b1a092cfebd79a4"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "command": [
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/extract_inverse_born",
+    "--input",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnostics/pdf_ratio/before/failed_shard/events.lhe",
+    "--output",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/inverse_replay.lhe",
+    "--summary",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/inverse_replay.json",
+    "--routes",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/macnlops_routes.dat",
+    "--settings",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Cards/macnlops_shower.cmnd",
+    "--pdf",
+    "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+    "--seed",
+    "4020127",
+    "--res",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_26/res_1"
+  ],
+  "returncode": 0,
+  "S_points": 4676,
+  "H_points": 223,
+  "max_S_Born_vs_input_relative_mu_error": 4.22939128164046e-10,
+  "output_byte_identical": true,
+  "notes": "Isolated read-only p_born getter after density call, original production objects untouched."
+}

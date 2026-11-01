@@ -1,0 +1,12 @@
+{
+  "base_git_head": "795c54bbf45b16d3355df03a96e78e1d296ea59d",
+  "branch": "MCcntRefactor_Sfun_MacNLOPS",
+  "matching_changes": "Symmetric default-v4 no-transfer domain for nonpositive native canonical Born PDFs; source generation unchanged.",
+  "files": {
+    "Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc": "0e2bbd496540ed2692cb0d2665544aba8380add65771776a9baaaec7312dc7e1",
+    "docs/macnlops_derivation.md": "45ff35a9e15f316c1e43dab510f63483ed9fedf0c65d1bfb43d58787e1f12d69",
+    "tests/unit_tests/various/test_macnlops_pdf_support.py": "10422af2d8b44f8345d2e8131dd155a2336644f3bbc2e7ef3becafabac1922c9"
+  },
+  "pythia_source_or_library_changed": false,
+  "commit_or_push_requested_for_this_validation": false
+}

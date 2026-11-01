@@ -1,0 +1,22 @@
+{
+  "compared_S_points": 5616,
+  "factor_order": [
+    "coupling",
+    "Born_PDF",
+    "combined"
+  ],
+  "max_relative_difference_per_factor": [
+    3.56231266707141e-10,
+    7.791101097609499e-12,
+    3.5358982408695283e-10
+  ],
+  "passed": true,
+  "reference": "Original independentWbb diagnosis computedBorn alpha_s\u00b2 andhardPDF ratios atnativeBornHT/2 versusrealHT/2; currentG usesnative selected-flow Born getter.",
+  "reference_files": [
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/S_born_scale_factors.npz",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/analysis/decision_metadata.npz"
+  ],
+  "tolerance_note": "Prior independent hard-scale reconstruction already showed up to4.2e-10 relative alpha(realHT)/alphaK disagreement; a squared coupling ratio can amplify this below1e-9. Actual canonicalnativeG difference is retained explicitly, not labelled bit-exact.",
+  "tolerance_relative": 1e-09,
+  "unmatched_unique_raw_points": 0
+}

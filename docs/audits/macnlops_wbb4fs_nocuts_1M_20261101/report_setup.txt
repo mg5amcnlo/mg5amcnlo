@@ -1,0 +1,34 @@
+W+bbbar four-flavour, no-cut validation, 1 November 2026
+
+Fresh process: p p > w+ b b~ QCD=2 QED=1 [QCD], loop_sm, 13 TeV.
+Both proton multiparticle definitions contain only g,u,d,s,c and antiparticles.
+Bottom mass 4.7 GeV, stable W+. All run-card generation cuts disabled,
+empty custom-cut list and PDG-cut dictionaries. No analysis acceptance cuts.
+PDF: NNPDF40_nlo_as_01180_nf_4 member0, LHAPDF334700. Native measured
+PDF alpha_s(91.1876GeV)=0.11261770402106505; hard code uses the PDF coupling.
+Hard scales: dynamical_scale_choice3 (H_T/2), no scale/PDF reweighting.
+
+MC@NLO-Delta native-IR/common-continuation-scale source, current implementation.
+First emission uses the unchanged shipped source Sudakov convention,
+alpha_s(MZ)=0.1365, one loop, CMWoff. Continuation alpha_s(MZ)=0.118,
+one loop, CMWoff, local recoil. Both shower stages allow four incoming
+and gluon-splitting flavours. Particle masses match the hard model.
+Stock Pythia8.318 coupling/trial running retains alphaSnfmax5; this is a
+four-flavour hard/PDF/species validation, not a patched nf4-running shower.
+Pythia source and installed library are unchanged. QCD cutoff0.5GeV;
+MPI, hadronization, primordial kT, QED showering and W/top/Higgs decays off.
+
+All source events retain original nonzero nominal signed weights during
+full shower. The four diagnostic weights isolate source, S veto only,
+H removal only and combined matching. No survivor, fiducial or plotted-range
+normalization. Primary observable pT(W+b+bbar) uses bare stable massive
+bottoms. Jet controls use anti-kT R0.5 with no jet-pT/rapidity threshold.
+Plot/range bins are diagnostics, not acceptance cuts.
+
+500-event preflight: first matching and corrected full shower pass. The
+initial full-shower default card allowed five splitting flavours and did
+not match model masses; its failed analysis runs were archived separately.
+Explicit nf4 species and hard-model mass overrides were applied before
+production, without changing any Pythia source/library. The corrected
+pilot preserves all500 first/full diagnostic weights and passes34000
+independent HwU-bin/weight comparisons. Pilot native scale probes also pass.

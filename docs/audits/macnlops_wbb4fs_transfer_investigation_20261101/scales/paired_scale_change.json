@@ -1,0 +1,27 @@
+{
+  "method": "Expected transfers, same original1M endpoints; paired50contiguous20k sourcechunks. Full all24003-H replay H_bound_all.json proves H bound unchanged by the same G.",
+  "results": [
+    {
+      "lo": 5,
+      "hi": 20,
+      "ratio_before": 0.9111399514884849,
+      "ratio_after": 0.9328772889385116,
+      "paired_ratio_change": 0.021737337450026706,
+      "paired_ratio_change_error": 0.00018813933012152122,
+      "net_improvement_pb": 0.23264855372081783,
+      "net_improvement_error_pb": 0.0009052836156448524,
+      "fraction_deficit_explained": 0.2622257167621511
+    },
+    {
+      "lo": 0,
+      "hi": null,
+      "ratio_before": 0.8971762313761312,
+      "ratio_after": 0.9293796481989653,
+      "paired_ratio_change": 0.03220341682283412,
+      "paired_ratio_change_error": 0.0002616743354802441,
+      "net_improvement_pb": 0.5954090890463664,
+      "net_improvement_error_pb": 0.003066752769812183,
+      "fraction_deficit_explained": 0.33698865334257905
+    }
+  ]
+}

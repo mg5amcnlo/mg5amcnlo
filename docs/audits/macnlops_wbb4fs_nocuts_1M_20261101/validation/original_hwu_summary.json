@@ -1,0 +1,270 @@
+{
+  "scope": "Original complete HwU histograms; saved per-event streams were incomplete.",
+  "cuts": "none",
+  "range_GeV": [
+    5,
+    20
+  ],
+  "source_pb": 202.8764306,
+  "matched_pb": 202.08789029999997,
+  "S_pb": 9.074333300000006,
+  "H_pb": 8.285795200000006,
+  "H_over_S": 0.9131023653274891,
+  "ratio_error": 0.012807953862173435,
+  "net_H_minus_S_pb": -0.7885381000000002,
+  "net_error_pb": 0.12221485506913195,
+  "matched_source_minus1": -0.0038868009342827303,
+  "rounding": "Scalar sums inherit per-bin 8-digit HwU print rounding; final binary replay is checked independently against these original histograms.",
+  "bindings": [
+    {
+      "job": 1,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_1/MADatNLO.HwU",
+      "sha256": "32af89df7fb6fc3c88589c5fb21ead84dcbe535bf4865c1724564a74fbf058a4"
+    },
+    {
+      "job": 2,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_2/MADatNLO.HwU",
+      "sha256": "c5b8474c513e46bf166c8b58dd1b0624c6cfd94a56d090fe5d056bfd7ff437e3"
+    },
+    {
+      "job": 3,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_3/MADatNLO.HwU",
+      "sha256": "cac2af70f76ec04d507e264fabf5067dd9de8c07ce2eb18f1d264031b1a46fa3"
+    },
+    {
+      "job": 4,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_4/MADatNLO.HwU",
+      "sha256": "91e119493bfb4084c44389b368cfb48d0fbc3d4342cc9b9ec3e7774e408a68d9"
+    },
+    {
+      "job": 5,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_5/MADatNLO.HwU",
+      "sha256": "efabcb32e2553871929b89e5df2c2433dedf270af40fff69d1a8b96af4b3bc90"
+    },
+    {
+      "job": 6,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_6/MADatNLO.HwU",
+      "sha256": "6c6d882484e748af4ecee05fd412574b30b810f03268cb06dabf8082e86a5148"
+    },
+    {
+      "job": 7,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_7/MADatNLO.HwU",
+      "sha256": "c4982fb7f28ef45354cefa24e29bef1527649b3b6af6e5a20ba2030c657b70eb"
+    },
+    {
+      "job": 8,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_8/MADatNLO.HwU",
+      "sha256": "a52b97086a49948affaf8a624b90399991590fa4819949062fd3924428e47d86"
+    },
+    {
+      "job": 9,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_9/MADatNLO.HwU",
+      "sha256": "4d936cd52da8d2ae8b4efd8aabbb6bbf10fe2ced60b5bc808e63e2e9aa208ba5"
+    },
+    {
+      "job": 10,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_10/MADatNLO.HwU",
+      "sha256": "73f564909a40eee1dd17093de1b590d9c229267f96e609ec3bb2aa31dcd4a532"
+    },
+    {
+      "job": 11,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_11/MADatNLO.HwU",
+      "sha256": "71dbe70aec32664190c8379dbccf3131bf246cf4fd82a3fe20cc87ba02dc79b4"
+    },
+    {
+      "job": 12,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_12/MADatNLO.HwU",
+      "sha256": "1de11b0ea1e7f6e93da891f6bdd5d8661803a66ee9dfb33ea6e3b93ecf256e1c"
+    },
+    {
+      "job": 13,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_13/MADatNLO.HwU",
+      "sha256": "e74b87e6bb932bea4e28697fb0620e8d7ac11d510a47280dcbd839b42a5e1c42"
+    },
+    {
+      "job": 14,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_14/MADatNLO.HwU",
+      "sha256": "5ca112e002813d1b360b5c36e8343e605cd1cce5d167b4cf6fe0e730a7dc88f8"
+    },
+    {
+      "job": 15,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_15/MADatNLO.HwU",
+      "sha256": "d092570fb56d8ac3a2cc87db7736db4084cde2cbd694b3bd385e11da899d74fd"
+    },
+    {
+      "job": 16,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_16/MADatNLO.HwU",
+      "sha256": "66cf31659a931ad8a8043d3a1ec857939d356733c06f3e580da07f66d9a8533f"
+    },
+    {
+      "job": 17,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_17/MADatNLO.HwU",
+      "sha256": "56eb3d725f9e7f3e0468384e81c06c8fdd5b3e0491caa7bb4d5066e5e4ae9349"
+    },
+    {
+      "job": 18,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_18/MADatNLO.HwU",
+      "sha256": "c64700b685d8b21bf9e7aa986114dbc6f712247ad0bdb1aaa69def6ad9182d07"
+    },
+    {
+      "job": 19,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_19/MADatNLO.HwU",
+      "sha256": "b6a427dd3734775a1fefd135983a8f50e6f78fb7791d29295741443cd92ba4fb"
+    },
+    {
+      "job": 20,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_20/MADatNLO.HwU",
+      "sha256": "ac1bd1b42f546c053a2884fdeab39d8a0ec8e53ca8404e48546b0ad15bfd744d"
+    },
+    {
+      "job": 21,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_21/MADatNLO.HwU",
+      "sha256": "ee960a82834a1172e390c70e1642f125d9760582b92929ca9d081bc5a6d61c6d"
+    },
+    {
+      "job": 22,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_22/MADatNLO.HwU",
+      "sha256": "2d5edcb0571a539b7e74432621b2eb1941c84c1ce204a63953e8acfcb0dba8e6"
+    },
+    {
+      "job": 23,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_23/MADatNLO.HwU",
+      "sha256": "f4c40114697bd1a5a77a12efa47f65b4d9fb5bec48c568f138611f5b4c960788"
+    },
+    {
+      "job": 24,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_24/MADatNLO.HwU",
+      "sha256": "f806ca6f28797d5aecec7dc7b1c06e2ddb66ab0a850b1b14fa1897d40ffbd98f"
+    },
+    {
+      "job": 25,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_25/MADatNLO.HwU",
+      "sha256": "22fa9b6991a7fdf37ad485e6532dfb05c5508024bd61d670cf76c2012fd4d338"
+    },
+    {
+      "job": 26,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_26/MADatNLO.HwU",
+      "sha256": "dc2a817cae4e4a2912a3cd6adc3e5ecebb9a901cdc41e3596e740b9a9301a66c"
+    },
+    {
+      "job": 27,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_27/MADatNLO.HwU",
+      "sha256": "35bcae419cbc3c4c121d77800b664341742473ddfdc73696342d7e786d3e85ad"
+    },
+    {
+      "job": 28,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_28/MADatNLO.HwU",
+      "sha256": "f35c26ab642506a5c29480c02b670651cc0ce139cb7102c07854da43a875e3e3"
+    },
+    {
+      "job": 29,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_29/MADatNLO.HwU",
+      "sha256": "77449e0fa85be760efd1f3be8e1c9336f5cd0935143a5c671fb3592165528162"
+    },
+    {
+      "job": 30,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_30/MADatNLO.HwU",
+      "sha256": "09b4c3c673576b78fb2bceb64f5b946c2b6d0ad90d067a82a6166c76f9203503"
+    },
+    {
+      "job": 31,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_31/MADatNLO.HwU",
+      "sha256": "87c01683bf27d8206206ee663a600bac394b879942c7af1c9e7642435590db90"
+    },
+    {
+      "job": 32,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_32/MADatNLO.HwU",
+      "sha256": "d69b34ff0f3d15cd885372e8b877af4a64dc78ae00f30d64170abef1b6a087ce"
+    },
+    {
+      "job": 33,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_33/MADatNLO.HwU",
+      "sha256": "3a47671a746105cd096972e641194768aa0e4207639aefd2351755d368190afb"
+    },
+    {
+      "job": 34,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_34/MADatNLO.HwU",
+      "sha256": "06d9df8897009c2072462021135bf43f1358378c53327ea22e21506293d78e7c"
+    },
+    {
+      "job": 35,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_35/MADatNLO.HwU",
+      "sha256": "e830a9a0a2d7feadc34bef9d754ba4716b6c0939735db5e675c1dfe800cf1795"
+    },
+    {
+      "job": 36,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_36/MADatNLO.HwU",
+      "sha256": "cae4a14ee6dc52bb1bd4d5bc7844163b3b571a9095b58ca5a04eb7e63baa65b4"
+    },
+    {
+      "job": 37,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_37/MADatNLO.HwU",
+      "sha256": "36f9993bba9fa391912f37306ad125cdc0259f775fa8b92fb2dd261021d45060"
+    },
+    {
+      "job": 38,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_38/MADatNLO.HwU",
+      "sha256": "3c0048a34df2630022f31e2b65e74a84c6d3fe073fac3b599b1e21c55361381c"
+    },
+    {
+      "job": 39,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_39/MADatNLO.HwU",
+      "sha256": "fc1868918bb4b03a91d962987fc936373c723b4ab6f9344118b6197c85569b7c"
+    },
+    {
+      "job": 40,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_40/MADatNLO.HwU",
+      "sha256": "8b80036f7a6a15ad2239da84a9e1ae1ec1627a5478234b011b3542188995d270"
+    },
+    {
+      "job": 41,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_41/MADatNLO.HwU",
+      "sha256": "cab00b95ab394267bac18a58365157afe2068b496f720d51806b99caa76af9bd"
+    },
+    {
+      "job": 42,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_42/MADatNLO.HwU",
+      "sha256": "c959b0b87f44ac5f7922a6400907c96ecabd6cc0bd22dbe1913597b34f6bb314"
+    },
+    {
+      "job": 43,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_43/MADatNLO.HwU",
+      "sha256": "161eb73cb3b34b6380ec40d8598169813a667c9ff43e68a40b6e3fe0cb33cecc"
+    },
+    {
+      "job": 44,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_44/MADatNLO.HwU",
+      "sha256": "b0f5bb532b97f5ecab3364e9fb1438fd424192520b9045e16ca6944ec23d51a3"
+    },
+    {
+      "job": 45,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_45/MADatNLO.HwU",
+      "sha256": "44efe666df8e4fb54f1c1d62837820a4e239dc109e691a0779d38c9654355cf2"
+    },
+    {
+      "job": 46,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_46/MADatNLO.HwU",
+      "sha256": "5c3c8b5430f8f6b9f418166696b235c8f7c930b9c5bf2ce86909981a589f6639"
+    },
+    {
+      "job": 47,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_47/MADatNLO.HwU",
+      "sha256": "7e41cdff60ed8416a382b45f1eef09fd5699ac91b3976a32998de12e9daffe7d"
+    },
+    {
+      "job": 48,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_48/MADatNLO.HwU",
+      "sha256": "a6a9f9748dfbfdf6a3d53855cd197719f036ff3775cc40225a51c24a08c28dda"
+    },
+    {
+      "job": 49,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_49/MADatNLO.HwU",
+      "sha256": "cb9ab090ed28e643fbfd231daad186e735bad7a06538cb7cef9ad325b197d6cc"
+    },
+    {
+      "job": 50,
+      "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3/run_50/MADatNLO.HwU",
+      "sha256": "223825c6ad6842d1203d9e5f0fa3a92bd4f0e812e9d1ec0431dcb4972f63bdce"
+    }
+  ]
+}

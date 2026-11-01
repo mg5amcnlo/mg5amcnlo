@@ -1,0 +1,1030 @@
+{
+  "counts": {
+    "accepted": 1000000,
+    "selected": 1000000,
+    "tried": 1000000
+  },
+  "messages": {
+    "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 8,
+    "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 50,
+    "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 50,
+    "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 50,
+    "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 50,
+    "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 50,
+    "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 9345
+  },
+  "rows": [
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 105026,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__1.log",
+        "sha256": "2806cfd6e3a42bd0fbbbbc65c84af9f92a0b6c1dae4b239d9a45cc281b3b5de2"
+      },
+      "fatal_native_statistics": {
+        "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 1
+      },
+      "job": 1,
+      "messages": {
+        "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 1,
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 203
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 70930,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__2.log",
+        "sha256": "836044a158f3c01b2c3a5ccaf3fa4fecd93137244ed40adba2f47d23dfa5613b"
+      },
+      "fatal_native_statistics": {},
+      "job": 2,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 185
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 125194,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__3.log",
+        "sha256": "467c5a75b0c6dc6e5f41cd6c9892ecfb6e405ff6a953890a83ebeed07e4bdf28"
+      },
+      "fatal_native_statistics": {},
+      "job": 3,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 181
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 75984,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__4.log",
+        "sha256": "c4d8ac878f7eff13db830f7e4d080a1306947d4d08a5f9ce1b52d376e64584f6"
+      },
+      "fatal_native_statistics": {},
+      "job": 4,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 196
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 104845,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__5.log",
+        "sha256": "84dcfb3b1ee9d197d524953b51c12fbe108dfa39b0797aa86ddc51a15b2fff23"
+      },
+      "fatal_native_statistics": {},
+      "job": 5,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 214
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 106441,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__6.log",
+        "sha256": "f04f84cc2f9300c502d88ccde4671641e03bd24bab6377cf97197b5879ec527f"
+      },
+      "fatal_native_statistics": {},
+      "job": 6,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 185
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 72127,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__7.log",
+        "sha256": "93897f6d688894e47028461470dfecf0ecd1e44c7bc8fe88ea3203987ec0ffbe"
+      },
+      "fatal_native_statistics": {},
+      "job": 7,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 179
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 108702,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__8.log",
+        "sha256": "009a66fa1d9f00b71150941acec70d547297e16542fc5a47d27ee736059edf5d"
+      },
+      "fatal_native_statistics": {},
+      "job": 8,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 187
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 84762,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__9.log",
+        "sha256": "5aaa2f6c397e5190172d8e3432a9b12d2922c46b23559400292a5aaeefd255ca"
+      },
+      "fatal_native_statistics": {},
+      "job": 9,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 197
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 159641,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__10.log",
+        "sha256": "408014a03e66da381a8ac439cc42dc1956e31931df46f3ecae6fd5570360cfe0"
+      },
+      "fatal_native_statistics": {},
+      "job": 10,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 199
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 147139,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__11.log",
+        "sha256": "22a1b7f7e49c3d5ed64f0425f6f1b0a7d03a33acac802fa56c8942df5938e62e"
+      },
+      "fatal_native_statistics": {},
+      "job": 11,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 178
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 76516,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__12.log",
+        "sha256": "6203e94c33d609f230ebcc77a435c0a0f3ba140e81b5808d58235887df90d189"
+      },
+      "fatal_native_statistics": {},
+      "job": 12,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 223
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 144878,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__13.log",
+        "sha256": "0ced70cc01a48836ab83bff746d906cc32cfd38d9afc0d1adc2eb5f728bc537a"
+      },
+      "fatal_native_statistics": {},
+      "job": 13,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 183
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 183581,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__14.log",
+        "sha256": "297c078efec6efeff486d03e4384517c5c215d219dd1ae2213b74e1473965518"
+      },
+      "fatal_native_statistics": {},
+      "job": 14,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 173
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 147804,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__15.log",
+        "sha256": "ef5d4d825d548eb62062c5accfe3918506ce37f1cd868a2449dd96c919075e60"
+      },
+      "fatal_native_statistics": {},
+      "job": 15,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 204
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 338792,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__16.log",
+        "sha256": "8469cbabbfad67fdcb35777bb773d718eb5fcdf8495a6f048dad4bbe4be3b9d7"
+      },
+      "fatal_native_statistics": {},
+      "job": 16,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 186
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 249283,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__17.log",
+        "sha256": "ea53381fd171cbdfcdf363ffdb1d628b45e4588f83042c53560405a7f2863da3"
+      },
+      "fatal_native_statistics": {},
+      "job": 17,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 172
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 174138,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__18.log",
+        "sha256": "a256dca6418c0f3cc890d11fe7e7b943676a0ed6ccc60d9cb094f0220f0e8427"
+      },
+      "fatal_native_statistics": {},
+      "job": 18,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 168
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 325407,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__19.log",
+        "sha256": "1414936a37db7f9bd481707b141c70703f0657ba8ec6996f4bf8cea9f8ba5690"
+      },
+      "fatal_native_statistics": {
+        "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 3
+      },
+      "job": 19,
+      "messages": {
+        "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 3,
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 191
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 52576,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__20.log",
+        "sha256": "067c2d0b8faa0bfe9f2280744c98eeedad8e22b47340569df5e55a3a0f629f1f"
+      },
+      "fatal_native_statistics": {},
+      "job": 20,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 180
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 172010,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__21.log",
+        "sha256": "f16edf4749c739c4d01a25e546ae41161a5a8989a814906530a10ce0d73a9ae7"
+      },
+      "fatal_native_statistics": {},
+      "job": 21,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 187
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 112692,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__22.log",
+        "sha256": "8ae85e7d72353f801810d7b2ad85f9c80a13d4e59ae6ac67d642519972d99e65"
+      },
+      "fatal_native_statistics": {},
+      "job": 22,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 179
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 245160,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__23.log",
+        "sha256": "be97a9682e04c129af272c0c74d24b805a3c4cdff950bf6a5a81e629ab9d65d4"
+      },
+      "fatal_native_statistics": {},
+      "job": 23,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 191
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 113272,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__24.log",
+        "sha256": "ed5494e02ea0420192c42a0151751170b7c5abdd4b151844a1e4b892e6e453ca"
+      },
+      "fatal_native_statistics": {
+        "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 1
+      },
+      "job": 24,
+      "messages": {
+        "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 1,
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 202
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 175335,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__25.log",
+        "sha256": "3c65c6955f790c9770c249e85dee4cbe0947d6b8ff71abf8a0f51b97f88cd924"
+      },
+      "fatal_native_statistics": {},
+      "job": 25,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 195
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 131578,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__26.log",
+        "sha256": "9b23aed46ad5fff488e61038c09c9af66f4a612ff3d096a382f738ef4c10d34d"
+      },
+      "fatal_native_statistics": {},
+      "job": 26,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 180
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 317778,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__27.log",
+        "sha256": "a6eea6a73a3b57fbbba4c7461e05cce9b58187078696acd38901a8533201d5c3"
+      },
+      "fatal_native_statistics": {},
+      "job": 27,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 173
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 207122,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__28.log",
+        "sha256": "353a763d6863e39b8dbd1abd25ea91fa40fcc5dbba7dce2bbc897a940177d09d"
+      },
+      "fatal_native_statistics": {},
+      "job": 28,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 204
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 264445,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__29.log",
+        "sha256": "768fc966700c49bc18c1a1ff9eba61f552dd2d48fa7493b6ce54c2f39a515238"
+      },
+      "fatal_native_statistics": {},
+      "job": 29,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 180
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 203930,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__30.log",
+        "sha256": "36aca5068198a3c8f23fa5e4fe9d95e8f3722edc5ce9dc5b0e3fb50919fcd21c"
+      },
+      "fatal_native_statistics": {},
+      "job": 30,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 177
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 134105,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__31.log",
+        "sha256": "ab4b0f31aecb6a1e9d6b2dc942b05deb9f7c7cd9ef59b51d27c2c87e32b38c60"
+      },
+      "fatal_native_statistics": {},
+      "job": 31,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 200
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 238643,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__32.log",
+        "sha256": "62700fd4c8c950dda546c45aebfc10f1f2c08709f64103ba34e1f41e1f374e37"
+      },
+      "fatal_native_statistics": {},
+      "job": 32,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 195
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 127322,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__33.log",
+        "sha256": "3d2ac2c7dda64b3aa4bb96686a6f31357dd6eb410ddb2e06071cfd271130f13b"
+      },
+      "fatal_native_statistics": {},
+      "job": 33,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 171
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 173207,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__34.log",
+        "sha256": "63a50351ac8374eceb606db77444272914402327bea72e9dd2de24f4bb81d35f"
+      },
+      "fatal_native_statistics": {},
+      "job": 34,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 176
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 212442,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__35.log",
+        "sha256": "1212466b567a3df4c338cbd574d9b81c6b2aa1be02f7bb9ecc8360eb6b9440d7"
+      },
+      "fatal_native_statistics": {},
+      "job": 35,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 183
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 113091,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__36.log",
+        "sha256": "3fbcaf01e5a2893d3172f20b9265786484a9c278b1f5bcfee59b62e3cc866541"
+      },
+      "fatal_native_statistics": {},
+      "job": 36,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 180
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 101919,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__37.log",
+        "sha256": "b092d0a5b0a0c963c6d679b6b5da265f6b79ad281e6ee8244616fffbeb964e8c"
+      },
+      "fatal_native_statistics": {},
+      "job": 37,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 190
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 206058,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__38.log",
+        "sha256": "90e87e3b344f34e7f4c6f10721147d58f54e2c89d4d023ea8caa65586bd7cdf8"
+      },
+      "fatal_native_statistics": {},
+      "job": 38,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 189
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 143197,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__39.log",
+        "sha256": "1862ba8af6aa83df828901224bedaf279eb2986b67dcdcf43d29e72b5e2e4fb6"
+      },
+      "fatal_native_statistics": {
+        "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 3
+      },
+      "job": 39,
+      "messages": {
+        "Error in SimpleSpaceShower::pT2nearThreshold: xPDF = 0": 3,
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 214
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 114554,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__40.log",
+        "sha256": "2ec128a34434eed6ab3b19243b8ee9fc90171aa108111a7d20f7b0c55a7cb553"
+      },
+      "fatal_native_statistics": {},
+      "job": 40,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 167
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 192226,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__41.log",
+        "sha256": "504d81003922df216bab910e9a6f901eaf3b5d3277949e4e98c5054e61becc36"
+      },
+      "fatal_native_statistics": {},
+      "job": 41,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 154
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 216033,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__42.log",
+        "sha256": "363359cfdb711d25c1c798a2a39ce40d092a8819b63cff67455bf94dc87f56d5"
+      },
+      "fatal_native_statistics": {},
+      "job": 42,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 189
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 172143,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__43.log",
+        "sha256": "60674beff7d36914377e1c4ba51d667340883df69317e70860a11a462d078343"
+      },
+      "fatal_native_statistics": {},
+      "job": 43,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 192
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 212841,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__44.log",
+        "sha256": "be9b60ca63a681b7a1ff91730b1abcc30819792ffe9d636e2664a4d5854f13e9"
+      },
+      "fatal_native_statistics": {},
+      "job": 44,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 192
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 151262,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__45.log",
+        "sha256": "9495dbbf61e784b8e4bf90c24555fbff32f45748b1023770f89992352924de96"
+      },
+      "fatal_native_statistics": {},
+      "job": 45,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 172
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 191295,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__46.log",
+        "sha256": "07c85cf738798b7fb42060f15665ae7d69bf51144dbc1f48f94f6b29537200ab"
+      },
+      "fatal_native_statistics": {},
+      "job": 46,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 180
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 122800,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__47.log",
+        "sha256": "2539792b77975cbd4a12becfb4e8cad920ab742f58c4e4207fe904c9f2d6407f"
+      },
+      "fatal_native_statistics": {},
+      "job": 47,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 190
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 200605,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__48.log",
+        "sha256": "86278605539d97579e61d6456b32571cccbe2c1887a8e075f3a69064e82b0e10"
+      },
+      "fatal_native_statistics": {},
+      "job": 48,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 191
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 111096,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__49.log",
+        "sha256": "959535e1801e7acab053d71c7f6436bc56ae41d328d8661f98279f3fdbee48c4"
+      },
+      "fatal_native_statistics": {},
+      "job": 49,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 190
+      },
+      "selected": 20000,
+      "tried": 20000
+    },
+    {
+      "accepted": 20000,
+      "binding": {
+        "bytes": 123199,
+        "path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/mcatnlo_run_PYTHIA8_3__50.log",
+        "sha256": "29f0e2148679620f4433b8069b6b022343e91d8302cccb8cdaa05b80bae60aa6"
+      },
+      "fatal_native_statistics": {},
+      "job": 50,
+      "messages": {
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 178
+      },
+      "selected": 20000,
+      "tried": 20000
+    }
+  ]
+}

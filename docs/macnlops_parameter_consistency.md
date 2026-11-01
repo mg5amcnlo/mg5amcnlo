@@ -8,6 +8,12 @@ the Sudakov table. Numbers refer to the DY and ttbar checks in
 13 TeV, 10^5 events); see also `docs/macnlops_derivation.md` and
 `docs/audits/delta_noemission/investigation_report.md`.
 
+Update, 1 November: default v4 also restores the canonical Born coupling
+and both Born-flavour hard-PDF reference scales in the common S/H density.
+It uses native Born amplitudes rather than an assumed alpha_s power.
+See [the current derivation](macnlops_derivation.md) for this correction;
+the dated comparisons and legacy formulas below retain their original scope.
+
 ## Summary
 
 * Four stages use QCD inputs: the NLO hard process with its MC

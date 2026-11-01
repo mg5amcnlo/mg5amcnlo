@@ -1,0 +1,968 @@
+{
+  "scope": "Read-only diagnostic copies; frozen source generation, matching decisions, production files and Pythia library unchanged.",
+  "native_survival_contexts": 26,
+  "native_survival_trials_per_context_per_mode": 6000,
+  "quadrature_Q_survival": {
+    "ALL": {
+      "points": 26,
+      "trials": 156000,
+      "mean_native_over_pred": 0.9998084379008959,
+      "weighted_native_over_pred": 1.000167541745904,
+      "median": 1.0017506381745584,
+      "pullmean": -0.011899501710381096,
+      "pullrms": 0.8477431464682161,
+      "warnings": 16,
+      "max_abs_pull": 2.9805048739852342,
+      "rows": [
+        {
+          "index": 573,
+          "pt": 3.120281574120531,
+          "predicted": 0.028527766406919182,
+          "native": 0.0295,
+          "ratio": 1.0340802563794482,
+          "pull": 0.4450793757870834,
+          "weight": 3.331511982364185e-05
+        },
+        {
+          "index": 755,
+          "pt": 3.050940025881124,
+          "predicted": 0.07216335944253115,
+          "native": 0.072,
+          "ratio": 0.9977362550220344,
+          "pull": -0.048953036027998886,
+          "weight": 5.557795398724478e-05
+        },
+        {
+          "index": 794,
+          "pt": 42.377198538028274,
+          "predicted": 0.89393599358519,
+          "native": 0.8973333333333333,
+          "ratio": 1.0038004284115667,
+          "pull": 0.8670077392713369,
+          "weight": 0.00012100226813051745
+        },
+        {
+          "index": 1106,
+          "pt": 6.097022432381913,
+          "predicted": 0.03756000991928714,
+          "native": 0.038,
+          "ratio": 1.0117143228039172,
+          "pull": 0.17825395584604475,
+          "weight": 1.2854247138490353e-06
+        },
+        {
+          "index": 1145,
+          "pt": 8.215276596435722,
+          "predicted": 0.37889934039979933,
+          "native": 0.38033333333333336,
+          "ratio": 1.0037846276850757,
+          "pull": 0.2288028206232164,
+          "weight": 2.9874212783773686e-05
+        },
+        {
+          "index": 1444,
+          "pt": 25.05522581114428,
+          "predicted": 0.755993586130243,
+          "native": 0.7621666666666667,
+          "ratio": 1.0081655197209043,
+          "pull": 1.1230943212466766,
+          "weight": 9.095007765192662e-05
+        },
+        {
+          "index": 1665,
+          "pt": 55.32553644114853,
+          "predicted": 0.9340094620072301,
+          "native": 0.9313333333333333,
+          "ratio": 0.9971347949001013,
+          "pull": -0.8197040110633254,
+          "weight": 0.00020625431931683999
+        },
+        {
+          "index": 1821,
+          "pt": 23.786392802045057,
+          "predicted": 0.6852324063248025,
+          "native": 0.6875,
+          "ratio": 1.003309232975947,
+          "pull": 0.3789478959728072,
+          "weight": 6.5131423636421e-05
+        },
+        {
+          "index": 1899,
+          "pt": 3.2120194663474253,
+          "predicted": 0.08914711800101727,
+          "native": 0.088,
+          "ratio": 0.9871323041424157,
+          "pull": -0.3136497638471664,
+          "weight": 2.7744851457332447e-05
+        },
+        {
+          "index": 2432,
+          "pt": 23.87731003646541,
+          "predicted": 0.7911902321519704,
+          "native": 0.7858333333333334,
+          "ratio": 0.9932293162870999,
+          "pull": -1.0114581232881363,
+          "weight": 7.787937633302334e-05
+        },
+        {
+          "index": 2458,
+          "pt": 121.42780724530604,
+          "predicted": 0.6740269372216129,
+          "native": 0.682,
+          "ratio": 1.0118289972374883,
+          "pull": 1.3261573649503862,
+          "weight": 0.00010219109695831839
+        },
+        {
+          "index": 2679,
+          "pt": 2.4024049811030115,
+          "predicted": 0.02607253232685221,
+          "native": 0.026333333333333334,
+          "ratio": 1.0100029027948514,
+          "pull": 0.12616149272674104,
+          "weight": 2.1001390743118276e-06
+        },
+        {
+          "index": 3693,
+          "pt": 6.568216212106834,
+          "predicted": 0.3033504297201028,
+          "native": 0.3011666666666667,
+          "ratio": 0.9928011868799691,
+          "pull": -0.36871506471659393,
+          "weight": 8.458501344815535e-05
+        },
+        {
+          "index": 4109,
+          "pt": 11.19282160092136,
+          "predicted": 0.439717961139527,
+          "native": 0.44116666666666665,
+          "ratio": 1.0032946244073937,
+          "pull": 0.22600250104183184,
+          "weight": 0.000113592334582104
+        },
+        {
+          "index": 5864,
+          "pt": 3.3589790933161843,
+          "predicted": 0.0803499373164583,
+          "native": 0.0705,
+          "ratio": 0.8774120099476329,
+          "pull": -2.9805048739852342,
+          "weight": 2.5593161100547846e-05
+        },
+        {
+          "index": 6475,
+          "pt": 3.1529063279114156,
+          "predicted": 0.030180250948172116,
+          "native": 0.032,
+          "ratio": 1.0602960212276862,
+          "pull": 0.8008929286370609,
+          "weight": 2.0075018674743165e-05
+        },
+        {
+          "index": 6956,
+          "pt": 5.5985868488020705,
+          "predicted": 0.29890525376871324,
+          "native": 0.2966666666666667,
+          "ratio": 0.9925107134323616,
+          "pull": -0.3796073792155444,
+          "weight": 3.068859738340638e-05
+        },
+        {
+          "index": 7528,
+          "pt": 7.284215029610467,
+          "predicted": 0.0886552950367868,
+          "native": 0.092,
+          "ratio": 1.0377270749798457,
+          "pull": 0.8963891721786693,
+          "weight": 1.2585511265472735e-05
+        },
+        {
+          "index": 7580,
+          "pt": 13.696449256179447,
+          "predicted": 0.38906745201516774,
+          "native": 0.3885,
+          "ratio": 0.9985415073601541,
+          "pull": -0.09018016499841765,
+          "weight": 0.00010795623518665022
+        },
+        {
+          "index": 7840,
+          "pt": 62.03148567177615,
+          "predicted": 0.9649855991008707,
+          "native": 0.9636666666666667,
+          "ratio": 0.9986332102412379,
+          "pull": -0.5459867876668789,
+          "weight": 0.00023682040417580938
+        },
+        {
+          "index": 8048,
+          "pt": 10.020492402110968,
+          "predicted": 0.07816497676900713,
+          "native": 0.08016666666666666,
+          "ratio": 1.0256085267392188,
+          "pull": 0.5709800544664612,
+          "weight": 6.032587382943606e-05
+        },
+        {
+          "index": 8490,
+          "pt": 12.826302854834871,
+          "predicted": 0.5003912571473158,
+          "native": 0.5041666666666667,
+          "ratio": 1.0075449150348352,
+          "pull": 0.5849042372698585,
+          "weight": 9.14145676011435e-05
+        },
+        {
+          "index": 8763,
+          "pt": 9.054930400862512,
+          "predicted": 0.3370352041440313,
+          "native": 0.336,
+          "ratio": 0.9969284984734446,
+          "pull": -0.1697649182526537,
+          "weight": 5.6682600650650085e-05
+        },
+        {
+          "index": 9556,
+          "pt": 11.38467622956558,
+          "predicted": 0.24190898985648726,
+          "native": 0.23883333333333334,
+          "ratio": 0.9872858940671094,
+          "pull": -0.5587610286132356,
+          "weight": 5.2376991640766424e-05
+        },
+        {
+          "index": 9764,
+          "pt": 176.44166484805802,
+          "predicted": 0.9383060972230779,
+          "native": 0.9385,
+          "ratio": 1.0002066519417234,
+          "pull": 0.06251798293052287,
+          "weight": 0.0001580948369974082
+        },
+        {
+          "index": 9907,
+          "pt": 4.292837402343399,
+          "predicted": 0.05082208162824097,
+          "native": 0.0485,
+          "ratio": 0.9543095923298304,
+          "pull": -0.8372937357434203,
+          "weight": 2.2404074336623968e-05
+        }
+      ],
+      "weighted_native_over_pred_error": 0.0034845195884243567
+    },
+    "ISR": {
+      "points": 26,
+      "trials": 156000,
+      "mean_native_over_pred": 1.0019460830603728,
+      "weighted_native_over_pred": 1.0019589782075033,
+      "median": 1.0006040208515738,
+      "pullmean": 0.07896371132235408,
+      "pullrms": 0.7521238457304589,
+      "warnings": 66,
+      "max_abs_pull": 1.5822129822633433,
+      "rows": [
+        {
+          "index": 573,
+          "pt": 3.120281574120531,
+          "predicted": 0.05953173001208656,
+          "native": 0.06133333333333333,
+          "ratio": 1.0302629088870925,
+          "pull": 0.5816085964328863,
+          "weight": 3.331511982364185e-05
+        },
+        {
+          "index": 755,
+          "pt": 3.050940025881124,
+          "predicted": 0.10832325408698897,
+          "native": 0.1105,
+          "ratio": 1.020094908811205,
+          "pull": 0.5378104637433571,
+          "weight": 5.557795398724478e-05
+        },
+        {
+          "index": 794,
+          "pt": 42.377198538028274,
+          "predicted": 0.89393599358519,
+          "native": 0.8896666666666667,
+          "ratio": 0.9952241246027013,
+          "pull": -1.0555237453960296,
+          "weight": 0.00012100226813051745
+        },
+        {
+          "index": 1106,
+          "pt": 6.097022432381913,
+          "predicted": 0.1474034755076207,
+          "native": 0.14866666666666667,
+          "ratio": 1.0085696158431534,
+          "pull": 0.27503507432359825,
+          "weight": 1.2854247138490353e-06
+        },
+        {
+          "index": 1145,
+          "pt": 8.215276596435722,
+          "predicted": 0.3843511084838749,
+          "native": 0.38,
+          "ratio": 0.9886793393128527,
+          "pull": -0.6943651148307496,
+          "weight": 2.9874212783773686e-05
+        },
+        {
+          "index": 1444,
+          "pt": 25.05522581114428,
+          "predicted": 0.7559935861659226,
+          "native": 0.7568333333333334,
+          "ratio": 1.0011107861002757,
+          "pull": 0.15162542327865686,
+          "weight": 9.095007765192662e-05
+        },
+        {
+          "index": 1665,
+          "pt": 55.32553644114853,
+          "predicted": 0.9340094620072301,
+          "native": 0.9371666666666667,
+          "ratio": 1.0033802705302917,
+          "pull": 1.0078012525577436,
+          "weight": 0.00020625431931683999
+        },
+        {
+          "index": 1821,
+          "pt": 23.786392802045057,
+          "predicted": 0.709930955236951,
+          "native": 0.71,
+          "ratio": 1.0000972556028718,
+          "pull": 0.01178631911353933,
+          "weight": 6.5131423636421e-05
+        },
+        {
+          "index": 1899,
+          "pt": 3.2120194663474253,
+          "predicted": 0.11140326618310868,
+          "native": 0.11133333333333334,
+          "ratio": 0.9993722549421451,
+          "pull": -0.017221651643023472,
+          "weight": 2.7744851457332447e-05
+        },
+        {
+          "index": 2432,
+          "pt": 23.87731003646541,
+          "predicted": 0.7911902321519704,
+          "native": 0.7908333333333334,
+          "ratio": 0.9995489089676117,
+          "pull": -0.06797230769496533,
+          "weight": 7.787937633302334e-05
+        },
+        {
+          "index": 2458,
+          "pt": 121.42780724530604,
+          "predicted": 0.8021793178261631,
+          "native": 0.8086666666666666,
+          "ratio": 1.0080871554480906,
+          "pull": 1.2775055250348935,
+          "weight": 0.00010219109695831839
+        },
+        {
+          "index": 2679,
+          "pt": 2.4024049811030115,
+          "predicted": 0.08324868870042926,
+          "native": 0.0805,
+          "ratio": 0.966982198238336,
+          "pull": -0.7825775325220589,
+          "weight": 2.1001390743118276e-06
+        },
+        {
+          "index": 3693,
+          "pt": 6.568216212106834,
+          "predicted": 0.3281349325163472,
+          "native": 0.3288333333333333,
+          "ratio": 1.0021283952050772,
+          "pull": 0.11515353031717346,
+          "weight": 8.458501344815535e-05
+        },
+        {
+          "index": 4109,
+          "pt": 11.19282160092136,
+          "predicted": 0.474353545873445,
+          "native": 0.46416666666666667,
+          "ratio": 0.9785247115882293,
+          "pull": -1.5822129822633433,
+          "weight": 0.000113592334582104
+        },
+        {
+          "index": 5864,
+          "pt": 3.3589790933161843,
+          "predicted": 0.12591780464383953,
+          "native": 0.13083333333333333,
+          "ratio": 1.0390375984031603,
+          "pull": 1.129107068034793,
+          "weight": 2.5593161100547846e-05
+        },
+        {
+          "index": 6475,
+          "pt": 3.1529063279114156,
+          "predicted": 0.07478793720344085,
+          "native": 0.07566666666666666,
+          "ratio": 1.0117496149256726,
+          "pull": 0.2573737229826456,
+          "weight": 2.0075018674743165e-05
+        },
+        {
+          "index": 6956,
+          "pt": 5.5985868488020705,
+          "predicted": 0.2990211029205128,
+          "native": 0.29383333333333334,
+          "ratio": 0.9826508245187012,
+          "pull": -0.8821697595418478,
+          "weight": 3.068859738340638e-05
+        },
+        {
+          "index": 7528,
+          "pt": 7.284215029610467,
+          "predicted": 0.20248850624687112,
+          "native": 0.2005,
+          "ratio": 0.9901796586693827,
+          "pull": -0.38471238022163756,
+          "weight": 1.2585511265472735e-05
+        },
+        {
+          "index": 7580,
+          "pt": 13.696449256179447,
+          "predicted": 0.4898431736207414,
+          "native": 0.48966666666666664,
+          "ratio": 0.9996396664002274,
+          "pull": -0.027350181151786966,
+          "weight": 0.00010795623518665022
+        },
+        {
+          "index": 7840,
+          "pt": 62.03148567177615,
+          "predicted": 0.9649855991008707,
+          "native": 0.9635,
+          "ratio": 0.9984604960921128,
+          "pull": -0.613627707512143,
+          "weight": 0.00023682040417580938
+        },
+        {
+          "index": 8048,
+          "pt": 10.020492402110968,
+          "predicted": 0.21638562841729747,
+          "native": 0.22016666666666668,
+          "ratio": 1.0174736107800908,
+          "pull": 0.7068219289781106,
+          "weight": 6.032587382943606e-05
+        },
+        {
+          "index": 8490,
+          "pt": 12.826302854834871,
+          "predicted": 0.50039125714731,
+          "native": 0.5105,
+          "ratio": 1.0202016776038796,
+          "pull": 1.5663851347920918,
+          "weight": 9.14145676011435e-05
+        },
+        {
+          "index": 8763,
+          "pt": 9.054930400862512,
+          "predicted": 0.38109966091214653,
+          "native": 0.3825,
+          "ratio": 1.0036744695193425,
+          "pull": 0.22318995055685253,
+          "weight": 5.6682600650650085e-05
+        },
+        {
+          "index": 9556,
+          "pt": 11.38467622956558,
+          "predicted": 0.3418196324710226,
+          "native": 0.3401666666666667,
+          "ratio": 0.9951642163078621,
+          "pull": -0.2702567137535808,
+          "weight": 5.2376991640766424e-05
+        },
+        {
+          "index": 9764,
+          "pt": 176.44166484805802,
+          "predicted": 0.9403124276653233,
+          "native": 0.9431666666666667,
+          "ratio": 1.0030354155888699,
+          "pull": 0.9549270052227359,
+          "weight": 0.0001580948369974082
+        },
+        {
+          "index": 9907,
+          "pt": 4.292837402343399,
+          "predicted": 0.11935292563042271,
+          "native": 0.11783333333333333,
+          "ratio": 0.9872680766804593,
+          "pull": -0.3650844244567051,
+          "weight": 2.2404074336623968e-05
+        }
+      ],
+      "weighted_native_over_pred_error": 0.002718312464140745
+    },
+    "FSR": {
+      "points": 26,
+      "trials": 156000,
+      "mean_native_over_pred": 0.9999196823604586,
+      "weighted_native_over_pred": 1.0003268616003156,
+      "median": 1.000000000000002,
+      "pullmean": 0.07647921354012067,
+      "pullrms": 0.9822723529998669,
+      "warnings": 0,
+      "max_abs_pull": 2.811505536304664,
+      "rows": [
+        {
+          "index": 573,
+          "pt": 3.120281574120531,
+          "predicted": 0.4791979366866929,
+          "native": 0.493,
+          "ratio": 1.028802426422656,
+          "pull": 2.1384160292700956,
+          "weight": 3.331511982364185e-05
+        },
+        {
+          "index": 755,
+          "pt": 3.050940025881124,
+          "predicted": 0.6661800059655019,
+          "native": 0.6723333333333333,
+          "ratio": 1.0092367337847574,
+          "pull": 1.015493605026175,
+          "weight": 5.557795398724478e-05
+        },
+        {
+          "index": 794,
+          "pt": 42.377198538028274,
+          "predicted": 1.0,
+          "native": 1.0,
+          "ratio": 1.0,
+          "pull": 0.0,
+          "weight": 0.00012100226813051745
+        },
+        {
+          "index": 1106,
+          "pt": 6.097022432381913,
+          "predicted": 0.23683904025168673,
+          "native": 0.24033333333333334,
+          "ratio": 1.0147538728325078,
+          "pull": 0.633455940551095,
+          "weight": 1.2854247138490353e-06
+        },
+        {
+          "index": 1145,
+          "pt": 8.215276596435722,
+          "predicted": 0.9858145164267139,
+          "native": 0.9853333333333333,
+          "ratio": 0.9995118928709583,
+          "pull": -0.3100478232022388,
+          "weight": 2.9874212783773686e-05
+        },
+        {
+          "index": 1444,
+          "pt": 25.05522581114428,
+          "predicted": 1.0,
+          "native": 1.0,
+          "ratio": 1.0,
+          "pull": 0.0,
+          "weight": 9.095007765192662e-05
+        },
+        {
+          "index": 1665,
+          "pt": 55.32553644114853,
+          "predicted": 1.0,
+          "native": 1.0,
+          "ratio": 1.0,
+          "pull": 0.0,
+          "weight": 0.00020625431931683999
+        },
+        {
+          "index": 1821,
+          "pt": 23.786392802045057,
+          "predicted": 0.9649633806806572,
+          "native": 0.9633333333333334,
+          "ratio": 0.9983107676623189,
+          "pull": -0.6718183087896619,
+          "weight": 6.5131423636421e-05
+        },
+        {
+          "index": 1899,
+          "pt": 3.2120194663474253,
+          "predicted": 0.8002199416596936,
+          "native": 0.8143333333333334,
+          "ratio": 1.0176368907332751,
+          "pull": 2.811505536304664,
+          "weight": 2.7744851457332447e-05
+        },
+        {
+          "index": 2432,
+          "pt": 23.87731003646541,
+          "predicted": 1.0,
+          "native": 1.0,
+          "ratio": 1.0,
+          "pull": 0.0,
+          "weight": 7.787937633302334e-05
+        },
+        {
+          "index": 2458,
+          "pt": 121.42780724530604,
+          "predicted": 0.8398070949879541,
+          "native": 0.8416666666666667,
+          "ratio": 1.00221428431578,
+          "pull": 0.39457749117400354,
+          "weight": 0.00010219109695831839
+        },
+        {
+          "index": 2679,
+          "pt": 2.4024049811030115,
+          "predicted": 0.3128768567866991,
+          "native": 0.30916666666666665,
+          "ratio": 0.9881416920441584,
+          "pull": -0.6218545491654024,
+          "weight": 2.1001390743118276e-06
+        },
+        {
+          "index": 3693,
+          "pt": 6.568216212106834,
+          "predicted": 0.9244668273860615,
+          "native": 0.9251666666666667,
+          "ratio": 1.0007570193541546,
+          "pull": 0.20602333182513352,
+          "weight": 8.458501344815535e-05
+        },
+        {
+          "index": 4109,
+          "pt": 11.19282160092136,
+          "predicted": 0.9268483730601838,
+          "native": 0.9285,
+          "ratio": 1.0017819818082683,
+          "pull": 0.49652784479703654,
+          "weight": 0.000113592334582104
+        },
+        {
+          "index": 5864,
+          "pt": 3.3589790933161843,
+          "predicted": 0.6380501084012176,
+          "native": 0.6285,
+          "ratio": 0.9850323536106786,
+          "pull": -1.53091781303785,
+          "weight": 2.5593161100547846e-05
+        },
+        {
+          "index": 6475,
+          "pt": 3.1529063279114156,
+          "predicted": 0.40332876749761554,
+          "native": 0.4033333333333333,
+          "ratio": 1.0000113203819954,
+          "pull": 0.0007209380714690667,
+          "weight": 2.0075018674743165e-05
+        },
+        {
+          "index": 6956,
+          "pt": 5.5985868488020705,
+          "predicted": 0.9996125795627361,
+          "native": 0.9993333333333333,
+          "ratio": 0.9997206455429714,
+          "pull": -0.8380180741384635,
+          "weight": 3.068859738340638e-05
+        },
+        {
+          "index": 7528,
+          "pt": 7.284215029610467,
+          "predicted": 0.4342691967376734,
+          "native": 0.427,
+          "ratio": 0.9832610813931054,
+          "pull": -1.138336862418096,
+          "weight": 1.2585511265472735e-05
+        },
+        {
+          "index": 7580,
+          "pt": 13.696449256179447,
+          "predicted": 0.7870549770736688,
+          "native": 0.7916666666666666,
+          "ratio": 1.0058594249796176,
+          "pull": 0.8795998204798711,
+          "weight": 0.00010795623518665022
+        },
+        {
+          "index": 7840,
+          "pt": 62.03148567177615,
+          "predicted": 0.9999999999999961,
+          "native": 1.0,
+          "ratio": 1.000000000000004,
+          "pull": 2.3314683517128287e-11,
+          "weight": 0.00023682040417580938
+        },
+        {
+          "index": 8048,
+          "pt": 10.020492402110968,
+          "predicted": 0.3549723632419872,
+          "native": 0.3445,
+          "ratio": 0.9704980885093633,
+          "pull": -1.7070229566476764,
+          "weight": 6.032587382943606e-05
+        },
+        {
+          "index": 8490,
+          "pt": 12.826302854834871,
+          "predicted": 0.9999999999999902,
+          "native": 1.0,
+          "ratio": 1.0000000000000098,
+          "pull": 5.861977570020827e-11,
+          "weight": 9.14145676011435e-05
+        },
+        {
+          "index": 8763,
+          "pt": 9.054930400862512,
+          "predicted": 0.8840024862387895,
+          "native": 0.888,
+          "ratio": 1.0045220616722685,
+          "pull": 0.9818611999498174,
+          "weight": 5.6682600650650085e-05
+        },
+        {
+          "index": 9556,
+          "pt": 11.38467622956558,
+          "predicted": 0.705221899769198,
+          "native": 0.7066666666666667,
+          "ratio": 1.0020486699263615,
+          "pull": 0.2458019907361222,
+          "weight": 5.2376991640766424e-05
+        },
+        {
+          "index": 9764,
+          "pt": 176.44166484805802,
+          "predicted": 0.9978648492857358,
+          "native": 0.9978333333333333,
+          "ratio": 0.9999684166123047,
+          "pull": -0.05250262363014782,
+          "weight": 0.0001580948369974082
+        },
+        {
+          "index": 9907,
+          "pt": 4.292837402343399,
+          "predicted": 0.42518640609372604,
+          "native": 0.4191666666666667,
+          "ratio": 0.9858421169144048,
+          "pull": -0.9450051651947428,
+          "weight": 2.2404074336623968e-05
+        }
+      ],
+      "weighted_native_over_pred_error": 0.0009616754750631565
+    }
+  },
+  "continuous_Q_survival": {
+    "ALL": {
+      "points": 26,
+      "trials": 156000,
+      "weighted_native_over_pred": 1.0001070830349887,
+      "weighted_native_over_pred_error": 0.003455101557556228,
+      "mean_ratio": 0.9925242236407452,
+      "pull_mean": 0.02347966465620294,
+      "pull_rms": 1.129490783106807,
+      "max_abs_pull": 2.6918292812001083,
+      "warnings": 22
+    },
+    "ISR": {
+      "points": 26,
+      "trials": 156000,
+      "weighted_native_over_pred": 1.0004016080306268,
+      "weighted_native_over_pred_error": 0.0027094035641807694,
+      "mean_ratio": 1.001405355330771,
+      "pull_mean": 0.01975929015633487,
+      "pull_rms": 1.031395930518951,
+      "max_abs_pull": 2.446357150540144,
+      "warnings": 72
+    },
+    "FSR": {
+      "points": 26,
+      "trials": 156000,
+      "weighted_native_over_pred": 1.001390684071147,
+      "weighted_native_over_pred_error": 0.0009636568573473279,
+      "mean_ratio": 1.0023621521136166,
+      "pull_mean": 0.23685117710499481,
+      "pull_rms": 0.6445480598213335,
+      "max_abs_pull": 1.394843831802647,
+      "warnings": 0
+    }
+  },
+  "local_FSR_conditional_shape": {
+    "events": 138252,
+    "support_violations": 0,
+    "cdf_range": [
+      1.78161071289878e-06,
+      0.9999988325418188
+    ],
+    "max_support_deviation": 0,
+    "formula": "Native z transformed by normalized integral of (1+z^2)/(1-z) over exact global-recoil massive-quark support and physical reduced-pT cutoff at each actual t; no survival factor or Born matrix element enters this conditional shape test.",
+    "groups": [
+      {
+        "label": "all",
+        "events": 138252,
+        "mean": 0.5002371984238965,
+        "mean_error": 0.0007763787959223161,
+        "KS_statistic": 0.0020267104418770776,
+        "KS_p": 0.6203962549802751,
+        "decile_counts": [
+          13993,
+          13779,
+          13785,
+          13663,
+          13747,
+          13919,
+          13812,
+          13720,
+          13752,
+          14082
+        ]
+      },
+      {
+        "label": "b",
+        "events": 62332,
+        "mean": 0.49983049602573065,
+        "mean_error": 0.0011562555915932953,
+        "KS_statistic": 0.0036330221905701565,
+        "KS_p": 0.3821859710521416,
+        "decile_counts": [
+          6408,
+          6201,
+          6262,
+          6134,
+          6070,
+          6288,
+          6278,
+          6017,
+          6274,
+          6400
+        ]
+      },
+      {
+        "label": "bbar",
+        "events": 75920,
+        "mean": 0.5005711100925276,
+        "mean_error": 0.001047686329772347,
+        "KS_statistic": 0.0022538330695805464,
+        "KS_p": 0.8344344131321406,
+        "decile_counts": [
+          7585,
+          7578,
+          7523,
+          7529,
+          7677,
+          7631,
+          7534,
+          7703,
+          7478,
+          7682
+        ]
+      },
+      {
+        "label": "pt<5",
+        "events": 71545,
+        "mean": 0.49977756509200383,
+        "mean_error": 0.0010792442238308948,
+        "KS_statistic": 0.0021850077444788285,
+        "KS_p": 0.8834186473478858,
+        "decile_counts": [
+          7221,
+          7187,
+          7150,
+          7019,
+          7133,
+          7269,
+          7158,
+          7059,
+          7081,
+          7268
+        ]
+      },
+      {
+        "label": "pt5-20",
+        "events": 51394,
+        "mean": 0.5004225437419139,
+        "mean_error": 0.001273365757373533,
+        "KS_statistic": 0.002885637554928988,
+        "KS_p": 0.7843618041471982,
+        "decile_counts": [
+          5225,
+          5074,
+          5105,
+          5133,
+          5098,
+          5103,
+          5202,
+          5132,
+          5106,
+          5216
+        ]
+      },
+      {
+        "label": "pt>=20",
+        "events": 15313,
+        "mean": 0.5017626231908315,
+        "mean_error": 0.0023328092877078752,
+        "KS_statistic": 0.008669388775838338,
+        "KS_p": 0.19880697830376604,
+        "decile_counts": [
+          1547,
+          1518,
+          1530,
+          1511,
+          1516,
+          1547,
+          1452,
+          1529,
+          1565,
+          1598
+        ]
+      }
+    ]
+  },
+  "inverse_FSR_jacobian": {
+    "points": 966,
+    "bottom": 525,
+    "antibottom": 441,
+    "second_branch": 0,
+    "max_z_error": 4.856670621222747e-13,
+    "max_t_relative_error": 2.259414877414656e-12,
+    "max_jacobian_relative_error": 2.2299115221002808e-08,
+    "median_jacobian_relative_error": 5.176958861596859e-11
+  },
+  "Born_getter": {
+    "command": [
+      "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/extract_inverse_born",
+      "--input",
+      "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnostics/pdf_ratio/before/failed_shard/events.lhe",
+      "--output",
+      "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/inverse_replay.lhe",
+      "--summary",
+      "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/inverse_replay.json",
+      "--routes",
+      "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/macnlops_routes.dat",
+      "--settings",
+      "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Cards/macnlops_shower.cmnd",
+      "--pdf",
+      "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+      "--seed",
+      "4020127",
+      "--res",
+      "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_26/res_1"
+    ],
+    "returncode": 0,
+    "S_points": 4676,
+    "H_points": 223,
+    "max_S_Born_vs_input_relative_mu_error": 4.22939128164046e-10,
+    "output_byte_identical": true,
+    "notes": "Isolated read-only p_born getter after density call, original production objects untouched."
+  },
+  "conclusions": [
+    "The conditional first-emission survival denominator agrees with stock native sampling within sub-percent weighted errors for the tested contexts, with both the saved quadrature-Q mixture and a dense inverse-CDF sampling of the continuous source Q law.",
+    "Massive-bottom FSR has the expected conditional AP z shape, exact native support, and inverse-map Jacobian at actual endpoints; no observed 10-30 percent kernel or finite-recoil determinant error.",
+    "All 368 captured Wbb Born profiles have zero final gluons; the global Born-gluon correction is inactive.",
+    "After the existing emission alpha_s/PDF correction, Ksh retains two Born alpha_s powers and both Born PDF factors at the real reference scales. The independent G formula restoring Born scales is correct for this fixed Wbb setup."
+  ],
+  "limitations": [
+    "Native trials cover 26 positive-S contexts from one 9973-event udx/GF1 shard, not a universal proof over all Born channels or source signs.",
+    "The AP conditional-shape test and inverse Jacobian do not test the local signed S/B density, diagram/colour-flow statistical measure, or full Born normalization.",
+    "The continuous Q diagnostic uses 4096 equal-probability inverse-CDF midpoint nodes rather than infinite resolution; the recovered smooth-D bounds reconstruct saved Q-node weights within 4.1e-15.",
+    "Native ISR trial warnings are retained; these probes do not certify a universal stock-Pythia trial envelope.",
+    "The Born-scale correction is a diagnostic finding, not implemented in production; a paired change must use projected Born IDs/x/scales on both streams and update the common bound."
+  ]
+}

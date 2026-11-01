@@ -1,0 +1,66 @@
+{
+  "passed": true,
+  "fields": [
+    "primary_scale",
+    "system_mass",
+    "system_y",
+    "bb_pt",
+    "bb_mass",
+    "bb_y",
+    "w_pt",
+    "w_y",
+    "b_pt",
+    "b_y",
+    "bbar_pt",
+    "bbar_y",
+    "bb_delta_phi",
+    "bb_delta_y",
+    "bb_delta_r",
+    "radiation_jet1_pt",
+    "radiation_jet2_pt",
+    "all_jet1_pt",
+    "all_jet2_pt"
+  ],
+  "tests": [
+    "massive Born kinematics",
+    "radiation jet excludes b/bbar",
+    "radiation retained to1e-8GeV without threshold",
+    "collinear gluon clustered with b in all-jet control",
+    "azimuthal rotation",
+    "longitudinal boost",
+    "strict object counting",
+    "Fortran HwU hook compilation"
+  ],
+  "trials": [
+    {
+      "radiation_pt": 1e-08,
+      "system_pt": 1e-08,
+      "radiation_jet_pt": 1e-08,
+      "all_jet_pt": 30.00000001
+    },
+    {
+      "radiation_pt": 0.0001,
+      "system_pt": 0.0001,
+      "radiation_jet_pt": 0.0001,
+      "all_jet_pt": 30.0001
+    },
+    {
+      "radiation_pt": 0.1,
+      "system_pt": 0.1,
+      "radiation_jet_pt": 0.1,
+      "all_jet_pt": 30.1
+    },
+    {
+      "radiation_pt": 1.0,
+      "system_pt": 1.0,
+      "radiation_jet_pt": 1.0,
+      "all_jet_pt": 31.0
+    },
+    {
+      "radiation_pt": 10.0,
+      "system_pt": 10.0,
+      "radiation_jet_pt": 10.0,
+      "all_jet_pt": 40.0
+    }
+  ]
+}

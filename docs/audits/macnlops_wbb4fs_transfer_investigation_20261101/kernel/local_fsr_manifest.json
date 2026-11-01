@@ -1,0 +1,12 @@
+{
+  "command": [
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/local_fsr",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/points_FSR.dat",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/local_fsr.csv",
+    "6000",
+    "4011391",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Cards/macnlops_shower.cmnd",
+    "FSR"
+  ],
+  "returncode": 0
+}

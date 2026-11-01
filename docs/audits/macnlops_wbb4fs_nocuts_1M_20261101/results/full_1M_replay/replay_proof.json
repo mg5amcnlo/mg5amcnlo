@@ -1,0 +1,319 @@
+{
+  "original_root": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/MCatNLO/RUN_PYTHIA8_3",
+  "replay_root": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay",
+  "source_input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Events/run_1M_wbb4fs_nocuts/events.lhe.gz",
+  "source_input_sha256": "586fce50c3031d7090a105ca9ac43a905e79949262b3ee61b0d06ebe7d5e5edd",
+  "original_analyzer_sha256": "a34137f73d76d1fb67e6cb14f17bd6ba31e6c9ade1706c2a71349fe4f52e8255",
+  "replay_analyzer_sha256": "6908ac49870f1ad1e62c75ad2fa43a305844bd6e90d8d29e685a9233cfdb715e",
+  "original_executable_sha256": "9b7815b25fed2433263df312111dbe879e83b440dd79cf4e5ba772bad05e5f06",
+  "replay_executable_sha256": "b9c1ef28c99fbedb45c7a055081184eeafcc55b1113874161e6cbde39e054956",
+  "driver_sha256": "687089c519033de100cb940d15a399466aa311cc328e3e8548a0f0ee19acd736",
+  "jobs": 50,
+  "events": 1000000,
+  "per_job_events": 20000,
+  "all_50_HwU_byte_identical": true,
+  "no_fort_97": true,
+  "seconds": 5.72003960609436,
+  "shards": [
+    {
+      "job": 1,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_0.lhe",
+      "input_sha256": "885ee562302834cf473ee9374432e19bf5b21deba63faa67ae85c29a87aa8059",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 2,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_1.lhe",
+      "input_sha256": "4c27ca9253242c215f86f63fac9a558435cf22eac58c4dd76cc8c84247e6e12f",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 3,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_2.lhe",
+      "input_sha256": "ecc807731234262cd56f7fa7832ff2a1c67f158fd742e9557e302b38aaf7c925",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 4,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_3.lhe",
+      "input_sha256": "dba677755762c4c21eb4de118adf721602f5a3e79d5573fef585b3d89eccb57b",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 5,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_4.lhe",
+      "input_sha256": "74364c7f4d27221b9cee116c22749de573220b455dba64f493fb131321a47454",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 6,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_5.lhe",
+      "input_sha256": "021abf915dc8ffc8af0ee8262c350af2d7f2a07b95dcbc51f4f3449a6e581d8f",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 7,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_6.lhe",
+      "input_sha256": "9671142d741c4ca28239c2104650d3e9884bb14a3969a3e1c118fd692ea6446c",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 8,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_7.lhe",
+      "input_sha256": "56656dbd5279ec0ab1dfe5d588e29c8a2a269c62fdba3c736811660021ffccba",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 9,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_8.lhe",
+      "input_sha256": "10d8b5f728ee88c426b06cc848d3094573a09d3a7c90a823ea2f6e9edc8f90ed",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 10,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_9.lhe",
+      "input_sha256": "2037566f13946b249b8266e04f768860a9816eeca05cedf101df6d965aed7caa",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 11,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_10.lhe",
+      "input_sha256": "5d2744cd71944bf68a0011f14af013d2fe709b3cf644e366f602598e350449f3",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 12,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_11.lhe",
+      "input_sha256": "cd87c76e4583a6d513eed7fde0d85e6dcbf47b3e9316087cd7b4d863425ebbfc",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 13,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_12.lhe",
+      "input_sha256": "cd3a1b11ae1c94c676d7c3611373e2a185050ae65537dbc521c574611d5347a2",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 14,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_13.lhe",
+      "input_sha256": "25e433affcd8d4f1a8a5314d5366debec9a0f57b2c1d93452a63ffcde5c162a7",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 15,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_14.lhe",
+      "input_sha256": "d8c2b87c758f4da1e4af110cc22f69c0e68ac5d74450a1b06443ff2bca34b15e",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 16,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_15.lhe",
+      "input_sha256": "ed7acb4721f781ac955b85b576abeb878d97dd8d053262dcbc93f25793ed33ef",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 17,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_16.lhe",
+      "input_sha256": "2acc00e890080a01a2515df62ac204baec7f065903c26bc1c0bdf3614b22b78b",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 18,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_17.lhe",
+      "input_sha256": "64d572164e6c50ffb1cc9545f23332104c0b0401b677133186775757a88edcb8",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 19,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_18.lhe",
+      "input_sha256": "47239efb01380827d01f3d6f40c32333161213a2f6547da151a9312e56f3f74c",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 20,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_19.lhe",
+      "input_sha256": "a679af0a50993c858de1beb25a675676b13b2c264a6b58950225efad4baaf887",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 21,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_20.lhe",
+      "input_sha256": "2267803fa2e461b4a032a34073b6a6041d6e1542bcc00bcf790a63c94c76d1a6",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 22,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_21.lhe",
+      "input_sha256": "db1af58671a61120810a754e3b43066ab31bb0613655a7df4635e2e65b33576c",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 23,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_22.lhe",
+      "input_sha256": "6d414df9f56aeda177feac6194b0a08e8c78686f364b1833f4d5ccb47df72dbd",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 24,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_23.lhe",
+      "input_sha256": "d38971c16e93685627d53b9d1216889fb1ab405aff2be6b922d3b415c9eb3aac",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 25,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_24.lhe",
+      "input_sha256": "2b4daa23ceceecc99e99ade8aeb28b80a0e0a7a54e057c47a12738743d345b22",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 26,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_25.lhe",
+      "input_sha256": "21432b26cf923b664d43e4dc6a14c503145ab99b0f538c474ccdf9e4f1140c77",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 27,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_26.lhe",
+      "input_sha256": "c0cf4252a383c95d244e9b8401b65981a0ef3ffcfb8eac7348692db3e31fafd0",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 28,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_27.lhe",
+      "input_sha256": "6579bf688dfc8ecebd44de92937f743efb4beee4ce71a7fba64857761ded6be3",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 29,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_28.lhe",
+      "input_sha256": "ea87e276d087a805cc2da637264537fae70263a2b697e5c35cc469ba1489f066",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 30,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_29.lhe",
+      "input_sha256": "1c0a2700a4315417b82c57d0041d3c96adc4cccbd2903cc818e414b82343cf66",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 31,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_30.lhe",
+      "input_sha256": "46c99d041fe6a01a2e3a326727f4bb1bffecced84ff1d9cc81d8143661337f90",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 32,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_31.lhe",
+      "input_sha256": "d1d35b0161b965631e760577072e5996a2766f819e9f1c688aa6f69d148342eb",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 33,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_32.lhe",
+      "input_sha256": "4d55145715850d22ed4960326e7be5833bcce66d46538a3df62259df66778b44",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 34,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_33.lhe",
+      "input_sha256": "3058ba4636fc6b82dba5b6da2aaa43813d483eb707a7294f7386cd280224c3a7",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 35,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_34.lhe",
+      "input_sha256": "9f9c8caa531efebac6f804bbfe4d5e9a1febad14267e87d6c75b78b948f83b57",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 36,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_35.lhe",
+      "input_sha256": "bb7393317f4bfe8ba6253fb825c6be2ee20b494d43e9142c9bda90d0f3795a47",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 37,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_36.lhe",
+      "input_sha256": "9b01fe048652466758c91353a1227c4ffdf6c39f421864b536554c5e88d90c38",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 38,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_37.lhe",
+      "input_sha256": "f906c715df0899966b9f86e4b5bbd34ae7659ce949c986bc755b3e220a0c30a2",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 39,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_38.lhe",
+      "input_sha256": "b31faf5e21a5f144a8d7c77eecc19fe49de2fe0d01bd8143f8504ccd707befdc",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 40,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_39.lhe",
+      "input_sha256": "f0e2a97b8d87c3f289605e67a1a8b1e791c747bab575013c1d231083675e223a",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 41,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_40.lhe",
+      "input_sha256": "c02d73d4a56c44bc8b803c19208fb1aea10fb85acd95aabf0df6bfc69fc083bc",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 42,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_41.lhe",
+      "input_sha256": "54de75ad3dc969d777e708861b8efe9e2c93bc7dd39eb716ee48af15a39fbea2",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 43,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_42.lhe",
+      "input_sha256": "ea9855b955865df871846b03b76cbbf8d74ede00669a3d7ba2eb5444760261dd",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 44,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_43.lhe",
+      "input_sha256": "ae73d8bb2986eb9215352266a5127149e67fc2dc912abfd706dc11ad31033520",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 45,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_44.lhe",
+      "input_sha256": "8fac21cc5df91ead70d358f16b949275beff37c982fcfca468495e33e66a12f8",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 46,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_45.lhe",
+      "input_sha256": "7b51c22c4fd330f54e0c4be3e68bcec9f78bfc5e7a5cae9e8eed7a8ca23e1d4c",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 47,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_46.lhe",
+      "input_sha256": "59f456cacacef87ad4b9ec9080789d9730a25b69af64a39e5cb867bb0ef6f364",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 48,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_47.lhe",
+      "input_sha256": "adf3652980561a9e509d33303a43726d5efeebc844fa22bcbac11764526545f9",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 49,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_48.lhe",
+      "input_sha256": "032e00c0dc431d1ee858b3eb7da2c432ef8d3457e452d1250bcf935c15133f1a",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    },
+    {
+      "job": 50,
+      "input": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/full_1M_replay/input.lhe.gz_49.lhe",
+      "input_sha256": "f2f1b80b1974fb179b586101067325f69053ed00f129fb5f41f8b6ddb98d8a54",
+      "card_sha256": "264b026b8e9054a94059fdc34c782a6269686afd8780a74db00614a372f14f50"
+    }
+  ]
+}

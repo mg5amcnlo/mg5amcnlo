@@ -1,0 +1,37 @@
+{
+  "first": {
+    "events": 486511,
+    "source_pb": 217.76794494343002,
+    "matched_pb": 216.91889566104007,
+    "S_pb": 9.947201334930005,
+    "H_pb": 9.098152052539998,
+    "H_over_S": 0.9146444056170316,
+    "ratio_error": 0.0121838262813084,
+    "net_H_minus_S_pb": -0.84904928239,
+    "net_error_pb": 0.12796687984316518,
+    "matched_source_minus1": -0.003898871721503938
+  },
+  "full": {
+    "events": 453439,
+    "source_pb": 202.87643160089002,
+    "matched_pb": 202.08789075864007,
+    "S_pb": 9.074334900570001,
+    "H_pb": 8.28579405832,
+    "H_over_S": 0.9131020784564091,
+    "ratio_error": 0.012807988473731347,
+    "net_H_minus_S_pb": -0.7885408422499999,
+    "net_error_pb": 0.12221524187528676,
+    "matched_source_minus1": -0.0038868035879160434
+  },
+  "passed": true,
+  "events": 1000000,
+  "jobs": 50,
+  "cuts": "none",
+  "paired_ratio_drift": -0.0015423271606225253,
+  "paired_ratio_drift_error": 0.007536441300385993,
+  "inputs": {
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/run_1M_wbb4fs_nocuts_lhe.npz": "1567f10774465e2d60392de90d67a7ed3563257690e2ef70b3d1c8d2fad3ee6e",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/validation_1M/full_events.npz": "2c7f2a28a00e99f052e2ec275d420743b7448e1230e02dba2e28259b40cc092e",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/results/validation_1M/comparison.json": "2a6443a4cd772bc76e20124b4385dae17959f5786720c72ca2958a4d9e9d4a55"
+  }
+}

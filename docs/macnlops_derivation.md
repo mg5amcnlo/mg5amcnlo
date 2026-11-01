@@ -368,7 +368,7 @@ interval, split at all connection stopping scales, FSR ceilings and
 \(t\), including changes in the source's live colour-line mixtures.
 
 Let \(u=\max(D_G-R,0)\), \(C=\min(u,K)\), and
-\(F=\beta_c K_{\rm sh}P\), where \(K_{\rm sh}/K\) retains v3's
+\(F=\beta_c K_{\rm sh}G_B P\), where \(K_{\rm sh}/K\) retains v3's
 coupling and resolved-flavour emission-PDF correction. The common,
 bounded transfer density is
 
@@ -386,6 +386,43 @@ shower probability permits no H removal. Thus clipping only the S veto
 cannot introduce an unmatched H transfer. This addresses the Sudakov
 factor; the channel-averaged \(\beta_c=\sigma_{S,c}/\sigma_{B,c}\)
 remains an approximation to the local S/B density ratio.
+
+Default v4 also restores the **canonical Born reference scales** through
+\(G_B\). The raw kernel uses the real-point scale choices, while its S
+source carries the Born-point scale choices. The native evaluator takes
+the ratio of the same selected-flow scalar Born contribution at those two
+references, including model coupling updates, mixed Born coupling orders
+and each order's custom scale prefactor. It multiplies this by the ratio
+of both canonical Born-flavour hard PDFs at the corresponding native
+factorization scales. Bare fixed lepton beams contribute unity without
+a PDF lookup. No process-wide power of alpha_s or particular dynamical
+scale formula is assumed.
+The supported reference beams are ordinary hadrons/antihadrons and bare
+fixed leptons; specialized UPC and dressed-lepton beam modes fail explicitly.
+
+The same \(G_B\) multiplies \(F\) for S veto and H removal; \(R,D,K\), the
+source damping and the continuation endpoints retain their definitions.
+Nonpositive Born-reference support retains both original contributions,
+and nonfinite factors remain errors. The native weight-line convention
+stores the first factorization scale for both beams; the correction and
+v4's kernel-PDF metadata follow that actual convention even when requested
+beam scale multipliers differ. The source convention itself is unchanged.
+Decision records expose born_scale_factor, born_coupling_factor and
+born_pdf_factor; corrected samples are marked
+born_scale_correction="native-born-v1". Explicit v2/v3 modes retain their
+historical definitions. The separate channel-average S/B approximation
+is still present; this correction does not introduce a fitted local S/B.
+
+The ordinary PDF-ratio model also needs a support condition. A native Born
+PDF can be clipped to zero while Pythia still produces an ISR branch using
+its internal daughter-PDF floor. In default v4, both S and H evaluate the
+same condition on the canonical Born flavours, momentum fractions and
+emission scale. If either incoming QCD Born PDF is nonpositive, the transfer
+is disabled and **both original contributions are retained**. Nonfinite
+PDF values remain errors. This adds no generation or analysis cut, changes
+no source weight or shower endpoint, and does not replace the native PDF
+floor by an inferred emission density. Positive-support decisions and the
+legacy v2/v3 prescriptions retain their previous definitions.
 
 The implementation reuses the shipped tables for **all source factors**,
 with the same grouped PDFs, beam types, real-state dipole masses,

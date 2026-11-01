@@ -1,0 +1,25 @@
+{
+  "command": "python -m unittest tests.unit_tests.fks.test_macnlops_born_scale_factor -v",
+  "tests": 9,
+  "skips": 0,
+  "failures": 0,
+  "errors": 0,
+  "elapsed_seconds": 0.214,
+  "status": "PASS",
+  "source_sha256": {
+    "Template/NLO/SubProcesses/montecarlocounter.f": "ef6f4411adccfff9f633fcbabd6f72e28ccce7d106c1750c9e060c936cc7fc16",
+    "Template/NLO/SubProcesses/driver_macnlops.f": "736cc3f224a51c5e99a66c9ab0a0a0ed5a576e8d36e25639df20280aeba9f71d",
+    "Template/NLO/SubProcesses/weight_lines.f": "bddc733f75c6d2b7af8a7b4c03a2bc89436df546bcfeef94c6960f66d7c632bd",
+    "Template/NLO/SubProcesses/macnlops_capi.f": "aea779e1fd9ac6f3811cbdaf4e9c1e443b57378327cb2fcc2b6930e948b49c52",
+    "tests/unit_tests/fks/test_macnlops_born_scale_factor.py": "9eda45a235dd5ca28b0a9081f02fbe2900da2d0aef608429dc4b123faac68367"
+  },
+  "coverage": [
+    "Native scalar Born powers0/1/2 and effective/mixed model couplings",
+    "Per-order custom cpower hook",
+    "Fixed/native dynamic references and canonical boost-dependent scale",
+    "Both hard PDF beams; actual native common muF1 despite asymmetric requested muF2",
+    "Bare lepton beams have no PDF calls and tolerate irrelevant x roundoff",
+    "Nonpositive support returns zero; nonfinite support errors",
+    "Real CMS/scales/Born cache/model-coupling state restored"
+  ]
+}

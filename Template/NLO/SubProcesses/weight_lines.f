@@ -21,6 +21,11 @@
 ! and the squared factorisation scales of that point's kernel PDFs.
          double precision :: macnlops_kernel_alphas=0d0
          double precision :: macnlops_kernel_q2fact(2)=0d0
+! The scalar Born and hard-PDF change of reference scale for v4.
+! A zero factor identifies an unsupported reference, not a PDF floor.
+         logical :: macnlops_born_scale_ready=.false.
+         double precision :: macnlops_born_scale_coupling=1d0,
+     $        macnlops_born_scale_pdf=1d0
 ! Optional first-emission Sudakov request. Source integration never enables
 ! it. The matching driver returns a deterministic marginal over its native
 ! starting-scale law, with the source Delta unchanged.
@@ -767,6 +772,9 @@ c update maximum
       macnlops_current_z=0d0
       macnlops_kernel_alphas=0d0
       macnlops_kernel_q2fact=0d0
+      macnlops_born_scale_ready=.false.
+      macnlops_born_scale_coupling=1d0
+      macnlops_born_scale_pdf=1d0
       if (allocated(QCDpower)) deallocate(QCDpower)
       if (allocated(pdg)) deallocate(pdg)
       if (allocated(pdg_uborn)) deallocate(pdg_uborn)

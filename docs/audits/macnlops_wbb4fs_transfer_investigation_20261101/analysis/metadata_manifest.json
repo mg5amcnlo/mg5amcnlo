@@ -1,0 +1,102 @@
+{
+  "events": 1000000,
+  "fields": [
+    "keep",
+    "accepted",
+    "pt",
+    "matching_scale",
+    "r",
+    "d",
+    "k",
+    "sector",
+    "candidates",
+    "marking",
+    "total_k",
+    "kernel_scale",
+    "alpha_s_shower",
+    "alpha_s_kernel",
+    "pdf_ratio",
+    "delta_source_mean",
+    "delta_shower_mean",
+    "starting_cdf",
+    "component_sector",
+    "config",
+    "graph",
+    "flow",
+    "flow_probability",
+    "insertion",
+    "source_factor",
+    "symmetry",
+    "source_scalup",
+    "hard_ht_half",
+    "endpoint_ht_half",
+    "hard_x1",
+    "hard_x2",
+    "endpoint_x1",
+    "endpoint_x2",
+    "hard_system_mass",
+    "hard_system_y",
+    "hard_bb_mass",
+    "hard_bb_pt",
+    "hard_b_pt",
+    "hard_bbar_pt",
+    "hard_w_pt",
+    "hard_bb_delta_phi",
+    "hard_bb_delta_r"
+  ],
+  "registry_map": {
+    "b6c6fe891fa046086cfe06aee7523306c81722b8e3f661f7259f23c10e31ea95": 0,
+    "f5897d0fc5ebb718adb3abc98b13c81a901ebf8835a28f7ddb64777dac5cb676": 1
+  },
+  "beta_groups": {
+    "0:1": {
+      "name": "P0_dxu_bbxwp/GF1.0",
+      "res": "res_1",
+      "sigma_S": 85.27228898701532,
+      "sigma_S_error": 0.262145577019222,
+      "sigma_B": 46.06913834428979,
+      "sigma_B_error": 0.03155365862292124,
+      "beta": 1.8509634009159779
+    },
+    "0:2": {
+      "name": "P0_dxu_bbxwp/GF2.0",
+      "res": "res_1",
+      "sigma_S": 86.2543290559734,
+      "sigma_S_error": 0.2472070357352837,
+      "sigma_B": 46.05225675861138,
+      "sigma_B_error": 0.03527694857477781,
+      "beta": 1.872966389206205
+    },
+    "1:1": {
+      "name": "P0_udx_bbxwp/GF1.0",
+      "res": "res_1",
+      "sigma_S": 86.94887632063565,
+      "sigma_S_error": 0.3122723594589295,
+      "sigma_B": 46.01346601756133,
+      "sigma_B_error": 0.03516460558885596,
+      "beta": 1.8896397912613465
+    },
+    "1:2": {
+      "name": "P0_udx_bbxwp/GF2.0",
+      "res": "res_1",
+      "sigma_S": 85.2075862173953,
+      "sigma_S_error": 0.27030214385772866,
+      "sigma_B": 46.074390460293415,
+      "sigma_B_error": 0.03704420912432117,
+      "beta": 1.8493480948125967
+    }
+  },
+  "beta_inference_max_abs": 8.881784197001252e-16,
+  "exact_first_event_order_weight_keep_verified": true,
+  "hard_momenta_columns": [
+    "px",
+    "py",
+    "pz",
+    "E",
+    "mass"
+  ],
+  "hard_momenta_note": "First nhard rows. nhard=5 for S Born and6 for H real; row identities ordered as source hard packet: incoming1,incoming2,b,bbar,W[,extra].",
+  "endpoint_ht_note": "H_T/2 of all stable final endpoint particles using their recorded masses.",
+  "seconds": 28.862879037857056,
+  "sha256": "a9cfba16fc68c335797c94749054865ebc2c0399ab35dc02c9c63ad24afcf14e"
+}

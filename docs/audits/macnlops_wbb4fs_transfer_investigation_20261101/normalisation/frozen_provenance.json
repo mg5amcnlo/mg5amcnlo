@@ -1,0 +1,149 @@
+{
+  "all101_raw_source_event_files_unchanged": true,
+  "created_utc": "2026-11-01T09:28:30.762825+00:00",
+  "first_matching_summary_unchanged": true,
+  "generation_sources_unchanged": true,
+  "git_head": "795c54bbf45b16d3355df03a96e78e1d296ea59d",
+  "normalisation_files": {
+    "born_alpha_audit.json": {
+      "bytes": 296,
+      "sha256": "8ac2bc3483736dd025898cf4bbecb325789d7c863b188359b65982fa6acc8267"
+    },
+    "born_control.npz": {
+      "bytes": 20209358,
+      "sha256": "e40833410c45dbb4e451fb0b7f8f9677c082c71ecc8e3772b5f7e55ec6b55fca"
+    },
+    "born_control_metadata.json": {
+      "bytes": 1065,
+      "sha256": "a20ef60c84d1c555434b7a4e46925ee86cbab612df80888cdc63afd43afd7f07"
+    },
+    "born_export.cmd": {
+      "bytes": 438,
+      "sha256": "fc3cffb8d5ac2513e7854abe274b5843f3e462883f2535e24611b30f673776fa"
+    },
+    "born_export.log": {
+      "bytes": 18453,
+      "sha256": "ef0f4e6ed671b357c4a5ac4ae3ae8ea5ec2663530397a9325c81c9015c99cd49"
+    },
+    "born_generate.cmd": {
+      "bytes": 158,
+      "sha256": "62d406f54adf8f407cb67f6c1e30332496f8151bc799f10af92d57476687c6c3"
+    },
+    "born_generate.log": {
+      "bytes": 5273,
+      "sha256": "1d868171fad950aaaa1f8a767c6d3a6f39bfb89e73b586ad0763c866d616bb1f"
+    },
+    "born_settings.json": {
+      "bytes": 2786,
+      "sha256": "0db1d071aabde6eeaa413511f126537aa2c1c5c0313d9302c8a074f4a7a2ba9b"
+    },
+    "cache_born_control.py": {
+      "bytes": 2701,
+      "sha256": "27f38451ffc14fb686d2f16382e29e7f4fa2a98df72e3410242b4d2e8aef8a2a"
+    },
+    "channel_normalisation.json": {
+      "bytes": 3630,
+      "sha256": "5976a13531677abea9c05e907e30debadb343a4fa80e7d4b5144b54e5a8341df"
+    },
+    "check_born_alpha": {
+      "bytes": 29104,
+      "sha256": "05c36807aeec0c7e5c4130ececf21126d6904db67b8ae2f0a8617be0600f57ba"
+    },
+    "check_born_alpha.cc": {
+      "bytes": 419,
+      "sha256": "e4ce467216b408201ece8ab0c4caafda2c17c2f46f648ce8157b17772ff6f944"
+    },
+    "configure_born.py": {
+      "bytes": 1531,
+      "sha256": "d5d1b13c6e2b1ddf48666fde6c2a970378b68a8619bfbe1b1b34020cf8dc61ed"
+    },
+    "crossfit_extended.json": {
+      "bytes": 229064,
+      "sha256": "729dd09e6d2585b289ec058f5c70250be587880a77c7eae7e529cdf7e2351f30"
+    },
+    "crossfit_extended.py": {
+      "bytes": 6603,
+      "sha256": "3a30c0d46710275f446c29d1b408a8ae2a0ea733c50e8f842187f8f4ad25c287"
+    },
+    "crossfit_flavour_geometry.json": {
+      "bytes": 278443,
+      "sha256": "2185da86101b7ff61e2ee56ce9e42526623ea91daaf090d004d509fc42a7a25a"
+    },
+    "crossfit_flavour_geometry.py": {
+      "bytes": 6953,
+      "sha256": "d0737551ebafa8c09b763c64407798473cc3639260d70e5ccaaa87aacceb4324"
+    },
+    "crossfit_geometry_stability.json": {
+      "bytes": 392413,
+      "sha256": "a4de10072948b16f05d0caa5e655adb1036b875a5451afaf3b8f21a31a15bdfe"
+    },
+    "crossfit_geometry_stability.py": {
+      "bytes": 6936,
+      "sha256": "48e352f90ab650fbc0bc12b249eafb34511b0dd3f6045c3f29b432af8255846b"
+    },
+    "crossfit_local_beta.json": {
+      "bytes": 101489,
+      "sha256": "d5366611bccb4cf0dac56d338392a0f16222d9bfaf20d525e2acd056f786033c"
+    },
+    "crossfit_local_beta.py": {
+      "bytes": 6366,
+      "sha256": "d0945a56ef4be43450eabf5b5368b259f8050bcc8669a635adeafad83563b5dd"
+    },
+    "normalisation_summary.json": {
+      "bytes": 24940,
+      "sha256": "a3e04fa2d1790470146509d824a6ec3ccac0a07eb96b503e579b7aea64ad74d7"
+    },
+    "predictions_flavour_mWbb_20.npz": {
+      "bytes": 5253446,
+      "sha256": "2a61c92d5c8ddca121a1401a22400f32f3a9b2ec56c951690246e3d79fa09a0a"
+    },
+    "predictions_flavour_mWbb_40.npz": {
+      "bytes": 5375439,
+      "sha256": "0ab08d5ed0ac58396a14ffaf9aeb5370d9ae871786b75de217df1e64bfcbabe7"
+    },
+    "predictions_flavour_order_mWbb_20.npz": {
+      "bytes": 5249933,
+      "sha256": "921e6d7e189f96bcfdadd38440e6cd4b6a88715df1af6ae9ac16612a0fa6b71b"
+    },
+    "predictions_mWbb_20.npz": {
+      "bytes": 5185369,
+      "sha256": "5a69d586a403e574659d1f042bd646d3ee993d4c98cb21763d54eee99da60cff"
+    },
+    "predictions_mWbb_40.npz": {
+      "bytes": 5256051,
+      "sha256": "6da6810dc98b2f38c40b8b672e0823a916c4435b81d352b998ce56fb363b73e5"
+    },
+    "predictions_mWbb_HT2_12x12.npz": {
+      "bytes": 5418279,
+      "sha256": "ef523504a9272aebd83f2a69b500cc1824e9cda2c2f662001025859bab7951d4"
+    },
+    "predictions_mWbb_HT2_16x16.npz": {
+      "bytes": 5627437,
+      "sha256": "01637ea53d480db94fb199efc7811ffb3f0e59dbffd7d51fda27f9916029b078"
+    },
+    "predictions_mWbb_HT2_8x8.npz": {
+      "bytes": 5278140,
+      "sha256": "1b3aef4c3f742d90185439c9bdd7906a25dbd4f487b3c7c64ae23b7a15d42c82"
+    },
+    "save_fit_predictions.py": {
+      "bytes": 1864,
+      "sha256": "2f1852b5871852c20582788ae7c655b63453e99e319f81b778ffe97ce4986161"
+    },
+    "save_geometry_predictions.py": {
+      "bytes": 1800,
+      "sha256": "d3402c93513d9051103a9e0ed2a97e390aa5b03b3826964f86409411f0bf2351"
+    },
+    "save_stable_geometry_predictions.py": {
+      "bytes": 1821,
+      "sha256": "3962a2d604cdc74b5688e7c7161502af03637dab728ffa1ff1a2d60553042ed3"
+    }
+  },
+  "passed": true,
+  "process_matcher_source_unchanged_since_guard_validation": true,
+  "raw_source_events": 1000000,
+  "root_matcher_source_unchanged_since_guard_validation": true,
+  "scope": "Read-only comparison against pre-investigation frozen source epoch/recovery/first-summary hashes; external LOcontrol and counterfactual diagnostic arrays are the only newly generated outputs. No commit/push or Pythia/source-generation/matching change was made by this normalisation investigation.",
+  "source_job_seeds_unchanged": true,
+  "stock_Pythia_library_sha256": "35203dfab4e20b044fe6e669b8170f5905f56c43c6dad6e762ceff86158a283c",
+  "stock_Pythia_library_unchanged": true
+}

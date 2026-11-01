@@ -1,0 +1,29 @@
+{
+  "command": [
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/extract_profiles",
+    "--input",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnostics/pdf_ratio/before/failed_shard/events.lhe",
+    "--output",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/replay.lhe",
+    "--summary",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/kernel/replay.json",
+    "--routes",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/macnlops_routes.dat",
+    "--settings",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/Cards/macnlops_shower.cmnd",
+    "--pdf",
+    "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0",
+    "--seed",
+    "4020127",
+    "--res",
+    "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_26/res_1"
+  ],
+  "cwd": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/processes/Wbb_4FS/SubProcesses/P0_udx_bbxwp/GF1.0_26",
+  "returncode": 0,
+  "production_source_sha256": "0e2bbd496540ed2692cb0d2665544aba8380add65771776a9baaaec7312dc7e1",
+  "isolated_source_sha256": "6b687635b689c8aac0813d0f9199b38bb2f126d94324673c98680f99f78e3359",
+  "notes": "Read-only diagnostic replay of frozen shard with unchanged decisions and extra profile output; no source or Pythia mutation.",
+  "output_byte_identical_to_frozen_guard_replay": true,
+  "output_sha256": "dd766cbfb9a9e41a3b8d00b454b2ece4dd9ff70c44f50c76c166c26fcc50c3b8",
+  "frozen_guard_output_sha256": "dd766cbfb9a9e41a3b8d00b454b2ece4dd9ff70c44f50c76c166c26fcc50c3b8"
+}

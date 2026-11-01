@@ -1,0 +1,15 @@
+{
+  "H_contexts": 223,
+  "all_positive_Born_support": true,
+  "combined_G_range": [
+    0.9846132853098207,
+    1.2196028529993261
+  ],
+  "max_alpha_real_relative_error": 3.064215547965432e-14,
+  "changed_H_removal_probabilities": 0,
+  "old_removed_weight_pb": 0.14354621577413557,
+  "new_removed_weight_pb": 0.14354621577413557,
+  "minimum_native_bound_over_C": 2.45326509474775,
+  "minimum_corrected_bound_over_C": 2.8513372220661,
+  "limits": "223H from one9,973-source shard; not a fullHpopulation correction."
+}

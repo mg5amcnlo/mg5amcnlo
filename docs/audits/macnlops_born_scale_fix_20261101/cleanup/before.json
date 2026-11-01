@@ -1,0 +1,11 @@
+{
+  "created_utc": "2026-11-01T10:14:12.541752+00:00",
+  "source_sha256": {
+    "Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc": "ec129d1eacfa27d7a4e0a442205847ba85a17751b7edcd263d97aeabb7acc39b",
+    "Template/NLO/SubProcesses/montecarlocounter.f": "ef6f4411adccfff9f633fcbabd6f72e28ccce7d106c1750c9e060c936cc7fc16",
+    "Template/NLO/SubProcesses/driver_macnlops.f": "736cc3f224a51c5e99a66c9ab0a0a0ed5a576e8d36e25639df20280aeba9f71d",
+    "Template/NLO/SubProcesses/macnlops_capi.f": "aea779e1fd9ac6f3811cbdaf4e9c1e443b57378327cb2fcc2b6930e948b49c52",
+    "Template/NLO/SubProcesses/weight_lines.f": "bddc733f75c6d2b7af8a7b4c03a2bc89436df546bcfeef94c6960f66d7c632bd",
+    "madgraph/various/macnlops.py": "340975199b9e727bcb530a379a219851ce4428ebd339e780926545c132b2cf5f"
+  }
+}

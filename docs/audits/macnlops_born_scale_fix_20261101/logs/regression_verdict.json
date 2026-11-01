@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "distinct_tests": 138,
+  "skips": 0,
+  "initial_passes": 137,
+  "updated_fixture": "test_macnlops_sudakov_profile:declare Born getter state and verify request reset",
+  "recheck_tests": 4,
+  "recheck_status": "PASS",
+  "production_source_changed_after_regressions": false,
+  "logs": {
+    "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/logs/regressions.log": "042cb83c49a65e021d50962fda24d32dc7b3387d2d74a4a9bb2b11f8e8bb5be5",
+    "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/logs/profile_fixture_recheck.log": "c9d5dde9315ee9908b69012eed2194ac5d40619fe9ee30902064b05bf70545e0"
+  }
+}

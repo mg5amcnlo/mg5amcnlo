@@ -1,0 +1,10 @@
+{
+  "P0_dxu_bbxwp": {
+    "exe": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/extract_P0_dxu_bbxwp",
+    "sha256": "dfa9fdc583e48259f9b9d5b825a37a2dd077c9a6ea0276629bd367474f8f76ec"
+  },
+  "P0_udx_bbxwp": {
+    "exe": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/diagnosis_transfer_20261101/scales/H_getter/extract_P0_udx_bbxwp",
+    "sha256": "2fe62fe97d1210ecb9d6227156c6275c60c58c47abe0d943a2758b745ad754e2"
+  }
+}

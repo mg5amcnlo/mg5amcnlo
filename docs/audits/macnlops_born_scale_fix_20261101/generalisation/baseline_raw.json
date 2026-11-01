@@ -1,0 +1,2531 @@
+{
+  "created_utc": "2026-11-01T09:51:36.914089+00:00",
+  "processes": [
+    {
+      "channels": [
+        {
+          "channel": {
+            "beta": 1.0643132394976094,
+            "res": "res_1",
+            "sigma_B": 29.751504069694445,
+            "sigma_B_error": 0.049070359971844585,
+            "sigma_S": 31.6649196763428,
+            "sigma_S_error": 0.05673174279523475
+          },
+          "counts": {
+            "accepted_H": 3,
+            "accepted_S": 269,
+            "evaluated_H": 15,
+            "evaluated_S": 282,
+            "h_removal_H": 15,
+            "input_H": 18,
+            "input_S": 282,
+            "no_transfer_S": 148,
+            "positive_h_H": 3,
+            "rejected_H": 15,
+            "rejected_S": 13,
+            "s_veto_S": 134
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE2/SubProcesses/P0_epem_uux/GF1.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 300,
+              "input": 12.714197939999945,
+              "macnlops": 12.808377183999944,
+              "macnlops_max": 0.047089622,
+              "macnlops_squares": 0.6031416400279823
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320102,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 12.714197939999945,
+            "macnlops": 12.808377183999944
+          }
+        },
+        {
+          "channel": {
+            "beta": 1.0624125404495908,
+            "res": "res_1",
+            "sigma_B": 14444.437960079864,
+            "sigma_B_error": 16.04872633495874,
+            "sigma_S": 15345.952028534954,
+            "sigma_S_error": 18.378923482024284
+          },
+          "counts": {
+            "accepted_H": 6,
+            "accepted_S": 275,
+            "evaluated_H": 10,
+            "evaluated_S": 283,
+            "exhausted_S": 1,
+            "h_removal_H": 10,
+            "input_H": 16,
+            "input_S": 284,
+            "no_transfer_S": 131,
+            "positive_h_H": 6,
+            "rejected_H": 10,
+            "rejected_S": 9,
+            "s_veto_S": 152
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE2/SubProcesses/P0_epem_uux/GF2.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 300,
+              "input": 13.185094159999942,
+              "macnlops": 13.232183781999941,
+              "macnlops_max": 0.047089622,
+              "macnlops_squares": 0.6230985325289081
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320104,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 13.185094159999942,
+            "macnlops": 13.232183781999941
+          }
+        },
+        {
+          "channel": {
+            "beta": 1.0618477530435357,
+            "res": "res_1",
+            "sigma_B": 11.224731497453044,
+            "sigma_B_error": 0.018563196227936923,
+            "sigma_S": 11.918955919087518,
+            "sigma_S_error": 0.01953050550651472
+          },
+          "counts": {
+            "accepted_H": 6,
+            "accepted_S": 245,
+            "evaluated_H": 2,
+            "evaluated_S": 255,
+            "h_removal_H": 2,
+            "input_H": 8,
+            "input_S": 255,
+            "no_transfer_S": 124,
+            "positive_h_H": 6,
+            "rejected_H": 2,
+            "rejected_S": 10,
+            "s_veto_S": 131
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE2/SubProcesses/P0_epem_ddx/GF1.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 263,
+              "input": 12.196212097999949,
+              "macnlops": 11.819495121999951,
+              "macnlops_max": 0.047089622,
+              "macnlops_squares": 0.5565755575258221
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320103,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 12.196212097999949,
+            "macnlops": 11.819495121999951
+          }
+        },
+        {
+          "channel": {
+            "beta": 1.0633648535959361,
+            "res": "res_1",
+            "sigma_B": 27759.649529835042,
+            "sigma_B_error": 22.586668067808752,
+            "sigma_S": 29518.635658167535,
+            "sigma_S_error": 27.637206419777467
+          },
+          "counts": {
+            "accepted_S": 280,
+            "evaluated_H": 11,
+            "evaluated_S": 289,
+            "h_removal_H": 11,
+            "input_H": 11,
+            "input_S": 289,
+            "no_transfer_S": 159,
+            "rejected_H": 11,
+            "rejected_S": 9,
+            "s_veto_S": 130
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE2/SubProcesses/P0_epem_ddx/GF2.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 300,
+              "input": 13.090914915999942,
+              "macnlops": 13.185094159999942,
+              "macnlops_max": 0.047089622,
+              "macnlops_squares": 0.6208811000288053
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320139,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 13.090914915999942,
+            "macnlops": 13.185094159999942
+          }
+        }
+      ],
+      "expected_events": 1163,
+      "input_subsets_unchanged": true,
+      "matching_sources": {
+        "MCatNLO/srcPythia8/MacNLOPSMatch.cc": "0e2bbd496540ed2692cb0d2665544aba8380add65771776a9baaaec7312dc7e1",
+        "SubProcesses/driver_macnlops.f": "e4003b2864a7ea4a73e1b9c62a6116df4c2d4989dbad7b99d96406f5cbf57ed5",
+        "SubProcesses/macnlops_capi.f": "aa80d1e7677d761f66ce1cff185aaf11a8b2dc4cc737af2b716a0a20a8f0ab25",
+        "SubProcesses/macnlops_evaluator.f": "38894be2bb09cc143c0f7995ceb678c60f82794e7fa14a189c67019448bfd849",
+        "SubProcesses/montecarlocounter.f": "88e7c11118bd125d1f261284fbef65187a922dc52fba957a8422bc3fc5d35d7c",
+        "SubProcesses/weight_lines.f": "0cc6344cef02f6b722ba432f234fc0002fc72c946eb382e621dc8cf0c97f634d"
+      },
+      "original_seeds_preserved": true,
+      "process": "EE2",
+      "provider_executables": {
+        "SubProcesses/P0_epem_ddx/macnlops_onestep": "dea5af8110506dc7ed2c667e65004461a0504372f3e693d1fb1a89c34e4ecffa",
+        "SubProcesses/P0_epem_uux/macnlops_onestep": "b61e0d0793848e78b3741e9c9fe1a5ba7019669d05f8c98497dfb23bcf966dfa"
+      },
+      "report": {
+        "counts": {
+          "accepted_H": 15,
+          "accepted_S": 1069,
+          "evaluated_H": 38,
+          "evaluated_S": 1109,
+          "exhausted_S": 1,
+          "h_removal_H": 38,
+          "input_H": 53,
+          "input_S": 1110,
+          "no_transfer_S": 562,
+          "positive_h_H": 15,
+          "rejected_H": 38,
+          "rejected_S": 41,
+          "s_veto_S": 547
+        },
+        "prescription": "component-sudakov-ratio-v4",
+        "rejected_events": "kept",
+        "weight_sums": {
+          "input": 51.186419113999776,
+          "macnlops": 51.04515024799978
+        }
+      }
+    },
+    {
+      "channels": [
+        {
+          "channel": {
+            "beta": 1.2577441304548318,
+            "res": "res_1",
+            "sigma_B": 4.360765959588346,
+            "sigma_B_error": 0.02780299457081553,
+            "sigma_S": 5.484727789959475,
+            "sigma_S_error": 0.05663810558141524
+          },
+          "counts": {
+            "accepted_H": 24,
+            "accepted_S": 232,
+            "evaluated_H": 17,
+            "evaluated_S": 259,
+            "h_removal_H": 17,
+            "input_H": 41,
+            "input_S": 259,
+            "no_transfer_S": 70,
+            "positive_h_H": 24,
+            "rejected_H": 17,
+            "rejected_S": 27,
+            "s_veto_S": 189
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE3/SubProcesses/P0_epem_uuxg/GF3.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 300,
+              "input": 5.253282607999998,
+              "macnlops": 5.209137375999998,
+              "macnlops_max": 0.022072616,
+              "macnlops_squares": 0.1247232965333645
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320202,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 5.253282607999998,
+            "macnlops": 5.209137375999998
+          }
+        },
+        {
+          "channel": {
+            "beta": 1.2536817132802327,
+            "res": "res_1",
+            "sigma_B": 4.40133643626119,
+            "sigma_B_error": 0.029747531853586306,
+            "sigma_S": 5.517875004134643,
+            "sigma_S_error": 0.05375149145554373
+          },
+          "counts": {
+            "accepted_H": 22,
+            "accepted_S": 248,
+            "evaluated_H": 14,
+            "evaluated_S": 264,
+            "h_removal_H": 14,
+            "input_H": 36,
+            "input_S": 264,
+            "no_transfer_S": 64,
+            "positive_h_H": 22,
+            "rejected_H": 14,
+            "rejected_S": 16,
+            "s_veto_S": 200
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE3/SubProcesses/P0_epem_uuxg/GF1.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 300,
+              "input": 4.9442659839999985,
+              "macnlops": 4.9442659839999985,
+              "macnlops_max": 0.022072616,
+              "macnlops_squares": 0.13154410181253307
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320203,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 4.9442659839999985,
+            "macnlops": 4.9442659839999985
+          }
+        },
+        {
+          "channel": {
+            "beta": 1.2468121069637115,
+            "res": "res_1",
+            "sigma_B": 1.6349204003747388,
+            "sigma_B_error": 0.011035776419605032,
+            "sigma_S": 2.0384385491091828,
+            "sigma_S_error": 0.020734215690475805
+          },
+          "counts": {
+            "accepted_H": 11,
+            "accepted_S": 90,
+            "evaluated_H": 10,
+            "evaluated_S": 97,
+            "h_removal_H": 10,
+            "input_H": 21,
+            "input_S": 97,
+            "no_transfer_S": 23,
+            "positive_h_H": 11,
+            "rejected_H": 10,
+            "rejected_S": 7,
+            "s_veto_S": 74
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE3/SubProcesses/P0_epem_ddxg/GF1.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 118,
+              "input": 1.7658092799999994,
+              "macnlops": 1.8761723599999993,
+              "macnlops_max": 0.022072616,
+              "macnlops_squares": 0.04920723808542899
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320204,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 1.7658092799999994,
+            "macnlops": 1.8761723599999993
+          }
+        },
+        {
+          "channel": {
+            "beta": 1.2370106007620854,
+            "res": "res_1",
+            "sigma_B": 1.662728679039103,
+            "sigma_B_error": 0.010918382092263423,
+            "sigma_S": 2.0568130021625093,
+            "sigma_S_error": 0.0219848415242598
+          },
+          "counts": {
+            "accepted_H": 9,
+            "accepted_S": 108,
+            "evaluated_H": 8,
+            "evaluated_S": 118,
+            "h_removal_H": 8,
+            "input_H": 17,
+            "input_S": 118,
+            "no_transfer_S": 27,
+            "positive_h_H": 9,
+            "rejected_H": 8,
+            "rejected_S": 10,
+            "s_veto_S": 91
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE3/SubProcesses/P0_epem_ddxg/GF3.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 135,
+              "input": 2.2734794479999993,
+              "macnlops": 2.3176246799999993,
+              "macnlops_max": 0.022072616,
+              "macnlops_squares": 0.05700244411876427
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320205,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 2.2734794479999993,
+            "macnlops": 2.3176246799999993
+          }
+        }
+      ],
+      "expected_events": 853,
+      "input_subsets_unchanged": true,
+      "matching_sources": {
+        "MCatNLO/srcPythia8/MacNLOPSMatch.cc": "0e2bbd496540ed2692cb0d2665544aba8380add65771776a9baaaec7312dc7e1",
+        "SubProcesses/driver_macnlops.f": "e4003b2864a7ea4a73e1b9c62a6116df4c2d4989dbad7b99d96406f5cbf57ed5",
+        "SubProcesses/macnlops_capi.f": "aa80d1e7677d761f66ce1cff185aaf11a8b2dc4cc737af2b716a0a20a8f0ab25",
+        "SubProcesses/macnlops_evaluator.f": "38894be2bb09cc143c0f7995ceb678c60f82794e7fa14a189c67019448bfd849",
+        "SubProcesses/montecarlocounter.f": "88e7c11118bd125d1f261284fbef65187a922dc52fba957a8422bc3fc5d35d7c",
+        "SubProcesses/weight_lines.f": "0cc6344cef02f6b722ba432f234fc0002fc72c946eb382e621dc8cf0c97f634d"
+      },
+      "original_seeds_preserved": true,
+      "process": "EE3",
+      "provider_executables": {
+        "SubProcesses/P0_epem_ddxg/macnlops_onestep": "d00b5456634d00c58f7a90de0a6b307c50c52e0e4fadef4faf8e570d831296b2",
+        "SubProcesses/P0_epem_uuxg/macnlops_onestep": "7f1fda97979a6e55905ea2208b92a3d6c4e6540f612f5c0dac640429951f5dcf"
+      },
+      "report": {
+        "counts": {
+          "accepted_H": 66,
+          "accepted_S": 678,
+          "evaluated_H": 49,
+          "evaluated_S": 738,
+          "h_removal_H": 49,
+          "input_H": 115,
+          "input_S": 738,
+          "no_transfer_S": 184,
+          "positive_h_H": 66,
+          "rejected_H": 49,
+          "rejected_S": 60,
+          "s_veto_S": 554
+        },
+        "prescription": "component-sudakov-ratio-v4",
+        "rejected_events": "kept",
+        "weight_sums": {
+          "input": 14.236837319999996,
+          "macnlops": 14.347200399999997
+        }
+      }
+    },
+    {
+      "channels": [
+        {
+          "channel": {
+            "beta": 2.127483552710223,
+            "res": "res_1",
+            "sigma_B": 5.688808408271358,
+            "sigma_B_error": 0.08722920865379066,
+            "sigma_S": 12.102846323116937,
+            "sigma_S_error": 0.18819834437696747
+          },
+          "counts": {
+            "accepted_H": 18,
+            "accepted_S": 121,
+            "evaluated_H": 2,
+            "evaluated_S": 130,
+            "h_removal_H": 2,
+            "input_H": 20,
+            "input_S": 130,
+            "no_transfer_S": 42,
+            "positive_h_H": 18,
+            "rejected_H": 2,
+            "rejected_S": 9,
+            "s_veto_S": 88
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE4/SubProcesses/P0_epem_uddxux/GF3.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 150,
+              "input": 0.44520532959999903,
+              "macnlops": 0.4232585879999991,
+              "macnlops_max": 0.0031352488,
+              "macnlops_squares": 0.0013663401202683035
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320402,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.44520532959999903,
+            "macnlops": 0.4232585879999991
+          }
+        },
+        {
+          "channel": {
+            "beta": 2.1380696130167345,
+            "res": "res_1",
+            "sigma_B": 4.434451077634148,
+            "sigma_B_error": 0.056894867648506105,
+            "sigma_S": 9.481165099498885,
+            "sigma_S_error": 0.14669374493728016
+          },
+          "counts": {
+            "accepted_H": 31,
+            "accepted_S": 111,
+            "evaluated_H": 4,
+            "evaluated_S": 115,
+            "h_removal_H": 4,
+            "input_H": 35,
+            "input_S": 115,
+            "no_transfer_S": 32,
+            "positive_h_H": 31,
+            "rejected_H": 4,
+            "rejected_S": 4,
+            "s_veto_S": 83
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE4/SubProcesses/P0_epem_uddxux/GF8.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 150,
+              "input": 0.41385284159999913,
+              "macnlops": 0.41385284159999913,
+              "macnlops_max": 0.0031352488,
+              "macnlops_squares": 0.001395829475382008
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320404,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.41385284159999913,
+            "macnlops": 0.41385284159999913
+          }
+        },
+        {
+          "channel": {
+            "beta": 2.1305700750672667,
+            "res": "res_1",
+            "sigma_B": 5.740675463348655,
+            "sigma_B_error": 0.0717214376591155,
+            "sigma_S": 12.23091135288356,
+            "sigma_S_error": 0.16471436200604425
+          },
+          "counts": {
+            "accepted_H": 19,
+            "accepted_S": 120,
+            "evaluated_H": 10,
+            "evaluated_S": 121,
+            "h_removal_H": 10,
+            "input_H": 29,
+            "input_S": 121,
+            "no_transfer_S": 34,
+            "positive_h_H": 19,
+            "rejected_H": 10,
+            "rejected_S": 1,
+            "s_veto_S": 87
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE4/SubProcesses/P0_epem_suuxsx/GF7.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 150,
+              "input": 0.36995935839999927,
+              "macnlops": 0.3981765975999992,
+              "macnlops_max": 0.0031352488,
+              "macnlops_squares": 0.0013663401202683035
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320403,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.36995935839999927,
+            "macnlops": 0.3981765975999992
+          }
+        },
+        {
+          "channel": {
+            "beta": 2.1531020248660537,
+            "res": "res_1",
+            "sigma_B": 5.658003798444239,
+            "sigma_B_error": 0.0638908198014766,
+            "sigma_S": 12.182259435130113,
+            "sigma_S_error": 0.16669043371822054
+          },
+          "counts": {
+            "accepted_H": 21,
+            "accepted_S": 119,
+            "evaluated_H": 3,
+            "evaluated_S": 126,
+            "h_removal_H": 3,
+            "input_H": 24,
+            "input_S": 126,
+            "no_transfer_S": 33,
+            "positive_h_H": 21,
+            "rejected_H": 3,
+            "rejected_S": 7,
+            "s_veto_S": 93
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE4/SubProcesses/P0_epem_suuxsx/GF8.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 150,
+              "input": 0.4201233391999991,
+              "macnlops": 0.40758234399999915,
+              "macnlops_max": 0.0031352488,
+              "macnlops_squares": 0.001376169905306205
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320406,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.4201233391999991,
+            "macnlops": 0.40758234399999915
+          }
+        },
+        {
+          "channel": {
+            "beta": 2.2648788954947503,
+            "res": "res_1",
+            "sigma_B": 4.303536205257809,
+            "sigma_B_error": 0.05486958855828548,
+            "sigma_S": 9.746988327285976,
+            "sigma_S_error": 0.13882605589938615
+          },
+          "counts": {
+            "accepted_H": 24,
+            "accepted_S": 118,
+            "evaluated_H": 4,
+            "evaluated_S": 122,
+            "h_removal_H": 4,
+            "input_H": 28,
+            "input_S": 122,
+            "no_transfer_S": 29,
+            "positive_h_H": 24,
+            "rejected_H": 4,
+            "rejected_S": 4,
+            "s_veto_S": 93
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE4/SubProcesses/P0_epem_sddxsx/GF8.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 150,
+              "input": 0.4201233391999991,
+              "macnlops": 0.4201233391999991,
+              "macnlops_max": 0.0031352488,
+              "macnlops_squares": 0.001395829475382008
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320407,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.4201233391999991,
+            "macnlops": 0.4201233391999991
+          }
+        },
+        {
+          "channel": {
+            "beta": 2.2024344607544903,
+            "res": "res_1",
+            "sigma_B": 4.385198736062364,
+            "sigma_B_error": 0.04478781148503461,
+            "sigma_S": 9.658112813560786,
+            "sigma_S_error": 0.144876478650856
+          },
+          "counts": {
+            "accepted_H": 15,
+            "accepted_S": 117,
+            "evaluated_H": 11,
+            "evaluated_S": 124,
+            "h_removal_H": 11,
+            "input_H": 26,
+            "input_S": 124,
+            "no_transfer_S": 29,
+            "positive_h_H": 15,
+            "rejected_H": 11,
+            "rejected_S": 7,
+            "s_veto_S": 95
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE4/SubProcesses/P0_epem_sddxsx/GF3.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 150,
+              "input": 0.3574183631999993,
+              "macnlops": 0.36995935839999927,
+              "macnlops_max": 0.0031352488,
+              "macnlops_squares": 0.0012975316250029931
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320408,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.3574183631999993,
+            "macnlops": 0.36995935839999927
+          }
+        },
+        {
+          "channel": {
+            "beta": 2.249305438895207,
+            "res": "res_1",
+            "sigma_B": 0.989874421651795,
+            "sigma_B_error": 0.011884204254869524,
+            "sigma_S": 2.2265299204446296,
+            "sigma_S_error": 0.03679527673225303
+          },
+          "counts": {
+            "accepted_H": 17,
+            "accepted_S": 124,
+            "evaluated_H": 5,
+            "evaluated_S": 128,
+            "h_removal_H": 5,
+            "input_H": 22,
+            "input_S": 128,
+            "no_transfer_S": 33,
+            "positive_h_H": 17,
+            "rejected_H": 5,
+            "rejected_S": 4,
+            "s_veto_S": 95
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE4/SubProcesses/P0_epem_dddxdx/GF15.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 150,
+              "input": 0.3950413487999992,
+              "macnlops": 0.3981765975999992,
+              "macnlops_max": 0.0031352488,
+              "macnlops_squares": 0.0013859996903441065
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320414,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.3950413487999992,
+            "macnlops": 0.3981765975999992
+          }
+        },
+        {
+          "channel": {
+            "beta": 2.161310826888676,
+            "res": "res_1",
+            "sigma_B": 1.0038508110906412,
+            "sigma_B_error": 0.010926726272099598,
+            "sigma_S": 2.1696336265911818,
+            "sigma_S_error": 0.02793948135110741
+          },
+          "counts": {
+            "accepted_H": 22,
+            "accepted_S": 117,
+            "evaluated_H": 7,
+            "evaluated_S": 122,
+            "h_removal_H": 7,
+            "input_H": 28,
+            "input_S": 122,
+            "no_transfer_S": 38,
+            "positive_h_H": 21,
+            "rejected_H": 6,
+            "rejected_S": 5,
+            "s_veto_S": 84
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE4/SubProcesses/P0_epem_dddxdx/GF7.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 150,
+              "input": 0.38250035359999923,
+              "macnlops": 0.3919060999999992,
+              "macnlops_max": 0.0031352488,
+              "macnlops_squares": 0.0013663401202683035
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320419,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.38250035359999923,
+            "macnlops": 0.3919060999999992
+          }
+        },
+        {
+          "channel": {
+            "beta": 2.269878157288183,
+            "res": "res_1",
+            "sigma_B": 1.0937927113195445,
+            "sigma_B_error": 0.014619581457675142,
+            "sigma_S": 2.482776184025253,
+            "sigma_S_error": 0.0404095059335429
+          },
+          "counts": {
+            "accepted_H": 24,
+            "accepted_S": 117,
+            "evaluated_H": 3,
+            "evaluated_S": 123,
+            "h_removal_H": 3,
+            "input_H": 27,
+            "input_S": 123,
+            "no_transfer_S": 35,
+            "positive_h_H": 24,
+            "rejected_H": 3,
+            "rejected_S": 6,
+            "s_veto_S": 88
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE4/SubProcesses/P0_epem_cuuxcx/GF4.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 150,
+              "input": 0.4013118463999992,
+              "macnlops": 0.3919060999999992,
+              "macnlops_max": 0.0031352488,
+              "macnlops_squares": 0.0013859996903441065
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320415,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.4013118463999992,
+            "macnlops": 0.3919060999999992
+          }
+        },
+        {
+          "channel": {
+            "beta": 2.282787383557197,
+            "res": "res_1",
+            "sigma_B": 1.0735814147169431,
+            "sigma_B_error": 0.01549227301482697,
+            "sigma_S": 2.4507581087373245,
+            "sigma_S_error": 0.03723480174301684
+          },
+          "counts": {
+            "accepted_H": 34,
+            "accepted_S": 109,
+            "evaluated_H": 4,
+            "evaluated_S": 112,
+            "h_removal_H": 4,
+            "input_H": 38,
+            "input_S": 112,
+            "no_transfer_S": 34,
+            "positive_h_H": 34,
+            "rejected_H": 4,
+            "rejected_S": 3,
+            "s_veto_S": 78
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE4/SubProcesses/P0_epem_cuuxcx/GF3.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 150,
+              "input": 0.4263938367999991,
+              "macnlops": 0.4295290855999991,
+              "macnlops_max": 0.0031352488,
+              "macnlops_squares": 0.0014056592604199095
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320416,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.4263938367999991,
+            "macnlops": 0.4295290855999991
+          }
+        },
+        {
+          "channel": {
+            "beta": 2.0114567879950345,
+            "res": "res_1",
+            "sigma_B": 0.5121144570746817,
+            "sigma_B_error": 0.008206219375217802,
+            "sigma_S": 1.0300961009132603,
+            "sigma_S_error": 0.017528301443889126
+          },
+          "counts": {
+            "accepted_H": 21,
+            "accepted_S": 115,
+            "evaluated_H": 6,
+            "evaluated_S": 123,
+            "h_removal_H": 6,
+            "input_H": 27,
+            "input_S": 123,
+            "no_transfer_S": 32,
+            "positive_h_H": 21,
+            "rejected_H": 6,
+            "rejected_S": 8,
+            "s_veto_S": 91
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE4/SubProcesses/P0_epem_uuuxux/GF3.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 150,
+              "input": 0.3950413487999992,
+              "macnlops": 0.3887708511999992,
+              "macnlops_max": 0.0031352488,
+              "macnlops_squares": 0.001336850765154599
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320426,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.3950413487999992,
+            "macnlops": 0.3887708511999992
+          }
+        },
+        {
+          "channel": {
+            "beta": 2.2813115907544317,
+            "res": "res_1",
+            "sigma_B": 0.48959848866932837,
+            "sigma_B_error": 0.00592579980223426,
+            "sigma_S": 1.116926707017191,
+            "sigma_S_error": 0.017063964417097566
+          },
+          "counts": {
+            "accepted_H": 23,
+            "accepted_S": 118,
+            "evaluated_H": 2,
+            "evaluated_S": 126,
+            "h_removal_H": 2,
+            "input_H": 24,
+            "input_S": 126,
+            "no_transfer_S": 40,
+            "positive_h_H": 22,
+            "rejected_H": 1,
+            "rejected_S": 8,
+            "s_veto_S": 86
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE4/SubProcesses/P0_epem_uuuxux/GF15.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 150,
+              "input": 0.40758234399999915,
+              "macnlops": 0.3856356023999992,
+              "macnlops_max": 0.0031352488,
+              "macnlops_squares": 0.0013859996903441065
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320427,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.40758234399999915,
+            "macnlops": 0.3856356023999992
+          }
+        },
+        {
+          "channel": {
+            "beta": 1.5106511980782975,
+            "res": "res_1",
+            "sigma_B": 0.24177699431972197,
+            "sigma_B_error": 0.0034180298367886513,
+            "sigma_S": 0.3652407061368577,
+            "sigma_S_error": 0.007346010322287871
+          },
+          "counts": {
+            "accepted_H": 16,
+            "accepted_S": 117,
+            "evaluated_H": 7,
+            "evaluated_S": 127,
+            "h_removal_H": 7,
+            "input_H": 23,
+            "input_S": 127,
+            "no_transfer_S": 25,
+            "positive_h_H": 16,
+            "rejected_H": 7,
+            "rejected_S": 10,
+            "s_veto_S": 102
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE4/SubProcesses/P0_epem_uuxgg/GF3.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 150,
+              "input": 0.3260658751999994,
+              "macnlops": 0.3292011239999994,
+              "macnlops_max": 0.0031352488,
+              "macnlops_squares": 0.0013073614100408946
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320434,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.3260658751999994,
+            "macnlops": 0.3292011239999994
+          }
+        },
+        {
+          "channel": {
+            "beta": 1.5356909786453483,
+            "res": "res_1",
+            "sigma_B": 0.23751804510196908,
+            "sigma_B_error": 0.0030829554658262704,
+            "sigma_S": 0.36475431912857287,
+            "sigma_S_error": 0.006908696725238152
+          },
+          "counts": {
+            "accepted_H": 11,
+            "accepted_S": 116,
+            "evaluated_H": 6,
+            "evaluated_S": 133,
+            "h_removal_H": 6,
+            "input_H": 17,
+            "input_S": 133,
+            "no_transfer_S": 23,
+            "positive_h_H": 11,
+            "rejected_H": 6,
+            "rejected_S": 17,
+            "s_veto_S": 110
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE4/SubProcesses/P0_epem_uuxgg/GF7.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 150,
+              "input": 0.37622985599999925,
+              "macnlops": 0.3542831143999993,
+              "macnlops_max": 0.0031352488,
+              "macnlops_squares": 0.0012483826998134857
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320435,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.37622985599999925,
+            "macnlops": 0.3542831143999993
+          }
+        },
+        {
+          "channel": {
+            "beta": 1.5122576212095695,
+            "res": "res_1",
+            "sigma_B": 0.08957378345856723,
+            "sigma_B_error": 0.0012457430077161794,
+            "sigma_S": 0.13545863669579397,
+            "sigma_S_error": 0.002666700908869136
+          },
+          "counts": {
+            "accepted_H": 10,
+            "accepted_S": 43,
+            "evaluated_H": 6,
+            "evaluated_S": 47,
+            "h_removal_H": 6,
+            "input_H": 16,
+            "input_S": 47,
+            "no_transfer_S": 10,
+            "positive_h_H": 10,
+            "rejected_H": 6,
+            "rejected_S": 4,
+            "s_veto_S": 37
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE4/SubProcesses/P0_epem_ddxgg/GF7.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 63,
+              "input": 0.12854520080000004,
+              "macnlops": 0.13481569840000002,
+              "macnlops_max": 0.0031352488,
+              "macnlops_squares": 0.0005209786070087761
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320436,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.12854520080000004,
+            "macnlops": 0.13481569840000002
+          }
+        },
+        {
+          "channel": {
+            "beta": 1.53813218134987,
+            "res": "res_1",
+            "sigma_B": 0.08922766642768147,
+            "sigma_B_error": 0.001175643292732633,
+            "sigma_S": 0.13724394519916827,
+            "sigma_S_error": 0.0025842754631132344
+          },
+          "counts": {
+            "accepted_H": 4,
+            "accepted_S": 48,
+            "evaluated_H": 3,
+            "evaluated_S": 53,
+            "h_removal_H": 3,
+            "input_H": 7,
+            "input_S": 53,
+            "no_transfer_S": 11,
+            "positive_h_H": 4,
+            "rejected_H": 3,
+            "rejected_S": 5,
+            "s_veto_S": 42
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/EE4/SubProcesses/P0_epem_ddxgg/GF3.0",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 60,
+              "input": 0.10032796160000002,
+              "macnlops": 0.10659845920000002,
+              "macnlops_max": 0.0031352488,
+              "macnlops_squares": 0.0005111488219708746
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320437,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "none"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.10032796160000002,
+            "macnlops": 0.10659845920000002
+          }
+        }
+      ],
+      "expected_events": 2223,
+      "input_subsets_unchanged": true,
+      "matching_sources": {
+        "MCatNLO/srcPythia8/MacNLOPSMatch.cc": "0e2bbd496540ed2692cb0d2665544aba8380add65771776a9baaaec7312dc7e1",
+        "SubProcesses/driver_macnlops.f": "e4003b2864a7ea4a73e1b9c62a6116df4c2d4989dbad7b99d96406f5cbf57ed5",
+        "SubProcesses/macnlops_capi.f": "aa80d1e7677d761f66ce1cff185aaf11a8b2dc4cc737af2b716a0a20a8f0ab25",
+        "SubProcesses/macnlops_evaluator.f": "38894be2bb09cc143c0f7995ceb678c60f82794e7fa14a189c67019448bfd849",
+        "SubProcesses/montecarlocounter.f": "88e7c11118bd125d1f261284fbef65187a922dc52fba957a8422bc3fc5d35d7c",
+        "SubProcesses/weight_lines.f": "0cc6344cef02f6b722ba432f234fc0002fc72c946eb382e621dc8cf0c97f634d"
+      },
+      "original_seeds_preserved": true,
+      "process": "EE4",
+      "provider_executables": {
+        "SubProcesses/P0_epem_cuuxcx/macnlops_onestep": "4a6d196088a28c77e2946f3be1b6eb2f04c6a5e22a3dc08a0d784f300f5463a8",
+        "SubProcesses/P0_epem_dddxdx/macnlops_onestep": "3087936c8f674108340174b4cabcb1d464f20bd9dee259437088922755d0f73c",
+        "SubProcesses/P0_epem_ddxgg/macnlops_onestep": "d24bf4c0308e7808bc9db475c457bf3a5cb5e8e04bc0c1626ae03fb0cfa0cd84",
+        "SubProcesses/P0_epem_sddxsx/macnlops_onestep": "2fc5fa64032ef54d5d6ecf7992099080aa62df83092bf45bc497e8172c52d818",
+        "SubProcesses/P0_epem_suuxsx/macnlops_onestep": "a79d48939ee3017a2086291c65e8c86d07444bf0fd092058e53903e596198819",
+        "SubProcesses/P0_epem_uddxux/macnlops_onestep": "4be1fdd5e6eeb3e130437bc7fee6417cd57aa7718e5435ed4ca9066ed143bec8",
+        "SubProcesses/P0_epem_uuuxux/macnlops_onestep": "cd47b079cf07486f72cb376dad6c55c8f9b8f494ce14045bc00c180f4bbf46a1",
+        "SubProcesses/P0_epem_uuxgg/macnlops_onestep": "5c71c4519a610725774261376658040ffdc53562dda276eac20454c84756b1c3"
+      },
+      "report": {
+        "counts": {
+          "accepted_H": 310,
+          "accepted_S": 1730,
+          "evaluated_H": 83,
+          "evaluated_S": 1832,
+          "h_removal_H": 83,
+          "input_H": 391,
+          "input_S": 1832,
+          "no_transfer_S": 480,
+          "positive_h_H": 308,
+          "rejected_H": 81,
+          "rejected_S": 102,
+          "s_veto_S": 1352
+        },
+        "prescription": "component-sudakov-ratio-v4",
+        "rejected_events": "kept",
+        "weight_sums": {
+          "input": 5.765722543199988,
+          "macnlops": 5.743775801599987
+        }
+      }
+    },
+    {
+      "channels": [
+        {
+          "channel": {
+            "beta": 1.0144878104924195,
+            "res": "res_1",
+            "sigma_B": 1040.4410622791615,
+            "sigma_B_error": 2.7002822775903343,
+            "sigma_S": 1055.5147752179937,
+            "sigma_S_error": 7.089499690564444
+          },
+          "counts": {
+            "accepted_H": 50,
+            "accepted_S": 197,
+            "evaluated_H": 15,
+            "evaluated_S": 235,
+            "h_removal_H": 15,
+            "input_H": 65,
+            "input_S": 235,
+            "no_transfer_S": 85,
+            "positive_h_H": 50,
+            "rejected_H": 15,
+            "rejected_S": 38,
+            "s_veto_S": 150
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/Wj/SubProcesses/P0_gu_wpd/GF1.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 300,
+              "input": 9.711243024000018,
+              "macnlops": 9.659032040000017,
+              "macnlops_max": 0.052210984,
+              "macnlops_squares": 0.6733187520113216
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320302,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "LHAPDF6:NNPDF40_nlo_as_01180/0"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 9.711243024000018,
+            "macnlops": 9.659032040000017
+          }
+        },
+        {
+          "channel": {
+            "beta": 0.8789823019060078,
+            "res": "res_1",
+            "sigma_B": 3910.301324574476,
+            "sigma_B_error": 6.322251838173403,
+            "sigma_S": 3437.0856594205843,
+            "sigma_S_error": 17.662944097930556
+          },
+          "counts": {
+            "accepted_H": 75,
+            "accepted_S": 174,
+            "evaluated_H": 17,
+            "evaluated_S": 208,
+            "h_removal_H": 17,
+            "input_H": 92,
+            "input_S": 208,
+            "no_transfer_S": 77,
+            "positive_h_H": 75,
+            "rejected_H": 17,
+            "rejected_S": 34,
+            "s_veto_S": 131
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/Wj/SubProcesses/P0_gu_wpd/GF2.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 300,
+              "input": 8.458179408000012,
+              "macnlops": 8.823656296000014,
+              "macnlops_max": 0.052210984,
+              "macnlops_squares": 0.6787707257118182
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320307,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "LHAPDF6:NNPDF40_nlo_as_01180/0"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 8.458179408000012,
+            "macnlops": 8.823656296000014
+          }
+        },
+        {
+          "channel": {
+            "beta": 1.0278311401903797,
+            "res": "res_1",
+            "sigma_B": 487.50069855878485,
+            "sigma_B_error": 2.5517959431895427,
+            "sigma_S": 501.0683988432824,
+            "sigma_S_error": 5.6145454747939425
+          },
+          "counts": {
+            "accepted_H": 57,
+            "accepted_S": 202,
+            "evaluated_H": 11,
+            "evaluated_S": 232,
+            "h_removal_H": 11,
+            "input_H": 68,
+            "input_S": 232,
+            "no_transfer_S": 86,
+            "positive_h_H": 57,
+            "rejected_H": 11,
+            "rejected_S": 30,
+            "s_veto_S": 146
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/Wj/SubProcesses/P0_gdx_wpux/GF1.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 300,
+              "input": 9.606821056000017,
+              "macnlops": 9.345766136000016,
+              "macnlops_max": 0.052210984,
+              "macnlops_squares": 0.7060305942143009
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320328,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "LHAPDF6:NNPDF40_nlo_as_01180/0"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 9.606821056000017,
+            "macnlops": 9.345766136000016
+          }
+        },
+        {
+          "channel": {
+            "beta": 0.9126686014880996,
+            "res": "res_1",
+            "sigma_B": 1893.0365596016297,
+            "sigma_B_error": 4.4380576709190045,
+            "sigma_S": 1727.7150294174628,
+            "sigma_S_error": 11.32354396726771
+          },
+          "counts": {
+            "accepted_H": 61,
+            "accepted_S": 199,
+            "evaluated_H": 12,
+            "evaluated_S": 227,
+            "h_removal_H": 12,
+            "input_H": 73,
+            "input_S": 227,
+            "no_transfer_S": 93,
+            "positive_h_H": 61,
+            "rejected_H": 12,
+            "rejected_S": 28,
+            "s_veto_S": 134
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/Wj/SubProcesses/P0_gdx_wpux/GF2.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 300,
+              "input": 7.83164760000001,
+              "macnlops": 7.7272256320000094,
+              "macnlops_max": 0.052210984,
+              "macnlops_squares": 0.7087565810645492
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320330,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "LHAPDF6:NNPDF40_nlo_as_01180/0"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 7.83164760000001,
+            "macnlops": 7.7272256320000094
+          }
+        },
+        {
+          "channel": {
+            "beta": 1.0339245843014395,
+            "res": "res_1",
+            "sigma_B": 1039.2232195739869,
+            "sigma_B_error": 2.6084988826105664,
+            "sigma_S": 1074.478435294438,
+            "sigma_S_error": 7.934026995725563
+          },
+          "counts": {
+            "accepted_H": 52,
+            "accepted_S": 208,
+            "evaluated_H": 15,
+            "evaluated_S": 233,
+            "h_removal_H": 15,
+            "input_H": 67,
+            "input_S": 233,
+            "no_transfer_S": 94,
+            "positive_h_H": 52,
+            "rejected_H": 15,
+            "rejected_S": 25,
+            "s_veto_S": 139
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/Wj/SubProcesses/P0_ug_wpd/GF1.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 300,
+              "input": 9.397977120000016,
+              "macnlops": 9.815664992000018,
+              "macnlops_max": 0.052210984,
+              "macnlops_squares": 0.7087565810645492
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320340,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "LHAPDF6:NNPDF40_nlo_as_01180/0"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 9.397977120000016,
+            "macnlops": 9.815664992000018
+          }
+        },
+        {
+          "channel": {
+            "beta": 0.8789236709878271,
+            "res": "res_1",
+            "sigma_B": 3888.7803854115314,
+            "sigma_B_error": 5.41832778386303,
+            "sigma_S": 3417.9411320113604,
+            "sigma_S_error": 18.139856598395077
+          },
+          "counts": {
+            "accepted_H": 70,
+            "accepted_S": 191,
+            "evaluated_H": 9,
+            "evaluated_S": 221,
+            "h_removal_H": 9,
+            "input_H": 79,
+            "input_S": 221,
+            "no_transfer_S": 89,
+            "positive_h_H": 70,
+            "rejected_H": 9,
+            "rejected_S": 30,
+            "s_veto_S": 132
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/Wj/SubProcesses/P0_ug_wpd/GF2.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 300,
+              "input": 8.14491350400001,
+              "macnlops": 8.301546456000011,
+              "macnlops_max": 0.052210984,
+              "macnlops_squares": 0.7114825679147975
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320345,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "LHAPDF6:NNPDF40_nlo_as_01180/0"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 8.14491350400001,
+            "macnlops": 8.301546456000011
+          }
+        },
+        {
+          "channel": {
+            "beta": 0.7921242107629248,
+            "res": "res_1",
+            "sigma_B": 1511.6352327845739,
+            "sigma_B_error": 2.2363654322274837,
+            "sigma_S": 1197.4028657309107,
+            "sigma_S_error": 8.488628408318752
+          },
+          "counts": {
+            "accepted_H": 89,
+            "accepted_S": 157,
+            "evaluated_H": 17,
+            "evaluated_S": 195,
+            "h_removal_H": 17,
+            "input_H": 105,
+            "input_S": 195,
+            "no_transfer_S": 66,
+            "positive_h_H": 88,
+            "rejected_H": 16,
+            "rejected_S": 38,
+            "s_veto_S": 129
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/Wj/SubProcesses/P0_udx_wpg/GF1.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 300,
+              "input": 8.04049153600001,
+              "macnlops": 7.93606956800001,
+              "macnlops_max": 0.052210984,
+              "macnlops_squares": 0.6705927651610734
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320366,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "LHAPDF6:NNPDF40_nlo_as_01180/0"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 8.04049153600001,
+            "macnlops": 7.93606956800001
+          }
+        },
+        {
+          "channel": {
+            "beta": 0.7869716075360571,
+            "res": "res_1",
+            "sigma_B": 1512.0575811648378,
+            "sigma_B_error": 3.0128733697948737,
+            "sigma_S": 1189.9463853363745,
+            "sigma_S_error": 9.844297999247237
+          },
+          "counts": {
+            "accepted_H": 70,
+            "accepted_S": 170,
+            "evaluated_H": 19,
+            "evaluated_S": 211,
+            "h_removal_H": 19,
+            "input_H": 89,
+            "input_S": 211,
+            "no_transfer_S": 77,
+            "positive_h_H": 70,
+            "rejected_H": 19,
+            "rejected_S": 41,
+            "s_veto_S": 134
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/Wj/SubProcesses/P0_udx_wpg/GF2.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 300,
+              "input": 8.14491350400001,
+              "macnlops": 7.93606956800001,
+              "macnlops_max": 0.052210984,
+              "macnlops_squares": 0.6542368440595837
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320373,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "LHAPDF6:NNPDF40_nlo_as_01180/0"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 8.14491350400001,
+            "macnlops": 7.93606956800001
+          }
+        },
+        {
+          "channel": {
+            "beta": 1.0341604468750196,
+            "res": "res_1",
+            "sigma_B": 484.5556824834657,
+            "sigma_B_error": 2.313353310071143,
+            "sigma_S": 501.10832113293105,
+            "sigma_S_error": 5.548189530040865
+          },
+          "counts": {
+            "accepted_H": 44,
+            "accepted_S": 210,
+            "evaluated_H": 18,
+            "evaluated_S": 238,
+            "h_removal_H": 18,
+            "input_H": 62,
+            "input_S": 238,
+            "no_transfer_S": 96,
+            "positive_h_H": 44,
+            "rejected_H": 18,
+            "rejected_S": 28,
+            "s_veto_S": 142
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/Wj/SubProcesses/P0_dxg_wpux/GF1.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 300,
+              "input": 10.651040736000022,
+              "macnlops": 10.546618768000021,
+              "macnlops_max": 0.052210984,
+              "macnlops_squares": 0.6924006599630596
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320380,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "LHAPDF6:NNPDF40_nlo_as_01180/0"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 10.651040736000022,
+            "macnlops": 10.546618768000021
+          }
+        },
+        {
+          "channel": {
+            "beta": 0.914875812043109,
+            "res": "res_1",
+            "sigma_B": 2054.5837138029724,
+            "sigma_B_error": 3.7404260461302514,
+            "sigma_S": 1879.688943576041,
+            "sigma_S_error": 10.09910704208422
+          },
+          "counts": {
+            "accepted_H": 62,
+            "accepted_S": 201,
+            "evaluated_H": 19,
+            "evaluated_S": 219,
+            "h_removal_H": 19,
+            "input_H": 81,
+            "input_S": 219,
+            "no_transfer_S": 86,
+            "positive_h_H": 62,
+            "rejected_H": 19,
+            "rejected_S": 18,
+            "s_veto_S": 133
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/Wj/SubProcesses/P0_dxg_wpux/GF2.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 300,
+              "input": 8.562601376000012,
+              "macnlops": 8.928078264000014,
+              "macnlops_max": 0.052210984,
+              "macnlops_squares": 0.716934541615294
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320382,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "LHAPDF6:NNPDF40_nlo_as_01180/0"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 8.562601376000012,
+            "macnlops": 8.928078264000014
+          }
+        },
+        {
+          "channel": {
+            "beta": 0.7891735832494071,
+            "res": "res_1",
+            "sigma_B": 1509.1413162014978,
+            "sigma_B_error": 2.919562121921791,
+            "sigma_S": 1190.9744601364625,
+            "sigma_S_error": 10.428446235181061
+          },
+          "counts": {
+            "accepted_H": 79,
+            "accepted_S": 167,
+            "evaluated_H": 16,
+            "evaluated_S": 205,
+            "h_removal_H": 16,
+            "input_H": 95,
+            "input_S": 205,
+            "no_transfer_S": 73,
+            "positive_h_H": 79,
+            "rejected_H": 16,
+            "rejected_S": 38,
+            "s_veto_S": 132
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/Wj/SubProcesses/P0_dxu_wpg/GF1.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 300,
+              "input": 8.353757440000011,
+              "macnlops": 8.04049153600001,
+              "macnlops_max": 0.052210984,
+              "macnlops_squares": 0.6705927651610734
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320392,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "LHAPDF6:NNPDF40_nlo_as_01180/0"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 8.353757440000011,
+            "macnlops": 8.04049153600001
+          }
+        },
+        {
+          "channel": {
+            "beta": 0.7973945651290463,
+            "res": "res_1",
+            "sigma_B": 1514.4423399545028,
+            "sigma_B_error": 2.314083561654992,
+            "sigma_S": 1207.608091081036,
+            "sigma_S_error": 7.938623795385576
+          },
+          "counts": {
+            "accepted_H": 89,
+            "accepted_S": 169,
+            "evaluated_H": 7,
+            "evaluated_S": 204,
+            "h_removal_H": 7,
+            "input_H": 96,
+            "input_S": 204,
+            "no_transfer_S": 61,
+            "positive_h_H": 89,
+            "rejected_H": 7,
+            "rejected_S": 35,
+            "s_veto_S": 143
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/Wj/SubProcesses/P0_dxu_wpg/GF2.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 300,
+              "input": 10.024508928000019,
+              "macnlops": 9.189133184000015,
+              "macnlops_max": 0.052210984,
+              "macnlops_squares": 0.7033046073640526
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 3320399,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "LHAPDF6:NNPDF40_nlo_as_01180/0"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 10.024508928000019,
+            "macnlops": 9.189133184000015
+          }
+        }
+      ],
+      "expected_events": 3600,
+      "input_subsets_unchanged": true,
+      "matching_sources": {
+        "MCatNLO/srcPythia8/MacNLOPSMatch.cc": "0e2bbd496540ed2692cb0d2665544aba8380add65771776a9baaaec7312dc7e1",
+        "SubProcesses/driver_macnlops.f": "e4003b2864a7ea4a73e1b9c62a6116df4c2d4989dbad7b99d96406f5cbf57ed5",
+        "SubProcesses/macnlops_capi.f": "aa80d1e7677d761f66ce1cff185aaf11a8b2dc4cc737af2b716a0a20a8f0ab25",
+        "SubProcesses/macnlops_evaluator.f": "38894be2bb09cc143c0f7995ceb678c60f82794e7fa14a189c67019448bfd849",
+        "SubProcesses/montecarlocounter.f": "88e7c11118bd125d1f261284fbef65187a922dc52fba957a8422bc3fc5d35d7c",
+        "SubProcesses/weight_lines.f": "0cc6344cef02f6b722ba432f234fc0002fc72c946eb382e621dc8cf0c97f634d"
+      },
+      "original_seeds_preserved": true,
+      "process": "Wj",
+      "provider_executables": {
+        "SubProcesses/P0_dxg_wpux/macnlops_onestep": "6ee8dccb36bf9097e89af8699e79a705f99da47ff935f8cec7a7a53744e396b8",
+        "SubProcesses/P0_dxu_wpg/macnlops_onestep": "88f5dd88df9091ae955fce700f170a7fa885a0a57c74a6f41f97a0227230770c",
+        "SubProcesses/P0_gdx_wpux/macnlops_onestep": "317ad0f8a88d313595f93b652fbd4a386450091603481c514ae7045b670e0e17",
+        "SubProcesses/P0_gu_wpd/macnlops_onestep": "c781ed953fa338224e6f839c675a9e59f40d0eef678d5989a694528414641433",
+        "SubProcesses/P0_udx_wpg/macnlops_onestep": "c7e81e09563587e760ad3cba9ce5553265ef8de5434dfe83b14316b26803818f",
+        "SubProcesses/P0_ug_wpd/macnlops_onestep": "e259ab62214548c9d2fdc626c48248041f9e737fd0cfc737bda8ce8105028368"
+      },
+      "report": {
+        "counts": {
+          "accepted_H": 798,
+          "accepted_S": 2245,
+          "evaluated_H": 175,
+          "evaluated_S": 2628,
+          "h_removal_H": 175,
+          "input_H": 972,
+          "input_S": 2628,
+          "no_transfer_S": 983,
+          "positive_h_H": 797,
+          "rejected_H": 174,
+          "rejected_S": 383,
+          "s_veto_S": 1645
+        },
+        "prescription": "component-sudakov-ratio-v4",
+        "rejected_events": "kept",
+        "weight_sums": {
+          "input": 106.92809523200017,
+          "macnlops": 106.24935244000015
+        }
+      }
+    },
+    {
+      "channels": [
+        {
+          "channel": {
+            "beta": 1.8896397912613465,
+            "res": "res_1",
+            "sigma_B": 46.01346601756133,
+            "sigma_B_error": 0.03516460558885596,
+            "sigma_S": 86.94887632063565,
+            "sigma_S_error": 0.3122723594589295
+          },
+          "counts": {
+            "accepted_H": 113,
+            "accepted_S": 359,
+            "below_matching_scale_S": 1,
+            "evaluated_H": 12,
+            "evaluated_S": 374,
+            "h_removal_H": 12,
+            "input_H": 125,
+            "input_S": 375,
+            "no_transfer_S": 144,
+            "positive_h_H": 113,
+            "rejected_H": 12,
+            "rejected_S": 16,
+            "s_veto_S": 230
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/Wbb/SubProcesses/P0_udx_bbxwp/GF1.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 500,
+              "input": 0.2304470379800013,
+              "macnlops": 0.2317344516000013,
+              "macnlops_max": 0.00064370681,
+              "macnlops_squares": 0.00019557719181745843
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 4020102,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.2304470379800013,
+            "macnlops": 0.2317344516000013
+          }
+        },
+        {
+          "channel": {
+            "beta": 1.8493480948125967,
+            "res": "res_1",
+            "sigma_B": 46.074390460293415,
+            "sigma_B_error": 0.03704420912432117,
+            "sigma_S": 85.2075862173953,
+            "sigma_S_error": 0.27030214385772866
+          },
+          "counts": {
+            "accepted_H": 120,
+            "accepted_S": 350,
+            "evaluated_H": 13,
+            "evaluated_S": 367,
+            "h_removal_H": 13,
+            "input_H": 133,
+            "input_S": 367,
+            "no_transfer_S": 137,
+            "positive_h_H": 120,
+            "rejected_H": 13,
+            "rejected_S": 17,
+            "s_veto_S": 230
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/Wbb/SubProcesses/P0_udx_bbxwp/GF2.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 500,
+              "input": 0.23688410608000135,
+              "macnlops": 0.23559669246000134,
+              "macnlops_max": 0.00064370681,
+              "macnlops_squares": 0.00019474847490297766
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 4020128,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.23688410608000135,
+            "macnlops": 0.23559669246000134
+          }
+        },
+        {
+          "channel": {
+            "beta": 1.8509634009159779,
+            "res": "res_1",
+            "sigma_B": 46.06913834428979,
+            "sigma_B_error": 0.03155365862292124,
+            "sigma_S": 85.27228898701532,
+            "sigma_S_error": 0.262145577019222
+          },
+          "counts": {
+            "accepted_H": 109,
+            "accepted_S": 350,
+            "evaluated_H": 17,
+            "evaluated_S": 374,
+            "h_removal_H": 17,
+            "input_H": 126,
+            "input_S": 374,
+            "no_transfer_S": 141,
+            "positive_h_H": 109,
+            "rejected_H": 17,
+            "rejected_S": 24,
+            "s_veto_S": 233
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/Wbb/SubProcesses/P0_dxu_bbxwp/GF1.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 500,
+              "input": 0.22915962436000128,
+              "macnlops": 0.22851591755000128,
+              "macnlops_max": 0.00064370681,
+              "macnlops_squares": 0.00019019053187333343
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 4020153,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.22915962436000128,
+            "macnlops": 0.22851591755000128
+          }
+        },
+        {
+          "channel": {
+            "beta": 1.872966389206205,
+            "res": "res_1",
+            "sigma_B": 46.05225675861138,
+            "sigma_B_error": 0.03527694857477781,
+            "sigma_S": 86.2543290559734,
+            "sigma_S_error": 0.2472070357352837
+          },
+          "counts": {
+            "accepted_H": 104,
+            "accepted_S": 370,
+            "evaluated_H": 10,
+            "evaluated_S": 386,
+            "h_removal_H": 10,
+            "input_H": 114,
+            "input_S": 386,
+            "no_transfer_S": 129,
+            "positive_h_H": 104,
+            "rejected_H": 10,
+            "rejected_S": 16,
+            "s_veto_S": 257
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/Wbb/SubProcesses/P0_dxu_bbxwp/GF2.0_1",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {},
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 500,
+              "input": 0.2304470379800013,
+              "macnlops": 0.22915962436000128,
+              "macnlops_max": 0.00064370681,
+              "macnlops_squares": 0.0001964059087319392
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 4020177,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 0.2304470379800013,
+            "macnlops": 0.22915962436000128
+          }
+        },
+        {
+          "channel": {
+            "beta": 1.8896397912613465,
+            "res": "res_1",
+            "sigma_B": 46.01346601756133,
+            "sigma_B_error": 0.03516460558885596,
+            "sigma_S": 86.94887632063565,
+            "sigma_S_error": 0.3122723594589295
+          },
+          "counts": {
+            "accepted_H": 2357,
+            "accepted_S": 7036,
+            "below_matching_scale_S": 1,
+            "evaluated_H": 223,
+            "evaluated_S": 7392,
+            "h_removal_H": 223,
+            "input_H": 2580,
+            "input_S": 7393,
+            "no_transfer_S": 2725,
+            "pdf_support_no_transfer_S": 1,
+            "positive_h_H": 2357,
+            "rejected_H": 223,
+            "rejected_S": 357,
+            "s_veto_S": 4666
+          },
+          "directory": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/generalisation/processes/Wbb/SubProcesses/P0_udx_bbxwp/GF1.0_26",
+          "error": "",
+          "input": "events.lhe",
+          "native_trial_warnings": {
+            "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 4
+          },
+          "output": "events_macnlops.lhe",
+          "prescription": "component-sudakov-ratio-v4",
+          "processes": {
+            "0": {
+              "events": 9973,
+              "input": 4.784672718730213,
+              "macnlops": 4.752487378230211,
+              "macnlops_max": 0.00064370681,
+              "macnlops_squares": 0.0038920689888584403
+            }
+          },
+          "rejected_events": "kept",
+          "schema": "macnlops-first-emission-channel-v1",
+          "seed": 4020127,
+          "shower": {
+            "alpha_s_mz": 0.1365,
+            "alpha_s_order": 1,
+            "cutoffs": [
+              0.5000000000000001,
+              0.5000000000000001
+            ],
+            "pdf": "LHAPDF6:NNPDF40_nlo_as_01180_nf_4/0"
+          },
+          "status": "complete",
+          "weight_sums": {
+            "input": 4.784672718730213,
+            "macnlops": 4.752487378230211
+          }
+        }
+      ],
+      "expected_events": 11973,
+      "input_subsets_unchanged": true,
+      "matching_sources": {
+        "MCatNLO/srcPythia8/MacNLOPSMatch.cc": "0e2bbd496540ed2692cb0d2665544aba8380add65771776a9baaaec7312dc7e1",
+        "SubProcesses/driver_macnlops.f": "e4003b2864a7ea4a73e1b9c62a6116df4c2d4989dbad7b99d96406f5cbf57ed5",
+        "SubProcesses/macnlops_capi.f": "aa80d1e7677d761f66ce1cff185aaf11a8b2dc4cc737af2b716a0a20a8f0ab25",
+        "SubProcesses/macnlops_evaluator.f": "38894be2bb09cc143c0f7995ceb678c60f82794e7fa14a189c67019448bfd849",
+        "SubProcesses/montecarlocounter.f": "88e7c11118bd125d1f261284fbef65187a922dc52fba957a8422bc3fc5d35d7c",
+        "SubProcesses/weight_lines.f": "0cc6344cef02f6b722ba432f234fc0002fc72c946eb382e621dc8cf0c97f634d"
+      },
+      "original_seeds_preserved": true,
+      "process": "Wbb",
+      "provider_executables": {
+        "SubProcesses/P0_dxu_bbxwp/macnlops_onestep": "00be2c600ef90f66d94f9cc4715aebe7f4bae846916813c41b0a8eef9973fa9f",
+        "SubProcesses/P0_udx_bbxwp/macnlops_onestep": "0a34b018f967d81956c7245fbe32531e360ffb1f647d68f45872739649996ce9"
+      },
+      "report": {
+        "counts": {
+          "accepted_H": 2803,
+          "accepted_S": 8465,
+          "below_matching_scale_S": 2,
+          "evaluated_H": 275,
+          "evaluated_S": 8893,
+          "h_removal_H": 275,
+          "input_H": 3078,
+          "input_S": 8895,
+          "no_transfer_S": 3276,
+          "pdf_support_no_transfer_S": 1,
+          "positive_h_H": 2803,
+          "rejected_H": 275,
+          "rejected_S": 430,
+          "s_veto_S": 5616
+        },
+        "prescription": "component-sudakov-ratio-v4",
+        "rejected_events": "kept",
+        "weight_sums": {
+          "input": 5.711610525130218,
+          "macnlops": 5.677494064200216
+        }
+      }
+    }
+  ],
+  "script_sha256": "332784e15f272c44fe9ffccd05647b4fab7a61389e2e83f0505d5ecef82251d3",
+  "stage": "baseline",
+  "stock_Pythia_sha256": "35203dfab4e20b044fe6e669b8170f5905f56c43c6dad6e762ceff86158a283c"
+}
