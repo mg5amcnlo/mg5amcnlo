@@ -52,9 +52,9 @@ namespace madmatrix // this is only needed for CPU SIMD vectorization
   // assume load from one page return high and low
   inline fptype_denom_sv momvFromContiguousArray( const fptype_momenta& ref )
   {
-    fptype_denom_hv lo = {}, hi = {};
-    for( int l = 0; l < neppVD; l++ ) { lo[l] = ( &ref )[l]; hi[l] = ( &ref )[neppVD + l]; }
-    return { lo, hi };
+    fptype_denom_sv out;
+    __builtin_memcpy( &out, &ref, sizeof( out ) );
+    return out;
   }
 #endif
 

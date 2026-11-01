@@ -441,13 +441,11 @@ ifeq ($(BACKEND),hip)
   override OPTFLAGS = -O2
 endif
 
-# PROFILE=1: reduced optimisation + symbols suitable for profilers (perf, gprof, valgrind...)
+# PROFILE=1: unchanged optimisation (-O3) + symbols and frame pointers for profilers (perf, Adaptyst, gprof, valgrind...)
 # DEBUG=1  : no optimisation + full debug symbols
 # Both flags propagate automatically to src/ sub-makes via MAKEFLAGS.
-# These override the HIP workaround above intentionally: DEBUG in particular must always win.
-ifeq ($(PROFILE),1)
-  override OPTFLAGS = -O2
-else ifeq ($(DEBUG),1)
+# DEBUG overrides the HIP workaround above intentionally: it must always win.
+ifeq ($(DEBUG),1)
   override OPTFLAGS = -O0
 endif
 
@@ -763,6 +761,11 @@ endif
 ifneq ($(filter 1,$(PROFILE) $(DEBUG)),)
   CXXFLAGS += -g -fno-omit-frame-pointer
   GPUFLAGS += $(XCOMPILERFLAG) -g $(XCOMPILERFLAG) -fno-omit-frame-pointer
+  # Frame pointers in leaf functions too, for complete stacks (option only exists on x86 and AArch64).
+  ifneq ($(filter x86_64 aarch64 arm64,$(UNAME_M)),)
+    CXXFLAGS += -mno-omit-leaf-frame-pointer
+    GPUFLAGS += $(XCOMPILERFLAG) -mno-omit-leaf-frame-pointer
+  endif
 endif
 
 #-------------------------------------------------------------------------------

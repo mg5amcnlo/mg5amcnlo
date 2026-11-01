@@ -160,6 +160,7 @@ jobs:
         run: |
           "$RUNNER_TEMP/delete_caches.sh" \
             heptools-v2-${{ env.CACHE_KEY }} \
+            heptools-core-v2-${{ env.CACHE_KEY }} \
             lhapdf-v2-${{ env.CACHE_KEY }} \
             pythia8-v2-${{ env.CACHE_KEY }} \
             boost-v2-${{ env.CACHE_KEY }} \
@@ -360,6 +361,14 @@ jobs:
          with:
            tools: lhapdf
 
+       # The downloaded PDF archives (those above, plus the ones "install
+       # lhapdf6" fetches, one of them twice as *.tar.gz.1) stayed next to the
+       # unpacked sets: ~330 MB of already compressed data, so ~330 MB of every
+       # cache built on top of this one. Only the unpacked sets are read.
+       - name: Drop the PDF archives before the cache is saved
+         if: steps.cache-lhapdf.outputs.cache-hit != 'true'
+         run: rm -fv /home/runner/.cache/HEPtools/lhapdf6_py3/share/LHAPDF/*.tar.gz*
+
   pythia8_cache:
     if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch') && github.event_name != 'schedule'
     runs-on: ${{ matrix.os }}
@@ -471,6 +480,22 @@ jobs:
          with:
            tools: boost
 
+       # The unpacked boost source/build tree (boost/boost_1_74_0, 1.2 GB) was
+       # cached too. Its header tree boost_1_74_0/boost has to stay:
+       # HEPToolInstaller.install_emela takes the first boost/boost* entry as
+       # boost root and builds eMELA with -I on it (deleting the whole tree
+       # failed run 41208465679 with an IndexError there). The rest (build
+       # objects, docs, tests, tools) is never read.
+       - name: Drop the boost source tree, but its headers, before the cache is saved
+         if: steps.cache-boost.outputs.cache-hit != 'true'
+         run: |
+           set -e
+           cd /home/runner/.cache/HEPtools/boost
+           src=$(ls -d boost_[0-9]*/ | head -1)
+           test -d "$src/boost"
+           find "$src" -mindepth 1 -maxdepth 1 ! -name boost -exec rm -rf {} +
+           du -sh "$src"
+
   emela_cache:
     if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch') && github.event_name != 'schedule'
     runs-on: ${{ matrix.os }}
@@ -528,6 +553,12 @@ jobs:
          uses: ./.github/actions/check_heptools
          with:
            tools: boost emela
+
+       # grids.tar.gz (115 MB, compressed) stayed next to the unpacked
+       # EMELA/share grids that eMELA reads (checked above).
+       - name: Drop the eMELA grid archive before the cache is saved
+         if: steps.cache-eMELA.outputs.cache-hit != 'true'
+         run: rm -fv /home/runner/.cache/HEPtools/EMELA/grids.tar.gz
 
 #  delete_lhapdf_cache:
 #     runs-on: ${{ matrix.os }}
@@ -679,6 +710,45 @@ jobs:
        with:
          tools: looptools
 
+  # The core cache: lhapdf + pythia8 (with hepmc) only, ~0.7 GB against ~1.1 GB
+  # for the full heptools cache. Most jobs (LO, mg7, MadSpin) need nothing
+  # else and restore it with restore_heptools_core, which cuts the cache egress
+  # of a push (GitHub has failed restores with "Egress is over the account
+  # limit"). The pythia8 sub-cache already is exactly that tree (it is built on
+  # top of the lhapdf one), so it is only checked and saved under its own,
+  # generation-suffixed, key here. Must run before heptools_cache deletes the
+  # sub-caches, hence its place in the needs of that job.
+  heptools_core_cache:
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch') && github.event_name != 'schedule'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04]
+    needs: pythia8_cache
+    steps:
+      # needed for ./.github/actions/check_heptools below
+      - uses: actions/checkout@v5
+
+      - name: Set cache key
+        run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
+
+      - name: Restore pythia8 (on top of lhapdf)
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/HEPtools
+          key: pythia8-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          fail-on-cache-miss: true
+
+      - name: Verify the core tree before saving it
+        uses: ./.github/actions/check_heptools
+        with:
+          tools: lhapdf pythia8
+
+      - uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/HEPtools
+          key: heptools-core-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
+
   # ---------------------------------------------------------------------------
   # Cache key generations (the reason every key below ends in ${{ github.run_id }})
   #
@@ -722,12 +792,13 @@ jobs:
         os: [ubuntu-24.04]
     # runs even if a dependency failed (see always() in the job 'if' above), but
     # never on the scheduled keep-warm run
-    needs: [lhapdf_cache, boost_cache, pythia8_cache, emela_cache, looptools_cache, contur_cache]
+    needs: [lhapdf_cache, boost_cache, pythia8_cache, emela_cache, looptools_cache, contur_cache, heptools_core_cache]
     env:
       # Every sub-cache job reported success. Not enough on its own (see the
       # content check below), but a necessary condition for touching the
-      # combined cache at all.
-      ALL_SUBCACHES_OK: ${{ needs.lhapdf_cache.result == 'success' && needs.boost_cache.result == 'success' && needs.pythia8_cache.result == 'success' && needs.emela_cache.result == 'success' && needs.contur_cache.result == 'success' && needs.looptools_cache.result == 'success' }}
+      # combined cache at all. heptools_core_cache is in it so that a failed
+      # core save keeps the pythia8 sub-cache for its re-run.
+      ALL_SUBCACHES_OK: ${{ needs.lhapdf_cache.result == 'success' && needs.boost_cache.result == 'success' && needs.pythia8_cache.result == 'success' && needs.emela_cache.result == 'success' && needs.contur_cache.result == 'success' && needs.looptools_cache.result == 'success' && needs.heptools_core_cache.result == 'success' }}
     steps:
       # needed for ./.github/actions/check_heptools below
       - uses: actions/checkout@v5
@@ -906,6 +977,20 @@ jobs:
       - name: Warn when there is no combined cache to keep warm
         if: steps.touch-heptools.outputs.cache-matched-key == ''
         run: echo "::warning::no heptools-v2-${{ env.CACHE_KEY }}-* cache found; it will be rebuilt on the next push or manual dispatch."
+
+      # same for the core (lhapdf + pythia8) cache; restoring it over the tree
+      # above is harmless, nothing reads that tree after the check
+      - name: Restore (touch) the core heptools cache
+        id: touch-core
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/HEPtools
+          key: heptools-core-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          restore-keys: |
+            heptools-core-v2-${{ env.CACHE_KEY }}-
+      - name: Warn when there is no core cache to keep warm
+        if: steps.touch-core.outputs.cache-matched-key == ''
+        run: echo "::warning::no heptools-core-v2-${{ env.CACHE_KEY }}-* cache found; it will be rebuilt on the next push or manual dispatch."
 
 
   # ---------------------------------------------------------------------------
