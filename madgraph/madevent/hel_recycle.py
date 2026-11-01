@@ -428,10 +428,51 @@ class CppDialect(Dialect):
         return [Template(fold).safe_substitute(row=row)
                 for fold in self.folds.get(amp.diag_num, ())]
 
+    # the spin letters of the legs of one Lorentz structure in a routine name:
+    # FFV2 of FFV2_FFS3M, VSV2 of VVV1_VSV2_VSS1
+    _STRUCTURE = re.compile(r'([FVS]+)\d')
+
+    @classmethod
+    def peel_spin(cls, root, peel, gauge='U'):
+        """(spin, components) of the current a P1N of `root` (the routine
+        name before _0) leaves on leg peel+1 -- the components a member's dot
+        product runs over -- or None when it is not split.
+
+        A combined routine (FFV2_FFS3, VVV1_VSV2_VSS1) names every structure,
+        and they must agree on the leg. The FD gauge changes two things. A
+        vector wavefunction has five components, the fifth its Goldstone, and
+        a scalar keeps its value in that same fifth component (the fortran
+        CombineAmpS of aloha_functions_fd.f reads W(5)). And a vector leg is
+        also its Goldstone: a structure with an S where another has a V reads
+        the fifth component of the same wavefunction. Such a leg is a vector,
+        and the current the P1N writes has all five components (the fifth from
+        the Goldstone structures). Getting either wrong drops or misreads part
+        of every amplitude of the group. The P1N routine names its output
+        after the first structure, so that one has to be the V. Names ALOHA
+        hashes (ALOHA_<n>) say nothing about the legs: not split, as spin 2
+        and 3/2."""
+        spins = set()
+        for k, structure in enumerate(root.split('_')):
+            match = cls._STRUCTURE.match(structure)
+            if not match or peel >= len(match.group(1)):
+                return None
+            letter = match.group(1)[peel]
+            if k == 0:
+                first = letter
+            spins.add(letter)
+        fd = gauge == 'FD'
+        if spins == {'F'}:
+            return 'F', (0, 1, 2, 3)
+        if spins == {'S'}:
+            return 'S', (4,) if fd else (0,)
+        if spins == {'V'} or (fd and spins == {'V', 'S'} and first == 'V'):
+            return 'V', (0, 1, 2, 3, 4) if fd else (0, 1, 2, 3)
+        return None
+
     def _whole_amplitude(self, line, amp):
         return [self.apply_args(line, [amp.args]).rstrip('\n')] + self._amp_fold(amp)
 
-    def _p1n_group(self, line, group, peel):
+    def _p1n_group(self, line, group, peel, gauge='U'):
         """One partial contraction shared by a group of amplitudes.
 
         The vertex is evaluated once with the peeled leg left off -- that is
@@ -455,10 +496,10 @@ class CppDialect(Dialect):
         # the vertex writes an amplitude, the current does not: keep the
         # wavefunction and coupling access classes, drop the amplitude one
         access = [access[0], access[-1]]
-        spin = root[peel] if peel < len(root) else None
-        if spin not in ('F', 'V', 'S'):
-            return None                 # spin 2 / 3/2: not split, as in fortran
-        ncomp = 1 if spin == 'S' else 4
+        peeled = self.peel_spin(root, peel, gauge)
+        if peeled is None:
+            return None
+        spin, comps = peeled
         args = list(group[0].args)
         args.pop(peel)
         args[-1] = self.P1N_SCRATCH
@@ -468,11 +509,11 @@ class CppDialect(Dialect):
                  '%s  const cxtype_sv* _pt = %s::kernelAccessConst( %s.w );'
                  % (indent, access[0], self.P1N_SCRATCH)]
         if self.TABLES:
-            table = self._p1n_table(group, peel, indent, access[0], ncomp,
+            table = self._p1n_table(group, peel, indent, access[0], comps,
                                     spin == 'F')
             if table is not None:
                 return lines[:2] + table + ['%s}' % indent]
-        dot = ' + '.join('_pt[%d] * _pw[%d]' % (i, i) for i in range(ncomp))
+        dot = ' + '.join('_pt[%d] * _pw[%d]' % (i, i) for i in comps)
         for amp in group:
             peeled = amp.args[peel]
             lines.append('%s  { const cxtype_sv* _pw = %s::kernelAccessConst( %s.w );'
@@ -604,7 +645,7 @@ class CppDialect(Dialect):
         text = repr(float(value))
         return text if ('.' in text or 'e' in text or 'n' in text) else text + '.'
 
-    def _p1n_table(self, group, peel, indent, w_access, ncomp, fermion):
+    def _p1n_table(self, group, peel, indent, w_access, comps, fermion):
         """The members of a P1N group and their folds as tables, and the call
         that runs them (after the P1N call itself); None when a member cannot be
         tabulated."""
@@ -639,9 +680,10 @@ class CppDialect(Dialect):
                 % (indent, ', '.join('0x%xu' % f for f in folds) or '0u'),
                 '%s  static constexpr double hrC[] = { %s };'
                 % (indent, ', '.join(cvalues) or '0.'),
-                '%s  hr_p1n_fold<%s, %d, %s>( %s, aloha_obj, hrM, %d, hrF, hrC, %d,'
+                '%s  hr_p1n_fold<%s, %d, %s%s>( %s, aloha_obj, hrM, %d, hrF, hrC, %d,'
                 ' jampAll_sv, %s, numAll_sv, iParity, storeChannelWeights );'
-                % (indent, w_access, ncomp, 'true' if fermion else 'false',
+                % (indent, w_access, len(comps), 'true' if fermion else 'false',
+                   ', %d' % comps[0] if comps[0] else '',
                    self.P1N_SCRATCH, len(members), ntmp or 1,
                    'ampAll_sv' if self.HR_STORE in table else 'jampTmpAll_sv')]
 
@@ -659,7 +701,7 @@ class CppDialect(Dialect):
         peel, groups = plan
         out = []
         for group in groups:
-            split = (self._p1n_group(line, group, peel)
+            split = (self._p1n_group(line, group, peel, gauge)
                      if len(group) >= self.P1N_MIN_SHARING else None)
             if split is None:
                 for amp in group:

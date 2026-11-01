@@ -2384,8 +2384,6 @@ class OneProcessExporterMadMatrix(export_mg7.OneProcessExporterMG7):
 
     def hel_recycling_refusal(self):
         """Why this process cannot be recycled, or None."""
-        if aloha.unitary_gauge == 3:
-            return 'the FD gauge (its five-component wavefunctions)'
         if len(self.matrix_elements) != 1:
             return 'more than one matrix element in the directory'
         so = export_v4.split_order_tables(self.matrix_elements[0])
@@ -2482,7 +2480,7 @@ class OneProcessExporterMadMatrix(export_mg7.OneProcessExporterMG7):
         recycler = hel_recycle.HelicityRecycler(
                         [str(hel) for hel in kept], [],
                         sorted((int(h), int(a)) for h, a in zero_perhel),
-                        dialect=dialect)
+                        gauge=getattr(self, '_hr_gauge', 'U'), dialect=dialect)
         recycler.hel_filt = True
         recycler.amp_splt = True
         recycler.amp_filt = True
@@ -2545,6 +2543,9 @@ class OneProcessExporterMadMatrix(export_mg7.OneProcessExporterMG7):
             else:
                 recycle = True
                 self._hr_calls = self.hr_orig_calls(color_amplitudes[0])
+                # FD: a vector's current has a fifth (Goldstone) component,
+                # which the amplitude split has to carry (CppDialect.peel_spin)
+                self._hr_gauge = 'FD' if aloha.unitary_gauge == 3 else 'U'
                 if self not in OneProcessExporterMadMatrix._hr_warmups:
                     OneProcessExporterMadMatrix._hr_warmups.append(self)
         if self.single_helicities:

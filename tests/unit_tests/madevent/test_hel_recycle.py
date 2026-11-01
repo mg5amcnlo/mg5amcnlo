@@ -439,6 +439,157 @@ class TestCppTabulatedSplit(unittest.TestCase):
         self.assertIsNone(value('__import__( "os" ) * '))
 
 
+class TestCppFDGauge(unittest.TestCase):
+    """The C++ dialect on FD gauge calls (set gauge FD).
+
+    A vector wavefunction has five components there, the fifth its Goldstone,
+    and a vertex coupling a vector and its Goldstone is ONE assembled routine
+    named after all its structures (VVV1_VSV2_VSS2_SVV2_SVS2_SSV3_0), with one
+    coupling and coefficient per structure. Unfolding such a call is the same
+    as any other; what FD changes is the amplitude split: the current a P1N
+    leaves on a vector leg has five components, and a four-component dot
+    product drops the Goldstone part of every amplitude of the group (25% of
+    |M|^2 on u u~ > w+ w-); and a scalar keeps its value in that fifth
+    component, so a scalar peel reading component 0 gets nothing (|M|^2
+    off by up to 2.2 relative on t t~ > w+ w- z)."""
+
+    # as in the EvaluateDiagrams.inc of u u~ > w+ w- in FD gauge
+    CURRENT = ('      FFV6_2M_3<W_ACCESS, CI_ACCESS>( aloha_obj[0], aloha_obj[1],'
+               ' flvCOUPs[1], 1.0, flvCOUPs[2], 1.0, cIPD[1], cIPD[2],'
+               ' aloha_obj[4] );')
+    LINE = ('      VVV1_VSV2_VSS2_SVV2_SVS2_SSV3_0<W_ACCESS, A_ACCESS, CI_ACCESS>('
+            ' aloha_obj[3], aloha_obj[2], aloha_obj[4], COUPs[ndcoup + 4], 1.0,'
+            ' COUPs[ndcoup + 5], 1.0, COUPs[ndcoup + 6], 1.0, COUPs[ndcoup + 7],'
+            ' 1.0, COUPs[ndcoup + 8], 1.0, COUPs[ndcoup + 9], 1.0, &amp_fp[0] );'
+            ' //HRAMP 2')
+    FakeAmp = TestCppAmplitudeSplit.FakeAmp
+
+    def setUp(self):
+        self.dialect = hel_recycle.CppDialect()
+        self.dialect.folds = {2: ['      jamp[${row}] += amp_sv[0];']}
+
+    def amplitudes(self):
+        """four rows sharing legs 2 and 3, each with its own W on leg 1"""
+        args = self.dialect.arguments(self.LINE)
+        amps = []
+        for row, slot in enumerate((10, 11, 12, 13)):
+            amp = self.FakeAmp(row + 1, ['aloha_obj[%d]' % slot] + args[1:])
+            amp.diag_num = 2
+            amps.append(amp)
+        return amps
+
+    def render(self, gauge, tables):
+        old = hel_recycle.CppDialect.P1N_MIN_SHARING
+        hel_recycle.CppDialect.P1N_MIN_SHARING = 2
+        self.dialect.TABLES = tables
+        try:
+            return self.dialect.render_amplitudes(self.LINE, self.amplitudes(),
+                                                  gauge=gauge, amp_splt=True)
+        finally:
+            hel_recycle.CppDialect.P1N_MIN_SHARING = old
+
+    def test_a_combined_call_is_taken_apart(self):
+        """the result and the wavefunctions of a multi-coupling call, and a
+        current whose masses come after its couplings"""
+
+        args = self.dialect.arguments(self.LINE)
+        self.assertEqual(len(args), 3 + 2 * 6 + 1)
+        self.assertEqual(self.dialect.output_position(args), len(args) - 1)
+        self.assertEqual([a for a in args if self.dialect.is_wavefunction(a)],
+                         ['aloha_obj[3]', 'aloha_obj[2]', 'aloha_obj[4]'])
+        self.assertEqual(self.dialect.amplitude_diagram(self.LINE, args), 2)
+        args = self.dialect.arguments(self.CURRENT)
+        self.assertEqual(self.dialect.output_position(args), 8)
+        self.assertEqual(args[6:8], ['cIPD[1]', 'cIPD[2]'])
+
+    def test_the_spin_of_a_peeled_leg(self):
+        spin = hel_recycle.CppDialect.peel_spin
+        f, v, v5 = (0, 1, 2, 3), (0, 1, 2, 3), (0, 1, 2, 3, 4)
+        # one structure: its own letter
+        self.assertEqual(spin('FFV1', 0), ('F', f))
+        self.assertEqual(spin('FFV1', 2), ('V', v))
+        self.assertEqual(spin('FFV1C1', 1), ('F', f))
+        self.assertEqual(spin('VVS1', 2), ('S', (0,)))
+        # FD: five components for a vector, and a scalar is the fifth one
+        self.assertEqual(spin('FFV2M', 2, 'FD'), ('V', v5))
+        self.assertEqual(spin('FFV2M', 0, 'FD'), ('F', f))
+        self.assertEqual(spin('VVS1', 2, 'FD'), ('S', (4,)))
+        self.assertEqual(spin('FFS4', 2, 'FD'), ('S', (4,)))
+        # FD: a vector leg is a Goldstone in some structures
+        root = 'VVV1_VSV2_VSS2_SVV2_SVS2_SSV3'
+        for leg in range(3):
+            self.assertEqual(spin(root, leg, 'FD'), ('V', v5))
+        self.assertEqual(spin('FFV2_FFS3M', 0, 'FD'), ('F', f))
+        self.assertEqual(spin('FFV2_FFS3M', 2, 'FD'), ('V', v5))
+        # a Higgs leg is a scalar in every structure
+        self.assertEqual(spin('VVS1_SSS1_VSS1_SVS1', 2, 'FD'), ('S', (4,)))
+        # outside FD the structures of a routine never disagree on a leg: if
+        # they do, nothing is guessed
+        self.assertIsNone(spin(root, 0))
+        # the P1N names its output after the first structure
+        self.assertIsNone(spin('SVV2_VVV1', 0, 'FD'))
+        # spin 2 and 3/2, and the names ALOHA hashes, are not split
+        self.assertIsNone(spin('TTT1', 0))
+        self.assertIsNone(spin('ALOHA_1234m56', 0, 'FD'))
+        self.assertIsNone(spin('FFV1', 3))
+
+    def test_a_scalar_peel_reads_the_fifth_component(self):
+        """FFS4_0 (a top Yukawa) peeled on the Higgs, as in t t~ > w+ w- z:
+        the scalar value is component 4 in FD, component 0 otherwise"""
+
+        line = ('      FFS4_0<W_ACCESS, A_ACCESS, CI_ACCESS>( aloha_obj[0],'
+                ' aloha_obj[1], aloha_obj[2], COUPs[ndcoup + 1], 1.0,'
+                ' &amp_fp[0] ); //HRAMP 2')
+        amps = [self.FakeAmp(row + 1, ['aloha_obj[0]', 'aloha_obj[1]',
+                                       'aloha_obj[%d]' % slot,
+                                       'COUPs[ndcoup+1]', '1.0', '&amp_fp[0]'])
+                for row, slot in enumerate((10, 11, 12, 13))]
+        for amp in amps:
+            amp.diag_num = 2
+        old = hel_recycle.CppDialect.P1N_MIN_SHARING
+        hel_recycle.CppDialect.P1N_MIN_SHARING = 2
+        try:
+            for tables, gauge, expected in (
+                    (False, 'FD', 'amp_sv[0] = _pt[4] * _pw[4]; }'),
+                    (False, 'U', 'amp_sv[0] = _pt[0] * _pw[0]; }'),
+                    (True, 'FD', 'hr_p1n_fold<W_ACCESS, 1, false, 4>( _p1n,'),
+                    (True, 'U', 'hr_p1n_fold<W_ACCESS, 1, false>( _p1n,')):
+                self.dialect.TABLES = tables
+                self.dialect.folds = {2: ['jampAll_sv[( ${row} * nParity + iParity )'
+                                          ' * njampso + 0] += amp_sv[0];']}
+                out = self.dialect.render_amplitudes(line, amps, gauge=gauge,
+                                                     amp_splt=True)
+                self.assertIn('FFS4P1N_3<W_ACCESS, CI_ACCESS>( aloha_obj[0],'
+                              ' aloha_obj[1], COUPs[ndcoup+1], 1.0, _p1n );', out)
+                self.assertIn(expected, out)
+        finally:
+            hel_recycle.CppDialect.P1N_MIN_SHARING = old
+
+    def test_a_vector_peel_dots_five_components(self):
+        out = self.render('FD', tables=False)
+        self.assertIn('VVV1_VSV2_VSS2_SVV2_SVS2_SSV3P1N_1<W_ACCESS, CI_ACCESS>('
+                      ' aloha_obj[2], aloha_obj[4], COUPs[ndcoup+4], 1.0,', out)
+        self.assertEqual(out.count('P1N_1<'), 1)
+        self.assertEqual(out.count('_pt[4] * _pw[4]'), 4)
+        self.assertNotIn('flv_index', out)
+        for row in range(4):
+            self.assertIn('jamp[%d] += amp_sv[0];' % row, out)
+
+    def test_the_tables_say_five_components(self):
+        self.dialect.folds = {2: ['jampAll_sv[( ${row} * nParity + iParity )'
+                                  ' * njampso + 0] += amp_sv[0];']}
+        out = self.render('FD', tables=True)
+        self.assertIn('hr_p1n_fold<W_ACCESS, 5, false>( _p1n, aloha_obj, hrM, 4,', out)
+
+    def test_no_split_without_the_gauge(self):
+        """the same call outside FD cannot happen; were it to, its vector and
+        Goldstone legs disagree and the vertex is evaluated whole"""
+
+        out = self.render('U', tables=False)
+        self.assertNotIn('P1N', out)
+        self.assertEqual(out.count('VVV1_VSV2_VSS2_SVV2_SVS2_SSV3_0<'), 4)
+
+
 class TestRecycledChunkBoundaries(unittest.TestCase):
     """Where the recycled call block may be cut.
 
