@@ -265,12 +265,13 @@ jobs:
       # ---- acceptancetest_mg7_hel_recycling ----
       # --hel_recycling: the recycled madmatrix build gives the |M|^2 of the
       # plain one, event by event, summed over the helicities and with one
-      # helicity per event (check_sa --hel-index), at the scalar and a SIMD backend
+      # helicity per event (check_sa --hel-index), at the scalar and a SIMD backend;
+      # in the unitary gauge (g g > t t~ g) and in FD (t t~ > w+ w- z)
       - name: "acceptancetest_mg7_hel_recycling: madmatrix --hel_recycling vs plain"
         if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_madmatrix_hel_recycling_vs_plain -pA -t0 -l INFO
+            ./tests/test_manager.py test_madmatrix_hel_recycling_vs_plain test_madmatrix_fd_hel_recycling_vs_plain -pA -t0 -l INFO
 
       # ---- acceptancetest_mg7_madspin_mixed_flavor ----
       # mg7 + MadSpin density-summary check driven through the madevent-style
