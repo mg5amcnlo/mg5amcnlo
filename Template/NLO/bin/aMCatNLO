@@ -99,6 +99,18 @@ def stdin_has_input():
     except (OSError, ValueError, AttributeError):
         return False
 
+def is_forced(args):
+    """True when the arguments ask for a forced run: -f, alone or among
+    combined short options (-fp), or --force."""
+    for arg in args:
+        if arg == '--force':
+            return True
+        # "-n myrun" may come as a single argument
+        option = (arg.split() or [''])[0]
+        if option.startswith('-') and not option.startswith('--') and 'f' in option[1:]:
+            return True
+    return False
+
 # Unless they come from a file, the commands, and the answers to the questions
 # of a command given on the command line, are read from stdin as in an
 # interactive session, where a command that cannot be applied (e.g. an invalid
@@ -107,7 +119,7 @@ def stdin_has_input():
 # stdin of the run that compiles.
 if not options.web and not options.allow_stdin and stdin_is_redirected() and \
         not (args and (os.path.isfile(args[0]) or args[0] == 'treatcards')) and \
-        not (args and '-f' in args[1:] and not stdin_has_input()):
+        not (args and is_forced(args[1:]) and not stdin_has_input()):
     sys.exit("Reading the commands or the answers to the questions from stdin is not "
              "supported: write them to a file and run '%s PATH' instead, so that an "
              "invalid command stops the run.\nUse --allow-stdin to read stdin as an "
