@@ -1,9 +1,11 @@
-"""The momentum fractions of a leptonic PhaseSpaceMapping are a batch.
+"""The momentum fractions of a PhaseSpaceMapping are a batch, also where it
+samples none (leptonic, a decay).
 
-Without PDFs x1 = x2 = 1, but like every output of a mapping they have the
-batch dimension their type declares. Channels of a MultiChannelMapping (and
-of a MultiChannelFunction) are concatenated output by output, which needs it:
-leptonic channels used to fail with "Argument must have batch dimension".
+There x1 = x2 = 1, but like every output of a mapping they have the batch
+dimension their type declares. Channels of a MultiChannelMapping (and of a
+MultiChannelFunction) are concatenated output by output, which needs it:
+leptonic and decay channels used to fail with "Argument must have batch
+dimension".
 """
 
 import numpy as np
@@ -52,6 +54,39 @@ def test_leptonic_channels():
     # a list of batch sizes, read on the host
     sizes = np.full(2, BATCH, dtype=np.int64)
     outputs = mapping.map_forward([torch.as_tensor(r)], [sizes])
+    for k, channel in enumerate(channels):
+        part = slice(k * BATCH, (k + 1) * BATCH)
+        ref = channel.map_forward([torch.as_tensor(r[part])])
+        for ours, theirs in zip(outputs, ref):
+            np.testing.assert_array_equal(to_numpy(ours)[part], to_numpy(theirs))
+
+
+def decay(invariant_power):
+    """t > b w+ (w+ > e+ ve), the W as a propagator, its virtuality sampled
+    with the given power"""
+    diagram = ms.Diagram(
+        [173.0],
+        [4.7, 0.0, 0.0],
+        [ms.Propagator(mass=80.4, width=2.0, pdg_id=24)],
+        [["i0", "o0", "p0"], ["p0", "o1", "o2"]],
+    )
+    return ms.PhaseSpaceMapping(
+        ms.Topology(diagram), 173.0, invariant_power=invariant_power
+    )
+
+
+def test_decay_channels():
+    channels = [decay(0.8), decay(0.0)]
+    r = np.random.default_rng(3).random((2 * BATCH, channels[0].random_dim()))
+    ref = channels[0].map_forward([torch.as_tensor(r[:BATCH])])
+    for x in ref[1:3]:
+        x = to_numpy(x)
+        assert x.shape == (BATCH,)
+        np.testing.assert_array_equal(x, 1.0)
+    sizes = np.full(2, BATCH, dtype=np.int64)
+    outputs = ms.MultiChannelMapping(channels).map_forward(
+        [torch.as_tensor(r)], [sizes]
+    )
     for k, channel in enumerate(channels):
         part = slice(k * BATCH, (k + 1) * BATCH)
         ref = channel.map_forward([torch.as_tensor(r[part])])
