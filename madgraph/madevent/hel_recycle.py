@@ -429,7 +429,7 @@ class CppDialect(Dialect):
                 for fold in self.folds.get(amp.diag_num, ())]
 
     # the spin letters of the legs of one Lorentz structure in a routine name:
-    # FFV2 of FFV2_FFS3M, VSV2 of VVV1_VSV2_VSS1
+    # FFV2 of FFV2_FFS3M, VSV2 of VVV1_VSV2_VSS1 (FFV6_2M is FFV6 and FFV2)
     _STRUCTURE = re.compile(r'([FVS]+)\d')
 
     @classmethod
@@ -451,15 +451,19 @@ class CppDialect(Dialect):
         after the first structure, so that one has to be the V. Names ALOHA
         hashes (ALOHA_<n>) say nothing about the legs: not split, as spin 2
         and 3/2."""
-        spins = set()
+        spins, legs = set(), None
         for k, structure in enumerate(root.split('_')):
             match = cls._STRUCTURE.match(structure)
-            if not match or peel >= len(match.group(1)):
+            if match:
+                legs = match.group(1)
+            elif not (legs and structure[:1].isdigit()):
                 return None
-            letter = match.group(1)[peel]
+            # else FFV1_2: the structures of one base are named by their number
+            if peel >= len(legs):
+                return None
             if k == 0:
-                first = letter
-            spins.add(letter)
+                first = legs[peel]
+            spins.add(legs[peel])
         fd = gauge == 'FD'
         if spins == {'F'}:
             return 'F', (0, 1, 2, 3)

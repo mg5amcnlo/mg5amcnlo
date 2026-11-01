@@ -509,6 +509,10 @@ class TestCppFDGauge(unittest.TestCase):
         self.assertEqual(spin('FFV1', 0), ('F', f))
         self.assertEqual(spin('FFV1', 2), ('V', v))
         self.assertEqual(spin('FFV1C1', 1), ('F', f))
+        # FFV6_2M is FFV6 and FFV2: the second one is named by its number
+        self.assertEqual(spin('FFV6_2M', 0, 'FD'), ('F', f))
+        self.assertEqual(spin('FFV1_2_3', 2), ('V', v))
+        self.assertEqual(spin('FFV6_2M', 2, 'FD'), ('V', v5))
         self.assertEqual(spin('VVS1', 2), ('S', (0,)))
         # FD: five components for a vector, and a scalar is the fifth one
         self.assertEqual(spin('FFV2M', 2, 'FD'), ('V', v5))
