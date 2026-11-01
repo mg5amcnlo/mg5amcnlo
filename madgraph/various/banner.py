@@ -1972,6 +1972,9 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('me_frame_unsafe_legs', [], typelist=int)
         # and the run_card default (empty: [1, 2])
         self.add_param('me_frame_default_legs', [], typelist=int)
+        # output written with --density (spin-density matrix): like a
+        # polarisation, the matrix element is then not Lorentz invariant
+        self.add_param('density_matrix', False)
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -4218,6 +4221,9 @@ template_on = \
   %(me_frame)s  = me_frame     ! list of particles to sum-up to define the rest-frame
                                ! in which to evaluate the matrix-element
                                ! [1,2] means the partonic center of mass 
+                               ! default: the massive final-state particles
+                               ! (or their decay products) for p p, [1,2] for
+                               ! e+ e- -- the same as at NLO
                                ! in a collision a single particle is held at
                                ! rest, spin along the Collins-Soper axis
 """
@@ -4502,6 +4508,60 @@ def get_model_flavour_scheme(proc_def):
         if isinstance(item, (list, tuple)):
             todo = list(item) + todo
     return None
+
+
+def default_me_frame_for_process(proc_def, density=False):
+    """The default me_frame of an LO run_card (madevent, mg7) for these
+    processes, the same rule as at NLO (fks_common.me_frame_characteristics).
+
+    None when the frame does not matter: no massive particle is polarised and
+    no spin-density matrix is asked for (output --density), so the matrix
+    element is Lorentz invariant and the card keeps its own default.
+    Otherwise:
+      - a collision with a coloured initial-state parton (p p): the rest
+        frame of the massive final-state particles of the core process, i.e.
+        the external legs coming from them (the particle itself, or all its
+        decay products: Process.get_massive_final_legs_with_decays). E.g.
+        [3, 4] for p p > w+{0} w-, [3] for p p > w+{0} j, [3, 4, 5, 6] for
+        p p > w+{0} z j, w+ > l+ vl, z > l+ l-. The partonic c.m. would have
+        no infrared-safe NLO counterpart once there is a jet, and the LO and
+        NLO defaults have to agree for a K-factor to mean anything.
+      - otherwise (e+ e-, decays, or no massive final-state particle): 'cm',
+        the partonic c.m. (or the rest frame of the decaying particle).
+    """
+    processes = []
+    todo = list(proc_def) if proc_def else []
+    while todo:
+        item = todo.pop(0)
+        if isinstance(item, (list, tuple)):
+            todo = list(item) + todo
+        else:
+            processes.append(item)
+
+    def massive(proc, leg):
+        particle = proc.get('model').get_particle(leg.get('id'))
+        return particle.get('mass').lower() != 'zero'
+
+    def all_legs(proc):
+        # the core legs carry the polarisation of a particle decayed later
+        legs = list(proc.get('legs'))
+        if hasattr(proc, 'get_legs_with_decays'):
+            legs += list(proc.get_legs_with_decays())
+        return legs
+
+    if not density and not any(
+            leg.get('polarization') and massive(proc, leg)
+            for proc in processes for leg in all_legs(proc)):
+        return None
+
+    legs = set()
+    for proc in processes:
+        initial = [leg for leg in proc.get('legs') if not leg.get('state')]
+        if len(initial) == 2 and any(
+                proc.get('model').get_particle(leg.get('id')).get('color') != 1
+                for leg in initial):
+            legs.update(proc.get_massive_final_legs_with_decays())
+    return sorted(legs) if legs else 'cm'
 
 
 def mlm_matching_needed(proc_def):
@@ -5420,7 +5480,7 @@ class RunCardLO(RunCard):
                         model = proc.get('model')
                         particle = model.get_particle(l.get('id'))
                         if particle.get('mass').lower() != 'zero':
-                            self.display_block.append('frame') 
+                            self.display_block.append('frame')
                             break
                 else:
                     continue
@@ -5428,6 +5488,17 @@ class RunCardLO(RunCard):
             else:
                 continue
             break
+
+        # ... and its default, when the matrix element is not Lorentz
+        # invariant: the massive final state for p p, [1,2] otherwise
+        # (default_me_frame_for_process)
+        frame = default_me_frame_for_process(
+                    proc_def, density=proc_characteristic.get('density_matrix'))
+        if frame is not None:
+            if 'frame' not in self.display_block:
+                self.display_block.append('frame')
+            if frame != 'cm' and 'me_frame' not in self.user_set:
+                self['me_frame'] = frame
 
         if proc_characteristic['ninitial'] == 1:
             self['SDE_strategy'] =1
@@ -6663,6 +6734,9 @@ class RunCardNLO(RunCard):
         default_legs = proc_characteristic.get('me_frame_default_legs')
         if default_legs and 'me_frame' not in self.user_set:
             self['me_frame'] = list(default_legs)
+        if (default_legs or proc_characteristic.get('density_matrix')) and \
+                'frame' not in self.display_block:
+            self.display_block.append('frame')
 
         # 4-flavour scheme: a massive b is not a parton of the proton, so the
         # default PDF has to be the nf_4 set rather than the 5-flavour one.
@@ -6966,15 +7040,20 @@ class RunCardMG7(RunCard):
         # the partonic centre of mass, i.e. the frame madevent evaluates in,
         # and [1] its equivalent for a 1 -> n decay. Only matters for a matrix
         # element that is not Lorentz invariant, i.e. a polarised one, so the
-        # default costs nothing and leaves every other run unchanged.
+        # default costs nothing and leaves every other run unchanged. A
+        # polarised (or density-matrix) process gets the madevent/aMC@NLO
+        # default instead (create_default_for_process).
         self.add_toml_param('run', 'me_frame', [], typelist=int,
             comment="external particles whose momenta are summed up to define the "
-                    "rest frame in which to evaluate the matrix element; [] (the "
-                    "default) applies no boost, [1,2] is the partonic centre of "
-                    "mass (what madevent evaluates in). Only matters for a non "
-                    "Lorentz invariant (polarised) matrix element. In a "
-                    "collision a single particle is held at rest with its spin "
-                    "along the Collins-Soper axis")
+                    "rest frame in which to evaluate the matrix element; [] "
+                    "applies no boost, [1,2] is the partonic centre of mass. "
+                    "Only matters for a non Lorentz invariant (polarised or "
+                    "density-matrix) matrix element; for one, the default is "
+                    "the massive final-state particles (or their decay "
+                    "products) in p p, [1,2] in e+ e- and [1] for a decay, as "
+                    "in madevent and aMC@NLO. In a collision a single "
+                    "particle is held at rest with its spin along the "
+                    "Collins-Soper axis")
 
         # ---------------------------- [gridpack] ----------------------
         self.add_toml_param('gridpack', 'save_gridpack', False,
@@ -8515,6 +8594,20 @@ class RunCardMG7(RunCard):
         # the off-shell propagators, not a cut on the final state.
         if proc_characteristic and proc_characteristic['ninitial'] == 1:
             self.remove_all_cut()
+
+        # A polarised (or density-matrix) matrix element is not Lorentz
+        # invariant: [] (no boost, the lab) is replaced by the same default as
+        # madevent and aMC@NLO, the massive final state for p p and the
+        # partonic c.m. otherwise ([1] for a decay, mg7's spelling of it).
+        # See default_me_frame_for_process.
+        frame = default_me_frame_for_process(proc_def, density=bool(
+            proc_characteristic and proc_characteristic.get('density_matrix')))
+        if frame is not None and 'run.me_frame' not in self.user_set:
+            if frame == 'cm':
+                ninitial = proc_characteristic['ninitial'] \
+                           if proc_characteristic else 2
+                frame = [1] if ninitial == 1 else [1, 2]
+            self['run']['me_frame'] = frame
 
         # the histograms are a list of observables of *this* final state, so
         # they can only be written once the process is known

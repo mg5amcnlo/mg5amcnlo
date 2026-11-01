@@ -831,6 +831,116 @@ class TestRunCardNLOMeFramePartonicCM(unittest.TestCase):
         self.assertEqual(self._frame_id(self._card(None, [], [])), 0)
 
 
+class TestDefaultMeFrameLO(unittest.TestCase):
+    """The LO (madevent, mg7) default me_frame follows the NLO one: for a
+    polarised or density-matrix process, the rest frame of the massive
+    final-state particles in p p, the partonic c.m. in e+ e- and for a
+    decay. Anything else keeps the card's own default."""
+
+    model = None
+
+    @classmethod
+    def setUpClass(cls):
+        import madgraph.models.import_ufo as import_ufo
+        cls.model = import_ufo.import_model('sm')
+
+    def proc(self, initial, final, decays=()):
+        """legs are (id, polarisation) pairs; decays are processes"""
+        import madgraph.core.base_objects as base_objects
+        legs = [base_objects.Leg({'id': i, 'state': False, 'polarization': p})
+                for i, p in initial]
+        legs += [base_objects.Leg({'id': i, 'state': True, 'polarization': p})
+                 for i, p in final]
+        return base_objects.Process({
+            'legs': base_objects.LegList(legs), 'model': self.model,
+            'decay_chains': base_objects.ProcessList(list(decays))})
+
+    def decay(self, mother, daughters, decays=()):
+        return self.proc([(mother, [])], [(d, []) for d in daughters], decays)
+
+    def default(self, proc, density=False):
+        return bannermod.default_me_frame_for_process([[proc]],
+                                                      density=density)
+
+    def test_massive_final_state_of_a_collision(self):
+        # u d~ > w+{0} g: the W alone, its Collins-Soper frame
+        self.assertEqual(self.default(self.proc([(2, []), (-1, [])],
+                                                [(24, [0]), (21, [])])), [3])
+        # u u~ > w+{0} w-: the W W rest frame, the partonic c.m. at LO
+        self.assertEqual(self.default(self.proc([(2, []), (-2, [])],
+                                                [(24, [0]), (-24, [])])),
+                         [3, 4])
+
+    def test_decay_products_stand_for_the_decayed_particle(self):
+        # u u~ > w+{0} z g, w+ > e+ ve, z > e+ e-: the W Z rest frame
+        proc = self.proc([(2, []), (-2, [])], [(24, [0]), (23, []), (21, [])],
+                         [self.decay(24, [-11, 12]), self.decay(23, [-11, 11])])
+        self.assertEqual(self.default(proc), [3, 4, 5, 6])
+        ids = [leg.get('id') for leg in proc.get_legs_with_decays()]
+        self.assertEqual(ids, [2, -2, -11, 12, -11, 11, 21])
+        # u u~ > t{-1} t~, t > w+ b, w+ > e+ ve: nested, the t t~ rest frame
+        proc = self.proc([(2, []), (-2, [])], [(6, [-1]), (-6, [])],
+                         [self.decay(6, [24, 5], [self.decay(24, [-11, 12])])])
+        self.assertEqual(self.default(proc), [3, 4, 5, 6])
+        self.assertEqual([leg.get('id') for leg in proc.get_legs_with_decays()],
+                         [2, -2, -11, 12, 5, -6])
+
+    def test_partonic_cm_without_initial_state_colour(self):
+        # e+ e- > w+{0} w-, and a decay
+        self.assertEqual(self.default(self.proc([(-11, []), (11, [])],
+                                                [(24, [0]), (-24, [])])), 'cm')
+        self.assertEqual(self.default(self.proc([(6, [])],
+                                                [(24, [0]), (5, [])])), 'cm')
+
+    def test_only_for_polarisation_or_density(self):
+        w_j = self.proc([(2, []), (-1, [])], [(24, []), (21, [])])
+        self.assertIsNone(self.default(w_j))
+        # a polarised massless particle: helicity is boost invariant
+        self.assertIsNone(self.default(self.proc([(2, []), (-2, [])],
+                                                 [(-11, [-1]), (11, [])])))
+        # output --density: the matrix element is not Lorentz invariant
+        self.assertEqual(self.default(w_j, density=True), [3])
+
+    def charac(self, ninitial=2):
+        charac = bannermod.ProcCharacteristic()
+        charac['ninitial'] = ninitial
+        return charac
+
+    def test_madevent_card(self):
+        card = bannermod.RunCardLO()
+        card.create_default_for_process(self.charac(), '', [[self.proc(
+            [(2, []), (-1, [])], [(24, [0]), (21, [])])]])
+        self.assertEqual(card['me_frame'], [3])
+        self.assertIn('frame', card.display_block)
+        # e+ e-: unchanged
+        card = bannermod.RunCardLO()
+        card.create_default_for_process(self.charac(), '', [[self.proc(
+            [(-11, []), (11, [])], [(24, [0]), (-24, [])])]])
+        self.assertEqual(card['me_frame'], [1, 2])
+        # unpolarised: unchanged, and no frame block
+        card = bannermod.RunCardLO()
+        card.create_default_for_process(self.charac(), '', [[self.proc(
+            [(2, []), (-1, [])], [(24, []), (21, [])])]])
+        self.assertEqual(card['me_frame'], [1, 2])
+        self.assertNotIn('frame', card.display_block)
+
+    def test_mg7_card(self):
+        def card(proc, ninitial=2):
+            run_card = bannermod.RunCardMG7()
+            run_card.create_default_for_process(self.charac(ninitial), '',
+                                                [[proc]])
+            return run_card['run']['me_frame']
+        self.assertEqual(card(self.proc([(2, []), (-1, [])],
+                                        [(24, [0]), (21, [])])), [3])
+        self.assertEqual(card(self.proc([(-11, []), (11, [])],
+                                        [(24, [0]), (-24, [])])), [1, 2])
+        self.assertEqual(card(self.proc([(6, [])], [(24, [0]), (5, [])]),
+                              ninitial=1), [1])
+        # unpolarised: mg7's own default, no boost
+        self.assertEqual(card(self.proc([(2, []), (-1, [])],
+                                        [(24, []), (21, [])])), [])
+
+
 class TestRunCard(unittest.TestCase):
     """ A class to test the TestConfig functionality """
     # a lot of the functionality is actually already tested in the child

@@ -325,11 +325,30 @@ final-state parton is refused. `[3,4]` on `p p > w+{0} j` used to pass and
 built the rest frame of the W and `j_fks`. Runs of the Born alone (`launch
 LO`, `aMC@LO`) refuse nothing.
 
-**LO/NLO consistency.** For a process whose final state is all massive, the
-NLO default equals the LO default `[1,2]` at the Born level. For one with a
-jet or another massless particle it does not. For example, `p p > w+{0} j`
-is `[3]` at NLO and `[1,2]` in madevent. A K-factor needs `me_frame = [3]`
-set in the LO run as well.
+**LO follows (same rule, 2026-11-01).** madevent and mg7 use the same
+default (`banner.default_me_frame_for_process`), so LO and NLO defaults agree
+and a K-factor compares like with like:
+
+- A collision with a coloured initial parton gets the rest frame of the
+  massive final-state particles of the core process.
+  - At LO a decayed particle is represented by all of its decay products.
+    For example, `p p > w+{0} z, w+ > e+ ve, z > e+ e-` gets `[3,4,5,6]`
+    (`Process.get_massive_final_legs_with_decays`).
+- e+ e- gets `[1,2]`.
+- A decay gets `[1,2]` in madevent and `[1]` in mg7, which are the two
+  spellings of the rest frame of the decaying particle.
+
+**Only when the frame matters.** This default is applied only when a massive
+particle is polarised, or when a spin-density matrix is asked for
+(`output ... --density`, recorded as `density_matrix` in
+`proc_characteristics`). Everything else keeps its old default: `[1,2]`
+(hidden) in madevent and at NLO, and `[]` (no boost) in mg7. There the
+matrix element is Lorentz invariant and nothing is boosted. For a process
+whose final state is all massive (dibosons, `t t~`), the new default is the
+partonic c.m. at the Born level, so LO results do not change. For one with a
+jet, a photon or a lepton, they do. For example, polarised `p p > w+{0} j`
+now uses the Collins-Soper frame of the W instead of its helicity in the
+partonic c.m. The size of that LO change was not measured here.
 
 ## 3. Milestones
 

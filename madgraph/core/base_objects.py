@@ -4674,7 +4674,33 @@ class Process(PhysicsObject):
         self['legs_with_decays'] = LegList(legs)
 
         return self['legs_with_decays']
-    
+
+    def get_massive_final_legs_with_decays(self):
+        """Numbers, as in get_legs_with_decays, of the external legs that come
+        from a massive final-state particle of the core process: the particle
+        itself, or all of its decay products. Their momenta add up to those of
+        the massive particles the core process produces, which is what an
+        me_frame naming 'the massive final state' means once they decay."""
+
+        model = self.get('model')
+        chains = list(self.get('decay_chains'))
+        numbers = []
+        position = 0
+        for leg in self.get('legs'):
+            nlegs = 1
+            if leg.get('state'):
+                # the same leg <-> decay chain matching as get_legs_with_decays
+                for chain in chains:
+                    if chain.get('legs')[0].get('id') == leg.get('id'):
+                        nlegs = len(chain.get_legs_with_decays()) - 1
+                        chains.remove(chain)
+                        break
+                particle = model.get_particle(leg.get('id'))
+                if particle.get('mass').lower() != 'zero':
+                    numbers.extend(range(position + 1, position + nlegs + 1))
+            position += nlegs
+        return numbers
+
     def get_tag(self):
         """return the tag for standalone call"""
         

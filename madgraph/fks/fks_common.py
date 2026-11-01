@@ -869,7 +869,7 @@ def get_user_leg_order(process, pert = 'QCD'):
     return [leg['number'] for leg in leglist]
 
 
-def me_frame_characteristics(processes):
+def me_frame_characteristics(processes, density=False):
     """What the run_card me_frame may mean for these NLO processes, in the
     leg numbering of the process as the user wrote it (the numbering of
     me_frame). Returns (cm_legs, unsafe_legs, default_legs), sorted lists.
@@ -905,8 +905,10 @@ def me_frame_characteristics(processes):
     infrared safe once real emission is computed. When cm_legs contains
     one, me_frame = [1, 2] has no infrared-safe NLO definition at all.
 
-    All three are empty when no massive particle is polarised: the matrix
-    elements are then Lorentz invariant, and the frame does not matter.
+    All three are empty when no massive particle is polarised and no
+    spin-density matrix is asked for (output --density, density=True): the
+    matrix elements are then Lorentz invariant, and the frame does not
+    matter.
     Legs of a multiparticle label count as coloured or massless if any of
     its particles is, and as massive if all of them are. If only some
     processes have an initial-state QCD splitting (a photon in the
@@ -925,9 +927,10 @@ def me_frame_characteristics(processes):
             ids = leg.get('ids') if 'ids' in leg else [leg.get('id')]
             particles.append([model.get_particle(i) for i in ids])
 
-        if not any(leg.get('polarization') and
-                   any(p.get('mass').lower() != 'zero' for p in parts)
-                   for leg, parts in zip(legs, particles)):
+        if not density and not any(
+                leg.get('polarization') and
+                any(p.get('mass').lower() != 'zero' for p in parts)
+                for leg, parts in zip(legs, particles)):
             continue
 
         initial = [n for n, leg in enumerate(legs, 1) if not leg.get('state')]

@@ -2093,7 +2093,8 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         its default and resolves the run_card against all three at launch."""
         cm_legs, unsafe_legs, default_legs = \
             fks_common.me_frame_characteristics(
-                                    getattr(self, 'proc_defs', None) or [])
+                getattr(self, 'proc_defs', None) or [],
+                density=self.proc_characteristic['density_matrix'])
         self.proc_characteristic['me_frame_cm_legs'] = cm_legs
         self.proc_characteristic['me_frame_unsafe_legs'] = unsafe_legs
         self.proc_characteristic['me_frame_default_legs'] = default_legs
