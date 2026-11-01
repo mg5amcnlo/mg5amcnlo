@@ -1,0 +1,60 @@
+name: Restore core heptools cache
+description: >
+  Restores the core heptools cache (lhapdf with its PDF sets, pythia8, hepmc)
+  and sets MG5 accordingly. ~0.7 GB instead of the ~1.1 GB of the full cache
+  (restore_heptools), for the jobs that need no rivet/contur/fastjet, eMELA,
+  boost or loop libraries: most LO, mg7 and MadSpin jobs.
+
+runs:
+  using: composite
+  steps:
+    - name: get os
+      run: echo "CACHE_KEY=heptools-core-v2-$ImageOS" >> $GITHUB_ENV && echo "FULL_CACHE_KEY=heptools-v2-$ImageOS" >> $GITHUB_ENV
+      shell: bash
+
+    # Generation-suffixed keys, as in restore_heptools: the exact key never
+    # matches, restore-keys serves the newest "heptools-core-v2-<ImageOS>-"
+    # entry, built by warm_cache.yml (heptools_core_cache). The full cache is a
+    # superset, so it is the fallback until warm_cache has built a core one.
+    - name: restore core cache
+      id: core-cache
+      uses: actions/cache/restore@v5
+      with:
+        path: ~/.cache/HEPtools
+        key: ${{ env.CACHE_KEY }}-${{ github.run_id }}
+        restore-keys: |
+          ${{ env.CACHE_KEY }}-
+          ${{ env.FULL_CACHE_KEY }}-
+
+    # A failed download is only a warning of actions/cache and leaves nothing
+    # restored (see restore_heptools): try once more after a pause.
+    - name: wait before retrying the restore
+      if: steps.core-cache.outputs.cache-matched-key == ''
+      run: |
+        echo "::warning::the core heptools cache was not restored, retrying in 60 s"
+        rm -rf ~/.cache/HEPtools
+        sleep 60
+      shell: bash
+    - name: restore core cache (retry)
+      if: steps.core-cache.outputs.cache-matched-key == ''
+      uses: actions/cache/restore@v5
+      with:
+        path: ~/.cache/HEPtools
+        key: ${{ env.CACHE_KEY }}-${{ github.run_id }}
+        restore-keys: |
+          ${{ env.CACHE_KEY }}-
+          ${{ env.FULL_CACHE_KEY }}-
+
+    # MG5 configuration for lhapdf and pythia8/hepmc only (setup_only: the
+    # tree is already there)
+    - uses: ./.github/actions/restore_heptools_pythia8
+      with:
+        setup_only: 'true'
+
+    - name: check that lhapdf and pythia8 were restored
+      run: |
+        if [ ! -x ~/.cache/HEPtools/bin/lhapdf-config ] || [ ! -d ~/.cache/HEPtools/pythia8 ]; then
+          echo "::error::the core HEPtools cache could not be restored (see the warnings of the restore steps, e.g. 'Egress is over the account limit'): re-run the job"
+          exit 1
+        fi
+      shell: bash

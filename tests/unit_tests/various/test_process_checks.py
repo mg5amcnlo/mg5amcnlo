@@ -1246,6 +1246,56 @@ class TestPrecisionCheck(unittest.TestCase):
         finally:
             shutil.rmtree(output_path, ignore_errors=True)
 
+    def test_check_precision_v_epem_mupmum(self):
+        """FPTYPE=v against FPTYPE=d for e+ e- > mu+ mu-, on the widest SIMD
+        backend of the host and on the scalar one.
+
+        FPTYPE=v computes the momenta and the propagator denominators in double
+        precision and the rest in single precision. On a SIMD backend the
+        denominators are a double precision vector with the single precision
+        lane count (MGONGPU_SIMD_DENOM64), a code path of its own; on the scalar
+        backend they are plain doubles. The process uses both forms of
+        madmatrix::denom: the photon propagator with its coupling (FFV1P0_3) and
+        the Z one of a routine assembled from two Lorentz structures, without
+        coupling (FFV2_4_3). FPTYPE=v is good to ~1e-6 there, so a lane filled
+        from the wrong momenta, or a non-finite value, fails at once."""
+        import shutil
+        import tempfile
+        if not (misc.which('g++') and misc.which('make')):
+            self.skipTest('check precision needs g++ and make')
+        try:
+            import madmatrix.output  # noqa: F401
+        except ImportError:
+            self.skipTest('madmatrix is not available')
+
+        model = import_ufo.import_model('sm', options={'apply_flavor_grouping': False})
+        legs = base_objects.MultiLegList([
+            base_objects.MultiLeg({'ids': [-11], 'state': False}),
+            base_objects.MultiLeg({'ids': [11], 'state': False}),
+            base_objects.MultiLeg({'ids': [-13], 'state': True}),
+            base_objects.MultiLeg({'ids': [13], 'state': True})])
+        procdef = base_objects.ProcessDefinition({'legs': legs, 'model': model})
+
+        for backend in ('auto', 'scalar'):
+            output_path = tempfile.mkdtemp(prefix='mg5_test_precision_v_')
+            try:
+                results = process_checks.check_precision(
+                    procdef, ['v'], options={'nb_event': 20000, 'backend': backend},
+                    output_path=output_path)
+                self.assertEqual([(r['mode'], r['backend']) for r in results],
+                                 [('v', backend)])
+                entry = results[0]
+                self.assertEqual(entry['nb_event'], 20000)
+                self.assertEqual(entry['nb_invalid'], 0, backend)
+                self.assertEqual(entry['nb_above'], 0, backend)
+                self.assertLess(entry['max'], 1e-4, backend)
+                # single precision amplitudes leave a visible difference: a
+                # build that fell back to double precision would give 0
+                self.assertGreater(entry['max'], 0., backend)
+                self.assertGreater(entry['time_mode'], 0., backend)
+            finally:
+                shutil.rmtree(output_path, ignore_errors=True)
+
 
 if __name__ == '__main__':
     unittest.unittest.main()

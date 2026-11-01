@@ -319,6 +319,48 @@ py::object madspace_py::tensor_to_dlpack(
     });
 }
 
+namespace {
+
+// catching exceptions is extremely expensive so we cache whether to use the new or
+// old version of the dlpack protocol
+py::object call_dlpack(
+    py::object& dlpack_func, py::dict& stream_arg, bool* dlpack_version_cache
+) {
+    py::object capsule_obj;
+    if (dlpack_version_cache == nullptr || !*dlpack_version_cache) {
+        try {
+            capsule_obj = dlpack_func(
+                "max_version"_a =
+                    std::make_tuple(DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION),
+                **stream_arg
+            );
+        } catch (py::error_already_set& e) {
+            if (e.matches(PyExc_TypeError)) {
+                capsule_obj = dlpack_func(**stream_arg);
+                if (dlpack_version_cache != nullptr) {
+                    *dlpack_version_cache = true;
+                }
+            } else {
+                throw;
+            }
+        }
+    } else {
+        try {
+            capsule_obj = dlpack_func(**stream_arg);
+        } catch (py::error_already_set& e) {
+            capsule_obj = dlpack_func(
+                "max_version"_a =
+                    std::make_tuple(DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION),
+                **stream_arg
+            );
+            *dlpack_version_cache = false;
+        }
+    }
+    return capsule_obj;
+}
+
+} // namespace
+
 Tensor madspace_py::dlpack_to_tensor(
     py::object tensor,
     std::optional<Type> expected_type,
@@ -352,36 +394,19 @@ Tensor madspace_py::dlpack_to_tensor(
         }
     }
 
-    // catching exceptions is extremely expensive so we cache whether to use the new or
-    // old version of the dlpack protocol
-    if (dlpack_version_cache == nullptr || !*dlpack_version_cache) {
-        try {
-            capsule_obj = dlpack_func(
-                "max_version"_a =
-                    std::make_tuple(DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION),
-                **stream_arg
-            );
-        } catch (py::error_already_set& e) {
-            if (e.matches(PyExc_TypeError)) {
-                capsule_obj = dlpack_func(**stream_arg);
-                if (dlpack_version_cache != nullptr) {
-                    *dlpack_version_cache = true;
-                }
-            } else {
-                throw;
-            }
+    try {
+        capsule_obj = call_dlpack(dlpack_func, stream_arg, dlpack_version_cache);
+    } catch (py::error_already_set& e) {
+        // numpy < 2.1 only has the unversioned protocol, which cannot flag a tensor
+        // read-only and so refuses to export a read-only array (np.broadcast_to, a
+        // frombuffer of bytes, ...). The tensor is only read, so export a copy.
+        if (!py::hasattr(tensor, "flags") ||
+            tensor.attr("flags").attr("writeable").cast<bool>()) {
+            throw;
         }
-    } else {
-        try {
-            capsule_obj = dlpack_func(**stream_arg);
-        } catch (py::error_already_set& e) {
-            capsule_obj = dlpack_func(
-                "max_version"_a =
-                    std::make_tuple(DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION),
-                **stream_arg
-            );
-            *dlpack_version_cache = false;
-        }
+        tensor = tensor.attr("copy")();
+        dlpack_func = tensor.attr("__dlpack__");
+        capsule_obj = call_dlpack(dlpack_func, stream_arg, dlpack_version_cache);
     }
     PyObject* capsule = capsule_obj.ptr();
     if (!capsule) {
