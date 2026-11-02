@@ -67,6 +67,12 @@ jobs:
       - uses: ./.github/actions/checkout_mg5
       - uses: ./.github/actions/install_madspace
       - uses: ./.github/actions/restore-pip-cache
+      # MG7CmdTest and the reweighting tests skip themselves without madspace,
+      # which would let a broken launcher through as a green job: fail instead
+      - name: check that madspace is installed
+        run: |
+            cd $GITHUB_WORKSPACE
+            python -c "from madgraph.mg7 import bootstrap; assert bootstrap.madspace_is_installed(), 'madspace is not installed: the launcher tests would be skipped'"
       - name: run the test_mg7_launch unit tests
         run: |
             cd $GITHUB_WORKSPACE
