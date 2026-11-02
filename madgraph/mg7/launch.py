@@ -57,6 +57,13 @@ from madgraph.mg7.postprocess import (  # noqa: F401
     run_lhe_postprocessing,
 )
 from madgraph.mg7.driver import (  # noqa: F401
+    ExistingRun,
+    REWEIGHT_CARD,
+    install_reweight_card,
+    list_runs,
+    prepare_reweighting,
+    run_reweighting,
+    lhe_via_binary,
     compute_decay_widths,
     _decay_flavor_options,
     _release_channel_generators,

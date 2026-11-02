@@ -366,7 +366,7 @@ class NpyToLheNamedWeightsTest(unittest.TestCase):
     def test_named_weights(self):
         sys.path.insert(0, str(MG_ROOT))
         try:
-            from madgraph.iolibs.template_files.mg7.npy_to_lhe import _add_named_weights
+            from madgraph.mg7.npy_to_lhe import _add_named_weights
         finally:
             sys.path.remove(str(MG_ROOT))
         event = "<event>\n 1 2 3\n<rwgt>\n<wgt id='1'> +1.0e+00 </wgt>\n</rwgt>\n</event>\n"

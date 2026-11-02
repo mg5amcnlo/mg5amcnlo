@@ -1186,7 +1186,7 @@ class MG7ReweightingTest(unittest.TestCase):
     CARD = "change helicity False\nlaunch --rwgt_name=mt\nset MT 175\n"
 
     def setUp(self):
-        from madgraph.iolibs.template_files.mg7 import launch
+        from madgraph.mg7 import launch
         self.launch = launch
         self.tmpdir = tempfile.TemporaryDirectory()
         self.cwd = os.getcwd()
@@ -1261,6 +1261,7 @@ class MG7ReweightingTest(unittest.TestCase):
             run_path = 'Events/run_01'
 
         launch = self.launch
+        from madgraph.mg7 import cli, driver
 
         def fake_run_generation(switch, reweight):
             launch.run_single(switch, reweight)
@@ -1271,18 +1272,18 @@ class MG7ReweightingTest(unittest.TestCase):
         def fake_prepare(switch, cli, options):
             calls.append(('prepare', switch.get('reweight'), cli))
             return 'DECISION'
-        with mock.patch.object(launch, 'ask_edit_cards', return_value={'reweight': 'ON'}), \
-                mock.patch.object(launch, 'prepare_reweighting', fake_prepare), \
-                mock.patch.object(launch, 'force_lhe_output_if_needed'), \
-                mock.patch.object(launch, 'run_generation', fake_run_generation), \
-                mock.patch.object(launch, 'compute_auto_widths'), \
-                mock.patch.object(launch, 'MadgraphProcess', lambda: mock.Mock(**{
+        with mock.patch.object(cli, 'ask_edit_cards', return_value={'reweight': 'ON'}), \
+                mock.patch.object(cli, 'prepare_reweighting', fake_prepare), \
+                mock.patch.object(cli, 'force_lhe_output_if_needed'), \
+                mock.patch.object(cli, 'run_generation', fake_run_generation), \
+                mock.patch.object(driver, 'compute_auto_widths'), \
+                mock.patch.object(driver, 'MadgraphProcess', lambda: mock.Mock(**{
                     'gridpack_run_mode': 'regular'})), \
-                mock.patch.object(launch, 'run_lhe_postprocessing',
+                mock.patch.object(driver, 'run_lhe_postprocessing',
                                   lambda p: calls.append(('systematics',))), \
-                mock.patch.object(launch, 'run_reweighting',
+                mock.patch.object(driver, 'run_reweighting',
                                   lambda p, c, decision: calls.append(('reweight', decision))), \
-                mock.patch.object(launch, 'run_selected_tools', fake_tools):
+                mock.patch.object(driver, 'run_selected_tools', fake_tools):
             launch.MG7Cmd(me_dir=self.me_dir).do_generate_events('--reweight=%s' % card)
         self.assertEqual(calls, [('prepare', 'ON', None), ('systematics',),
                                  ('reweight', 'DECISION'), ('tools', ())])
@@ -1293,10 +1294,11 @@ class MG7ReweightingTest(unittest.TestCase):
         card = self.write_card(self.CARD, os.path.join(self.tmpdir.name, 'rw.dat'))
         seen = []
         launch = self.launch
-        with mock.patch.object(launch, 'prepare_reweighting',
+        from madgraph.mg7 import cli, driver
+        with mock.patch.object(cli, 'prepare_reweighting',
                                lambda switch, cli, options: seen.append((switch, cli))), \
-                mock.patch.object(launch, 'force_lhe_output_if_needed'), \
-                mock.patch.object(launch, 'run_generation'):
+                mock.patch.object(cli, 'force_lhe_output_if_needed'), \
+                mock.patch.object(cli, 'run_generation'):
             launch.MG7Cmd(me_dir=self.me_dir).do_generate_events(
                 '-f --reweight=%s --reweight-backend=classic' % card)
         self.assertEqual(seen, [({'reweight': 'ON'}, 'classic')])
@@ -1334,7 +1336,7 @@ class MG7ReweightingTest(unittest.TestCase):
         generation, the reweighting (reweighting(process)) and the npy->LHE
         conversion faked; returns (process, calls)."""
         from madgraph.various import reweight_backend as rb
-        from madgraph.iolibs.template_files.mg7 import npy_to_lhe
+        from madgraph.mg7 import npy_to_lhe
         run_path = os.path.abspath(os.path.join('Events', 'run_01'))
         os.makedirs(run_path)
         calls = []
@@ -1358,10 +1360,11 @@ class MG7ReweightingTest(unittest.TestCase):
             calls.append(('reweight', p.events_path))
             reweighting(p)
         launch = self.launch
-        with mock.patch.object(launch, 'compute_auto_widths'), \
-                mock.patch.object(launch, 'MadgraphProcess', lambda: process), \
-                mock.patch.object(launch, 'run_lhe_postprocessing'), \
-                mock.patch.object(launch, 'run_reweighting', run_reweighting), \
+        from madgraph.mg7 import cli, driver
+        with mock.patch.object(driver, 'compute_auto_widths'), \
+                mock.patch.object(driver, 'MadgraphProcess', lambda: process), \
+                mock.patch.object(driver, 'run_lhe_postprocessing'), \
+                mock.patch.object(driver, 'run_reweighting', run_reweighting), \
                 mock.patch.object(npy_to_lhe, 'convert', convert):
             launch.run_single(None, rb.Decision('madtrex', 'param'))
         return process, calls
@@ -1458,7 +1461,7 @@ class MG7ReweightingTest(unittest.TestCase):
 
     def test_sync_lhe_copy(self):
         import gzip
-        from madgraph.iolibs.template_files.mg7.run_interface import sync_lhe_copy
+        from madgraph.mg7.run_interface import sync_lhe_copy
         with gzip.open('a.lhe.gz', 'wt') as f:
             f.write('events\n')
         sync_lhe_copy('a.lhe.gz', 'b.lhe')
@@ -1490,17 +1493,18 @@ class MG7ReweightingTest(unittest.TestCase):
         failure is logged with how to reweight again."""
         os.makedirs(os.path.join('Events', 'run_01'))
         launch = self.launch
+        from madgraph.mg7 import cli, driver
         process = mock.Mock(gridpack_run_mode='regular',
                             run_path=os.path.abspath(os.path.join('Events', 'run_01')))
         calls = []
 
         def failing(p, c, decision):
             raise RuntimeError('SPINUP 9 in event 3')
-        with mock.patch.object(launch, 'compute_auto_widths'), \
-                mock.patch.object(launch, 'MadgraphProcess', lambda: process), \
-                mock.patch.object(launch, 'run_lhe_postprocessing'), \
-                mock.patch.object(launch, 'run_reweighting', failing), \
-                mock.patch.object(launch, 'run_selected_tools',
+        with mock.patch.object(driver, 'compute_auto_widths'), \
+                mock.patch.object(driver, 'MadgraphProcess', lambda: process), \
+                mock.patch.object(driver, 'run_lhe_postprocessing'), \
+                mock.patch.object(driver, 'run_reweighting', failing), \
+                mock.patch.object(driver, 'run_selected_tools',
                                   lambda switch, p: calls.append('tools')), \
                 self.assertLogs('madevent', 'WARNING') as logs:
             launch.run_single({'reweight': 'ON', 'shower': 'Pythia8'}, 'DECISION')
@@ -1536,6 +1540,7 @@ class MG7ReweightingTest(unittest.TestCase):
         open(os.path.join('Events', 'run_01', 'events.lhe.gz'), 'w').close()
         card = self.write_card(self.CARD, os.path.join(self.tmpdir.name, 'rw.dat'))
         launch = self.launch
+        from madgraph.mg7 import cli, driver
         cmd = launch.MG7Cmd(me_dir=self.me_dir)
         seen = []
 

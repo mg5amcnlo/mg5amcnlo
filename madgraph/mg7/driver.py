@@ -354,7 +354,7 @@ def run_reweighting(process, card_path=REWEIGHT_CARD, requested=None, decision=N
             drop_stored_matrix_elements(process.events_path)
         tool_copy = os.path.join(run_dir, "unweighted_events.lhe.gz")
         if not process.events_path.endswith(".npy") and os.path.exists(tool_copy):
-            from madgraph.iolibs.template_files.mg7.run_interface import sync_lhe_copy
+            from madgraph.mg7.run_interface import sync_lhe_copy
             sync_lhe_copy(process.events_path, tool_copy)
         log.info("reweighting weights written to %s", process.events_path)
         write_reweighting_record(run_dir, decision, card_path, process.events_path)
@@ -365,7 +365,7 @@ def run_reweighting(process, card_path=REWEIGHT_CARD, requested=None, decision=N
         raise RuntimeError("No LHE event file in %s: the classic reweighting "
                            "module needs one" % run_dir)
     run_name = os.path.basename(os.path.dirname(os.path.abspath(lhe_path)))
-    from madgraph.iolibs.template_files.mg7.run_interface import MG7RunCmd
+    from madgraph.mg7.run_interface import MG7RunCmd
     cmd = MG7RunCmd(os.getcwd(), load_mg5_options(), run_name, lhe_path)
     cmd.set_run_name(run_name, None, "parton")
     command = "reweight --backend=classic --mode=%s -from_cards" % (
