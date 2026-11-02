@@ -315,7 +315,7 @@ class _JITSymbolicaEvaluatorAdapter:
         except Exception as error:
             raise NativeEvaluationError(
                 "SymJIT could not compile the structured evaluator instructions "
-                "as a complex direct-arena P-kernel"
+                f"as a complex direct-arena P-kernel: {error}"
             ) from error
         if not isinstance(application, bytes) or not application:
             raise NativeEvaluationError(
