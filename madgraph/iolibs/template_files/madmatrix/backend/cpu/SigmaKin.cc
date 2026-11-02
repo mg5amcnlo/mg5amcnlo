@@ -452,7 +452,8 @@ namespace madmatrix
   // jampAll_sv[nHrRows][nParity][njampso], and if storeChannelWeights the
   // multichannel numerators numAll_sv[nHrRows][nParity][ndiagrams].
   void
-  calculate_all_jamps( const fptype_momenta* allmomenta, // input: momenta[nevt*npar*4]
+  calculate_all_jamps( const ProcessParameters& params,  // input: parameters of the process
+                       const fptype_momenta* allmomenta, // input: momenta[nevt*npar*4]
                        const fptype* allcouplings,       // input: couplings[nevt*ndcoup*2]
                        const unsigned int* iflavorVec,   // input: indices of the flavor combinations
                        cxtype_amp_sv* ampAll_sv,         // output: amplitudes of every row (rows mode)
@@ -472,6 +473,17 @@ namespace madmatrix
     using CI_ACCESS = HostAccessCouplingsFixed;
     using F_ACCESS = HostAccessIflavorVec;
     mgDebug( 0, __FUNCTION__ );
+    // The parameters of the process, under the names the recycled calls use (as in calculate_jamps)
+    fptype cIPD[ProcessParameters::nIPD];
+    for( int i = 0; i < ProcessParameters::nIPD; i++ ) cIPD[i] = params.IPD[i];
+    const fptype* cIPC = params.IPC;
+    const int* cIPF_partner1 = params.IPF_partner1;
+    const int* cIPF_partner2 = params.IPF_partner2;
+    const fptype* cIPF_value = params.IPF_value;
+    [[maybe_unused]] const fptype cBWCUTOFF = params.bwcutoff; // the $-excluded propagators (ALOHA P1D tag)
+#ifndef MGONGPU_HARDCODE_PARAM
+    Parameters::current = params.model; // for the HelAmps routines that read a model parameter
+#endif
     // one wavefunction slot per COPY, which is more than the nwf of one row and
     // far fewer than one row's worth per row. A big process has thousands of
     // them (g g > t t~ g g g: 4826, 1.0 MB at simd_128), more than the stack of a worker
@@ -570,7 +582,8 @@ namespace madmatrix
   // did not build, with the plain code of that helicity (calculate_jamps): the
   // matrix element stays complete, that helicity is just not recycled.
   inline void
-  hr_row_or_plain( int ihel,
+  hr_row_or_plain( const ProcessParameters& params,
+                   int ihel,
                    const fptype_momenta* allmomenta,
                    const fptype* allcouplings,
                    const unsigned int* iflavorVec,
@@ -590,7 +603,7 @@ namespace madmatrix
       return;
     }
     hr_unbaked_row( ihel );
-    calculate_jamps( cHel[ihel], nullptr, allmomenta, allcouplings, iflavorVec, allJamp_sv, storeChannelWeights,
+    calculate_jamps( params, cHel[ihel], nullptr, allmomenta, allcouplings, iflavorVec, allJamp_sv, storeChannelWeights,
                      allNumerators, allDenominators, jamp2_sv, ievt00 );
   }
 
@@ -599,7 +612,8 @@ namespace madmatrix
   // its color sum. MEs_ighel[ighel] (and MEs_ighel2 for the second page in mixed
   // precision) get the running sum over the helicities up to ighel.
   inline void
-  hr_page( const fptype_momenta* allmomenta,
+  hr_page( const ProcessParameters& params,
+           const fptype_momenta* allmomenta,
            const fptype* allcouplings,
            const unsigned int* iflavorVec,
            fptype* allMEs,
@@ -612,6 +626,8 @@ namespace madmatrix
            const int ievt00 )
   {
     using E_ACCESS = HostAccessMatrixElements;
+    const int cNGoodHel = params.nGoodHel;
+    const int* cGoodHel = params.goodHel;
     // The tables of the page, the wavefunction slots and the jamps of every
     // helicity for BLAS: MBs for a big process, in this thread's scratch area
     // (HelRecyclingScratch.h), which every recycled subprocess library of the
@@ -652,7 +668,7 @@ namespace madmatrix
 #endif
     fptype_momenta_sv* pvec_sv = reinterpret_cast<fptype_momenta_sv*>( scratch + tableBytes );
     cxtype_amp_sv* w_sv = reinterpret_cast<cxtype_amp_sv*>( scratch + tableBytes + pvecBytes );
-    calculate_all_jamps( allmomenta, allcouplings, iflavorVec, ampAll_sv, jampTmpAll_sv, jampAll_sv, numAll_sv,
+    calculate_all_jamps( params, allmomenta, allcouplings, iflavorVec, ampAll_sv, jampTmpAll_sv, jampAll_sv, numAll_sv,
                          pvec_sv, w_sv, storeChannelWeights, ievt00 );
 #if defined MGONGPU_CPP_HAS_BLAS and !defined MGONGPU_HR_NO_BLAS
     // The color matrix does not depend on the helicity: for a large-enough one
@@ -664,7 +680,7 @@ namespace madmatrix
       {
         cxtype_sv* jamp_sv = ghelJamp_sv + (size_t)ighel * nParity * ncolor;
         for( int i = 0; i < nParity * ncolor; i++ ) jamp_sv[i] = cxzero_sv<cxtype_sv>();
-        hr_row_or_plain( cGoodHel[ighel], allmomenta, allcouplings, iflavorVec, ampAll_sv, jampAll_sv, numAll_sv, jamp_sv,
+        hr_row_or_plain( params, cGoodHel[ighel], allmomenta, allcouplings, iflavorVec, ampAll_sv, jampAll_sv, numAll_sv, jamp_sv,
                          storeChannelWeights, allNumerators, allDenominators, jamp2_sv, ievt00 );
       }
       color_sum_cpu_blas( allMEs, MEs_ighel, MEs_ighel2, ghelJamp_sv, cNGoodHel, ievt00 );
@@ -674,7 +690,7 @@ namespace madmatrix
     for( int ighel = 0; ighel < cNGoodHel; ighel++ )
     {
       cxtype_amp_sv jamp_sv[nParity * njampso] = {};
-      hr_row_or_plain( cGoodHel[ighel], allmomenta, allcouplings, iflavorVec, ampAll_sv, jampAll_sv, numAll_sv, jamp_sv,
+      hr_row_or_plain( params, cGoodHel[ighel], allmomenta, allcouplings, iflavorVec, ampAll_sv, jampAll_sv, numAll_sv, jamp_sv,
                        storeChannelWeights, allNumerators, allDenominators, jamp2_sv, ievt00 );
       color_sum_cpu( allMEs, jamp_sv, ievt00 );
       MEs_ighel[ighel] = E_ACCESS::kernelAccess( E_ACCESS::ieventAccessRecord( allMEs, ievt00 ) );
@@ -1033,7 +1049,7 @@ namespace madmatrix
       // for the good helicities, not per SIMD lane)
       if( hrUseRecycling && allihel == nullptr )
       {
-        hr_page( allmomenta, allcouplings, iflavorVec, allMEs, allNumerators, allDenominators, jamp2_sv, MEs_ighel,
+        hr_page( params, allmomenta, allcouplings, iflavorVec, allMEs, allNumerators, allDenominators, jamp2_sv, MEs_ighel,
 #if defined MGONGPU_CPPSIMD and defined MGONGPU_FPTYPE_DOUBLE and defined MGONGPU_FPTYPE2_FLOAT
                  MEs_ighel2,
 #else
