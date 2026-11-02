@@ -186,6 +186,18 @@ ME_BACKENDS = ('amplicol',)
 _BACKEND_BRACKET = re.compile(r"\[\s*(?P<backend>\w+)\s*\]")
 
 
+def check_amplicol_overlap(procdef, others, what):
+    """Refuse a process sharing a subprocess with another one, which would
+    count it twice (the duplicate check of 'add process')."""
+    import madgraph.iolibs.export_amplicol as export_amplicol
+    model = procdef.get('model')
+    for other in others:
+        if export_amplicol.overlapping(procdef, other, model):
+            raise madgraph.InvalidCmd(
+                "Duplicate process %s found: it overlaps %s. Please check "
+                "your processes." % (procdef.nice_string(prefix=False), what(other)))
+
+
 def split_backend_line(line):
     """(line without the bracket, backend) for a process with a matrix-element
     backend bracket like '[amplicol]', (line, '') for any other line."""
@@ -4145,17 +4157,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     # Add a process to the existing multiprocess definition
     # Generate a new amplitude
-    def check_amplicol_overlap(self, procdef, others, what):
-        """Refuse a process sharing a subprocess with another one, which would
-        count it twice (the duplicate check of 'add process')."""
-        import madgraph.iolibs.export_amplicol as export_amplicol
-        model = procdef.get('model')
-        for other in others:
-            if export_amplicol.overlapping(procdef, other, model):
-                raise self.InvalidCmd(
-                    "Duplicate process %s found: it overlaps %s. Please check "
-                    "your processes." % (procdef.nice_string(prefix=False), what(other)))
-
     def add_backend_process(self, procdef, backend, warning_duplicate=True):
         """Keep a process whose matrix elements come from another backend than
         MG diagrams. It is exported by the mg7 output, without diagrams."""
@@ -4176,10 +4177,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             raise self.InvalidCmd(
                 "Can not mix processes with different number of initial states.")
         if warning_duplicate:
-            self.check_amplicol_overlap(
+            check_amplicol_overlap(
                 procdef, list(self._curr_amplicol_defs),
                 lambda other: other.nice_string(prefix=False))
-            self.check_amplicol_overlap(
+            check_amplicol_overlap(
                 procdef, [amp.get('process') for amp in self._curr_amps],
                 lambda other: other.nice_string())
         self._curr_amplicol_defs.append(procdef)
@@ -4376,7 +4377,7 @@ This implies that with decay chains:
                 for amp in amplitudes:
                     if amp not in self._curr_amps:
                         if warning_duplicate and self._curr_amplicol_defs:
-                            self.check_amplicol_overlap(
+                            check_amplicol_overlap(
                                 amp.get('process'), list(self._curr_amplicol_defs),
                                 lambda other: other.nice_string(prefix=False))
                         self._curr_amps.append(amp)
