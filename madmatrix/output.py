@@ -25,6 +25,7 @@ from os.path import join as pjoin
 import madgraph.iolibs.files as files
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.export_cpp as export_cpp
+import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.various.misc as misc
 
 from . import launch_plugin
@@ -104,7 +105,9 @@ class ProcessExporterMadMatrix(export_cpp.ProcessExporterMG7):
 
     from_template = {'.': relative_path_list(home_path, ['COPYRIGHT', 'COPYING', 'COPYING.LESSER']),
                      'src': relative_path_list(madmatrix_templates, [
-                         'read_slha.h', 'read_slha.cc'
+                         'read_slha.h', 'read_slha.cc',
+                         # --hel_recycling: the per-thread tables, shared by the subprocess libraries
+                         'HelRecyclingScratch.h', 'HelRecyclingScratch.cc'
                      ]),
                      # Backend-owned skeleton files live only under backend/<variant>/ now
                      # (see backend_variants below); only genuinely backend-agnostic files
@@ -207,6 +210,14 @@ class ProcessExporterMadMatrix(export_cpp.ProcessExporterMG7):
         # Honor the output command's --mask=True|False (flavor-mask
         # optimization for grouped/merged flavors). Default: enabled.
         self.use_flavor_mask = self._parse_flavor_mask_option()
+        # --axial_gauge is read per matrix element by the helas call writer;
+        # say here, once per output, if the FD gauge drops it
+        helas_call_writers.axial_gauge_requested(
+                            self.opt.get('output_options'), warn=True)
+        # --hel_recycling: a new output starts with no warm-up of its own; what
+        # an earlier one left registered (one that died before its finalize)
+        # must never be built into this one
+        del model_handling.OneProcessExporterMadMatrix._hr_warmups[:]
 
     def _parse_flavor_mask_option(self):
         """Read --mask=True|False from the output command line (default True)."""
@@ -255,6 +266,8 @@ class ProcessExporterMadMatrix(export_cpp.ProcessExporterMG7):
         # through the hook, not an inline dict: madmatrix.mk also carries the
         # host-BLAS placeholders that get_makefile_replace_dict fills in
         replace_dict = self.get_makefile_replace_dict(model)
+        # kept to render the --hel_recycling probe makefile at finalize
+        self._p_makefile_replace = replace_dict
         for name in self.p_makefiles:
             rendered = self.read_template_file(pjoin(self.madmatrix_templates, name)) % replace_dict
             open(pjoin(self.dir_path, 'SubProcesses', name), 'w').write(rendered)
@@ -321,6 +334,140 @@ class ProcessExporterMadMatrix(export_cpp.ProcessExporterMG7):
         # Irrelevant here since group_mode=False so this function is never called
         misc.sprint('Entering ProcessExporterMadMatrix.modify_grouping')
         return False, matrix_element
+
+    def finalize(self, *args, **kwargs):
+        super().finalize(*args, **kwargs)
+        # --hel_recycling: the warm-up runs once every P* directory is complete
+        # and buildable (CPU/SIMD only: the GPU backend ignores the tables)
+        self._run_hel_recycling_warmups()
+
+    # The --hel_recycling probe runs through the standalone driver check_sa.exe,
+    # which only `output standalone` ships. Any other output is lent it (with
+    # the standalone makefile, under another name) for the warm-up build only.
+    _hr_probe_files = ['check_sa.cc', 'nvtx.h', 'timer.h', 'timermap.h']
+    _hr_probe_makefile = 'hrprobe.mk'
+
+    def _install_hr_probe(self, dirpath):
+        """Make check_sa.exe buildable in dirpath: return the extra make
+        arguments that build it and the files to remove afterwards."""
+        added = []
+        for name in self._hr_probe_files:
+            target = pjoin(dirpath, name)
+            if not os.path.lexists(target):
+                files.cp(pjoin(self.madmatrix_templates, name), target)
+                added.append(target)
+        # madmatrix_standalone.mk includes madmatrix.mk by name
+        target = pjoin(dirpath, 'madmatrix.mk')
+        if not os.path.lexists(target):
+            os.symlink(pjoin(os.pardir, 'madmatrix.mk'), target)
+            added.append(target)
+        target = pjoin(dirpath, self._hr_probe_makefile)
+        rendered = self.read_template_file(pjoin(self.madmatrix_templates,
+                        'madmatrix_standalone.mk')) % self._p_makefile_replace
+        with open(target, 'w') as fsock:
+            fsock.write(rendered)
+        added.append(target)
+        # the backend marker check_sa.exe's link rule writes
+        added.append(pjoin(dirpath, '.check_sa_backend'))
+        return ['-f', self._hr_probe_makefile], added
+
+    def _run_hel_recycling_warmups(self):
+        """For each --hel_recycling P* directory: build a probe of the ordinary
+        code (BACKEND=scalar FPTYPE=d HRPROBE=1), run it once to have its own
+        good-helicity scan print the good helicities and the amplitudes that are
+        only a cancellation zero at each, and write the recycled build for those.
+
+        The scan is the very sigmaKin_getGoodHel the helicity loop uses at run
+        time, so the rows built can never be short of one it asks for (at these
+        parameters). On any failure the directory keeps the ordinary code: correct
+        but not recycled, which is the right way round to fail."""
+        exporters = model_handling.OneProcessExporterMadMatrix._hr_warmups
+        # only this output's directories, whatever happens: the list is shared
+        # by every exporter of the session
+        mine = [e for e in exporters if self._is_own_dir(e.path)]
+        del exporters[:]
+        for exporter in mine:
+            dirpath = exporter.path
+            name = os.path.basename(dirpath)
+            makeargs, added = [], []
+            try:
+                makeargs, added = self._install_hr_probe(dirpath)
+                built = subprocess.run(
+                    ['make'] + makeargs + ['-j%d' % (os.cpu_count() or 1),
+                     'BACKEND=scalar', 'FPTYPE=d', 'HRPROBE=1'],
+                    cwd=dirpath, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                if built.returncode != 0:
+                    logger.warning('hel_recycling warm-up build failed in %s; it is '
+                        'written without recycling.\n%s', name,
+                        built.stdout.decode(errors='replace')[-1500:])
+                    continue
+                # perf mode: 64 distinct RAMBO events, which the probe's
+                # good-helicity scan samples (matrix mode repeats ONE point)
+                env = dict(os.environ, MG_DUMP_GOODHEL='1')
+                run = subprocess.run([pjoin(dirpath, 'check_sa.exe'), 'perf',
+                                      '1', '64', '1'],
+                                     cwd=dirpath, env=env, stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT)
+                output = run.stdout.decode(errors='replace')
+                if run.returncode != 0:
+                    logger.warning('hel_recycling warm-up run failed in %s; it is '
+                                   'written without recycling.', name)
+                    continue
+                good_hels, zero_perhel = self._parse_hel_warmup(output)
+                if not good_hels:
+                    logger.warning('hel_recycling warm-up found no helicity in %s; '
+                                   'it is written without recycling.', name)
+                    continue
+                nrows = exporter.write_recycled(good_hels, zero_perhel)
+                if nrows is None:
+                    continue        # declined, and said why
+                logger.info('hel_recycling: %s builds %d helicity rows of %d, '
+                    'dropping %d (helicity, amplitude) pairs that vanish', name,
+                    nrows, exporter.matrix_elements[0].get_helicity_combinations(),
+                    len(zero_perhel))
+            except Exception as err:
+                logger.warning('hel_recycling warm-up error in %s (%s); it is '
+                               'written without recycling.', name, err)
+            finally:
+                self._clean_warmup_build(dirpath, makeargs, added)
+
+    def _is_own_dir(self, path):
+        """Whether path lies in this output's directory."""
+        own = os.path.realpath(self.dir_path)
+        return os.path.commonpath([own, os.path.realpath(path)]) == own
+
+    @staticmethod
+    def _parse_hel_warmup(output):
+        """The good helicities (1-based rows of cHel) and the (row, amplitude)
+        pairs that vanish, as printed by sigmaKin_setGoodHel under MG_HR_PROBE --
+        the protocol madevent's helicity filter prints."""
+        good, zeros = [], []
+        for line in output.splitlines():
+            if line.startswith('Matrix Element/Good Helicity:'):
+                good.append(int(line.split()[-1]))
+            elif line.startswith('HEL/ZEROAMP:'):
+                _me, hel, amp = line.split()[1:4]
+                zeros.append((int(hel), int(amp)))
+        return sorted(set(good)), sorted(set(zeros))
+
+    @staticmethod
+    def _clean_warmup_build(dirpath, makeargs=(), added=()):
+        """Undo the probe build: its objects must not be reused (the probe is not
+        the real thing), and the build tag it leaves makes the next make with any
+        other BACKEND/FPTYPE refuse to run. Then take back the driver files the
+        probe was lent. (An explicit BACKEND, or make records the one 'auto'
+        resolves to in .resolved-backend.)"""
+        try:
+            subprocess.run(['make'] + list(makeargs) + ['BACKEND=scalar', 'cleanall'],
+                           cwd=dirpath, stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
+        for path in added:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
 
 
 # Standalone mode: in addition to the normal madmatrix exports, this writes
@@ -424,8 +571,15 @@ class ProcessExporterMadMatrixStandalone(ProcessExporterMadMatrix):
 
     def finalize(self, *args, **kwargs):
         # no subprocesses.json (nor anything else the mg7 launcher needs), only
-        # the process table of the standalone libraries
+        # the --hel_recycling warm-up, which can only run once every P* directory
+        # is complete and buildable, and the process table of the standalone
+        # libraries
+        self._run_hel_recycling_warmups()
         self.write_processes_file()
+
+    def _install_hr_probe(self, dirpath):
+        # check_sa.exe is part of a standalone output already
+        return [], []
 
     def write_processes_file(self):
         """SubProcesses/madmatrix_processes.json: per subprocess, its library

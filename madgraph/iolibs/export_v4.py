@@ -392,6 +392,8 @@ class ProcessExporterFortran(VirtualExporter,
         if isinstance(self.cmd_options, dict) and 'axial_gauge' in self.cmd_options:
             self.opt['axial_gauge'] = banner_mod.ConfigFile.format_variable(
                   self.cmd_options['axial_gauge'], bool, 'axial_gauge')
+            # once per output: says so if the FD gauge drops the option
+            helas_call_writers.axial_gauge_requested(self.opt, warn=True)
         self._configure_flavor_mask_from_cmd_options()
         
         #place holder to pass information to the run_interface
@@ -1740,11 +1742,11 @@ C
         set_of_lib = ' '.join(self.get_source_libraries_list()+['$(LIBRARIES)'])
         if self.opt['model'] == 'mssm' or self.opt['model'].startswith('mssm-'):
             model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc vector.inc\n\tcd MODEL && make
-MODEL/MG5_param.dat: ../Cards/param_card.dat\n\t../bin/madevent treatcards param
-param_card.inc: MODEL/MG5_param.dat\n\t../bin/madevent treatcards param\n'''
+MODEL/MG5_param.dat: ../Cards/param_card.dat\n\t../bin/madevent --allow-stdin treatcards param
+param_card.inc: MODEL/MG5_param.dat\n\t../bin/madevent --allow-stdin treatcards param\n'''
         else:
             model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc vector.inc\n\tcd MODEL && make
-param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
+param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent --allow-stdin treatcards param\n'''
         
         dual_libs = ''
         dhelas_dual = ''
@@ -7645,7 +7647,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                        'axial_gauge' in opt['output_options']:
             self.opt['axial_gauge'] = banner_mod.ConfigFile.format_variable(
                   opt['output_options']['axial_gauge'], bool, 'axial_gauge')
-            if self.opt['axial_gauge']:
+            # False if the FD gauge drops it (ProcessExporterFortran.__init__
+            # already said so)
+            if helas_call_writers.axial_gauge_requested(self.opt):
                 # AMP2 -- the single diagram enhancement weight of
                 # sde_strategy 1 -- is gauge dependent: the axial gauge moves
                 # amplitude between diagrams, so |AMP_i|^2 stops following the
@@ -11151,10 +11155,11 @@ class UFO_model_to_mg4(object):
         else:
             raise MadGraph5Error('Unknown format')
 
-        if self.opt['export_format'].startswith('standalone'):
-            cp( MG5DIR + '/Template/LO/Source/alfas_functions.f', 
+        if self.opt['export_format'].startswith('standalone') or \
+                                                self.running_in_model_library():
+            cp( MG5DIR + '/Template/LO/Source/alfas_functions.f',
                 self.dir_path)
-            cp( MG5DIR + '/Template/LO/Source/alfas.inc', 
+            cp( MG5DIR + '/Template/LO/Source/alfas.inc',
                 self.dir_path)
 
             fsock = open(pjoin(self.dir_path, '..', 'cuts.inc'),'w')
@@ -11169,7 +11174,21 @@ class UFO_model_to_mg4(object):
             if self.model['running_elements']:
                 cp( MG5DIR + '/Template/Running',  pjoin(self.dir_path, '..', 'RUNNING'))
 
+        if self.running_in_model_library():
+            # the evolution routines go into the model library itself (see
+            # create_makeinc): the shared libraries of these formats link
+            # Source/MODEL/*.o or libmodel, never librunning
+            for name in self.running_sources:
+                cp(pjoin(MG5DIR, 'Template', 'Running', name), self.dir_path)
 
+    running_sources = ['matrix_exponential.f', 'c8lib.f', 'r8lib.f']
+
+    def running_in_model_library(self):
+        """True for a model with running parameters (running.py) exported
+        with makefile_standalone (standalone, MadLoop, reweighting, ...)"""
+        return bool(self.model['running_elements']) and not (
+            self.opt['export_format'] in ['madevent', 'FKS5_default', 'FKS5_optimized']
+            or self.opt['loop_induced'])
 
     def create_coupl_inc(self):
         """ write coupling.inc """
@@ -11219,7 +11238,7 @@ C
                     %(complex_mp_format)s %(mp_prefix)sgal(2)
                     common/MP_weak/ %(mp_prefix)sgal
                     
-                    %(complex_mp_format)s %(mp_prefix)sMU_R
+                    %(real_mp_format)s %(mp_prefix)sMU_R
                     common/MP_rscale/ %(mp_prefix)sMU_R
 
                 """
@@ -13708,8 +13727,11 @@ c         segments from -DABS(tiny*Ga) to Ga
             text += ' rw_onia.o'
         text += ' model_functions.o get_color.o '
         
-        if self.opt['export_format'].startswith('standalone'):
+        if self.opt['export_format'].startswith('standalone') or \
+                                                self.running_in_model_library():
             text += ' alfas_functions.o '
+        if self.running_in_model_library():
+            text += ' '.join(f.replace('.f', '.o') for f in self.running_sources) + ' '
 
         nb_coup_indep_noloop = 1 + len(self.coups_indep_noloop) // self.nb_def_by_file 
         nb_coup_indep_loop = 1 + len(self.coups_indep_loop) // self.nb_def_by_file

@@ -576,6 +576,14 @@ endif
 $(info OMPFLAGS=$(OMPFLAGS))
 CXXFLAGS += $(OMPFLAGS)
 
+# --hel_recycling warm-up probe (make BACKEND=scalar FPTYPE=d HRPROBE=1): the
+# ordinary code with every amplitude recorded, so that the good-helicity scan
+# can report which ones vanish at which helicity (see SigmaKin.cc, MG_HR_PROBE).
+# Built and thrown away by the exporter at generation time.
+ifeq ($(HRPROBE),1)
+  CXXFLAGS += -DMG_HR_PROBE
+endif
+
 # Set the build flags appropriate to each BACKEND choice (example: "make BACKEND=scalar")
 # [NB MGONGPU_PVW512 is needed because "-mprefer-vector-width=256" is not exposed in a macro]
 # [See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96476]
@@ -841,6 +849,38 @@ objects_lib=$(BUILDDIR)/CPPProcess.o $(BUILDDIR)/color_sum.o $(BUILDDIR)/MatrixE
 # libraries MadSpin loads), not in every library of every output
 ifeq ($(DENSITY)$(GPUCC),1)
   objects_lib += $(BUILDDIR)/Density.o
+endif
+
+# --hel_recycling: the chunks of a big recycled block, in translation units of
+# their own so that they build in parallel (see HelRecyclingChunks.h). CPU only:
+# the GPU backend ignores the recycled build, and so does the warm-up probe.
+ifeq ($(GPUCC),)
+ifneq ($(HRPROBE),1)
+objects_lib += $(patsubst %%.cc,$(BUILDDIR)/%%.o,$(wildcard HelRecyclingChunks_*.cc))
+endif
+# HRMAXMB=<n>: the table size per SIMD page above which the build takes the
+# plain matrix element instead (see hrUseRecycling in
+# backend/{cpu,simd}/SigmaKin.cc; 0: no limit). HRNOBLAS=1: the recycled build
+# makes its color sum row by row even where BLAS is used. Both are read from the
+# environment too, so they reach an mg7 build. SigmaKin.o is rebuilt when they
+# change: the compiler flags are not otherwise a dependency of the objects.
+ifneq ($(HRMAXMB),)
+CXXFLAGS += -DMGONGPU_HR_MAX_TABLE_MB=$(HRMAXMB)
+endif
+ifneq ($(HRNOBLAS),)
+CXXFLAGS += -DMGONGPU_HR_NO_BLAS
+endif
+$(BUILDDIR)/.hrflags: FORCE_HRFLAGS
+	@mkdir -p $(BUILDDIR); if [ "$$(cat $@ 2>/dev/null)" != "$(HRMAXMB):$(HRNOBLAS)" ]; then echo "$(HRMAXMB):$(HRNOBLAS)" > $@; fi
+.PHONY: FORCE_HRFLAGS
+FORCE_HRFLAGS:
+$(BUILDDIR)/SigmaKin.o: $(BUILDDIR)/.hrflags
+else
+ifneq ($(wildcard HelRecycling.inc),)
+ifeq ($(filter clean cleanall cleancommon cleanallcommon,$(MAKECMDGOALS)),)
+$(info INFO: --hel_recycling is CPU only: this $(BACKEND) build of $(notdir $(CURDIR)) is the plain matrix element (see backend/gpu/SigmaKin.cc))
+endif
+endif
 endif
 
 # Backend-owned sources (the backend variant first, then what all of them share)

@@ -819,6 +819,16 @@ def pid_exists(pid):
     else:
         return True
 
+def pool_chunksize(pool, nitems):
+    """chunksize to pass to pool.map / pool.map_async: ceil(nitems / (4 * nprocs)),
+    as CPython computes when no chunksize is given, but from the number of
+    processes the pool was created with. CPython uses len(pool._pool) instead,
+    which drops to zero (ZeroDivisionError) while a maxtasksperchild pool
+    replaces the workers that exited after their last task.
+    """
+    nprocs = max(1, pool._processes)
+    return max(1, -(-nitems // (4 * nprocs)))
+
 
 
 #===============================================================================

@@ -1728,6 +1728,68 @@ class TestRunCardMG7(unittest.TestCase):
         self.assertTrue(rc.is_cut_name('cuts.jet-pt.max'))
         self.assertFalse(rc.is_cut_name('generation.events'))
 
+    def test_set_cut_rejects_an_unknown_bound(self):
+        """a typo in the bound used to create a cut named 'jet-pt.mni'"""
+        rc = bannermod.RunCardMG7()
+        before = dict(rc['cuts'])
+        self.assertRaises(bannermod.InvalidRunCard, rc.set_cut, 'jet-pt.mni', 20)
+        self.assertRaises(bannermod.InvalidRunCard, rc.set_cut, 'cuts.jet-pt.minimum', 20)
+        self.assertEqual(dict(rc['cuts']), before)
+        rc.set_cut('jet-pt', 25)      # no bound: the minimum
+        self.assertEqual(rc['cuts']['jet-pt']['min'], 25.0)
+
+    def test_custom_parameter_keeps_its_case(self):
+        """a custom function reads its parameters by their exact name"""
+        rc = bannermod.RunCardMG7()
+        rc.read_data({'custom_functions': {'cut_parameters': {'ptMin': 10}}})
+        rc.set('custom_functions.cut_parameters.ptMin', 30, user=True)
+        rc.set('Custom_Functions.CUT_parameters.etaMax', '2.5', user=True)
+        self.assertEqual(rc.custom_parameters('cut'), {'ptMin': 30.0, 'etaMax': 2.5})
+
+    def test_energy_units_only_for_energies(self):
+        """only the entries declared energy=True (and the [cuts] on an energy
+        observable) take a value with a unit; any other number refuses one"""
+        lo = bannermod.RunCardLO()
+        lo.set('ptj', '1 TeV', user=True)
+        self.assertEqual(lo['ptj'], 1000.)
+        lo['pt_min_pdg'] = {6: '500 GeV'}
+        self.assertEqual(lo['pt_min_pdg'], {6: 500.})
+        for name, value in (('etaj', '2 TeV'), ('nevents', '1 TeV'), ('drjj', '1 MeV')):
+            self.assertRaises(bannermod.InvalidCardEdition, lo.set, name, value, user=True)
+        self.assertRaises(bannermod.InvalidCardEdition, lo.__setitem__,
+                          'eta_min_pdg', {6: '1 TeV'})
+        lo.set('run_tag', '13TeV', user=True)   # a string keeps its unit
+        self.assertEqual(lo['run_tag'], '13TeV')
+        nlo = bannermod.RunCardNLO()
+        nlo.set('mur_ref_fixed', '0.1 TeV', user=True)
+        self.assertEqual(nlo['mur_ref_fixed'], 100.)
+        self.assertRaises(bannermod.InvalidCardEdition, nlo.set, 'jetradius', '1 GeV')
+
+        rc = bannermod.RunCardMG7()
+        rc.set('beam.min_scale', '1 TeV', user=True)
+        self.assertEqual(rc['beam.min_scale'], 1000.)
+        self.assertRaises(bannermod.InvalidCardEdition, rc.set, 'beam.jet_radius', '1 GeV')
+        self.assertRaises(bannermod.InvalidCardEdition, rc.set, 'events', '1 TeV')
+        before = dict(rc['cuts'])
+        for name, value in (('jet-eta_abs.max', '4 TeV'), ('jet-lepton-delta_r.min', '1 MeV')):
+            self.assertRaises(bannermod.InvalidRunCard, rc.set_cut, name, value)
+        for name, value in (('etaj', '2 TeV'), ('drjj', '1 MeV')):
+            self.assertRaises(bannermod.InvalidRunCard, rc.set_lo_cut, name, value)
+        self.assertRaises(bannermod.InvalidRunCard, rc.set_lo_param,
+                          'eta_max_pdg', '{6: 2 TeV}')
+        self.assertEqual(dict(rc['cuts']), before)
+        self.assertEqual(rc.set_cut('sqrt_s.min', '2*mz', {'mz': 91.188})[2], 182.376)
+        self.assertEqual(rc.set_lo_cut('ptj', '1 TeV')[2], 1000.)
+
+    def test_set_ambiguous_key_honours_raiseerror(self):
+        """a bare key present in several sections is an error when asked for"""
+        rc = bannermod.RunCardMG7()
+        rc.set('enable', True, user=True)          # warning only
+        self.assertRaises(bannermod.InvalidCardEdition, rc.set, 'enable', True,
+                          user=True, raiseerror=True)
+        self.assertRaises(bannermod.InvalidCardEdition, rc.set, 'pdf', 'NNPDF',
+                          user=True, raiseerror=True)
+
     def test_set_lo_cut(self):
         """madevent cut names land in [cuts] as from_LO maps them, the "no
         cut" sentinels removing the bound; [histograms] is left alone"""
@@ -1805,7 +1867,10 @@ class TestRunCardMG7(unittest.TestCase):
         self.assertEqual(rc['phasespace.sde_strategy'], 'denominators')
         rc.set_lo_param('sde_strategy', '1')
         self.assertEqual(rc['phasespace.sde_strategy'], 'diagrams')
-        self.assertEqual(len(rc.set_lo_param('sde_strategy', '3')[1]), 1)
+        self.assertRaises(bannermod.InvalidCmd, rc.set_lo_param, 'sde_strategy', '3')
+        self.assertRaises(bannermod.InvalidCmd, rc.set_lo_param,
+                          'dynamical_scale_choice', '99')
+        self.assertEqual(rc['beam.dynamical_scale_choice'], 'partonic_energy')
         self.assertIsNone(rc.set_lo_param('sde_strategy', 'denominators'))
         rc.set_lo_param('maxjetflavor', '5')
         self.assertEqual(sorted(rc['multiparticles']['jet']),

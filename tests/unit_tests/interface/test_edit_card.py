@@ -468,6 +468,106 @@ class TestEditCardCmd(unittest.TestCase):
         self.cmd.do_set('wt default')
         self.assertEqual(param['decay'].get((6,)).value, wt)
 
+    def test_invalid_set_warns_interactively(self):
+        """an invalid set command leaves the cards alone without raising"""
+        param = self.cmd.param_card
+        mass = param['mass'].get((6,)).value
+        for line in ('foo_bar 3', 'mt abc', 'param_card mass 999 10',
+                     'run_card ptj', 'mass all abc', ''):
+            self.cmd.do_set(line)
+        self.assertEqual(param['mass'].get((6,)).value, mass)
+
+    def test_invalid_set_is_an_error_in_scripted_runs(self):
+        """a launch script must stop on a set command it cannot apply"""
+        self.cmd.mother_interface.inputfile = iter([])
+        param = self.cmd.param_card
+        mass = param['mass'].get((6,)).value
+        for line in ('foo_bar 3', 'mt abc', 'param_card mass 999 10',
+                     'run_card ptj', 'mass all abc', 'width 6 auto --foo=1',
+                     'madweight_card', 'events'):
+            self.assertRaises(madgraph.InvalidCmd, self.cmd.do_set, line)
+        self.assertEqual(param['mass'].get((6,)).value, mass)
+        # valid commands are unaffected
+        self.cmd.do_set('ptj 50')
+        self.assertEqual(self.cmd.run_card['ptj'], 50)
+        self.cmd.do_set('mt 180')
+        self.assertEqual(param['mass'].get((6,)).value, 180)
+
+    def test_set_with_energy_unit(self):
+        """a value with an energy unit is converted to GeV for an energy (a
+        mass, a width, an energy entry of the run_card) and refused for
+        anything else: a warning interactively, an error in a scripted run"""
+        param = self.cmd.param_card
+        self.cmd.do_set('mt 1 TeV')
+        self.assertEqual(param['mass'].get((6,)).value, 1000.)
+        self.cmd.do_set('mass 6 172.5 GeV')
+        self.assertEqual(param['mass'].get((6,)).value, 172.5)
+        self.cmd.do_set('wt 1500 MeV')
+        self.assertEqual(param['decay'].get((6,)).value, 1.5)
+        self.cmd.do_set('ptj 0.1 TeV')
+        self.assertEqual(self.cmd.run_card['ptj'], 100.)
+        self.cmd.do_set('ebeam1 6.8TeV')
+        self.assertEqual(self.cmd.run_card['ebeam1'], 6800.)
+
+        ymt = param['yukawa'].get((6,)).value
+        etaj = self.cmd.run_card['etaj']
+        nevents = self.cmd.run_card['nevents']
+        lines = ('ymt 1 TeV', 'yukawa 6 1 TeV', 'etaj 2 TeV', 'nevents 1 TeV')
+        for line in lines:
+            self.cmd.do_set(line)
+        self.cmd.mother_interface.inputfile = iter([])
+        for line in lines:
+            self.assertRaises(madgraph.InvalidCmd, self.cmd.do_set, line)
+        self.assertEqual(param['yukawa'].get((6,)).value, ymt)
+        self.assertEqual(self.cmd.run_card['etaj'], etaj)
+        self.assertEqual(self.cmd.run_card['nevents'], nevents)
+
+    def test_energy_shortcut_with_unit(self):
+        """an energy shortcut takes its value with a unit (a unit-less lhc/lcc
+        value is in TeV, the others in GeV); a real extra argument is refused"""
+        run_card = self.cmd.run_card
+        for line, ebeam in (('lhc 500 GeV', 250.), ('lhc 13.6TeV', 6800.),
+                            ('lhc 13', 6500.), ('ebeam 6.8 TeV', 6800.),
+                            ('lep 200 GeV', 100.)):
+            self.cmd.do_set(line)
+            self.assertEqual((run_card['ebeam1'], run_card['ebeam2']), (ebeam, ebeam), line)
+        self.cmd.do_set('fixed_scale 0.1 TeV')
+        self.assertEqual(run_card['scale'], 100.)
+        self.cmd.mother_interface.inputfile = iter([])
+        for line in ('lhc 13 14', 'cm_velocity 0.5 GeV'):
+            self.assertRaises(madgraph.InvalidCmd, self.cmd.do_set, line)
+        self.assertEqual(run_card['ebeam1'], 100.)
+
+    def test_rejected_param_value_changes_nothing(self):
+        """a value refused for a whole block, a block scale or a name mapped
+        to several entries is refused once, and leaves the param_card (and
+        its "modified" flag) alone"""
+        param = self.cmd.param_card
+        masses = dict((k, p.value) for k, p in param['mass'].param_dict.items())
+        self.cmd.modified_card.discard('param')
+        with self.assertLogs('madgraph.stdout', level='WARNING') as logs:
+            self.cmd.do_set('mass all abc')
+            self.cmd.do_set('mass scale abc')
+        self.assertEqual(len(logs.output), 2, logs.output)
+        self.assertNotIn('param', self.cmd.modified_card)
+        self.assertEqual(dict((k, p.value) for k, p in param['mass'].param_dict.items()),
+                         masses)
+
+        # a name standing for a mass and a yukawa: a unit fits only the mass,
+        # so neither entry changes and nothing claims that they did
+        self.cmd.pname2block['mt'] = [('mass', (6,)), ('yukawa', (6,))]
+        ymt = param['yukawa'].get((6,)).value
+        with self.assertLogs('madgraph.stdout', level='WARNING') as logs:
+            self.cmd.do_set('mt 1 TeV')
+        self.assertEqual(len(logs.output), 1, logs.output)
+        self.assertIn('can not carry a unit', logs.output[0])
+        self.assertEqual(param['mass'].get((6,)).value, masses[(6,)])
+        self.assertEqual(param['yukawa'].get((6,)).value, ymt)
+        self.assertNotIn('param', self.cmd.modified_card)
+        self.cmd.do_set('mt 180')
+        self.assertEqual((param['mass'].get((6,)).value, param['yukawa'].get((6,)).value),
+                         (180., 180.))
+
     def test_modif_run_card(self):
         """ """
 

@@ -24,6 +24,16 @@ from unittest import mock
 import madgraph.various.misc as misc
 class TEST_misc(unittest.TestCase):
 
+    def test_pool_chunksize(self):
+        """same chunks as CPython's map without chunksize, from the pool size"""
+        for nprocs in (1, 3, 8):
+            pool = mock.Mock(_processes=nprocs, _pool=[])
+            for nitems in (0, 1, 4 * nprocs - 1, 4 * nprocs, 4 * nprocs + 1, 100):
+                chunksize, extra = divmod(nitems, 4 * nprocs)
+                expected = max(1, chunksize + bool(extra))
+                self.assertEqual(misc.pool_chunksize(pool, nitems), expected)
+
+
     def test_gzip_keep_preserves_plain_source(self):
         data = b"<event>\n1 2 3\n</event>\n" * 100
         with tempfile.TemporaryDirectory() as tmp:

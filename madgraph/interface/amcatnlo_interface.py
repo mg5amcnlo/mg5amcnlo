@@ -1127,7 +1127,8 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                     # the very large timeout passed to get is to be able to catch
                     # KeyboardInterrupts
                     diroutputmap = pool.map_async(generate_directories_fks_async,
-                                                  list(range(len(glob_directories_map)))).get(9999999)
+                                                  list(range(len(glob_directories_map))),
+                                                  chunksize=misc.pool_chunksize(pool, len(glob_directories_map))).get(9999999)
                 except KeyboardInterrupt:
                     pool.terminate()
                     raise KeyboardInterrupt 

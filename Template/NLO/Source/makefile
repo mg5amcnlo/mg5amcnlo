@@ -69,10 +69,10 @@ $(LIBDIR)libmodel.a: MODEL param_card.inc
 	cp -f MODEL/model_object.mod $(LIBDIR)
 
 run_card.inc: ../Cards/run_card.dat
-	../bin/aMCatNLO treatcards run
+	../bin/aMCatNLO --allow-stdin treatcards run
 
 param_card.inc: ../Cards/param_card.dat
-	../bin/aMCatNLO treatcards param
+	../bin/aMCatNLO --allow-stdin treatcards param
 
 CutTools: $(LIBDIR)libcts.a
 libcuttools: $(LIBDIR)libcts.a

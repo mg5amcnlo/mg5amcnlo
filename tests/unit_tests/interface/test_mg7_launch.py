@@ -36,6 +36,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import copy
 import types
 import unittest
 from unittest import mock
@@ -796,7 +797,7 @@ class MG7CmdTest(unittest.TestCase):
     def test_set_madevent_cut_name_scan_is_refused_by_name(self):
         obj = self.cut_selector()
         before = dict(obj.run_card['cuts'])
-        with self.assertLogs('madgraph7', level='WARNING') as logs:
+        with self.assertLogs('madgraph.stdout', level='WARNING') as logs:
             obj.do_set('ptj scan:[20, 30]')
         self.assertIn('cannot be scanned', logs.output[0])
         self.assertEqual(dict(obj.run_card['cuts']), before)
@@ -841,6 +842,88 @@ class MG7CmdTest(unittest.TestCase):
         obj.do_set('pdlabel1 none')
         self.assertNotEqual(obj.run_card['beam']['pdf1'], 'none')
         self.assertNotIn('run', obj.modified_card)
+
+    def test_invalid_set_is_an_error_in_scripted_runs(self):
+        """the set commands the mg7 editor rejects stop a launch script"""
+        from madgraph import InvalidCmd
+        obj = self.cut_selector()
+        obj.mother_interface = types.SimpleNamespace(inputfile=iter([]))
+        for line in ('pdf NNPDF', 'histograms 42', 'jet-pt.mni 20', 'jet-pt.min abc',
+                     'mmll abc', 'ptj scan:[20, 30]', 'iseed xx',
+                     'dynamical_scale_choice 99', 'sde_strategy 7', 'pdlabel1 none',
+                     'custom_functions.bogus.x 1'):
+            self.assertRaises(InvalidCmd, obj.do_set, line)
+        self.assertNotIn('run', obj.modified_card)
+        self.assertNotIn('jet-pt.mni', obj.run_card['cuts'])
+        # madevent's -1/0 scale choices only warn, so ported scripts still run
+        with self.assertLogs('madgraph7', level='WARNING'):
+            obj.do_set('dynamical_scale_choice -1')
+        self.generic_do_set.assert_not_called()
+
+    def test_non_number_cut_bound_only_warns_interactively(self):
+        """set jet-pt.min abc is rejected through invalid_set: a warning,
+        not an exception, when nobody scripts the question"""
+        obj = self.cut_selector()
+        before = dict(obj.run_card['cuts']['jet-pt'])
+        with self.assertLogs('madgraph.stdout', level='WARNING') as logs:
+            obj.do_set('jet-pt.min abc')
+        self.assertIn("invalid 'set jet-pt.min abc'", logs.output[0])
+        self.assertEqual(dict(obj.run_card['cuts']['jet-pt']), before)
+        self.assertNotIn('run', obj.modified_card)
+
+    def test_energy_unit_on_a_dimensionless_entry_is_refused(self):
+        """a unit converts an energy cut but stops a script on a dimensionless one"""
+        obj = self.cut_selector()
+        obj.do_set('jet-pt.min 1 TeV')
+        self.assertEqual(obj.run_card['cuts']['jet-pt']['min'], 1000.)
+        cuts = copy.deepcopy(obj.run_card['cuts'])
+        obj.mother_interface = types.SimpleNamespace(inputfile=iter([]))
+        for line in ('jet-eta_abs.max 4 TeV', 'etaj 2 TeV', 'drjj 1 MeV',
+                     'iseed 1 GeV', 'nevents 1 TeV'):
+            self.assertRaises(madgraph.InvalidCmd, obj.do_set, line)
+        self.assertEqual(obj.run_card['cuts'], cuts)
+        self.generic_do_set.assert_not_called()
+
+    def test_collider_and_scale_shortcuts_go_through_invalid_set(self):
+        """set lhc/fixed_scale/e_cm with a value that is not a number warn
+        interactively (nothing raised) and stop a launch script"""
+        lines = ('lhc abc', 'lep abc', 'fixed_scale abc', 'e_cm abc', 'e_cm scan:[1,2]')
+        obj = self.cut_selector()
+        beam = dict(obj.run_card['beam'])
+        with self.assertLogs('madgraph.stdout', level='WARNING') as logs:
+            for line in lines:
+                obj.do_set(line)
+        self.assertEqual(len(logs.output), len(lines), logs.output)
+        obj.mother_interface = types.SimpleNamespace(inputfile=iter([]))
+        for line in lines:
+            self.assertRaises(madgraph.InvalidCmd, obj.do_set, line)
+        self.assertEqual(dict(obj.run_card['beam']), beam)
+        self.assertNotIn('run', obj.modified_card)
+        self.generic_do_set.assert_not_called()
+
+    def test_unknown_lhaid_only_warns_in_scripted_runs(self):
+        from madgraph.various import banner as banner_mod
+        obj = self.histogram_selector()
+        obj.mother_interface = types.SimpleNamespace(inputfile=iter([]))
+        error = banner_mod.UnknownPDFSet('lhaid = 1: unknown LHAPDF id')
+        with mock.patch.object(type(obj.run_card), 'set_lo_beam_param',
+                               side_effect=error):
+            with self.assertLogs('madgraph7', level='WARNING') as logs:
+                obj.do_set('lhaid 1')
+        self.assertIn('unknown LHAPDF id', logs.output[0])
+        self.assertNotIn('run', obj.modified_card)
+
+    def test_set_custom_function_parameter(self):
+        """custom function parameters are not run_card keys: set them anyway"""
+        obj = self.cut_selector()
+        obj.do_set('custom_functions.cut_parameters.pt_min 30')
+        self.assertEqual(obj.run_card.custom_parameters('cut'), {'pt_min': 30.0})
+        # the name is matched as the custom function writes it: case kept
+        obj.do_set('custom_functions.cut_parameters.etaMax 2.5')
+        self.assertEqual(obj.run_card.custom_parameters('cut'),
+                         {'pt_min': 30.0, 'etaMax': 2.5})
+        self.assertIn('run', obj.modified_card)
+        self.generic_do_set.assert_not_called()
 
     def test_no_post_processing_keeps_the_npy_output(self):
         self.assertEqual(self.output_format({}), 'compact_npy')

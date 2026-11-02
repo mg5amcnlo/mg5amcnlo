@@ -97,7 +97,7 @@ setrun.o: setrun.f nexternal.inc leshouche.inc run_card.inc run_config.inc genps
 rw_events.o: rw_events.f run_config.inc
 %(additional_dependencies)s
 run_card.inc: ../Cards/run_card.dat
-	../bin/madevent treatcards run
+	../bin/madevent --allow-stdin treatcards run
 
 clean4pdf:
 	rm -f ../lib/libpdf.$(libext)
@@ -115,10 +115,10 @@ libiregi: $(LIBDIR)libiregi.a
 libcuttools: $(LIBDIR)libcts.a
 
 treatCards:
-	../bin/madevent treatcards all
+	../bin/madevent --allow-stdin treatcards all
 
 treatCardsLoopNoInit:
-	../bin/madevent treatcards loop --no_MadLoopInit
+	../bin/madevent --allow-stdin treatcards loop --no_MadLoopInit
 
 libmodel: $(LIBDIR)libmodel.$(libext)
 

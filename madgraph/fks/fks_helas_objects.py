@@ -335,7 +335,8 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                 modelpath = born_procs[0].born_amp['process']['model'].get('modelpath')
                 #modelpath = self.get('processes')[0].get('model').get('modelpath')
                 with misc.TMP_variable(sys, 'path', sys.path + [pjoin(MG5DIR, 'models'), modelpath]):
-                    realmapout = pool.map_async(async_generate_real,realmapin).get(9999999)
+                    realmapout = pool.map_async(async_generate_real,realmapin,
+                                       chunksize=misc.pool_chunksize(pool, len(realmapin))).get(9999999)
             except KeyboardInterrupt:
                 pool.terminate()
                 raise KeyboardInterrupt
@@ -362,7 +363,8 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                                   fksmulti['loop_filter']])
 
             try:
-                bornmapout = pool.map_async(async_generate_born,bornmapin).get(9999999)
+                bornmapout = pool.map_async(async_generate_born,bornmapin,
+                                    chunksize=misc.pool_chunksize(pool, len(bornmapin))).get(9999999)
             except KeyboardInterrupt:
                 pool.terminate()
                 raise KeyboardInterrupt 
@@ -406,7 +408,8 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                     memapin.append([i,mefile, duplicate_me_lists[i]])
 
                 try:
-                    memapout.append(pool.map_async(async_finalize_matrix_elements,memapin).get(9999999))
+                    memapout.append(pool.map_async(async_finalize_matrix_elements,memapin,
+                                    chunksize=misc.pool_chunksize(pool, len(memapin))).get(9999999))
                 except KeyboardInterrupt:
                     pool.terminate()
                     raise KeyboardInterrupt 

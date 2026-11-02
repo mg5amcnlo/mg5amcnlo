@@ -120,7 +120,7 @@ endif
 
 #-------------------------------------------------------------------------------
 
-objects=$(addprefix $(BUILDDIR)/, read_slha.o Parameters.o)
+objects=$(addprefix $(BUILDDIR)/, read_slha.o Parameters.o HelRecyclingScratch.o)
 
 # Target (and build rules): common (src) library
 ifeq ($(GPUCC),)
