@@ -241,7 +241,7 @@ class TestCppAmplitudeSplit(unittest.TestCase):
 
     LINE = ('      FFV1_0<W_ACCESS, A_ACCESS, CD_ACCESS>( aloha_obj[0],'
             ' aloha_obj[1], aloha_obj[2], COUPs[0], 1.0,'
-            ' &amp_fp[0] ); //HRAMP 1')
+            ' &amp_fp[0] ); //HRAMP 1 2,2,3')
 
     class FakeAmp(object):
         def __init__(self, row, args):
@@ -261,7 +261,7 @@ class TestCppAmplitudeSplit(unittest.TestCase):
         old = hel_recycle.CppDialect.P1N_MIN_SHARING
         hel_recycle.CppDialect.P1N_MIN_SHARING = env.get('minshare', 2)
         try:
-            return self.dialect.render_amplitudes(self.LINE, amps,
+            return self.dialect.render_amplitudes(env.get('line', self.LINE), amps,
                                                   gauge='U', amp_splt=True)
         finally:
             hel_recycle.CppDialect.P1N_MIN_SHARING = old
@@ -315,12 +315,32 @@ class TestCppAmplitudeSplit(unittest.TestCase):
         self.assertIn('P1N', self.render(amps, minshare=2))
 
     def test_the_split_is_declined_rather_than_guessed(self):
-        """A spin the fortran renderer refuses too"""
+        """A spin the fortran renderer refuses too (spin 2, whatever the
+        routine is called), a call the exporter did not tag with its spins, and
+        a name ALOHA hashed (its P1N is another hash, not <name>P1N_)"""
 
         amps = self.amplitudes(['aloha_obj[10]', 'aloha_obj[11]',
                                 'aloha_obj[12]', 'aloha_obj[13]'])
-        line = self.LINE.replace('FFV1_0', 'TTT1_0')
-        self.assertIsNone(self.dialect._p1n_group(line, amps, 0))
+        for line in (self.LINE.replace('//HRAMP 1 2,2,3', '//HRAMP 1 5,5,5'),
+                     self.LINE.replace('//HRAMP 1 2,2,3', '//HRAMP 1'),
+                     self.LINE.replace('FFV1_0', 'ALOHA_1234m56_0')):
+            self.assertIsNone(self.dialect._p1n_group(line, amps, 0))
+
+    def test_the_spins_are_the_tag_not_the_name(self):
+        """The letters of a Lorentz name are a convention of the UFO
+        generators, not part of the format: the exporter tags each amplitude
+        with the spins of its wavefunctions, and that is what is read"""
+
+        self.assertEqual(self.dialect.amplitude_spins(self.LINE), (2, 2, 3))
+        self.assertEqual(self.dialect.amplitude_diagram(self.LINE, []), 1)
+        self.assertIsNone(self.dialect.amplitude_spins(
+            self.LINE.replace('//HRAMP 1 2,2,3', '//HRAMP 1')))
+        # a routine whose name says three vectors, on two fermions and a vector
+        line = self.LINE.replace('FFV1_0', 'VVV9_0')
+        out = self.render(self.amplitudes(['aloha_obj[%d]' % i
+                                           for i in (10, 11, 12, 13)]), line=line)
+        self.assertIn('VVV9P1N_1<', out)
+        self.assertIn('_p1n.flv_index != aloha_obj[10].flv_index', out)
 
 
 class TestCppTabulatedSplit(unittest.TestCase):
@@ -437,6 +457,163 @@ class TestCppTabulatedSplit(unittest.TestCase):
         self.assertEqual(value('cxtype_amp( 0, 1 ) * '), 1j)
         self.assertIsNone(value('cI * '))
         self.assertIsNone(value('__import__( "os" ) * '))
+
+
+class TestCppFDGauge(unittest.TestCase):
+    """The C++ dialect on FD gauge calls (set gauge FD).
+
+    A vector wavefunction has five components there, the fifth its Goldstone,
+    and a vertex coupling a vector and its Goldstone is ONE assembled routine
+    named after all its structures (VVV1_VSV2_VSS2_SVV2_SVS2_SSV3_0), with one
+    coupling and coefficient per structure. Unfolding such a call is the same
+    as any other; what FD changes is the amplitude split: the current a P1N
+    leaves on a vector leg has five components, and a four-component dot
+    product drops the Goldstone part of every amplitude of the group (25% of
+    |M|^2 on u u~ > w+ w-); and a scalar keeps its value in that fifth
+    component, so a scalar peel reading component 0 gets nothing (|M|^2
+    off by up to 2.2 relative on t t~ > w+ w- z)."""
+
+    # as in the EvaluateDiagrams.inc of u u~ > w+ w- in FD gauge
+    CURRENT = ('      FFV6_2M_3<W_ACCESS, CI_ACCESS>( aloha_obj[0], aloha_obj[1],'
+               ' flvCOUPs[1], 1.0, flvCOUPs[2], 1.0, cIPD[1], cIPD[2],'
+               ' aloha_obj[4] );')
+    LINE = ('      VVV1_VSV2_VSS2_SVV2_SVS2_SSV3_0<W_ACCESS, A_ACCESS, CI_ACCESS>('
+            ' aloha_obj[3], aloha_obj[2], aloha_obj[4], COUPs[ndcoup + 4], 1.0,'
+            ' COUPs[ndcoup + 5], 1.0, COUPs[ndcoup + 6], 1.0, COUPs[ndcoup + 7],'
+            ' 1.0, COUPs[ndcoup + 8], 1.0, COUPs[ndcoup + 9], 1.0, &amp_fp[0] );'
+            ' //HRAMP 2 3,3,3')
+    FakeAmp = TestCppAmplitudeSplit.FakeAmp
+
+    def setUp(self):
+        self.dialect = hel_recycle.CppDialect()
+        self.dialect.folds = {2: ['      jamp[${row}] += amp_sv[0];']}
+
+    def amplitudes(self):
+        """four rows sharing legs 2 and 3, each with its own W on leg 1"""
+        args = self.dialect.arguments(self.LINE)
+        amps = []
+        for row, slot in enumerate((10, 11, 12, 13)):
+            amp = self.FakeAmp(row + 1, ['aloha_obj[%d]' % slot] + args[1:])
+            amp.diag_num = 2
+            amps.append(amp)
+        return amps
+
+    def render(self, gauge, tables):
+        old = hel_recycle.CppDialect.P1N_MIN_SHARING
+        hel_recycle.CppDialect.P1N_MIN_SHARING = 2
+        self.dialect.TABLES = tables
+        try:
+            return self.dialect.render_amplitudes(self.LINE, self.amplitudes(),
+                                                  gauge=gauge, amp_splt=True)
+        finally:
+            hel_recycle.CppDialect.P1N_MIN_SHARING = old
+
+    def test_a_combined_call_is_taken_apart(self):
+        """the result and the wavefunctions of a multi-coupling call, and a
+        current whose masses come after its couplings"""
+
+        args = self.dialect.arguments(self.LINE)
+        self.assertEqual(len(args), 3 + 2 * 6 + 1)
+        self.assertEqual(self.dialect.output_position(args), len(args) - 1)
+        self.assertEqual([a for a in args if self.dialect.is_wavefunction(a)],
+                         ['aloha_obj[3]', 'aloha_obj[2]', 'aloha_obj[4]'])
+        self.assertEqual(self.dialect.amplitude_diagram(self.LINE, args), 2)
+        args = self.dialect.arguments(self.CURRENT)
+        self.assertEqual(self.dialect.output_position(args), 8)
+        self.assertEqual(args[6:8], ['cIPD[1]', 'cIPD[2]'])
+
+    def test_the_components_of_a_peeled_leg(self):
+        comps = hel_recycle.CppDialect.peel_components
+        self.assertEqual(comps(2), (True, (0, 1, 2, 3)))
+        self.assertEqual(comps(2, 'FD'), (True, (0, 1, 2, 3)))
+        self.assertEqual(comps(3), (False, (0, 1, 2, 3)))
+        self.assertEqual(comps(3, 'FD'), (False, (0, 1, 2, 3, 4)))
+        self.assertEqual(comps(1), (False, (0,)))
+        self.assertEqual(comps(1, 'FD'), (False, (4,)))
+        # spin 3/2 and 2 are not split, as in fortran
+        self.assertIsNone(comps(4))
+        self.assertIsNone(comps(5, 'FD'))
+
+    def test_the_tag_is_the_spin_not_the_name(self):
+        """VVV1_VSV2_..._0 has S letters on every leg, the tag says three
+        vectors: each leg is split as the vector it is"""
+
+        self.assertEqual(self.dialect.amplitude_spins(self.LINE), (3, 3, 3))
+        old = hel_recycle.CppDialect.P1N_MIN_SHARING
+        hel_recycle.CppDialect.P1N_MIN_SHARING = 2
+        self.dialect.TABLES = False
+        try:
+            # leg 3 varies here: its P1N is the one written
+            amps = []
+            args = self.dialect.arguments(self.LINE)
+            for row, slot in enumerate((10, 11, 12, 13)):
+                amp = self.FakeAmp(row + 1, args[:2] + ['aloha_obj[%d]' % slot]
+                                   + args[3:])
+                amp.diag_num = 2
+                amps.append(amp)
+            out = self.dialect.render_amplitudes(self.LINE, amps, gauge='FD',
+                                                 amp_splt=True)
+        finally:
+            hel_recycle.CppDialect.P1N_MIN_SHARING = old
+        self.assertIn('VVV1_VSV2_VSS2_SVV2_SVS2_SSV3P1N_3<', out)
+        self.assertEqual(out.count('_pt[4] * _pw[4]'), 4)
+        self.assertEqual(out.count('_pt[0] * _pw[0]'), 4)
+
+    def test_a_scalar_peel_reads_the_fifth_component(self):
+        """FFS4_0 (a top Yukawa) peeled on the Higgs, as in t t~ > w+ w- z:
+        the scalar value is component 4 in FD, component 0 otherwise"""
+
+        line = ('      FFS4_0<W_ACCESS, A_ACCESS, CI_ACCESS>( aloha_obj[0],'
+                ' aloha_obj[1], aloha_obj[2], COUPs[ndcoup + 1], 1.0,'
+                ' &amp_fp[0] ); //HRAMP 2 2,2,1')
+        amps = [self.FakeAmp(row + 1, ['aloha_obj[0]', 'aloha_obj[1]',
+                                       'aloha_obj[%d]' % slot,
+                                       'COUPs[ndcoup+1]', '1.0', '&amp_fp[0]'])
+                for row, slot in enumerate((10, 11, 12, 13))]
+        for amp in amps:
+            amp.diag_num = 2
+        old = hel_recycle.CppDialect.P1N_MIN_SHARING
+        hel_recycle.CppDialect.P1N_MIN_SHARING = 2
+        try:
+            for tables, gauge, expected in (
+                    (False, 'FD', 'amp_sv[0] = _pt[4] * _pw[4]; }'),
+                    (False, 'U', 'amp_sv[0] = _pt[0] * _pw[0]; }'),
+                    (True, 'FD', 'hr_p1n_fold<W_ACCESS, 1, false, 4>( _p1n,'),
+                    (True, 'U', 'hr_p1n_fold<W_ACCESS, 1, false>( _p1n,')):
+                self.dialect.TABLES = tables
+                self.dialect.folds = {2: ['jampAll_sv[( ${row} * nParity + iParity )'
+                                          ' * njampso + 0] += amp_sv[0];']}
+                out = self.dialect.render_amplitudes(line, amps, gauge=gauge,
+                                                     amp_splt=True)
+                self.assertIn('FFS4P1N_3<W_ACCESS, CI_ACCESS>( aloha_obj[0],'
+                              ' aloha_obj[1], COUPs[ndcoup+1], 1.0, _p1n );', out)
+                self.assertIn(expected, out)
+        finally:
+            hel_recycle.CppDialect.P1N_MIN_SHARING = old
+
+    def test_a_vector_peel_dots_five_components(self):
+        out = self.render('FD', tables=False)
+        self.assertIn('VVV1_VSV2_VSS2_SVV2_SVS2_SSV3P1N_1<W_ACCESS, CI_ACCESS>('
+                      ' aloha_obj[2], aloha_obj[4], COUPs[ndcoup+4], 1.0,', out)
+        self.assertEqual(out.count('P1N_1<'), 1)
+        self.assertEqual(out.count('_pt[4] * _pw[4]'), 4)
+        self.assertNotIn('flv_index', out)
+        for row in range(4):
+            self.assertIn('jamp[%d] += amp_sv[0];' % row, out)
+
+    def test_the_tables_say_five_components(self):
+        self.dialect.folds = {2: ['jampAll_sv[( ${row} * nParity + iParity )'
+                                  ' * njampso + 0] += amp_sv[0];']}
+        out = self.render('FD', tables=True)
+        self.assertIn('hr_p1n_fold<W_ACCESS, 5, false>( _p1n, aloha_obj, hrM, 4,', out)
+
+    def test_four_components_without_the_gauge(self):
+        """the same vectors outside FD: no fifth component"""
+
+        out = self.render('U', tables=False)
+        self.assertEqual(out.count('P1N_1<'), 1)
+        self.assertNotIn('_pt[4]', out)
+        self.assertEqual(out.count('_pt[3] * _pw[3]'), 4)
 
 
 class TestRecycledChunkBoundaries(unittest.TestCase):
@@ -640,12 +817,16 @@ class TestRecycledColourSubExpressions(unittest.TestCase):
             def get(self, key):
                 return 1
 
+        class Amplitude(object):
+            def get(self, key):
+                return []
+
         from string import Template
         self.writer.nb_tmp_jamp = ntmp
         for namp, value in amps.items():
             captures = plan[1].get(namp, []) if plan is not None else None
-            fold = self.writer._hr_orig_amplitude('FFV1_0( a ); ', namp, Diagram(),
-                                                  False, self.color, captures)
+            fold = self.writer._hr_orig_amplitude('FFV1_0( a ); ', namp, Amplitude(),
+                                                  Diagram(), False, self.color, captures)
             self.assertEqual(fold[-1], '//HRENDFOLD')
             scope['amp_sv'] = [value]
             for line in fold[2:-1]:
@@ -724,7 +905,19 @@ class TestRecycledColourSubExpressions(unittest.TestCase):
         self.assertTrue(all('amp_sv' not in l and 'ampRow[0]' in l for l in rows))
 
     def test_rows_store(self):
-        fold = self.writer._hr_orig_store('FFV1_0( a ); ', 7, 40)
+        class Mother(object):
+            def __init__(self, spin):
+                self.spin = spin
+            def get(self, key):
+                return {'spin': self.spin}[key]
+
+        class Amplitude(object):
+            def get(self, key):
+                return {'mothers': [Mother(2), Mother(2), Mother(3)]}[key]
+
+        fold = self.writer._hr_orig_store('FFV1_0( a ); ', 7, 40, Amplitude())
+        # the number, and the spin of each argument's wavefunction
+        self.assertTrue(fold[0].endswith(' //HRAMP 7 2,2,3'), fold[0])
         self.assertEqual(fold[1:], ['//HRFOLD 7',
             'ampAll_sv[( ${row} * nParity + iParity ) * 40 + 6] = amp_sv[0];',
             '//HRENDFOLD'])

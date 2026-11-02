@@ -2214,6 +2214,38 @@ class TestCmdShell2(unittest.TestCase,
         produced the recycled build (HelRecycling.inc), or the test would compare
         plain with plain.
         """
+        self._hel_recycling_vs_plain('g g > t t~ g')
+
+    def test_madmatrix_fd_hel_recycling_vs_plain(self):
+        """--hel_recycling in the FD gauge must not change |M|^2 either.
+
+        What FD changes for the recycler is the amplitude split (P1N): the
+        current a P1N leaves on a vector leg has five components, the fifth
+        the Goldstone, and a scalar keeps its value in that fifth component.
+        Dotting four components for a vector or component 0 for a scalar
+        silently drops part of every amplitude of a group (|M|^2 off by up to
+        2.2 relative here). t t~ > w+ w- z splits all three kinds at the
+        default threshold: vector legs of the merged vector/Goldstone vertices
+        (VVV1_VSV2_..., VVVV5_VVSS1_...), the Higgs of the top Yukawa (FFS4)
+        and fermion legs; the test checks that each kind is there.
+        """
+        import glob
+        self.do('set gauge FD')
+        try:
+            recycled = self._hel_recycling_vs_plain('t t~ > w+ w- z')
+        finally:
+            self.do('set gauge unitary')
+        calls = ''.join(open(path).read() for path in
+                        glob.glob(pjoin(recycled, 'HelRecycling*.inc')))
+        for kind in ('hr_p1n_fold<W_ACCESS, 5, false>',
+                     'hr_p1n_fold<W_ACCESS, 1, false, 4>',
+                     'hr_p1n_fold<W_ACCESS, 4, true>'):
+            self.assertIn(kind, calls, 'no %s group in the recycled build' % kind)
+
+    def _hel_recycling_vs_plain(self, process):
+        """plain and --hel_recycling standalone outputs of `process`, |M|^2
+        compared event by event (see test_madmatrix_hel_recycling_vs_plain);
+        returns the recycled subprocess directory"""
         devnull = open(os.devnull, 'w')
         root = self.out_dir + '_hr'
         dirs = {'plain': root + '_plain', 'recycled': root + '_recycled'}
@@ -2221,7 +2253,7 @@ class TestCmdShell2(unittest.TestCase,
             if os.path.isdir(path):
                 shutil.rmtree(path)
         self.do('import model sm')
-        self.do('generate g g > t t~ g')
+        self.do('generate %s' % process)
         self.do('output standalone %s -f' % dirs['plain'])
         self.do('output standalone %s -f --hel_recycling=True' % dirs['recycled'])
         proc = {}
@@ -2273,6 +2305,7 @@ class TestCmdShell2(unittest.TestCase,
                                          % (backend, tag, i, a, b))
                 compared += 1
         self.assertGreaterEqual(compared, 2, 'the scalar backend did not build')
+        return proc['recycled']
 
     def test_standalone_cpp_perf_alpha_s_from_param_card(self):
         """check_sa.exe 'perf' mode must use the alpha_s of the param card,

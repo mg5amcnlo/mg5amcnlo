@@ -78,11 +78,13 @@ hr_fold_amp( const cxtype_amp_sv& amp,
   return f + nfold;
 }
 
-// The members of one P1N group: p1n holds the vertex with the peeled leg (of
-// NCOMP components) left off; each member is its dot product with the member's
-// own wavefunction of that leg.
+// The members of one P1N group: p1n holds the vertex with the peeled leg left
+// off; each member is its dot product with the member's own wavefunction of
+// that leg, over NCOMP components from FIRST: 1 for a scalar, 4 for a fermion
+// or a vector, 5 for a vector in the FD gauge (the fifth is its Goldstone),
+// where a scalar is the one component 4 (see CppDialect.peel_components).
 // A fermion peel makes the flavour test here (see CppDialect._p1n_group).
-template<class W_ACCESS, int NCOMP, bool FERMION>
+template<class W_ACCESS, int NCOMP, bool FERMION, int FIRST = 0>
 inline void
 hr_p1n_fold( const ALOHAOBJ& p1n,
              const ALOHAOBJ* aloha_obj,
@@ -104,9 +106,14 @@ hr_p1n_fold( const ALOHAOBJ& p1n,
     const cxtype_sv* _pw = W_ACCESS::kernelAccessConst( w.w );
     cxtype_amp_sv amp;
     if constexpr( NCOMP == 1 )
-      amp = _pt[0] * _pw[0];
-    else
+      amp = _pt[FIRST] * _pw[FIRST];
+    else if constexpr( NCOMP == 4 )
       amp = _pt[0] * _pw[0] + _pt[1] * _pw[1] + _pt[2] * _pw[2] + _pt[3] * _pw[3];
+    else // FD gauge vector: the fifth component is its Goldstone
+    {
+      static_assert( NCOMP == 5, "a P1N current has 1, 4 or 5 components" );
+      amp = _pt[0] * _pw[0] + _pt[1] * _pw[1] + _pt[2] * _pw[2] + _pt[3] * _pw[3] + _pt[4] * _pw[4];
+    }
     if constexpr( FERMION )
     {
       if( p1n.flv_index != w.flv_index || p1n.flv_index == -1 ) amp = cxzero_sv();
