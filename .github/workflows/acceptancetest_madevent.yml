@@ -46,7 +46,7 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
-      - uses: ./.github/actions/restore_heptools
+      - uses: ./.github/actions/restore_heptools_core
       - uses: ./.github/actions/restore_all
 
 
@@ -264,7 +264,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
-      - uses: ./.github/actions/restore_heptools
+      - uses: ./.github/actions/restore_heptools_core
       - uses: ./.github/actions/restore-pip-cache
 
       # ---- acceptancetest_20 ----
@@ -334,7 +334,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
       - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools
+      - uses: ./.github/actions/restore_heptools_core
 
       # ---- acceptancetest_37 ----
       - name: "acceptancetest_37"
@@ -504,7 +504,7 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
-      - uses: ./.github/actions/restore_heptools
+      - uses: ./.github/actions/restore_heptools_core
       - uses: ./.github/actions/restore-pip-cache
       - uses: ./.github/actions/restore_ufomodel
 
@@ -570,7 +570,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
-      - uses: ./.github/actions/restore_heptools
+      - uses: ./.github/actions/restore_heptools_core
 
       # ---- acceptancetest_103_polarization ----
       - name: "acceptancetest_103_polarization"

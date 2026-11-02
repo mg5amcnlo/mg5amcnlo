@@ -333,8 +333,8 @@ function codeGenAndDiff()
     # Generate run_card.inc and param_card.inc (include stdout and stderr in the code generation log which is later checked for errors)
     # These two steps are part of "cd Source; make" but they actually are code-generating steps
     # Note: treatcards run also regenerates vector.inc if vector_size has changed in the runcard
-    ${outproc}/bin/madevent treatcards run >> ${outproc}_log.txt 2>&1 # AV BUG! THIS MAY SILENTLY FAIL (check if output contains "Please report this bug")
-    ${outproc}/bin/madevent treatcards param >> ${outproc}_log.txt 2>&1 # AV BUG! THIS MAY SILENTLY FAIL (check if output contains "Please report this bug")
+    ${outproc}/bin/madevent --allow-stdin treatcards run >> ${outproc}_log.txt 2>&1 # AV BUG! THIS MAY SILENTLY FAIL (check if output contains "Please report this bug")
+    ${outproc}/bin/madevent --allow-stdin treatcards param >> ${outproc}_log.txt 2>&1 # AV BUG! THIS MAY SILENTLY FAIL (check if output contains "Please report this bug")
     # Generate matrix*.pdf files using ps2pdf and remove the original matrix*.ps (NB: this only works if ghostscript is installed)
     if which ps2pdf > /dev/null 2>&1; then
       for matrixps in ${outproc}/SubProcesses/P*/matrix*.ps; do

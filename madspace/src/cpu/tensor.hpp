@@ -12,12 +12,12 @@
 namespace madspace {
 namespace cpu {
 
-// View onto a tensor for the vectorized kernels. The simd_vec_size lanes of a
+// View onto a tensor for the vectorized kernels. The V::lanes lanes of a
 // vector are consecutive batch entries, so they are always contiguous in memory
 // (batch stride one) and are read and written with plain vector loads and stores.
 // Moving to the next vector advances the data pointer by vec_step elements:
-// simd_vec_size for batched tensors, zero for literals that are stored padded to
-// simd_vec_size identical lanes. Tensors that do not have this layout are handled
+// V::lanes for batched tensors, zero for literals that are stored padded to
+// simd_vec_size_max identical lanes. Tensors that do not have this layout are handled
 // by the scalar kernels instead (see tensor_foreach_impl).
 template <class V, ScalarType T, int _dim, bool is_batch>
 class VectorizedTensorView {
@@ -65,9 +65,7 @@ public:
         T* ptr = &_data[offset(first_index)];
         int i = 1;
         ((ptr = &ptr[index * _stride[i++]]), ...);
-        return {
-            ptr, &_stride[sizeof...(I) + 1], &_shape[sizeof...(I) + 1], _vec_step
-        };
+        return {ptr, &_stride[sizeof...(I) + 1], &_shape[sizeof...(I) + 1], _vec_step};
     }
 
     template <typename... I>
@@ -78,15 +76,13 @@ public:
         T* ptr = &_data[offset(first_index)];
         int i = 1;
         ((ptr = &ptr[index * _stride[i++]]), ...);
-        return {
-            ptr, &_stride[sizeof...(I) + 1], &_shape[sizeof...(I) + 1], _vec_step
-        };
+        return {ptr, &_stride[sizeof...(I) + 1], &_shape[sizeof...(I) + 1], _vec_step};
     }
 
     operator V() const
         requires(_dim == 0)
     {
-        return vload(_data);
+        return vload(VecTag<V>{}, _data);
     }
 
     V operator=(V value)
@@ -99,7 +95,7 @@ public:
     V operator+=(V value)
         requires(_dim == 0)
     {
-        V new_value = vload(_data) + value;
+        V new_value = vload(VecTag<V>{}, _data) + value;
         vstore(_data, new_value);
         return new_value;
     }
@@ -109,7 +105,7 @@ public:
 
     std::size_t size(std::size_t index = 0) const {
         if (is_batch && index == 0) {
-            return _shape[0] / simd_vec_size;
+            return _shape[0] / V::lanes;
         } else {
             return _shape[index];
         }
@@ -119,14 +115,14 @@ public:
     V gather(IVec indices) const
         requires(_dim == 1)
     {
-        return vgather(_data, 1, _stride[0], indices);
+        return vgather(VecTag<V>{}, _data, 1, _stride[0], indices);
     }
 
     template <typename IVec>
     void scatter_add(IVec indices, V values)
         requires(_dim == 1)
     {
-        V old_values = vgather(_data, 1, _stride[0], indices);
+        V old_values = vgather(VecTag<V>{}, _data, 1, _stride[0], indices);
         vscatter(_data, 1, _stride[0], indices, old_values + values);
     }
 
@@ -183,7 +179,7 @@ public:
     operator V() const
         requires(_dim == 0)
     {
-        return vload_broadcast(_data);
+        return vload_broadcast(VecTag<V>{}, _data);
     }
 
     // the value as a plain scalar, e.g. for loop bounds or indices
@@ -199,7 +195,7 @@ public:
     V gather(IVec indices) const
         requires(_dim == 1)
     {
-        return vgather(_data, 0, _stride[0], indices);
+        return vgather(VecTag<V>{}, _data, 0, _stride[0], indices);
     }
 
 private:
@@ -277,7 +273,7 @@ struct get_views {
 
 // return the tuple of VectorizedTensorViews where the type is extracted
 // from the signature of F. vec_steps holds the step between vectors for every
-// argument (simd_vec_size, or zero for padded literals)
+// argument (the lane count, or zero for padded literals)
 template <typename F, int dims>
 struct get_vectorized_views;
 template <typename... TParam, int dims>
@@ -334,6 +330,15 @@ struct first_param;
 template <typename... TParam>
 struct first_param<void (*)(TParam...)> {
     static constexpr int dim = std::tuple_element_t<0, std::tuple<TParam...>>::dim;
+};
+
+// lane count of a vectorized kernel, taken from the vector type of its first view
+template <typename F>
+struct vector_lanes;
+template <typename... TParam>
+struct vector_lanes<void (*)(TParam...)> {
+    static constexpr int value = std::remove_cvref_t<
+        std::tuple_element_t<0, std::tuple<TParam...>>>::VType::lanes;
 };
 
 template <auto func, int dims, typename... V>
@@ -437,7 +442,7 @@ inline void tensor_foreach_impl(
 
     // The vectorized kernel loads and stores the lanes of a vector with plain
     // contiguous memory accesses. It is only used if every batched argument has
-    // batch stride one (or is a literal padded to simd_vec_size lanes); single
+    // batch stride one (or is a literal padded to simd_vec_size_max lanes); single
     // inputs are read with broadcast loads and can have any layout. Otherwise
     // the whole batch is handled by the scalar kernel.
     constexpr std::size_t n_args = n_in + n_out + sizeof...(S);
@@ -454,7 +459,7 @@ inline void tensor_foreach_impl(
                     if constexpr (!ScalarType<View> && !Single::value[I]) {
                         auto& view = std::get<I>(flat_views);
                         if (view.shape[0] == batch_size && view.stride[0] == 1) {
-                            vec_steps[I] = simd_vec_size;
+                            vec_steps[I] = vector_lanes<decltype(vector_func)>::value;
                         } else if (view.simd_padded) {
                             vec_steps[I] = 0;
                         } else {
@@ -469,10 +474,9 @@ inline void tensor_foreach_impl(
 
     device.foreach (
         batch_size,
-        [flat_views,
-         vectorize,
-         vec_steps,
-         scalar_args...](std::size_t count, std::size_t offset) mutable {
+        [flat_views, vectorize, vec_steps, scalar_args...](
+            std::size_t count, std::size_t offset
+        ) mutable {
             auto views = std::apply(get_views(), flat_views);
             std::size_t scalar_offset = offset;
             if constexpr (!std::
@@ -486,8 +490,10 @@ inline void tensor_foreach_impl(
                         },
                         views
                     );
-                    std::size_t vec_count = count / simd_vec_size;
-                    std::size_t vec_offset = offset / simd_vec_size;
+                    constexpr std::size_t lanes =
+                        vector_lanes<decltype(vector_func)>::value;
+                    std::size_t vec_count = count / lanes;
+                    std::size_t vec_offset = offset / lanes;
                     std::apply(
                         [vec_count, vec_offset](auto&&... args) {
                             nested_for<vector_func, dims>(
@@ -496,7 +502,7 @@ inline void tensor_foreach_impl(
                         },
                         vectorized_views
                     );
-                    scalar_offset += vec_count * simd_vec_size;
+                    scalar_offset += vec_count * lanes;
                 }
             }
             std::size_t scalar_count = offset + count - scalar_offset;

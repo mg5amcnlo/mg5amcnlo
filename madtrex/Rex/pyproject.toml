@@ -1,0 +1,23 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "packaging>=22"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "pyrex"
+version = "1.0.0"
+description = "Python bindings for Rex/teaRex LHE parsing and event reweighting"
+readme = "README.md"
+requires-python = ">=3.9"
+# dual licensed: upstream Rex is LGPL-3.0-or-later; this copy is distributed
+# with MadGraph7 under the MadGraph7 license (LICENSE at the top of MadGraph7)
+license = { text = "LGPL-3.0-or-later, or the MadGraph7 license (LICENSE in the MadGraph7 distribution)" }
+authors = [
+  { name = "Zenny Wettersten" },
+]
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+cmake.build-type = "Release"
+# pip install always builds the Python bindings, regardless of the CMake
+# option's own OFF default (which only matters for bare `cmake` builds).
+cmake.define.REX_BUILD_PYTHON = "ON"

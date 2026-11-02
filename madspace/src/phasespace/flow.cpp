@@ -46,7 +46,7 @@ void vegas_init(
     auto grid_tensor = context->global(grid_name).cpu();
     bool is_cpu = false; // context->device() == cpu_device();
     Tensor bias_tensor =
-        is_cpu ? bias_global : Tensor(DataType::dt_float, bias_global.shape());
+        is_cpu ? bias_global : Tensor(DataType::dt_float64, bias_global.shape());
     auto bias_view = bias_tensor.view<double, 2>()[0];
     auto grid_view = grid_tensor.view<double, 3>()[0];
     std::size_t n_dims = grid_tensor.size(1);
@@ -142,7 +142,7 @@ void vegas_init(
     }
 
     if (!is_cpu) {
-        bias_global.copy_from(bias_tensor);
+        bias_global.copy_from(bias_tensor.cast(bias_global.dtype()));
     }
 }
 
@@ -156,7 +156,8 @@ Flow::Flow(
     std::size_t subnet_hidden_dim,
     std::size_t subnet_layers,
     MLP::Activation subnet_activation,
-    bool invert_spline
+    bool invert_spline,
+    DataType subnet_precision
 ) :
     Mapping(
         "Flow",
@@ -173,9 +174,9 @@ Flow::Flow(
     // one-dimensional input (a 2 -> 1 phase space) would leave the flow
     // without any block and nothing to train.
     if (input_dim < 2) {
-        throw std::invalid_argument(std::format(
-            "Flow input dimension must be at least 2, got {}", input_dim
-        ));
+        throw std::invalid_argument(
+            std::format("Flow input dimension must be at least 2, got {}", input_dim)
+        );
     }
     std::size_t block_count = 0;
     for (std::size_t dim = input_dim - 1; dim > 0; dim /= 2) {
@@ -203,13 +204,15 @@ Flow::Flow(
                  subnet_hidden_dim,
                  subnet_layers,
                  subnet_activation,
-                 prefixed_name(prefix, std::format("subnet{}a", block_index + 1))),
+                 prefixed_name(prefix, std::format("subnet{}a", block_index + 1)),
+                 subnet_precision),
              MLP(indices1.size() + condition_dim,
                  indices2.size() * (3 * bin_count + 1),
                  subnet_hidden_dim,
                  subnet_layers,
                  subnet_activation,
-                 prefixed_name(prefix, std::format("subnet{}b", block_index + 1))),
+                 prefixed_name(prefix, std::format("subnet{}b", block_index + 1)),
+                 subnet_precision),
              indices1,
              indices2}
         );

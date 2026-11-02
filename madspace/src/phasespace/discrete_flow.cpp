@@ -12,7 +12,8 @@ DiscreteFlow::DiscreteFlow(
     std::size_t condition_dim,
     std::size_t subnet_hidden_dim,
     std::size_t subnet_layers,
-    MLP::Activation subnet_activation
+    MLP::Activation subnet_activation,
+    DataType subnet_precision
 ) :
     Mapping(
         "DiscreteFlow",
@@ -57,7 +58,8 @@ DiscreteFlow::DiscreteFlow(
                 subnet_hidden_dim,
                 subnet_layers,
                 subnet_activation,
-                prefixed_name(prefix, std::format("subnet{}_", dim_index + 1))
+                prefixed_name(prefix, std::format("subnet{}_", dim_index + 1)),
+                subnet_precision
             );
         } else {
             _first_prob_name = prefixed_name(prefix, "prob0");
@@ -112,7 +114,7 @@ Mapping::Result DiscreteFlow::build_transform(
         if (dim_index == 0 && _first_prob_name) {
             probs = fb.global(
                 _first_prob_name.value(),
-                DataType::dt_float,
+                DataType::dt_float64,
                 {static_cast<int>(option_count)}
             );
         } else {

@@ -29,6 +29,12 @@ public:
 
   const vector<double>& getMasses() const {return mME;}
 
+  // Recompute mME (external particle on-shell masses) from the current model parameters
+  // (pars). mME is only populated once, in the constructor; call this after overriding a
+  // mass via pars.setParameterByName() (e.g. through umami_set_parameter) so getMasses()
+  // reflects the new value.
+  void refreshMasses();
+
   const double* getAmp2() const { return amp2; }
 
   Parameters_%(model_name)s& getParameters() { return pars; }

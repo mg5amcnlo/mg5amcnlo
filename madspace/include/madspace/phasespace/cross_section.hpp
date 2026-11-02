@@ -62,6 +62,9 @@ public:
      *                                 rather than reconstructed.
      * @param decay                    If true, describe the decay of a single
      *                                 incoming particle instead of a collision.
+     * @param matrix_element_output    If true, also return the squared matrix
+     *                                 element itself (before PDFs and flux) as
+     *                                 a last output, `raw_matrix_element`.
      */
     DifferentialCrossSection(
         const MatrixElement& matrix_element,
@@ -73,7 +76,8 @@ public:
         const std::variant<std::monostate, PdfGrid, CachedPdf>& pdf1 = std::monostate{},
         const std::variant<std::monostate, PdfGrid, CachedPdf>& pdf2 = std::monostate{},
         bool input_momentum_fraction = true,
-        bool decay = false
+        bool decay = false,
+        bool matrix_element_output = false
     );
 
     /// The allowed initial-parton flavour combinations.
@@ -86,6 +90,8 @@ public:
     const std::optional<RunningCoupling>& running_coupling() const {
         return _running_coupling;
     }
+    /// Whether the squared matrix element is returned as a last output.
+    bool matrix_element_output() const { return _matrix_element_output; }
 
 private:
     NamedVector<Value> build_function_impl(
@@ -101,6 +107,7 @@ private:
     std::variant<std::monostate, EnergyScale, CachedScale> _energy_scale;
     bool _input_momentum_fraction;
     bool _decay;
+    bool _matrix_element_output;
 };
 
 } // namespace madspace

@@ -31,6 +31,24 @@ pjoin = os.path.join
 logger = logging.getLogger('madevent')
 
 
+def sync_lhe_copy(source, target):
+    """Make the LHE file target hold the events of source, gzipped or not
+    as each file's name says; replaced atomically. The mg7 run's event file
+    (events.lhe[.gz]) and the copy the madevent tools read
+    (unweighted_events.lhe.gz, see MG7RunCmd._prepare_run_dir) are kept the
+    same this way after a reweighting wrote into one of them."""
+    import gzip
+    tmp = target + '.tmp'
+    opener_in = gzip.open if source.endswith('.gz') else open
+    opener_out = gzip.open if target.endswith('.gz') else open
+    if source.endswith('.gz') == target.endswith('.gz'):
+        shutil.copyfile(source, tmp)
+    else:
+        with opener_in(source, 'rb') as src, opener_out(tmp, 'wb') as dst:
+            shutil.copyfileobj(src, dst)
+    os.replace(tmp, target)
+
+
 @contextlib.contextmanager
 def _quiet_setup():
     """Silence the INFO chatter of a madevent interface being constructed.
@@ -263,6 +281,79 @@ class MG7RunCmd(madevent_interface.MadEventCmd):
         """
         from madgraph.iolibs.template_files.mg7.launch import load_process_model
         return load_process_model(self.me_dir)
+
+    def do_reweight(self, line):
+        """``reweight [--backend=classic|madtrex|auto] ...``: the backend
+        option (also spelled ``--reweight-backend=``) chooses who reweights,
+        together with the reweight switch and the card's ``change backend``
+        (see madgraph/various/reweight_backend.py). MadtRex reweights this
+        run's events (an MG7 output); the classic module is the inherited
+        command, without the option."""
+        from madgraph.various import reweight_backend as rb
+        requested = None
+        words = []
+        for word in line.split():
+            if word.startswith(('--backend=', '--reweight-backend=')):
+                requested = word.split('=', 1)[1]
+            else:
+                words.append(word)
+        line = ' '.join(words)
+        card_path = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
+        if '-from_cards' in words and not os.path.exists(card_path):
+            return
+        if requested == 'classic' or not os.path.exists(card_path):
+            return self._classic_reweight(line)
+        with open(card_path) as fsock:
+            traits = rb.classify_card(fsock.read())
+        plugin = [w.split('=', 1)[1] for w in words if w.startswith('--plugin=')]
+        if '--mode=density' in words:
+            traits.density = True
+        decision = rb.select_backend(
+            [('reweight --backend', requested)], traits,
+            rb.probe_environment(self.me_dir, self.options),
+            plugin=plugin[0] if plugin else None)
+        if decision.backend == 'classic':
+            return self._classic_reweight(line)
+        logger.info(decision.describe())
+        from madgraph.iolibs.template_files.mg7 import madtrex
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            card = pjoin(tmp, 'reweight_card.dat')
+            with open(card_path) as fsock, open(card, 'w') as out:
+                out.write(rb.strip_backend_line(fsock.read()))
+            # in place: the weights go into the run's event file
+            madtrex.run_reweighting(card, events_path=self._mg7_lhe_path,
+                                    card_kind=decision.card_kind,
+                                    process_directory=self.me_dir)
+        tool_copy = self._tool_copy()
+        if os.path.exists(tool_copy):
+            sync_lhe_copy(self._mg7_lhe_path, tool_copy)
+
+    def _tool_copy(self):
+        return pjoin(os.path.dirname(self._mg7_lhe_path), 'unweighted_events.lhe.gz')
+
+    def _classic_reweight(self, line):
+        """The classic module, which writes its weights into the tools' copy
+        of the events (unweighted_events.lhe.gz); the run's own event file
+        gets them too, as with MadtRex."""
+        out = super(MG7RunCmd, self).do_reweight(line)
+        self.sync_reweighted_events()
+        return out
+
+    def sync_reweighted_events(self):
+        """Copy the tools' copy of the events (unweighted_events.lhe[.gz])
+        onto the run's event file when it is newer, i.e. when the classic
+        reweighting module wrote into it. Safe to call again (e.g. after
+        store_result(), which may gzip the copy)."""
+        run_dir = os.path.dirname(self._mg7_lhe_path)
+        copies = [pjoin(run_dir, name) for name in
+                  ('unweighted_events.lhe.gz', 'unweighted_events.lhe')]
+        copies = [path for path in copies if os.path.exists(path)]
+        if not copies:
+            return
+        newest = max(copies, key=os.path.getmtime)
+        if os.path.getmtime(newest) > os.path.getmtime(self._mg7_lhe_path):
+            sync_lhe_copy(newest, self._mg7_lhe_path)
 
     def do_set(self, line, log=True):
         """Intercept the compiler options: the base handler patches

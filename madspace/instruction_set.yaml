@@ -231,6 +231,7 @@ sub:
   dims: 0
 
 mul:
+  precision: [float32, float64]
   inputs:
     - name: in1
       type: [float, ...]
@@ -3162,7 +3163,53 @@ interpolate_alpha_s:
 ---
 title: Normalizing flows and MLPs
 
+convert_float32:
+  inputs:
+    - name: in1
+      type: [float64, ...]
+      desc: "double-precision tensor"
+  outputs:
+    - name: out
+      type: [float32, ...]
+      desc: "the input rounded to single precision"
+  dims: 0
+  vectorized: False
+  differentiable: True
+  desc: "Converts a tensor to single precision. Used at the boundaries of single-precision @ref MLP networks."
+
+convert_float64:
+  inputs:
+    - name: in1
+      type: [float32, ...]
+      desc: "single-precision tensor"
+  outputs:
+    - name: out
+      type: [float64, ...]
+      desc: "the input in double precision"
+  dims: 0
+  vectorized: False
+  differentiable: True
+  desc: "Converts a tensor to double precision. Used at the boundaries of single-precision @ref MLP networks."
+
+matmul_to_float64:
+  inputs:
+    - name: x
+      type: [float32, n]
+      backward_arg: True
+    - name: weight
+      type: [float32, single, m, n]
+      backward_arg: True
+    - name: bias
+      type: [float32, single, m]
+  outputs:
+    - name: y
+      type: [float64, m]
+  custom_op: True
+  differentiable: True
+  desc: "Single-precision affine map whose result is converted to double precision. Equivalent to @ref convert_float64 applied to the output of @ref matmul, but the GPU backend fuses the bias addition and the conversion, and the backward pass fuses the gradient conversion with the bias gradient. Used for the last layer of single-precision @ref MLP networks."
+
 matmul:
+  precision: [float32, float64]
   inputs:
     - name: x
       type: [float, n]
@@ -3183,7 +3230,164 @@ matmul:
   differentiable: True
   desc: "Affine layer y = weight x + bias. Building block of @ref MLP."
 
+matmul_relu:
+  precision: [float32, float64]
+  inputs:
+    - name: x
+      type: [float, n]
+      desc: "input vector"
+      backward_arg: True
+    - name: weight
+      type: [float, single, m, n]
+      desc: "weight matrix"
+      backward_arg: True
+    - name: bias
+      type: [float, single, m]
+      desc: "bias vector"
+  outputs:
+    - name: linear
+      type: [float, m]
+      desc: "the affine transform of the input"
+    - name: y
+      type: [float, m]
+      desc: "the activated affine transform"
+  custom_op: matmul_activation
+  custom_op_args: [ReluActivation]
+  differentiable: True
+  desc: "@ref matmul followed by @ref relu, with the bias addition and the activation in one kernel. Produced by the GPU backend's lowering of @ref relu applied to the output of @ref matmul."
+
+matmul_leaky_relu:
+  precision: [float32, float64]
+  inputs:
+    - name: x
+      type: [float, n]
+      desc: "input vector"
+      backward_arg: True
+    - name: weight
+      type: [float, single, m, n]
+      desc: "weight matrix"
+      backward_arg: True
+    - name: bias
+      type: [float, single, m]
+      desc: "bias vector"
+  outputs:
+    - name: linear
+      type: [float, m]
+      desc: "the affine transform of the input"
+    - name: y
+      type: [float, m]
+      desc: "the activated affine transform"
+  custom_op: matmul_activation
+  custom_op_args: [LeakyReluActivation]
+  differentiable: True
+  desc: "@ref matmul followed by @ref leaky_relu, with the bias addition and the activation in one kernel. Produced by the GPU backend's lowering of @ref leaky_relu applied to the output of @ref matmul."
+
+matmul_elu:
+  precision: [float32, float64]
+  inputs:
+    - name: x
+      type: [float, n]
+      desc: "input vector"
+      backward_arg: True
+    - name: weight
+      type: [float, single, m, n]
+      desc: "weight matrix"
+      backward_arg: True
+    - name: bias
+      type: [float, single, m]
+      desc: "bias vector"
+  outputs:
+    - name: linear
+      type: [float, m]
+      desc: "the affine transform of the input"
+    - name: y
+      type: [float, m]
+      desc: "the activated affine transform"
+  custom_op: matmul_activation
+  custom_op_args: [EluActivation]
+  differentiable: True
+  desc: "@ref matmul followed by @ref elu, with the bias addition and the activation in one kernel. Produced by the GPU backend's lowering of @ref elu applied to the output of @ref matmul."
+
+matmul_gelu:
+  precision: [float32, float64]
+  inputs:
+    - name: x
+      type: [float, n]
+      desc: "input vector"
+      backward_arg: True
+    - name: weight
+      type: [float, single, m, n]
+      desc: "weight matrix"
+      backward_arg: True
+    - name: bias
+      type: [float, single, m]
+      desc: "bias vector"
+  outputs:
+    - name: linear
+      type: [float, m]
+      desc: "the affine transform of the input"
+    - name: y
+      type: [float, m]
+      desc: "the activated affine transform"
+  custom_op: matmul_activation
+  custom_op_args: [GeluActivation]
+  differentiable: True
+  desc: "@ref matmul followed by @ref gelu, with the bias addition and the activation in one kernel. Produced by the GPU backend's lowering of @ref gelu applied to the output of @ref matmul."
+
+matmul_sigmoid:
+  precision: [float32, float64]
+  inputs:
+    - name: x
+      type: [float, n]
+      desc: "input vector"
+      backward_arg: True
+    - name: weight
+      type: [float, single, m, n]
+      desc: "weight matrix"
+      backward_arg: True
+    - name: bias
+      type: [float, single, m]
+      desc: "bias vector"
+  outputs:
+    - name: linear
+      type: [float, m]
+      desc: "the affine transform of the input"
+    - name: y
+      type: [float, m]
+      desc: "the activated affine transform"
+  custom_op: matmul_activation
+  custom_op_args: [SigmoidActivation]
+  differentiable: True
+  desc: "@ref matmul followed by @ref sigmoid, with the bias addition and the activation in one kernel. Produced by the GPU backend's lowering of @ref sigmoid applied to the output of @ref matmul."
+
+matmul_softplus:
+  precision: [float32, float64]
+  inputs:
+    - name: x
+      type: [float, n]
+      desc: "input vector"
+      backward_arg: True
+    - name: weight
+      type: [float, single, m, n]
+      desc: "weight matrix"
+      backward_arg: True
+    - name: bias
+      type: [float, single, m]
+      desc: "bias vector"
+  outputs:
+    - name: linear
+      type: [float, m]
+      desc: "the affine transform of the input"
+    - name: y
+      type: [float, m]
+      desc: "the activated affine transform"
+  custom_op: matmul_activation
+  custom_op_args: [SoftplusActivation]
+  differentiable: True
+  desc: "@ref matmul followed by @ref softplus, with the bias addition and the activation in one kernel. Produced by the GPU backend's lowering of @ref softplus applied to the output of @ref matmul."
+
 relu:
+  precision: [float32, float64]
   inputs:
     - name: in1
       type: [float, ...]
@@ -3197,6 +3401,7 @@ relu:
   desc: "Element-wise ReLU activation. Building block of @ref MLP."
 
 leaky_relu:
+  precision: [float32, float64]
   inputs:
     - name: in1
       type: [float, ...]
@@ -3210,6 +3415,7 @@ leaky_relu:
   desc: "Element-wise leaky ReLU activation. Building block of @ref MLP."
 
 elu:
+  precision: [float32, float64]
   inputs:
     - name: in1
       type: [float, ...]
@@ -3223,6 +3429,7 @@ elu:
   desc: "Element-wise ELU activation. Building block of @ref MLP."
 
 gelu:
+  precision: [float32, float64]
   inputs:
     - name: in1
       type: [float, ...]
@@ -3236,6 +3443,7 @@ gelu:
   desc: "Element-wise GELU activation. Building block of @ref MLP."
 
 sigmoid:
+  precision: [float32, float64]
   inputs:
     - name: in1
       type: [float, ...]
@@ -3250,6 +3458,7 @@ sigmoid:
   desc: "Element-wise sigmoid activation. Building block of @ref MLP."
 
 scaled_tanh:
+  precision: [float32, float64]
   inputs:
     - name: in1
       type: [float, ...]
@@ -3264,6 +3473,7 @@ scaled_tanh:
   desc: "Element-wise scaled hyperbolic tangent activation. Building block of @ref MLP."
 
 softplus:
+  precision: [float32, float64]
   inputs:
     - name: in1
       type: [float, ...]
@@ -3353,6 +3563,52 @@ rqs_inverse:
   differentiable: True
   dims: 2
   desc: "Applies a rational-quadratic spline in the inverse direction. Building block of @ref Flow."
+
+rqs_forward_with_float32:
+  inputs:
+    - name: input
+      type: [float, n]
+      desc: "values to transform"
+    - name: condition
+      type: [float, n, 6]
+      desc: "packed spline parameters"
+  outputs:
+    - name: output
+      type: [float, n]
+      desc: "transformed values"
+    - name: det
+      type: [float, n]
+      desc: "per-element Jacobian"
+    - name: output32
+      type: [float32, n]
+      desc: "the transformed values in single precision"
+  differentiable: True
+  dims: 2
+  vectorized: False
+  desc: "@ref rqs_forward that also returns its output in single precision, so that the conversion does not need a separate kernel. Produced by the GPU backend's lowering of @ref convert_float32 applied to the output of @ref rqs_forward."
+
+rqs_inverse_with_float32:
+  inputs:
+    - name: input
+      type: [float, n]
+      desc: "values to transform"
+    - name: condition
+      type: [float, n, 6]
+      desc: "packed spline parameters"
+  outputs:
+    - name: output
+      type: [float, n]
+      desc: "transformed values"
+    - name: det
+      type: [float, n]
+      desc: "per-element Jacobian"
+    - name: output32
+      type: [float32, n]
+      desc: "the transformed values in single precision"
+  differentiable: True
+  dims: 2
+  vectorized: False
+  desc: "@ref rqs_inverse that also returns its output in single precision, so that the conversion does not need a separate kernel. Produced by the GPU backend's lowering of @ref convert_float32 applied to the output of @ref rqs_inverse."
 
 softmax:
   inputs:
@@ -3569,6 +3825,26 @@ select:
       desc: "gathered entries"
   differentiable: True
   desc: "Gathers several entries from a float vector by index."
+
+select_with_float32:
+  inputs:
+    - name: input
+      type: [float, n]
+      desc: "source vector"
+    - name: indices
+      type: [int, single, m]
+      desc: "indices to gather"
+      backward_arg: True
+  outputs:
+    - name: output
+      type: [float, m]
+      desc: "gathered entries"
+    - name: output32
+      type: [float32, m]
+      desc: "the gathered entries in single precision"
+  differentiable: True
+  vectorized: False
+  desc: "@ref select that also returns the gathered entries in single precision, so that the conversion does not need a separate kernel. Produced by the GPU backend's lowering of @ref convert_float32 applied to the output of @ref select."
 
 select_vector:
   inputs:

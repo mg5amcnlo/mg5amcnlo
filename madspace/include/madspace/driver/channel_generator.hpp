@@ -226,6 +226,7 @@ private:
         std::array<int, 5> ladder;
         int subprocess_index;
         int bias;
+        int matrix_element;
         int random, rest;
     };
 

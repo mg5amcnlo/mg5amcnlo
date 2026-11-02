@@ -54,6 +54,7 @@ public:
      * @param subnet_activation  Activation of the subnetworks.
      * @param invert_spline     Whether the spline is applied in the inverse
      *                          direction.
+     * @param subnet_precision  Float type of the subnetworks (see @ref MLP).
      */
     Flow(
         std::size_t input_dim,
@@ -63,7 +64,8 @@ public:
         std::size_t subnet_hidden_dim = 32,
         std::size_t subnet_layers = 3,
         MLP::Activation subnet_activation = MLP::leaky_relu,
-        bool invert_spline = true
+        bool invert_spline = true,
+        DataType subnet_precision = DataType::dt_float64
     );
     /// Number of transformed dimensions.
     std::size_t input_dim() const { return _input_dim; }

@@ -409,6 +409,9 @@ else
 endif
 export BACKENDDIR
 
+# Export FPTYPE (used e.g. to name the common library, see MADMATRIX_COMMONLIB below)
+export FPTYPE
+
 #-------------------------------------------------------------------------------
 
 #=== Configure ccache for C++ and CUDA/HIP builds
@@ -438,13 +441,11 @@ ifeq ($(BACKEND),hip)
   override OPTFLAGS = -O2
 endif
 
-# PROFILE=1: reduced optimisation + symbols suitable for profilers (perf, gprof, valgrind...)
+# PROFILE=1: unchanged optimisation (-O3) + symbols and frame pointers for profilers (perf, Adaptyst, gprof, valgrind...)
 # DEBUG=1  : no optimisation + full debug symbols
 # Both flags propagate automatically to src/ sub-makes via MAKEFLAGS.
-# These override the HIP workaround above intentionally: DEBUG in particular must always win.
-ifeq ($(PROFILE),1)
-  override OPTFLAGS = -O2
-else ifeq ($(DEBUG),1)
+# DEBUG overrides the HIP workaround above intentionally: it must always win.
+ifeq ($(DEBUG),1)
   override OPTFLAGS = -O0
 endif
 
@@ -469,11 +470,16 @@ ifeq ($(PCH),1)
 endif
 
 # Dependency on src directory
-# The common library name carries the full BACKEND suffix so each vectorisation/GPU variant is distinct.
+# The common library name carries the model name and the full BACKEND suffix -- see the
+# matching comment in madmatrix_src.mk for why the model name is required (dlopen
+# collisions across process directories regenerated in different models) -- and, purely
+# for naming consistency with MADMATRIX_LIB, the FPTYPE too; unlike MADMATRIX_LIB this
+# isn't consumed by anything outside these madmatrix makefiles (subprocesses.json never
+# references it directly), so no further propagation is needed for this one.
 # LIBTAG (empty by default) goes into the name of every library of this output: the
 # dynamic loader identifies a library by its name, so two outputs loaded into one
 # process (MadSpin's production and decay matrix elements) need different ones.
-MADMATRIX_COMMONLIB = madmatrix_common$(LIBTAG)_$(BACKEND)
+MADMATRIX_COMMONLIB = madmatrix_common$(LIBTAG)_%(model)s_$(BACKEND)_$(FPTYPE)
 LIBFLAGS = -L$(LIBDIR) -l$(MADMATRIX_COMMONLIB)
 INCFLAGS += -I$(SRC) -I$(SRC)/rambo
 
@@ -569,6 +575,14 @@ endif
 # Set the build flags appropriate to OMPFLAGS
 $(info OMPFLAGS=$(OMPFLAGS))
 CXXFLAGS += $(OMPFLAGS)
+
+# --hel_recycling warm-up probe (make BACKEND=scalar FPTYPE=d HRPROBE=1): the
+# ordinary code with every amplitude recorded, so that the good-helicity scan
+# can report which ones vanish at which helicity (see SigmaKin.cc, MG_HR_PROBE).
+# Built and thrown away by the exporter at generation time.
+ifeq ($(HRPROBE),1)
+  CXXFLAGS += -DMG_HR_PROBE
+endif
 
 # Set the build flags appropriate to each BACKEND choice (example: "make BACKEND=scalar")
 # [NB MGONGPU_PVW512 is needed because "-mprefer-vector-width=256" is not exposed in a macro]
@@ -755,6 +769,11 @@ endif
 ifneq ($(filter 1,$(PROFILE) $(DEBUG)),)
   CXXFLAGS += -g -fno-omit-frame-pointer
   GPUFLAGS += $(XCOMPILERFLAG) -g $(XCOMPILERFLAG) -fno-omit-frame-pointer
+  # Frame pointers in leaf functions too, for complete stacks (option only exists on x86 and AArch64).
+  ifneq ($(filter x86_64 aarch64 arm64,$(UNAME_M)),)
+    CXXFLAGS += -mno-omit-leaf-frame-pointer
+    GPUFLAGS += $(XCOMPILERFLAG) -mno-omit-leaf-frame-pointer
+  endif
 endif
 
 #-------------------------------------------------------------------------------
@@ -814,13 +833,54 @@ override RUNTIME =
 processid_short=$(shell basename $(CURDIR))
 ###$(info processid_short=$(processid_short))
 
-MADMATRIX_LIB = madmatrix$(LIBTAG)_$(processid_short)_$(BACKEND)
+# The process library name carries LIBTAG (see MADMATRIX_COMMONLIB above), the model
+# name (same %(model)s substitution, and the same dlopen-collision rationale, as
+# MADMATRIX_COMMONLIB above), the process id, the hardware backend, and the
+# floating-point type -- so that libraries built for different models/precisions/backends
+# out of the same process directory never collide, and so that a loader can tell, from
+# the filename alone, exactly which of those a given library on disk was built with
+# (subprocesses.json itself stays agnostic to BACKEND and FPTYPE -- see me_lib_format in
+# madmatrix/output.py -- since a given process directory can be compiled for several of
+# each without regenerating the JSON).
+MADMATRIX_LIB = madmatrix$(LIBTAG)_%(model)s_$(processid_short)_$(BACKEND)_$(FPTYPE)
 objects_lib=$(BUILDDIR)/CPPProcess.o $(BUILDDIR)/color_sum.o $(BUILDDIR)/MatrixElementKernels.o $(BUILDDIR)/CrossSectionKernels.o $(BUILDDIR)/umami.o $(BUILDDIR)/SigmaKin.o
 # The spin-density matrices for MadSpin (backend/common/Density.h): C++ backends,
 # and only in the builds madmatrix/density.py asks for (DENSITY=1, the scalar
 # libraries MadSpin loads), not in every library of every output
 ifeq ($(DENSITY)$(GPUCC),1)
   objects_lib += $(BUILDDIR)/Density.o
+endif
+
+# --hel_recycling: the chunks of a big recycled block, in translation units of
+# their own so that they build in parallel (see HelRecyclingChunks.h). CPU only:
+# the GPU backend ignores the recycled build, and so does the warm-up probe.
+ifeq ($(GPUCC),)
+ifneq ($(HRPROBE),1)
+objects_lib += $(patsubst %%.cc,$(BUILDDIR)/%%.o,$(wildcard HelRecyclingChunks_*.cc))
+endif
+# HRMAXMB=<n>: the table size per SIMD page above which the build takes the
+# plain matrix element instead (see hrUseRecycling in
+# backend/{cpu,simd}/SigmaKin.cc; 0: no limit). HRNOBLAS=1: the recycled build
+# makes its color sum row by row even where BLAS is used. Both are read from the
+# environment too, so they reach an mg7 build. SigmaKin.o is rebuilt when they
+# change: the compiler flags are not otherwise a dependency of the objects.
+ifneq ($(HRMAXMB),)
+CXXFLAGS += -DMGONGPU_HR_MAX_TABLE_MB=$(HRMAXMB)
+endif
+ifneq ($(HRNOBLAS),)
+CXXFLAGS += -DMGONGPU_HR_NO_BLAS
+endif
+$(BUILDDIR)/.hrflags: FORCE_HRFLAGS
+	@mkdir -p $(BUILDDIR); if [ "$$(cat $@ 2>/dev/null)" != "$(HRMAXMB):$(HRNOBLAS)" ]; then echo "$(HRMAXMB):$(HRNOBLAS)" > $@; fi
+.PHONY: FORCE_HRFLAGS
+FORCE_HRFLAGS:
+$(BUILDDIR)/SigmaKin.o: $(BUILDDIR)/.hrflags
+else
+ifneq ($(wildcard HelRecycling.inc),)
+ifeq ($(filter clean cleanall cleancommon cleanallcommon,$(MAKECMDGOALS)),)
+$(info INFO: --hel_recycling is CPU only: this $(BACKEND) build of $(notdir $(CURDIR)) is the plain matrix element (see backend/gpu/SigmaKin.cc))
+endif
+endif
 endif
 
 # Backend-owned sources (the backend variant first, then what all of them share)
@@ -917,7 +977,7 @@ ifeq ($(MADMATRIX_COMMONLIB_EXTERNAL),1)
 $(LIBDIR)/lib$(MADMATRIX_COMMONLIB).so: ;
 else
 $(LIBDIR)/lib$(MADMATRIX_COMMONLIB).so: $(SRC)/*.h $(SRC)/*.cc $(BUILDDIR)/.build.$(TAG)
-	$(MAKE) -C $(SRC) BACKEND=$(BACKEND) LIBDIR=$(LIBDIR)
+	$(MAKE) -C $(SRC) BACKEND=$(BACKEND) FPTYPE=$(FPTYPE) LIBDIR=$(LIBDIR)
 endif
 
 #-------------------------------------------------------------------------------
@@ -1020,20 +1080,26 @@ $(addprefix commonlib.,$(BLDBACKENDS)): commonlib.%%:
 clean:
 ifeq ($(USEBUILDDIR),1)
 	rm -rf $(BUILDDIR)
+ifneq ($(MADMATRIX_COMMONLIB_EXTERNAL),1)
+	$(MAKE) -C $(SRC) clean BACKEND=$(BACKEND) FPTYPE=$(FPTYPE) LIBDIR=$(LIBDIR)
+endif
 else
 	rm -f $(BUILDDIR)/.build.* $(BUILDDIR)/*.o
 	rm -f $(LIBDIR)/lib$(MADMATRIX_LIB).so
 	rm -f $(BACKEND_LOG)
 ifneq ($(MADMATRIX_COMMONLIB_EXTERNAL),1)
-	$(MAKE) -C $(SRC) clean BACKEND=$(BACKEND) LIBDIR=$(LIBDIR)
+	$(MAKE) -C $(SRC) clean BACKEND=$(BACKEND) FPTYPE=$(FPTYPE) LIBDIR=$(LIBDIR)
 endif
 endif
 
-# cleanall: remove objects and libraries for ALL backends.
+# cleanall: remove objects and libraries for ALL backends and FPTYPEs.
+# (NB: MADMATRIX_LIB itself only names one BACKEND/FPTYPE combination -- see
+# its own definition above -- so this globs for all of them explicitly,
+# rather than just removing $(MADMATRIX_LIB) as 'clean' above does.)
 cleanall:
 	rm -rf build.*
 	rm -f ./.build.* ./*.o
-	rm -f $(LIBDIR)/libmadmatrix_$(processid_short)_*.so
+	rm -f $(LIBDIR)/libmadmatrix_%(model)s_$(processid_short)_*.so
 ifneq ($(MADMATRIX_COMMONLIB_EXTERNAL),1)
 	$(MAKE) -C $(SRC) cleanall LIBDIR=$(LIBDIR)
 endif
@@ -1042,7 +1108,7 @@ endif
 # for the SubProcesses dispatcher, which owns the common library while the P*
 # directories are cleaned in parallel with MADMATRIX_COMMONLIB_EXTERNAL=1.
 cleancommon:
-	$(MAKE) -C $(SRC) clean BACKEND=$(BACKEND) LIBDIR=$(LIBDIR)
+	$(MAKE) -C $(SRC) clean BACKEND=$(BACKEND) FPTYPE=$(FPTYPE) LIBDIR=$(LIBDIR)
 
 cleanallcommon:
 	$(MAKE) -C $(SRC) cleanall LIBDIR=$(LIBDIR)

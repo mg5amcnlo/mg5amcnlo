@@ -16,7 +16,7 @@ N_BINS = 5
 
 
 def histogram_function(n_bins):
-    out_type = ms.Type(ms.DataType.float, ms.BatchSize.one, [n_bins + 2])
+    out_type = ms.Type(ms.DataType.float64, ms.BatchSize.one, [n_bins + 2])
     fb = ms.FunctionBuilder(
         ms.NamedTypes([(name, ms.batch_float) for name in ("x", "w", "lo", "hi")]),
         ms.NamedTypes([("values", out_type), ("square_values", out_type)]),

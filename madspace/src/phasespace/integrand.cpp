@@ -48,8 +48,8 @@ bool emits_alphas_scales(
     const std::optional<RunningCoupling>& running_coupling,
     std::size_t particle_count
 ) {
-    return energy_scale && energy_scale->mlm_alphas_reweighting() &&
-        running_coupling && particle_count > 3;
+    return energy_scale && energy_scale->mlm_alphas_reweighting() && running_coupling &&
+        particle_count > 3;
 }
 
 // Whether the event carries the MLM pdf reweighting ladder, for the
@@ -212,8 +212,7 @@ Integrand::Integrand(
                         energy_scale, running_coupling, mapping.particle_count()
                     )) {
                     ret_types.push_back(
-                        "alphas_scales",
-                        batch_float_array(mapping.particle_count() - 3)
+                        "alphas_scales", batch_float_array(mapping.particle_count() - 3)
                     );
                 }
                 if (emits_pdf_ladder(
@@ -229,6 +228,9 @@ Integrand::Integrand(
                     for (auto name : ladder_beam_names) {
                         ret_types.push_back(name, batch_float_array(2));
                     }
+                }
+                if (diff_xs_first.matrix_element_output()) {
+                    ret_types.push_back("matrix_element", batch_float);
                 }
                 // before "random": the outputs after it feed the discrete histograms
                 if (custom_bias) {
@@ -374,19 +376,15 @@ Integrand::Integrand(
         for (std::size_t f = 0; f < option_count; ++f) {
             _pdf_rw_table.at(0 * option_count + f) = index_of(21);
             for (std::size_t beam = 0; beam < 2; ++beam) {
-                _pdf_rw_table.at((1 + beam) * option_count + f) = index_of(
-                    pid_options.size() > 0 ? pid_options.at(f).at(beam) : 21
-                );
+                _pdf_rw_table.at((1 + beam) * option_count + f) =
+                    index_of(pid_options.size() > 0 ? pid_options.at(f).at(beam) : 21);
             }
             for (std::size_t c = 0; c < absolute.size(); ++c) {
-                _pdf_rw_table.at((3 + c) * option_count + f) =
-                    index_of(absolute.at(c));
+                _pdf_rw_table.at((3 + c) * option_count + f) = index_of(absolute.at(c));
             }
         }
         for (std::size_t c = 0; c < class_count; ++c) {
-            _pdf_rw_class_offsets.push_back(
-                static_cast<me_int_t>(c * option_count)
-            );
+            _pdf_rw_class_offsets.push_back(static_cast<me_int_t>(c * option_count));
         }
         _pdf_rw = PartonDensity(*grid, rw_pids, true);
         _pdf_rw_pdgs.assign(rw_pids.begin(), rw_pids.end());
@@ -492,13 +490,13 @@ NamedVector<Value> Integrand::build_function_impl(
 }
 
 NamedVector<Type> Integrand::compute_channel_part_ret_types() const {
-    auto acc_float = Type(DataType::dt_float, acc_batch_size, {});
-    auto acc_int = Type(DataType::dt_int, acc_batch_size, {});
+    auto acc_float = Type(DataType::dt_float64, acc_batch_size, {});
+    auto acc_int = Type(DataType::dt_int32, acc_batch_size, {});
     auto acc_float_array = [](int n) {
-        return Type(DataType::dt_float, acc_batch_size, {n});
+        return Type(DataType::dt_float64, acc_batch_size, {n});
     };
     auto acc_four_vec_array = [](int n) {
-        return Type(DataType::dt_float, acc_batch_size, {n, 4});
+        return Type(DataType::dt_float64, acc_batch_size, {n, 4});
     };
 
     bool has_multi_flavor = _pid_options.size() > 1;
@@ -522,7 +520,7 @@ NamedVector<Type> Integrand::compute_channel_part_ret_types() const {
     }
 
     // outputs after cuts
-    ret.push_back("indices_acc", Type(DataType::dt_int, acc_batch_size, {}));
+    ret.push_back("indices_acc", Type(DataType::dt_int32, acc_batch_size, {}));
     ret.push_back("momenta_acc", acc_four_vec_array(particle_count));
     ret.push_back("x1_acc", acc_float);
     ret.push_back("x2_acc", acc_float);
@@ -553,7 +551,9 @@ NamedVector<Type> Integrand::compute_channel_part_ret_types() const {
     }
     if (_pdf_rw && _pid_options.size() > 0) {
         for (auto name : ladder_slot_names) {
-            ret.push_back(std::format("{}_acc", name), acc_float_array(particle_count - 2));
+            ret.push_back(
+                std::format("{}_acc", name), acc_float_array(particle_count - 2)
+            );
         }
         for (auto name : ladder_beam_names) {
             ret.push_back(std::format("{}_acc", name), acc_float_array(2));
@@ -727,10 +727,11 @@ NamedVector<Value> Integrand::build_channel_part(
             _pdfs.at(i).value().build_function(fb, {x_acc.at(i), pdf_scale}).at(0);
         if (_has_mirror && _pdfs_swapped.at(i)) {
             // leg i of a mirrored event comes from the other beam
-            auto pdf_swapped = _pdfs_swapped.at(i)
-                                   .value()
-                                   .build_function(fb, {x_acc.at(i), pdf_scale})
-                                   .at(0);
+            auto pdf_swapped =
+                _pdfs_swapped.at(i)
+                    .value()
+                    .build_function(fb, {x_acc.at(i), pdf_scale})
+                    .at(0);
             pdf = fb.gather_vector(
                 fb.batch_gather(indices_acc, mirror_index), fb.stack({pdf, pdf_swapped})
             );
@@ -956,8 +957,9 @@ NamedVector<Value> Integrand::build_channel_part(
         for (auto name : ladder_slot_names) {
             out.push_back(
                 std::format("{}_acc", name),
-                mlm_ladder.size() > 0 ? mlm_ladder.at(name)
-                                      : fb.full({0., batch_size, slot_count})
+                mlm_ladder.size() > 0
+                    ? mlm_ladder.at(name)
+                    : fb.full({0., batch_size, slot_count})
             );
         }
         for (auto name : ladder_beam_names) {
@@ -1034,9 +1036,8 @@ ValueVec Integrand::mlm_weights(
         auto flavor_classes = scales.at("pdf_rw_flavor");
         std::size_t slot_count = flavor_classes.type.shape.at(0);
         double low = _energy_scale->min_scale();
-        double high = _energy_scale->max_scale() > 0.
-            ? _energy_scale->max_scale()
-            : 1e30;
+        double high =
+            _energy_scale->max_scale() > 0. ? _energy_scale->max_scale() : 1e30;
         auto ones = fb.full({1., batch_size_acc});
         Value factor, veto;
         ValueVec ladder_x, ladder_pdg, ladder_q, ladder_info;
@@ -1052,10 +1053,7 @@ ValueVec Integrand::mlm_weights(
             auto beam = pick("pdf_rw_beam");
             // x of the beam line: the beam's own momentum fraction times
             // everything the clustering z has taken off it since.
-            auto x_beam = fb.add(
-                x.at(0),
-                fb.mul(beam, fb.sub(x.at(1), x.at(0)))
-            );
+            auto x_beam = fb.add(x.at(0), fb.mul(beam, fb.sub(x.at(1), x.at(0))));
             auto x = fb.mul(x_beam, pick("pdf_rw_x"));
             auto scale_of = [&](const char* name) {
                 auto q = pick(name);
@@ -1123,7 +1121,8 @@ ValueVec Integrand::mlm_weights(
             // each beam's leading density, at the scale it was evaluated at
             // (clamped by apply_scale_range)
             ladder->push_back(
-                "ladder_lead_q", fb.stack({scales.at("pdf_scale1"), scales.at("pdf_scale2")})
+                "ladder_lead_q",
+                fb.stack({scales.at("pdf_scale1"), scales.at("pdf_scale2")})
             );
         }
     }
@@ -1239,8 +1238,9 @@ NamedVector<Value> Integrand::build_common_part(
     if (_energy_scale && _energy_scale->is_mlm()) {
         cluster_scales_acc = args.at("cluster_scales_acc");
     }
-    bool has_alphas_scales =
-        emits_alphas_scales(_energy_scale, _running_coupling, _mapping.particle_count());
+    bool has_alphas_scales = emits_alphas_scales(
+        _energy_scale, _running_coupling, _mapping.particle_count()
+    );
     Value alphas_scales_acc;
     if (has_alphas_scales) {
         alphas_scales_acc = args.at("alphas_scales_acc");
@@ -1405,24 +1405,28 @@ NamedVector<Value> Integrand::build_common_part(
             for (int k = 0; k < _mlm_history_qcd_power; ++k) {
                 factor = fb.mul(factor, alpha_ratio);
             }
+            if (_diff_xs.at(0).matrix_element_output()) {
+                // the stored squared matrix element is at the event's alpha_s
+                // too, without the beam densities
+                dxs_vec.back() = fb.mul(dxs_vec.back(), factor);
+            }
             for (std::size_t i = 0; i < 2; ++i) {
                 if (_diff_xs.at(0).has_pdf(i)) {
                     // a first density of exactly zero gave a zero weight, which
                     // stays zero (the guard only keeps 0 * x / 0 from a NaN)
-                    auto denominator = fb.add(
-                        pdfs_first.at(i), fb.cut_one(pdfs_first.at(i), 0., 0.)
-                    );
-                    factor =
-                        fb.mul(factor, fb.div(pdfs_acc.at(i), denominator));
+                    auto denominator =
+                        fb.add(pdfs_first.at(i), fb.cut_one(pdfs_first.at(i), 0., 0.));
+                    factor = fb.mul(factor, fb.div(pdfs_acc.at(i), denominator));
                 }
             }
             dxs_vec.at(0) = fb.mul(dxs_vec.at(0), factor);
         } else {
             // several powers of alpha_s mix (gluon fusion and VBF in one
             // process, say): the matrix element has to be evaluated again
-            dxs_vec = _diff_xs.at(0)
-                          .build_function(fb, make_xs_args(pdfs_acc, alpha_qcd_acc))
-                          .values();
+            dxs_vec =
+                _diff_xs.at(0)
+                    .build_function(fb, make_xs_args(pdfs_acc, alpha_qcd_acc))
+                    .values();
         }
     }
 
@@ -1605,9 +1609,7 @@ NamedVector<Value> Integrand::build_common_part(
             );
         }
 
-        outputs.push_back(
-            "ren_scale", scatter_or_drop(zeros_float, ren_scale_acc)
-        );
+        outputs.push_back("ren_scale", scatter_or_drop(zeros_float, ren_scale_acc));
         outputs.push_back("alpha_qcd", scatter_or_drop(zeros_float, alpha_qcd_acc));
         ValueVec pdf_vals;
         if (_diff_xs.at(0).has_pdf(0)) {
@@ -1636,8 +1638,7 @@ NamedVector<Value> Integrand::build_common_part(
             outputs.push_back(
                 "cluster_scales",
                 scatter_or_drop(
-                    fb.full({0., batch_size_val, outgoing_count}),
-                    cluster_scales_acc
+                    fb.full({0., batch_size_val, outgoing_count}), cluster_scales_acc
                 )
             );
         }
@@ -1646,8 +1647,7 @@ NamedVector<Value> Integrand::build_common_part(
                 auto& value = ladder_acc.at(name);
                 auto width = static_cast<me_int_t>(value.type.shape.at(0));
                 outputs.push_back(
-                    name,
-                    scatter_or_drop(fb.full({0., batch_size_val, width}), value)
+                    name, scatter_or_drop(fb.full({0., batch_size_val, width}), value)
                 );
             }
         }
@@ -1658,6 +1658,11 @@ NamedVector<Value> Integrand::build_common_part(
                 scatter_or_drop(
                     fb.full({0., batch_size_val, vertex_count}), alphas_scales_acc
                 )
+            );
+        }
+        if (_diff_xs.at(0).matrix_element_output()) {
+            outputs.push_back(
+                "matrix_element", scatter_or_drop(zeros_float, dxs_vec.back())
             );
         }
         if (bias_acc) {

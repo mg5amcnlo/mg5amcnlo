@@ -102,10 +102,10 @@ class TestMadMatrixDensityFiles(unittest.TestCase):
 
     def test_make_variables(self):
         self.assertEqual(density.make_variables(),
-                         ['PGOAL=lib', 'BACKEND=scalar', 'DENSITY=1'])
+                         ['PGOAL=lib', 'BACKEND=scalar', 'FPTYPE=m', 'DENSITY=1'])
         self.assertEqual(density.build_command(4, 'simd_128', '_ms2d'),
-                         ['make', '-j4', 'PGOAL=lib', 'BACKEND=simd_128', 'DENSITY=1',
-                          'LIBTAG=_ms2d'])
+                         ['make', '-j4', 'PGOAL=lib', 'BACKEND=simd_128', 'FPTYPE=m',
+                          'DENSITY=1', 'LIBTAG=_ms2d'])
 
     def test_find_libtag(self):
         self.assertRaises(density.MadDensityError, density.find_libtag, self.tmp)
@@ -114,6 +114,21 @@ class TestMadMatrixDensityFiles(unittest.TestCase):
         self.assertEqual(density.find_libtag(self.tmp), '_ms1p')
         self.assertEqual(density.find_libtag(self.tmp, 'simd_128'), '_ms1p')
         self.touch('libmadmatrix_common_scalar.so')
+        self.assertRaises(density.MadDensityError, density.find_libtag, self.tmp)
+
+    def test_find_libtag_model_fptype(self):
+        """An output whose process table names the common library (with the
+        model and FPTYPE): the tag is read off that name."""
+        with open(os.path.join(self.tmp, 'SubProcesses', density.PROCESSES_FILE), 'w') as f:
+            json.dump({'common_library': 'libmadmatrix_common{libtag}_sm_{backend}_{fptype}.so',
+                       'subprocesses': []}, f)
+        self.assertRaises(density.MadDensityError, density.find_libtag, self.tmp)
+        self.touch('libmadmatrix_common_ms1p_sm_scalar_m.so')
+        self.touch('libmadmatrix_common_ms1p_sm_scalar_d.so')
+        self.assertEqual(density.find_libtag(self.tmp), '_ms1p')
+        self.assertEqual(density.common_library_path(self.tmp, '_ms1p'),
+                         os.path.join(self.tmp, 'lib', 'libmadmatrix_common_ms1p_sm_scalar_m.so'))
+        self.touch('libmadmatrix_common_sm_scalar_m.so')
         self.assertRaises(density.MadDensityError, density.find_libtag, self.tmp)
 
     def test_is_output(self):

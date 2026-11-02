@@ -13,20 +13,44 @@ namespace madspace {
 /**
  * Element data type of a compute-graph @ref Value.
  *
- * `dt_int` and `dt_float` are ordinary integer and floating-point tensors.
+ * `dt_int32`, `dt_float32` and `dt_float64` are ordinary integer and
+ * floating-point tensors.
  * `batch_sizes` marks a value that instead carries a list of batch sizes, used
  * to split and recombine batches in multi-channel functions.
  */
 enum class DataType {
-    dt_int,      ///< Integer tensor.
-    dt_float,    ///< Floating-point tensor.
+    dt_int32,    ///< 32-bit integer tensor.
+    dt_float32,  ///< Single-precision floating-point tensor.
+    dt_float64,  ///< Double-precision floating-point tensor.
     batch_sizes, ///< A list of batch sizes rather than tensor data.
 };
 
 using me_int_t = int;
 
 template <typename T>
-concept ScalarType = std::same_as<T, me_int_t> || std::same_as<T, double>;
+concept ScalarType =
+    std::same_as<T, me_int_t> || std::same_as<T, float> || std::same_as<T, double>;
+
+/// Scalar types that can be stored in a literal @ref Value.
+template <typename T>
+concept LiteralType = std::same_as<T, me_int_t> || std::same_as<T, double>;
+
+/// The `DataType` corresponding to the C++ element type `T`.
+template <ScalarType T>
+constexpr DataType dtype_of() {
+    if constexpr (std::is_same_v<T, me_int_t>) {
+        return DataType::dt_int32;
+    } else if constexpr (std::is_same_v<T, float>) {
+        return DataType::dt_float32;
+    } else {
+        return DataType::dt_float64;
+    }
+}
+
+/// True for the floating-point data types `dt_float32` and `dt_float64`.
+inline bool is_float(DataType dtype) {
+    return dtype == DataType::dt_float32 || dtype == DataType::dt_float64;
+}
 
 /**
  * Symbolic size of the batch dimension of a @ref Value.
@@ -138,19 +162,19 @@ inline bool operator!=(const Type& lhs, const Type& rhs) {
 
 using TypeVec = std::vector<Type>;
 
-const Type single_float{DataType::dt_float, BatchSize::One{}, {}};
-const Type single_int{DataType::dt_int, BatchSize::One{}, {}};
+const Type single_float{DataType::dt_float64, BatchSize::One{}, {}};
+const Type single_int{DataType::dt_int32, BatchSize::One{}, {}};
 inline Type single_float_array(int count) {
-    return {DataType::dt_float, BatchSize::one, {count}};
+    return {DataType::dt_float64, BatchSize::one, {count}};
 }
 inline Type single_int_array(int count) {
-    return {DataType::dt_int, BatchSize::one, {count}};
+    return {DataType::dt_int32, BatchSize::one, {count}};
 }
 inline Type single_float_array_2d(int count1, int count2) {
-    return {DataType::dt_float, BatchSize::one, {count1, count2}};
+    return {DataType::dt_float64, BatchSize::one, {count1, count2}};
 }
 inline Type single_int_array_2d(int count1, int count2) {
-    return {DataType::dt_int, BatchSize::one, {count1, count2}};
+    return {DataType::dt_int32, BatchSize::one, {count1, count2}};
 }
 
 const BatchSize batch_size = BatchSize("batch_size");
@@ -158,21 +182,21 @@ Type batch_size_array(int count);
 /// A `batch_sizes` `Type` splitting `batch_size` into `count` symbolic
 /// per-channel sizes that add up to the total.
 Type multichannel_batch_size(int count);
-const Type batch_float{DataType::dt_float, batch_size, {}};
-const Type batch_int{DataType::dt_int, batch_size, {}};
-const Type batch_four_vec{DataType::dt_float, batch_size, {4}};
+const Type batch_float{DataType::dt_float64, batch_size, {}};
+const Type batch_int{DataType::dt_int32, batch_size, {}};
+const Type batch_four_vec{DataType::dt_float64, batch_size, {4}};
 /// A `float` `Type` with a batch dimension and a static trailing shape of
 /// `count` elements.
 inline Type batch_float_array(int count) {
-    return {DataType::dt_float, batch_size, {count}};
+    return {DataType::dt_float64, batch_size, {count}};
 }
 inline Type batch_int_array(int count) {
-    return {DataType::dt_int, batch_size, {count}};
+    return {DataType::dt_int32, batch_size, {count}};
 }
 /// A `Type` of `count` four-vectors: batch dimension plus a trailing shape of
 /// `(count, 4)`.
 inline Type batch_four_vec_array(int count) {
-    return {DataType::dt_float, batch_size, {count, 4}};
+    return {DataType::dt_float64, batch_size, {count, 4}};
 }
 
 using TensorValue = std::tuple<
@@ -207,7 +231,7 @@ struct Value {
     /// Scalar floating-point constant.
     Value(double value) : type(single_float), literal_value(value) {}
 
-    template <ScalarType T>
+    template <LiteralType T>
     Value(const std::vector<std::vector<T>>& values) :
         Value(
             [&] {
@@ -231,10 +255,10 @@ struct Value {
             {static_cast<int>(values.size()), static_cast<int>(values.at(0).size())}
         ) {}
 
-    template <ScalarType T>
+    template <LiteralType T>
     Value(const std::vector<T>& values, const std::vector<int>& shape = {}) :
         type{
-            std::is_same_v<T, me_int_t> ? DataType::dt_int : DataType::dt_float,
+            dtype_of<T>(),
             BatchSize::one,
             shape.size() == 0 ? std::vector<int>{static_cast<int>(values.size())}
                               : shape

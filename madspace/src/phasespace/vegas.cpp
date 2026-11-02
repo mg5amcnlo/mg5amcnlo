@@ -39,7 +39,7 @@ Mapping::Result VegasMapping::build_forward_impl(
 ) const {
     auto grid = fb.global(
         _grid_name,
-        DataType::dt_float,
+        DataType::dt_float64,
         {static_cast<int>(_dimension), static_cast<int>(_bin_count) + 1}
     );
     auto [output, dets] = fb.vegas_forward(inputs.at(0), grid);
@@ -53,7 +53,7 @@ Mapping::Result VegasMapping::build_inverse_impl(
 ) const {
     auto grid = fb.global(
         _grid_name,
-        DataType::dt_float,
+        DataType::dt_float64,
         {static_cast<int>(_dimension), static_cast<int>(_bin_count) + 1}
     );
     auto [output, dets] = fb.vegas_inverse(inputs.at(0), grid);
@@ -62,7 +62,7 @@ Mapping::Result VegasMapping::build_inverse_impl(
 
 void VegasMapping::initialize_globals(ContextPtr context) const {
     context->define_global(
-        _grid_name, DataType::dt_float, {_dimension, _bin_count + 1}
+        _grid_name, DataType::dt_float64, {_dimension, _bin_count + 1}
     );
     initialize_vegas_grid(context, _grid_name);
 }
@@ -71,14 +71,14 @@ void madspace::initialize_vegas_grid(ContextPtr context, const std::string& grid
     bool is_cpu = context->device() == cpu_device();
     auto grid_global = context->global(grid_name);
     if (grid_global.shape().size() != 3 || grid_global.size(0) != 1 ||
-        grid_global.size(2) < 2 || grid_global.dtype() != DataType::dt_float) {
+        grid_global.size(2) < 2 || grid_global.dtype() != DataType::dt_float64) {
         throw std::runtime_error("Invalid vegas grid type");
     }
     Tensor grid;
     if (is_cpu) {
         grid = grid_global;
     } else {
-        grid = Tensor(DataType::dt_float, grid_global.shape());
+        grid = Tensor(DataType::dt_float64, grid_global.shape());
     }
 
     auto grid_view = grid.view<double, 3>()[0];

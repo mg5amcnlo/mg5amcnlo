@@ -27,8 +27,9 @@ EventHistograms::EventHistograms(
 ) :
     _specs(specs),
     _reference_weight(
-        std::isfinite(reference_weight) && reference_weight != 0. ? reference_weight
-                                                                  : 1.
+        std::isfinite(reference_weight) && reference_weight != 0.
+            ? reference_weight
+            : 1.
     ) {
     if (!context) {
         throw std::invalid_argument("EventHistograms requires a context");
@@ -59,15 +60,19 @@ EventHistograms::EventHistograms(
                 "EventHistograms: one observable per histogram expected"
             );
         }
-        _runtimes.push_back(RuntimeData{
-            .runtime = build_runtime(obs->values.function(), context, false),
-            .particle_count = obs->particle_count,
-        });
+        _runtimes.push_back(
+            RuntimeData{
+                .runtime = build_runtime(obs->values.function(), context, false),
+                .particle_count = obs->particle_count,
+            }
+        );
     }
 }
 
 void EventHistograms::fill(
-    EventBuffer& buffer, const std::vector<double>& syst_weights, std::size_t weight_count
+    EventBuffer& buffer,
+    const std::vector<double>& syst_weights,
+    std::size_t weight_count
 ) {
     std::size_t count = buffer.event_count();
     if (count == 0) {
@@ -93,7 +98,7 @@ void EventHistograms::fill(
     for (auto& [subproc, indices] : groups) {
         auto& runtime_data = _runtimes.at(subproc).value();
         std::size_t pc = runtime_data.particle_count;
-        Tensor momenta(DataType::dt_float, {indices.size(), pc, 4});
+        Tensor momenta(DataType::dt_float64, {indices.size(), pc, 4});
         auto view = momenta.view<double, 3>();
         for (std::size_t n = 0; n < indices.size(); ++n) {
             for (std::size_t j = 0; j < pc; ++j) {
@@ -111,7 +116,7 @@ void EventHistograms::fill(
         }
         for (std::size_t o = 0; o < _specs.size(); ++o) {
             if (!_observable_index.at(o)) {
-                continue;  // filled from the event weight below
+                continue; // filled from the event weight below
             }
             Tensor out = outputs.at(_observable_index.at(o).value()).cpu().contiguous();
             if (out.shape().size() == 1) {
@@ -192,21 +197,22 @@ json EventHistograms::to_json(const SystematicsCalculator* systematics) const {
         return result;
     }
     double n = static_cast<double>(_event_count);
-    auto normalised = [&](const std::vector<double>& sums,
-                          const std::vector<double>& squares,
-                          std::vector<double>& values,
-                          std::vector<double>& errors) {
-        values.resize(sums.size());
-        errors.resize(sums.size());
-        for (std::size_t b = 0; b < sums.size(); ++b) {
-            // the event weights are "average" normalised: the cross section in a
-            // bin is the mean of (weight x indicator), its error the standard
-            // error of that mean
-            values[b] = sums[b] / n;
-            double var = (squares[b] - sums[b] * sums[b] / n) / n;
-            errors[b] = var > 0. ? std::sqrt(var / n) : 0.;
-        }
-    };
+    auto normalised =
+        [&](const std::vector<double>& sums,
+            const std::vector<double>& squares,
+            std::vector<double>& values,
+            std::vector<double>& errors) {
+            values.resize(sums.size());
+            errors.resize(sums.size());
+            for (std::size_t b = 0; b < sums.size(); ++b) {
+                // the event weights are "average" normalised: the cross section in a
+                // bin is the mean of (weight x indicator), its error the standard
+                // error of that mean
+                values[b] = sums[b] / n;
+                double var = (squares[b] - sums[b] * sums[b] / n) / n;
+                errors[b] = var > 0. ? std::sqrt(var / n) : 0.;
+            }
+        };
     std::vector<int> ids;
     std::vector<std::size_t> scale_indices;
     std::vector<PdfGroupInfo> pdf_groups;
@@ -217,7 +223,8 @@ json EventHistograms::to_json(const SystematicsCalculator* systematics) const {
     }
     for (std::size_t o = 0; o < _specs.size(); ++o) {
         auto& spec = _specs[o];
-        std::vector<std::vector<double>> values(_weight_count + 1), errors(_weight_count + 1);
+        std::vector<std::vector<double>> values(_weight_count + 1),
+            errors(_weight_count + 1);
         for (std::size_t c = 0; c <= _weight_count; ++c) {
             normalised(_sums[o][c], _square_sums[o][c], values[c], errors[c]);
         }

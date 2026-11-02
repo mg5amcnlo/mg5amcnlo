@@ -97,7 +97,7 @@ def test_stack_of_literals_is_folded():
     func = build(
         [("x", ms.batch_float_array(3))], [("y", ms.batch_float_array(3))], body
     )
-    assert instruction_names(func) == ["mul"]
+    assert instruction_names(func) == ["mul_float64"]
 
 
 @pytest.mark.cpu_only
@@ -150,7 +150,7 @@ def test_single_flavor_integrand_has_no_constant_gathers(tmp_path):
             for output in instr.outputs:
                 sources[output.local_index] = instr.instruction.name
         for instr in func.instructions:
-            if instr.instruction.name == "mul":
+            if instr.instruction.name == "mul_float64":
                 assert all(
                     sources.get(arg.local_index) != "full" for arg in instr.inputs
                 )
@@ -276,7 +276,7 @@ def test_global_probability_gradient_is_summed_over_events():
     """The gradient of a broadcast (global) probability vector is the sum of the
     contributions of all events."""
     ctx = new_context()
-    ctx.define_global("test_simd_layout_probs", ms.DataType.float, [4], True)
+    ctx.define_global("test_simd_layout_probs", ms.DataType.float64, [4], True)
     ctx.get_global("test_simd_layout_probs").torch()[:] = torch.tensor(
         [[0.1, 0.4, 0.3, 0.2]]
     )
@@ -284,7 +284,7 @@ def test_global_probability_gradient_is_summed_over_events():
         ms.NamedTypes([("index", ms.batch_int)]),
         ms.NamedTypes([("r", ms.batch_float), ("det", ms.batch_float)]),
     )
-    probs = fb.get_global("test_simd_layout_probs", ms.DataType.float, [4])
+    probs = fb.get_global("test_simd_layout_probs", ms.DataType.float64, [4])
     r, det = fb.sample_discrete_probs_inverse(fb.input(0), probs)
     fb.output(0, r)
     fb.output(1, det)
@@ -317,13 +317,13 @@ def test_broadcast_gradient_through_stack():
     """stack of a broadcast (global) and a batched value: the gradient of the
     global accumulates the whole batch."""
     ctx = new_context()
-    ctx.define_global("test_simd_layout_scalar", ms.DataType.float, [], True)
+    ctx.define_global("test_simd_layout_scalar", ms.DataType.float64, [], True)
     ctx.get_global("test_simd_layout_scalar").torch()[:] = 1.5
     fb = ms.FunctionBuilder(
         ms.NamedTypes([("x", ms.batch_float)]),
         ms.NamedTypes([("y", ms.batch_float_array(2))]),
     )
-    g = fb.get_global("test_simd_layout_scalar", ms.DataType.float, [])
+    g = fb.get_global("test_simd_layout_scalar", ms.DataType.float64, [])
     fb.output(0, fb.stack([g, fb.input(0)]))
     module = FunctionModule(fb.function(), ctx)
     param = module.global_params["test_simd_layout_scalar"]

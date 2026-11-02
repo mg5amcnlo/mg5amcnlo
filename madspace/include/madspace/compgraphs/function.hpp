@@ -81,6 +81,7 @@ private:
     std::vector<InstructionCall> _instructions;
 
     friend Function sort_breadth_first(const Function& function);
+    friend Function fuse_instructions(const Function& function);
 };
 
 std::ostream& operator<<(std::ostream& out, const Value& value);
@@ -128,6 +129,10 @@ public:
     ValueVec instruction(const std::string& name, const ValueVec& args);
     /// Append @p instruction with arguments @p args; returns its outputs.
     ValueVec instruction(InstructionPtr instruction, const ValueVec& args);
+    /// Calls the float32 or float64 variant `<name>_float32` / `<name>_float64` of
+    /// an instruction, chosen by the first non-literal float argument. Float64
+    /// literals are converted for a float32 call.
+    ValueVec precision_instruction(const std::string& name, const ValueVec& args);
     /// Index of the execution stream new instructions are added to.
     std::size_t current_stream() const { return _current_stream; }
     /// Select the execution stream new instructions are added to.

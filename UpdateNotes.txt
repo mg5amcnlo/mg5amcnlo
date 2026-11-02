@@ -5,6 +5,27 @@ ANNOUNCEMENT:
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
 0.3.0 (XX/XX/XX):
+   OM: bin/madgraph, bin/madevent, bin/aMCatNLO and bin/generate_events (madevent, aMC@NLO
+       and mg7 outputs) no longer read their commands, or the answers to the questions of
+       a command given on the command line, from a pipe or a redirected file (e.g.
+       "./bin/madgraph < script.txt", "echo 0 | ./bin/generate_events"). That mode runs as
+       an interactive session, where a command that cannot be applied (such as an invalid
+       "set") was only a warning and the run went on. They now stop with an error asking
+       to write the commands to a file and run "EXECUTABLE PATH" instead, unless the new
+       --allow-stdin option is given. A forced run (-f) only stops when input is waiting
+       on stdin, which it would otherwise silently ignore. Running with a script file, or
+       with stdin on /dev/null, is unchanged.
+   OM: energy units ("1 TeV", "500 MeV", ...) are now only accepted where the value is an
+       energy, and converted to GeV. The run_card entries carrying an energy are declared
+       as such (energy=True in their definition): the madevent and aMC@NLO run_cards now
+       accept units on them too (e.g. "set ptj 1 TeV"). A unit on any other numeric entry
+       is an error: on the mg7 run_card, "set etaj 2 TeV" or "set jet-eta_abs.max 4 TeV"
+       used to set an eta cut of 2000/4000; for the [cuts], the observable of the cut says
+       whether it is an energy. In the param_card, only the masses and the widths accept
+       a unit (e.g. "set mt 172.5 GeV"). The madevent energy shortcuts (lhc, lcc, lep,
+       ilc, ebeam, fixed_scale) take a unit too: "set lhc 500 GeV" is a 500 GeV collider
+       (a unit-less lhc/lcc value stays in TeV), where "set ebeam 6.5 TeV" used to set
+       6.5 GeV; a real extra argument ("set lhc 13 14") is now refused.
    OM: madevent MLM (ickkw=1) with use_syst: the <pdfrwt> entry of the incoming partons
        used the flavour class of the grouped subprocess instead of the event's flavour
        (pdg 1 for s s~, 2 for c c~), so the systematics (PDF and mu_F variations) of every
@@ -36,6 +57,42 @@ ANNOUNCEMENT:
        NNPDF40_nlo_as_01180_qed (lhaid 335900), at NLO also for a model with a
        massive b (NNPDF4.0 has no 4-flavour QED set). The NNPDF4.0 defaults
        have no photon. A PDF set by the user is kept.
+   ZW: MG7 outputs have two reweighting backends: MadtRex ('install madtrex';
+       matrix-element and PDF/scale reweighting on lhe or lhe_npy events) and the
+       classic reweighting module (f2py). Both read Cards/reweight_card.dat with the
+       classic vocabulary ('change' for options, 'set' for parameters). The backend
+       comes from 'generate_events --reweight-backend=classic|madtrex|auto', the
+       reweight switch of the launch question (now OFF/ON/classic/madtrex/density,
+       ON being auto), or the card's new 'change backend' line; auto prefers
+       MadtRex when it can run the card. The choice is logged and recorded in
+       Events/<run>/reweighting.json, and a choice that cannot run stops the launch
+       before the generation. Reweighting runs once, after the systematics;
+       '--reweight=CARD' now just switches it on with CARD as the reweight card.
+       MadtRex cards: 'change helicity', 'change fptype', 'change mode LO|pdf',
+       'change verbose/max_batch/...' replace the former 'set' spellings (still
+       accepted, with a warning), 'set MT 175' (a parameter by its param_card
+       name) works, and directives only the classic module knows are an error
+       instead of being ignored. MG7 outputs get their own default reweight card
+       documenting both backends. madevent and aMC@NLO outputs are unchanged.
+       Both backends add their weights to the run's own event file
+       (Events/<run>/events.lhe.gz, or events.npy for an lhe_npy run reweighted by
+       MadtRex, as rwgt_<name> columns that npy_to_lhe carries over), after the
+       systematics weights; MadtRex no longer writes a separate *_reweighted file
+       (bin/reweight --output still can). MadtRex reads lhe_npy events with
+       systematics weights (they were refused as "Invalid header for event file").
+   ZW: Without f2py_compiler set, the f2py installed with the running Python (e.g.
+       in a virtual environment) is used before f2py3/f2py on the PATH, which may
+       build modules for another Python version (reweighting then failed with "file
+       too short" or a missing all_matrix2py module).
+   OM: MadtRex follow-ups: 'install madtrex' builds with clang/macOS; madtrex refuses a
+       madspace other than the one it was built against (with the command to rebuild it;
+       MadGraph then reweights with the classic module) and its installer a too old
+       madspace; a failing reweighting no longer stops the run, and 'reweight RUN' (after
+       'launch PROC -i') reweights the events of an earlier run; MadtRex reweight cards
+       accept '!' comments and multi-index parameters ('set NMIX 1 2 0.5'); the baseline
+       PDF set and precision of a MadtRex reweighting are those of the run that made the
+       events (its LHE header), not of the current run_card; a gridpack made with
+       include_madtrex_source builds madtrex from its sources in bin/reweight.
    OM: new command 'install cuttools_iregi' recompiling CutTools and IREGI (vendor/)
        with the current fortran compiler. The error raised when CutTools/IREGI were
        compiled with another compiler (e.g. after a gfortran update) now points to it.

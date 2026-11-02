@@ -57,6 +57,7 @@ def main():
             "--enum-class-locations=Activation:MLP.Activation",
             "--enum-class-locations=CutMode:Cuts.CutMode",
             "--enum-class-locations=LRSchedule:AdamOptimizer.LRSchedule",
+            "--enum-class-locations=DataType:DataType",
             "--enum-class-locations=JetScaleScheme:MLMClustering.JetScaleScheme",
             "--enum-class-locations=ScaleScheme:MLMClustering.ScaleScheme",
             "--enum-class-locations=PartonLineScheme:MLMClustering.PartonLineScheme",

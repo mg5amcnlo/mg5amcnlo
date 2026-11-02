@@ -58,6 +58,9 @@ parser.add_option("-s", "--nocaffeinate", action="store_false", default=True, de
                   help='For mac user, forbids to use caffeinate when running with a script')
 parser.add_option("","--plain", action="store_true", default=False, dest='plain',
                   help='disable coloured output')
+parser.add_option("","--allow-stdin", action="store_true", default=False, dest='allow_stdin',
+                  help='read the commands piped or redirected into stdin, as an interactive '
+                       'session: invalid "set" commands then only warn')
 (options, args) = parser.parse_args()
 if len(args) == 0:
     args = ''
@@ -65,6 +68,25 @@ if len(args) == 0:
 if options.plain:
     # disable color
     os.environ['MG7_NO_COLOR'] = '1'
+
+def stdin_is_redirected():
+    """True when stdin is a pipe, a socket or a file, i.e. neither a terminal
+    nor a character device such as /dev/null (batch jobs)."""
+    import stat
+    try:
+        return not stat.S_ISCHR(os.fstat(sys.stdin.fileno()).st_mode)
+    except (OSError, ValueError, AttributeError):
+        return False
+
+# Commands read from stdin go through the interactive loop, where a command
+# that cannot be applied (e.g. an invalid "set") is only a warning: refuse
+# that mode unless asked for, before the -O re-execution below.
+if not (options.file or args) and not options.web and not options.allow_stdin \
+        and stdin_is_redirected():
+    sys.exit("Reading the commands from stdin is not supported: write them to a "
+             "file and run '%s PATH' instead, so that an invalid command stops the "
+             "run.\nUse --allow-stdin to read stdin as an interactive session "
+             "(invalid commands then only warn)." % sys.argv[0])
 
 import subprocess
 

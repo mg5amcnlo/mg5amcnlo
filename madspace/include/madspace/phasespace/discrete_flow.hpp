@@ -45,6 +45,7 @@ public:
      * @param subnet_hidden_dim Hidden width of the @ref MLP subnetworks.
      * @param subnet_layers     Number of layers in the subnetworks.
      * @param subnet_activation  Activation of the subnetworks.
+     * @param subnet_precision  Float type of the subnetworks (see @ref MLP).
      */
     DiscreteFlow(
         const std::vector<std::size_t>& option_counts,
@@ -53,7 +54,8 @@ public:
         std::size_t condition_dim = 0,
         std::size_t subnet_hidden_dim = 32,
         std::size_t subnet_layers = 3,
-        MLP::Activation subnet_activation = MLP::leaky_relu
+        MLP::Activation subnet_activation = MLP::leaky_relu,
+        DataType subnet_precision = DataType::dt_float64
     );
     /// Number of categories per discrete dimension.
     const std::vector<std::size_t>& option_counts() const { return _option_counts; }

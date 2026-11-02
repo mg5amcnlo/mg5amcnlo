@@ -25,6 +25,11 @@ Every decision is logged in /var/lib/ceci/gate/gate.log. Setup: .github/gpu_ci/R
     ceci-gate watch-runner CLUSTER RUN_ID RUN_ATTEMPT
         waits until the Slurm job of the runner started for that run attempt has ended, then
         prints `ALLOCATION_ENDED JOBID STATE...`; read-only on the cluster (squeue, sacct)
+    ceci-gate cancel-runner CLUSTER RUN_ID RUN_ATTEMPT
+        scancels the Slurm job of the runner started for that run attempt, from start_runner
+        when it was cancelled, timed out or failed before the runner was online
+start-runner also scancels first the runner jobs left in the queue by run attempts that are
+over: with --dependency=singleton, they would hold back the new one for as long as they wait.
 
 Written for the python3 of Rocky Linux 8 (3.6).
 """
@@ -56,6 +61,7 @@ CLUSTERS = {
                   "workflow": ".github/workflows/gpu_manneback_cuda.yml"},
 }
 MODULES_WORKFLOW = ".github/workflows/gpu_cluster_modules.yml"
+RUN_TAG = re.compile(r"mg7-run-(\d{1,20})-(\d{1,4})")  # RUN_TAG of gpu_runner_ci.yml, the Slurm comment
 MAX_CPUS = 64
 MAX_MEM_GB = 256
 MAX_MINUTES = 240
@@ -95,7 +101,9 @@ def trusted(path):
     return st.st_uid == 0 and not st.st_mode & 0o022
 
 
-def github(path):
+def github(path, lenient=False):
+    """the JSON answer of the GitHub API. On an error, refuse; with lenient=True, return None
+    for a 404 and raise OSError for the others instead."""
     req = urllib.request.Request("https://api.github.com/repos/%s/%s" % (REPO, path), headers={
         "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28",
         "User-Agent": "ceci-gate"})
@@ -106,10 +114,15 @@ def github(path):
         with urllib.request.urlopen(req, timeout=30) as r:
             return json.loads(r.read().decode())
     except urllib.error.HTTPError as e:
+        if lenient and e.code == 404:
+            return None
         hint = " (API rate limit? see TOKEN_FILE in ceci-gate)" if e.code in (403, 429) else ""
-        refuse("GitHub API %s: HTTP %d %s%s" % (path, e.code, e.reason, hint))
+        error = "GitHub API %s: HTTP %d %s%s" % (path, e.code, e.reason, hint)
     except (urllib.error.URLError, OSError) as e:
-        refuse("GitHub API %s: %s" % (path, e))
+        error = "GitHub API %s: %s" % (path, e)
+    if lenient:
+        raise OSError(error)
+    refuse(error)
 
 
 def listed(path, required):
@@ -121,9 +134,9 @@ def listed(path, required):
         return {line.split("#")[0].strip() for line in f} - {""}
 
 
-def check_run(run_id, attempt, workflow, events, job_name):
-    """Refuse unless run RUN_ID/RUN_ATTEMPT is an allowed run whose job JOB_NAME is the one
-    running right now on the runner of the calling Unix user."""
+def check_run(run_id, attempt, workflow, events, job_names):
+    """Refuse unless run RUN_ID/RUN_ATTEMPT is an allowed run whose job called one of JOB_NAMES
+    is running right now on the runner of the calling Unix user."""
     runner = RUNNERS.get(CALLER)
     check(runner is not None, "Unix user %s is not one of the runner users %s" % (CALLER, sorted(RUNNERS)))
     wf = github("actions/runs/%s/attempts/%s" % (run_id, attempt))
@@ -148,9 +161,9 @@ def check_run(run_id, attempt, workflow, events, job_name):
         time.sleep(wait)
         jobs = github("actions/runs/%s/attempts/%s/jobs?per_page=100" % (run_id, attempt)).get("jobs", [])
         if any(j.get("status") == "in_progress" and j.get("runner_name") == runner
-               and j.get("name", "").split(" / ")[-1] == job_name for j in jobs):
+               and j.get("name", "").split(" / ")[-1] in job_names for j in jobs):
             return who
-    refuse("no %s job of run %s attempt %s is running on runner %s" % (job_name, run_id, attempt, runner))
+    refuse("no %s job of run %s attempt %s is running on runner %s" % ("/".join(job_names), run_id, attempt, runner))
 
 
 def lock(name):
@@ -185,11 +198,25 @@ def execute(cmd, stdin=None):
     return subprocess.call(cmd, stdin=stdin if stdin is not None else subprocess.DEVNULL, env=env())
 
 
+def remote_cmd(cluster, args, ssh_options=()):
+    return ["ssh", "-o", "BatchMode=yes"] + list(ssh_options) + [cluster,
+            "bash -l -s -- " + " ".join(shlex.quote(a) for a in args)]
+
+
 def remote(cluster, script, args, ssh_options=()):
     """ssh CLUSTER bash -l -s -- ARGS < SHARE/SCRIPT"""
     with open(share(script), "rb") as f:
-        return execute(["ssh", "-o", "BatchMode=yes"] + list(ssh_options) + [cluster,
-                    "bash -l -s -- " + " ".join(shlex.quote(a) for a in args)], stdin=f)
+        return execute(remote_cmd(cluster, args, ssh_options), stdin=f)
+
+
+def remote_output(cluster, script, args):
+    """the same, returning (status, stdout); stdout is also printed"""
+    sys.stdout.flush()
+    with open(share(script), "rb") as f:
+        p = subprocess.run(remote_cmd(cluster, args), stdin=f, stdout=subprocess.PIPE,
+                           env=env(), universal_newlines=True)
+    print(p.stdout, end="")
+    return p.returncode, p.stdout
 
 
 def minutes(hhmmss):
@@ -197,6 +224,44 @@ def minutes(hhmmss):
     check(m is not None, "--time %r is not HH:MM:SS" % hhmmss)
     h, mi, s = (int(x) for x in m.groups())
     return h * 60 + mi + (s > 0)
+
+
+def run_tag(run_id, attempt):
+    return "mg7-run-%s-%s" % (run_id, attempt)  # RUN_TAG of gpu_runner_ci.yml
+
+
+def cancel_leftovers(cluster, label):
+    """scancel the runner jobs of the cluster whose run attempt is over on GitHub: a run cancelled
+    while its runner job was queued, when start_runner could not cancel it. With
+    --dependency=singleton they would hold back the new runner job for as long as they wait.
+    Best effort: unless remote_cancel_runner.sh is missing on the VM, the start goes on."""
+    status, out = remote_output(cluster, "remote_cancel_runner.sh", [label])
+    if status != 0:
+        print("ceci-gate: cannot list the runner jobs on %s, no leftover cancelled" % cluster)
+        return
+    over = []
+    for line in out.splitlines():
+        fields = line.split()
+        if len(fields) != 4 or fields[0] != "RUNNER_JOB":
+            continue
+        m = RUN_TAG.fullmatch(fields[3])
+        if m is None:
+            print("ceci-gate: runner job %s has no run tag (%s): left alone" % (fields[1], fields[3]))
+            continue
+        try:
+            wf = github("actions/runs/%s/attempts/%s" % m.groups(), lenient=True)
+        except OSError as e:
+            print("ceci-gate: cannot tell whether run %s attempt %s is over (%s): job %s left alone"
+                  % (m.group(1), m.group(2), e, fields[1]))
+            continue
+        status = "deleted" if wf is None else wf.get("status")
+        if status in ("completed", "deleted"):
+            over.append(fields[3])
+            log("leftover %s runner job %s %s of run %s attempt %s, which is %s: cancelling it"
+                % (cluster, fields[1], fields[2], m.group(1), m.group(2), status))
+    if over:
+        print("ceci-gate: cancelling the runner jobs of the run attempts that are over: %s" % " ".join(over))
+        remote(cluster, "remote_cancel_runner.sh", [label] + over)
 
 
 def cmd_ping(a):
@@ -216,7 +281,7 @@ def cmd_start_runner(a):
     for opt in extra:
         check(EXTRA_SBATCH.fullmatch(opt) is not None, "extra sbatch option %r not allowed" % opt)
 
-    who = check_run(a.run_id, a.attempt, c["workflow"], ("push", "workflow_dispatch"), "start_runner")
+    who = check_run(a.run_id, a.attempt, c["workflow"], ("push", "workflow_dispatch"), ("start_runner",))
     lock("%s-%s-%s" % (a.cluster, a.run_id, a.attempt))
     log("ACCEPTED start-runner %s run=%s attempt=%s %s :: %s %s %s %s %s %s" % (
         a.cluster, a.run_id, a.attempt, who, a.partition, a.gres, a.cpus, a.mem, a.time, " ".join(extra)))
@@ -227,9 +292,9 @@ def cmd_start_runner(a):
             "%s:mg7-gpu-ci/runner-%s/" % (a.cluster, c["label"])]) != 0:
         refuse("no runner in ~/mg7-gpu-ci/runner-%s on %s: install it with .github/gpu_ci/install_runner.sh"
                % (c["label"], a.cluster))
-    run_tag = "mg7-run-%s-%s" % (a.run_id, a.attempt)  # RUN_TAG of gpu_runner_ci.yml
+    cancel_leftovers(a.cluster, c["label"])
     return remote(a.cluster, "remote_start_runner.sh", [
-        c["label"], a.run_id, run_tag, str(IDLE_MINUTES),
+        c["label"], a.run_id, run_tag(a.run_id, a.attempt), str(IDLE_MINUTES),
         "--partition=" + a.partition, "--gres=" + a.gres, "--cpus-per-task=" + a.cpus,
         "--mem=" + a.mem, "--time=" + a.time] + extra)
 
@@ -241,7 +306,7 @@ def cmd_modules(a):
           "partition %r not allowed on %s %s" % (a.partition, a.cluster, c["partitions"]))
     check(a.gres == "" or GRES.fullmatch(a.gres) is not None, "--gres %r not allowed" % a.gres)
 
-    who = check_run(a.run_id, a.attempt, MODULES_WORKFLOW, ("workflow_dispatch",), "modules")
+    who = check_run(a.run_id, a.attempt, MODULES_WORKFLOW, ("workflow_dispatch",), ("modules",))
     lock("modules-%s-%s-%s" % (a.cluster, a.run_id, a.attempt))
     log("ACCEPTED modules %s run=%s attempt=%s %s :: pattern=%r partition=%r gres=%r" % (
         a.cluster, a.run_id, a.attempt, who, a.pattern, a.partition, a.gres))
@@ -251,14 +316,22 @@ def cmd_modules(a):
 def cmd_watch_runner(a):
     c = CLUSTERS[a.cluster]
     # no lock(): the watchdog calls again when the connection drops
-    who = check_run(a.run_id, a.attempt, c["workflow"], ("push", "workflow_dispatch"), "watchdog")
+    who = check_run(a.run_id, a.attempt, c["workflow"], ("push", "workflow_dispatch"), ("watchdog",))
     log("ACCEPTED watch-runner %s run=%s attempt=%s %s" % (a.cluster, a.run_id, a.attempt, who))
-    run_tag = "mg7-run-%s-%s" % (a.run_id, a.attempt)  # RUN_TAG of gpu_runner_ci.yml
     # one connection for the whole run; the keepalives notice a dead one
-    status = remote(a.cluster, "remote_watch_runner.sh", [c["label"], run_tag],
+    status = remote(a.cluster, "remote_watch_runner.sh", [c["label"], run_tag(a.run_id, a.attempt)],
                     ["-o", "ServerAliveInterval=60", "-o", "ServerAliveCountMax=5"])
     log("watch-runner %s run=%s attempt=%s ended with status %d" % (a.cluster, a.run_id, a.attempt, status))
     return status
+
+
+def cmd_cancel_runner(a):
+    c = CLUSTERS[a.cluster]
+    # no lock(): cancelling twice is harmless. Only from start_runner, before its runner is online:
+    # once it is, stop_runner (if: always()) must reach it to end the allocation.
+    who = check_run(a.run_id, a.attempt, c["workflow"], ("push", "workflow_dispatch"), ("start_runner",))
+    log("ACCEPTED cancel-runner %s run=%s attempt=%s %s" % (a.cluster, a.run_id, a.attempt, who))
+    return remote(a.cluster, "remote_cancel_runner.sh", [c["label"], run_tag(a.run_id, a.attempt)])
 
 
 def main():
@@ -272,7 +345,7 @@ def main():
     s.add_argument("cluster", choices=sorted(CLUSTERS))
     s.set_defaults(func=cmd_ping)
     for name, func in (("start-runner", cmd_start_runner), ("modules", cmd_modules),
-                       ("watch-runner", cmd_watch_runner)):
+                       ("watch-runner", cmd_watch_runner), ("cancel-runner", cmd_cancel_runner)):
         s = sub.add_parser(name)
         s.add_argument("cluster", choices=sorted(CLUSTERS))
         s.add_argument("run_id", type=lambda x: x if re.fullmatch(r"\d{1,20}", x) else refuse("bad run id %r" % x))

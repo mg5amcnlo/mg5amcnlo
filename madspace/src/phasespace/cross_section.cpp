@@ -11,7 +11,8 @@ DifferentialCrossSection::DifferentialCrossSection(
     const std::variant<std::monostate, PdfGrid, CachedPdf>& pdf1,
     const std::variant<std::monostate, PdfGrid, CachedPdf>& pdf2,
     bool input_momentum_fraction,
-    bool decay
+    bool decay,
+    bool matrix_element_output
 ) :
     FunctionGenerator(
         "DifferentialCrossSection",
@@ -50,7 +51,13 @@ DifferentialCrossSection::DifferentialCrossSection(
             }
             return arg_types;
         }(),
-        matrix_element.return_types()
+        [&] {
+            auto ret_types = matrix_element.return_types();
+            if (matrix_element_output) {
+                ret_types.push_back("raw_matrix_element", batch_float);
+            }
+            return ret_types;
+        }()
     ),
     _pid_options(pid_options),
     _matrix_element(matrix_element),
@@ -62,7 +69,8 @@ DifferentialCrossSection::DifferentialCrossSection(
     _e_cm(cm_energy),
     _energy_scale(energy_scale),
     _input_momentum_fraction(input_momentum_fraction),
-    _decay(decay) {
+    _decay(decay),
+    _matrix_element_output(matrix_element_output) {
     if (decay) {
         if (_has_pdf.at(0) || _has_pdf.at(1)) {
             throw std::invalid_argument("a decay has no beams, so no PDFs");
@@ -157,6 +165,7 @@ NamedVector<Value> DifferentialCrossSection::build_function_impl(
         throw std::runtime_error("matrix element missing in return values");
     }
     std::size_t me_index = search - _matrix_element.outputs().begin();
+    Value matrix_element = me_result.at(me_index);
     if (_decay) {
         // Differential decay rate: dGamma = |M|^2 dPhi_n / (2 M), in GeV. The
         // flux is a compile-time constant here (M is fixed by the decaying
@@ -174,6 +183,9 @@ NamedVector<Value> DifferentialCrossSection::build_function_impl(
             me_result.at(me_index),
             _e_cm * _e_cm
         );
+    }
+    if (_matrix_element_output) {
+        me_result.push_back("raw_matrix_element", matrix_element);
     }
     return me_result;
 }

@@ -24,6 +24,16 @@ from unittest import mock
 import madgraph.various.misc as misc
 class TEST_misc(unittest.TestCase):
 
+    def test_pool_chunksize(self):
+        """same chunks as CPython's map without chunksize, from the pool size"""
+        for nprocs in (1, 3, 8):
+            pool = mock.Mock(_processes=nprocs, _pool=[])
+            for nitems in (0, 1, 4 * nprocs - 1, 4 * nprocs, 4 * nprocs + 1, 100):
+                chunksize, extra = divmod(nitems, 4 * nprocs)
+                expected = max(1, chunksize + bool(extra))
+                self.assertEqual(misc.pool_chunksize(pool, nitems), expected)
+
+
     def test_gzip_keep_preserves_plain_source(self):
         data = b"<event>\n1 2 3\n</event>\n" * 100
         with tempfile.TemporaryDirectory() as tmp:
@@ -251,6 +261,32 @@ class TEST_misc(unittest.TestCase):
         with mock.patch('sys.__stdout__', ClosedStdout()):
             proc = misc.Popen(['echo', 'ok'], stdout=None, stderr=subprocess.STDOUT)
             self.assertEqual(proc.wait(), 0)
+
+
+_HEPTOOLS_LHAPDF = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))))), 'HEPTools', 'lhapdf6_py3', 'bin', 'lhapdf-config')
+
+
+@unittest.skipUnless(os.path.exists(_HEPTOOLS_LHAPDF), 'no HEPTools lhapdf6_py3')
+class TEST_import_python_lhapdf(unittest.TestCase):
+    """The HEPTools lhapdf python module has no rpath to libLHAPDF: setting
+    LD_LIBRARY_PATH from inside the process is too late for the loader, so
+    import_python_lhapdf loads the library itself first."""
+
+    def test_import_without_ld_library_path(self):
+        import sys
+        root = os.path.dirname(os.path.dirname(os.path.dirname(_HEPTOOLS_LHAPDF)))
+        env = dict(os.environ)
+        env.pop('LD_LIBRARY_PATH', None)
+        env.pop('PYTHONPATH', None)
+        code = ("import sys; sys.path.insert(0, %r)\n"
+                "import madgraph.various.misc as misc\n"
+                "module = misc.import_python_lhapdf(%r)\n"
+                "print(module.version())\n" % (root, _HEPTOOLS_LHAPDF))
+        result = subprocess.run([sys.executable, '-c', code], env=env,
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertRegex(result.stdout.strip().splitlines()[-1], r'^\d+\.\d+')
 
 
 class TEST_pythia8_main164(unittest.TestCase):

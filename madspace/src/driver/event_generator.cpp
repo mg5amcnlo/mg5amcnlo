@@ -1041,6 +1041,9 @@ void EventGenerator::copy_event_fields(
     if (contains("partial_weight_product")) {
         event_out.partial_weight_product() = event_in.partial_weight_product();
     }
+    if (contains("matrix_element")) {
+        event_out.matrix_element() = event_in.matrix_element();
+    }
     if (_systematics) {
         std::size_t count = _systematics->weight_count();
         for (std::size_t k = 0; k < count; ++k) {
@@ -1222,6 +1225,8 @@ void EventGenerator::read_and_combine(
     bool has_subproc_index =
         _channels.at(0)->event_layout_extra_flags() & EventRecord::f_subproc_index;
     bool has_bias = _channels.at(0)->event_layout_extra_flags() & EventRecord::f_bias;
+    bool has_matrix_element =
+        _channels.at(0)->event_layout_extra_flags() & EventRecord::f_matrix_element;
 
     for (std::size_t event_index = 0; event_index < event_count; ++event_index) {
         std::size_t random_index = rand_gen.generate_int(channel_data.back().cum_count);
@@ -1287,6 +1292,9 @@ void EventGenerator::read_and_combine(
         }
         if (has_partial) {
             event_out.partial_weight_product() = event_in.partial_weight_product();
+        }
+        if (has_matrix_element) {
+            event_out.matrix_element() = event_in.matrix_element();
         }
 
         std::size_t i = 0;

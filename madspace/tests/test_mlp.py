@@ -14,9 +14,21 @@ def assert_approx(actual, expected):
     torch.testing.assert_close(actual, expected, rtol=1e-6, atol=1e-12)
 
 
+PRECISIONS = {
+    "float64": (ms.DataType.float64, torch.float64, 1e-6),
+    "float32": (ms.DataType.float32, torch.float32, 1e-3),
+}
+
+
+@pytest.fixture(params=PRECISIONS.keys())
+def precision(request):
+    return PRECISIONS[request.param]
+
+
 @pytest.fixture
-def mlp():
-    return ms.MLP(10, 1, 32, 3, ms.MLP.leaky_relu, "")
+def mlp(precision):
+    # smooth activation: at a kink, float32 rounding can flip the gradient of an event
+    return ms.MLP(10, 1, 32, 3, ms.MLP.gelu, "", precision[0])
 
 
 @pytest.fixture
@@ -34,9 +46,16 @@ def test_properties():
     mlp = ms.MLP(10, 1, 32, 3, ms.MLP.leaky_relu, "")
     assert mlp.input_dim() == 10
     assert mlp.output_dim() == 1
+    assert mlp.precision() == ms.DataType.float64
+    mlp = ms.MLP(10, 1, precision=ms.DataType.float32)
+    assert mlp.precision() == ms.DataType.float32
+    with pytest.raises(Exception):
+        ms.MLP(10, 1, precision=ms.DataType.int32)
 
 
-def test_initialization(mlp_module):
+def test_initialization(mlp_module, precision):
+    for param in mlp_module.global_params.values():
+        assert param.dtype == precision[1]
     assert torch.all(mlp_module.global_params["layer1:weight"] != 0)
     assert torch.all(mlp_module.global_params["layer1:bias"] != 0)
     assert torch.all(mlp_module.global_params["layer2:weight"] != 0)
@@ -73,14 +92,16 @@ def test_activation(activation):
     assert_approx(grad_me, grad_torch)
 
 
-def test_training(mlp, mlp_module, module_context):
+@pytest.mark.parametrize("grad_clip", [0.0, 0.01])
+def test_training(mlp, mlp_module, module_context, precision, grad_clip):
+    _, dtype, tol = precision
     mlp_torch = nn.Sequential(
         nn.Linear(10, 32),
-        nn.LeakyReLU(),
+        nn.GELU(),
         nn.Linear(32, 32),
-        nn.LeakyReLU(),
+        nn.GELU(),
         nn.Linear(32, 1),
-    )
+    ).to(dtype)
 
     with torch.no_grad():
         for i in range(3):
@@ -102,47 +123,61 @@ def test_training(mlp, mlp_module, module_context):
     fb.output(1, mlp_out)
     ctx.copy_globals_from(module_context)
     builtin_opt = ms.AdamOptimizer(
-        function=fb.function(), context=ctx, learning_rate=1e-2
+        function=fb.function(),
+        context=ctx,
+        learning_rate=1e-2,
+        grad_clip_threshold=grad_clip,
     )
 
     opt_ms = torch.optim.Adam(mlp_module.parameters(), lr=1e-2)
     opt_torch = torch.optim.Adam(mlp_torch.parameters(), lr=1e-2)
 
+    def close(a, b):
+        return a == approx(b, rel=tol, abs=tol)
+
+    def assert_close(actual, expected):
+        torch.testing.assert_close(actual, expected, rtol=tol, atol=tol)
+
+    # the builtin optimizer clips the RMS gradient, not the norm
+    n_params = sum(p.numel() for p in mlp_torch.parameters())
+    max_norm = grad_clip * n_params**0.5
+
     g = generator(3210)
     for i in range(10):
-        x = randn((128, 10), generator=g)
+        # the input and the loss are in float64, only the network uses dtype
+        x = randn((128, 10), generator=g, dtype=torch.float64)
         y = x.square().sum(dim=1, keepdim=True)
 
         loss_ms = (y - mlp_module(x)).square().mean()
         opt_ms.zero_grad()
         loss_ms.backward()
+        if grad_clip > 0:
+            clipped = nn.utils.clip_grad_norm_(mlp_module.parameters(), max_norm)
+            assert clipped > max_norm
         opt_ms.step()
 
-        loss_torch = (y - mlp_torch(x)).square().mean()
+        loss_torch = (y - mlp_torch(x.to(dtype)).double()).square().mean()
         opt_torch.zero_grad()
         loss_torch.backward()
+        if grad_clip > 0:
+            nn.utils.clip_grad_norm_(mlp_torch.parameters(), max_norm)
         opt_torch.step()
 
         loss_builtin, mlp_out = builtin_opt.step([x])
 
-        assert loss_ms.item() == approx(loss_torch.item())
-        assert loss_builtin.torch().item() == approx(loss_torch.item())
+        assert close(loss_ms.item(), loss_torch.item())
+        assert close(loss_builtin.torch().item(), loss_torch.item())
 
         with torch.no_grad():
             for i in range(3):
                 w_torch = mlp_torch[2 * i].weight
                 b_torch = mlp_torch[2 * i].bias
-                assert_approx(
-                    mlp_module.global_params[f"layer{i+1}:weight"][0], w_torch
-                )
-                assert_approx(mlp_module.global_params[f"layer{i+1}:bias"][0], b_torch)
-                assert_approx(
-                    mlp_module.global_params[f"layer{i+1}:weight"].grad[0],
-                    mlp_torch[2 * i].weight.grad,
-                )
-                assert_approx(
-                    mlp_module.global_params[f"layer{i+1}:bias"].grad[0],
-                    mlp_torch[2 * i].bias.grad,
-                )
-                assert_approx(ctx.get_global(f"layer{i+1}.weight").torch()[0], w_torch)
-                assert_approx(ctx.get_global(f"layer{i+1}.bias").torch()[0], b_torch)
+                w_ms = mlp_module.global_params[f"layer{i+1}:weight"]
+                b_ms = mlp_module.global_params[f"layer{i+1}:bias"]
+                assert w_ms.dtype == dtype
+                assert_close(w_ms[0], w_torch)
+                assert_close(b_ms[0], b_torch)
+                assert_close(w_ms.grad[0], mlp_torch[2 * i].weight.grad)
+                assert_close(b_ms.grad[0], mlp_torch[2 * i].bias.grad)
+                assert_close(ctx.get_global(f"layer{i+1}.weight").torch()[0], w_torch)
+                assert_close(ctx.get_global(f"layer{i+1}.bias").torch()[0], b_torch)

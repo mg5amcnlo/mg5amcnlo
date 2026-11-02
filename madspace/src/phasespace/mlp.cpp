@@ -15,16 +15,17 @@ Value build_layer(
     int output_dim,
     MLP::Activation activation,
     const std::string& prefix,
-    int layer_index
+    int layer_index,
+    DataType precision
 ) {
     auto weight = fb.global(
         prefixed_name(prefix, std::format("layer{}.weight", layer_index)),
-        DataType::dt_float,
+        precision,
         {output_dim, input_dim}
     );
     auto bias = fb.global(
         prefixed_name(prefix, std::format("layer{}.bias", layer_index)),
-        DataType::dt_float,
+        precision,
         {output_dim}
     );
     auto linear_out = fb.matmul(input, weight, bias);
@@ -53,25 +54,19 @@ void initialize_layer(
     const std::string& prefix,
     int layer_index,
     std::optional<std::uint64_t> seed,
-    bool zeros
+    bool zeros,
+    DataType precision
 ) {
     auto weight_name =
         prefixed_name(prefix, std::format("layer{}.weight", layer_index));
     auto bias_name = prefixed_name(prefix, std::format("layer{}.bias", layer_index));
-    auto weight_tensor_global = context->define_global(
-        weight_name, DataType::dt_float, {output_dim, input_dim}, true
-    );
+    auto weight_tensor_global =
+        context->define_global(weight_name, precision, {output_dim, input_dim}, true);
     auto bias_tensor_global =
-        context->define_global(bias_name, DataType::dt_float, {output_dim}, true);
-    Tensor weight_tensor, bias_tensor;
-    bool is_cpu = context->device() == cpu_device();
-    if (is_cpu) {
-        weight_tensor = weight_tensor_global;
-        bias_tensor = bias_tensor_global;
-    } else {
-        weight_tensor = Tensor(DataType::dt_float, {1, output_dim, input_dim});
-        bias_tensor = Tensor(DataType::dt_float, {1, output_dim});
-    }
+        context->define_global(bias_name, precision, {output_dim}, true);
+    // filled in double precision on the CPU, then converted and copied
+    Tensor weight_tensor(DataType::dt_float64, {1, output_dim, input_dim});
+    Tensor bias_tensor(DataType::dt_float64, {1, output_dim});
 
     auto weight_view = weight_tensor.view<double, 3>()[0];
     auto bias_view = bias_tensor.view<double, 2>()[0];
@@ -105,10 +100,8 @@ void initialize_layer(
         }
     }
 
-    if (!is_cpu) {
-        weight_tensor_global.copy_from(weight_tensor);
-        bias_tensor_global.copy_from(bias_tensor);
-    }
+    weight_tensor_global.copy_from(weight_tensor.cast(precision));
+    bias_tensor_global.copy_from(bias_tensor.cast(precision));
 }
 
 } // namespace
@@ -119,7 +112,8 @@ MLP::MLP(
     std::size_t hidden_dim,
     std::size_t layers,
     Activation activation,
-    const std::string& prefix
+    const std::string& prefix,
+    DataType precision
 ) :
     FunctionGenerator(
         "MLP",
@@ -131,7 +125,11 @@ MLP::MLP(
     _hidden_dim(hidden_dim),
     _layers(layers),
     _activation(activation),
-    _prefix(prefix) {
+    _prefix(prefix),
+    _precision(precision) {
+    if (!is_float(precision)) {
+        throw std::invalid_argument("MLP precision must be a float type");
+    }
     if (input_dim == 0) {
         throw std::invalid_argument("MLP input dimension cannot be 0");
     }
@@ -142,15 +140,16 @@ MLP::MLP(
 
 NamedVector<Value>
 MLP::build_function_impl(FunctionBuilder& fb, const NamedVector<Value>& args) const {
+    bool single = _precision == DataType::dt_float32;
     std::size_t dim = _input_dim;
-    Value x = args.at(0);
+    Value x = single ? fb.convert_float32(args.at(0)) : args.at(0);
     for (std::size_t i = 1; i < _layers; ++i) {
-        x = build_layer(fb, x, dim, _hidden_dim, _activation, _prefix, i);
+        x = build_layer(fb, x, dim, _hidden_dim, _activation, _prefix, i, _precision);
         dim = _hidden_dim;
     }
-    return {
-        {"output", build_layer(fb, x, dim, _output_dim, MLP::linear, _prefix, _layers)}
-    };
+    Value output =
+        build_layer(fb, x, dim, _output_dim, MLP::linear, _prefix, _layers, _precision);
+    return {{"output", single ? fb.convert_float64(output) : output}};
 }
 
 void MLP::initialize_globals(
@@ -158,10 +157,14 @@ void MLP::initialize_globals(
 ) const {
     std::size_t dim = _input_dim;
     for (std::size_t i = 1; i < _layers; ++i) {
-        initialize_layer(context, dim, _hidden_dim, _prefix, i, seed, false);
+        initialize_layer(
+            context, dim, _hidden_dim, _prefix, i, seed, false, _precision
+        );
         dim = _hidden_dim;
     }
-    initialize_layer(context, dim, _output_dim, _prefix, _layers, seed, true);
+    initialize_layer(
+        context, dim, _output_dim, _prefix, _layers, seed, true, _precision
+    );
 }
 
 std::vector<std::string> MLP::global_names() const {

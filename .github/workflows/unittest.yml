@@ -160,7 +160,9 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_check_flavor_qqbar_to_tt test_check_flavor_qqbar_to_zg test_check_language_function_epem_aa test_check_language_gg_ttx_cpp_ps_point test_check_language_proclist_merged_expansion test_fd_python_value_matches_unitary_fixed_point test_output_flavor_summary test_parse_sa_output_flavor_selection test_python_vs_cpp_epem_aa test_python_vs_fortran_epem_aa -t0
+            # test_check_precision_v_epem_mupmum builds and runs FPTYPE=v (double precision momenta
+            # and denominators) against FPTYPE=d, on the widest SIMD backend of the runner and on scalar
+            ./tests/test_manager.py test_check_flavor_qqbar_to_tt test_check_flavor_qqbar_to_zg test_check_language_function_epem_aa test_check_language_gg_ttx_cpp_ps_point test_check_language_proclist_merged_expansion test_fd_python_value_matches_unitary_fixed_point test_output_flavor_summary test_parse_sa_output_flavor_selection test_python_vs_cpp_epem_aa test_python_vs_fortran_epem_aa test_check_precision_v_epem_mupmum -t0
 
       # ---- unittest_32 ----
       # Uncovered unit tests in tests/unit_tests/various/test_import_ufo.py
@@ -332,6 +334,17 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_lhe_ordering test_reweight_ordering test_boost_by_a_momentum_at_rest test_nested_identical_children -t0
+
+      # ---- unittest_reweight_backend ----
+      # the reweighting backend choice (classic module or MadtRex) and the
+      # MadtRex reweight-card readers: pure Python, no madspace/madtrex. The
+      # tests needing an installed madtrex run in acceptancetest_mg7.yml
+      # (acceptancetest_mg7_madtrex).
+      - name: "unittest_reweight_backend: reweighting backend choice and MadtRex cards"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_reweight_backend NpyToLheNamedWeightsTest HelicityReweightingCardTest ClassicVocabularyTest GridpackSourceBuildTest -t0
 
       # Leave /tmp empty for the next job on this self-hosted machine.
       - if: always()

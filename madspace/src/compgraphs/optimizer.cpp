@@ -1,6 +1,7 @@
 #include "madspace/compgraphs/optimizer.hpp"
 
 #include <algorithm>
+#include <format>
 #include <numeric>
 #include <ranges>
 #include <unordered_map>
@@ -78,5 +79,111 @@ Function madspace::sort_breadth_first(const Function& function) {
     for (std::size_t index : instruction_perm) {
         func_out._instructions.push_back(function._instructions.at(index));
     }
+    return func_out;
+}
+
+Function madspace::fuse_instructions(const Function& function) {
+    Function func_out = function;
+    auto& instructions = func_out._instructions;
+    std::vector<int> producer(function.locals().size(), -1);
+    std::vector<int> use_count(function.locals().size(), 0);
+    for (std::size_t i = 0; i < instructions.size(); ++i) {
+        for (auto& output : instructions[i].outputs) {
+            producer.at(output.local_index) = i;
+        }
+        for (auto& input : instructions[i].inputs) {
+            if (input.local_index != -1) {
+                ++use_count.at(input.local_index);
+            }
+        }
+    }
+    for (auto& output : function.outputs()) {
+        ++use_count.at(output.local_index);
+    }
+
+    auto find_instruction = [](const std::string& name) {
+        auto find = instruction_set.find(name);
+        if (find == instruction_set.end()) {
+            throw std::runtime_error(std::format("Unknown instruction '{}'", name));
+        }
+        return find->second.get();
+    };
+
+    // the precision of each activation instruction that fuses into a matmul
+    static const auto activation_precisions = [] {
+        std::unordered_map<std::string, std::string> precisions;
+        for (std::string activation :
+             {"relu", "leaky_relu", "elu", "gelu", "sigmoid", "softplus"}) {
+            for (std::string precision : {"float32", "float64"}) {
+                precisions.emplace(activation + "_" + precision, precision);
+            }
+        }
+        return precisions;
+    }();
+
+    std::vector<bool> removed(instructions.size());
+    bool any_fused = false;
+    for (std::size_t i = 0; i < instructions.size(); ++i) {
+        auto& call = instructions[i];
+        const std::string& name = call.instruction->name();
+        auto find_precision = activation_precisions.find(name);
+        bool is_activation = find_precision != activation_precisions.end();
+        if (name != "convert_float32" && name != "convert_float64" && !is_activation) {
+            continue;
+        }
+        auto& input = call.inputs.at(0);
+        if (input.local_index == -1) {
+            continue;
+        }
+        int source_index = producer.at(input.local_index);
+        if (source_index == -1 || removed.at(source_index)) {
+            continue;
+        }
+        auto& source = instructions.at(source_index);
+        // the fused instruction takes the place of the producer
+        if (source.stream_index != call.stream_index) {
+            continue;
+        }
+        const std::string& source_name = source.instruction->name();
+        if (is_activation) {
+            if (source_name != "matmul_" + find_precision->second) {
+                continue;
+            }
+            // the matmul output stays an output, the activation needs it backward
+            source.instruction = find_instruction("matmul_" + name);
+            source.outputs.push_back(call.outputs.at(0));
+        } else if (name == "convert_float32") {
+            bool fusable = source_name == "select" || source_name == "rqs_forward" ||
+                source_name == "rqs_inverse";
+            if (!fusable || source.outputs.at(0).local_index != input.local_index ||
+                input.type.dtype != DataType::dt_float64) {
+                continue;
+            }
+            source.instruction = find_instruction(source_name + "_with_float32");
+            source.outputs.push_back(call.outputs.at(0));
+        } else {
+            if (source_name != "matmul_float32" ||
+                use_count.at(input.local_index) != 1) {
+                continue;
+            }
+            source.instruction = find_instruction("matmul_to_float64");
+            source.outputs = {call.outputs.at(0)};
+        }
+        producer.at(call.outputs.at(0).local_index) = source_index;
+        removed.at(i) = true;
+        any_fused = true;
+    }
+    if (!any_fused) {
+        return func_out;
+    }
+
+    std::vector<InstructionCall> kept;
+    kept.reserve(instructions.size());
+    for (std::size_t i = 0; i < instructions.size(); ++i) {
+        if (!removed.at(i)) {
+            kept.push_back(std::move(instructions[i]));
+        }
+    }
+    instructions = std::move(kept);
     return func_out;
 }

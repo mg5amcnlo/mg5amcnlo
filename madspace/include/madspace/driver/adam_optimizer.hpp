@@ -11,7 +11,8 @@ namespace madspace {
 /// `grad_clip_threshold`.
 class GradientClipper : public FunctionGenerator {
 public:
-    GradientClipper();
+    /// @param dtype  Float type of the gradients; the norm is computed in float64.
+    GradientClipper(DataType dtype = DataType::dt_float64);
 
 private:
     NamedVector<Value> build_function_impl(

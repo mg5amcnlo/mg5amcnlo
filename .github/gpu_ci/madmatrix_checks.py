@@ -26,6 +26,13 @@ of check_sa.exe, so only the check it belongs to.
    synchronise with the default stream) gives the same |M|^2 and helicities as on the
    default stream: every memset, kernel and copy of the matrix element must go to the
    stream umami is given, the helicity filtering of the first call included.
+4. helicity_index: ``g g > t t~ z`` (massless and massive vectors, a longitudinal Z,
+   massive fermions) evaluated for one given helicity per event (UMAMI_IN_HELICITY_INDEX,
+   --hel-index), on both backends: the |M|^2 of the ncomb helicities, each given to every
+   event, add up to the helicity-summed |M|^2, the GPU ones equal the CPU ones helicity by
+   helicity, and with a random helicity per event (the threads of a warp, or the lanes of
+   a SIMD vector, on different helicities in lock-step) every event gets the |M|^2 of its
+   helicity and returns it as the chosen helicity.
 
 Any CPU backend but scalar (simd_128, ...) works too, to try the script without a GPU;
 check 3 is then skipped. Writes summary.txt (key=value lines) in the current directory;
@@ -46,7 +53,7 @@ import time
 
 GPU_BACKENDS = ('cuda', 'hip')
 CPU_BACKEND = 'scalar'
-CHECKS = ('mssm_gpu_vs_cpu', 'zero_me', 'nonblocking_stream')
+CHECKS = ('mssm_gpu_vs_cpu', 'zero_me', 'nonblocking_stream', 'helicity_index')
 
 results = {}
 
@@ -66,7 +73,7 @@ def run(cmd, cwd=None, log=None):
 
 
 def write(path, typecode, values):
-    """A raw binary file of check_sa.exe: 'd' double, 'I' 32-bit unsigned int."""
+    """A raw binary file of check_sa.exe: 'd' double, 'I'/'i' 32-bit unsigned/signed int."""
     with open(path, 'wb') as f:
         array.array(typecode, values).tofile(f)
     return os.path.abspath(path)
@@ -265,6 +272,70 @@ def check_nonblocking_stream(backend, repo, ncalls=4):
         problems.append('default stream: |M|^2 <= 0 or no helicity')
     check('nonblocking_stream', not problems, '; '.join(problems[:3]) or
           '%d calls of %d events identical to the default stream' % (ncalls, nevt // ncalls))
+
+
+# ---------------------------------------------------------------------------
+# 4. one given helicity per event
+# ---------------------------------------------------------------------------
+
+def check_helicity_index(backend, repo, nevt=512):
+    section('g g > t t~ z, one given helicity per event (%s, %s)' % (backend, CPU_BACKEND))
+    name = 'ggttxz_hel'
+    (proc_dir,) = output(repo, name, 'sm', 'g g > t t~ z', (CPU_BACKEND, backend))
+    data = open(os.path.join(proc_dir, 'ProcessData.h')).read()
+    ncomb = int(re.search(r'constexpr int ncomb = (\d+);', data).group(1))
+    batch = [1, nevt, 1]
+    momenta = dump(name, 'momenta')
+    check_sa(proc_dir, CPU_BACKEND, ['--energy', 2000, '--dump-momenta', momenta] + batch,
+             name + '_rambo.log')
+    rng = random.Random(17)
+    mixed = [rng.randrange(ncomb) for _ in range(nevt)]
+    problems, details = [], []
+    perhel = {}
+    for run_backend in (CPU_BACKEND, backend):
+        prefix = '%s_%s' % (name, run_backend)
+        check_sa(proc_dir, run_backend, ['--momenta', momenta, '--dump-me', dump(prefix, 'me')] + batch,
+                 prefix + '.log')
+        summed = read(dump(prefix, 'me'), 'd')
+        perhel[run_backend] = []
+        for ihel in range(ncomb):
+            hprefix = '%s_h%d' % (prefix, ihel)
+            hels = write(hprefix + '_in.bin', 'i', [ihel] * nevt)
+            check_sa(proc_dir, run_backend, ['--momenta', momenta, '--hel-index', hels,
+                                             '--dump-me', dump(hprefix, 'me'),
+                                             '--dump-hel', dump(hprefix, 'hel')] + batch,
+                     hprefix + '.log')
+            perhel[run_backend].append(read(dump(hprefix, 'me'), 'd'))
+            if set(read(dump(hprefix, 'hel'), 'i')) != {ihel}:
+                problems.append('%s: helicity %d not returned as the chosen helicity' % (run_backend, ihel))
+        total = [sum(perhel[run_backend][ihel][ievt] for ihel in range(ncomb)) for ievt in range(nevt)]
+        rels = [abs(a - b) / abs(b) if b != 0 else float('inf') for a, b in zip(total, summed)]
+        bad = [ievt for ievt, rel in enumerate(rels) if not rel < 1e-10]
+        if bad or len(summed) != nevt:
+            problems.append('%s: the sum over the helicities differs from the helicity sum in %d of %d events'
+                            % (run_backend, len(bad), nevt))
+        # a random helicity per event, the same events
+        mprefix = '%s_mixed' % prefix
+        hels = write(mprefix + '_in.bin', 'i', mixed)
+        check_sa(proc_dir, run_backend, ['--momenta', momenta, '--hel-index', hels,
+                                         '--dump-me', dump(mprefix, 'me'),
+                                         '--dump-hel', dump(mprefix, 'hel')] + batch,
+                 mprefix + '.log')
+        me, hel = read(dump(mprefix, 'me'), 'd'), read(dump(mprefix, 'hel'), 'i')
+        expected = [perhel[run_backend][ihel][ievt] for ievt, ihel in enumerate(mixed)]
+        bad = [ievt for ievt, (a, b) in enumerate(zip(me, expected)) if not abs(a - b) <= 1e-12 * abs(b)]
+        if bad or list(hel) != mixed:
+            problems.append('%s: a random helicity per event: %d |M|^2 differ from that helicity\'s, '
+                            '%d helicities not returned' % (run_backend, len(bad),
+                                                            sum(1 for a, b in zip(hel, mixed) if a != b)))
+        details.append('%s: max rel diff of the helicity sum %.1e' % (run_backend, max(rels, default=0.)))
+        print('  ' + details[-1])
+    bad = sum(1 for ihel in range(ncomb) for a, b in zip(perhel[backend][ihel], perhel[CPU_BACKEND][ihel])
+              if not abs(a - b) <= 1e-9 * max(abs(b), 1e-300))
+    if bad:
+        problems.append('%d (helicity, event) |M|^2 differ between %s and %s' % (bad, backend, CPU_BACKEND))
+    check('helicity_index', not problems, '; '.join(problems[:3]) or
+          '%d helicities x %d events; %s' % (ncomb, nevt, '; '.join(details)))
 
 
 def main():

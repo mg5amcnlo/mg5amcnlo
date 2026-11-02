@@ -20,6 +20,17 @@ Tensor load_tensor(TarReader& tar, const std::string& name);
 /// Append `tensor` as an npy file called `name` to the tar archive `tar`.
 void save_tensor(TarWriter& tar, const std::string& name, Tensor tensor);
 
+// Peeks a .npy event file's own field descriptor (its header's "descr"
+// entry) without needing to already know its layout -- returns the field
+// names in declaration order (particle-level fields duplicated per particle
+// slot with a "partN_" prefix, matching full_descr()'s own naming). Used
+// where a file's actual layout has caller-optional fields the reader needs
+// to auto-detect before committing to a DataLayout to open it with (eg
+// LHE event records, which may or may not carry
+// x1/fact_scale1/x2/fact_scale2/partial_weight_product depending on whether
+// [generation] systematics was enabled when the file was written).
+std::vector<std::string> peek_npy_field_names(const std::string& file);
+
 struct FieldLayout {
     enum Type { i32, f64 };
 
@@ -216,6 +227,7 @@ public:
     static constexpr int f_partial_weights = 64;
     static constexpr int f_syst_weights = 128;
     static constexpr int f_bias = 256;
+    static constexpr int f_matrix_element = 512;
 
     // `syst_weight_count` columns of systematic variation weights are appended
     // when f_syst_weights is set; `syst_weight_ids` names them (rwgt_<id>).
@@ -282,6 +294,9 @@ public:
         if (fields & f_bias) {
             ret.push_back({"bias", FieldLayout::f64, 8});
         }
+        if (fields & f_matrix_element) {
+            ret.push_back({"matrix_element", FieldLayout::f64, 9});
+        }
         return ret;
     }
 
@@ -327,6 +342,9 @@ public:
 
     // event bias, divided out of the weight when the channels are combined
     UnalignedRef<double> bias() { return &_data[_offsets[7] + 0]; }
+
+    // squared matrix element the event was generated with, before PDFs and flux
+    UnalignedRef<double> matrix_element() { return &_data[_offsets[8] + 0]; }
 
     void from_lhe_event(const LHEEvent& event) {
         lhe_process_id() = event.process_id;
@@ -486,6 +504,11 @@ public:
     void clear();
     std::size_t particle_count() const { return _particle_count; }
     std::size_t event_count() const { return _event_count; }
+    // The DataLayout this file was actually constructed with -- lets a
+    // reader that only has an already-open EventFile& (not the layout that
+    // was used to open it) build a matching EventBuffer, rather than having
+    // to independently know/recompute the same layout itself.
+    const DataLayout& layout() const { return _layout; }
     ~EventFile();
 
     void write(EventBuffer& buffer) {
@@ -533,6 +556,7 @@ private:
     std::size_t _event_size;
     Mode _mode;
     bool _delete_on_close;
+    DataLayout _layout;
 };
 
 } // namespace madspace

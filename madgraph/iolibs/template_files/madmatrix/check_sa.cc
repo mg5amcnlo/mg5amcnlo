@@ -176,7 +176,7 @@ namespace
     return true;
   }
 
-  // Raw binary per-event values (--alphas <file>, --flavors, --rnd-hel, --rnd-col): one
+  // Raw binary per-event values (--alphas <file>, --flavors, --rnd-hel, --rnd-col, --hel-index): one
   // value of type T per event, with no header, as array.tofile writes them in Python.
   template<typename T>
   bool read_binary_values( const std::string& path, const char* what, std::vector<T>& values )
@@ -206,6 +206,7 @@ namespace
     std::string flavorsFile;                                // --flavors: a file of 32-bit unsigned ints
     std::string rndHelFile;                                 // --rnd-hel: a file of doubles
     std::string rndColFile;                                 // --rnd-col: a file of doubles
+    std::string helIndexFile;                               // --hel-index: a file of 32-bit ints
     std::string dumpHelFile;                                // --dump-hel: write the helicity indices
     std::string dumpColFile;                                // --dump-col: write the color indices
     std::vector<std::pair<std::string, double>> parameters; // --param <name>=<value>
@@ -254,6 +255,8 @@ namespace
       << "  --rnd-hel <file>  Random numbers of the helicity choice (umami otherwise uses 0.5\n"
       << "                    and returns the helicity sum for an interference |M|^2).\n"
       << "  --rnd-col <file>  Random numbers of the color choice (otherwise 0.5).\n"
+      << "  --hel-index <file>  Helicity index [0,ncomb) of every event: the |M|^2 of that one\n"
+      << "                    helicity instead of the helicity sum (UMAMI_IN_HELICITY_INDEX).\n"
       << "  --dump-hel <file>  Write the chosen helicity index of every event (-1: none).\n"
       << "  --dump-col <file>  Write the chosen color index of every event (-1: none).\n"
       << "  --param <name>=<value>  umami_set_parameter after umami_initialize (repeatable).\n"
@@ -648,6 +651,7 @@ namespace
     double alphasValue = param_card_alpha_s();
     std::vector<double> alphasIn, rndHelIn, rndColIn;
     std::vector<unsigned int> flavorsIn;
+    std::vector<int> helIndexIn;
     if( is_float( io.alphas.c_str() ) )
       alphasValue = atof( io.alphas.c_str() );
     else if( !io.alphas.empty() && !read_binary_values( io.alphas, "alpha_s", alphasIn ) )
@@ -655,11 +659,13 @@ namespace
     if( !io.flavorsFile.empty() && !read_binary_values( io.flavorsFile, "flavor", flavorsIn ) ) return 2;
     if( !io.rndHelFile.empty() && !read_binary_values( io.rndHelFile, "helicity random number", rndHelIn ) ) return 2;
     if( !io.rndColFile.empty() && !read_binary_values( io.rndColFile, "color random number", rndColIn ) ) return 2;
+    if( !io.helIndexFile.empty() && !read_binary_values( io.helIndexFile, "helicity index", helIndexIn ) ) return 2;
     const std::size_t nevtRun = eventsFromFile ? lheEvents.size() : (std::size_t)niter * nevt;
     for( auto [size, what] : { std::make_pair( alphasIn.size(), "alpha_s" ),
                                std::make_pair( flavorsIn.size(), "flavor" ),
                                std::make_pair( rndHelIn.size(), "helicity random number" ),
-                               std::make_pair( rndColIn.size(), "color random number" ) } )
+                               std::make_pair( rndColIn.size(), "color random number" ),
+                               std::make_pair( helIndexIn.size(), "helicity index" ) } )
     {
       if( size != 0 && size < nevtRun )
       {
@@ -684,6 +690,7 @@ namespace
     std::vector<double> alphasVec( nevt, alphasValue );
     std::vector<double> rndHelVec( nevt, 0.5 ), rndColVec( nevt, 0.5 );
     std::vector<int> helVec( nevt ), colVec( nevt );
+    std::vector<int> helInVec( nevt, 0 );
 #ifdef MGONGPUCPP_GPUIMPL
     timermap.start( "00 GpuInit" );
     GpuRuntime gpuRuntime( false );
@@ -700,6 +707,7 @@ namespace
     DeviceBufferBase<double> devAlphaS( nevt );
     DeviceBufferBase<double> devRndHel( nevt ), devRndCol( nevt );
     DeviceBufferBase<int> devHel( nevt ), devCol( nevt );
+    DeviceBufferBase<int> devHelIn( nevt );
     std::vector<double> hstUmamiMEs( nevt );
     // the inputs that are the same for every event are copied to the device once
     gpuMemcpy( devFlv.data(), flvVec.data(), nevt * sizeof( unsigned int ), gpuMemcpyHostToDevice );
@@ -712,6 +720,7 @@ namespace
     double* rndColPtr = devRndCol.data();
     int* helPtr = devHel.data();
     int* colPtr = devCol.data();
+    int* helInPtr = devHelIn.data();
     gpuStream_t stream = nullptr; // nullptr: the default stream
     if( io.nonblockingStream ) gpuStreamCreateNonBlocking( &stream );
 #else
@@ -728,6 +737,7 @@ namespace
     double* rndColPtr = rndColVec.data();
     int* helPtr = helVec.data();
     int* colPtr = colVec.data();
+    int* helInPtr = helInVec.data();
 #endif
 
     // The keys and buffers of the umami call, the same for every batch
@@ -744,6 +754,11 @@ namespace
     {
       in_keys.push_back( UMAMI_IN_RANDOM_COLOR );
       inputs.push_back( rndColPtr );
+    }
+    if( !helIndexIn.empty() )
+    {
+      in_keys.push_back( UMAMI_IN_HELICITY_INDEX );
+      inputs.push_back( helInPtr );
     }
     if( dumpHel.is_open() )
     {
@@ -922,11 +937,17 @@ namespace
         for( unsigned int ievt = 0; ievt < nevt; ++ievt )
           flvVec[ievt] = flavorsIn[base + std::min( ievt, nreal - 1 )];
       }
+      if( !helIndexIn.empty() )
+      {
+        for( unsigned int ievt = 0; ievt < nevt; ++ievt )
+          helInVec[ievt] = helIndexIn[base + std::min( ievt, nreal - 1 )];
+      }
 #ifdef MGONGPUCPP_GPUIMPL
       if( !alphasIn.empty() ) gpuMemcpy( alphasPtr, alphasVec.data(), nevt * sizeof( double ), gpuMemcpyHostToDevice );
       if( !rndHelIn.empty() ) gpuMemcpy( rndHelPtr, rndHelVec.data(), nevt * sizeof( double ), gpuMemcpyHostToDevice );
       if( !rndColIn.empty() ) gpuMemcpy( rndColPtr, rndColVec.data(), nevt * sizeof( double ), gpuMemcpyHostToDevice );
       if( !flavorsIn.empty() ) gpuMemcpy( flvPtr, flvVec.data(), nevt * sizeof( unsigned int ), gpuMemcpyHostToDevice );
+      if( !helIndexIn.empty() ) gpuMemcpy( helInPtr, helInVec.data(), nevt * sizeof( int ), gpuMemcpyHostToDevice );
       // A non-blocking stream does not wait for the inputs copied and transposed on the
       // default stream: finish them first, as any caller on such a stream must
       if( stream != nullptr ) checkGpu( gpuDeviceSynchronize() );
@@ -1146,10 +1167,11 @@ int main( int argc, char** argv )
     else if( arg == "--energy" && argn + 1 < argc && is_float( argv[argn + 1] ) )
       perfEnergy = atof( argv[++argn] );
     else if( ( arg == "--alphas" || arg == "--flavors" || arg == "--rnd-hel" || arg == "--rnd-col" ||
-               arg == "--dump-hel" || arg == "--dump-col" ) && argn + 1 < argc )
+               arg == "--hel-index" || arg == "--dump-hel" || arg == "--dump-col" ) && argn + 1 < argc )
     {
       std::string& value = ( arg == "--alphas" ? io.alphas : arg == "--flavors" ? io.flavorsFile :
                              arg == "--rnd-hel" ? io.rndHelFile : arg == "--rnd-col" ? io.rndColFile :
+                             arg == "--hel-index" ? io.helIndexFile :
                              arg == "--dump-hel" ? io.dumpHelFile : io.dumpColFile );
       value = argv[++argn];
       mode = MODE_PERF;

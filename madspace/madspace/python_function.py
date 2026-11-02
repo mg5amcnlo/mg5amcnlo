@@ -12,33 +12,33 @@ from ._madspace_py import (
 
 # input name: (data type, shape after the batch dimension); "n" is the particle count
 _INPUT_SHAPES = {
-    "momenta": (DataType.float, ("n", 4)),
-    "alpha_s": (DataType.float, ()),
-    "flavor_index": (DataType.int, ()),
-    "random_color": (DataType.float, ()),
-    "random_helicity": (DataType.float, ()),
-    "random_diagram": (DataType.float, ()),
-    "helicity_index": (DataType.int, ()),
-    "diagram_index": (DataType.int, ()),
-    "channel_index": (DataType.int, ()),
-    "particle_count": (DataType.int, ()),
-    "pdg_ids": (DataType.int, ("n",)),
-    "momentum_fraction": (DataType.float, ()),
-    "scale": (DataType.float, ()),
-    "pdg_id": (DataType.int, ()),
-    "beam_index": (DataType.int, ()),
+    "momenta": (DataType.float64, ("n", 4)),
+    "alpha_s": (DataType.float64, ()),
+    "flavor_index": (DataType.int32, ()),
+    "random_color": (DataType.float64, ()),
+    "random_helicity": (DataType.float64, ()),
+    "random_diagram": (DataType.float64, ()),
+    "helicity_index": (DataType.int32, ()),
+    "diagram_index": (DataType.int32, ()),
+    "channel_index": (DataType.int32, ()),
+    "particle_count": (DataType.int32, ()),
+    "pdg_ids": (DataType.int32, ("n",)),
+    "momentum_fraction": (DataType.float64, ()),
+    "scale": (DataType.float64, ()),
+    "pdg_id": (DataType.int32, ()),
+    "beam_index": (DataType.int32, ()),
 }
 _OUTPUT_TYPES = {
-    "matrix_element": DataType.float,
-    "color_index": DataType.int,
-    "helicity_index": DataType.int,
-    "diagram_index": DataType.int,
-    "cut": DataType.float,
-    "ren_scale": DataType.float,
-    "fact_scale1": DataType.float,
-    "fact_scale2": DataType.float,
-    "pdf": DataType.float,
-    "bias": DataType.float,
+    "matrix_element": DataType.float64,
+    "color_index": DataType.int32,
+    "helicity_index": DataType.int32,
+    "diagram_index": DataType.int32,
+    "cut": DataType.float64,
+    "ren_scale": DataType.float64,
+    "fact_scale1": DataType.float64,
+    "fact_scale2": DataType.float64,
+    "pdf": DataType.float64,
+    "bias": DataType.float64,
 }
 
 
@@ -135,7 +135,7 @@ class PythonFunction:
 
     def _numpy_output(self, address, dtype, count, offset):
         # numpy.from_dlpack gives read-only arrays, so map the CPU buffer directly
-        ctype = ctypes.c_double if dtype == DataType.float else ctypes.c_int32
+        ctype = ctypes.c_double if dtype == DataType.float64 else ctypes.c_int32
         size = ctypes.sizeof(ctype)
         buffer = (ctype * count).from_address(address + offset * size)
         return self._numpy.frombuffer(buffer, dtype=self._numpy.dtype(ctype))
@@ -169,7 +169,7 @@ class PythonFunction:
             if self._needs_particle_count and n is None:
                 counts = self._view(
                     inputs[_UMAMI_INPUT_KEYS["particle_count"]],
-                    DataType.int,
+                    DataType.int32,
                     [count],
                     [1],
                     offset,
@@ -227,7 +227,7 @@ class PythonFunction:
                 raise TypeError(
                     f"{prefix} must be a torch.Tensor, not {type(result).__name__}"
                 )
-            expected = torch.float64 if dtype == DataType.float else torch.int32
+            expected = torch.float64 if dtype == DataType.float64 else torch.int32
             result_device = "cpu" if result.device.type == "cpu" else "gpu"
             if result_device != ("cpu" if device[0] == "cpu" else "gpu"):
                 raise ValueError(
@@ -240,7 +240,7 @@ class PythonFunction:
                     f"{prefix} must be a numpy.ndarray, not {type(result).__name__}"
                 )
             expected = numpy.dtype(
-                numpy.float64 if dtype == DataType.float else numpy.int32
+                numpy.float64 if dtype == DataType.float64 else numpy.int32
             )
         if result.dtype != expected:
             raise TypeError(f"{prefix} must have dtype {expected}, not {result.dtype}")

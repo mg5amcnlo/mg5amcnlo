@@ -138,7 +138,7 @@ me_int_t Instruction::int_literal_arg(
 ) const {
     auto& arg_val = args.at(index);
     auto& arg_type = arg_val.type;
-    if (arg_type.dtype != DataType::dt_int || arg_type.batch_size != BatchSize::one ||
+    if (arg_type.dtype != DataType::dt_int32 || arg_type.batch_size != BatchSize::one ||
         arg_type.shape.size() != 0 ||
         !std::holds_alternative<me_int_t>(arg_val.literal_value)) {
         throw std::invalid_argument(
@@ -488,7 +488,7 @@ TypeVec BatchSplitInstruction::signature(const ValueVec& args) const {
 TypeVec BatchSplitByIndexInstruction::signature(const ValueVec& args) const {
     check_arg_count(args, 2);
     auto& indices_type = args.at(0).type;
-    if (indices_type.dtype != DataType::dt_int || indices_type.shape.size() != 0) {
+    if (indices_type.dtype != DataType::dt_int32 || indices_type.shape.size() != 0) {
         throw std::invalid_argument(
             std::format("{}, argument 1: expected batch of integers", name())
         );
@@ -503,7 +503,7 @@ TypeVec BatchSplitByIndexInstruction::signature(const ValueVec& args) const {
     auto last_batch_size = indices_type.batch_size;
     for (int i = 0; i < size; ++i) {
         auto batch_size = i == size - 1 ? last_batch_size : BatchSize();
-        output_types.push_back({DataType::dt_int, batch_size, {}});
+        output_types.push_back({DataType::dt_int32, batch_size, {}});
         last_batch_size = last_batch_size - batch_size;
     }
     return output_types;
@@ -547,7 +547,8 @@ TypeVec BatchMergeByIndexInstruction::signature(const ValueVec& args) const {
                 )
             );
         }
-        if (indices_type.dtype != DataType::dt_int || indices_type.shape.size() != 0) {
+        if (indices_type.dtype != DataType::dt_int32 ||
+            indices_type.shape.size() != 0) {
             throw std::invalid_argument(
                 std::format(
                     "{}, argument {}: expected batch of integers", name(), i + 2
@@ -679,7 +680,7 @@ TypeVec OffsetIndicesInstruction::signature(const ValueVec& args) const {
         batch_sizes_out.type.batch_size_list.end(),
         BatchSize::zero
     );
-    return {{DataType::dt_int, total_batch_size, {}}};
+    return {{DataType::dt_int32, total_batch_size, {}}};
 }
 
 TypeVec FullInstruction::signature(const ValueVec& args) const {
@@ -749,7 +750,7 @@ TypeVec AcceptNormInstruction::signature(const ValueVec& args) const {
         }
         ++i;
     }
-    return {{DataType::dt_float, BatchSize::one, {}}};
+    return {{DataType::dt_float64, BatchSize::one, {}}};
 }
 
 TypeVec RqsReshapeInstruction::signature(const ValueVec& args) const {
@@ -757,7 +758,7 @@ TypeVec RqsReshapeInstruction::signature(const ValueVec& args) const {
     int bin_count = int_literal_arg(args, 1);
 
     auto& input_type = args.at(0).type;
-    if (input_type.dtype != DataType::dt_float || input_type.shape.size() != 1 ||
+    if (input_type.dtype != DataType::dt_float64 || input_type.shape.size() != 1 ||
         input_type.shape.at(0) % (3 * bin_count + 1) != 0) {
         throw std::invalid_argument(
             std::format(
@@ -769,28 +770,28 @@ TypeVec RqsReshapeInstruction::signature(const ValueVec& args) const {
     int dim = input_type.shape.at(0) / (3 * bin_count + 1);
 
     return {
-        {DataType::dt_float, input_type.batch_size, {dim, bin_count}},
-        {DataType::dt_float, input_type.batch_size, {dim, bin_count}},
-        {DataType::dt_float, input_type.batch_size, {dim, bin_count + 1}},
+        {DataType::dt_float64, input_type.batch_size, {dim, bin_count}},
+        {DataType::dt_float64, input_type.batch_size, {dim, bin_count}},
+        {DataType::dt_float64, input_type.batch_size, {dim, bin_count + 1}},
     };
 }
 
 TypeVec NonzeroInstruction::signature(const ValueVec& args) const {
     check_arg_count(args, 1);
     auto& input_type = args.at(0).type;
-    if (input_type.dtype != DataType::dt_float || input_type.shape.size() != 0) {
+    if (input_type.dtype != DataType::dt_float64 || input_type.shape.size() != 0) {
         throw std::invalid_argument(
             std::format("{}, argument 1: expected batch of floats", name())
         );
     }
-    return {{DataType::dt_int, BatchSize(), {}}};
+    return {{DataType::dt_int32, BatchSize(), {}}};
 }
 
 TypeVec BatchGatherInstruction::signature(const ValueVec& args) const {
     check_arg_count(args, 2);
     auto& indices_type = args.at(0).type;
     auto& values_type = args.at(1).type;
-    if (indices_type.dtype != DataType::dt_int || indices_type.shape.size() != 0) {
+    if (indices_type.dtype != DataType::dt_int32 || indices_type.shape.size() != 0) {
         throw std::invalid_argument(
             std::format("{}, argument 1: expected batch of integers", name())
         );
@@ -808,13 +809,13 @@ TypeVec BatchScatterInstruction::signature(const ValueVec& args) const {
     auto& indices_type = args.at(0).type;
     auto& target_type = args.at(1).type;
     auto& source_type = args.at(2).type;
-    if (indices_type.dtype != DataType::dt_int || indices_type.shape.size() != 0) {
+    if (indices_type.dtype != DataType::dt_int32 || indices_type.shape.size() != 0) {
         throw std::invalid_argument(
             std::format("{}, argument 1: expected batch of integers", name())
         );
     }
-    if (target_type.dtype != DataType::dt_float &&
-        target_type.dtype != DataType::dt_int) {
+    if (target_type.dtype != DataType::dt_float64 &&
+        target_type.dtype != DataType::dt_int32) {
         throw std::invalid_argument(
             std::format("{}, argument 2: expected data type float or int", name())
         );
@@ -841,7 +842,7 @@ TypeVec RandomInstruction::signature(const ValueVec& args) const {
         );
     }
     int count = int_literal_arg(args, 1);
-    return {{DataType::dt_float, batch_size_type.batch_size_list.at(0), {count}}};
+    return {{DataType::dt_float64, batch_size_type.batch_size_list.at(0), {count}}};
 }
 
 TypeVec RandomIntInstruction::signature(const ValueVec& args) const {
@@ -860,19 +861,19 @@ TypeVec RandomIntInstruction::signature(const ValueVec& args) const {
             std::format("{}, argument 2: expected single batch size", name())
         );
     }
-    return {{DataType::dt_int, batch_size_type.batch_size_list.at(0), {}}};
+    return {{DataType::dt_int32, batch_size_type.batch_size_list.at(0), {}}};
 }
 
 TypeVec UnweightInstruction::signature(const ValueVec& args) const {
     check_arg_count(args, 2);
     auto& weights_type = args.at(0).type;
     auto& max_weight_type = args.at(1).type;
-    if (weights_type.dtype != DataType::dt_float || weights_type.shape.size() != 0) {
+    if (weights_type.dtype != DataType::dt_float64 || weights_type.shape.size() != 0) {
         throw std::invalid_argument(
             std::format("{}, argument 1: expected batch of floats", name())
         );
     }
-    if (max_weight_type.dtype != DataType::dt_float ||
+    if (max_weight_type.dtype != DataType::dt_float64 ||
         max_weight_type.batch_size != BatchSize::one ||
         max_weight_type.shape.size() != 0) {
         throw std::invalid_argument(
@@ -882,7 +883,8 @@ TypeVec UnweightInstruction::signature(const ValueVec& args) const {
 
     BatchSize out_batch_size;
     return {
-        {DataType::dt_int, out_batch_size, {}}, {DataType::dt_float, out_batch_size, {}}
+        {DataType::dt_int32, out_batch_size, {}},
+        {DataType::dt_float64, out_batch_size, {}}
     };
 }
 
@@ -925,7 +927,7 @@ TypeVec MatrixElementInstruction::signature(const ValueVec& args) const {
         }
         switch (input_key) {
         case UMAMI_IN_MOMENTA:
-            if (input_type.dtype != DataType::dt_float ||
+            if (input_type.dtype != DataType::dt_float64 ||
                 input_type.shape.size() != 2 || input_type.shape.at(1) != 4) {
                 throw std::invalid_argument(
                     std::format(
@@ -941,7 +943,7 @@ TypeVec MatrixElementInstruction::signature(const ValueVec& args) const {
         case UMAMI_IN_RANDOM_DIAGRAM:
         case UMAMI_IN_MOMENTUM_FRACTION:
         case UMAMI_IN_SCALE:
-            if (input_type.dtype != DataType::dt_float ||
+            if (input_type.dtype != DataType::dt_float64 ||
                 input_type.shape.size() != 0) {
                 throw std::invalid_argument(
                     std::format(
@@ -957,7 +959,8 @@ TypeVec MatrixElementInstruction::signature(const ValueVec& args) const {
         case UMAMI_IN_PARTICLE_COUNT:
         case UMAMI_IN_PDG_ID:
         case UMAMI_IN_BEAM_INDEX:
-            if (input_type.dtype != DataType::dt_int || input_type.shape.size() != 0) {
+            if (input_type.dtype != DataType::dt_int32 ||
+                input_type.shape.size() != 0) {
                 throw std::invalid_argument(
                     std::format(
                         "matrix_element, argument {}: expected batch of integers", i + 1
@@ -966,7 +969,8 @@ TypeVec MatrixElementInstruction::signature(const ValueVec& args) const {
             }
             break;
         case UMAMI_IN_PDG_IDS:
-            if (input_type.dtype != DataType::dt_int || input_type.shape.size() != 1) {
+            if (input_type.dtype != DataType::dt_int32 ||
+                input_type.shape.size() != 1) {
                 throw std::invalid_argument(
                     std::format(
                         "matrix_element, argument {}: expected array of integers", i + 1
@@ -999,17 +1003,17 @@ TypeVec MatrixElementInstruction::signature(const ValueVec& args) const {
         case UMAMI_OUT_FACT_SCALE_2:
         case UMAMI_OUT_PDF:
         case UMAMI_OUT_BIAS:
-            dtype = DataType::dt_float;
+            dtype = DataType::dt_float64;
             shape = {};
             break;
         case UMAMI_OUT_DIAGRAM_AMP2:
-            dtype = DataType::dt_float;
+            dtype = DataType::dt_float64;
             shape = {output_size};
             break;
         case UMAMI_OUT_COLOR_INDEX:
         case UMAMI_OUT_HELICITY_INDEX:
         case UMAMI_OUT_DIAGRAM_INDEX:
-            dtype = DataType::dt_int;
+            dtype = DataType::dt_int32;
             shape = {};
             break;
         default:
