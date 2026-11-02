@@ -1,7 +1,7 @@
 ! Exercise the production compute_delta routine with controlled Born/real
 ! records and a simple Sudakov table. There is no shower runtime interface.
 program check_mcatnlo_delta_matching
-  use mc_counterterms, only: compute_delta,isspecial
+  use mc_counterterms, only: compute_delta,isspecial,delta_connections,delta_leg_probability
   use process_module
   use scale_module
   implicit none
@@ -21,6 +21,10 @@ program check_mcatnlo_delta_matching
   integer :: mass_calls(4:5)
   common /test_mass_calls/ mass_calls
   double precision :: p(0:3,5),prob,expected,t34,t43
+  type(delta_connections) :: connections
+  double precision :: mcmass(21)
+  logical :: unit_table
+  common /test_unit_table/ unit_table
   character(len=32) :: mode
 
   call get_command_argument(1,mode)
@@ -36,6 +40,7 @@ program check_mcatnlo_delta_matching
   lpp=0
   isspecial=.false.
   table_calls=0
+  unit_table=.false.
   mass_calls=0
   mccntcalled=0
   valid_dipole_n=.false.
@@ -74,6 +79,18 @@ program check_mcatnlo_delta_matching
   call require(logical(seen_dead(3,4) .and. seen_dead(4,3)),'starting-scale veto preserved')
   call require(prob == 1d0 .and. table_calls == 5,'dead dipoles do not enter Sudakov product')
   call require(all(mass_calls == 2),'model masses requested for each Delta calculation')
+
+  ! Both colour-line weights vanish when table ratios round to unity.
+  ! The survival probability must remain finite and equal to one.
+  connections%count=2
+  connections%start=50d0
+  connections%stop=nearest(50d0,-1d0)
+  connections%mass=50d0
+  connections%sudakov_type=2
+  mcmass=0d0
+  unit_table=.true.
+  prob=delta_leg_probability(3,21,[21],0,0d0,connections,mcmass)
+  call require(prob==1d0,'rounded unit two-line Sudakov ratios remain finite')
   print *, 'PASS native Delta matching and starting-scale veto'
 contains
   subroutine require(condition,label)
@@ -124,6 +141,12 @@ double precision function pysudakov_safe(scale,mass,id,kind,mcmass)
   common /cstxmbds/ cstlow,cstupp,cxmlow,cxmupp
   integer :: id,kind,table_calls
   common /test_table_calls/ table_calls
+  logical :: unit_table
+  common /test_unit_table/ unit_table
+  if(unit_table)then
+    pysudakov_safe=1d0
+    return
+  endif
   if (table_calls == 0) then
     cstlow=1d0
     cstupp=1000d0

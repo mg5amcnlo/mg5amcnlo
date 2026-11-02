@@ -84,6 +84,9 @@ class TestMCDeadZones(unittest.TestCase):
     def test_massless_partner_roundoff(self):
         self.check_case("massless")
 
+    def test_single_recoil_uses_its_onshell_mass_after_boosts(self):
+        self.check_case("single_recoil")
+
     def test_massive_partner_boundary(self):
         self.check_case("massive")
 
