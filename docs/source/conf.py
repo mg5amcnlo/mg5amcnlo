@@ -19,6 +19,24 @@ if os.path.isdir(os.path.join(_local_install, "madspace")):
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+# pyamplicol/docs is copied (not symlinked: MyST resolves links from the real
+# path) into the gitignored source/pyamplicol.
+def _copy_pyamplicol_docs():
+    import shutil
+
+    here = os.path.dirname(os.path.abspath(__file__))
+    source = os.path.join(here, "..", "..", "pyamplicol", "docs")
+    target = os.path.join(here, "pyamplicol")
+    shutil.rmtree(target, ignore_errors=True)
+    jekyll_only = shutil.ignore_patterns(
+        "_config.yml", "_includes", "css", "results", "archive", "arxiv", ".*"
+    )
+
+    shutil.copytree(source, target, ignore=jekyll_only)
+
+
+_copy_pyamplicol_docs()
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -60,7 +78,15 @@ extensions = [
     # "sphinx.ext.linkcode",
     "sphinx_autodoc_typehints",
     "breathe",
+    "myst_parser",
 ]
+
+# The pyAmpliCol pages are Markdown.
+source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
+myst_enable_extensions = ["dollarmath", "colon_fence"]
+myst_heading_anchors = 3
+# pyAmpliCol pages put an HTML banner above their first (H2) heading.
+suppress_warnings = ["myst.header"]
 
 # The docstrings generated from the Doxygen comments use Google-style "Args:"
 # blocks (see madspace/generate_docstrings.py); napoleon turns them into proper

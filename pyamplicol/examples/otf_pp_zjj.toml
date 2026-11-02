@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: 0BSD
+# Compact OTF LC example for p p > Z j j. The first explicit warm_up or
+# evaluation constructs only the selected flow with a complete helicity sum.
+
+schema_version = 1
+action = "generate"
+
+[model]
+source = "built-in-sm"
+
+[process]
+entries = [{ expression = "p p > Z j j" }]
+flavor_scheme = 2
+max_quark_lines = 2
+
+[process.multiparticles]
+p = ["d", "d~", "g"]
+j = ["d", "d~", "g"]
+
+[color]
+accuracy = "lc"
+
+[generation]
+output = "artifacts/otf_pp_zjj"
+mode = "error"
+emit_api_bundle = true
+
+[evaluator]
+execution_mode = "on-the-fly"
+backend = "jit"
+batch_size = 128
+
+[evaluator.optimization]
+# This controls cold query construction, not warmed numerical execution.
+cores = 4
+
+[evaluator.jit]
+optimization_level = 2
+compress = false
+
+[evaluation]
+artifact = "artifacts/otf_pp_zjj"
+process = "d d~ > g z g"
+momenta = "data/pp_zjj_momenta.json"
+precision = 16
+
+[benchmark]
+target_runtime = 2.0
+batch_size = 128
+precision = 16
+warmup_runs = 2
+minimum_samples = 5
+# CLI positions are one-based; this is one LC flow with a helicity sum.
+color_flow_ids = ["1"]
+
+[output]
+format = "human"
+color = "auto"
+progress = "auto"
+log_level = "info"

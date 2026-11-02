@@ -42,3 +42,17 @@ If you need a stable release, use the
    madspace/umami-api
    madspace/python-api
    madspace/cpp-api
+
+.. toctree::
+   :maxdepth: 1
+   :caption: pyAmpliCol
+   :hidden:
+
+   pyamplicol/README
+   pyamplicol/user/installation
+   pyamplicol/user/gentle-walkthrough
+   pyamplicol/user/configuration
+   pyamplicol/user/python-api
+   pyamplicol/user/profiling-and-benchmarking
+   pyamplicol/user/architecture-overview
+   pyamplicol/development/README

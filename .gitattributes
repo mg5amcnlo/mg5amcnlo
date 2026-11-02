@@ -4,3 +4,15 @@
 .gitattributes export-ignore
 .pre-commit-config.yaml export-ignore
 .bzrignore export-ignore
+
+# pyamplicol tests and development tooling stay in the repository for its own
+# PyPI releases. The MadGraph7 installer builds the wheel without them.
+pyamplicol/tests/ export-ignore
+pyamplicol/tools/developer/ export-ignore
+
+# Generated pyamplicol data: GitHub collapses these in PR diffs.
+pyamplicol/Cargo.lock linguist-generated
+pyamplicol/dependencies/python-runtime-lock.toml linguist-generated
+pyamplicol/tests/fixtures/** linguist-generated
+pyamplicol/src/pyamplicol/assets/selftest/** linguist-generated
+pyamplicol/src/pyamplicol/assets/models/json/** linguist-generated

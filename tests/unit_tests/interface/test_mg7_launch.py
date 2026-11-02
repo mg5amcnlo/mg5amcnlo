@@ -480,6 +480,12 @@ class MadspaceInstallCommandTest(unittest.TestCase):
                                   or a.startswith('--jobs')]), 1, args)
             self.assertNotIn('5', args)
 
+    def test_pyamplicol_runs_its_own_installer(self):
+        self.cmd.do_set('nb_core 3 --no_save')
+        args = self.installer_args('pyamplicol --source -y')
+        self.assertTrue(args[1].endswith(os.path.join('pyamplicol', 'install.py')))
+        self.assertEqual(args[2:], ['--source', '-y', '-j', '3'])
+
     def test_madtrex_runs_its_own_installer(self):
         """`install madtrex` runs madtrex/install.py (not madspace's), with
         the same job-count forwarding."""

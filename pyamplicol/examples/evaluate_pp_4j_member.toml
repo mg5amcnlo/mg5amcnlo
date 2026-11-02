@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: 0BSD
+# Evaluate u~ g > u~ g g g, a flavour-blind member that was not generated.
+# It is routed through its representative d g > d g g g by the relabelling
+# u -> d plus charge conjugation, at momenta given in the member's leg order.
+
+schema_version = 1
+action = "evaluate"
+
+[evaluation]
+artifact = "artifacts/pp_4j_flavor_blind"
+# Any member of the 486 subprocesses, in any order within each side of ">",
+# is accepted, for example "g u~ > g g g u~" or "u~ u > u~ u g g".
+process = "u~ g > u~ g g g"
+precision = 16
+momenta = "data/pp_4j_momenta.json"
+
+[output]
+format = "human"
+color = "auto"
+progress = "off"

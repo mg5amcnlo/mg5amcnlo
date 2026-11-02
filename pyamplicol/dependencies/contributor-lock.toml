@@ -1,0 +1,69 @@
+# SPDX-License-Identifier: 0BSD
+# Source-checkout-only dependency inputs for non-publishable contributor builds.
+schema_version = 1
+
+[abis]
+symbolica_serialization = "symbolica-bincode2-v1"
+symjit_application = "symjit-application-storage-v3"
+symjit_plane_application = "pyamplicol-symjit-plane-application-v2"
+
+[symbolica]
+source_url = "https://github.com/symbolica-dev/symbolica.git"
+candidate_version = "3.0.0"
+candidate_revision = "7b31114c7a77571aabacf96a311f27ef0f44d007"
+community_url = "https://github.com/symbolica-dev/symbolica-community.git"
+community_revision = "98740d198fb6667c63c0de7cffd4328b5dca57b0"
+release_status = "merged-main-candidate"
+
+[gammaloop_candidate]
+source_url = "https://github.com/alphal00p/gammaloop.git"
+branch = "main"
+revision = "312cf6aaf4cd1414f6742ad87ce39922c497a0b6"
+release_status = "developer-build-input-only"
+
+[symjit]
+candidate_version = "2.26.0"
+repository = "https://github.com/siravan/symjit-crate.git"
+revision = "530304a07d1be6d5abc80291aa5e92cf28ac5546"
+
+[symbolica_integrate]
+source_url = "https://github.com/symbolica-dev/symbolica-integrate.git"
+# Unmodified upstream main with Symbolica 3.0 support.
+revision = "716354a07f2660b38390c95702aa617d1f9472c7"
+
+[ratatui]
+distribution = "ratatui"
+version = "0.4.2"
+source_url = "https://files.pythonhosted.org/packages/83/ef/61a985816192cd3ee50ad5570a72f1fc6d22b86047771d5b72a05bbdc3eb/ratatui-0.4.2.tar.gz"
+sdist_sha256 = "2778b066378f8e1629b4b5e1076f1957c8c439b45cdeaf51970d1949730bb0d5"
+ffi_repository = "https://github.com/holo-q/ratatui-ffi.git"
+ffi_revision = "7249c0bd1445c0c6ee76f3f24923eb35a1d931e0"
+release_status = "developer-build-input-only"
+license = "MIT"
+
+[ufo_model_loader]
+source_url = "https://github.com/alphal00p/ufo_model_loader.git"
+candidate_revision = "70ddee6b416f8c8b340e0d087646d77095c5d24b"
+latest_verified_published_version = "0.1.8"
+published_revision = "f5a9f8d2eaff76b99629fc3143952ca4f2425d55"
+wheel_sha256 = "b253942f0a356eacd5fd68b104cacf11039c2391a9ee963107f674fad54f01ef"
+release_status = "verified"
+license = "MIT"
+
+[legacy_amplicol]
+source_url = "git@github.com:rikkert-frederix/AmpliCol.git"
+branch = "amplicol_with_patches"
+revision = "dcb3efbcbe89c51969818cddf48113fba19ad763"
+reference_fixture_revision = "f3fdca35631c9405d28337a79cdab84994d8e414"
+release_status = "developer-only"
+license = "NOASSERTION"
+redistributed = false
+license_evidence = "No LICENSE or COPYING file exists at the pinned branch revision"
+
+[reference_fft]
+source_url = "https://github.com/rikkert-frederix/AllGluonsMultipletFFT.git"
+branch = "main"
+revision = "9c3cb4fb4658200884553bab796e85bd5e7fe7a9"
+release_status = "developer-only"
+license = "NOASSERTION"
+redistributed = false

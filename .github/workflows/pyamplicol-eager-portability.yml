@@ -1,0 +1,218 @@
+name: pyAmpliCol eager JIT pack architecture transfer
+
+# Ported from pyamplicol: packs produced on one architecture must work on the
+# others, which the installer relies on when it regenerates them locally.
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/pyamplicol-eager-portability.yml
+      - pyamplicol/Cargo.lock
+      - pyamplicol/Cargo.toml
+      - pyamplicol/build_backend/prepared_models.py
+      - pyamplicol/dependencies/release-lock.toml
+      - pyamplicol/pyproject.toml
+      - pyamplicol/rust/crates/rusticol-core/src/eager_runtime/**
+      - pyamplicol/rust/crates/rusticol-core/src/eager_runtime.rs
+      - pyamplicol/rust/crates/rusticol-core/src/eager_tables.rs
+      - pyamplicol/rust/crates/rusticol-core/src/engine/**
+      - pyamplicol/rust/crates/rusticol-core/src/engine.rs
+      - pyamplicol/rust/crates/rusticol-core/src/evaluator/symjit.rs
+      - pyamplicol/rust/crates/rusticol-core/src/evaluator/symjit_plane.rs
+      - pyamplicol/rust/crates/rusticol-core/src/evaluator/symjit_direct.rs
+      - pyamplicol/rust/crates/rusticol-core/src/evaluator/symjit_eager_direct.rs
+      - pyamplicol/rust/crates/rusticol-core/src/evaluator/symjit_compiled_direct.rs
+      - pyamplicol/rust/crates/rusticol-core/src/lib.rs
+      - pyamplicol/rust/crates/rusticol-python/src/lib.rs
+      - pyamplicol/src/pyamplicol/_internal/physics/symbols.py
+      - pyamplicol/src/pyamplicol/_internal/versions.py
+      - pyamplicol/src/pyamplicol/config/**
+      - pyamplicol/src/pyamplicol/evaluators/symbolica*.py
+      - pyamplicol/src/pyamplicol/generation/**
+      - pyamplicol/src/pyamplicol/models/prepared*.py
+      - pyamplicol/src/pyamplicol/runtime/eager_exact/**
+      - pyamplicol/tools/ci/eager_portability*.py
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/pyamplicol-eager-portability.yml
+      - pyamplicol/Cargo.lock
+      - pyamplicol/Cargo.toml
+      - pyamplicol/build_backend/prepared_models.py
+      - pyamplicol/dependencies/release-lock.toml
+      - pyamplicol/pyproject.toml
+      - pyamplicol/rust/crates/rusticol-core/src/eager_runtime/**
+      - pyamplicol/rust/crates/rusticol-core/src/eager_runtime.rs
+      - pyamplicol/rust/crates/rusticol-core/src/eager_tables.rs
+      - pyamplicol/rust/crates/rusticol-core/src/engine/**
+      - pyamplicol/rust/crates/rusticol-core/src/engine.rs
+      - pyamplicol/rust/crates/rusticol-core/src/evaluator/symjit.rs
+      - pyamplicol/rust/crates/rusticol-core/src/evaluator/symjit_plane.rs
+      - pyamplicol/rust/crates/rusticol-core/src/evaluator/symjit_direct.rs
+      - pyamplicol/rust/crates/rusticol-core/src/evaluator/symjit_eager_direct.rs
+      - pyamplicol/rust/crates/rusticol-core/src/evaluator/symjit_compiled_direct.rs
+      - pyamplicol/rust/crates/rusticol-core/src/lib.rs
+      - pyamplicol/rust/crates/rusticol-python/src/lib.rs
+      - pyamplicol/src/pyamplicol/_internal/physics/symbols.py
+      - pyamplicol/src/pyamplicol/_internal/versions.py
+      - pyamplicol/src/pyamplicol/config/**
+      - pyamplicol/src/pyamplicol/evaluators/symbolica*.py
+      - pyamplicol/src/pyamplicol/generation/**
+      - pyamplicol/src/pyamplicol/models/prepared*.py
+      - pyamplicol/src/pyamplicol/runtime/eager_exact/**
+      - pyamplicol/tools/ci/eager_portability*.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: pyamplicol
+
+concurrency:
+  group: pyamplicol-eager-portability-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  produce-architecture-packs:
+    name: Produce prepared JIT pack (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    concurrency:
+      group: "pyamplicol-symbolica-${{ startsWith(matrix.runner, 'macos-') && matrix.runner || format('{0}-{1}', matrix.runner, github.run_id) }}"
+      cancel-in-progress: false
+      queue: max
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: linux-x86-64
+            system: Linux
+            machine: x86_64
+            pack_architecture: x86_64
+          - runner: macos-15
+            target: macos-arm64
+            system: Darwin
+            machine: arm64
+            pack_architecture: aarch64
+    env:
+      PYAMPLICOL_BUILD_MODE: release
+      PYTHONDONTWRITEBYTECODE: "1"
+      SYMBOLICA_HIDE_BANNER: "1"
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            pyamplicol/pyproject.toml
+            pyamplicol/dependencies/release-lock.toml
+            pyamplicol/dependencies/python-runtime-lock.toml
+      - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
+      - name: Install pinned build tools
+        run: python -m pip install "maturin==1.15.0" "packaging==26.3"
+      - name: Build the non-publishable release bootstrap wheel
+        run: >-
+          python tools/ci/memory_watchdog.py --limit-gib 30 --
+          python tools/release/prepare_release_prepared_models.py
+          bootstrap-wheel .artifacts/release-prepared-bootstrap
+      - name: Install the isolated published-dependency runtime
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install .artifacts/release-prepared-bootstrap/pyamplicol-*.whl
+      - name: Produce host-labelled portable built-in JIT O2 packs
+        run: >-
+          .venv/bin/python tools/ci/memory_watchdog.py --limit-gib 30 --
+          .venv/bin/python tools/ci/eager_portability.py produce
+          .artifacts/eager-portability-transfer/${{ matrix.pack_architecture }}
+          --python .venv/bin/python
+          --asset-mode release
+          --expected-system ${{ matrix.system }}
+          --expected-machine ${{ matrix.machine }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pyamplicol-eager-jit-transfer-${{ matrix.pack_architecture }}
+          path: pyamplicol/.artifacts/eager-portability-transfer/${{ matrix.pack_architecture }}/
+          if-no-files-found: error
+          retention-days: 14
+
+  consume-matching-architecture-pack:
+    name: Consume portable pack (${{ matrix.target }})
+    needs: produce-architecture-packs
+    runs-on: ${{ matrix.runner }}
+    concurrency:
+      group: "pyamplicol-symbolica-${{ startsWith(matrix.runner, 'macos-') && matrix.runner || format('{0}-{1}', matrix.runner, github.run_id) }}"
+      cancel-in-progress: false
+      queue: max
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: linux-x86-64
+            system: Linux
+            machine: x86_64
+            pack_architecture: x86_64
+          - runner: macos-15-intel
+            target: macos-x86-64
+            system: Darwin
+            machine: x86_64
+            pack_architecture: x86_64
+          - runner: macos-15
+            target: macos-arm64
+            system: Darwin
+            machine: arm64
+            pack_architecture: aarch64
+    env:
+      PYAMPLICOL_BUILD_MODE: release
+      PYTHONDONTWRITEBYTECODE: "1"
+      SYMBOLICA_HIDE_BANNER: "1"
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            pyamplicol/pyproject.toml
+            pyamplicol/dependencies/release-lock.toml
+            pyamplicol/dependencies/python-runtime-lock.toml
+      - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: pyamplicol-eager-jit-transfer-${{ matrix.pack_architecture }}
+          path: pyamplicol/.artifacts/eager-portability-transfer
+      - name: Install pinned build tools
+        run: python -m pip install "maturin==1.15.0" "packaging==26.3"
+      - name: Build the non-publishable release bootstrap wheel
+        run: >-
+          python tools/ci/memory_watchdog.py --limit-gib 30 --
+          python tools/release/prepare_release_prepared_models.py
+          bootstrap-wheel .artifacts/release-prepared-bootstrap
+      - name: Install the isolated published-dependency runtime
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install .artifacts/release-prepared-bootstrap/pyamplicol-*.whl
+      - name: Generate and evaluate from the portable pack
+        run: >-
+          .venv/bin/python tools/ci/memory_watchdog.py --limit-gib 30 --
+          .venv/bin/python tools/ci/eager_portability.py consume
+          .artifacts/eager-portability-transfer
+          --python .venv/bin/python
+          --expected-system ${{ matrix.system }}
+          --expected-machine ${{ matrix.machine }}
+          --report .artifacts/eager-portability-results/${{ matrix.target }}.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pyamplicol-eager-jit-result-${{ matrix.target }}
+          path: pyamplicol/.artifacts/eager-portability-results/${{ matrix.target }}.json
+          if-no-files-found: error
+          retention-days: 14

@@ -2,8 +2,9 @@ name: Release
 
 # Fires once a GitHub Release is published (draft -> Publish release), never on
 # a tag push by itself. Checks that main's CI was green for the tagged commit,
-# publishes madspace to PyPI with the same version as the MadGraph release, and
-# attaches the MadGraph tarball to the release. If anything fails, the release
+# publishes madspace and pyamplicol to PyPI with the same version as the
+# MadGraph release, and attaches the MadGraph tarball and the pyamplicol
+# prepared-model archive to the release. If anything fails, the release
 # is reverted to draft so a half-published version never stays public.
 #
 # The test suites are deliberately NOT re-run here. Every commit on main is
@@ -89,6 +90,7 @@ jobs:
             .github/workflows/aloha.yml
             .github/workflows/check_xsec_processes_mg7.yml
             .github/workflows/madspace.yml
+            .github/workflows/pyamplicol.yml
 
   # Builds the wheels for every supported Python/platform. This one suite does
   # have to run at release time: the CI build on main only builds the
@@ -132,10 +134,45 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 
+  # Builds and tests the pyamplicol sdist and wheels (and the prepared-model
+  # archive they contain), validated by pyamplicol's own release tooling.
+  pyamplicol:
+    needs: require_green_ci
+    uses: ./.github/workflows/pyamplicol.yml
+    with:
+      full_matrix: true
+
+  # Defined here for the same reason as publish_pypi; pyamplicol's PyPI trusted
+  # publisher names this workflow and the same "pypi" environment.
+  publish_pypi_pyamplicol:
+    name: Publish pyamplicol to PyPI
+    needs: [pyamplicol, publish_pypi]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pyamplicol
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+    steps:
+      - name: Download the validated dists
+        uses: actions/download-artifact@v5
+        with:
+          name: pyamplicol-validated-release
+          path: validated
+      - name: Keep only the package files
+        run: |
+          mkdir dist
+          find validated -name 'pyamplicol-*.whl' -exec cp {} dist/ \;
+          find validated -name 'pyamplicol-*.tar.gz' -exec cp {} dist/ \;
+          ls -l dist
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
   tarball:
     needs:
       - check_version
       - publish_pypi
+      - publish_pypi_pyamplicol
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -151,6 +188,21 @@ jobs:
           pattern: cibw-*
           path: wheels
           merge-multiple: true
+
+      - name: Download the pyamplicol wheels built for this release
+        uses: actions/download-artifact@v5
+        with:
+          name: pyamplicol-validated-release
+          path: pyamplicol-validated
+
+      - name: Download the pyamplicol prepared-model archive
+        uses: actions/download-artifact@v5
+        with:
+          name: pyamplicol-prepared-models
+          path: dist
+
+      - name: Collect the pyamplicol wheel names
+        run: find pyamplicol-validated -name 'pyamplicol-*.whl' -exec cp {} wheels/ \;
 
       - name: Build the MadGraph tarball
         run: >
@@ -175,6 +227,14 @@ jobs:
           done
           test -d madspace/install/madspace
 
+          # Also checks that Symbolica accepts pyamplicol's library key.
+          for attempt in $(seq 10); do
+            python3 pyamplicol/install.py --bin -y && break
+            echo "attempt $attempt: pyamplicol==${{ needs.check_version.outputs.version }} not installable yet, retrying..."
+            sleep 15
+          done
+          test -d pyamplicol/install/pyamplicol
+
       - name: Sign the tarball with Sigstore
         uses: sigstore/gh-action-sigstore-python@v3.0.0
         with:
@@ -191,6 +251,8 @@ jobs:
       - require_green_ci
       - madspace
       - publish_pypi
+      - pyamplicol
+      - publish_pypi_pyamplicol
       - tarball
     # 'skipped' has to count as a failure here: a job whose own guard is false,
     # or one whose dependency was skipped, is neither failure() nor cancelled(),

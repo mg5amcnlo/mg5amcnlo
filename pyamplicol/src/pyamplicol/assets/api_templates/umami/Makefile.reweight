@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: 0BSD
+RUSTICOL_CONFIG ?= rusticol-config
+RUSTICOL_CONFIG_PATH := $(shell command -v "$(RUSTICOL_CONFIG)" 2>/dev/null)
+ifeq ($(strip $(RUSTICOL_CONFIG_PATH)),)
+$(error rusticol-config is unavailable; activate the pyAmpliCol environment or set RUSTICOL_CONFIG=/absolute/path)
+endif
+include providers.mk
+CC ?= cc
+BUILD_DIR ?= build
+CFLAGS ?= -O2
+CFLAGS += -std=c11 -Wall -Wextra -pedantic
+SDK_LIBRARY := $(shell "$(RUSTICOL_CONFIG_PATH)" --library)
+SDK_CFLAGS := $(shell "$(RUSTICOL_CONFIG_PATH)" --cflags)
+SDK_LIBS := $(shell "$(RUSTICOL_CONFIG_PATH)" --libs)
+HOST_SYSTEM := $(shell uname -s)
+ifeq ($(HOST_SYSTEM),Darwin)
+SHARED_FLAGS = -dynamiclib -Wl,-install_name,@rpath/$(notdir $@) -Wl,-exported_symbols_list,umami.exports.macos
+else ifeq ($(HOST_SYSTEM),Linux)
+SHARED_FLAGS = -shared -Wl,-z,defs -Wl,-soname,$(notdir $@) -Wl,--version-script=umami.exports
+else
+$(error UMAMI shared libraries support Linux and macOS)
+endif
+LIBRARIES := $(addprefix $(BUILD_DIR)/libreweight_,$(addsuffix .so,$(UMAMI_PROVIDERS)))
+
+.PHONY: all shared clean
+all shared: $(LIBRARIES)
+
+$(BUILD_DIR):
+	mkdir -p "$@"
+
+$(BUILD_DIR)/libreweight_%.so: umami_reweight.c reweight_%.h reweight_provider.h umami.h $(SDK_LIBRARY) | $(BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(SDK_CFLAGS) $(CFLAGS) -fPIC -DUMAMI_REWEIGHT_HEADER='"reweight_$*.h"' $(SHARED_FLAGS) "$<" -o "$@" $(LDFLAGS) $(SDK_LIBS)
+
+clean:
+	$(RM) $(LIBRARIES)

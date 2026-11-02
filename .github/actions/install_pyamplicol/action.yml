@@ -1,0 +1,26 @@
+name: Install pyamplicol
+description: >
+  Make the pyamplicol install (built once per commit by a build_pyamplicol job)
+  available to the tests: restores the cached pyamplicol/install directory and
+  puts it on PYTHONPATH. It does NOT build; the build_pyamplicol job must run
+  first (use `needs:`).
+
+runs:
+  using: composite
+  steps:
+    # Must match the key computed by the build_pyamplicol action exactly.
+    - name: pyamplicol cache key
+      run: echo "PAC_PY=$(python3 -c 'import sys;print(f"{sys.version_info.major}{sys.version_info.minor}")')" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Restore pyamplicol install
+      uses: actions/cache/restore@v5
+      with:
+        path: pyamplicol/install
+        key: pyamplicol-${{ runner.os }}-py${{ env.PAC_PY }}-${{ hashFiles('pyamplicol/src/**', 'pyamplicol/rust/**', 'pyamplicol/build_backend/**', 'pyamplicol/Cargo.*', 'pyamplicol/pyproject.toml', 'pyamplicol/rust-toolchain.toml', 'pyamplicol/dependencies/*.toml') }}
+        fail-on-cache-miss: true
+
+    # Prepended: in the MadGraph root, pyamplicol/ is the source directory.
+    - name: Put pyamplicol on PYTHONPATH
+      run: echo "PYTHONPATH=$GITHUB_WORKSPACE/pyamplicol/install:$PYTHONPATH" >> "$GITHUB_ENV"
+      shell: bash

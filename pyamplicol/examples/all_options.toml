@@ -1,0 +1,268 @@
+# SPDX-License-Identifier: 0BSD
+# Exhaustive TOML schema-v1 reference. Every current registry leaf is active.
+# This card is for resolution/documentation, not as a recommended physics run.
+
+# action: Required command action. Choices are generate, evaluate, benchmark,
+# inspect, model-inspect, model-compile, model-processes, and group-processes.
+action = "generate"
+
+# schema_version: Configuration schema. The only current value is 1.
+schema_version = 1
+
+[model]
+# model.source: "built-in-sm", "built-in-sm-heft", or a UFO
+# directory/JSON/compiled-model path.
+source = "models/json/sm/sm.json"
+# model.restriction: Optional restriction name. Default is null, which applies
+# a model-provided default restriction when one exists.
+restriction = "default"
+# model.simplify: Simplify an external model while compiling. Default true.
+simplify = true
+# model.cache: Reuse the content-addressed compiled-model cache. Default true.
+cache = true
+# model.cache_dir: Optional cache directory. Default is platform-specific/null.
+cache_dir = "cache/models"
+
+[process]
+# process.entries: Typed process expressions with optional unique stable names.
+entries = [
+  { expression = "p p > Z j j" },
+]
+# process.flavor_scheme: Number of active quark flavors. Default 5.
+flavor_scheme = 2
+# process.max_quark_lines: Optional maximum quark-line count. Default null.
+max_quark_lines = 2
+# process.coupling_order_policy: "minimal" or "explicit". Default minimal.
+coupling_order_policy = "explicit"
+# The following four topology-extraction controls are unstable, developer-only
+# implementation details. Do not rely on them in production run cards.
+# process.max_color_sectors: Optional cap on generated color sectors. Default null.
+max_color_sectors = 32
+# process.reference_color_order: Optional external-leg ordering used to identify
+# a reference LC sector. Default is an empty list.
+reference_color_order = [1, 2, 3, 4, 5]
+# process.selected_color_sector_ids: Optional generated-sector subset. Default
+# is an empty list, which keeps every generated sector.
+selected_color_sector_ids = [0]
+# process.selected_source_helicities: Optional fixed source helicities keyed by
+# one-based external-leg label. Default is an empty table.
+selected_source_helicities = { "1" = -1, "2" = 1 }
+# process.flavor_blind: Generate one representative per flavour-relabelling
+# class and record the others as unverified members in process-groups.json.
+# Default false.
+flavor_blind = false
+# process.consider_charge_conjugation: Also relate processes by charge
+# conjugation for flavor_blind and numerical grouping. Default true.
+consider_charge_conjugation = true
+# process.only_unit_multiplier: Accept only numerical relations with factor 1.
+# Default false.
+only_unit_multiplier = false
+# process.analyze_process_groups: "none" or "numerical". After generation,
+# "numerical" compares generated processes at random points and records equal
+# matrix elements up to a rational factor. Default none.
+analyze_process_groups = "none"
+
+# process.multiparticles: User-defined particle-name expansions, merged over
+# model defaults. Every model supplies "all" for its valid propagating physical
+# external states (excluding ghosts, Goldstones, and auxiliary/non-propagating
+# records); an explicit all entry overrides that broad default.
+[process.multiparticles]
+p = ["d", "d~", "u", "u~", "g"]
+j = ["d", "d~", "u", "u~", "g"]
+
+# process.max_coupling_orders: Non-negative limits keyed by coupling-order name.
+[process.max_coupling_orders]
+QCD = 4
+QED = 2
+
+[color]
+# color.accuracy: "lc", "nlc", or "full". Default lc.
+accuracy = "lc"
+# color.contraction: "direct" or "symmetric-group-fft". Default direct.
+# The FFT method requires NLC/full with recurrence or on-the-fly execution.
+contraction = "direct"
+# color.fft_basis: "trace" or "adjoint". Default trace.
+# Adjoint adaptively selects certified DDM (Yang-Mills or single-insertion
+# HEFT), fundamental chains/products for quarks, or exact trace otherwise.
+# Saved fft_basis_selection reports the actual representation and reason.
+# It requires FFT contraction and does not support correlated generation.
+# The schema default shown here remains trace.
+fft_basis = "trace"
+# color.lc_flow_layout: "topology-replay" or "all-flow-union". Default
+# topology-replay. The all-flow union is LC-only and cannot be combined with
+# generation-selected or truncated color/helicity coverage.
+lc_flow_layout = "topology-replay"
+
+[generation]
+# generation.output: Optional artifact output path. Default null.
+output = "artifacts/pp_zjj_all_options"
+# generation.mode: "error", "append", or "replace". Default error.
+mode = "error"
+# generation.workers: Positive integer or "auto". Default auto.
+workers = "auto"
+# generation.emit_api_bundle: Emit Python/Rust/C/C++/Fortran/UMAMI API bundle. Default true.
+emit_api_bundle = true
+[generation.validation]
+# generation.validation.enabled: Run generation validation. Default true.
+enabled = true
+# generation.validation.samples: Positive sample count. Default 2.
+samples = 2
+# generation.validation.seed: Non-negative random seed. Default 12345.
+seed = 12345
+# generation.validation.relative_tolerance: Non-negative tolerance. Default 1e-12.
+relative_tolerance = 1e-12
+# generation.validation.absolute_tolerance: Non-negative tolerance. Default 1e-300.
+absolute_tolerance = 1e-300
+# generation.validation.post_build_validation: Re-open and numerically smoke-test
+# the built evaluator. Default false; structural artifact checks always run.
+post_build_validation = false
+
+[generation.relation_discovery]
+# generation.relation_discovery.mode: "off", "diagnostic", or
+# "certified-reuse". Exact proofs are preferred. Independently verified
+# equal, opposite, and zero currents may also be applied with persisted
+# numerical evidence and a warning. Default off, because the high-precision
+# probes are costly at generation time; set "certified-reuse" or pass
+# --numerical-current-reuse to search for additional reuse.
+mode = "off"
+# generation.relation_discovery.precision_digits: Decimal probe precision,
+# at least 80. Default 96.
+precision_digits = 96
+# generation.relation_discovery.probe_count: Deterministic candidate points,
+# at least 2. Default 4.
+probe_count = 4
+# generation.relation_discovery.verification_probe_count: Independent
+# verification points, at least 2. Default 4.
+verification_probe_count = 4
+# generation.relation_discovery.relative_tolerance: Non-negative verification
+# tolerance. Default 1e-70.
+relative_tolerance = 1e-70
+# generation.relation_discovery.absolute_tolerance: Non-negative verification
+# tolerance. Default 1e-80.
+absolute_tolerance = 1e-80
+# generation.relation_discovery.seed: Non-negative deterministic probe seed.
+# Default 1348026701.
+seed = 1348026701
+
+[evaluator]
+# evaluator.backend: "jit", "asm", or "cpp". Default jit.
+backend = "jit"
+# evaluator.execution_mode: "compiled", "eager", "recurrence", or
+# "on-the-fly". Default recurrence. Eager, recurrence, and on-the-fly
+# built-in-sm use the wheel-owned JIT O2 pack; other packs need an explicit
+# .pyamplicol-model source. On-the-fly supports LC and contracted NLC/full in
+# native f64.
+execution_mode = "compiled"
+# evaluator.batch_size: Positive evaluation batch size. Default 128.
+batch_size = 128
+# evaluator.output_chunk_size: Positive size or null. Default 512.
+output_chunk_size = 512
+
+[evaluator.eager]
+# evaluator.eager.point_tile_size: Maximum points per eager workspace tile.
+# The runtime reduces this automatically when required. Default 1024.
+# This eager section is not applied by on-the-fly execution.
+point_tile_size = 1024
+# evaluator.eager.workspace_mib: Batch workspace target. Default 256; grows as
+# needed to fit the minimum executable tile, rather than rejecting a process.
+workspace_mib = 256
+
+[evaluator.recurrence]
+# evaluator.recurrence.point_tile_size: Maximum points per recurrence workspace
+# tile. The runtime may reduce this automatically. Default 1024.
+# On-the-fly records this request as provenance but does not currently apply it.
+point_tile_size = 1024
+# evaluator.recurrence.workspace_mib: Batch workspace target; grows as needed
+# to fit the minimum executable tile, rather than rejecting a process.
+# Default 256. This target is not currently applied by on-the-fly execution.
+workspace_mib = 256
+
+[evaluator.optimization]
+# evaluator.optimization.horner_iterations: Non-negative count. Default 10.
+horner_iterations = 10
+# evaluator.optimization.cpe_iterations: Non-negative override. The field is
+# omitted by default so Symbolica selects its backend default; this card uses 0.
+cpe_iterations = 0
+# evaluator.optimization.cores: Positive integer or "auto". Default auto. In
+# on-the-fly mode this is the requested query-construction thread count, not a
+# numerical-evaluation thread guarantee.
+cores = "auto"
+# evaluator.optimization.max_horner_variables: Non-negative limit. Default 1000.
+max_horner_variables = 1000
+# evaluator.optimization.max_common_pair_cache_entries: Default 5000000.
+max_common_pair_cache_entries = 5000000
+# evaluator.optimization.max_common_pair_distance: Default 1000.
+max_common_pair_distance = 1000
+# evaluator.optimization.collect_factors: "auto", true, or false. Default auto.
+collect_factors = "auto"
+
+[evaluator.jit]
+# evaluator.jit.optimization_level: Integer 0 through 3. Default 2.
+optimization_level = 2
+# evaluator.jit.compress: Smaller generated code, potentially slower evaluation.
+# "auto" enables compiled JIT O2 only; true/false explicitly override the default.
+compress = "auto"
+
+[evaluator.cpp]
+# evaluator.cpp.optimization: Compiler optimization token. Default "O3".
+optimization = "O3"
+# evaluator.cpp.compiler: Optional compiler executable. Default null.
+compiler = "c++"
+# evaluator.cpp.native_arch: Opt into recorded host CPU requirements. Default false.
+native_arch = false
+# evaluator.cpp.extra_flags: Allowlisted non-ISA compiler arguments. Default empty.
+extra_flags = ["-fno-math-errno"]
+
+[evaluation]
+# evaluation.artifact: Optional schema-v3 artifact path. Default null.
+artifact = "artifacts/pp_zjj_all_options"
+# evaluation.process: Optional stable ID/alias, concrete expression, or unique
+# permutation within each side of a concrete process. Legs never cross ">".
+# Default null.
+process = "d d~ > g z g"
+# evaluation.precision: Positive decimal-digit request. Default 16.
+precision = 16
+# evaluation.resolved: Return physical resolved components. Default false.
+resolved = true
+# evaluation.helicity_ids: Stable physical helicity selectors. Default empty.
+helicity_ids = []
+# evaluation.color_flow_ids: Stable LC flow selectors. Default empty.
+color_flow_ids = []
+# evaluation.model_parameters: Optional flat UFO-style JSON parameter card.
+# Values are finite numbers or [real, imaginary] pairs. Direct parameter
+# overrides are applied afterward. Default null.
+model_parameters = "data/model_parameters.json"
+# evaluation.momenta: Optional JSON phase-space points path. Default null.
+momenta = "data/pp_zjj_momenta.json"
+
+[benchmark]
+# benchmark.target_runtime: Positive target duration in seconds. Default 10.0.
+target_runtime = 10.0
+# benchmark.batch_size: Positive benchmark batch size. Default 128.
+batch_size = 128
+# benchmark.precision: Positive decimal precision used by Python evaluation. Default 16.
+precision = 16
+# benchmark.warmup_runs: Non-negative warmup count. Default 2.
+warmup_runs = 2
+# benchmark.minimum_samples: Positive minimum measured samples. Default 5.
+minimum_samples = 5
+# benchmark.helicity_ids: Optional benchmark helicity selectors. With both
+# selector lists empty, profiling chooses the generated layout's hot workload.
+helicity_ids = []
+# benchmark.color_flow_ids: Optional benchmark LC flow selectors. With both
+# selector lists empty, profiling chooses the generated layout's hot workload.
+color_flow_ids = []
+
+[output]
+# output.format: typed API/config provenance default. The CLI uses --json.
+format = "human"
+# output.color: "auto", "always", or "never". Default auto.
+color = "auto"
+# output.progress: "auto", "tty", "log", or "off". Default auto.
+progress = "auto"
+# output.log_level: "debug", "info", "warning", or "error". Default info.
+log_level = "info"
+
+[symbolica]
+# symbolica.suggest_license: Show one restricted-mode license reminder. Default true.
+suggest_license = true

@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: 0BSD
+
+[package]
+name = "rusticol-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[features]
+default = ["f64-compiled", "f64-symjit"]
+f64-compiled = ["dep:libloading", "dep:num-complex", "dep:symjit"]
+f64-symjit = ["dep:num-complex", "dep:symjit"]
+# Unstable cross-crate bridge used only by the private PyO3 extension during
+# artifact generation. It is intentionally absent from the default feature set.
+python-generation-bridge = ["f64-symjit"]
+# Non-default parity seam for the private Python development harness.  This
+# feature is deliberately absent from production/default builds.
+on-the-fly-test-support = ["f64-symjit"]
+symbolica-runtime = ["dep:symbolica"]
+
+[dependencies]
+bincode.workspace = true
+libloading = { version = "0.9", optional = true }
+libc.workspace = true
+num-complex = { version = "0.4", optional = true }
+rayon.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+symbolica = { version = "=3.0.0", default-features = false, features = ["bincode", "integer-gmp", "float-mpfr", "native_code_generation"], optional = true }
+symjit = { version = "=2.26.4", default-features = false, optional = true }
+thiserror.workspace = true
+wide.workspace = true

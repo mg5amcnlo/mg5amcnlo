@@ -1,0 +1,623 @@
+name: pyAmpliCol
+
+# Ported from the standalone pyamplicol repository (tests.yml and
+# release-artifacts.yml). Every job runs inside pyamplicol/.
+on:
+  push:
+    # All branches, no tags (see madspace.yml): release.yml gates on the run
+    # for the commit on main and then calls this workflow to build the wheels.
+    branches:
+      - '**'
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      full_matrix:
+        description: 'Also build and test the release sdist and wheels'
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      full_matrix:
+        description: 'Also build and test the release sdist and wheels'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pyamplicol-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    working-directory: pyamplicol
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+  SYMBOLICA_HIDE_BANNER: "1"
+
+jobs:
+  # Skips the heavy jobs unless pyamplicol changed; a job, not `paths:`, so every
+  # commit still gets a (green) run for release.yml's CI gate.
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      pyamplicol: ${{ steps.diff.outputs.pyamplicol }}
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          # Release builds only build artifacts; main's run already tested them.
+          FULL_MATRIX: ${{ inputs.full_matrix && 'true' || 'false' }}
+        run: |
+          set -euo pipefail
+          if [[ "$FULL_MATRIX" == true ]]; then
+            echo "pyamplicol=false" | tee -a "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          case "$EVENT" in
+            push) base="$PUSH_BEFORE" ;;
+            pull_request) base="$PR_BASE" ;;
+            *) base="" ;;
+          esac
+          if [[ -z "$base" || "$base" =~ ^0+$ ]] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            changed=true
+          elif git diff --name-only "$base" HEAD \
+              | grep -qE '^(pyamplicol/|\.github/workflows/pyamplicol|\.github/actions/(pyamplicol|build_pyamplicol|install_pyamplicol)|VERSION$)'; then
+            changed=true
+          else
+            changed=false
+          fi
+          echo "pyamplicol=$changed" | tee -a "$GITHUB_OUTPUT"
+
+  python-compatibility:
+    name: Python ${{ matrix.python-version }} lightweight API
+    needs: changes
+    if: needs.changes.outputs.pyamplicol == 'true'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyamplicol/pyproject.toml
+      - name: Install lightweight test dependency
+        run: python -m pip install "pytest>=8.3,<9"
+      - name: Check lightweight typed configuration API
+        env:
+          PYTHONPATH: ${{ github.workspace }}/pyamplicol/src
+        run: >-
+          python -m pytest
+          tests/unit/test_config_models.py
+          tests/unit/test_config_resolution.py
+          -q
+      - name: Check the CI memory watchdog
+        if: matrix.python-version == '3.11'
+        run: python -m pytest tests/unit/test_ci_memory_watchdog.py -q
+
+  source-contracts:
+    name: Python 3.11 source and release contracts
+    needs: changes
+    if: needs.changes.outputs.pyamplicol == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyamplicol/pyproject.toml
+      - name: Install source-contract test dependency
+        run: python -m pip install "pytest>=8.3,<9"
+      - name: Prepared models
+        uses: ./.github/actions/pyamplicol_prepared_models
+      - name: Check the version follows the MadGraph VERSION file
+        run: python tools/release/sync_version.py --check
+      - name: Check public source, repository, and release contracts
+        env:
+          PYTHONPATH: ${{ github.workspace }}/pyamplicol/src
+        run: >-
+          python -m pytest
+          tests/unit/test_api_requests.py
+          tests/unit/test_cli_parser.py
+          tests/unit/test_deployment_harness.py
+          tests/unit/test_public_import_laziness.py
+          tests/unit/test_repository_policy.py
+          tests/unit/test_sdk_config.py
+          tests/unit/test_otf_cache.py
+          tests/release
+          --deselect
+          tests/unit/test_api_requests.py::test_public_compiled_model_uses_the_canonical_schema
+          -q
+
+  # Builds through the MadGraph installer and checks that Symbolica accepts the
+  # package library key; the install is cached for install_pyamplicol.
+  installer:
+    name: MadGraph installer and Symbolica library key
+    needs: changes
+    if: needs.changes.outputs.pyamplicol == 'true'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Build pyamplicol with install.py (checks the library key)
+        uses: ./.github/actions/build_pyamplicol
+      - name: Library key from the MadGraph root, as the [amplicol] worker sees it
+        run: |
+          python - <<'EOF'
+          import sys
+          sys.path.insert(0, ".")
+          from madgraph.iolibs.template_files.mg7 import bootstrap
+          bootstrap.ensure_pyamplicol(interactive=False)
+          bootstrap.check_pyamplicol_license()
+          assert bootstrap.check_pyamplicol_source_hash()
+          print("pyamplicol library key accepted; source hash matches")
+          EOF
+      - name: Warn before the library key expires
+        run: |
+          expiry=$(grep -o 'SU-[0-9]*-pyamplicol-[0-9.]*' pyamplicol/src/pyamplicol/__init__.py \
+            | sed 's/.*-//' | tr . -)
+          days=$(( ($(date -d "$expiry" +%s) - $(date +%s)) / 86400 ))
+          echo "pyamplicol's Symbolica library key expires on $expiry ($days days)."
+          if (( days < 90 )); then
+            echo "::warning::pyamplicol's Symbolica library key expires on $expiry; request a renewed key."
+          fi
+      - name: Symbolica is licensed outside the MadGraph root
+        env:
+          PYTHONPATH: ${{ github.workspace }}/pyamplicol/install
+        run: |
+          cd "$RUNNER_TEMP"
+          env -u SYMBOLICA_LICENSE python - <<'EOF'
+          import pyamplicol
+          from pyamplicol.licensing import detect_symbolica_license
+          state = detect_symbolica_license(suggest=False)
+          print(state)
+          assert state.licensed, "Symbolica runs in restricted mode"
+          EOF
+
+  release-runtime:
+    name: Published-dependency generation, runtime, and native SDK
+    needs: [changes, python-compatibility, source-contracts]
+    if: needs.changes.outputs.pyamplicol == 'true' && github.event_name != 'push'
+    runs-on: ubuntu-24.04
+    env:
+      CARGO_INCREMENTAL: "0"
+      PYAMPLICOL_BUILD_MODE: release
+      PYAMPLICOL_REQUIRE_NATIVE_TESTS: "1"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            pyamplicol/pyproject.toml
+            pyamplicol/dependencies/release-lock.toml
+            pyamplicol/dependencies/contributor-lock.toml
+            pyamplicol/dependencies/python-runtime-lock.toml
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - name: Cache Cargo downloads
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-1.97.1-${{ hashFiles('pyamplicol/Cargo.lock', 'pyamplicol/dependencies/contributor-lock.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-1.97.1-
+      - name: Install C++17 and Fortran 2008 toolchains
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y g++ gfortran make
+          command -v c++
+          command -v gfortran
+          command -v make
+      - name: Prepared models
+        uses: ./.github/actions/pyamplicol_prepared_models
+      - name: Build and stage the published-dependency runtime (30 GiB RSS limit)
+        run: >-
+          python tools/ci/memory_watchdog.py --limit-gib 30 --
+          python dependencies/install_dependencies.py
+      - name: Run lightweight dependency, typing, and CI-tool checks
+        run: |
+          .venv/bin/python tools/release/check_dependencies.py
+          PYTHON="$PWD/.venv/bin/python" just typing
+          .venv/bin/python -m ruff check tools/ci tests/unit/test_ci_memory_watchdog.py
+      - name: Build and exercise native APIs and UMAMI shared providers (30 GiB RSS limit)
+        env:
+          RUST_BACKTRACE: "1"
+        run: >-
+          .venv/bin/python tools/ci/memory_watchdog.py --limit-gib 30 --
+          .venv/bin/python -m pytest
+          tests/integration/test_multilanguage_api.py
+          tests/integration/test_correlated_native_sdk.py
+          tests/integration/test_otf_cache_native_sdk.py
+          tests/integration/test_umami_api.py
+          -q -s
+      - name: Run focused Python unit checks (30 GiB RSS limit)
+        run: |
+          .venv/bin/python tools/ci/memory_watchdog.py --limit-gib 30 -- \
+            .venv/bin/python -m pytest \
+            tests/unit/test_api_requests.py \
+            tests/unit/test_api_bundle.py \
+            tests/unit/test_umami_metadata.py \
+            tests/unit/test_umami_semantics.py \
+            tests/unit/test_benchmarking.py \
+            tests/unit/test_adjoint_color_contraction.py \
+            tests/unit/test_adjoint_generation_scope.py \
+            tests/unit/test_adjoint_singlet_color_certificate.py \
+            tests/unit/test_fft_basis_strategy.py \
+            tests/unit/test_compiler_kernel_scale.py \
+            tests/unit/test_compiler_auxiliary_components.py \
+            tests/unit/test_heft_contact_trees.py \
+            tests/unit/test_sm_heft_model.py \
+            tests/unit/test_recurrence_numerical_current_warmup.py \
+            tests/unit/test_recurrence_exact_contracted_color.py \
+            tests/unit/test_recurrence_direct_intrinsics.py \
+            tests/unit/test_config_models.py \
+            tests/unit/test_config_resolution.py \
+            tests/unit/test_dag_model_independence.py \
+            tests/unit/test_exact_parameter_precision.py \
+            tests/unit/test_exact_color_weight.py \
+            tests/unit/test_exact_symbolic_propagators.py \
+            tests/unit/test_stage_exact_weights.py \
+            tests/unit/test_color_connection_catalogue.py \
+            tests/unit/test_color_connections.py \
+            tests/unit/test_color_correlator_matrices.py \
+            tests/unit/test_correlat*.py \
+            tests/unit/test_nlo_limit_study.py \
+            tests/unit/test_exact_vertex_normalization.py \
+            tests/unit/test_external_model_independence.py \
+            tests/unit/test_generation_config_provenance.py \
+            tests/unit/test_generation_execution_schema.py \
+            tests/unit/test_generation_stage_contract.py \
+            tests/unit/test_model_loading.py \
+            tests/unit/test_sdk_config.py \
+            tests/unit/test_selftest_fixture.py \
+            tests/unit/test_symbolica_exact.py \
+            -q
+      - name: Run eager prepared-model and runtime unit checks (30 GiB RSS limit)
+        run: >-
+          .venv/bin/python tools/ci/memory_watchdog.py --limit-gib 30 --
+          .venv/bin/python -m pytest
+          tests/unit/test_eager_*.py
+          tests/unit/test_model_source_prepared_compile.py
+          tests/unit/test_packaged_prepared_model*.py
+          tests/unit/test_prepared_*.py
+          -q
+      - name: Run focused generation and runtime integration (30 GiB RSS limit)
+        # The restricted child must run first with an uninitialized parent.
+        run: |
+          .venv/bin/python tools/ci/memory_watchdog.py --limit-gib 30 -- \
+            .venv/bin/python -m pytest tests/integration/test_spenso_restricted_mode.py -q
+          .venv/bin/python tools/ci/memory_watchdog.py --limit-gib 30 -- \
+            .venv/bin/python -m pytest \
+            tests/integration/test_schema_v3_generation_runtime.py \
+            tests/integration/test_exact_precision_normalization.py \
+            tests/integration/test_sm_heft_backends.py \
+            tests/integration/test_heft_correlated_precision.py \
+            tests/integration/test_compiled_exact_color.py \
+            tests/integration/test_correlators.py \
+            tests/integration/test_correlator_colour_accuracy.py \
+            tests/integration/test_otf_cache.py \
+            tests/integration/test_adjoint_fft_runtime.py \
+            tests/integration/test_generalized_adjoint_fft_runtime.py \
+            tests/integration/test_recurrence_generation_runtime.py::test_ufo_sm_recurrence_refreshes_real_and_complex_derived_couplings \
+            -q
+      - name: Check Rust workspace (30 GiB RSS limit)
+        run: >-
+          .venv/bin/python tools/ci/memory_watchdog.py --limit-gib 30 --
+          env PYTHON=$PWD/.venv/bin/python just rust-check
+      - name: Test Rust workspace (30 GiB RSS limit)
+        run: >-
+          .venv/bin/python tools/ci/memory_watchdog.py --limit-gib 30 --
+          env PYTHON=$PWD/.venv/bin/python just rust-test
+      - name: Exercise installed release runtime and checkout-independent examples
+        run: |
+          .venv/bin/python -m pyamplicol self-test --json
+          .venv/bin/python -m pytest tests/integration/test_examples.py -q
+
+  # ---- Release artifacts (release.yml, or a manual run with full_matrix) ----
+
+  prepared-models:
+    name: Release prepared-model archive
+    if: inputs.full_matrix
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Prepared models
+        uses: ./.github/actions/pyamplicol_prepared_models
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pyamplicol-prepared-models
+          path: pyamplicol/.artifacts/prepared-models/pyamplicol-prepared-models.tar.gz
+          if-no-files-found: error
+
+  release-source-preflight:
+    name: Focused release source preflight
+    needs: prepared-models
+    runs-on: ubuntu-24.04
+    env:
+      PYAMPLICOL_BUILD_MODE: release
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - uses: actions/download-artifact@v5
+        with:
+          name: pyamplicol-prepared-models
+          path: pyamplicol/.artifacts/prepared-models
+      - name: Unpack the prepared models
+        run: python tools/release/prepared_models_archive.py unpack .artifacts/prepared-models/pyamplicol-prepared-models.tar.gz
+      - name: Install focused source-test tools
+        run: python -m pip install "pytest>=8.3,<9" "ruff>=0.9,<1"
+      - name: Verify exact published dependency inputs
+        run: python tools/release/check_dependencies.py
+      - name: Run focused clean-checkout release tests
+        run: >-
+          python -m pytest
+          tests/release
+          tests/unit/test_dependency_gate.py
+          tests/unit/test_release_*.py
+          -q
+      - name: Lint release and build tooling
+        run: >-
+          ruff check
+          build_backend
+          tools/release
+          tests/release
+          tests/unit/test_dependency_gate.py
+          tests/unit/test_release_*.py
+
+  independent-physics-oracle:
+    name: Independent Fortran physics oracle
+    if: inputs.full_matrix
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install the independent oracle toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y gfortran make
+          python -m pip install "jsonschema>=4.22,<5"
+      - name: Run independent Fortran physics comparison
+        run: |
+          set -euo pipefail
+          python tools/ci/memory_watchdog.py --limit-gib 30 -- \
+            python tools/developer/legacy_amplicol.py \
+            --prepare-checkout \
+            --fixture tests/fixtures/reference/physics-v2.json \
+            --jobs 2 >/dev/null
+
+  retained-sdist:
+    name: Build retained source distribution
+    needs: [release-source-preflight, independent-physics-oracle]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: actions/download-artifact@v5
+        with:
+          name: pyamplicol-prepared-models
+          path: pyamplicol/.artifacts/prepared-models
+      - name: Unpack the prepared models
+        run: python tools/release/prepared_models_archive.py unpack .artifacts/prepared-models/pyamplicol-prepared-models.tar.gz
+      - name: Install build tools
+        run: python -m pip install "build>=1.2,<2" "maturin==1.15.0"
+      - name: Build the one retained sdist
+        run: >-
+          python tools/ci/memory_watchdog.py --limit-gib 30 --
+          python tools/release/build_release_artifacts.py
+          --sdist-only
+          --output-dir .artifacts/release-source
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pyamplicol-retained-sdist
+          path: pyamplicol/.artifacts/release-source/
+          if-no-files-found: error
+
+  macos-wheels:
+    name: macOS release wheel and native deployment (${{ matrix.target }})
+    needs: retained-sdist
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: macos-arm64
+          - runner: macos-15-intel
+            target: macos-x86_64
+    runs-on: ${{ matrix.runner }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
+      PYAMPLICOL_BUILD_MODE: release
+      RUSTUP_TOOLCHAIN: "1.97.1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          name: pyamplicol-retained-sdist
+          path: pyamplicol/.artifacts/retained
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - name: Install build and deployment tools
+        run: python -m pip install "build>=1.2,<2" "maturin==1.15.0" "twine>=6,<7"
+      - name: Build and audit from retained sdist
+        run: >-
+          python tools/ci/memory_watchdog.py --limit-gib 30 --
+          python tools/release/build_release_artifacts.py
+          --retained-sdist .artifacts/retained/pyamplicol-*.tar.gz
+          --output-dir .artifacts/platform
+      - name: Require C++17 and Fortran 2008 SDK toolchains
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v make
+          cxx="$(command -v c++)"
+          fc="$(command -v gfortran || true)"
+          if [[ -z "$fc" ]]; then
+            brew install gcc
+            prefix="$(brew --prefix gcc)"
+            for candidate in "$prefix/bin/gfortran" "$prefix"/bin/gfortran-*; do
+              if [[ -x "$candidate" ]]; then
+                fc="$candidate"
+                break
+              fi
+            done
+          fi
+          [[ -n "$fc" && -x "$fc" ]]
+          printf 'CXX=%s\n' "$cxx" >> "$GITHUB_ENV"
+          printf 'FC=%s\n' "$fc" >> "$GITHUB_ENV"
+      - name: Test installed wheel on CPython 3.11
+        run: >-
+          python tools/ci/memory_watchdog.py --limit-gib 30 --
+          python tools/release/test_deployment.py
+          --python "$(command -v python)"
+          --wheel .artifacts/platform/pyamplicol-*.whl
+          --no-build
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - name: Test installed abi3 wheel on CPython 3.14
+        run: >-
+          python tools/ci/memory_watchdog.py --limit-gib 30 --
+          python tools/release/test_deployment.py
+          --python "$(command -v python)"
+          --wheel .artifacts/platform/pyamplicol-*.whl
+          --abi3-smoke-only
+          --no-build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pyamplicol-release-${{ matrix.target }}
+          path: pyamplicol/.artifacts/platform/
+          if-no-files-found: error
+
+  manylinux-wheel:
+    name: manylinux release wheel and native deployment
+    needs: retained-sdist
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          name: pyamplicol-retained-sdist
+          path: pyamplicol/.artifacts/retained
+      - name: Build and deploy-test in manylinux_2_28 x86_64
+        run: |
+          docker run --rm \
+            -v "$PWD:/io" \
+            -w /io \
+            -e PYAMPLICOL_BUILD_MODE=release \
+            quay.io/pypa/manylinux_2_28_x86_64@sha256:b04887b645dde99b9e955aeae3ff4da414992d0bd88259f046295b56361c5614 \
+            /bin/bash -euxo pipefail -c '
+              git config --global --add safe.directory "*"
+              yum install -y gcc-c++ gcc-gfortran make
+              curl --proto "=https" --tlsv1.2 -sSf \
+                -o /tmp/rustup-init \
+                https://static.rust-lang.org/rustup/archive/1.28.2/x86_64-unknown-linux-gnu/rustup-init
+              echo "20a06e644b0d9bd2fbdbfd52d42540bdde820ea7df86e92e533c073da0cdd43c  /tmp/rustup-init" \
+                | sha256sum --check --strict
+              chmod +x /tmp/rustup-init
+              /tmp/rustup-init -y --profile minimal --default-toolchain 1.97.1
+              source "$HOME/.cargo/env"
+              export RUSTUP_TOOLCHAIN=1.97.1
+              PY311=/opt/python/cp311-cp311/bin/python
+              PY314=/opt/python/cp314-cp314/bin/python
+              "$PY311" -m pip install "build>=1.2,<2" "maturin==1.15.0" "twine>=6,<7"
+              "$PY311" tools/ci/memory_watchdog.py --limit-gib 30 -- \
+                "$PY311" tools/release/build_release_artifacts.py \
+                --retained-sdist .artifacts/retained/pyamplicol-*.tar.gz \
+                --output-dir .artifacts/platform
+              "$PY311" tools/ci/memory_watchdog.py --limit-gib 30 -- \
+                "$PY311" tools/release/test_deployment.py \
+                --python "$PY311" \
+                --wheel .artifacts/platform/pyamplicol-*.whl \
+                --no-build
+              "$PY311" tools/ci/memory_watchdog.py --limit-gib 30 -- \
+                "$PY311" tools/release/test_deployment.py \
+                --python "$PY314" \
+                --wheel .artifacts/platform/pyamplicol-*.whl \
+                --abi3-smoke-only \
+                --no-build
+            '
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pyamplicol-release-manylinux-x86_64
+          path: pyamplicol/.artifacts/platform/
+          if-no-files-found: error
+
+  validated-artifacts:
+    name: Collect validated release artifacts
+    needs: [retained-sdist, macos-wheels, manylinux-wheel]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: pyamplicol-re*
+          path: pyamplicol/.artifacts/incoming
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install artifact validation tools
+        run: python -m pip install "twine>=6,<7"
+      - name: Audit and collect package files
+        run: >-
+          python tools/release/publish_dry_run.py
+          --artifact-dir .artifacts/incoming
+          --output-dir .artifacts/validated
+          --no-build
+          --require-all-targets
+          --skip-clean-install
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pyamplicol-validated-release
+          path: pyamplicol/.artifacts/validated/
+          if-no-files-found: error

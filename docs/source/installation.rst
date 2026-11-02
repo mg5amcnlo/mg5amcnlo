@@ -13,3 +13,7 @@ Python 3.12 or higher and a C++ compiler are required. The ``madspace`` library 
 installed automatically the first time you launch a run. To build it yourself instead,
 run ``install madspace`` from the MadGraph7 prompt, or see the
 :doc:`MadSpace installation instructions <madspace/installation>`.
+
+The ``pyamplicol`` package, used by the ``[amplicol]`` matrix-element backend, is
+installed in the same way with ``install pyamplicol``; see the
+:doc:`pyAmpliCol installation instructions <pyamplicol/user/installation>`.

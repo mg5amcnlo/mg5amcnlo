@@ -1,0 +1,42 @@
+Symbolica Proprietary Terms And Redistribution Permission
+
+SPDX identifier: LicenseRef-Symbolica-Proprietary
+
+Upstream terms reproduced from Symbolica 2.2.0 License.md
+
+# Symbolica licenses
+
+The source code of Symbolica is publicly available. It is not permitted to
+copy or distribute any part of the Symbolica code without express prior
+permission.
+
+Visit https://symbolica.io/license/ to read more about the license philosophy
+behind Symbolica or to acquire a license.
+
+## Hobbyist / student license
+
+For personal non-professional use of Symbolica, for example for studies or for
+a hobby, a free hobbyist license can be acquired.
+
+## Professional non-commercial license
+
+For professional non-commercial use of Symbolica, for example for work at an
+educational / research institute, you or your employer must acquire a
+professional non-commercial license.
+
+## Commercial license
+
+For professional commercial use of Symbolica, you or your employer must
+acquire a commercial license.
+
+Attribution And Project-Specific Permission
+
+Symbolica is developed by Ben Ruijl and contributors and is available from
+https://symbolica.io/ and https://github.com/symbolica-dev/symbolica.
+
+Express redistribution permission for pyAmpliCol: the pyAmpliCol project has
+express prior permission from the Symbolica licensor to redistribute the
+Symbolica components required by pyAmpliCol's binary runtime. This permission
+is specific to pyAmpliCol release artifacts. It does not grant recipients a
+general right to copy or distribute Symbolica separately, and it does not
+replace the use license appropriate to the recipient's circumstances.

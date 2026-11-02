@@ -1,0 +1,104 @@
+action = "generate"
+schema_version = 1
+
+[model]
+source = "built-in-sm"
+simplify = true
+cache = true
+
+[process]
+entries = [{ expression = "d d~ > z" }]
+flavor_scheme = 5
+coupling_order_policy = "minimal"
+reference_color_order = []
+selected_color_sector_ids = []
+
+[process.multiparticles]
+
+[process.max_coupling_orders]
+
+[process.selected_source_helicities]
+
+[color]
+accuracy = "lc"
+contraction = "direct"
+lc_flow_layout = "topology-replay"
+fft_basis = "trace"
+
+[generation]
+output = "."
+mode = "error"
+workers = 1
+emit_api_bundle = true
+
+[generation.validation]
+enabled = true
+samples = 1
+seed = 12345
+relative_tolerance = 1e-12
+absolute_tolerance = 1e-300
+post_build_validation = false
+
+[generation.relation_discovery]
+mode = "certified-reuse"
+precision_digits = 96
+probe_count = 4
+verification_probe_count = 4
+relative_tolerance = 1e-70
+absolute_tolerance = 1e-80
+seed = 1348026701
+
+[evaluator]
+backend = "jit"
+execution_mode = "compiled"
+batch_size = 128
+output_chunk_size = 512
+
+[evaluator.optimization]
+horner_iterations = 10
+cores = 12
+max_horner_variables = 1000
+max_common_pair_cache_entries = 5000000
+max_common_pair_distance = 1000
+collect_factors = "auto"
+
+[evaluator.jit]
+optimization_level = 2
+compress = true
+
+[evaluator.cpp]
+optimization = "O3"
+native_arch = false
+extra_flags = []
+
+[evaluator.eager]
+point_tile_size = 1024
+workspace_mib = 256
+
+[evaluator.recurrence]
+point_tile_size = 1024
+workspace_mib = 256
+
+[evaluation]
+precision = 16
+resolved = false
+helicity_ids = []
+color_flow_ids = []
+
+[benchmark]
+target_runtime = 10.0
+batch_size = 128
+precision = 16
+warmup_runs = 2
+minimum_samples = 5
+helicity_ids = []
+color_flow_ids = []
+
+[output]
+format = "json"
+color = "auto"
+progress = "off"
+log_level = "info"
+
+[symbolica]
+suggest_license = false

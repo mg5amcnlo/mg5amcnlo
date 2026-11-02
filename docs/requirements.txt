@@ -2,3 +2,4 @@ sphinx==9.0.4
 sphinx-autodoc-typehints==3.6.0
 breathe==4.36.0
 furo==2025.12.19
+myst-parser==5.0.0

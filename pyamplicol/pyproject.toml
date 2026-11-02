@@ -1,0 +1,223 @@
+# SPDX-License-Identifier: 0BSD
+
+[build-system]
+requires = [
+  "maturin==1.15.0",
+  "packaging==26.3",
+]
+build-backend = "_pyamplicol_build"
+backend-path = ["build_backend"]
+
+[project]
+name = "pyamplicol"
+dynamic = ["version"]
+description = "Generator using current recursion to build fast color-ordered matrix-element evaluators"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "0BSD"
+license-files = [
+  "LICENSE",
+  "THIRD_PARTY_NOTICES.md",
+  "licenses/*",
+  "licenses/**/*",
+]
+authors = [
+  { name = "Rikkert Frederix", email = "rikkert.frederix@thep.lu.se" },
+  { name = "Valentin Hirschi", email = "valentin.hirschi@gmail.com" },
+  { name = "Timea Vitos", email = "timea.vitos@thep.lu.se" },
+]
+keywords = [
+  "high-energy physics",
+  "matrix elements",
+  "UFO",
+  "Symbolica",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Zero-Clause BSD (0BSD)",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Rust",
+  "Topic :: Scientific/Engineering :: Physics",
+  "Typing :: Typed",
+]
+dependencies = [
+  "colorama==0.4.6",
+  "numpy==2.4.6",
+  "platformdirs==4.12.2",
+  "prettytable==3.18.0",
+  "progressbar2==4.6.0",
+  "six==1.17.0",
+  "symbolica==3.0.0",
+  "tomli-w==1.2.0",
+  "ufo-model-loader==1.0.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "build>=1.2,<2",
+  "jsonschema>=4.22,<5",
+  "maturin==1.15.0",
+  "mypy>=1.13,<2",
+  "pytest>=8.3,<9",
+  "ruff>=0.9,<1",
+  "twine>=6,<7",
+  "wheel>=0.45,<1",
+]
+docs = [
+  "pypdf>=5,<6",
+]
+fft-profiling = [
+  "matplotlib==3.11.2",
+  "reportlab==4.5.1",
+]
+
+[project.scripts]
+pyamplicol = "pyamplicol.cli:main"
+rusticol-config = "rusticol_config:main"
+
+[project.urls]
+Homepage = "https://github.com/MadGraphTeam/pyamplicol"
+Documentation = "https://madgraph.org/pyamplicol/"
+Issues = "https://github.com/MadGraphTeam/pyamplicol/issues"
+Source = "https://github.com/MadGraphTeam/pyamplicol"
+
+[tool.maturin]
+manifest-path = "rust/crates/rusticol-python/Cargo.toml"
+python-source = "src"
+python-packages = ["pyamplicol", "rusticol_config"]
+module-name = "pyamplicol._rusticol"
+bindings = "pyo3"
+features = ["extension-module", "numpy"]
+locked = true
+strip = true
+compatibility = "manylinux_2_28"
+auditwheel = "repair"
+include = [
+  { path = "LICENSE", format = ["sdist"] },
+  { path = "licenses/**/*", format = ["sdist"] },
+  { path = "THIRD_PARTY_NOTICES.md", format = ["sdist"] },
+  { path = "README.md", format = ["sdist"] },
+  { path = "Cargo.lock", format = ["sdist"] },
+  { path = "Cargo.toml", format = ["sdist"] },
+  { path = "rust-toolchain.toml", format = ["sdist"] },
+  { path = "justfile", format = ["sdist"] },
+  { path = "build_backend/**/*", format = ["sdist"] },
+  { path = "dependencies/release-lock.toml", format = ["sdist"] },
+  { path = "docs/README.md", format = ["sdist"] },
+  { path = "docs/correlators.md", format = ["sdist"] },
+  { path = "docs/correlator-conventions.md", format = ["sdist"] },
+  { path = "docs/user/**/*", format = ["sdist"] },
+  { path = "examples/**/*", format = ["sdist"] },
+  { path = "rust/**/*", format = ["sdist"] },
+  { path = "schemas/**/*", format = ["sdist"] },
+  { path = "source_hash.py", format = ["sdist"] },
+  { path = "tests/**/*", format = ["sdist"] },
+  { path = "tools/ci/__init__.py", format = ["sdist"] },
+  { path = "tools/ci/memory_watchdog.py", format = ["sdist"] },
+  { path = "tools/developer/**/*", format = ["sdist"] },
+  { path = "tools/release/**/*", format = ["sdist"] },
+  { path = "tools/typing/**/*", format = ["sdist"] },
+  { path = "_sdk/**/*", from = "out-dir", to = "pyamplicol/", crate-name = "rusticol-python" },
+]
+exclude = [
+  "**/__pycache__/**",
+  "**/*.pyc",
+  "build_backend/python_lock.py",
+  "dependencies/checkouts/**",
+  "dependencies/contributor-lock.toml",
+  "dependencies/install_dependencies.py",
+  "dependencies/python-runtime-lock.toml",
+  ".pyamplicol-build-dependencies/**",
+  "outputs/**",
+  "PYPI_DEPLOYMENT_TEST/**",
+  "release_assets/**",
+  "target/**",
+]
+
+[tool.maturin.sbom]
+rust = false
+auditwheel = false
+
+[tool.pyamplicol.native-build]
+schema-version = 1
+
+[tool.pyamplicol.native-build.rust-path-remapping]
+candidate-checkouts = "/pyamplicol/dependencies"
+checkout = "/pyamplicol/checkout"
+source = "/pyamplicol/source"
+build = "/pyamplicol/build"
+sysroot = "/rust/sysroot"
+
+[tool.pyamplicol.native-build.macos]
+cc = "/usr/bin/clang"
+cxx = "/usr/bin/clang++"
+deployment-target = "11.0"
+
+[tool.pyamplicol.native-build.sdk]
+package = "rusticol-capi"
+profile = "release"
+# Fat LTO folds libstd into referenced static-library objects, which makes the
+# archive impossible to link from a Rust consumer on ELF without duplicate symbols.
+rustc-codegen-arguments = ["-C", "lto=off", "-C", "embed-bitcode=no"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --import-mode=importlib"
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+exclude = [
+  "src/pyamplicol/assets/models/ufo/**",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+mypy_path = "src"
+explicit_package_bases = true
+follow_imports = "silent"
+files = [
+  "src/pyamplicol/__init__.py",
+  "src/pyamplicol/api",
+  "src/pyamplicol/config/__init__.py",
+  "src/pyamplicol/config/errors.py",
+  "src/pyamplicol/config/models.py",
+  "src/pyamplicol/config/registry.py",
+  "src/pyamplicol/reporting",
+  "src/pyamplicol/runtime",
+  "tools/typing/check_public_typing.py",
+  "tests/typing/consumer_public_api.py",
+  "tests/typing/test_typing_gate.py",
+]
+exclude = [
+  "^src/pyamplicol/assets/models/ufo/",
+  "^src/pyamplicol/assets/api_templates/",
+]
+show_error_codes = true
+warn_unused_configs = true
+
+# Symbolica 3.0.0's FactorProjector overloads crash mypy 1.20.2. These
+# implementation-only tensor bindings are exercised by numerical tests;
+# keep checking all pyAmpliCol public types and the other Symbolica stubs.
+[[tool.mypy.overrides]]
+module = "symbolica.community.tensor"
+follow_imports = "skip"
+follow_imports_for_stubs = true
+
+[tool.coverage.run]
+source = ["pyamplicol"]
+
+[tool.coverage.report]
+show_missing = true

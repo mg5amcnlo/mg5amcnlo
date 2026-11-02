@@ -577,7 +577,9 @@ def _release_wheel_available() -> bool:
 
     python_tag = f"cp{sys.version_info.major}{sys.version_info.minor}"
     return any(
-        python_tag in name and all(tag in name for tag in platform_tags)
+        name.startswith(f"{PACKAGE_NAME}-")
+        and python_tag in name
+        and all(tag in name for tag in platform_tags)
         for name in wheels.split(",")
     )
 

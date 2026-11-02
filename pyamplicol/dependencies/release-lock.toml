@@ -1,0 +1,97 @@
+# SPDX-License-Identifier: 0BSD
+schema_version = 1
+
+[project]
+distribution = "pyamplicol"
+version = "0.2.1"
+python_requires = ">=3.11"
+wheel_abi = "cp311-abi3"
+license = "0BSD"
+
+[abis]
+python_api = 1
+toml = 1
+compiled_model = 9
+process_artifact = 3
+runtime_physics = 1
+c_abi = 1
+symbolica_serialization = "symbolica-bincode2-v1"
+symjit_application = "symjit-application-storage-v3"
+symjit_plane_application = "pyamplicol-symjit-plane-application-v2"
+prepared_model_bundle = 1
+prepared_kernel_variant = "pyamplicol-prepared-kernel-variant-v2"
+eager_kernel = "pyamplicol-eager-kernel-v1"
+eager_plan = "pyamplicol-eager-plan-v2"
+eager_selector_domains = "pyamplicol-eager-selector-domains-v1"
+
+[toolchain]
+just = "1.46.0"
+maturin = "1.15.0"
+packaging = "26.3"
+rust_minimum = "1.89.0"
+rust_toolchain = "1.97.1"
+rust_toolchain_action_sha = "46511b1c83438f0dd37c02d843619ece5a4abb5b"
+manylinux_image = "quay.io/pypa/manylinux_2_28_x86_64"
+manylinux_image_digest = "sha256:b04887b645dde99b9e955aeae3ff4da414992d0bd88259f046295b56361c5614"
+
+[[targets]]
+triple = "aarch64-apple-darwin"
+platform_tag = "macosx_11_0_arm64"
+
+[[targets]]
+triple = "x86_64-apple-darwin"
+platform_tag = "macosx_11_0_x86_64"
+
+[[targets]]
+triple = "x86_64-unknown-linux-gnu"
+platform_tag = "manylinux_2_28_x86_64"
+
+[[python_dependencies]]
+distribution = "colorama"
+version = "0.4.6"
+
+[[python_dependencies]]
+distribution = "numpy"
+version = "2.4.6"
+
+[[python_dependencies]]
+distribution = "platformdirs"
+version = "4.12.2"
+
+[[python_dependencies]]
+distribution = "prettytable"
+version = "3.18.0"
+
+[[python_dependencies]]
+distribution = "progressbar2"
+version = "4.6.0"
+
+[[python_dependencies]]
+distribution = "six"
+version = "1.17.0"
+
+[[python_dependencies]]
+distribution = "symbolica"
+version = "3.0.0"
+
+[[python_dependencies]]
+distribution = "tomli-w"
+version = "1.2.0"
+
+[[python_dependencies]]
+distribution = "ufo-model-loader"
+version = "1.0.0"
+
+[symbolica]
+python_distribution = "symbolica"
+python_version = "3.0.0"
+rust_crate = "symbolica"
+rust_version = "3.0.0"
+serialization_abi = "symbolica-bincode2-v1"
+
+[symjit]
+version = "2.26.4"
+
+[ufo_model_loader]
+python_distribution = "ufo-model-loader"
+required_version = "1.0.0"

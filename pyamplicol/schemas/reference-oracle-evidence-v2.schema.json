@@ -1,0 +1,436 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pyamplicol.org/schemas/reference-oracle-evidence-v2.schema.json",
+  "title": "pyAmpliCol independent oracle evidence v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidence_schema_version",
+    "kind",
+    "evidence_set_id",
+    "captured_at",
+    "oracle",
+    "dependency_ids",
+    "records"
+  ],
+  "properties": {
+    "evidence_schema_version": {
+      "const": 2
+    },
+    "kind": {
+      "const": "pyamplicol-reference-oracle-evidence"
+    },
+    "evidence_set_id": {
+      "$ref": "#/$defs/public_id"
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "oracle": {
+      "$ref": "#/$defs/oracle"
+    },
+    "dependency_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/public_id"
+      }
+    },
+    "records": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/record"
+      }
+    }
+  },
+  "$defs": {
+    "public_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:+,~-]*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "decimal": {
+      "type": "string",
+      "pattern": "^(?:0|-?(?:(?:[1-9][0-9]*)(?:\\.[0-9]*[1-9])?|0\\.[0-9]*[1-9]))$"
+    },
+    "nonnegative_decimal": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]*[1-9])?$"
+    },
+    "oracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "implementation",
+        "revision",
+        "content_sha256",
+        "independence_statement",
+        "validation_profile",
+        "tolerance_ceiling"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "implementation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "content_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "independence_statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "validation_profile": {
+          "enum": [
+            "exact",
+            "binary64",
+            "high-precision"
+          ]
+        },
+        "tolerance_ceiling": {
+          "$ref": "#/$defs/tolerances"
+        }
+      }
+    },
+    "process_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expression",
+        "ordered_external_pdgs",
+        "ordered_external_leg_ids",
+        "source_to_row_permutation",
+        "row_id",
+        "color_order_count",
+        "ordered_color_legs"
+      ],
+      "properties": {
+        "expression": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ordered_external_pdgs": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "integer"
+          }
+        },
+        "ordered_external_leg_ids": {
+          "type": "array",
+          "minItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/public_id"
+          }
+        },
+        "source_to_row_permutation": {
+          "type": "array",
+          "minItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "row_id": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "color_order_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "ordered_color_legs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/public_id"
+          }
+        }
+      }
+    },
+    "tolerances": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relative",
+        "absolute"
+      ],
+      "properties": {
+        "relative": {
+          "$ref": "#/$defs/nonnegative_decimal"
+        },
+        "absolute": {
+          "$ref": "#/$defs/nonnegative_decimal"
+        }
+      }
+    },
+    "decimal_vector": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/decimal"
+      }
+    },
+    "decimal_matrix": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/decimal_vector"
+      }
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "case_id",
+        "point_id",
+        "independent_of_pyamplicol",
+        "arithmetic_precision_bits",
+        "round_trip_decimal_digits",
+        "certified_decimal_digits",
+        "arithmetic",
+        "coverage",
+        "helicity_ids",
+        "color_ids",
+        "observed_total",
+        "observed_helicity_totals",
+        "observed_values",
+        "process_identity",
+        "input_sha256",
+        "physics_case_sha256",
+        "oracle_output_sha256",
+        "evidence_record_sha256",
+        "command",
+        "tolerances"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "case_id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "point_id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "independent_of_pyamplicol": {
+          "const": true
+        },
+        "arithmetic_precision_bits": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "round_trip_decimal_digits": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "certified_decimal_digits": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "arithmetic": {
+          "enum": [
+            "binary64",
+            "decimal",
+            "rational",
+            "analytic"
+          ]
+        },
+        "coverage": {
+          "enum": [
+            "total",
+            "helicity-aggregate",
+            "resolved"
+          ]
+        },
+        "helicity_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/public_id"
+          }
+        },
+        "color_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/public_id"
+          }
+        },
+        "observed_total": {
+          "$ref": "#/$defs/decimal"
+        },
+        "observed_helicity_totals": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/decimal_vector"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_values": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/decimal_matrix"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "process_identity": {
+          "$ref": "#/$defs/process_identity"
+        },
+        "input_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "physics_case_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "oracle_output_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "evidence_record_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "command": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "tolerances": {
+          "$ref": "#/$defs/tolerances"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "arithmetic": {
+                "const": "binary64"
+              }
+            },
+            "required": [
+              "arithmetic"
+            ]
+          },
+          "then": {
+            "properties": {
+              "arithmetic_precision_bits": {
+                "const": 53
+              },
+              "round_trip_decimal_digits": {
+                "const": 17
+              },
+              "certified_decimal_digits": {
+                "maximum": 15
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "coverage": {
+                "const": "total"
+              }
+            },
+            "required": [
+              "coverage"
+            ]
+          },
+          "then": {
+            "properties": {
+              "observed_helicity_totals": {
+                "type": "null"
+              },
+              "observed_values": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "coverage": {
+                "const": "helicity-aggregate"
+              }
+            },
+            "required": [
+              "coverage"
+            ]
+          },
+          "then": {
+            "properties": {
+              "observed_helicity_totals": {
+                "$ref": "#/$defs/decimal_vector"
+              },
+              "observed_values": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "coverage": {
+                "const": "resolved"
+              }
+            },
+            "required": [
+              "coverage"
+            ]
+          },
+          "then": {
+            "properties": {
+              "observed_helicity_totals": {
+                "type": "null"
+              },
+              "observed_values": {
+                "$ref": "#/$defs/decimal_matrix"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

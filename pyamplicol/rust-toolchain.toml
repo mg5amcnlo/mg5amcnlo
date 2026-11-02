@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: 0BSD
+
+[toolchain]
+channel = "1.97.1"
+profile = "minimal"
+components = ["clippy", "rustfmt"]

@@ -200,6 +200,15 @@ jobs:
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_madspace_install -t0
 
+      # ---- unittest_pyamplicol_install ----
+      # tests/unit_tests/various/test_pyamplicol_install.py: install.py (build
+      # stubbed), the version sync with VERSION and the source hash
+      - name: "unittest_pyamplicol_install: run the pyamplicol installer unit tests"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_pyamplicol_install -t0
+
       # ---- unittest_hwu ----
       # tests/unit_tests/various/test_mg7_hwu_output.py: the MADatLO.HwU an mg7
       # run writes, read back and overlaid on an aMC@NLO MADatNLO.HwU by

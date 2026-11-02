@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: 0BSD
+# Serialized scalar contact model named "scalars".
+# `pyamplicol examples copy` materializes this model beside the card.
+
+schema_version = 1
+action = "generate"
+
+[model]
+source = "models/json/scalars/scalars.json"
+simplify = true
+
+[process]
+entries = [
+  { expression = "scalar_0 scalar_0 > scalar_0 scalar_0", name = "scalar_contact_2to2" },
+  { expression = "scalar_0 scalar_0 > 3*scalar_0", name = "scalar_contact_2to3" },
+]
+
+[process.max_coupling_orders]
+QED = 6
+
+[color]
+accuracy = "lc"
+
+[generation]
+output = "artifacts/external_json_scalars"
+emit_api_bundle = true
+
+[evaluator]
+backend = "jit"
+execution_mode = "compiled"

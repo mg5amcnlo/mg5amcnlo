@@ -1,0 +1,9 @@
+---
+---
+{% include css/just-the-docs.scss.liquid color_scheme="dark" %}
+
+.site-logo,
+.main-content img[alt="pyAmpliCol"] {
+  filter: brightness(2) saturate(1.1)
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.65));
+}

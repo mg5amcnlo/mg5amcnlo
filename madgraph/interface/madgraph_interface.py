@@ -613,6 +613,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("     --source       Build from source (non-interactive).")
         logger.info("     -j N/--jobs=N  Parallel compilation jobs (source build;")
         logger.info("                    defaults to the 'nb_core' option).")
+        logger.info("     --system       Install into the active Python environment instead of madspace/install.")
+        logger.info("     --clean        Delete the build and install directories first (full rebuild).")
+        logger.info("     --docs         Generate API docstrings and .pyi stubs (source build, needs doxygen).")
         logger.info("     --cuda         Enable CUDA GPU backend (source build).")
         logger.info("     --hip          Enable HIP/ROCm GPU backend (source build).")
         logger.info("     --openblas     Build OpenBLAS from source (default on Linux/Windows, source build).")
@@ -624,6 +627,19 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("     --cuda-arch=ARCHS  Semicolon-separated CUDA compute capabilities, e.g. 75;80;86.")
         logger.info("     --hip-arch=ARCHS   Semicolon-separated HIP architectures, e.g. gfx900;gfx906.")
         logger.info(" ")
+        logger.info("   \"install pyamplicol [options]\"",'$MG:BOLD')
+        logger.info("   Install pyAmpliCol, the matrix-element generator of the [amplicol] backend.")
+        logger.info("   Without options an interactive installer is launched. Available options:")
+        logger.info("     -y/--yes       Re-install non-interactively using saved settings.")
+        logger.info("     --bin          Install pre-compiled package from PyPI (non-interactive;")
+        logger.info("                    only guaranteed to match this checkout in a release tarball).")
+        logger.info("     --source       Build from source (non-interactive; needs a Rust toolchain,")
+        logger.info("                    which is installed locally if rustup is not available).")
+        logger.info("     -j N/--jobs=N  Parallel compilation jobs (source build;")
+        logger.info("                    defaults to the 'nb_core' option).")
+        logger.info("     --system       Install into the active Python environment instead of pyamplicol/install.")
+        logger.info("     --clean        Delete the build and install directories first (full rebuild).")
+        logger.info("     --build-models Regenerate the prepared models instead of downloading them.")
         logger.info("   \"install madtrex [options]\"",'$MG:BOLD')
         logger.info("   Install MadtRex, the event-reweighting library used by MG7, together")
         logger.info("   with its bundled Rex fork. Requires madspace to be installed first.")
@@ -3752,12 +3768,20 @@ class CompleteForCmd(cmd.CompleteCmd):
         elif len(args) and args[0] == 'update':
             return self.list_completion(text, ['-f','--timeout='])
         elif len(args) >= 2 and args[1] == 'madspace':
-            options = ['-y', '--yes', '--bin', '--source',
+            options = ['-y', '--yes', '--bin', '--source', '-j', '--jobs=',
+                       '--system', '--clean', '--docs', '--no-docs',
                        '--cuda', '--no-cuda', '--hip', '--no-hip',
                        '--openblas', '--no-openblas',
                        '--simd', '--no-simd',
                        '--debug', '--full-debug', '--no-debug',
                        '--cuda-arch=', '--hip-arch=']
+            for opt in options[:]:
+                if any(a.startswith(opt) for a in args[2:]):
+                    options.remove(opt)
+            return self.list_completion(text, options)
+        elif len(args) >= 2 and args[1] == 'pyamplicol':
+            options = ['-y', '--yes', '--bin', '--source', '-j', '--jobs=',
+                       '--system', '--clean', '--build-models']
             for opt in options[:]:
                 if any(a.startswith(opt) for a in args[2:]):
                     options.remove(opt)
@@ -3823,7 +3847,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _install_opts = ['Delphes', 'ExRootAnalysis',
                      'update', 'Golem95', 'QCDLoop', 'maddm', 'maddump',
                      'looptools', 'cuttools_iregi', 'MadSTR', 'RunningCoupling',
-                     'madspace', 'madtrex']
+                     'madspace', 'pyamplicol', 'madtrex']
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
@@ -8590,7 +8614,7 @@ MadGraph7 that supports quadruple precision (typically g++ based on gcc 4.6+).""
         elif args[0] == 'cuttools_iregi':
             self.install_cuttools_iregi()
             return
-        elif args[0] in ('madspace', 'madtrex'):
+        elif args[0] in ('madspace', 'pyamplicol', 'madtrex'):
             install_script = pjoin(MG5DIR, args[0], 'install.py')
             install_args = args[1:]
             # The source build compiles in parallel only if it is told how many

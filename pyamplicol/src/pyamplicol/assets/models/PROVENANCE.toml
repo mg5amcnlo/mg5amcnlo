@@ -1,0 +1,1140 @@
+# SPDX-License-Identifier: 0BSD
+schema_version = 1
+manifest = "MANIFEST.sha256"
+canonical_root = "pyamplicol/assets/models"
+release_status = "eligible"
+selection_policy = "Git blobs under the baseline package asset tree only; the duplicate top-level tree and working-tree generated files are excluded"
+baseline_tracked_file_count = 67
+baseline_payload_file_count = 66
+[[licenses]]
+id = "0BSD"
+path = "LICENSE"
+applies_to = "pyAmpliCol-owned built-in and scalar model material"
+
+[[licenses]]
+id = "GammaLoop-model-assets"
+path = "licenses/GammaLoop-model-assets.txt"
+applies_to = "UFO and derived JSON model assets distributed with GammaLoop"
+
+[[licenses]]
+id = "MadGraph5-aMCatNLO"
+path = "licenses/MadGraph5_aMCatNLO.txt"
+applies_to = "ufo/sm/build_restrict.py"
+
+[[licenses]]
+id = "MIT"
+path = "licenses/ufo-model-loader.txt"
+applies_to = "serialization tool; generated JSON retains source-model terms"
+
+[[models]]
+id = "built-in-sm"
+format = "python"
+canonical_package_path = "pyamplicol/models/builtin/__init__.py"
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/model.py"
+source_sha256 = "7b3bac9e53193260bf9c2829ef972f87d23246e93dc57f208bda4821195b7ad3"
+companion_source_path = "pyAmpliCol/src/pyamplicol/symbols.py"
+companion_source_sha256 = "265178a9b8960c8176decbc92000b47c778e9c993851cc76f067d4cb8e0c6d62"
+license_ids = [ "0BSD",]
+release_eligible = true
+asset_manifest_member = false
+note = "Code-backed model owned by the models/generation worker; no duplicate serialization is invented here"
+
+[[models]]
+id = "sm"
+formats = [ "ufo", "json",]
+authors = [ "N. Christensen", "C. Duhr",]
+canonical_ufo_path = "pyamplicol/assets/models/ufo/sm"
+canonical_json_path = "pyamplicol/assets/models/json/sm/sm.json"
+license_ids = [ "GammaLoop-model-assets",]
+release_eligible = true
+
+[[models]]
+id = "scalars"
+formats = [ "ufo", "json",]
+authors = [ "Valentin Hirschi",]
+generator = "FeynRules 1.7.69"
+canonical_ufo_path = "pyamplicol/assets/models/ufo/scalars"
+canonical_json_path = "pyamplicol/assets/models/json/scalars/scalars.json"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+release_eligible = true
+
+[[models]]
+id = "scalar_gravity"
+formats = [ "ufo", "json",]
+authors = [ "Valentin Hirschi",]
+generator = "FeynRules 1.7.69"
+canonical_ufo_path = "pyamplicol/assets/models/ufo/scalar_gravity"
+canonical_json_path = "pyamplicol/assets/models/json/scalar_gravity/scalar_gravity.json"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+release_eligible = true
+
+[[transformations]]
+id = "verbatim-git-blob-v1"
+description = "Copy the selected baseline Git blob byte-for-byte"
+
+[[transformations]]
+id = "scalar-static-defaults-v1"
+description = "Replace UFO_SCALARS_MODEL_* environment reads with the historical defaults N_SCALARS=3 and N_POINT_INTERACTIONS=3..10"
+authorized_by = "docs/development/PHYSICS_EXTRACTION_CONTRACT.md#model-determinism"
+
+[[transformations]]
+id = "scalar-gravity-static-defaults-v1"
+description = "Replace UFO_GRAVITY_MODEL_N_SCALARS with N_SCALARS=3 and remove the unused interaction-option branch containing undefined N_POINT_INTERACTIONS"
+authorized_by = "docs/development/PHYSICS_EXTRACTION_CONTRACT.md#model-determinism"
+
+[[transformations]]
+id = "loader-ufo-full-v1"
+description = "Load sanitized UFO with restriction='full', simplify=True, no index wrapping; serialize model with ufo-model-loader 0.1.8 JSONLook.VERBOSE"
+authorized_by = "docs/development/MODEL_ASSET_PROVENANCE.md#before-extraction"
+
+[[transformations]]
+id = "loader-ufo-full-wrapped-v1"
+description = "Load sanitized UFO with restriction='full', simplify=True, wrap Lorentz indices; serialize with ufo-model-loader 0.1.8 JSONLook.VERBOSE"
+authorized_by = "docs/development/MODEL_ASSET_PROVENANCE.md#before-extraction"
+
+[[transformations]]
+id = "loader-json-canonical-v1"
+description = "Load the tracked frozen JSON variant without a restriction and reserialize with ufo-model-loader 0.1.8 JSONLook.VERBOSE"
+authorized_by = "docs/development/MODEL_ASSET_PROVENANCE.md#before-extraction"
+
+[[transformations]]
+id = "sm-standard-ufo-spinor-order-v1"
+description = "Swap the fermion-pair leg labels in the spinor slots of the SM Lorentz structures to the standard UFO order of MadGraph and FeynRules, e.g. FFV1 = Gamma(3,2,1); the JSON models apply it to their loader-ufo-full-v1 and loader-ufo-full-wrapped-v1 serializations"
+authorized_by = "docs/development/model-assets/TRANSFORMATIONS.md#standard-ufo-spinor-order"
+
+[[transformations]]
+id = "loader-restriction-card-v1"
+description = "Parse every external parameter from the matching sanitized UFO restriction card and serialize the complete card, including explicit zeros, with ufo-model-loader 0.1.8 JSONLook.VERBOSE"
+authorized_by = "docs/development/MODEL_ASSET_PROVENANCE.md#before-extraction"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/json/scalar_gravity/restrict_default.json"
+package_sha256 = "78e536276cfa98a854ea9b418a6de9437da1e21ea258fcc57ba2b20a6a691900"
+package_size = 357
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/json/scalar_gravity/restrict_default.json"
+source_blob_oid = "f3e10838fadee3867cafa98712e40121b4c652b8"
+source_git_mode = "100644"
+source_sha256 = "78e536276cfa98a854ea9b418a6de9437da1e21ea258fcc57ba2b20a6a691900"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "loader-restriction-card-v1"
+upstream_distribution_path = "assets/models/json/scalar_gravity/restrict_default.json"
+upstream_exact_blob_match = false
+generated_from = "ufo/scalar_gravity/restrict_default.dat"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/json/scalar_gravity/scalar_gravity.json"
+package_sha256 = "3bfc81548466ffc464fa72a3469a9c0c8930970bf048c64c43aee13c8e83bd72"
+package_size = 224817
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/json/scalar_gravity/scalar_gravity.json"
+source_blob_oid = "9dba5b8cf3e65a38166a2f852f0aaa7ea987b08b"
+source_git_mode = "100644"
+source_sha256 = "e303fd1c39eb39e7deca5b36099202074a9048da3dbf2a73baf1f43a31648173"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "loader-ufo-full-v1"
+upstream_distribution_path = "assets/models/json/scalar_gravity/scalar_gravity.json"
+upstream_exact_blob_match = true
+generated_from = "ufo/scalar_gravity"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/json/scalars/restrict_default.json"
+package_sha256 = "ffe7759b8efcc86e6d12d3797c2e63a91c18c07de1bace6a51ee02144ecbf218"
+package_size = 322
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/json/scalars/restrict_default.json"
+source_blob_oid = "510bf5ae4c24bdf3bd092c46b5cf30d1a3ea012b"
+source_git_mode = "100644"
+source_sha256 = "31e30e8bdbdaf4753e361269fcd0294f7d7c82956c0afe66052dd527aa4b864a"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "loader-restriction-card-v1"
+upstream_distribution_path = "assets/models/json/scalars/restrict_default.json"
+upstream_exact_blob_match = false
+generated_from = "ufo/scalars/restrict_default.dat"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/json/scalars/scalars.json"
+package_sha256 = "ca27b8cc228cd03db57556fc1c40298865a75269bf2744bee8c59c013eb28df7"
+package_size = 127756
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/json/scalars/scalars.json"
+source_blob_oid = "47b891712d2298fe3f617a554b4a88cb4a8f0f8b"
+source_git_mode = "100644"
+source_sha256 = "6085cb3b1307bfdf7f3bb709ac1df9354b0cef8b1a3f6316f673fa069c9d9c85"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "loader-ufo-full-v1"
+upstream_distribution_path = "assets/models/json/scalars/scalars.json"
+upstream_exact_blob_match = true
+generated_from = "ufo/scalars"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/json/scalars/scalars_2p_3p.json"
+package_sha256 = "0a268a9fc959036e166367155ab2eeca5c52f76927a89245f8964b9b33b2a8b5"
+package_size = 10990
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/json/scalars/scalars_2p_3p.json"
+source_blob_oid = "f456fa7fb19c5c2964ac431c1d43ab6393814a0b"
+source_git_mode = "100644"
+source_sha256 = "ba4a928f4bf28975ca861c85106559a6d2747326572751eec3448bf67a5f763a"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "loader-json-canonical-v1"
+upstream_distribution_path = "assets/models/json/scalars/scalars_2p_3p.json"
+upstream_exact_blob_match = true
+generated_from = "json/scalars/scalars_2p_3p.json"
+frozen_options = "N_SCALARS=3; N_POINT_INTERACTIONS=[2,3]"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/json/sm/restrict_c_mass.json"
+package_sha256 = "014e93a779812d9af1d3886143cebc8fd911e92f5f970aee4dfffe01429651f5"
+package_size = 908
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/json/sm/restrict_c_mass.json"
+source_blob_oid = "6f2691574431b0efb59b4df5449bf8b035118f50"
+source_git_mode = "100644"
+source_sha256 = "6b191f6d0c45a6e91ea867079b1095e37fc4882df1c1380e70312890959dc7a6"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "loader-restriction-card-v1"
+upstream_distribution_path = "assets/models/json/sm/restrict_c_mass.json"
+upstream_exact_blob_match = false
+generated_from = "ufo/sm/restrict_c_mass.dat"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/json/sm/restrict_ckm.json"
+package_sha256 = "be8bdca54507167d8ae4b33d0b0b77808052cd841d6fabd26a3d99926d915b99"
+package_size = 915
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/json/sm/restrict_ckm.json"
+source_blob_oid = "80a237d40629c2181b63311d79f104f2f865121d"
+source_git_mode = "100644"
+source_sha256 = "57f3ffbd0a0784d433bb9b01211299f29dde1ddd0182ee0b1e4a87dc3f2b5c73"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "loader-restriction-card-v1"
+upstream_distribution_path = "assets/models/json/sm/restrict_ckm.json"
+upstream_exact_blob_match = false
+generated_from = "ufo/sm/restrict_ckm.dat"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/json/sm/restrict_default.json"
+package_sha256 = "8fdd48a3624620c1a15bab602f43a41519038cf69d8fef6aeaaaf13a3f1846c1"
+package_size = 906
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/json/sm/restrict_default.json"
+source_blob_oid = "3ad2ec48354f2eaa98873074ebab97c39b02c297"
+source_git_mode = "100644"
+source_sha256 = "9d357d17c254595dbf612b66d6b531c982eefb71432835360bbfd8b21dcf454b"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "loader-restriction-card-v1"
+upstream_distribution_path = "assets/models/json/sm/restrict_default.json"
+upstream_exact_blob_match = false
+generated_from = "ufo/sm/restrict_default.dat"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/json/sm/restrict_lepton_masses.json"
+package_sha256 = "3d9fe3095907cef03f889bd95b9630a2f836d70244f1b450cfd5d2764913531b"
+package_size = 929
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/json/sm/restrict_lepton_masses.json"
+source_blob_oid = "b9a1d2fc10724269fee9b45235351039396594fe"
+source_git_mode = "100644"
+source_sha256 = "a22a9de56e536cd7c4e4bd4707f5f95d3255fb0dffd49d9567ec9a659576bb76"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "loader-restriction-card-v1"
+upstream_distribution_path = "assets/models/json/sm/restrict_lepton_masses.json"
+upstream_exact_blob_match = false
+generated_from = "ufo/sm/restrict_lepton_masses.dat"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/json/sm/restrict_no_b_mass.json"
+package_sha256 = "82d2fbc06f9d0b7daaed56673912d920ca459f435e9083deed2f4b716c2f4a30"
+package_size = 906
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/json/sm/restrict_no_b_mass.json"
+source_blob_oid = "d9b4518f19c497b9b414fc5380286a1f3f1fe9dc"
+source_git_mode = "100644"
+source_sha256 = "2ca10cc1e02b34f226db983da9a787659257003e6d84001204389e8aef03dfa5"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "loader-restriction-card-v1"
+upstream_distribution_path = "assets/models/json/sm/restrict_no_b_mass.json"
+upstream_exact_blob_match = false
+generated_from = "ufo/sm/restrict_no_b_mass.dat"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/json/sm/restrict_no_masses.json"
+package_sha256 = "f925921df1b66f010cd6f8cd348b5f4728ba37678e0733d8618cef3f2b4e610e"
+package_size = 902
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/json/sm/restrict_no_masses.json"
+source_blob_oid = "4532ce8adb6385909b113dd706e9382dbba9b3c3"
+source_git_mode = "100644"
+source_sha256 = "9bc6bba7b940da83484e5f43346ba202333669aaca578dfa110ed3fbc17514b8"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "loader-restriction-card-v1"
+upstream_distribution_path = "assets/models/json/sm/restrict_no_masses.json"
+upstream_exact_blob_match = false
+generated_from = "ufo/sm/restrict_no_masses.dat"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/json/sm/restrict_no_tau_mass.json"
+package_sha256 = "a26603f4f3572309dc7ce2f23295d5a8aec61d2f3c42a017341245e459648478"
+package_size = 902
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/json/sm/restrict_no_tau_mass.json"
+source_blob_oid = "f6a10ad19ea5b9e812b654ef98bfeb0c6ea01667"
+source_git_mode = "100644"
+source_sha256 = "7560d6890d7cd26532f28865fb8f4092ffcbf49c54fa7a16e921e6b08c3f43e3"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "loader-restriction-card-v1"
+upstream_distribution_path = "assets/models/json/sm/restrict_no_tau_mass.json"
+upstream_exact_blob_match = false
+generated_from = "ufo/sm/restrict_no_tau_mass.dat"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/json/sm/restrict_no_widths.json"
+package_sha256 = "fdc03507f82a3d98571b97ba0ab34f712dc0eb02b101f8308b96c6ab8490c08c"
+package_size = 885
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/json/sm/restrict_no_widths.json"
+source_blob_oid = "267fd018128278533f8b809ab4c58453ebb7b016"
+source_git_mode = "100644"
+source_sha256 = "9002d18be203c34418a3966f7cedc5d20844c317c55906efca32f51a38f1f183"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "loader-restriction-card-v1"
+upstream_distribution_path = "assets/models/json/sm/restrict_no_widths.json"
+upstream_exact_blob_match = false
+generated_from = "ufo/sm/restrict_no_widths.dat"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/json/sm/restrict_zeromass_ckm.json"
+package_sha256 = "b8b4376c82f9486266283a383a0347ec42498296180d92249e2e7a772e1a7e1a"
+package_size = 911
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/json/sm/restrict_zeromass_ckm.json"
+source_blob_oid = "5a4dd6a33974cd47a32aa3a82625e6f0f38f803c"
+source_git_mode = "100644"
+source_sha256 = "2173adc123ef202816d56e20772747f8a513ce9294635e099fdbe4832329944d"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "loader-restriction-card-v1"
+upstream_distribution_path = "assets/models/json/sm/restrict_zeromass_ckm.json"
+upstream_exact_blob_match = false
+generated_from = "ufo/sm/restrict_zeromass_ckm.dat"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/json/sm/sm.json"
+package_sha256 = "c1222e3b70b71804e5212e994a3b76e2f098f7fc3ba1693c9f9c65578d7e3e00"
+package_size = 120661
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/json/sm/sm.json"
+source_blob_oid = "41927df948a4c22e3295363be3b4c39b3fedc6c3"
+source_git_mode = "100644"
+source_sha256 = "684f75c88c7faf6832e9e8122970ec5fe98b9cd30bc989b7f8e1818c327fe165"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "sm-standard-ufo-spinor-order-v1"
+upstream_distribution_path = "assets/models/json/sm/sm.json"
+upstream_exact_blob_match = false
+generated_from = "ufo/sm"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/json/sm/sm_wrapped_indices.json"
+package_sha256 = "e1ee0059f3fc534c462e98c358249acbce0a711171fcbfe41720a9a1f24b2933"
+package_size = 124855
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/json/sm/sm_wrapped_indices.json"
+source_blob_oid = "bd86527135715c8bdc9f21aef6f511543a5b7fe2"
+source_git_mode = "100644"
+source_sha256 = "b4221a0985ad5c6987c325a75012a3231995c604e44ad543d0b1ead22eb19404"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "sm-standard-ufo-spinor-order-v1"
+upstream_distribution_path = "assets/models/json/sm/sm_wrapped_indices.json"
+upstream_exact_blob_match = false
+generated_from = "ufo/sm"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalar_gravity/__init__.py"
+package_sha256 = "baf7043f1586a6b70546d04019b11c3fc17f181f278d5d33a70b7217b5e0db71"
+package_size = 652
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalar_gravity/__init__.py"
+source_blob_oid = "9a3ad6aac9acfbe3f8e4b4423d5565bffd909fe1"
+source_git_mode = "100644"
+source_sha256 = "baf7043f1586a6b70546d04019b11c3fc17f181f278d5d33a70b7217b5e0db71"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalar_gravity/__init__.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalar_gravity/coupling_orders.py"
+package_sha256 = "63738137e1355e064968615a500ecd195395af6f8dea4fd4efee541b47dc7f27"
+package_size = 524
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalar_gravity/coupling_orders.py"
+source_blob_oid = "f6a1ec99fbba8b0dcf9abc3192831839f3df1fe5"
+source_git_mode = "100644"
+source_sha256 = "63738137e1355e064968615a500ecd195395af6f8dea4fd4efee541b47dc7f27"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalar_gravity/coupling_orders.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalar_gravity/couplings.py"
+package_sha256 = "afd07d76eaefaf4828a243eb63c88196f11da1fcbea59f873c1e3832fbc276fb"
+package_size = 1865
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalar_gravity/couplings.py"
+source_blob_oid = "643747e8f3ca22ce8189ffa5d3875028bc9d0424"
+source_git_mode = "100644"
+source_sha256 = "afd07d76eaefaf4828a243eb63c88196f11da1fcbea59f873c1e3832fbc276fb"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalar_gravity/couplings.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalar_gravity/function_library.py"
+package_sha256 = "7ab870cbfebbca3858ab8d6780d138b4b2531f6e2be84ff2cf4e6362b6c601bd"
+package_size = 1332
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalar_gravity/function_library.py"
+source_blob_oid = "b2843b6ca0834c14389aef93203a7eaeb8022b7c"
+source_git_mode = "100644"
+source_sha256 = "7ab870cbfebbca3858ab8d6780d138b4b2531f6e2be84ff2cf4e6362b6c601bd"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalar_gravity/function_library.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalar_gravity/lorentz.py"
+package_sha256 = "28e38a5a20aee6e02605fc2dc2d2e850b05edc1ade5f343fc2ef780ba9666e42"
+package_size = 134243
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalar_gravity/lorentz.py"
+source_blob_oid = "768a0b9363a70b28c980c4d2447d4c665b3a07ef"
+source_git_mode = "100644"
+source_sha256 = "28e38a5a20aee6e02605fc2dc2d2e850b05edc1ade5f343fc2ef780ba9666e42"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalar_gravity/lorentz.py"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalar_gravity/object_library.py"
+package_sha256 = "5db44f44bdc8df1ada2c76bd02d5f9241298d0187b963c0d2ee39b88e3910cb3"
+package_size = 7079
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalar_gravity/object_library.py"
+source_blob_oid = "85c41db185c460a8ad17d4220365056f04039658"
+source_git_mode = "100644"
+source_sha256 = "5db44f44bdc8df1ada2c76bd02d5f9241298d0187b963c0d2ee39b88e3910cb3"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalar_gravity/object_library.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalar_gravity/param_card.dat"
+package_sha256 = "ed708e1744af39117e364be9f8c2f9c7fa844781701a3fb419cff95a8b427dd7"
+package_size = 1960
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalar_gravity/param_card.dat"
+source_blob_oid = "84e32fdbbbe9c57cb64d47a00794ec13660ee70e"
+source_git_mode = "100644"
+source_sha256 = "ed708e1744af39117e364be9f8c2f9c7fa844781701a3fb419cff95a8b427dd7"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalar_gravity/param_card.dat"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalar_gravity/parameters.py"
+package_sha256 = "01b0477e0b0e352f968a6d1bfd1e9724c505adc6dd5c1d39dd08e9da97cd9f00"
+package_size = 3645
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalar_gravity/parameters.py"
+source_blob_oid = "1fbe07ca4c5f8d8ea72b541930d6293ee6870959"
+source_git_mode = "100644"
+source_sha256 = "68de6a8ab6ecb1f358a13954be99597bb30665d1e195b7395f8faf405bd8657e"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "scalar-gravity-static-defaults-v1"
+upstream_distribution_path = "assets/models/ufo/scalar_gravity/parameters.py"
+upstream_exact_blob_match = true
+generated_from = "ufo/scalar_gravity/parameters.py"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalar_gravity/particles.py"
+package_sha256 = "90b4efa5fd4c8eb443c43a3a8d7109add2fae94807670098195d6024acd91bd5"
+package_size = 1681
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalar_gravity/particles.py"
+source_blob_oid = "bea3ca350ebb8cc66c5179ffb491c82f68d7a026"
+source_git_mode = "100644"
+source_sha256 = "90b4efa5fd4c8eb443c43a3a8d7109add2fae94807670098195d6024acd91bd5"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalar_gravity/particles.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalar_gravity/restrict_default.dat"
+package_sha256 = "ed708e1744af39117e364be9f8c2f9c7fa844781701a3fb419cff95a8b427dd7"
+package_size = 1960
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalar_gravity/restrict_default.dat"
+source_blob_oid = "84e32fdbbbe9c57cb64d47a00794ec13660ee70e"
+source_git_mode = "100644"
+source_sha256 = "ed708e1744af39117e364be9f8c2f9c7fa844781701a3fb419cff95a8b427dd7"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalar_gravity/restrict_default.dat"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalar_gravity/restrict_full.dat"
+package_sha256 = "0005fc634dd25e095ad70ee49b1789736e6ed31a428794866fea279585a7fbd0"
+package_size = 1579
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalar_gravity/restrict_full.dat"
+source_blob_oid = "b206643b681de5bf10fd96112a3a925d5a0e7234"
+source_git_mode = "100644"
+source_sha256 = "0005fc634dd25e095ad70ee49b1789736e6ed31a428794866fea279585a7fbd0"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalar_gravity/restrict_full.dat"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalar_gravity/run_write_param_card.py"
+package_sha256 = "d45878face2f212eaed32932e36ffcaf33e643db347c44d074657292805b47a0"
+package_size = 543
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalar_gravity/run_write_param_card.py"
+source_blob_oid = "d87ecc25b963bd42e7f886e06bc475c8f5333e5b"
+source_git_mode = "100755"
+source_sha256 = "d45878face2f212eaed32932e36ffcaf33e643db347c44d074657292805b47a0"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalar_gravity/run_write_param_card.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalar_gravity/vertices.py"
+package_sha256 = "4c7d261c81d15242c09cd12403fe8d32a5d41fefc4136e726d5e934d9358e9be"
+package_size = 1893
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalar_gravity/vertices.py"
+source_blob_oid = "ca314996c75d9f0750e452a7232ac9a4555b0345"
+source_git_mode = "100644"
+source_sha256 = "4c7d261c81d15242c09cd12403fe8d32a5d41fefc4136e726d5e934d9358e9be"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalar_gravity/vertices.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalar_gravity/write_param_card.py"
+package_sha256 = "3008b3269d0689370523a4a6dbcdd4100bb7d78599e2f3df79127ead6fe7fc75"
+package_size = 6556
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalar_gravity/write_param_card.py"
+source_blob_oid = "bcf80e99553c7631dc4a1ea92d4a28a87ecde78f"
+source_git_mode = "100644"
+source_sha256 = "3008b3269d0689370523a4a6dbcdd4100bb7d78599e2f3df79127ead6fe7fc75"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalar_gravity/write_param_card.py"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalars/__init__.py"
+package_sha256 = "baf7043f1586a6b70546d04019b11c3fc17f181f278d5d33a70b7217b5e0db71"
+package_size = 652
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalars/__init__.py"
+source_blob_oid = "9a3ad6aac9acfbe3f8e4b4423d5565bffd909fe1"
+source_git_mode = "100644"
+source_sha256 = "baf7043f1586a6b70546d04019b11c3fc17f181f278d5d33a70b7217b5e0db71"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalars/__init__.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalars/coupling_orders.py"
+package_sha256 = "2e691ad2042a4a7edde293fe69ba96f54ec08221061db0ed1dc30f588011504e"
+package_size = 416
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalars/coupling_orders.py"
+source_blob_oid = "cb073b19efe1954a432c2c375f73c363f6e6b53d"
+source_git_mode = "100644"
+source_sha256 = "2e691ad2042a4a7edde293fe69ba96f54ec08221061db0ed1dc30f588011504e"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalars/coupling_orders.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalars/couplings.py"
+package_sha256 = "325cfc644fe3b86cffd8de916c3f285016d70fe673d50f3c5ca1c7dcdfaa4183"
+package_size = 257
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalars/couplings.py"
+source_blob_oid = "9a3f7c38b09a3d9440e478fefe3b4c6457340bad"
+source_git_mode = "100644"
+source_sha256 = "325cfc644fe3b86cffd8de916c3f285016d70fe673d50f3c5ca1c7dcdfaa4183"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalars/couplings.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalars/function_library.py"
+package_sha256 = "7ab870cbfebbca3858ab8d6780d138b4b2531f6e2be84ff2cf4e6362b6c601bd"
+package_size = 1332
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalars/function_library.py"
+source_blob_oid = "b2843b6ca0834c14389aef93203a7eaeb8022b7c"
+source_git_mode = "100644"
+source_sha256 = "7ab870cbfebbca3858ab8d6780d138b4b2531f6e2be84ff2cf4e6362b6c601bd"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalars/function_library.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalars/lorentz.py"
+package_sha256 = "3daaf714d13328419366cc5c9b6a490d6cd9cff8ace604bf2ec0915061e5b736"
+package_size = 726
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalars/lorentz.py"
+source_blob_oid = "85a4a01cac7a4677d484ea5efbfa75c5fe3d661c"
+source_git_mode = "100644"
+source_sha256 = "3daaf714d13328419366cc5c9b6a490d6cd9cff8ace604bf2ec0915061e5b736"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalars/lorentz.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalars/object_library.py"
+package_sha256 = "5db44f44bdc8df1ada2c76bd02d5f9241298d0187b963c0d2ee39b88e3910cb3"
+package_size = 7079
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalars/object_library.py"
+source_blob_oid = "85c41db185c460a8ad17d4220365056f04039658"
+source_git_mode = "100644"
+source_sha256 = "5db44f44bdc8df1ada2c76bd02d5f9241298d0187b963c0d2ee39b88e3910cb3"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalars/object_library.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalars/parameters.py"
+package_sha256 = "7b11a9b1d84126d31f58d5c4752ea0fe0921074bfcb338ecd6ef4d2ad7da89a7"
+package_size = 3452
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalars/parameters.py"
+source_blob_oid = "884e4025f897608d8f2773300c8cb1fc71306904"
+source_git_mode = "100644"
+source_sha256 = "7620698c89ec9a87eb11177f682627e9a334222d42b378c18e111b866f7c3ad0"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "scalar-static-defaults-v1"
+upstream_distribution_path = "assets/models/ufo/scalars/parameters.py"
+upstream_exact_blob_match = true
+generated_from = "ufo/scalars/parameters.py"
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalars/particles.py"
+package_sha256 = "1e346940ecf9746445db47219256cc4739444b111f3a2a96967bbb890b57e310"
+package_size = 1221
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalars/particles.py"
+source_blob_oid = "20399e78bea20b015fdfd4703a896775f8916cb1"
+source_git_mode = "100644"
+source_sha256 = "1e346940ecf9746445db47219256cc4739444b111f3a2a96967bbb890b57e310"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalars/particles.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalars/restrict_default.dat"
+package_sha256 = "020178e9df8fe242fd4d34077db4caff694959a7c6d7a5c829527f8de4e1c80f"
+package_size = 1748
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalars/restrict_default.dat"
+source_blob_oid = "8d45909b657a69ab4a7e8f4f799aeb1cc2163959"
+source_git_mode = "100644"
+source_sha256 = "020178e9df8fe242fd4d34077db4caff694959a7c6d7a5c829527f8de4e1c80f"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalars/restrict_default.dat"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalars/restrict_full.dat"
+package_sha256 = "0005fc634dd25e095ad70ee49b1789736e6ed31a428794866fea279585a7fbd0"
+package_size = 1579
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalars/restrict_full.dat"
+source_blob_oid = "b206643b681de5bf10fd96112a3a925d5a0e7234"
+source_git_mode = "100644"
+source_sha256 = "0005fc634dd25e095ad70ee49b1789736e6ed31a428794866fea279585a7fbd0"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalars/restrict_full.dat"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalars/run_write_param_card.py"
+package_sha256 = "d45878face2f212eaed32932e36ffcaf33e643db347c44d074657292805b47a0"
+package_size = 543
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalars/run_write_param_card.py"
+source_blob_oid = "d87ecc25b963bd42e7f886e06bc475c8f5333e5b"
+source_git_mode = "100755"
+source_sha256 = "d45878face2f212eaed32932e36ffcaf33e643db347c44d074657292805b47a0"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalars/run_write_param_card.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalars/vertices.py"
+package_sha256 = "1341725ef6b4bf5eb7ff5fa09d633c1cb52e89b695c627ae42c2ca5664525d4f"
+package_size = 1103
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalars/vertices.py"
+source_blob_oid = "b58af0f4ce08f1be499c51dba34fba062a5e4191"
+source_git_mode = "100644"
+source_sha256 = "1341725ef6b4bf5eb7ff5fa09d633c1cb52e89b695c627ae42c2ca5664525d4f"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalars/vertices.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/scalars/write_param_card.py"
+package_sha256 = "3008b3269d0689370523a4a6dbcdd4100bb7d78599e2f3df79127ead6fe7fc75"
+package_size = 6556
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/scalars/write_param_card.py"
+source_blob_oid = "bcf80e99553c7631dc4a1ea92d4a28a87ecde78f"
+source_git_mode = "100644"
+source_sha256 = "3008b3269d0689370523a4a6dbcdd4100bb7d78599e2f3df79127ead6fe7fc75"
+license_ids = [ "0BSD", "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/scalars/write_param_card.py"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/__init__.py"
+package_sha256 = "dcefb2fa6a4b1653d87944a11dfaedf1b5a2c0a5b27d2370685c2e21d157a568"
+package_size = 886
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/__init__.py"
+source_blob_oid = "a4b9447bcac8c96261eaed4a3e4c8bdcaaae0e9a"
+source_git_mode = "100644"
+source_sha256 = "dcefb2fa6a4b1653d87944a11dfaedf1b5a2c0a5b27d2370685c2e21d157a568"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/__init__.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/build_restrict.py"
+package_sha256 = "de21ae72ae23f8409d077599f0e4fabbab5287373e3930bc34a19adacd60781e"
+package_size = 2886
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/build_restrict.py"
+source_blob_oid = "838268f2087759d8315a27d3160c9f003c4849d3"
+source_git_mode = "100644"
+source_sha256 = "de21ae72ae23f8409d077599f0e4fabbab5287373e3930bc34a19adacd60781e"
+license_ids = [ "GammaLoop-model-assets", "MadGraph5-aMCatNLO",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/build_restrict.py"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/coupling_orders.py"
+package_sha256 = "cb45f17e973165af72af7f5fabe368306919b00d8421745c79807b5fda1bdace"
+package_size = 485
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/coupling_orders.py"
+source_blob_oid = "3a0bd46b64bf60b7348433c3fa8b161fc2bcd4bf"
+source_git_mode = "100644"
+source_sha256 = "cb45f17e973165af72af7f5fabe368306919b00d8421745c79807b5fda1bdace"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/coupling_orders.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/couplings.py"
+package_sha256 = "a5d30cec4efec54b637b5a2ce8017b54fa78f16c546afe33e7410a0279bf979c"
+package_size = 14157
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/couplings.py"
+source_blob_oid = "5e3e67ffd2ef718620644c76aaa687d6cd18a924"
+source_git_mode = "100644"
+source_sha256 = "a5d30cec4efec54b637b5a2ce8017b54fa78f16c546afe33e7410a0279bf979c"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/couplings.py"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/decays.py"
+package_sha256 = "12b9bc8544b01e248087f197c2dc9137d274f980178bc72f67d130fb149007a2"
+package_size = 13625
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/decays.py"
+source_blob_oid = "23af667e4c1d5df7ea393bf098daa9982112b588"
+source_git_mode = "100644"
+source_sha256 = "12b9bc8544b01e248087f197c2dc9137d274f980178bc72f67d130fb149007a2"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/decays.py"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/function_library.py"
+package_sha256 = "a8821ed8a739e43b705ff7c7aa7d93ff545071b0fe020f5c0c8b0799c30ef2ae"
+package_size = 1339
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/function_library.py"
+source_blob_oid = "33a8975a586a597cfb86f20d7ccb102d804b1787"
+source_git_mode = "100644"
+source_sha256 = "a8821ed8a739e43b705ff7c7aa7d93ff545071b0fe020f5c0c8b0799c30ef2ae"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/function_library.py"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/lorentz.py"
+package_sha256 = "1f13e8b63e2ecf428e2875e14bc6901ce49952e1cf2b18ea9934c8d4264e3559"
+package_size = 2656
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/lorentz.py"
+source_blob_oid = "f413c46228114e00282f2d5ba99ffeb8eecd3d7e"
+source_git_mode = "100644"
+source_sha256 = "cd578c286b038dd3daae396ebd1515cf36d8089b63a1d20247d2b797054b162b"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "sm-standard-ufo-spinor-order-v1"
+upstream_distribution_path = "assets/models/ufo/sm/lorentz.py"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/object_library.py"
+package_sha256 = "6391978031caea837ecea426f2f0cfdac748457a00bac99e02c025c42e883cb5"
+package_size = 6959
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/object_library.py"
+source_blob_oid = "d63a4532dd732b2cb471c57b2217113d8c9ccfc9"
+source_git_mode = "100644"
+source_sha256 = "6391978031caea837ecea426f2f0cfdac748457a00bac99e02c025c42e883cb5"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/object_library.py"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/parameters.py"
+package_sha256 = "e8599a97d31004d7af8c589a5e734c9141b48d9becdbbde86a37e41635390e38"
+package_size = 14852
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/parameters.py"
+source_blob_oid = "8cf61680938dd9cf68f615ee47d85a281b9b9215"
+source_git_mode = "100644"
+source_sha256 = "e8599a97d31004d7af8c589a5e734c9141b48d9becdbbde86a37e41635390e38"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/parameters.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/particles.py"
+package_sha256 = "9b542b5d49598ade4d9d6897d569e8feeaa05993e74aef67fb5dfafd5efa9916"
+package_size = 10248
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/particles.py"
+source_blob_oid = "161bd4d13e0e49d8c3ddac24ca4de488c4bcd329"
+source_git_mode = "100644"
+source_sha256 = "9b542b5d49598ade4d9d6897d569e8feeaa05993e74aef67fb5dfafd5efa9916"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/particles.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/restrict_c_mass.dat"
+package_sha256 = "817a7843a1435c1c7b1f0231ababc346e58f81d8038b9c0b2c75eae32960da9e"
+package_size = 1412
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/restrict_c_mass.dat"
+source_blob_oid = "153d8c6509d5ecedfde606ef3a2bcf434b1960df"
+source_git_mode = "100644"
+source_sha256 = "817a7843a1435c1c7b1f0231ababc346e58f81d8038b9c0b2c75eae32960da9e"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/restrict_c_mass.dat"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/restrict_ckm.dat"
+package_sha256 = "75fd361e4ce78100b7dd107cd42b1015d9303da44bec8971e401c2d20d7876cb"
+package_size = 1412
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/restrict_ckm.dat"
+source_blob_oid = "3b0e9f9db10eff5ceedb5ee13e2912014d42a367"
+source_git_mode = "100644"
+source_sha256 = "75fd361e4ce78100b7dd107cd42b1015d9303da44bec8971e401c2d20d7876cb"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/restrict_ckm.dat"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/restrict_default.dat"
+package_sha256 = "988939a63e2d35ca991bac864b8f10f6ee19fd13063cb68e91af962767974889"
+package_size = 1439
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/restrict_default.dat"
+source_blob_oid = "2ae557d5ad70599a258322b6fb1d8c15bc4966e2"
+source_git_mode = "100644"
+source_sha256 = "988939a63e2d35ca991bac864b8f10f6ee19fd13063cb68e91af962767974889"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/restrict_default.dat"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/restrict_full.dat"
+package_sha256 = "f1e023d45808db115385e5707640a3a3e126217840067a14200e995181eba151"
+package_size = 4670
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/restrict_full.dat"
+source_blob_oid = "38ec0ccc5299c453c792bb0851fd55467521bc54"
+source_git_mode = "100644"
+source_sha256 = "f1e023d45808db115385e5707640a3a3e126217840067a14200e995181eba151"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/restrict_full.dat"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/restrict_lepton_masses.dat"
+package_sha256 = "eb44e12f6f4ee591e76277322359e31f4a577a9200acd6c5c8dc6629a039e8c8"
+package_size = 1439
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/restrict_lepton_masses.dat"
+source_blob_oid = "b8d90f3e35ac00e2700b06be399f43a9aeb0a904"
+source_git_mode = "100644"
+source_sha256 = "eb44e12f6f4ee591e76277322359e31f4a577a9200acd6c5c8dc6629a039e8c8"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/restrict_lepton_masses.dat"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/restrict_no_b_mass.dat"
+package_sha256 = "32dc93b5584b7bdbf24e87ce12d55398cc2d865e0240ccf6e853c2ade1f90e9e"
+package_size = 1412
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/restrict_no_b_mass.dat"
+source_blob_oid = "f42e3375d13af52b900c0819b13db974a68bbedc"
+source_git_mode = "100644"
+source_sha256 = "32dc93b5584b7bdbf24e87ce12d55398cc2d865e0240ccf6e853c2ade1f90e9e"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/restrict_no_b_mass.dat"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/restrict_no_masses.dat"
+package_sha256 = "539664a3651839946cc995257bd9e108054c789f5352ecc0e562260798e66bf0"
+package_size = 1412
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/restrict_no_masses.dat"
+source_blob_oid = "31a72cedc730903d603b00e0b998a76b9165edd2"
+source_git_mode = "100644"
+source_sha256 = "539664a3651839946cc995257bd9e108054c789f5352ecc0e562260798e66bf0"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/restrict_no_masses.dat"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/restrict_no_tau_mass.dat"
+package_sha256 = "52433bb4161af5a0f17c91964fdd695b155c0c9821eda37142f04a1b1c2e57f8"
+package_size = 1412
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/restrict_no_tau_mass.dat"
+source_blob_oid = "6497e444d297fbeeafd34f0d50986e04c42884a8"
+source_git_mode = "100644"
+source_sha256 = "52433bb4161af5a0f17c91964fdd695b155c0c9821eda37142f04a1b1c2e57f8"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/restrict_no_tau_mass.dat"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/restrict_no_widths.dat"
+package_sha256 = "0ab8569ed8e747b0c0c0ee2c2c93db1e368489237baf8430c53eef605a1634e8"
+package_size = 1410
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/restrict_no_widths.dat"
+source_blob_oid = "55e78884b93d2fcd1a6125d12937ea40974d594a"
+source_git_mode = "100644"
+source_sha256 = "0ab8569ed8e747b0c0c0ee2c2c93db1e368489237baf8430c53eef605a1634e8"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/restrict_no_widths.dat"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/restrict_zeromass_ckm.dat"
+package_sha256 = "2388cf490afcfb5530f49ae3a85fec235be236e33c4bb5e1515f3d4827b963c6"
+package_size = 1412
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/restrict_zeromass_ckm.dat"
+source_blob_oid = "c82164bac69678563fad925c7e9fedc8d497c545"
+source_git_mode = "100644"
+source_sha256 = "2388cf490afcfb5530f49ae3a85fec235be236e33c4bb5e1515f3d4827b963c6"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/restrict_zeromass_ckm.dat"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/run_write_param_card.py"
+package_sha256 = "d45878face2f212eaed32932e36ffcaf33e643db347c44d074657292805b47a0"
+package_size = 543
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/run_write_param_card.py"
+source_blob_oid = "d87ecc25b963bd42e7f886e06bc475c8f5333e5b"
+source_git_mode = "100755"
+source_sha256 = "d45878face2f212eaed32932e36ffcaf33e643db347c44d074657292805b47a0"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/run_write_param_card.py"
+upstream_exact_blob_match = true
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/vertices.py"
+package_sha256 = "6f3353b483e6a3f7c6b9f5e79d3a818af8e933ec63f96c18ed271760f6492c68"
+package_size = 32556
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/vertices.py"
+source_blob_oid = "d8c6ceb815df1d152dc651585848bbd273300bed"
+source_git_mode = "100644"
+source_sha256 = "6f3353b483e6a3f7c6b9f5e79d3a818af8e933ec63f96c18ed271760f6492c68"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/vertices.py"
+upstream_exact_blob_match = false
+
+[[files]]
+canonical_package_path = "pyamplicol/assets/models/ufo/sm/write_param_card.py"
+package_sha256 = "9a289a0f17edaaa0609ccd7d83db3b2d4b389e51f07a0f0c47ffce77afb18c03"
+package_size = 6619
+source_repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+source_revision = "643bc6f99d7b2249af0a85204768df243e612411"
+source_path = "pyAmpliCol/src/pyamplicol/assets/models/ufo/sm/write_param_card.py"
+source_blob_oid = "3abf4cff0cb9dca8baba042a0b7c373b4e8b8b64"
+source_git_mode = "100644"
+source_sha256 = "9a289a0f17edaaa0609ccd7d83db3b2d4b389e51f07a0f0c47ffce77afb18c03"
+license_ids = [ "GammaLoop-model-assets",]
+transformation_id = "verbatim-git-blob-v1"
+upstream_distribution_path = "assets/models/ufo/sm/write_param_card.py"
+upstream_exact_blob_match = false
+
+[source]
+repository = "git@github.com:rikkert-frederix/AmpliCol.git"
+revision = "643bc6f99d7b2249af0a85204768df243e612411"
+root = "pyAmpliCol/src/pyamplicol/assets/models"
+
+[generator]
+distribution = "ufo-model-loader"
+version = "0.1.8"
+repository = "https://github.com/alphal00p/ufo_model_loader.git"
+revision = "70ddee6b416f8c8b340e0d087646d77095c5d24b"
+license_id = "MIT"
+serialization = "JSONLook.VERBOSE"
+
+[upstream_distribution]
+repository = "https://github.com/alphal00p/gammaloop.git"
+revision = "db79edc84f6a1580decbcc4ede7ea0b1c79d9a08"
+root = "assets/models"
+baseline_exact_blob_matches = 28
+baseline_nonmatching_blobs = 38
+interpretation = "Exactness is asserted per file below; all primary source identities remain the AmpliCol baseline Git objects"

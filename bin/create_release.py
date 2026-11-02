@@ -23,8 +23,8 @@ locally for testing):
     python bin/create_release.py --version 0.2.0 --output dist/
 
 It performs the following actions:
-  1. Check that VERSION agrees with --version, and that madspace still derives
-     its version from it. (UpdateNotes.txt still tracks the legacy MG5_aMC@NLO
+  1. Check that VERSION agrees with --version, that madspace still derives
+     its version from it, and that pyamplicol's versions are synced to it. (UpdateNotes.txt still tracks the legacy MG5_aMC@NLO
      3.7.x series and is not part of this check.)
   2. git-archive the current HEAD into a clean MG7_v<version> directory
      (preserves the madgraph/VERSION symlink; ignores untracked/gitignored
@@ -128,8 +128,9 @@ def parse_info_file(filepath):
 
 
 def check_versions(version):
-    """Fail loudly if VERSION disagrees with the version being released, or if
-    madspace/pyproject.toml has stopped deriving its version from VERSION."""
+    """Fail loudly if VERSION disagrees with the version being released, if
+    madspace/pyproject.toml has stopped deriving its version from VERSION, or
+    if pyamplicol's literal (Cargo) versions are out of sync with VERSION."""
     errors = []
 
     mg_version = parse_info_file(pjoin(ROOT, 'VERSION')).get('version')
@@ -142,6 +143,13 @@ def check_versions(version):
         errors.append(
             "madspace/pyproject.toml pins its own version instead of reading it "
             "from VERSION; madspace must be released in lockstep with MadGraph")
+
+    sync = subprocess.run(
+        [sys.executable, pjoin(ROOT, 'pyamplicol', 'tools', 'release', 'sync_version.py'),
+         '--check', '--version', version],
+        capture_output=True, text=True)
+    if sync.returncode:
+        errors.append(sync.stderr.strip() + "; run pyamplicol/tools/release/sync_version.py")
 
     if errors:
         for e in errors:

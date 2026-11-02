@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: 0BSD
+# q q~ > Z + 6g with process-local compiled-DAG JIT O3 execution.
+#
+#   pyamplicol generate --card qq_z6g_compiled_jit_o3.toml
+#   pyamplicol profile --card qq_z6g_compiled_jit_o3.toml
+
+schema_version = 1
+action = "generate"
+
+[model]
+source = "built-in-sm"
+cache = true
+
+[process]
+entries = [
+  { expression = "u u~ > Z g g g g g g", name = "uubar_Z_6g_compiled" },
+]
+
+[color]
+accuracy = "lc"
+
+[generation]
+output = "artifacts/qq_z6g_compiled_jit_o3"
+mode = "error"
+workers = 1
+emit_api_bundle = true
+
+[generation.validation]
+enabled = true
+samples = 3
+seed = 12345
+relative_tolerance = 1e-12
+absolute_tolerance = 1e-300
+post_build_validation = false
+
+[evaluator]
+backend = "jit"
+execution_mode = "compiled"
+batch_size = 64
+output_chunk_size = 512
+
+[evaluator.jit]
+optimization_level = 3
+compress = false
+
+[evaluation]
+artifact = "artifacts/qq_z6g_compiled_jit_o3"
+process = "u u~ > Z g g g g g g"
+precision = 16
+
+[benchmark]
+target_runtime = 5.0
+batch_size = 64
+precision = 16
+warmup_runs = 2
+minimum_samples = 5
+color_flow_ids = ["1"]
+
+[output]
+format = "human"
+color = "auto"
+progress = "auto"
+log_level = "info"

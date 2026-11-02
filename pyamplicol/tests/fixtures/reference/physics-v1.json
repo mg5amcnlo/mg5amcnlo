@@ -1,0 +1,306 @@
+{
+  "fixture_schema_version": 1,
+  "source": {
+    "repository_commit": "643bc6f99d7b2249af0a85204768df243e612411",
+    "process_artifact_schema": 2,
+    "runtime_schema": 2,
+    "note": "Clean compact values captured before the standalone schema-v3 port."
+  },
+  "cases": {
+    "builtin_sm_ddbar_z_lc": {
+      "model": "built-in-sm",
+      "process": "d d~ > z",
+      "process_id": "d_dbar_to_z",
+      "color_accuracy": "lc",
+      "momenta": [
+        [
+          [45.594, 0.0, 0.0, 45.594],
+          [45.594, 0.0, 0.0, -45.594],
+          [91.188, 0.0, 0.0, 0.0]
+        ]
+      ],
+      "coverage": {
+        "helicities": "complete",
+        "color": "complete",
+        "color_kind": "physical-lc-flows"
+      },
+      "topology": {
+        "source_count": 7,
+        "current_count": 13,
+        "interaction_count": 6,
+        "interaction_evaluation_count": 6,
+        "amplitude_root_count": 6
+      },
+      "resolved": {
+        "h:-1,+1,-1": {
+          "flow:2,1": 137.93356063778558
+        },
+        "h:+1,-1,+1": {
+          "flow:2,1": 4.172973090944297
+        }
+      },
+      "total": 142.1065337287299
+    },
+    "builtin_sm_ddbar_z_nlc": {
+      "model": "built-in-sm",
+      "process": "d d~ > z",
+      "process_id": "d_dbar_to_z",
+      "color_accuracy": "nlc",
+      "momenta_from": "builtin_sm_ddbar_z_lc",
+      "coverage": {
+        "helicities": "complete",
+        "color": "contracted",
+        "color_kind": "contracted-color"
+      },
+      "topology": {
+        "source_count": 7,
+        "current_count": 13,
+        "interaction_count": 6,
+        "interaction_evaluation_count": 6,
+        "amplitude_root_count": 6
+      },
+      "resolved": {
+        "h:-1,+1,-1": {
+          "color:contracted": 137.93356063778558
+        },
+        "h:+1,-1,+1": {
+          "color:contracted": 4.172973090944296
+        }
+      },
+      "total": 142.1065337287299
+    },
+    "builtin_sm_ddbar_z_full": {
+      "model": "built-in-sm",
+      "process": "d d~ > z",
+      "process_id": "d_dbar_to_z",
+      "color_accuracy": "full",
+      "momenta_from": "builtin_sm_ddbar_z_lc",
+      "coverage": {
+        "helicities": "complete",
+        "color": "contracted",
+        "color_kind": "contracted-color"
+      },
+      "topology_from": "builtin_sm_ddbar_z_nlc",
+      "resolved_from": "builtin_sm_ddbar_z_nlc",
+      "total": 142.1065337287299
+    },
+    "builtin_sm_ddbar_zg_lc": {
+      "model": "built-in-sm",
+      "process": "d d~ > z g",
+      "process_id": "d_dbar_to_z_g",
+      "color_accuracy": "lc",
+      "momenta": [
+        [
+          [500.0, 0.0, 0.0, 500.0],
+          [500.0, 0.0, 0.0, -500.0],
+          [
+            504.157625672,
+            -304.1084262865,
+            208.76026523528103,
+            331.35611794513767
+          ],
+          [
+            495.842374328,
+            304.1084262865,
+            -208.76026523528103,
+            -331.35611794513767
+          ]
+        ]
+      ],
+      "coverage": {
+        "helicities": "complete",
+        "color": "complete",
+        "color_kind": "physical-lc-flows"
+      },
+      "topology": {
+        "source_count": 9,
+        "current_count": 31,
+        "interaction_count": 34,
+        "interaction_evaluation_count": 34,
+        "amplitude_root_count": 12
+      },
+      "resolved": {
+        "h:-1,+1,-1,-1": {
+          "flow:2,4,1": 0.000026091034789099317
+        },
+        "h:-1,+1,-1,+1": {
+          "flow:2,4,1": 0.3773466872450282
+        },
+        "h:-1,+1,+0,-1": {
+          "flow:2,4,1": 0.0012478598189341644
+        },
+        "h:-1,+1,+0,+1": {
+          "flow:2,4,1": 0.0012478598189342007
+        },
+        "h:-1,+1,+1,-1": {
+          "flow:2,4,1": 0.014920394498506004
+        },
+        "h:-1,+1,+1,+1": {
+          "flow:2,4,1": 1.0316468782852936e-6
+        },
+        "h:+1,-1,-1,-1": {
+          "flow:2,4,1": 3.121092968625858e-8
+        },
+        "h:+1,-1,-1,+1": {
+          "flow:2,4,1": 0.00045139416731248123
+        },
+        "h:+1,-1,+0,-1": {
+          "flow:2,4,1": 0.00003775212806517328
+        },
+        "h:+1,-1,+0,+1": {
+          "flow:2,4,1": 0.00003775212806517224
+        },
+        "h:+1,-1,+1,-1": {
+          "flow:2,4,1": 0.011416058314955969
+        },
+        "h:+1,-1,+1,+1": {
+          "flow:2,4,1": 7.893451425916166e-7
+        }
+      },
+      "total": 0.40673370135754094
+    },
+    "builtin_sm_ddbar_zg_nlc": {
+      "model": "built-in-sm",
+      "process": "d d~ > z g",
+      "process_id": "d_dbar_to_z_g",
+      "color_accuracy": "nlc",
+      "momenta_from": "builtin_sm_ddbar_zg_lc",
+      "coverage": {
+        "helicities": "complete",
+        "color": "contracted",
+        "color_kind": "contracted-color"
+      },
+      "topology": {
+        "source_count": 9,
+        "current_count": 31,
+        "interaction_count": 34,
+        "interaction_evaluation_count": 34,
+        "amplitude_root_count": 12
+      },
+      "resolved": {
+        "h:-1,+1,-1,-1": {
+          "color:contracted": 0.000023192030923643838
+        },
+        "h:-1,+1,-1,+1": {
+          "color:contracted": 0.33541927755113615
+        },
+        "h:-1,+1,+0,-1": {
+          "color:contracted": 0.0011092087279414794
+        },
+        "h:-1,+1,+0,+1": {
+          "color:contracted": 0.0011092087279415115
+        },
+        "h:-1,+1,+1,-1": {
+          "color:contracted": 0.013262572887560891
+        },
+        "h:-1,+1,+1,+1": {
+          "color:contracted": 9.170194473647053e-7
+        },
+        "h:+1,-1,-1,-1": {
+          "color:contracted": 2.7743048610007626e-8
+        },
+        "h:+1,-1,-1,+1": {
+          "color:contracted": 0.00040123925983331666
+        },
+        "h:+1,-1,+0,-1": {
+          "color:contracted": 0.000033557447169042914
+        },
+        "h:+1,-1,+0,+1": {
+          "color:contracted": 0.000033557447169041986
+        },
+        "h:+1,-1,+1,-1": {
+          "color:contracted": 0.010147607391071971
+        },
+        "h:+1,-1,+1,+1": {
+          "color:contracted": 7.016401267481036e-7
+        }
+      },
+      "total": 0.3615410678733697
+    },
+    "builtin_sm_ddbar_zg_full": {
+      "model": "built-in-sm",
+      "process": "d d~ > z g",
+      "process_id": "d_dbar_to_z_g",
+      "color_accuracy": "full",
+      "momenta_from": "builtin_sm_ddbar_zg_lc",
+      "coverage": {
+        "helicities": "complete",
+        "color": "contracted",
+        "color_kind": "contracted-color"
+      },
+      "topology_from": "builtin_sm_ddbar_zg_nlc",
+      "resolved_from": "builtin_sm_ddbar_zg_nlc",
+      "total": 0.3615410678733697
+    },
+    "scalars_2to2_lc": {
+      "model": "scalars-json",
+      "process": "scalar_0 scalar_0 > scalar_0 scalar_0",
+      "process_id": "scalar_0_scalar_0_to_scalar_0_scalar_0",
+      "color_accuracy": "lc",
+      "momenta": [
+        [
+          [500.0, 0.0, 0.0, 500.0],
+          [500.0, 0.0, 0.0, -500.0],
+          [
+            499.99999999999994,
+            -306.65836769058797,
+            210.51071473894038,
+            334.1345305493651
+          ],
+          [
+            499.99999999999994,
+            306.65836769058797,
+            -210.51071473894038,
+            -334.1345305493651
+          ]
+        ]
+      ],
+      "coverage": {
+        "helicities": "complete",
+        "color": "complete",
+        "color_kind": "physical-lc-flows"
+      },
+      "topology": {
+        "source_count": 4,
+        "current_count": 8,
+        "interaction_count": 6,
+        "interaction_evaluation_count": 6,
+        "amplitude_root_count": 1
+      },
+      "resolved": {
+        "h:+0,+0,+0,+0": {
+          "flow:singlet": 0.5
+        }
+      },
+      "total": 0.5
+    },
+    "scalar_gravity_2to2_lc": {
+      "model": "scalar-gravity-json",
+      "process": "scalar_0 scalar_0 > graviton graviton",
+      "process_id": "scalar_0_scalar_0_to_graviton_graviton",
+      "color_accuracy": "lc",
+      "momenta_from": "scalars_2to2_lc",
+      "coverage": {
+        "helicities": "complete",
+        "color": "complete",
+        "color_kind": "physical-lc-flows"
+      },
+      "topology": {
+        "source_count": 6,
+        "current_count": 14,
+        "interaction_count": 12,
+        "interaction_evaluation_count": 12,
+        "amplitude_root_count": 2
+      },
+      "resolved": {
+        "h:+0,+0,-2,+2": {
+          "flow:singlet": 598183164.8212746
+        },
+        "h:+0,+0,+2,-2": {
+          "flow:singlet": 598183164.8212746
+        }
+      },
+      "total": 1196366329.6425493
+    }
+  }
+}
