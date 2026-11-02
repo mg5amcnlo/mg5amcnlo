@@ -849,6 +849,27 @@ NamedVector<Value> Integrand::build_channel_part(
         }
         if (has_multi_flavor) {
             pdf_prior = fb.abs(fb.product(pdf_priors));
+            // the constant factors of the flavours' weights, so that the prior
+            // follows their contributions at a given phase-space point but for
+            // the matrix element
+            if (_flavor_factors.size() == _pid_options.size() || _has_mirror) {
+                std::vector<double> factors(_pid_options.size(), 1.);
+                for (std::size_t f = 0; f < factors.size(); ++f) {
+                    if (_flavor_factors.size() == factors.size()) {
+                        factors[f] *= _flavor_factors[f];
+                    }
+                    if (_has_mirror) {
+                        factors[f] *= _flavor_mirror_factors.at(f);
+                    }
+                }
+                pdf_prior = fb.mul(
+                    pdf_prior,
+                    fb.gather_vector(
+                        fb.full({static_cast<me_int_t>(0), fb.batch_size({pdf_prior})}),
+                        nested_vector2<double>{factors}
+                    )
+                );
+            }
             if (_active_flavors_mask.size() > 0) {
                 Value index = fb.batch_gather(indices_acc, chan_index_in_group);
                 Value mask = fb.gather_vector(index, _active_flavors_mask);
