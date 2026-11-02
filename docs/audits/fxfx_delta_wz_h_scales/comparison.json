@@ -1,0 +1,1105 @@
+{
+  "old": {
+    "lhe": {
+      "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta/Events/run_01/events.lhe.gz",
+      "events": 1000000,
+      "scales_tags": 1000000,
+      "samples": {
+        "0": {
+          "events": 391633,
+          "H": 99589,
+          "positive": 372532,
+          "negative": 19101,
+          "S": 292044
+        },
+        "1": {
+          "events": 608367,
+          "S": 522906,
+          "positive": 451306,
+          "H": 85461,
+          "negative": 157061
+        }
+      },
+      "negative_fraction": 0.176162,
+      "absolute_weight_min": 76.606154,
+      "absolute_weight_max": 76.606154,
+      "physical_event_order_sha256": "da2ea9765f3eff6a68a3f921404ce2e874306f8d835f51e00516f1e832423c52",
+      "headers_without_scalup_sha256": "a4e90e5525927bf08b590233996ba42c6bc811806de414f02bd5a6863465c5fa",
+      "scalup_GeV": {
+        "0:H": {
+          "min": 3.0039035,
+          "p01": 42.256382,
+          "p10": 74.02850600000001,
+          "median": 154.616,
+          "p90": 338.48990599999996,
+          "p99": 694.2846047999998,
+          "max": 2137.5709
+        },
+        "0:S": {
+          "min": 10.08592,
+          "p01": 34.56601603,
+          "p10": 60.8300134,
+          "median": 81.7155415,
+          "p90": 128.75711900000002,
+          "p99": 258.5358918000004,
+          "max": 1216.7542
+        },
+        "1:H": {
+          "min": 3.0015337,
+          "p01": 3.12192676,
+          "p10": 7.4962121,
+          "median": 25.808998,
+          "p90": 243.63548,
+          "p99": 653.8800119999999,
+          "max": 3166.2551
+        },
+        "1:S": {
+          "min": 10.000002,
+          "p01": 10.11471645,
+          "p10": 11.6311945,
+          "median": 27.372539500000002,
+          "p90": 246.510495,
+          "p99": 624.2297580000009,
+          "max": 4947.8512
+        }
+      }
+    },
+    "hwu": {
+      "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta/Events/run_01/plot_PYTHIA8_1_0.HwU",
+      "rates_pb": {
+        "0": {
+          "central": 20.886361,
+          "stat_error": 0.042526146
+        },
+        "1": {
+          "central": 10.07325,
+          "stat_error": 0.032801214
+        },
+        "SUM": {
+          "central": 30.959611,
+          "stat_error": 0.053706541
+        }
+      },
+      "max_histogram_sum_relative_residual": 1.1480304186185442e-07
+    },
+    "shower": {
+      "jobs": 20,
+      "counts": {
+        "SUM": {
+          "tried": 1000000,
+          "selected": 1000000,
+          "accepted": 491504
+        },
+        "0": {
+          "tried": 391633,
+          "selected": 391633,
+          "accepted": 308166
+        },
+        "1": {
+          "tried": 608367,
+          "selected": 608367,
+          "accepted": 183338
+        }
+      },
+      "messages": {
+        "Abort from Pythia::next: reached end of Les Houches Events File": 9,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 20,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 20,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 20,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 20,
+        "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 173,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1811,
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 20
+      },
+      "errors_or_unexpected_aborts": 0
+    },
+    "accepted_signs_from_uniform_weights": {
+      "0": {
+        "positive": 290406,
+        "negative": 17760,
+        "negative_fraction": 0.05763127664959795
+      },
+      "1": {
+        "positive": 157416,
+        "negative": 25922,
+        "negative_fraction": 0.14138912827673478
+      },
+      "SUM": {
+        "positive": 447822,
+        "negative": 43682,
+        "negative_fraction": 0.08887414954913897
+      }
+    }
+  },
+  "new": {
+    "lhe": {
+      "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_Hgeom/Events/run_hgeom/events.lhe.gz",
+      "events": 1000000,
+      "scales_tags": 1000000,
+      "samples": {
+        "0": {
+          "events": 391267,
+          "H": 99501,
+          "positive": 372186,
+          "S": 291766,
+          "negative": 19081
+        },
+        "1": {
+          "events": 608733,
+          "S": 523204,
+          "negative": 157054,
+          "positive": 451679,
+          "H": 85529
+        }
+      },
+      "negative_fraction": 0.176135,
+      "absolute_weight_min": 76.606154,
+      "absolute_weight_max": 76.606154,
+      "physical_event_order_sha256": "7f276ab5720d7eecbae0604cc8c59a63483bbf1b67dd9ee9253ddbe8c9723914",
+      "headers_without_scalup_sha256": "ca537361256c0709fedfbf0454910c1da00ece8f1dfea155ddc7ae0eaaacfc08",
+      "scalup_GeV": {
+        "0:H": {
+          "min": 0.067643265,
+          "p01": 6.8491006,
+          "p10": 29.452768,
+          "median": 86.634489,
+          "p90": 219.40727,
+          "p99": 468.56455,
+          "max": 1435.9412
+        },
+        "0:S": {
+          "min": 10.08592,
+          "p01": 34.5643874,
+          "p10": 60.832246,
+          "median": 81.7168525,
+          "p90": 128.769675,
+          "p99": 258.6294679999989,
+          "max": 1216.7542
+        },
+        "1:H": {
+          "min": 0.00092630423,
+          "p01": 0.8946882392,
+          "p10": 3.30190096,
+          "median": 14.36382,
+          "p90": 79.6698864,
+          "p99": 269.7237412,
+          "max": 1411.9971
+        },
+        "1:S": {
+          "min": 10.000002,
+          "p01": 10.114804209999999,
+          "p10": 11.6330554,
+          "median": 27.421125,
+          "p90": 246.96969200000004,
+          "p99": 625.2040549999969,
+          "max": 4947.8512
+        }
+      }
+    },
+    "hwu": {
+      "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_Hgeom/Events/run_hgeom/plot_PYTHIA8_1_0.HwU",
+      "rates_pb": {
+        "0": {
+          "central": 20.924817,
+          "stat_error": 0.042614512
+        },
+        "1": {
+          "central": 10.121129,
+          "stat_error": 0.032874396
+        },
+        "SUM": {
+          "central": 31.045946,
+          "stat_error": 0.053821206
+        }
+      },
+      "max_histogram_sum_relative_residual": 1.374866788580195e-07
+    },
+    "shower": {
+      "jobs": 20,
+      "counts": {
+        "SUM": {
+          "tried": 1000000,
+          "selected": 1000000,
+          "accepted": 493605
+        },
+        "0": {
+          "tried": 391267,
+          "selected": 391267,
+          "accepted": 309448
+        },
+        "1": {
+          "tried": 608733,
+          "selected": 608733,
+          "accepted": 184157
+        }
+      },
+      "messages": {
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 20,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 20,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 20,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 20,
+        "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 173,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1980,
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 20,
+        "Abort from Pythia::next: reached end of Les Houches Events File": 7
+      },
+      "errors_or_unexpected_aborts": 0
+    },
+    "accepted_signs_from_uniform_weights": {
+      "0": {
+        "positive": 291298,
+        "negative": 18150,
+        "negative_fraction": 0.0586528269693131
+      },
+      "1": {
+        "positive": 158138,
+        "negative": 26019,
+        "negative_fraction": 0.14128705398111394
+      },
+      "SUM": {
+        "positive": 449436,
+        "negative": 44169,
+        "negative_fraction": 0.08948248093110889
+      }
+    }
+  },
+  "rate_changes": {
+    "0": {
+      "old_pb": 20.886361,
+      "new_pb": 20.924817,
+      "difference_pb": 0.038456000000000046,
+      "relative_change": 0.0018412015381712443
+    },
+    "1": {
+      "old_pb": 10.07325,
+      "new_pb": 10.121129,
+      "difference_pb": 0.047879000000000005,
+      "relative_change": 0.004753083662174529
+    },
+    "SUM": {
+      "old_pb": 30.959611,
+      "new_pb": 31.045946,
+      "difference_pb": 0.08633500000000183,
+      "relative_change": 0.00278863322927414
+    }
+  },
+  "binned_integrals": [
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "old": {
+        "central_pb": 12.7594444,
+        "error_pb": 0.03275152816841794
+      },
+      "new": {
+        "central_pb": 12.748796200000001,
+        "error_pb": 0.03291480430514835
+      },
+      "relative_change": -0.0008345347701815831
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "old": {
+        "central_pb": 7.61825231,
+        "error_pb": 0.026209047180850993
+      },
+      "new": {
+        "central_pb": 7.68398027,
+        "error_pb": 0.026222253751020975
+      },
+      "relative_change": 0.008627695346047126
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "old": {
+        "central_pb": 0.5074391576999999,
+        "error_pb": 0.006981674654281562
+      },
+      "new": {
+        "central_pb": 0.4908922374,
+        "error_pb": 0.006702053197642802
+      },
+      "relative_change": -0.032608678398016955
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "old": {
+        "central_pb": 0.0012256984,
+        "error_pb": 0.0003906162433044559
+      },
+      "new": {
+        "central_pb": 0.0011490922499999999,
+        "error_pb": 0.0002966943419387239
+      },
+      "relative_change": -0.06250000000000011
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "old": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "new": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "relative_change": null
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "old": {
+        "central_pb": 0.209441216,
+        "error_pb": 0.004919522778863695
+      },
+      "new": {
+        "central_pb": 0.225988141,
+        "error_pb": 0.004999982112018627
+      },
+      "relative_change": 0.07900510375188041
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "old": {
+        "central_pb": 2.55719004,
+        "error_pb": 0.016795626273962302
+      },
+      "new": {
+        "central_pb": 2.5718218,
+        "error_pb": 0.016850219668781585
+      },
+      "relative_change": 0.0057218117430177795
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "old": {
+        "central_pb": 4.45480107,
+        "error_pb": 0.021778255424338738
+      },
+      "new": {
+        "central_pb": 4.45717589,
+        "error_pb": 0.021855052674437544
+      },
+      "relative_change": 0.000533092266676638
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "old": {
+        "central_pb": 2.276351877,
+        "error_pb": 0.015393262538068163
+      },
+      "new": {
+        "central_pb": 2.291902938,
+        "error_pb": 0.015366743707442718
+      },
+      "relative_change": 0.006831571672695214
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "old": {
+        "central_pb": 0.57132868025,
+        "error_pb": 0.007616054022449708
+      },
+      "new": {
+        "central_pb": 0.56971995315,
+        "error_pb": 0.0075878770681490635
+      },
+      "relative_change": -0.0028157646475862608
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "old": {
+        "central_pb": 12.9688856,
+        "error_pb": 0.03311894095078603
+      },
+      "new": {
+        "central_pb": 12.9747844,
+        "error_pb": 0.033292406424213467
+      },
+      "relative_change": 0.0004548424731265488
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "old": {
+        "central_pb": 10.175442,
+        "error_pb": 0.031128880427247315
+      },
+      "new": {
+        "central_pb": 10.2558022,
+        "error_pb": 0.03116948086860952
+      },
+      "relative_change": 0.007897465289468553
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "old": {
+        "central_pb": 4.96224023,
+        "error_pb": 0.02286998466476841
+      },
+      "new": {
+        "central_pb": 4.94806818,
+        "error_pb": 0.02285959011691184
+      },
+      "relative_change": -0.002855978216113053
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "old": {
+        "central_pb": 2.277577557,
+        "error_pb": 0.015398217729690482
+      },
+      "new": {
+        "central_pb": 2.293052025,
+        "error_pb": 0.015369607679964774
+      },
+      "relative_change": 0.006794266106302516
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "old": {
+        "central_pb": 0.57132868025,
+        "error_pb": 0.007616054022449708
+      },
+      "new": {
+        "central_pb": 0.56971995315,
+        "error_pb": 0.0075878770681490635
+      },
+      "relative_change": -0.0028157646475862608
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "old": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "new": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "relative_change": null
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "old": {
+        "central_pb": 6.0598532,
+        "error_pb": 0.023582256000786388
+      },
+      "new": {
+        "central_pb": 6.07685983,
+        "error_pb": 0.02337881267467999
+      },
+      "relative_change": 0.0028064425719092068
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "old": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "new": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "relative_change": null
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "old": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "new": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "relative_change": null
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "old": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "new": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "relative_change": null
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "old": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "new": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "relative_change": null
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "old": {
+        "central_pb": 3.18474764,
+        "error_pb": 0.01864301696655336
+      },
+      "new": {
+        "central_pb": 3.21523689,
+        "error_pb": 0.018773510076522584
+      },
+      "relative_change": 0.009573521498865034
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "old": {
+        "central_pb": 4.38616195,
+        "error_pb": 0.02170348471467153
+      },
+      "new": {
+        "central_pb": 4.3772756600000005,
+        "error_pb": 0.021682654628919346
+      },
+      "relative_change": -0.002025983103519313
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "old": {
+        "central_pb": 1.90879555,
+        "error_pb": 0.014015995431765968
+      },
+      "new": {
+        "central_pb": 1.925648912,
+        "error_pb": 0.013993786352908173
+      },
+      "relative_change": 0.008829317524341462
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "old": {
+        "central_pb": 0.48752155355,
+        "error_pb": 0.006915800473818531
+      },
+      "new": {
+        "central_pb": 0.4928073719,
+        "error_pb": 0.006937405102834788
+      },
+      "relative_change": 0.010842224946794987
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "old": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "new": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "relative_change": null
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "old": {
+        "central_pb": 9.2446011,
+        "error_pb": 0.030061351518280776
+      },
+      "new": {
+        "central_pb": 9.2920966,
+        "error_pb": 0.029983554892955153
+      },
+      "relative_change": 0.00513764731287325
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "old": {
+        "central_pb": 4.38616195,
+        "error_pb": 0.02170348471467153
+      },
+      "new": {
+        "central_pb": 4.3772756600000005,
+        "error_pb": 0.021682654628919346
+      },
+      "relative_change": -0.002025983103519313
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "old": {
+        "central_pb": 1.90879555,
+        "error_pb": 0.014015995431765968
+      },
+      "new": {
+        "central_pb": 1.925648912,
+        "error_pb": 0.013993786352908173
+      },
+      "relative_change": 0.008829317524341462
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "old": {
+        "central_pb": 0.48752155355,
+        "error_pb": 0.006915800473818531
+      },
+      "new": {
+        "central_pb": 0.4928073719,
+        "error_pb": 0.006937405102834788
+      },
+      "relative_change": 0.010842224946794987
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "old": {
+        "central_pb": 13.2299595,
+        "error_pb": 0.033327903127522714
+      },
+      "new": {
+        "central_pb": 13.2419099,
+        "error_pb": 0.03356966992445246
+      },
+      "relative_change": 0.0009032831884330239
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "old": {
+        "central_pb": 7.65640201,
+        "error_pb": 0.02641446397949748
+      },
+      "new": {
+        "central_pb": 7.68290771,
+        "error_pb": 0.026250213511230018
+      },
+      "relative_change": 0.0034619002457527692
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "old": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "new": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "relative_change": null
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "old": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "new": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "relative_change": null
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "old": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "new": {
+        "central_pb": 0.0,
+        "error_pb": 0.0
+      },
+      "relative_change": null
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "old": {
+        "central_pb": 0.0438187205,
+        "error_pb": 0.0023210524014575236
+      },
+      "new": {
+        "central_pb": 0.0421333846,
+        "error_pb": 0.002434581527821999
+      },
+      "relative_change": -0.03846154978441241
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "old": {
+        "central_pb": 2.24486675,
+        "error_pb": 0.015453950864818938
+      },
+      "new": {
+        "central_pb": 2.27535599,
+        "error_pb": 0.015664413138337958
+      },
+      "relative_change": 0.01358175936277739
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "old": {
+        "central_pb": 4.86380133,
+        "error_pb": 0.023009025489592983
+      },
+      "new": {
+        "central_pb": 4.866789,
+        "error_pb": 0.02301629329160138
+      },
+      "relative_change": 0.0006142664548347554
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "old": {
+        "central_pb": 2.30124886,
+        "error_pb": 0.015505509126016516
+      },
+      "new": {
+        "central_pb": 2.3099053990000002,
+        "error_pb": 0.015422589969686533
+      },
+      "relative_change": 0.003761670087258695
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "old": {
+        "central_pb": 0.61330885825,
+        "error_pb": 0.00782958341448852
+      },
+      "new": {
+        "central_pb": 0.6213525059,
+        "error_pb": 0.007828459177943023
+      },
+      "relative_change": 0.013115166268675038
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "old": {
+        "central_pb": 13.2737783,
+        "error_pb": 0.03340862871439114
+      },
+      "new": {
+        "central_pb": 13.2840434,
+        "error_pb": 0.03365783587886311
+      },
+      "relative_change": 0.0007733367070021924
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "old": {
+        "central_pb": 9.9012689,
+        "error_pb": 0.030603079969087017
+      },
+      "new": {
+        "central_pb": 9.9582637,
+        "error_pb": 0.030568734948304387
+      },
+      "relative_change": 0.005756312708566025
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "old": {
+        "central_pb": 4.86380133,
+        "error_pb": 0.023009025489592983
+      },
+      "new": {
+        "central_pb": 4.866789,
+        "error_pb": 0.02301629329160138
+      },
+      "relative_change": 0.0006142664548347554
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "old": {
+        "central_pb": 2.30124886,
+        "error_pb": 0.015505509126016516
+      },
+      "new": {
+        "central_pb": 2.3099053990000002,
+        "error_pb": 0.015422589969686533
+      },
+      "relative_change": 0.003761670087258695
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "old": {
+        "central_pb": 0.61330885825,
+        "error_pb": 0.00782958341448852
+      },
+      "new": {
+        "central_pb": 0.6213525059,
+        "error_pb": 0.007828459177943023
+      },
+      "relative_change": 0.013115166268675038
+    }
+  ],
+  "identical_ordered_event_kinematics_and_types": false,
+  "identical_headers_except_scalup": false,
+  "common_unique_event_records": 996763,
+  "common_records_with_changed_weight": 0,
+  "old_duplicate_event_records": 0,
+  "new_duplicate_event_records": 0,
+  "paired_scalup_ratios": {
+    "0:S": {
+      "changed": 0,
+      "count": 291766,
+      "quantiles": {
+        "min": 1.0,
+        "p10": 1.0,
+        "median": 1.0,
+        "p90": 1.0,
+        "max": 1.0
+      }
+    },
+    "0:H": {
+      "changed": 94094,
+      "count": 99500,
+      "quantiles": {
+        "min": 0.006603428032893324,
+        "p10": 0.29090964551823345,
+        "median": 0.5869531274112945,
+        "p90": 0.974704295239043,
+        "max": 1.828597728846014
+      }
+    },
+    "1:S": {
+      "changed": 0,
+      "count": 520397,
+      "quantiles": {
+        "min": 1.0,
+        "p10": 1.0,
+        "median": 1.0,
+        "p90": 1.0,
+        "max": 1.0
+      }
+    },
+    "1:H": {
+      "changed": 65520,
+      "count": 85100,
+      "quantiles": {
+        "min": 6.270879570958168e-05,
+        "p10": 0.1446254177382543,
+        "median": 0.5386329113832025,
+        "p90": 1.0,
+        "max": 1.9208792397067371
+      }
+    }
+  }
+}

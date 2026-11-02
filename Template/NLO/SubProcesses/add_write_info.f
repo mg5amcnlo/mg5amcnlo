@@ -596,8 +596,8 @@ c
      $           /'(add_write_info.f)'
             stop
          endif
-! Both FxFx modes shower from the ordinary scalar SCALUP. Delta's
-! directed scales are used internally to calculate its probability.
+! Both FxFx modes use scalar SCALUP. For Delta H events it is the
+! geometric mean of the selected event's directed stopping scales.
          if (mcatnlo_delta_mod) then
             if (iSorH_lhe.eq.1) then
                matching_scale=showerscaleS_hard

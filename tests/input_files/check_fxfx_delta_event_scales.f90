@@ -29,7 +29,7 @@ program check_fxfx_delta_event_scales
   call get_command_argument(1,mode)
   delta=trim(mode).eq.'delta'
   call init_process_module_global('PYTHIA8   ','all ',5,2,delta,13000d0,1,1,3)
-  call init_scale_module(5,1d0,1,1)
+  call init_scale_module(5,1d0,2,2)
   ickkw=3
   nfksprocess=1
   ifks_lhe=5
@@ -43,16 +43,44 @@ program check_fxfx_delta_event_scales
   mu_r=91d0
   showerscaleS_hard=29d0
   showerscaleH_hard=53d0
+  original=-1d0
+  original(1,2)=4d0
+  original(2,1)=9d0
+  original(2,5)=16d0
+  original(5,2)=36d0
+  original(3,4)=0d0
+  original(3,3)=1d100
+  emsca_H=-1d0
+  if(delta)emsca_H(2,2,:,:)=original
+  emsca_H_hard=53d0
+  call set_FxFx_delta_H_scale(2,2)
+  expected=53d0
+  if(delta)expected=12d0
+  call require(abs(emsca_H_hard(2,2)-expected).lt.1d-12, &
+       'directed stopping-scale mean, excluding diagonal and nonpositive entries')
+  call require(all(emsca_H_hard(1,:).eq.53d0).and.emsca_H_hard(2,1).eq.53d0, &
+       'geometric mean belongs only to the selected sector and fold')
+  showerscaleH_hard=emsca_H_hard(2,2)
+  if(delta)then
+    ! Intermediate products overflow/underflow; the logarithmic mean is finite.
+    emsca_H(1,1,:,:)=-1d0
+    emsca_H(1,1,1,2)=1d200
+    emsca_H(1,1,2,1)=1d200
+    emsca_H(1,1,2,5)=1d-200
+    emsca_H(1,1,5,2)=1d-200
+    call set_FxFx_delta_H_scale(1,1)
+    call require(abs(emsca_H_hard(1,1)-1d0).lt.1d-12,'stable mean over widely separated scales')
+    call set_FxFx_delta_H_scale(1,2)
+    call require(emsca_H_hard(1,2).eq.53d0,'empty stopping-scale set keeps fallback')
+    ickkw_mod=0
+    call set_FxFx_delta_H_scale(2,1)
+    call require(emsca_H_hard(2,1).eq.53d0,'standalone Delta scalar is unchanged')
+    ickkw_mod=3
+  endif
   do iSorH_lhe=1,2
     next=3+iSorH_lhe
     expected=showerscaleS_hard
     if(iSorH_lhe.eq.2)expected=showerscaleH_hard
-    do i=1,5
-      do j=1,5
-        original(i,j)=dble(10*i+j)/10d0
-        if(i.eq.j)original(i,j)=-1d0
-      enddo
-    enddo
     if (delta) then
       showerscaleS=original(1:4,1:4)
       showerscaleH=original

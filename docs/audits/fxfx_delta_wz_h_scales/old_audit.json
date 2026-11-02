@@ -1,0 +1,132 @@
+{
+  "lhe": {
+    "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta/Events/run_01/events.lhe.gz",
+    "events": 1000000,
+    "scales_tags": 1000000,
+    "samples": {
+      "0": {
+        "events": 391633,
+        "H": 99589,
+        "positive": 372532,
+        "negative": 19101,
+        "S": 292044
+      },
+      "1": {
+        "events": 608367,
+        "S": 522906,
+        "positive": 451306,
+        "H": 85461,
+        "negative": 157061
+      }
+    },
+    "negative_fraction": 0.176162,
+    "absolute_weight_min": 76.606154,
+    "absolute_weight_max": 76.606154,
+    "physical_event_order_sha256": "da2ea9765f3eff6a68a3f921404ce2e874306f8d835f51e00516f1e832423c52",
+    "headers_without_scalup_sha256": "a4e90e5525927bf08b590233996ba42c6bc811806de414f02bd5a6863465c5fa",
+    "scalup_GeV": {
+      "0:H": {
+        "min": 3.0039035,
+        "p01": 42.256382,
+        "p10": 74.02850600000001,
+        "median": 154.616,
+        "p90": 338.48990599999996,
+        "p99": 694.2846047999998,
+        "max": 2137.5709
+      },
+      "0:S": {
+        "min": 10.08592,
+        "p01": 34.56601603,
+        "p10": 60.8300134,
+        "median": 81.7155415,
+        "p90": 128.75711900000002,
+        "p99": 258.5358918000004,
+        "max": 1216.7542
+      },
+      "1:H": {
+        "min": 3.0015337,
+        "p01": 3.12192676,
+        "p10": 7.4962121,
+        "median": 25.808998,
+        "p90": 243.63548,
+        "p99": 653.8800119999999,
+        "max": 3166.2551
+      },
+      "1:S": {
+        "min": 10.000002,
+        "p01": 10.11471645,
+        "p10": 11.6311945,
+        "median": 27.372539500000002,
+        "p90": 246.510495,
+        "p99": 624.2297580000009,
+        "max": 4947.8512
+      }
+    }
+  },
+  "hwu": {
+    "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta/Events/run_01/plot_PYTHIA8_1_0.HwU",
+    "rates_pb": {
+      "0": {
+        "central": 20.886361,
+        "stat_error": 0.042526146
+      },
+      "1": {
+        "central": 10.07325,
+        "stat_error": 0.032801214
+      },
+      "SUM": {
+        "central": 30.959611,
+        "stat_error": 0.053706541
+      }
+    },
+    "max_histogram_sum_relative_residual": 1.1480304186185442e-07
+  },
+  "shower": {
+    "jobs": 20,
+    "counts": {
+      "SUM": {
+        "tried": 1000000,
+        "selected": 1000000,
+        "accepted": 491504
+      },
+      "0": {
+        "tried": 391633,
+        "selected": 391633,
+        "accepted": 308166
+      },
+      "1": {
+        "tried": 608367,
+        "selected": 608367,
+        "accepted": 183338
+      }
+    },
+    "messages": {
+      "Abort from Pythia::next: reached end of Les Houches Events File": 9,
+      "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 20,
+      "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 20,
+      "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 20,
+      "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 20,
+      "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 173,
+      "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1811,
+      "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 20
+    },
+    "errors_or_unexpected_aborts": 0
+  },
+  "accepted_signs_from_uniform_weights": {
+    "0": {
+      "positive": 290406,
+      "negative": 17760,
+      "negative_fraction": 0.05763127664959795
+    },
+    "1": {
+      "positive": 157416,
+      "negative": 25922,
+      "negative_fraction": 0.14138912827673478
+    },
+    "SUM": {
+      "positive": 447822,
+      "negative": 43682,
+      "negative_fraction": 0.08887414954913897
+    }
+  }
+}

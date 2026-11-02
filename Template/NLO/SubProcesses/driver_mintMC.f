@@ -977,13 +977,12 @@ c Check the sampled Born before native H histories change active data.
             call compute_shower_scale_n1body(p,i_fks,j_fks,
      $           mc_shower_scale_mass())
             if (mcatnlo_delta) then
-! Standalone Delta H events use directed stopping scales for showering.
-! FxFx-Delta writes only the ordinary scalar saved below.
+! Delta replaces these bounds with directed stopping scales when available.
+! FxFx-Delta reduces the selected stopping scales to a scalar below.
                emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)
      $              =shower_scale_n1body(1:ndelH,1:ndelH)
                if (ickkw.eq.3) then
-! Retain the ordinary FxFx scalar with the same outer sector and fold.
-! Its Born reference is the hard scale, before the directed dipole caps.
+! Retain the ordinary FxFx fallback for points without a Delta calculation.
                   emsca_H_hard(iFKS,ifold_counter)=
      $                 shower_scale_n1body(i_fks,j_fks)
                   if (born_flow_picked.gt.0)
@@ -1049,6 +1048,12 @@ c check if event or counter-event passes cuts
                call mc_end_real_point()
                goto 900
             endif
+! The flow dispatcher has restored the outer event's stopping scales.
+! Bit 3 records an actual Delta calculation; otherwise keep the fallback.
+! Set the scalar before inner histories can change the active scale matrix.
+            if (mcatnlo_delta.and.ickkw.eq.3.and.
+     $           btest(MCcntcalled,3))
+     $           call set_FxFx_delta_H_scale(iFKS,ifold_counter)
             if (MCExplicitKLSum.and..not.calibrating_spread.and.
      $           ickkw.ne.4.and.abrv.ne.'real') then
                call repartition_MC_H(first_native_H,p,p_lab,

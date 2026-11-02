@@ -23,7 +23,8 @@ module scale_module
   public :: compute_shower_scale_nbody,compute_shower_scale_n1body, &
        init_scale_module,Bornonly_shower_scale,get_random_shower_dipole_scale, &
        determine_partner,save_shower_scale_nbody,pythia8_S_scales, &
-       herwig7_S_scales,scalar_S_scales,set_FxFx_shower_scale_nbody
+       herwig7_S_scales,scalar_S_scales,set_FxFx_shower_scale_nbody, &
+       set_FxFx_delta_H_scale
   private
 contains
   
@@ -198,6 +199,34 @@ contains
        shower_scale_nbody_max=-1d0
     endwhere
   end subroutine set_FxFx_shower_scale_nbody
+
+  subroutine set_FxFx_delta_H_scale(ifks,ifold)
+    ! Reduce the selected event's mapped stopping scales to one FxFx scale.
+    ! Each positive directed entry counts once; absent entries are negative.
+    ! Sum logarithms so the product cannot overflow or underflow.
+    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+    integer, intent(in) :: ifks,ifold
+    integer :: i,j,nscales
+    double precision :: scale,logsum
+    if (.not.mcatnlo_delta_mod.or.ickkw_mod.ne.3) return
+    logsum=0d0
+    nscales=0
+    do j=1,ndelH
+       do i=1,ndelH
+          if (i.eq.j) cycle
+          scale=emsca_H(ifks,ifold,i,j)
+          if (.not.ieee_is_finite(scale)) then
+             write (*,*) 'Nonfinite FxFx-Delta H stopping scale',ifks,ifold,i,j
+             stop 1
+          endif
+          if (scale.le.0d0) cycle
+          logsum=logsum+log(scale)
+          nscales=nscales+1
+       enddo
+    enddo
+    ! Keep the ordinary FxFx fallback if no active stopping scale exists.
+    if (nscales.gt.0) emsca_H_hard(ifks,ifold)=exp(logsum/dble(nscales))
+  end subroutine set_FxFx_delta_H_scale
 
   subroutine save_shower_scale_nbody(ifks,ifold,father,partner)
     integer, intent(in) :: ifks,ifold,father

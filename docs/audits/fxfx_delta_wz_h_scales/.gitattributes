@@ -1,0 +1,5 @@
+# Retain the hash-bound input cards and source patch byte for byte.
+cards/** -text -whitespace
+source.patch -text -whitespace
+# Python's CSV writer uses CRLF record separators.
+histogram_comparison.csv -text whitespace=cr-at-eol

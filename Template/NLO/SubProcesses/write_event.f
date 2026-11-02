@@ -199,7 +199,7 @@ c
      $        scalup_a(1:npart,1:npart)=
      $        shower_scale_a(1:npart,1:npart)
          if (ickkw.eq.3.and.mcatnlo_delta_mod) then
-c FxFx-Delta retains the ordinary FxFx scalar shower interface.
+c FxFx-Delta writes its selected scalar, including the H stopping-scale mean.
             if (iSorH_lhe.eq.1) then
                SCALUP=showerscaleS_hard
             else

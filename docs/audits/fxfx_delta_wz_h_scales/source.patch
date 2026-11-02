@@ -1,0 +1,111 @@
+diff --git a/Template/NLO/SubProcesses/add_write_info.f b/Template/NLO/SubProcesses/add_write_info.f
+index 5538343c9..070be4b1d 100644
+--- a/Template/NLO/SubProcesses/add_write_info.f
++++ b/Template/NLO/SubProcesses/add_write_info.f
+@@ -596,8 +596,8 @@ c
+      $           /'(add_write_info.f)'
+             stop
+          endif
+-! Both FxFx modes shower from the ordinary scalar SCALUP. Delta's
+-! directed scales are used internally to calculate its probability.
++! Both FxFx modes use scalar SCALUP. For Delta H events it is the
++! geometric mean of the selected event's directed stopping scales.
+          if (mcatnlo_delta_mod) then
+             if (iSorH_lhe.eq.1) then
+                matching_scale=showerscaleS_hard
+diff --git a/Template/NLO/SubProcesses/driver_mintMC.f b/Template/NLO/SubProcesses/driver_mintMC.f
+index 7421c25da..44186b8ad 100644
+--- a/Template/NLO/SubProcesses/driver_mintMC.f
++++ b/Template/NLO/SubProcesses/driver_mintMC.f
+@@ -977,13 +977,12 @@ c Check the sampled Born before native H histories change active data.
+             call compute_shower_scale_n1body(p,i_fks,j_fks,
+      $           mc_shower_scale_mass())
+             if (mcatnlo_delta) then
+-! Standalone Delta H events use directed stopping scales for showering.
+-! FxFx-Delta writes only the ordinary scalar saved below.
++! Delta replaces these bounds with directed stopping scales when available.
++! FxFx-Delta reduces the selected stopping scales to a scalar below.
+                emsca_H(iFKS,ifold_counter,1:ndelH,1:ndelH)
+      $              =shower_scale_n1body(1:ndelH,1:ndelH)
+                if (ickkw.eq.3) then
+-! Retain the ordinary FxFx scalar with the same outer sector and fold.
+-! Its Born reference is the hard scale, before the directed dipole caps.
++! Retain the ordinary FxFx fallback for points without a Delta calculation.
+                   emsca_H_hard(iFKS,ifold_counter)=
+      $                 shower_scale_n1body(i_fks,j_fks)
+                   if (born_flow_picked.gt.0)
+@@ -1049,6 +1048,12 @@ c check if event or counter-event passes cuts
+                call mc_end_real_point()
+                goto 900
+             endif
++! The flow dispatcher has restored the outer event's stopping scales.
++! Bit 3 records an actual Delta calculation; otherwise keep the fallback.
++! Set the scalar before inner histories can change the active scale matrix.
++            if (mcatnlo_delta.and.ickkw.eq.3.and.
++     $           btest(MCcntcalled,3))
++     $           call set_FxFx_delta_H_scale(iFKS,ifold_counter)
+             if (MCExplicitKLSum.and..not.calibrating_spread.and.
+      $           ickkw.ne.4.and.abrv.ne.'real') then
+                call repartition_MC_H(first_native_H,p,p_lab,
+diff --git a/Template/NLO/SubProcesses/scale_module.f90 b/Template/NLO/SubProcesses/scale_module.f90
+index 2086c4db2..5f318e9bd 100644
+--- a/Template/NLO/SubProcesses/scale_module.f90
++++ b/Template/NLO/SubProcesses/scale_module.f90
+@@ -23,7 +23,8 @@ module scale_module
+   public :: compute_shower_scale_nbody,compute_shower_scale_n1body, &
+        init_scale_module,Bornonly_shower_scale,get_random_shower_dipole_scale, &
+        determine_partner,save_shower_scale_nbody,pythia8_S_scales, &
+-       herwig7_S_scales,scalar_S_scales,set_FxFx_shower_scale_nbody
++       herwig7_S_scales,scalar_S_scales,set_FxFx_shower_scale_nbody, &
++       set_FxFx_delta_H_scale
+   private
+ contains
+   
+@@ -199,6 +200,34 @@ contains
+     endwhere
+   end subroutine set_FxFx_shower_scale_nbody
+ 
++  subroutine set_FxFx_delta_H_scale(ifks,ifold)
++    ! Reduce the selected event's mapped stopping scales to one FxFx scale.
++    ! Each positive directed entry counts once; absent entries are negative.
++    ! Sum logarithms so the product cannot overflow or underflow.
++    use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
++    integer, intent(in) :: ifks,ifold
++    integer :: i,j,nscales
++    double precision :: scale,logsum
++    if (.not.mcatnlo_delta_mod.or.ickkw_mod.ne.3) return
++    logsum=0d0
++    nscales=0
++    do j=1,ndelH
++       do i=1,ndelH
++          if (i.eq.j) cycle
++          scale=emsca_H(ifks,ifold,i,j)
++          if (.not.ieee_is_finite(scale)) then
++             write (*,*) 'Nonfinite FxFx-Delta H stopping scale',ifks,ifold,i,j
++             stop 1
++          endif
++          if (scale.le.0d0) cycle
++          logsum=logsum+log(scale)
++          nscales=nscales+1
++       enddo
++    enddo
++    ! Keep the ordinary FxFx fallback if no active stopping scale exists.
++    if (nscales.gt.0) emsca_H_hard(ifks,ifold)=exp(logsum/dble(nscales))
++  end subroutine set_FxFx_delta_H_scale
++
+   subroutine save_shower_scale_nbody(ifks,ifold,father,partner)
+     integer, intent(in) :: ifks,ifold,father
+     integer, intent(in), optional :: partner
+diff --git a/Template/NLO/SubProcesses/write_event.f b/Template/NLO/SubProcesses/write_event.f
+index fc20a9662..a76c90837 100644
+--- a/Template/NLO/SubProcesses/write_event.f
++++ b/Template/NLO/SubProcesses/write_event.f
+@@ -199,7 +199,7 @@ c
+      $        scalup_a(1:npart,1:npart)=
+      $        shower_scale_a(1:npart,1:npart)
+          if (ickkw.eq.3.and.mcatnlo_delta_mod) then
+-c FxFx-Delta retains the ordinary FxFx scalar shower interface.
++c FxFx-Delta writes its selected scalar, including the H stopping-scale mean.
+             if (iSorH_lhe.eq.1) then
+                SCALUP=showerscaleS_hard
+             else

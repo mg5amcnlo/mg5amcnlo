@@ -1,0 +1,102 @@
+{
+  "created_utc": "2026-10-30T15:56:48.155451+00:00",
+  "baseline_process": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta",
+  "new_process": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_Hgeom",
+  "baseline_commit": "a4d369829a647ace3d8b87e1466593062c197f2f",
+  "generation_seed": 33,
+  "reused_integration_grids": true,
+  "nevents": 1000000,
+  "shower_qcut_GeV": 70,
+  "pythia_version": "8.317",
+  "source_changes": {
+    "scale_module.f90": {
+      "old_sha256": "8a5fdffad4e1eb21573c91e43d7fa6e68dfb5909d1e4e44e9b5632feae1905ce",
+      "new_sha256": "8bf8b2f7fbe205b26ecf8e1d16c8e829f7ba196ca47e6e189009fc44c87b4868"
+    },
+    "driver_mintMC.f": {
+      "old_sha256": "e0fc76f0a9ce6c517e3c1d83d51d23e9382b51fe18807e74b564aeaca0cff846",
+      "new_sha256": "db0645a918d7e8499621e2b92f1041eeb87adadf633235e7ac9bfb397785434c"
+    },
+    "add_write_info.f": {
+      "old_sha256": "74fc3a34b631aa4b034032a51ff21acf3676aa16fc56f0751d888d71dbeaeee6",
+      "new_sha256": "afb970d1c53e7b4b8f5c216485431cfec9e14ac51175d92ebf87290c7e2062e1"
+    },
+    "write_event.f": {
+      "old_sha256": "7176537ae0455d59ea1c7142821ea773efbdd915574732078f4bc74e6179bffa",
+      "new_sha256": "6a8e3a6562236a13f164dba7228b3dc40f979236e2127c89ca25d3d2487d0f11"
+    }
+  },
+  "generation_command": [
+    "python3",
+    "bin/generate_events",
+    "aMC@NLO",
+    "-f",
+    "-p",
+    "-m",
+    "-o",
+    "--nb_core=32",
+    "--name=run_hgeom"
+  ],
+  "shower_command": [
+    "python3",
+    "bin/shower",
+    "run_hgeom",
+    "-f"
+  ],
+  "card_hashes": {
+    "run_card.dat": {
+      "old": "5b3ef64123f2da034b2a1efd21af0d1e94dd5ab1a47ac1de141f9e19fe80e643",
+      "new": "597d3057d7febc52c6b66ded35801420f75ffcdad1712470cfd6fe55fd7612e0"
+    },
+    "shower_card.dat": {
+      "old": "92b14979289fd88e4fb31fb4362b412057ae8fab3a22f7d503ff35938e82c5c2",
+      "new": "92b14979289fd88e4fb31fb4362b412057ae8fab3a22f7d503ff35938e82c5c2"
+    },
+    "param_card.dat": {
+      "old": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+      "new": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f"
+    },
+    "FKS_params.dat": {
+      "old": "3a42a5704b3824b355946f44d26131cd52ba3e108de62c5004641a0639fe3233",
+      "new": "3a42a5704b3824b355946f44d26131cd52ba3e108de62c5004641a0639fe3233"
+    },
+    "MadLoopParams.dat": {
+      "old": "a9f1e587e43241a5dc0797f1a238459f422729ec9979ffd7f0f0848499f1c814",
+      "new": "a9f1e587e43241a5dc0797f1a238459f422729ec9979ffd7f0f0848499f1c814"
+    }
+  },
+  "unchanged_shower_source_hashes": {
+    "MCatNLO/srcPythia8/Pythia83.cc": "6eda85c364dfbc5bf031d58efcba9de484f6f6c38ebe305bfe578baa2c9e4924",
+    "MCatNLO/include/LHEFRead.h": "d3a6b7684ab16cf2251dc7bcb54ad0bb59909627d30ba342a232422b562c6d9a",
+    "MCatNLO/PY8Analyzer/py8an_HwU_pp_wz_fxfx.f": "e7a9259ccfeccd7f48bafde6f9f14f3815fdc0e9a291ab561cfa20d22a7e5dca"
+  },
+  "pythia_library": {
+    "file": "/export/slow1/rikkert/FxFx_BS_test/MCcntRefactor_Sfun_Granny/HEPTools/pythia8/lib/libpythia8.so",
+    "sha256": "d365f45bde0c4046f13ee6e0b56f5d07d324e9e6f1d9bcac925fa653f273d546"
+  },
+  "old_audit_fix": "Only inspect scales tags inside event records; the old audit incorrectly treated the banner scalesfunctionalform tag as event metadata.",
+  "event_allocation_note": "Fortran seed 33 is reused. The Python allocation of event counts across integration jobs can differ; compare common physical records by their particle data rather than assuming identical event ordering.",
+  "old_histogram_sha256": "c6402e11e76d699ea98b2080c4a23b375a848892a40133c8a6c55dfbb3eaa56b",
+  "archived_cards": "cards/",
+  "actual_shower_steering": {
+    "identical": true,
+    "old_sha256": "f66bebee916cbd522026c1db8a13d55719991157beb3c95c933e31cb558ce85d",
+    "new_sha256": "f66bebee916cbd522026c1db8a13d55719991157beb3c95c933e31cb558ce85d"
+  },
+  "completed_utc": "2026-10-30T17:12:53.142511+00:00",
+  "analysis_script": {
+    "file": "fxfx_diagnostics/compare_wz_h_scales.py",
+    "sha256": "dcaced052c637c411cab728b6bde829f58454e7aa273e302d5e653bccdffd3a0"
+  },
+  "output_sha256": {
+    "comparison.json": "e5f4bd76adc475f7ec5ee0699aa5c743ff7c55c30b1371b7caf7111ad3bf341c",
+    "comparison.md": "64be8fe81846e49c7452bca6015ae970c0b90f8a8e44ed648d4f7471764d7513",
+    "histogram_comparison.csv": "814833d3d4afdeff6dba3dffc0e8699e4d507843f25881e537493e93be9b1000",
+    "distributions.pdf": "330d53d7814fb317666094c0c3ca4c17e46d71d240c3babd2fdda662ef1b93a9",
+    "pt_wz.png": "db7260dadb06fd82602bed67d1d1e921a650a83fd13204c58abeb73d24e40130",
+    "pt_j1.png": "1fbc9e39d1bd9982dd6278843c038fd6e6a22983d750b7c557d9aadb099fbcf8",
+    "djr01.png": "9b8afc9969128a8f2b430ed063bd62da1b4a1ed6788ea579febf97298325506a"
+  },
+  "old_lhe_sha256": "36d9f9dbc84c9b05224b175a9588cdc73aeaeeade3b6f2b4dd66caa2ba6c9a81",
+  "new_lhe_sha256": "4d7f86344201d3288caafdb43fed1a3f949c32796afc169895adc63339f86a38"
+}

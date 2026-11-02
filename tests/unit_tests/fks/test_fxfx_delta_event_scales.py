@@ -1,4 +1,4 @@
-"""FxFx and FxFx-Delta share scalar shower metadata through resonance insertion."""
+"""FxFx-Delta H-scale means and scalar metadata through resonance insertion."""
 
 from pathlib import Path
 import shutil

@@ -32,13 +32,21 @@ FxFx boundary; arbitrary independent S-event starting scales would need
 a corresponding treatment in the analytic Sudakov. It does not establish
 the combined prescription's logarithmic accuracy at higher orders.
 
-Both FxFx modes use the ordinary scalar shower interface. For S events,
-`SCALUP` is the Born hard scale. For H events it is the larger of the
-real-emission dipole bound and the Born hard scale, or just the former
-when no Born flow exists. The scalar and colours follow the same outer
-sector and fold. H contributions with different scalar shower scales
-remain distinct during unweighting; unused Delta matrices do not split
-otherwise identical FxFx events.
+Both FxFx modes use the scalar shower interface. For S events, `SCALUP`
+is the Born hard scale. For FxFx-Delta H events with reconstructed stopping
+scales, it is the unweighted geometric mean of the positive directed
+H-event starting scales mapped from those stopping scales:
+`SCALUP = exp(sum(log(Q_ij))/N)`. Each active directed matrix entry counts
+once; diagonal, absent and nonpositive entries are excluded. The mean is
+computed after restoring the selected outer colour flow and before
+evaluating inner histories, without a Born hard-scale floor. If no Delta
+calculation or no positive entry is available, the ordinary FxFx fallback
+is retained: the larger of the real-emission dipole bound and the Born
+hard scale, or just the former when no Born flow exists. Ordinary FxFx
+always keeps that prescription. The scalar and colours follow the same
+outer sector and fold. H contributions with different scalar shower scales
+remain distinct during unweighting; matrices with the same scalar do not
+split otherwise identical FxFx events.
 
 Events carry the standard FxFx `pt_clust_N` matching tags and no directed
 `scalup_i_j` shower tags. Shower steering enables production-scale input
@@ -50,9 +58,18 @@ hook or flags are needed.
 
 Delta still modifies the event weights. Its internal directed starting
 and stopping scales remain available to calculate the no-emission
-probability. Using the ordinary FxFx H-event `SCALUP` instead of passing
-Delta stopping scales changes higher-order shower terms. Standalone
-MC@NLO-Delta retains its directed shower-scale interface.
+probability. Pythia selects the largest candidate evolution scale among
+the competing channels, then lowers the evolution ceiling for all of
+them. Changing one channel's upper limit therefore also changes the
+probability that another channel wins. The previous hard scalar could
+allow radiation far above the reconstructed stopping scales; keeping
+Delta in the event weight does not impose those limits on the shower.
+The geometric mean averages logarithmic scale intervals, but cannot
+reproduce the channel competition of separate directed shower limits.
+It can raise some channels' limits and lower others'. It is a scalar
+approximation affecting higher-order shower terms, not a proof of
+logarithmic equivalence. Standalone MC@NLO-Delta retains its directed
+shower-scale interface.
 
 Focused regressions are available with:
 
@@ -66,14 +83,98 @@ cache reuse. Scale/event tests check physical S dipole limits, scalar
 sector/fold ownership, resonance-index remapping and ordinary-mode
 controls. LHE tests exercise both Fortran readers, scale reweights,
 multi-digit indices and Python matching-scale edits. They verify that
-ordinary FxFx and FxFx-Delta write identical shower metadata, while
-standalone Delta continues to round-trip its directed scales.
+ordinary FxFx and FxFx-Delta use the same shower metadata format, while
+standalone Delta continues to round-trip its directed scales. The scalar
+scale regression checks the H-event geometric mean, sentinel exclusion,
+numerical range, sector/fold ownership and the ordinary-mode controls.
 
 Set `PYTHIA8` to a Pythia installation to run the real-Pythia matching
 regression. It checks stable Z bosons and pre-decayed `Z -> e+ e-`
 records with daughters placed before or after the production gluon,
 including both matched and excluded gluons. These checks do not validate
 merged cross sections, merging-scale dependence or logarithmic accuracy.
+
+### H-event geometric mean validation
+
+Validation on 30 October 2026 passed 34 focused tests: 31 covering native
+Delta scales, the geometric mean and event output, colour/flow ownership,
+LHE round trips, matching weights and explicit FKS summation, plus three
+real-Pythia matching-label tests. The complete modified `scale_module.f90`,
+`driver_mintMC.f`, `add_write_info.f` and `write_event.f` sources compiled
+against the generated WZ subprocess includes and modules.
+
+A separate Pythia 8.318 diagnostic replayed one saved `u g -> Z u` H event
+5,000 times per prescription. Its four directed H-event starts were
+`5.3684094`, `2.9679588`, `2.9679588` and `2.9679588` GeV, giving a geometric
+mean of `3.4419519877` GeV, compared with the previous scalar `91.188` GeV.
+MPI, QED radiation and hadronization were disabled, and no FxFx merging
+veto was applied. The first-emission scale below is Pythia's evolution
+scale, rather than the laboratory transverse momentum.
+
+| H-event shower prescription | First emissions above 6 GeV | Mean first-emission scale (GeV) |
+| --- | ---: | ---: |
+| Separate directed starts | 0 / 5,000 | 2.66659 |
+| Previous FxFx scalar, 91.188 GeV | 4,701 / 5,000 | 32.2013 |
+| Geometric-mean scalar, 3.44195 GeV | 0 / 5,000 | 2.59777 |
+
+All 15,000 replay showers completed without failures. This single-event
+diagnostic demonstrates the changed shower response; it does not measure
+the effect on merged cross sections or establish logarithmic accuracy.
+
+### Full WZ comparison of H-event scales
+
+A full comparison on 30 October 2026 used one million events per
+prescription for `p p > w+ z [QCD] @0` plus `p p > w+ z j [QCD] @1`.
+The old scalar sample is `PROC_pp_wz01j_EWjets_Delta/Events/run_01`,
+generated with commit `a4d369829`; the geometric-mean sample is
+`PROC_pp_wz01j_EWjets_Delta_Hgeom/Events/run_hgeom`. Both use 13 TeV beams,
+`ptj=10` GeV, `Qcut=70` GeV, maximum merged multiplicity one, stable W/Z
+bosons and Pythia 8.317 with MPI and hadronization disabled and
+`qed_shower=F`. The archived steering did not explicitly disable
+`TimeShower:QEDshowerByOther`; this comparison predates that switch fix
+and does not establish the absence of charged-resonance QED radiation.
+The actual Pythia steering files are byte-identical. The old integration
+grids and Fortran generation seed 33 were reused; the shared partonic
+normalization is `49.5161 +/- 0.0665` pb, rather than a newly integrated
+cross section.
+
+The rates after showering and FxFx merging are:
+
+| Sample | Old scalar (pb) | Geometric mean (pb) | Change |
+| --- | ---: | ---: | ---: |
+| @0 | 20.886361 +/- 0.042526 | 20.924817 +/- 0.042615 | +0.184% |
+| @1 | 10.073250 +/- 0.032801 | 10.121129 +/- 0.032874 | +0.475% |
+| Sum | 30.959611 +/- 0.053707 | 31.045946 +/- 0.053821 | +0.279% |
+
+The median H-event `SCALUP` changes from 154.616 to 86.6345 GeV in @0
+and from 25.8090 to 14.3638 GeV in @1. Of 996,763 common physical event
+records, none changes its signed weight, and all 812,163 common S-event
+scales are unchanged. Job event allocations differ slightly, so event
+ordering and the complete event sets are not identical.
+
+The merged `pT(WZ)` integral over 20--70 GeV changes from
+`10.175442 +/- 0.031129` to `10.255802 +/- 0.031169` pb (+0.790%).
+The @0 contribution over 70--150 GeV changes from
+`0.507439 +/- 0.006982` to `0.490892 +/- 0.006702` pb (-3.261%), while
+the merged result in that range changes by -0.286%. These are central
+shifts with each run's statistical error; no cross-run covariance was
+estimated. The comparison measures one fixed merging-scale setup and
+does not establish logarithmic equivalence of the scalar prescription.
+
+All one million records were selected by each shower. The accepted
+counts change from 491,504 to 493,605, with zero Pythia errors or
+unexpected aborts in both cases. The negative-weight fraction before
+showering is 17.6162% versus 17.6135%; among accepted merged events it
+is 8.8874% versus 8.9482%, inferred from the uniform absolute event
+weights and signed rates. All histograms satisfy `SUM = @0 + @1`, with
+maximum relative residuals below `1.4e-7`.
+
+The [full report](audits/fxfx_delta_wz_h_scales/comparison.md),
+[comparison plots](audits/fxfx_delta_wz_h_scales/distributions.pdf),
+[all histogram bins](audits/fxfx_delta_wz_h_scales/histogram_comparison.csv)
+and [setup with source/card hashes](audits/fxfx_delta_wz_h_scales/setup.json)
+retain the results and reproduction details. The analysis script is
+`fxfx_diagnostics/compare_wz_h_scales.py`.
 
 ## Pythia8 S-event starting scales
 

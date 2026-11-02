@@ -72,6 +72,14 @@ program check_mcatnlo_delta_matching
   call require(mccntcalled == 8 .and. table_calls == 5,'Delta table calls and bookkeeping')
   call require(all(mass_calls == 1),'charm and bottom model masses both requested')
 
+  ! The FxFx scalar must follow the reconstructed scales, not the Born scale.
+  ickkw_mod=3
+  emsca_H_hard=500d0
+  call set_FxFx_delta_H_scale(1,1)
+  call require(abs(emsca_H_hard(1,1)-sqrt(t34*t43)).lt.1d-12, &
+       'FxFx H scalar follows native stopping scales')
+  ickkw_mod=0
+
   ! Lowering the starting scale vetoes both dipoles before the Sudakov calls.
   shower_scale_nbody=1d0
   mccntcalled=0

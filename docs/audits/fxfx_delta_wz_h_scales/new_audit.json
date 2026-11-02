@@ -1,0 +1,132 @@
+{
+  "lhe": {
+    "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_Hgeom/Events/run_hgeom/events.lhe.gz",
+    "events": 1000000,
+    "scales_tags": 1000000,
+    "samples": {
+      "0": {
+        "events": 391267,
+        "H": 99501,
+        "positive": 372186,
+        "S": 291766,
+        "negative": 19081
+      },
+      "1": {
+        "events": 608733,
+        "S": 523204,
+        "negative": 157054,
+        "positive": 451679,
+        "H": 85529
+      }
+    },
+    "negative_fraction": 0.176135,
+    "absolute_weight_min": 76.606154,
+    "absolute_weight_max": 76.606154,
+    "physical_event_order_sha256": "7f276ab5720d7eecbae0604cc8c59a63483bbf1b67dd9ee9253ddbe8c9723914",
+    "headers_without_scalup_sha256": "ca537361256c0709fedfbf0454910c1da00ece8f1dfea155ddc7ae0eaaacfc08",
+    "scalup_GeV": {
+      "0:H": {
+        "min": 0.067643265,
+        "p01": 6.8491006,
+        "p10": 29.452768,
+        "median": 86.634489,
+        "p90": 219.40727,
+        "p99": 468.56455,
+        "max": 1435.9412
+      },
+      "0:S": {
+        "min": 10.08592,
+        "p01": 34.5643874,
+        "p10": 60.832246,
+        "median": 81.7168525,
+        "p90": 128.769675,
+        "p99": 258.6294679999989,
+        "max": 1216.7542
+      },
+      "1:H": {
+        "min": 0.00092630423,
+        "p01": 0.8946882392,
+        "p10": 3.30190096,
+        "median": 14.36382,
+        "p90": 79.6698864,
+        "p99": 269.7237412,
+        "max": 1411.9971
+      },
+      "1:S": {
+        "min": 10.000002,
+        "p01": 10.114804209999999,
+        "p10": 11.6330554,
+        "median": 27.421125,
+        "p90": 246.96969200000004,
+        "p99": 625.2040549999969,
+        "max": 4947.8512
+      }
+    }
+  },
+  "hwu": {
+    "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_Hgeom/Events/run_hgeom/plot_PYTHIA8_1_0.HwU",
+    "rates_pb": {
+      "0": {
+        "central": 20.924817,
+        "stat_error": 0.042614512
+      },
+      "1": {
+        "central": 10.121129,
+        "stat_error": 0.032874396
+      },
+      "SUM": {
+        "central": 31.045946,
+        "stat_error": 0.053821206
+      }
+    },
+    "max_histogram_sum_relative_residual": 1.374866788580195e-07
+  },
+  "shower": {
+    "jobs": 20,
+    "counts": {
+      "SUM": {
+        "tried": 1000000,
+        "selected": 1000000,
+        "accepted": 493605
+      },
+      "0": {
+        "tried": 391267,
+        "selected": 391267,
+        "accepted": 309448
+      },
+      "1": {
+        "tried": 608733,
+        "selected": 608733,
+        "accepted": 184157
+      }
+    },
+    "messages": {
+      "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 20,
+      "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 20,
+      "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 20,
+      "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 20,
+      "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 173,
+      "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1980,
+      "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 20,
+      "Abort from Pythia::next: reached end of Les Houches Events File": 7
+    },
+    "errors_or_unexpected_aborts": 0
+  },
+  "accepted_signs_from_uniform_weights": {
+    "0": {
+      "positive": 291298,
+      "negative": 18150,
+      "negative_fraction": 0.0586528269693131
+    },
+    "1": {
+      "positive": 158138,
+      "negative": 26019,
+      "negative_fraction": 0.14128705398111394
+    },
+    "SUM": {
+      "positive": 449436,
+      "negative": 44169,
+      "negative_fraction": 0.08948248093110889
+    }
+  }
+}
