@@ -120,7 +120,10 @@ class MyTextTestRunner(unittest.TextTestRunner):
                 self.stream.writeln(" errors=%d)" % errored)
             self.stream.writeln(' '.join([str(t[0]).split()[0] for t in result.errors]))
         else:
-            self.stream.writeln("OK")
+            if result.skipped:
+                self.stream.writeln("OK (skipped=%d)" % len(result.skipped))
+            else:
+                self.stream.writeln("OK")
         if self.bypassed:
             self.stream.writeln("Bypassed %s:" % len(self.bypassed))
             self.stream.writeln(" ".join(self.bypassed))
@@ -1164,6 +1167,10 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
                                                 synchronize=options.synchronize)
 
 
+    # Optional dependency skips are successful unittest results. Capture the
+    # result before notification formatting replaces it with a summary string.
+    successful = (not isinstance(output, unittest.runner.TextTestResult)
+                  or output.wasSuccessful())
     if 0 < float(options.notification) < time.time()-start_time:
         if isinstance(output, unittest.runner.TextTestResult):
             run = output.testsRun
@@ -1174,13 +1181,8 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         else:
             failed, errored, skipped = 0, 0 ,0
         misc.system_notify("tests finished", str(output))
-        if failed or errored or skipped:
-            sys.exit(1)
-    elif isinstance(output, unittest.runner.TextTestResult):
-        failed, errored, skipped = list(map(len,
-                               (output.failures, output.errors, output.skipped)))
-        if failed or errored or skipped:
-            sys.exit(1)
+    if not successful:
+        sys.exit(1)
 #some example
 #    run('iolibs')
 #    run('test_test_manager.py')

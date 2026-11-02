@@ -2071,6 +2071,9 @@ class OrganizeModelExpression:
     def __init__(self, model):
     
         self.model = model  # UFOMODEL
+        # Gmu inputs and additional running scales belong to this model.
+        # Augmenting the class list would change later imports' dependencies.
+        self.track_dependant = list(self.track_dependant)
         self.perturbation_couplings = {}
         try:
             for order in model.all_orders: # Check if it is a loop model or not

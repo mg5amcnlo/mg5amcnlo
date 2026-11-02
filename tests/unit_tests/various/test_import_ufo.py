@@ -20,6 +20,7 @@ import copy
 import os
 import sys
 import time
+from types import SimpleNamespace
 
 import tests.unit_tests as unittest
 
@@ -228,6 +229,42 @@ class TestGetLuarkPDG(unittest.TestCase):
 class TestImportUFONoSideEffect(unittest.TestCase):
     """Test class for the the possible side effect on a UFO model loaded when
        converting it to a MG5 model"""
+
+    def test_model_dependency_tracking_does_not_leak_between_imports(self):
+        def parameter(name, nature='external', value=1.0,
+                      block='SMINPUTS', code=1):
+            return SimpleNamespace(name=name, nature=nature, type='real',
+                                   value=value, lhablock=block, lhacode=[code])
+
+        def model(gmu=False, running=False):
+            parameters = [parameter('Gf', code=2)]
+            if not gmu:
+                parameters.append(parameter('aEWM1'))
+            if running:
+                parameters.append(parameter('MU_EW', block='LOOP', code=2))
+            else:
+                parameters.append(parameter('MU_EW', 'internal', '2.0'))
+            parameters += [parameter('MW', 'internal', 'Gf'),
+                           parameter('scale_copy', 'internal', 'MU_EW')]
+            return SimpleNamespace(all_parameters=parameters, all_couplings=[])
+
+        defaults = ['aS', 'aEWM1', 'MU_R']
+        with misc.TMP_variable(import_ufo.OrganizeModelExpression,
+                               'track_dependant', defaults):
+            baseline = import_ufo.OrganizeModelExpression(model())
+            baseline.main()
+            for gmu in (True, False):
+                with self.subTest(gmu=gmu):
+                    previous = import_ufo.OrganizeModelExpression(model(gmu, True))
+                    previous.main()
+                    self.assertIn('MU_EW', previous.track_dependant)
+                    self.assertEqual('Gf' in previous.track_dependant, gmu)
+                    following = import_ufo.OrganizeModelExpression(model())
+                    following.main()
+                    self.assertEqual(defaults, ['aS', 'aEWM1', 'MU_R'])
+                    for name in ('MW', 'scale_copy'):
+                        self.assertEqual(following.all_expr[name].depend,
+                                         baseline.all_expr[name].depend)
 
     def test_ImportUFONoSideEffectLO(self):
         """Checks that there are no side effects of the import of the LO UFO sm"""       
