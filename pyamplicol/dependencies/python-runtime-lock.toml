@@ -162,7 +162,7 @@ distribution = "symbolica"
 version = "3.0.3"
 license = "LicenseRef-Symbolica-Proprietary"
 direct = true
-dependencies = []
+dependencies = ["symbolica-fonts", "symbolica-vakint-data"]
 
   [[packages.artifacts]]
   filename = "symbolica-3.0.3-cp39-abi3-macosx_10_12_x86_64.whl"
@@ -175,6 +175,28 @@ dependencies = []
   [[packages.artifacts]]
   filename = "symbolica-3.0.3-cp39-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
   sha256 = "3d4325d6741ecc9994971c7a5c8e29958c4fa6f0ac219c00cb8302a2b2ebe7d6"
+
+[[packages]]
+distribution = "symbolica-fonts"
+version = "3.0.3"
+license = "LicenseRef-Symbolica-Proprietary"
+direct = false
+dependencies = []
+
+  [[packages.artifacts]]
+  filename = "symbolica_fonts-3.0.3-py3-none-any.whl"
+  sha256 = "0c431610cf8b856cdbe730e08c77ae27b3d8c949aefc4244f0437a426db30543"
+
+[[packages]]
+distribution = "symbolica-vakint-data"
+version = "3.0.3"
+license = "LicenseRef-Symbolica-Proprietary"
+direct = false
+dependencies = []
+
+  [[packages.artifacts]]
+  filename = "symbolica_vakint_data-3.0.3-py3-none-any.whl"
+  sha256 = "c2fc80431c778e0f45e3928bde9e0112a2aba21b7edb75d7f1729f2f96454b9c"
 
 [[packages]]
 distribution = "tomli-w"
