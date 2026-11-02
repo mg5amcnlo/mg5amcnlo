@@ -91,7 +91,7 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
                         work / 'MCmasses_PYTHIA8.inc')
         shutil.copyfile(TEMPLATE / 'fks_powers.inc', work / 'fks_powers.inc')
         (work / 'delta_matching.f').write_text(mc_counterterm_test_module(
-                        ('compute_delta', 'delta_native_ir_probability', 'delta_common_probability', 'get_delta_stopping_scales',
+                        ('compute_delta', 'delta_native_tc_probability', 'delta_common_probability', 'get_delta_stopping_scales',
                          'get_delta_connections', 'delta_leg_probability',
                          'gl_safe', 'get_parton_id',
                          'setSudType', 'delta_backward_leg', 'delta_group_xf',
@@ -137,17 +137,17 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn('MC@NLO-Delta scale reconstruction failed', result.stdout)
 
-    def test_common_scale_global_ir_weight_and_native_handoff(self):
+    def test_common_scale_native_tc_weight_and_handoff(self):
         result = subprocess.run([str(self.executable), 'common'],
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn('PASS native-history global-IR Delta weight and handoff', result.stdout)
+        self.assertIn('PASS native-tc Delta weight and handoff', result.stdout)
 
-    def test_common_scale_retains_deep_collinear_damping(self):
+    def test_alternative_collinear_scale_does_not_override_native_tc(self):
         result = subprocess.run([str(self.executable), 'common_ir'],
                                 capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn('PASS common-scale Delta deep-collinear damping', result.stdout)
+        self.assertIn('PASS native-tc independent of alternative collinear scales', result.stdout)
 
     def test_common_scale_gluon_colour_multiplicities(self):
         result = subprocess.run([str(self.executable), 'common_gluon'],

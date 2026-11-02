@@ -51,11 +51,14 @@ ORDINARY_SOURCE = 'ordinary-mcatnlo-v1'
 RESOLVED_SOURCE = 'resolved-convex-v1'
 DELTA_SOURCE = 'mcatnlo-delta-v1'
 WINNER_DELTA_SOURCE = 'mcatnlo-delta-winner-v1'  # Legacy, readable for audits.
-NATIVE_IR_DELTA_SOURCE = 'mcatnlo-delta-native-ir-v1'
-DELTA_SOURCES = (DELTA_SOURCE, WINNER_DELTA_SOURCE, NATIVE_IR_DELTA_SOURCE)
+NATIVE_IR_DELTA_SOURCE = 'mcatnlo-delta-native-ir-v1'  # Legacy lower envelope, readable for audits.
+NATIVE_TC_DELTA_SOURCE = 'mcatnlo-delta-native-tc-v1'
+DELTA_SOURCES = (DELTA_SOURCE, WINNER_DELTA_SOURCE, NATIVE_IR_DELTA_SOURCE,
+                 NATIVE_TC_DELTA_SOURCE)
 SOURCE_NAMES = {ORDINARY_SOURCE: 'ordinary', RESOLVED_SOURCE: 'resolved',
                 DELTA_SOURCE: 'delta', WINNER_DELTA_SOURCE: 'delta_winner',
-                NATIVE_IR_DELTA_SOURCE: 'delta_native_ir'}
+                NATIVE_IR_DELTA_SOURCE: 'delta_native_ir',
+                NATIVE_TC_DELTA_SOURCE: 'delta_native_tc'}
 SOURCE_CONSTRUCTIONS = {name: construction for construction, name in SOURCE_NAMES.items()}
 DELTA_SOURCE_NAMES = tuple(SOURCE_NAMES[construction] for construction in DELTA_SOURCES)
 # v2 normalises the S veto to beta*K_sh; v1 divided by the bare K.
@@ -153,7 +156,7 @@ def source_construction(card, common_scale=False):
     if common_scale and not delta:
         raise MatchingError("DeltaCommonScale requires mcatnlo_delta=True")
     if delta:
-        return NATIVE_IR_DELTA_SOURCE if common_scale else DELTA_SOURCE
+        return NATIVE_TC_DELTA_SOURCE if common_scale else DELTA_SOURCE
     return RESOLVED_SOURCE if resolved else ORDINARY_SOURCE
 
 
@@ -1278,6 +1281,9 @@ class NativeEvaluator:
         if (self.construction == WINNER_DELTA_SOURCE or
                 event.hard.source == SOURCE_NAMES[WINNER_DELTA_SOURCE]):
             raise MatchingError('Legacy winner sources require their archived evaluator')
+        if (self.construction == NATIVE_IR_DELTA_SOURCE or
+                event.hard.source == SOURCE_NAMES[NATIVE_IR_DELTA_SOURCE]):
+            raise MatchingError('Legacy global-IR sources require their archived evaluator')
         directories = self._registry_routes.get(component.registry, ())
         if len(directories) != 1:
             raise MatchingError('No unique native Born provider for the component registry')
@@ -1304,7 +1310,7 @@ class NativeEvaluator:
                 raise MatchingError('Cannot identify sampled shower component: %s' % exc) from exc
             choices = [(choice.sector, choice.permutation, choice.born_permutation,
                         choice.orientation) for choice in candidates]
-        mode = 3 if self.construction == NATIVE_IR_DELTA_SOURCE else int(
+        mode = 4 if self.construction == NATIVE_TC_DELTA_SOURCE else int(
             self.construction == DELTA_SOURCE)
         requests = []
         for sector, permutation, born_permutation, orientation in choices:

@@ -50,16 +50,14 @@ HELPERS='''
       integer ids(4)
       ids=[2,-2,25,21]
       end subroutine
-      subroutine delta_native_ir_probability(p,pb,ids,start,pt,prob,n,t)
-      double precision p(0:3,4),pb(0:3,3),start(3,3),pt,prob,t(9),q
-      integer ids(4),n
+      subroutine delta_native_tc_probability(p,pb,ids,start,pt,prob)
+      double precision p(0:3,4),pb(0:3,3),start(3,3),pt,prob,q
+      integer ids(4)
       q=start(1,2)
       prob=1d0
-      if(q.gt.7.5d0)prob=(7.5d0/q)**2
+      if(q.gt.pt)prob=(pt/q)**2
 c A resolved charm event must use the SAME representative source law.
       if(any(ids.ne.[2,-2,25,21]))prob=1d0
-      n=0
-      t=0d0
       end subroutine
 
       subroutine get_delta_stopping_scales(p,ids,col,start,upper,
@@ -215,18 +213,21 @@ class TestSudakovMarginal(unittest.TestCase):
 
 
     def test_native_source_average_includes_unsupported_start_nodes(self):
-        def integrand(q):
-            u=(q-3.)/17.
-            rho=2.*u*(1.-u)/(17.*(u*u+(1.-u)**2)**2)
-            return rho*(1. if q<=7.5 else (7.5/q)**2)
-        expected=0.
-        for a,b in [(3.,7.5),(7.5,20.)]:
-            n=4000; h=(b-a)/n
-            expected+=h/3.*(integrand(a)+integrand(b)+sum(
-                (4 if k%2 else 2)*integrand(a+k*h) for k in range(1,n)))
+        def reference(pt):
+            def integrand(q):
+                u=(q-3.)/17.
+                rho=2.*u*(1.-u)/(17.*(u*u+(1.-u)**2)**2)
+                return rho*(1. if q<=pt else (pt/q)**2)
+            total=0.
+            for a,b in [(3.,pt),(pt,20.)]:
+                n=4000; h=(b-a)/n
+                total+=h/3.*(integrand(a)+integrand(b)+sum(
+                    (4 if k%2 else 2)*integrand(a+k*h) for k in range(1,n)))
+            return total
         result=subprocess.run([str(self.exe),'native'],input='5\n10\n',
                               capture_output=True,text=True,check=True)
-        for line in result.stdout.splitlines():
+        for pt,line in zip([5.,10.],result.stdout.splitlines()):
+            expected=reference(pt)
             status,n,source,cdf,weight,_,_=map(float,line.split())
             self.assertEqual(status,0)
             self.assertAlmostEqual(source,expected,delta=2e-10)
@@ -260,12 +261,10 @@ class TestGlobalGluonProfile(unittest.TestCase):
       integer ids(5)
       ids=[2,-1,24,21,21]
       end subroutine
-      subroutine delta_native_ir_probability(p,pb,ids,start,pt,prob,n,t)
-      double precision p(0:3,5),pb(0:3,4),start(4,4),pt,prob,t(16)
-      integer ids(5),n
+      subroutine delta_native_tc_probability(p,pb,ids,start,pt,prob)
+      double precision p(0:3,5),pb(0:3,4),start(4,4),pt,prob
+      integer ids(5)
       prob=1d0-start(1,4)/200d0
-      n=0
-      t=0d0
       end subroutine
       subroutine get_delta_stopping_scales(p,ids,col,start,upper,
      $ stop,mass,dead)

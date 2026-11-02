@@ -277,9 +277,10 @@
 ! Default :: .true.
 !
 ! Opt-in native-history MC@NLO-Delta source: continue H at its native
-! emission scale, with an all-radiator Sudakov and continuous global
-! infrared damping. Changes H/S weights before unweighting; regenerate
-! events after changing this flag. Older winner samples are incompatible.
+! emission scale t_c, with every Born radiator evolved down to t_c.
+! No alternative inverse-history scale enters the source damping.
+! Changes H/S weights before unweighting; regenerate events after changing
+! this flag. Older winner/global-IR minimum samples are incompatible.
 #DeltaCommonScale
 .false.
 ! Default :: .false.

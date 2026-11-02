@@ -60,7 +60,7 @@ end program
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn('PASS common-scale policy', result.stdout)
 
-    def test_capi_identifies_native_ir_as_a_distinct_source_mode(self):
+    def test_capi_identifies_native_tc_as_a_distinct_source_mode(self):
         source = (TEMPLATE / 'macnlops_capi.f').read_text()
         start = source.index('      subroutine macnlops_c_source_mode(mode)')
         end = source.index('\n      end', start) + len('\n      end')
@@ -88,7 +88,7 @@ call source_mode(mode)
 if(mode/=1)error stop 'per-dipole Delta mode'
 delta_common_scale=.true.
 call source_mode(mode)
-if(mode/=3)error stop 'native/global-IR must not reuse winner mode 2'
+if(mode/=4)error stop 'native-tc must not reuse winner/global-IR modes'
 end program
 ''')
         result = subprocess.run([shutil.which('gfortran'), '-O0',

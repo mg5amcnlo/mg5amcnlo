@@ -1565,6 +1565,7 @@ c ordinary Fortran collect/reweight readers. No generator module is needed.
       if(meta(14).eq.2)source='delta'
       if(meta(14).eq.3)source='delta_winner'
       if(meta(14).eq.4)source='delta_native_ir'
+      if(meta(14).eq.5)source='delta_native_tc'
       partition='sampled'
       if(meta(15).eq.1)partition='global_sum'
       hard_event_text(1)='  <macnlops_hard_event version="1"'//
@@ -1633,7 +1634,8 @@ c This is used by collect_events as well as the EOF-catching reader.
      $    index(header,'source="resolved"').eq.0.and.
      $    index(header,'source="delta"').eq.0.and.
      $    index(header,'source="delta_winner"').eq.0.and.
-     $    index(header,'source="delta_native_ir"').eq.0).or.
+     $    index(header,'source="delta_native_ir"').eq.0.and.
+     $    index(header,'source="delta_native_tc"').eq.0).or.
      $   (index(header,'partition="sampled"').eq.0.and.
      $    index(header,'partition="global_sum"').eq.0))
      $     error stop 'Unsupported hard-event annotation header'

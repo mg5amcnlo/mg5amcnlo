@@ -202,7 +202,7 @@ struct ComponentPacket {
 ComponentPacket componentPacket(const InputEvent& input) {
   const auto block = sourceXMLBlock(input.extra, "macnlops_component");
   if (!block.present || !input.hasHard || input.hardPartition != "sampled" ||
-      (input.hardSource != "delta" && input.hardSource != "delta_native_ir"))
+      (input.hardSource != "delta" && input.hardSource != "delta_native_tc"))
     throw std::runtime_error("The first-emission program requires sampled MC@NLO-Delta "
                              "sources with component packets");
   std::istringstream rows(block.contents);
@@ -213,7 +213,7 @@ ComponentPacket componentPacket(const InputEvent& input) {
   const auto labels = fields(data[0], 4, "sampled-component labels");
   const auto weights = fields(data[1], 4, "sampled-component weights");
   ComponentPacket c;
-  c.damping = input.hardSource == "delta_native_ir" ? 3 : 1;
+  c.damping = input.hardSource == "delta_native_tc" ? 4 : 1;
   c.registry = block.attributes.at("registry");
   c.sector = integer(labels[0]); c.config = integer(labels[1]);
   c.graph = integer(labels[2]); c.flow = integer(labels[3]);
@@ -705,12 +705,14 @@ double gluonFsrRate(const Context& c, const GluonRadiators& p, double logT) {
     if (d[0]!=0.)
       throw std::runtime_error("Global gluon profile requires a massless Born gluon");
     const int ends=int(t<d[3]*d[3])+int(t<d[4]*d[4]);
-    const double M2=d[2]*d[2], rec2=d[1]*d[1], A=M2-rec2;
+    const double M2=d[2]*d[2], rec2=d[1]*d[1];
     const double corrected=(d[2]-d[1])*(d[2]-d[1]);
     if (!ends || !(d[2]>d[1] && t<.25*corrected)) continue;
+    const double r=rec2/M2, u=1.-r, tau=t/M2, rootTau=std::sqrt(tau);
     // The original native virtual-mass and momentum inequalities, solved
     // for z(1-z). The second bound includes the entire hard recoiler.
-    const double smin=std::max(t/corrected,(d[2]*std::sqrt(t)-t)/A);
+    const double recoilSmin=(rootTau-tau)/u;
+    const double smin=std::max(t/corrected,recoilSmin);
     if (!(smin>0. && smin<.25)) continue;
     const double zmin=2.*smin/(1.+std::sqrt(1.-4.*smin));
     const double vmax=std::log((1.-zmin)/zmin);
@@ -721,15 +723,42 @@ double gluonFsrRate(const Context& c, const GluonRadiators& p, double logT) {
       const double v=std::log((1.-z)/z);
       if (v<vmax) {edges.push_back(-v); edges.push_back(v);}
     }
+    const double recoilFloor=1.e-12;
+    if (rec2>0.) {
+      // Retain the native denominator floors, splitting where their max()
+      // changes branch. D1=u*z-tau/z and D2=u*(1-z)-tau/(1-z).
+      const double zFloor=(recoilFloor+
+        std::sqrt(recoilFloor*recoilFloor+4.*u*tau))/(2.*u);
+      if (zFloor>zmin && zFloor<.5) {
+        const double v=std::log((1.-zFloor)/zFloor);
+        edges.push_back(-v); edges.push_back(v);
+      }
+      const double sFloor=tau/recoilFloor;
+      if (sFloor>smin && sFloor<.25) {
+        const double z=2.*sFloor/(1.+std::sqrt(1.-4.*sFloor));
+        const double v=std::log((1.-z)/z);
+        edges.push_back(-v); edges.push_back(v);
+      }
+    }
     std::sort(edges.begin(),edges.end());
     edges.erase(std::unique(edges.begin(),edges.end()),edges.end());
     const auto integrand=[&](double v) {
-      const double z=1./(1.+std::exp(-v)), omz=1.-z;
-      const double virtual2=t/(z*omz), r=rec2/M2, a=virtual2/M2;
-      const double x1=(1.-r+a)*z, x2=1.+r-a;
-      const double deadCone=rec2>0. ? std::max(0.,1.-
-        r/std::max(1.e-12,x1+x2-1.-r)*
-        std::max(1.e-12,1.+r-x2)/std::max(1.e-12,1.-r-x1)) : 1.;
+      const double exponential=std::exp(-std::abs(v));
+      const double small=exponential/(1.+exponential), large=1./(1.+exponential);
+      const double z=v>=0. ? large : small, omz=v>=0. ? small : large;
+      const double s=z*omz, virtual2=t/s, a=tau/s;
+      double deadCone=1.;
+      if (rec2>0.) {
+        const double d1=u*z-tau/z, d2=u*omz-tau/omz;
+        if (d1>=recoilFloor && d2>=recoilFloor && a>=recoilFloor) {
+          // Algebraically 1-r*a/(D1*D2), factored at the physical zero.
+          // Subtracting x1+x2-1-r or 1+r-x2 loses precision here; adaptive
+          // refinement then chases roundoff near an otherwise smooth edge.
+          const double numerator=std::max(0.,u*(s-recoilSmin)*(u*s+tau+rootTau));
+          deadCone=std::max(0.,numerator/(numerator+r*tau));
+        } else deadCone=std::max(0.,1.-r/std::max(recoilFloor,d1)*
+          std::max(recoilFloor,a)/std::max(recoilFloor,d2));
+      }
       // Native colour-end partition, not the full Pgg counted twice.
       const double gg=1.5*(1.+z*z*z)/omz*deadCone;
       double flavours=0.;
@@ -746,9 +775,9 @@ double gluonFsrRate(const Context& c, const GluonRadiators& p, double logT) {
       for (int j=0; j<panels; ++j) {
         const double a=edges[k-1]+(edges[k]-edges[k-1])*j/panels;
         const double b=edges[k-1]+(edges[k]-edges[k-1])*(j+1)/panels;
-        if (massiveDaughters) {
-          // A cosine map removes the square-root onset at either end of
-          // each flavour-threshold interval before adaptive quadrature.
+        if (massiveDaughters || rec2>0.) {
+          // A cosine map resolves narrow recoil layers and removes the
+          // square-root onset at the ends of flavour-threshold intervals.
           const auto smooth=[&](double theta) {
             const double sine=std::sin(.5*theta);
             return .5*(b-a)*std::sin(theta)*
@@ -1310,9 +1339,9 @@ int main(int argc, char** argv) {
     char registry[64];
     macnlops_c_setup(&nlegs, registry);
     macnlops_c_source_mode(&sourceMode);
-    if (sourceMode != 1 && sourceMode != 3)
+    if (sourceMode != 1 && sourceMode != 4)
       throw std::runtime_error("First emission requires a compiled MC@NLO-Delta source");
-    const std::string expectedSource = sourceMode == 3 ? "delta_native_ir" : "delta";
+    const std::string expectedSource = sourceMode == 4 ? "delta_native_tc" : "delta";
     c.routes.read(m.routes);
     if (c.routes.registry != std::string(registry, 64) || c.routes.nexternal != nlegs)
       throw std::runtime_error("Route table does not describe this directory's densities");

@@ -1,7 +1,7 @@
 ! Exercise the production compute_delta routine with controlled Born/real
 ! records and a simple Sudakov table. There is no shower runtime interface.
 program check_mcatnlo_delta_matching
-  use mc_counterterms, only: compute_delta,delta_native_ir_probability,delta_common_probability,isspecial
+  use mc_counterterms, only: compute_delta,delta_native_tc_probability,delta_common_probability,isspecial
   use FKSParams, only: delta_common_scale
   use fks_phase_space_data, only: p1_cnt,p_born
   use process_module
@@ -23,13 +23,12 @@ program check_mcatnlo_delta_matching
   integer :: mass_calls(4:5)
   common /test_mass_calls/ mass_calls
   double precision :: p(0:3,5),prob,expected,t34,t43
-  double precision :: history_t(16),survival(2)
   double precision :: start(4,4),source_prob,native_scale
   common /test_native_scale/ native_scale
   double precision :: fallback(5,5),fallback_original(5,5)
   double precision :: epsilon,previous,bad_probability,seen_mass_min,seen_mass_max
   common /test_seen_masses/ seen_mass_min,seen_mass_max
-  integer :: history_count,rng_calls,point
+  integer :: rng_calls,point
   common /test_rng/ rng_calls
   logical :: ir_test,gluon_test,globalfsr_test,packing_test
   common /test_packing_mode/ packing_test
@@ -109,12 +108,12 @@ program check_mcatnlo_delta_matching
                  'generation receives both compact Born legs and their capped dipole mass')
     expected=exp(2d0*(1d0-50d0/native_scale))
     call require(abs(prob-expected)<1d-14,'nonlinear mass-dependent source Sudakov')
-    call delta_native_ir_probability(p,p_born,[11,-11,1,-1,21], &
-                             shower_scale_nbody,native_scale,source_prob,history_count,history_t)
-    call require(history_count==1.and.abs(source_prob-prob)<1d-14, &
+    call delta_native_tc_probability(p,p_born,[11,-11,1,-1,21], &
+                             shower_scale_nbody,native_scale,source_prob)
+    call require(abs(source_prob-prob)<1d-14, &
                  'generation and profile-style compact Born evaluation agree')
-    call delta_native_ir_probability(p,p1_cnt(:,1:4,0),[11,-11,1,-1,21], &
-                             shower_scale_nbody,native_scale,bad_probability,history_count,history_t)
+    call delta_native_tc_probability(p,p1_cnt(:,1:4,0),[11,-11,1,-1,21], &
+                             shower_scale_nbody,native_scale,bad_probability)
     call require(all(p1_cnt(:,i_fks,0)==0d0).and.p1_cnt(0,5,0)>0d0, &
                  'the real-sized Born counterevent has an interior hole')
     call require(seen_mass_min==0d0.and.abs(bad_probability-prob)>.1d0, &
@@ -177,9 +176,8 @@ program check_mcatnlo_delta_matching
     valid_dipole_n(3,1,1)=.true.
     shower_scale_nbody=-1d0
     shower_scale_nbody(3,1)=88.69246172113849d0
-    call delta_native_ir_probability(p,p_born,[21,21,6,-6,21], &
-                             shower_scale_nbody,native_scale,source_prob,history_count,history_t)
-    call require(history_count==0,'actual native top endpoint has no supported local inverse')
+    call delta_native_tc_probability(p,p_born,[21,21,6,-6,21], &
+                             shower_scale_nbody,native_scale,source_prob)
     call require(abs(source_prob-native_scale/shower_scale_nbody(3,1))<1d-14, &
                  'native global-FSR all-leg factor survives the local dead-zone sentinel')
     print *, 'PASS native global-FSR independent of local inverse'
@@ -207,12 +205,9 @@ program check_mcatnlo_delta_matching
       p(:,5)=[100d0,80d0,0d0,60d0]
       native_scale=200d0
       call compute_delta(p,prob)
-      call delta_native_ir_probability(p,p_born,[21,21,11,-11,21], &
-                               shower_scale_nbody,native_scale,source_prob,history_count,history_t)
-      call require(history_count==2,'two gluon radiators, each sharing both colour ends with its partner')
-      call require(maxval(abs(history_t(1:2)**2-[8000d0,32000d0]))<1d-8,'gluon Lund scales')
-      survival=([8000d0,32000d0]/300d0**2)**2
-      expected=minval(survival)
+      call delta_native_tc_probability(p,p_born,[21,21,11,-11,21], &
+                               shower_scale_nbody,native_scale,source_prob)
+      expected=(native_scale/300d0)**4
       call require(abs(prob-expected)<1d-12.and.abs(source_prob-expected)<1d-12, &
                    'both gluons contribute both colour ends: all-leg survival is (t/Q)^4')
       call require(rng_calls==0,'native gluon continuation requires no history draw')
@@ -223,7 +218,6 @@ program check_mcatnlo_delta_matching
       stop
     endif
     j_fks=2 ! The OTHER valid history becomes collinear while native t_c stays finite.
-    previous=1d0
     do point=1,4
       select case(point)
       case(1)
@@ -238,16 +232,11 @@ program check_mcatnlo_delta_matching
       p(:,5)=[100d0,100d0*sqrt(max(0d0,2d0*epsilon-epsilon**2)),0d0,100d0*(1d0-epsilon)]
       mccntcalled=0
       call compute_delta(p,prob)
-      call delta_native_ir_probability(p,p_born,[1,-1,11,-11,21], &
-                               shower_scale_nbody,native_scale,source_prob,history_count,history_t)
-      call require(history_count==2,'both ISR histories retained into the deep-collinear limit')
-      call require(abs(source_prob-prob)<1d-14,'source and explicit source_prob agree in the collinear limit')
-      call require(prob<=previous,'common-scale Delta decreases toward collinearity')
-      if(point>=3)then
-        call require(history_t(1)==1d-6,'native tiny-virtuality sentinel retained')
-        call require(prob==0d0,'a zero alternative Sudakov forces exactly zero common Delta')
-      endif
-      previous=prob
+      call delta_native_tc_probability(p,p_born,[1,-1,11,-11,21], &
+                               shower_scale_nbody,native_scale,source_prob)
+      call require(abs(source_prob-prob)<1d-14,'generation and native source factor agree')
+      call require(abs(prob-(native_scale/300d0)**2)<1d-14, &
+                   'alternative collinear or zero scales cannot override finite native t_c')
     enddo
     ! z becomes indistinguishable from one at the soft boundary. This
     ! limiting case must have zero suppression factor, rather than the
@@ -255,9 +244,9 @@ program check_mcatnlo_delta_matching
     do point=1,2
       p(:,5)=0d0
       if(point==2)p(:,5)=[1d-14,1d-14,0d0,0d0]
-      call delta_native_ir_probability(p,p_born,[1,-1,11,-11,21], &
-                               shower_scale_nbody,native_scale,source_prob,history_count,history_t)
-      call require(history_count==0.and.source_prob==0d0,'exact and rounded soft boundaries retain zero Delta')
+      call delta_native_tc_probability(p,p_born,[1,-1,11,-11,21], &
+                               shower_scale_nbody,native_scale,source_prob)
+      call require(source_prob==0d0,'exact and rounded soft boundaries retain zero Delta')
       mccntcalled=0
       call compute_delta(p,prob)
       call require(prob==0d0.and.rng_calls==0,'soft boundary creates no weighted H event or history draw')
@@ -267,7 +256,7 @@ program check_mcatnlo_delta_matching
     call require(previous>source_prob.and.source_prob>0d0,'common source approaches its zero continuously')
     call require(delta_common_probability(p_born,shower_scale_nbody,.5d0)==0d0, &
                  'the artificial source infrared endpoint is exactly zero')
-    print *, 'PASS common-scale Delta deep-collinear damping'
+    print *, 'PASS native-tc independent of alternative collinear scales'
     stop
   endif
 
@@ -278,28 +267,24 @@ program check_mcatnlo_delta_matching
     valid_dipole_n1(4,5)=.true.
     valid_dipole_n1(5,4)=.true.
     call compute_delta(p,prob)
-    t34=sqrt(201600d0)/19d0
-    t43=sqrt(3850d0)/3d0
-    expected=min(t34*t34,t43*t43)/50d0**2
-    call require(abs(prob-expected)<1d-12,'source uses the lower envelope of all-leg Sudakovs')
+    expected=native_scale**2/50d0**2
+    call require(abs(prob-expected)<1d-12,'source uses all-leg Sudakovs down to native t_c')
     call require(all(abs(pack(emsca_H(1,1,:,:),valid_dipole_n1)-native_scale)<1d-12), &
                  'all active H dipoles inherit the native matching evolution scale')
     call require(rng_calls==0,'native continuation needs no conditional history draw')
-    call delta_native_ir_probability(p,p_born,[11,-11,1,-1,21], &
-                             shower_scale_nbody,native_scale,source_prob,history_count,history_t)
-    call require(history_count==2,'two valid fixed-Born quark singular reconstructions')
-    call require(maxval(abs(history_t(1:2)-[t34,t43]))<1d-12,'inverse reconstruction scales')
-    ! A smaller actual evolution scale must itself enter the envelope;
-    ! it also sets H continuation, irrespective of any random draw.
+    call delta_native_tc_probability(p,p_born,[11,-11,1,-1,21], &
+                             shower_scale_nbody,native_scale,source_prob)
+    call require(abs(source_prob-prob)<1d-14,'native source factor agrees with generation')
+    ! An actual native scale fixes both source damping and continuation.
     native_scale=10d0
     mccntcalled=0
     call compute_delta(p,prob)
-    call require(abs(prob-.04d0)<1d-14,'native all-leg Sudakov participates in global envelope')
+    call require(abs(prob-.04d0)<1d-14,'native all-leg Sudakov fixes the common source factor')
     call require(all(abs(pack(emsca_H(1,1,:,:),valid_dipole_n1)-10d0)<1d-12), &
                  'native scale fixes every active H dipole')
     native_scale=0d0
-    call delta_native_ir_probability(p,p_born,[11,-11,1,-1,21], &
-                             shower_scale_nbody,native_scale,source_prob,history_count,history_t)
+    call delta_native_tc_probability(p,p_born,[11,-11,1,-1,21], &
+                             shower_scale_nbody,native_scale,source_prob)
     call require(source_prob==0d0,'native zero scale forces the infrared source limit')
     native_scale=30d0
     ! A prepared global-recoil history can be valid even when every
@@ -307,34 +292,38 @@ program check_mcatnlo_delta_matching
     p(:,5)=10d0*p(:,5)
     mccntcalled=0
     call compute_delta(p,prob)
-    call delta_native_ir_probability(p,p_born,[11,-11,1,-1,21], &
-                             shower_scale_nbody,native_scale,source_prob,history_count,history_t)
-    call require(history_count==0.and.abs(prob-.36d0)<1d-14, &
+    call delta_native_tc_probability(p,p_born,[11,-11,1,-1,21], &
+                             shower_scale_nbody,native_scale,source_prob)
+    call require(abs(prob-.36d0)<1d-14, &
                  'native damping does not require a supported local inverse')
     call require(all(abs(pack(emsca_H(1,1,:,:),valid_dipole_n1)-native_scale)<1d-12), &
                  'no local inverse cannot replace the native H continuation cap')
     p(:,5)=p(:,5)/10d0
-    ! Leg 3's own reconstructed emission lies above its start (dead for
-    ! that inverse history), but it must still compete above leg 4's
-    ! lower reconstruction scale. Reusing the old dead mask would omit it.
+    ! Fixed flow still contains competing radiators with distinct caps.
+    ! The native radiator is leg 4; leg 3 also evolves when its cap>t_c.
+    j_fks=4
     start=shower_scale_nbody
     start(3,4)=22d0
-    call delta_native_ir_probability(p,p_born,[11,-11,1,-1,21], &
-                             start,native_scale,source_prob,history_count,history_t)
-    call require(history_count==1.and.abs(history_t(1)-t43)<1d-12,'unsupported reconstruction excluded')
-    call require(abs(source_prob-t43*t43/(22d0*50d0))<1d-12, &
-                 'all competing legs use the common cutoff, regardless of old dead masks')
+    native_scale=20d0
+    call delta_native_tc_probability(p,p_born,[11,-11,1,-1,21], &
+                             start,native_scale,source_prob)
+    call require(abs(source_prob-20d0**2/(22d0*50d0))<1d-12, &
+                 'all competing legs evolve to the native lower scale')
+    native_scale=30d0
+    call delta_native_tc_probability(p,p_born,[11,-11,1,-1,21], &
+                             start,native_scale,source_prob)
+    call require(abs(source_prob-.6d0)<1d-12,'competitor capped below native scale contributes unity')
     start=1d0
-    call delta_native_ir_probability(p,p_born,[11,-11,1,-1,21], &
-                             start,native_scale,source_prob,history_count,history_t)
-    call require(history_count==0.and.source_prob==1d0,'no supported histories retain hard remainder')
+    call delta_native_tc_probability(p,p_born,[11,-11,1,-1,21], &
+                             start,native_scale,source_prob)
+    call require(source_prob==1d0,'unsupported native history retains hard remainder')
     shower_scale_nbody=1d0
     mccntcalled=0
     call compute_delta(p,prob)
     call require(prob==1d0.and.rng_calls==0,'hard remainder needs no history draw')
     call require(all(abs(pack(emsca_H(1,1,:,:),valid_dipole_n1)-native_scale)<1d-12), &
                  'hard remainder retains the common native scale')
-    print *, 'PASS native-history global-IR Delta weight and handoff'
+    print *, 'PASS native-tc Delta weight and handoff'
     stop
   endif
 

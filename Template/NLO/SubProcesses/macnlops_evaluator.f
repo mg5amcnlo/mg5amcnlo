@@ -88,13 +88,13 @@ c same routines to the in-process first-emission program.
             if(ios.ne.0.or.marker.ne.'COMPONENT_LOCAL_V1'.or.
      $         component_config.lt.1.or.component_graph.lt.1.or.
      $         component_flow.lt.1.or.
-     $         damping_mode.lt.0.or.damping_mode.gt.3.or.
-     $         damping_mode.eq.2.or.
+     $         damping_mode.lt.0.or.damping_mode.gt.4.or.
+     $         damping_mode.eq.2.or.damping_mode.eq.3.or.
      $         .not.ieee_is_finite(diagram_symmetry).or.
      $         diagram_symmetry.le.0d0)
      $         stop 'Invalid local component selector'
             if((mcatnlo_delta.neqv.(damping_mode.gt.0)).or.
-     $         (delta_common_scale.neqv.(damping_mode.eq.3)))
+     $         (delta_common_scale.neqv.(damping_mode.eq.4)))
      $         stop 'Local damping mode differs from source matching'
          elseif(mcatnlo_delta)then
             read(*,'(a)',iostat=ios)request_line

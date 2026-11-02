@@ -1,0 +1,75 @@
+{
+  "utc": "2026-11-01T18:11:13.358571+00:00",
+  "scope": "Existing external macnlops_* campaign directories; cleanup before native-tc implementation",
+  "reproduction_tested": false,
+  "results_and_reproduction_metadata_preserved": true,
+  "roots": [
+    {
+      "root": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101",
+      "before_bytes": 3143249920,
+      "after_bytes": 11800576,
+      "accounting_path": "/export/slow1/rikkert/macnlops_born_scale_fix_20261101/CLEANUP_SUMMARY.json",
+      "accounting_keys": null,
+      "freed_bytes": 3131449344
+    },
+    {
+      "root": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031",
+      "before_bytes": 4642398208,
+      "after_bytes": 12066816,
+      "accounting_path": "/export/slow1/rikkert/macnlops_native_ir_1M_20261031/cleanup_manifest.json",
+      "accounting_keys": null,
+      "freed_bytes": 4630331392
+    },
+    {
+      "root": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031",
+      "before_bytes": 48986923008,
+      "after_bytes": 81850368,
+      "accounting_path": "/export/slow1/rikkert/macnlops_native_ir_jets_1M_20261031/cleanup_manifest.json",
+      "accounting_keys": null,
+      "freed_bytes": 48905072640
+    },
+    {
+      "root": "/export/slow1/rikkert/macnlops_negative_h_inventory_20261101",
+      "before_bytes": 65536,
+      "after_bytes": 53248,
+      "accounting_path": "/export/slow1/rikkert/macnlops_negative_h_inventory_20261101/cleanup_manifest.json",
+      "accounting_keys": null,
+      "freed_bytes": 12288
+    },
+    {
+      "root": "/export/slow1/rikkert/macnlops_sudakov_1M_20261030",
+      "before_bytes": 5328769024,
+      "after_bytes": 12181504,
+      "accounting_path": "/export/slow1/rikkert/macnlops_sudakov_1M_20261030/cleanup_manifest.json",
+      "accounting_keys": null,
+      "freed_bytes": 5316587520
+    },
+    {
+      "root": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101",
+      "before_bytes": 17558130688,
+      "after_bytes": 64712704,
+      "accounting_path": "/export/slow1/rikkert/macnlops_wbb4fs_1M_nocuts_20261101/CLEANUP_SUMMARY.json",
+      "accounting_keys": null,
+      "freed_bytes": 17493417984
+    },
+    {
+      "root": "/export/slow1/rikkert/macnlops_winner_1M_20261031",
+      "before_bytes": 9464635392,
+      "after_bytes": 50061312,
+      "accounting_path": "/export/slow1/rikkert/macnlops_winner_1M_20261031/cleanup_manifest.json",
+      "accounting_keys": null,
+      "freed_bytes": 9414574080
+    },
+    {
+      "root": "/export/slow1/rikkert/macnlops_winner_20261031",
+      "before_bytes": 383688704,
+      "after_bytes": 704512,
+      "accounting_path": "/export/slow1/rikkert/macnlops_winner_20261031/cleanup_manifest.json",
+      "accounting_keys": null,
+      "freed_bytes": 382984192
+    }
+  ],
+  "total_after_bytes": 233431040,
+  "total_freed_bytes": 89274429440,
+  "freed_GiB": 83.14329147338867
+}

@@ -1,5 +1,104 @@
 # MAcNLOPS from the generated measures
 
+## Native emission-scale source: 1 November
+
+With `mcatnlo_delta=True` and `DeltaCommonScale=True`, fresh generation uses
+`delta_native_tc` / `mcatnlo-delta-native-tc-v1`. This replaces the historical
+minimum over alternative inverse-reconstruction scales described below.
+The sampled component retains its native sector, Born chart, diagram and
+colour flow, with `MCExplicitKLSum=False` and
+`MCSubtractionAtFixedFlow=True`.
+
+For a supported native branching at `t_c=get_qMC(xi,y)`, the source factor is
+
+\[
+ P_c(Q)=\Delta_{\rm all}(\Phi_{B,c};Q,t_c).
+\]
+
+Every live Born radiator and colour end contributes, with its own starting
+cap. An alternative reconstruction's smaller scale, or zero Sudakov, does
+not alter this factor. H already continues at `t_c`; its continuation rule
+does not change. Unsupported native hard remainders retain unit factor,
+while a supported native zero and the numerical soft limit retain their
+zero-factor convention. The table continuation below 0.5 GeV and through
+1.01 GeV remains a separate finite-cutoff prescription.
+
+The same factor enters the signed source terms before unweighting:
+
+\[
+ H_c=(R_c-D_c)P_c,\qquad
+ S_c\supset D_cP_c+R_c(1-P_c).
+\]
+
+The v4 matcher recomputes this new factor at every source-Q quadrature node
+to obtain its unconditional source average. Its competing-shower marginal
+remains conditional on `Q>t_c`, and its bounded S/H transfer still includes
+the native Born-scale correction. The source uses the existing tables and
+grouped PDF convention; this change does not identify those approximations
+with the exact native shower probability or remove the local S/B model.
+
+Fresh matching must reject old `delta_native_ir` and `delta_winner` source
+files. Historical files remain readable for accounting and analysis, with
+their original source identity. Regeneration requires fresh integration,
+channel normalization and unweighting, rather than changing H weights or
+continuation scales in an existing file.
+
+At resolved fixed kinematics, `P_c=1+O(alpha_s)`. Relative to ordinary
+MC@NLO, the source-only observable change is
+`integral (1-P_c)(R_c-D_c)(O_B-O_R)`, beyond NLO when the weighted expansion
+is integrable. Dropping the global minimum removes its deliberate protection
+in other inverse-collinear limits: the native FKS partition and G completion
+must supply the required component behaviour there. Numerical and
+fixed-order qualifications below remain applicable.
+
+The million-event W+jet campaign exposed roundoff in the numerical gluon-FSR
+denominator at a smooth massive-recoiler endpoint. Its evaluation now uses
+paired logistic coordinates, an algebraically factored dead-cone numerator,
+explicit native-floor boundaries and a cosine endpoint map. The kernel,
+native floors, quadrature tolerance and recursion limit are unchanged.
+Ten independent 60/90-digit reference rates agree within `3.3e-13`; the
+old integrator's 984 convergent points in a 1,000-profile comparison agree
+within `4.5e-13`, and the new evaluation converges at all 1,000 points.
+The original failed channel completes all 9,849 events, preserving its
+previously completed 531-event prefix's endpoints, weights and decisions.
+The entire W+jet matching cohort is replayed with the original hard inputs
+and seeds. Earlier successful gluon-containing samples retain their recorded
+runtime epoch; the fix changes numerical evaluation of the same kernel.
+
+Fresh validation completed one million source events for each of EE2j, DY,
+gluon-fusion H, ttbar, Wj, EE3j, EE4j and massive 4FS Wbb. All eight samples
+completed first-emission matching and full showering. Native accounting,
+physical profiles, signed normalization and independent event audits pass;
+the latter retain input-bound native reconstruction controls for 12 Wbb and
+two Wj events, with the original strict failures preserved. Negative H
+counts across the eight equal-size samples fall from 414,649 to 2,374.
+The [campaign report](/export/slow1/rikkert/macnlops_native_tc_1M_20261101/results/campaign_summary.md)
+contains individual counts, shapes, source epochs and warning accounting.
+
+Transfer closure remains imperfect. In the primary-observable interval
+5--20 GeV, the paired full-minus-first H-removal/S-veto ratio drift is
+`+0.05891 +/- 0.00695` for Wj and `-0.01661 +/- 0.00545` for Wbb.
+Other processes' ratio drifts are within 1.11 conditional statistical
+standard deviations. Wj's separate 40 GeV analysis selection shifts its
+cross section by -3.583% at first emission and -3.598% after showering.
+These errors condition on the generated sample and channel estimates;
+integration and matching-model uncertainties are not included. The tests
+establish the implemented source and the sampled infrared limits, without
+proving exact shower-density correspondence or a universal NLO theorem.
+Historical comparisons include other source/profile corrections and are
+not an isolated variation of the stopping scale.
+
+## Historical campaign storage after 1 November cleanup
+
+The external `/export/slow1/rikkert/macnlops_*` campaigns were reduced to
+actual numerical results, histogram tables, plots, cards, commands and
+provenance to recover disk space. Their generated sources, builds, event
+files and raw per-event caches were deliberately removed. Historical reports
+retain their original paths and hashes; statements below about complete
+external event/source archives describe their state before this cleanup.
+Each retained campaign has cleanup accounting and reproduction notes.
+Reproduction of the old campaigns was not tested, as requested.
+
 ## Global gluon shower denominator correction: 31 October
 
 The competing-shower denominator integrates the stock global-recoil
@@ -172,7 +271,11 @@ not validate the current source. The original-v4 ttbar shower also retained
 QEDByOther; winner and native samples disable it, so comparisons with
 original v4 include that configuration correction.
 
-## Native-history source with global infrared damping (`DeltaCommonScale`)
+## Historical native-history source with global infrared damping
+
+This section describes `mcatnlo-delta-native-ir-v1`, superseded by the
+native emission-scale construction above. Its samples and numerical results
+keep their original source identity.
 
 Set `mcatnlo_delta=True` in the run card and `#DeltaCommonScale` to `.true.`
 in `SubProcesses/FKS_params.dat` **before integration and event generation**.
@@ -379,7 +482,7 @@ bounded transfer density is
 \]
 
 The program evaluates these ratios in logarithms. Without saturation,
-\(v_S=C A/(\beta_c K_{\rm sh}P)\) and \(r_H=C/u\).
+\(v_S=C A/(\beta_c K_{\rm sh}G_B P)\) and \(r_H=C/u\).
 If the required S rejection would exceed one, H removal is reduced by
 the same bound. A zero source average protects both samples; a zero
 shower probability permits no H removal. Thus clipping only the S veto

@@ -14,6 +14,15 @@ It uses native Born amplitudes rather than an assumed alpha_s power.
 See [the current derivation](macnlops_derivation.md) for this correction;
 the dated comparisons and legacy formulas below retain their original scope.
 
+The native-scale source introduced on 1 November evaluates all Born
+radiators' no-emission factors down to the retained component's native
+emission scale `t_c`. It replaces the minimum over alternative inverse
+scales, with source identity `mcatnlo-delta-native-tc-v1`. Generation and the
+matcher's unconditional source average use the same new definition. The
+conditional shower marginal, Born-reference correction and coupling/PDF
+consistency requirements remain applicable. Older numerical comparisons
+below have not been relabelled as native-scale results.
+
 ## Summary
 
 * Four stages use QCD inputs: the NLO hard process with its MC

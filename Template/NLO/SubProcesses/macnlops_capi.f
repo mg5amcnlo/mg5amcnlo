@@ -24,8 +24,8 @@ c registry fingerprint that every source component packet must carry.
       subroutine macnlops_c_source_mode(mode)
      $     bind(C,name='macnlops_c_source_mode')
 c Fail before matching if source provenance and the compiled FKS policy differ.
-c Modes: 0 ordinary, 1 per-dipole Delta, 3 native-history/global-IR.
-c Legacy auxiliary-winner mode 2 is incompatible with this generator.
+c Modes: 0 ordinary, 1 per-dipole Delta, 4 native-history stopping scale.
+c Legacy winner (2) and global-IR envelope (3) are incompatible.
       use, intrinsic :: iso_c_binding, only: c_int
       use FKSParams, only: delta_common_scale
       implicit none
@@ -33,7 +33,7 @@ c Legacy auxiliary-winner mode 2 is incompatible with this generator.
       integer(c_int) mode
       mode=0
       if(mcatnlo_delta)mode=1
-      if(mcatnlo_delta.and.delta_common_scale)mode=3
+      if(mcatnlo_delta.and.delta_common_scale)mode=4
       end
 
 

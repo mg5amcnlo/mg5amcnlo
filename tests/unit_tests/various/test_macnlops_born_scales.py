@@ -108,9 +108,9 @@ class TestPairedBornScaleNative(unittest.TestCase):
             cls.base_environment.pop(key, None)
 
     def setUp(self):
-        self.env = dict(self.base_environment, MACNLOPS_STUB_MODE='3')
+        self.env = dict(self.base_environment, MACNLOPS_STUB_MODE='4')
         (self.work / 'events.lhe').write_text(
-            self.original_input.replace('source="delta"', 'source="delta_native_ir"'))
+            self.original_input.replace('source="delta"', 'source="delta_native_tc"'))
 
     def tearDown(self):
         (self.work / 'events.lhe').write_text(self.original_input)

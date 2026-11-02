@@ -62,7 +62,7 @@ class TestFixedLeptonProfiles(unittest.TestCase):
                 patch.object(mc, 'shower_library_hashes', return_value={'libpythia8.so': 'a'*64}), \
                 patch.object(mc, 'pdf_name', side_effect=AssertionError('unused PDF lookup')):
             profile = mc.prepare_generation(self.root, card, '/pythia')
-        self.assertEqual(profile['construction'], mc.NATIVE_IR_DELTA_SOURCE)
+        self.assertEqual(profile['construction'], mc.NATIVE_TC_DELTA_SOURCE)
         self.assertEqual(profile['pdf'], 'none')
         self.assertIsNone(profile['pdf_info_sha256'])
         self.assertIsNone(profile['pdf_member_sha256'])

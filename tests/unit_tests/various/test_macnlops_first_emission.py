@@ -399,35 +399,39 @@ class TestFirstEmissionNative(unittest.TestCase):
             header, blocks = stream.header, list(stream)
         return header, blocks, json.loads((self.work / (name + '.json')).read_text())
 
-    def test_native_ir_source_uses_matching_policy_and_rejects_winner_backend(self):
+    def test_native_tc_source_uses_matching_policy_and_rejects_winner_backend(self):
         path = self.work / 'events.lhe'
         original = path.read_text()
         try:
-            path.write_text(original.replace('source="delta"', 'source="delta_native_ir"'))
+            path.write_text(original.replace('source="delta"', 'source="delta_native_tc"'))
             rejected = subprocess.run(['./match.exe', '--input', 'events.lhe', '--output',
                 'mismatch.lhe', '--summary', 'mismatch.json', '--routes', 'routes.dat',
                 '--settings', str(self.settings), '--pdf', self.pdf, '--seed', '7349'],
                 cwd=self.work, env=self.env, capture_output=True, text=True)
             self.assertNotEqual(rejected.returncode, 0)
             self.assertIn('Source Sudakov policy differs', rejected.stdout + rejected.stderr)
-            self.env['MACNLOPS_STUB_MODE'] = '3'
-            _, blocks, report = self.run_match('native_ir_policy')
+            self.env['MACNLOPS_STUB_MODE'] = '4'
+            _, blocks, report = self.run_match('native_tc_policy')
             self.assertEqual(report['status'], 'complete')
-            self.assertTrue(all(mc.Event(block).hard.source == 'delta_native_ir' for block in blocks))
-            path.write_text(original.replace('source="delta"', 'source="delta_winner"'))
-            rejected = subprocess.run(['./match.exe', '--input', 'events.lhe', '--output',
-                'winner_mismatch.lhe', '--summary', 'winner_mismatch.json', '--routes', 'routes.dat',
-                '--settings', str(self.settings), '--pdf', self.pdf, '--seed', '7349'],
-                cwd=self.work, env=self.env, capture_output=True, text=True)
-            self.assertNotEqual(rejected.returncode, 0)
-            self.assertIn('Source Sudakov policy differs', rejected.stdout + rejected.stderr)
-            self.env['MACNLOPS_STUB_MODE'] = '2'
-            rejected = subprocess.run(['./match.exe', '--input', 'events.lhe', '--output',
-                'legacy_backend.lhe', '--summary', 'legacy_backend.json', '--routes', 'routes.dat',
-                '--settings', str(self.settings), '--pdf', self.pdf, '--seed', '7349'],
-                cwd=self.work, env=self.env, capture_output=True, text=True)
-            self.assertNotEqual(rejected.returncode, 0)
-            self.assertIn('compiled MC@NLO-Delta source', rejected.stdout + rejected.stderr)
+            self.assertTrue(all(mc.Event(block).hard.source == 'delta_native_tc' for block in blocks))
+            for legacy_source in ('delta_winner', 'delta_native_ir'):
+                path.write_text(original.replace('source="delta"',
+                                                'source="%s"' % legacy_source))
+                rejected = subprocess.run(['./match.exe', '--input', 'events.lhe', '--output',
+                    'source_mismatch.lhe', '--summary', 'source_mismatch.json', '--routes', 'routes.dat',
+                    '--settings', str(self.settings), '--pdf', self.pdf, '--seed', '7349'],
+                    cwd=self.work, env=self.env, capture_output=True, text=True)
+                self.assertNotEqual(rejected.returncode, 0)
+                self.assertIn('Source Sudakov policy differs', rejected.stdout + rejected.stderr)
+            path.write_text(original.replace('source="delta"', 'source="delta_native_tc"'))
+            for legacy_mode in ('2', '3'):
+                self.env['MACNLOPS_STUB_MODE'] = legacy_mode
+                rejected = subprocess.run(['./match.exe', '--input', 'events.lhe', '--output',
+                    'legacy_backend.lhe', '--summary', 'legacy_backend.json', '--routes', 'routes.dat',
+                    '--settings', str(self.settings), '--pdf', self.pdf, '--seed', '7349'],
+                    cwd=self.work, env=self.env, capture_output=True, text=True)
+                self.assertNotEqual(rejected.returncode, 0)
+                self.assertIn('compiled MC@NLO-Delta source', rejected.stdout + rejected.stderr)
         finally:
             path.write_text(original)
             self.env.pop('MACNLOPS_STUB_MODE', None)

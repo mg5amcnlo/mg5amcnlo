@@ -250,9 +250,9 @@ c at event scale while still resolving physical heavy-mass shifts.
          if(component_flow.lt.1.or.component_flow.gt.max_bcol.or.
      $      component_config.lt.1.or.component_graph.lt.1.or.
      $      damping_mode.lt.0.or.
-     $      damping_mode.gt.3.or.damping_mode.eq.2.or.
+     $      damping_mode.gt.4.or.damping_mode.eq.2.or.damping_mode.eq.3.or.
      $      (mcatnlo_delta_mod.neqv.(damping_mode.gt.0)).or.
-     $      (delta_common_scale.neqv.(damping_mode.eq.3)).or.
+     $      (delta_common_scale.neqv.(damping_mode.eq.4)).or.
      $      .not.ieee_is_finite(diagram_symmetry).or.
      $      diagram_symmetry.le.0d0)then
             status=30

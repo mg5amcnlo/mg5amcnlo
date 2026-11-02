@@ -40,7 +40,8 @@ bool eventStart(const std::string& line) {
 }
 
 bool isDeltaSource(const std::string& source) {
-  return source == "delta" || source == "delta_winner" || source == "delta_native_ir";
+  return source == "delta" || source == "delta_winner" ||
+    source == "delta_native_ir" || source == "delta_native_tc";
 }
 
 double number(std::string s) {

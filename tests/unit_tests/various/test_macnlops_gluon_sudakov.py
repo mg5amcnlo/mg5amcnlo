@@ -17,12 +17,14 @@ LAMBDAS = (.3249942945718149, .28756663468675603, .22513027856717657)
 
 @unittest.skipUnless(shutil.which('g++'), 'requires g++')
 class TestGlobalGluonRate(unittest.TestCase):
+    source_path = ROOT/'Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc'
+
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory(prefix='macnlops_gluon_rate_')
         cls.addClassCleanup(cls.tmp.cleanup)
         work = Path(cls.tmp.name)
-        source = (ROOT/'Template/NLO/MCatNLO/srcPythia8/MacNLOPSMatch.cc').read_text()
+        source = cls.source_path.read_text()
         rule = source[source.index('struct GaussRule {'):
                       source.index('// Exact massless-II backward')]
         rate = source[source.index('double gluonQuadrature('):
@@ -126,6 +128,45 @@ int main(int argc,char**) {
         for (q, expected), value in zip(points, actual):
             with self.subTest(q=q):
                 self.assertAlmostEqual(value, expected, delta=3e-9)
+
+    def test_captured_wjet_roundoff_failure_and_neighbouring_scales(self):
+        # The old x1/x2 subtraction exhausted depth18 on the first point.
+        # Independent 90-digit values integrate x=|2z-1|, after analytically
+        # adding the two colour-end orientations (not the logit Gauss rule).
+        # See docs/audits/check_gluon_quadrature_reference_20261101.py.
+        scales = [(16.307745317636243, .4074932789486993229054889338601),
+                  (16.307729009890924, .4074934653761065083427673521248),
+                  (16.30776162538156, .4074930925215657358759251455104)]
+        points = [(80.419002445775163, 2679.8203470176318,
+                   28.056336658409535, 0., q, 5, 0., 0., 1)
+                  for q, _ in scales]
+        for (q, expected), actual in zip(scales, self.rates(points)):
+            with self.subTest(q=q):
+                self.assertAlmostEqual(actual, expected, delta=3e-11)
+
+    def test_recoil_boundary_layers_ceiling_and_native_floors(self):
+        rec, M = 80.419002445775163, 2679.8203470176318
+        # Both small-r and close-ceiling references use the physical native
+        # support. The 1.3/13000 point activates a denominator floor: removing
+        # that floor shifts its reference by 1.2131e-9, above this tolerance.
+        values = [
+            ((rec, 5000., 6000., 0., .51, 5, 0., 0., 1),
+             6.3251069420624623074974877326581),
+            ((rec, 13000., 14000., 0., .51, 5, 0., 0., 1),
+             7.0327478693096797276285396969606),
+            ((rec, 13000., 14000., 0., 16.3, 5, 0., 0., 1),
+             .5521655197412242842969635338552),
+            ((rec, M, M, 0., 1299.699372585256, 5, 0., 0., 1),
+             .0000022726672614090989828666973954332),
+            ((rec, M, M, 0., 1299.7006721559583, 5, 0., 0., 1),
+             .000000022721039879033922645365694825719),
+            ((1.3, 13000., 14000., 0., .51, 5, 0., 0., 1),
+             7.0329200767076626474912285655079),
+            ((80., 125., 30., 0., .6, 5, 2., 6., 1),
+             2.0404252426893745116491050314789)]
+        for (point, expected), actual in zip(values, self.rates([p for p, _ in values])):
+            with self.subTest(point=point):
+                self.assertAlmostEqual(actual, expected, delta=3e-11)
 
     def test_pair_mass_threshold_does_not_become_an_evolution_pt_cut(self):
         def point(M, nf):
