@@ -304,6 +304,24 @@ def test_orders_differing_by_equal_mass_final_labels_share_a_channel():
     assert len(data["channels"]) == 2
 
 
+def test_orders_differing_by_massless_flavours_share_a_channel():
+    """Gluons and quarks of any charge in the same legs share one channel, as in
+    AmpliCol: one for p p > j j j, not one per flavour pattern."""
+    charged = model()
+    for particle in charged["ir"]["particles"]:
+        if abs(particle["pdg_code"]) == 992:
+            particle["charge"] = 2 / 3 if particle["pdg_code"] > 0 else -2 / 3
+    # the cyclic order 1 2 4 3, the quark lines starting at the quark
+    (data,) = export(
+        process("g", pdgs=(990, 990, 990, 990), words=((1, 2, 4, 3),)),
+        process("q1", pdgs=(990, 990, 991, -991), words=((3, 1, 2, 4),)),
+        process("q2", pdgs=(990, 990, 992, -992), words=((3, 1, 2, 4),)),
+        compiled_model=charged,
+    )
+    assert len(entries(data)) == 3
+    assert len(data["channels"]) == 1
+
+
 def test_permutation_invariant_restricted_helicity_set_is_grouped():
     p = with_replay()
     p.physics["helicities"][0]["values"] = [1, 1, -1, 1]

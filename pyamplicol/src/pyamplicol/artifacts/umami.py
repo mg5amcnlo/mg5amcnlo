@@ -1124,16 +1124,8 @@ def _build_provider(
                     configurations,
                 )
             )
-            # Contributions share a phase-space channel only with the same kind
-            # of particle in every leg, so that the cuts select the same legs
-            kinds = [None] * count
-            for slot, pdg in enumerate(pdgs):
-                particle = particles[int(pdg)]
-                kinds[relabel[slot]] = (
-                    abs(int(particle["color"])),
-                    abs(float(particle.get("charge", 0.0))),
-                    particle.get("spin"),
-                )
+            # Not keyed by the flavours of the legs: the cuts are flavour blind
+            # (grouping.assumptions), as the launch checks.
             keys = []
             for partner_order, configuration in partners:
                 _, partner_rotated = _channel_pattern(
@@ -1148,7 +1140,6 @@ def _build_provider(
                 key = (
                     tuple(partner_rotated),
                     tuple((tuple(legs), abs(pdg)) for legs, pdg in partner_resonances),
-                    tuple(kinds),
                 )
                 if key not in keys:
                     keys.append(key)
