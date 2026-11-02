@@ -1600,18 +1600,22 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         # me_frame needs the process: what [1,2] means, and which legs may not
         # enter a frame once real emission is computed (see
         # RunCardNLO.get_me_frame_legs, which raises for a frame that is not
-        # infrared safe)
-        proc_charac = getattr(self, 'proc_characteristics', None) or \
-                      self.get_characteristics()
-        self.run_card.set_me_frame_process(proc_charac,
-            real_emission=mode not in ['LO', 'aMC@LO', 'noshowerLO'])
-        legs = self.run_card.get_me_frame_legs()
-        if legs != (self.run_card['me_frame'] if 'me_frame' in
-                    self.run_card.user_set else []):
-            logger.info('me_frame: the matrix elements are evaluated in the '
-                        'rest frame of legs %s, which is the partonic c.m. of '
-                        'the Born and stays infrared safe for the real '
-                        'emission.' % legs)
+        # infrared safe). Only when a run is being compiled: a bare
+        # 'treatcards run' (the reweighting compiles its rw_me Source that
+        # way) has no run_card loaded yet, and the parent reads the card as
+        # written -- whose default me_frame already names explicit legs.
+        if isinstance(getattr(self, 'run_card', None), banner_mod.RunCardNLO):
+            proc_charac = getattr(self, 'proc_characteristics', None) or \
+                          self.get_characteristics()
+            self.run_card.set_me_frame_process(proc_charac,
+                real_emission=mode not in ['LO', 'aMC@LO', 'noshowerLO'])
+            legs = self.run_card.get_me_frame_legs()
+            if legs != (self.run_card['me_frame'] if 'me_frame' in
+                        self.run_card.user_set else []):
+                logger.info('me_frame: the matrix elements are evaluated in '
+                            'the rest frame of legs %s, which is the partonic '
+                            'c.m. of the Born and stays infrared safe for the '
+                            'real emission.' % legs)
 
         return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
     

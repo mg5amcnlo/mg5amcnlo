@@ -6303,11 +6303,17 @@ class RunCardNLO(RunCard):
         # momentum fractions, by a finite amount even in the singular limit,
         # so the frame jumps across that limit and the subtraction stops
         # cancelling. Selecting exactly the initial state is the partonic
-        # c.m.. Without the process, any other use of an initial-state leg is
-        # refused here; with it (a launch), get_me_frame_legs refuses only
-        # the beams that radiate, and allows the decaying particle of a
-        # 1 -> n process and a beam not charged under the perturbation.
-        if 'me_frame' in self.user_set and not self['me_frame_cm_legs']:
+        # c.m.. Whether a leg radiates depends on the process, which is only
+        # known at launch (set_me_frame_process). Then, for a polarised
+        # process, get_me_frame_legs refuses only the beams that radiate, and
+        # allows the decaying particle of a 1 -> n process and a beam not
+        # charged under the perturbation; for one whose frame does not
+        # matter, any other use of an initial-state leg is refused here.
+        # Without the process (a card read or edited outside a launch)
+        # nothing can be decided yet: RunCard.read would turn a refusal into
+        # a warning that the launch then contradicts.
+        if 'me_frame' in self.user_set and self['me_frame_ninitial'] and \
+                not self['me_frame_cm_legs']:
             initial = [n for n in self['me_frame'] if n in (1, 2)]
             # Exactly the initial state is the partonic c.m. (see
             # get_me_frame_legs); anything else that names an initial-state

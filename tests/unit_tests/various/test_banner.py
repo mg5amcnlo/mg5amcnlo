@@ -706,14 +706,29 @@ class TestProcCardWrappedLines(unittest.TestCase):
 import re
 import shutil
 class TestRunCardNLOMeFrame(unittest.TestCase):
-    """me_frame is only meaningful for the whole initial state or for
-    final-state particles; a partial initial state must be refused at parse
-    time rather than reaching the generated Fortran."""
+    """For a process whose frame does not matter (unpolarised), me_frame is
+    only meaningful for the whole initial state or for final-state particles;
+    a partial initial state must be refused when the run is set up rather
+    than reaching the generated Fortran. Without the process nothing is
+    decided: whether a leg radiates depends on it (see
+    TestRunCardNLOMeFramePartonicCM)."""
 
     def _card(self, me_frame):
         run_card = bannermod.RunCardNLO()
         run_card.set('me_frame', me_frame, user=True)
+        # the process is known, and its frame does not matter
+        charac = bannermod.ProcCharacteristic()
+        charac['ninitial'] = 2
+        run_card.set_me_frame_process(charac)
         return run_card
+
+    def test_without_the_process_nothing_is_decided(self):
+        # a card read outside a launch: [1] is the decaying particle of a
+        # 1 -> n process, [1, 3] a valid frame in e+ e- > t t~ [QCD]
+        for me_frame in ([1], [1, 3]):
+            run_card = bannermod.RunCardNLO()
+            run_card.set('me_frame', me_frame, user=True)
+            run_card.check_validity()
 
     def test_a_single_beam_is_refused(self):
         # The regression: this used to pass check_validity because only a
