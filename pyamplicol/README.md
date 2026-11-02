@@ -59,7 +59,7 @@ toolchain. A Fortran compiler is required only for Fortran consumers.
 
 Contributor setup defaults to published Python dependencies from
 `pyproject.toml`, including Symbolica 3.0.0 and ufo-model-loader 1.0.0, and the
-release-mode native build with published SymJIT 2.26.4.
+release-mode native build with published SymJIT 2.27.3.
 Building a new release wheel requires a clean Git checkpoint and complete
 release assets; the dependency mode does not relax publication guards.
 

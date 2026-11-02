@@ -86,11 +86,11 @@ version = "1.0.0"
 python_distribution = "symbolica"
 python_version = "3.0.3"
 rust_crate = "symbolica"
-rust_version = "3.0.0"
+rust_version = "3.0.2"
 serialization_abi = "symbolica-bincode2-v1"
 
 [symjit]
-version = "2.26.4"
+version = "2.27.3"
 
 [ufo_model_loader]
 python_distribution = "ufo-model-loader"

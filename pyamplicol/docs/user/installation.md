@@ -167,7 +167,7 @@ python -m pip install .
 For development from a checkout, `just dev-install` creates a repository-managed
 environment with published Python dependencies from `pyproject.toml`, including
 Symbolica 3.0.0 and ufo-model-loader 1.0.0, and the release-mode native build with
-published SymJIT 2.26.4. It does not use an editable installation. Building a new
+published SymJIT 2.27.3. It does not use an editable installation. Building a new
 release wheel requires a clean Git checkpoint and complete release assets;
 published-dependency mode does not relax these publication guards.
 
