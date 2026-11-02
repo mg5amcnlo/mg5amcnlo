@@ -78,6 +78,10 @@ jobs:
   produce-architecture-packs:
     name: Produce prepared JIT pack (${{ matrix.target }})
     runs-on: ${{ matrix.runner }}
+    concurrency:
+      group: "pyamplicol-symbolica-${{ startsWith(matrix.runner, 'macos-') && matrix.runner || format('{0}-{1}', matrix.runner, github.run_id) }}"
+      cancel-in-progress: false
+      queue: max
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -141,6 +145,10 @@ jobs:
     name: Consume portable pack (${{ matrix.target }})
     needs: produce-architecture-packs
     runs-on: ${{ matrix.runner }}
+    concurrency:
+      group: "pyamplicol-symbolica-${{ startsWith(matrix.runner, 'macos-') && matrix.runner || format('{0}-{1}', matrix.runner, github.run_id) }}"
+      cancel-in-progress: false
+      queue: max
     timeout-minutes: 90
     strategy:
       fail-fast: false

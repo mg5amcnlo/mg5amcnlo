@@ -72,7 +72,7 @@ version = "1.17.0"
 
 [[python_dependencies]]
 distribution = "symbolica"
-version = "3.0.3"
+version = "3.0.0"
 
 [[python_dependencies]]
 distribution = "tomli-w"
@@ -84,7 +84,7 @@ version = "1.0.0"
 
 [symbolica]
 python_distribution = "symbolica"
-python_version = "3.0.3"
+python_version = "3.0.0"
 rust_crate = "symbolica"
 rust_version = "3.0.0"
 serialization_abi = "symbolica-bincode2-v1"

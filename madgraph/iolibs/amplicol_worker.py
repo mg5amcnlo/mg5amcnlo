@@ -12,12 +12,17 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""Generation of the '[amplicol]' artifacts with pyamplicol, run in the process
-of export_amplicol. pyamplicol (and Symbolica) are imported here, after
-bootstrap.ensure_pyamplicol put them on sys.path."""
+"""Generation of the '[amplicol]' artifacts with pyamplicol, run in its own
+process by export_amplicol.
+
+Symbolica, which pyamplicol imports, holds a per-user lock until the process
+exits, so it is never imported by MadGraph itself: sessions do not block each
+other while they are open. Usage: python amplicol_worker.py JOB.json
+"""
 
 import json
 import logging
+import sys
 
 
 def model_source(pyamplicol, model):
@@ -69,18 +74,17 @@ def generate_artifact(pyamplicol, artifact, accuracy, process, model):
                                           model=model, mode='replace')
 
 
-def generate(job):
-    """Generate the artifacts of the processes of a job (see
-    export_amplicol.export_amplicol_processes) and return the reweight providers
-    of each of them."""
+def main(job_path):
     import os
+    logging.basicConfig(level=logging.WARNING, format='%(name)s: %(message)s')
+    with open(job_path) as stream:
+        job = json.load(stream)
     import pyamplicol
     from pyamplicol.artifacts import umami_reweight
     from pyamplicol.licensing import detect_symbolica_license
     if not detect_symbolica_license(suggest=False).licensed:
-        logging.getLogger('madgraph.amplicol').warning(
-            'Symbolica does not accept the license key of pyamplicol (%s): '
-            'generating in its restricted mode', pyamplicol.__file__)
+        logging.warning('Symbolica does not accept the license key of pyamplicol '
+                        '(%s): generating in its restricted mode', pyamplicol.__file__)
     model = model_source(pyamplicol, job['model'])
     providers = []
     for process in job['processes']:
@@ -91,4 +95,9 @@ def generate(job):
         providers.append(umami_reweight.write_reweight_provider(
             os.path.join(path, 'lc'), os.path.join(path, 'full'),
             os.path.join(path, 'reweight')))
-    return providers
+    with open(job['result'], 'w') as stream:
+        json.dump(providers, stream)
+
+
+if __name__ == '__main__':
+    main(sys.argv[1])

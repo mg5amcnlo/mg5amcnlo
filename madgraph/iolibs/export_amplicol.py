@@ -33,7 +33,10 @@ import logging
 import os
 import re
 import shlex
+import subprocess
 import sys
+import tempfile
+import time
 
 import madgraph
 
@@ -59,6 +62,14 @@ clean:
 """
 
 
+WORKER = pjoin(os.path.dirname(os.path.abspath(__file__)), 'amplicol_worker.py')
+# printed by Symbolica when another process holds its per-user thread
+SYMBOLICA_BUSY = 'Cannot start another restricted Symbolica thread'
+# seconds between the attempts while Symbolica is busy, and before giving up
+SYMBOLICA_RETRY = 10
+SYMBOLICA_MAX_WAIT = 3600
+
+
 # rusticol-config of the pyamplicol in pyamplicol/install, for the makefiles
 RUSTICOL_CONFIG = """\
 #!/bin/sh
@@ -76,7 +87,7 @@ PYTHONPATH=%(install)s${PYTHONPATH:+:$PYTHONPATH} exec %(python)s -c \\
 
 def check_pyamplicol(interactive=None, jobs=None):
     """Install pyamplicol in pyamplicol/install if needed and put it first on
-    sys.path, for the generation in this process and for the builds.
+    sys.path, which the worker inherits. Never imported here, see amplicol_worker.
     Returns its version and source hash."""
     from madgraph.mg7 import bootstrap
     try:
@@ -102,6 +113,59 @@ def write_rusticol_config(subproc_dir, pyamplicol):
         os.chmod(path, 0o755)
     with open(pjoin(subproc_dir, PYAMPLICOL_RECORD), 'w') as stream:
         json.dump(pyamplicol, stream, indent=2)
+
+
+def run_worker(job):
+    """Run amplicol_worker on a job, waiting while Symbolica is busy elsewhere."""
+    env = dict(os.environ, SYMBOLICA_HIDE_BANNER='1',
+               PYTHONPATH=os.pathsep.join(p for p in sys.path if p))
+    start = time.monotonic()
+    waiting = False
+    while True:
+        returncode, busy = run_worker_once(job, env)
+        if returncode == 0:
+            return
+        if not busy:
+            raise madgraph.InvalidCmd('pyamplicol failed to generate the [amplicol] '
+                                      'matrix elements, see the messages above')
+        if 'symbolica' in sys.modules:
+            raise madgraph.InvalidCmd(
+                'Symbolica is imported in this MadGraph process, so the pyamplicol '
+                'worker cannot start: do not import pyamplicol or symbolica here')
+        if time.monotonic() - start > SYMBOLICA_MAX_WAIT:
+            raise madgraph.InvalidCmd(
+                'Symbolica has been used by another process for %d minutes: only one '
+                'pyamplicol process may run per user, stop the other one and output '
+                'again' % (SYMBOLICA_MAX_WAIT // 60))
+        if not waiting:
+            logger.info('Symbolica is used by another process: waiting for it')
+            waiting = True
+        time.sleep(SYMBOLICA_RETRY)
+
+
+def run_worker_once(job, env):
+    """The exit code of one worker run, and whether Symbolica was busy. The
+    worker never outlives this call, so it cannot keep holding Symbolica's lock."""
+    worker = subprocess.Popen([sys.executable, WORKER, job], env=env,
+                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                              text=True)
+    busy = False
+    try:
+        for line in worker.stdout:
+            if SYMBOLICA_BUSY in line:
+                busy = True
+            elif not line.startswith(('\u250c', '\u2502', '\u2514', '\u251c')):
+                sys.stdout.write(line)
+        return worker.wait(), busy
+    finally:
+        if worker.poll() is None:
+            worker.terminate()
+            try:
+                worker.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                worker.kill()
+                worker.wait()
+        worker.stdout.close()
 
 
 def load_metadata(artifact):
@@ -259,7 +323,7 @@ def file_hash(path):
 
 
 def cached_model_key(key_file):
-    """The key of the cached model, see amplicol_generation.model_source."""
+    """The key of the cached model, see amplicol_worker.model_source."""
     try:
         with open(key_file) as stream:
             return json.load(stream).get('key')
@@ -408,8 +472,8 @@ def export_amplicol_processes(*args, **kwargs):
     and return the subprocesses.json entries; see _export_amplicol_processes.
 
     pyamplicol/install, which holds pinned dependencies (numpy, ...) too, is on
-    sys.path only while this runs, so that it does not shadow the packages of the
-    rest of the MG5 session (what pyamplicol imports stays loaded)."""
+    sys.path only while this runs: the worker gets it through PYTHONPATH, and it
+    must not shadow the packages of the rest of the MG5 session."""
     saved = list(sys.path)
     try:
         return _export_amplicol_processes(*args, **kwargs)
@@ -435,15 +499,16 @@ def _export_amplicol_processes(dir_path, proc_defs, model, multiparticles=None,
         processes.append({'name': name, 'path': path, 'expression': expression,
                           'multiparticles': process_multiparticles,
                           'orders': coupling_orders(procdef, model)})
-    from madgraph.iolibs import amplicol_generation
-    try:
-        providers = amplicol_generation.generate({
-            'model': model_job(model, pjoin(subproc_dir, MODEL_FILE), pyamplicol),
-            'processes': processes})
-    except Exception as error:
-        logger.error('pyamplicol failed to generate the [amplicol] matrix elements')
-        raise madgraph.InvalidCmd('pyamplicol failed to generate the [amplicol] '
-                                  'matrix elements: %s' % error)
+    with tempfile.TemporaryDirectory(prefix='amplicol_job_') as scratch:
+        job = pjoin(scratch, 'job.json')
+        with open(job, 'w') as stream:
+            json.dump({'model': model_job(model, pjoin(subproc_dir, MODEL_FILE),
+                                         pyamplicol),
+                       'processes': processes,
+                       'result': pjoin(scratch, 'providers.json')}, stream)
+        run_worker(job)
+        with open(pjoin(scratch, 'providers.json')) as stream:
+            providers = json.load(stream)
     entries = []
     for procdef, process, provider_ids in zip(proc_defs, processes, providers):
         name, path, orders = process['name'], process['path'], process['orders']

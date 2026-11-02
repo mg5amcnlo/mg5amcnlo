@@ -51,7 +51,7 @@ def madspace_is_installed() -> bool:
 
 def _pyamplicol_package():
     """The directory of the pyamplicol package that ``import pyamplicol`` would
-    load, or None. Found, not imported."""
+    load, or None. Found, not imported (Symbolica would take its per-user lock)."""
     spec = importlib.util.find_spec("pyamplicol")
     if spec is None or not spec.origin:
         return None  # e.g. the source directory as a namespace package
@@ -217,6 +217,8 @@ def check_pyamplicol_license(pythonpath=None) -> None:
     try:
         info = json.loads(result.stdout.strip().splitlines()[-1])
     except (IndexError, ValueError):
+        # E.g. Symbolica refuses to start while this process already holds
+        # its per-user lock (symbolica imported here before the check).
         raise RuntimeError(
             "pyamplicol cannot be imported:\n" + result.stdout + result.stderr
         ) from None
