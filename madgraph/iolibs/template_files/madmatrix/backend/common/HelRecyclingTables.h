@@ -82,7 +82,7 @@ hr_fold_amp( const cxtype_amp_sv& amp,
 // off; each member is its dot product with the member's own wavefunction of
 // that leg, over NCOMP components from FIRST: 1 for a scalar, 4 for a fermion
 // or a vector, 5 for a vector in the FD gauge (the fifth is its Goldstone),
-// where a scalar is the one component 4 (see CppDialect.peel_spin).
+// where a scalar is the one component 4 (see CppDialect.peel_components).
 // A fermion peel makes the flavour test here (see CppDialect._p1n_group).
 template<class W_ACCESS, int NCOMP, bool FERMION, int FIRST = 0>
 inline void

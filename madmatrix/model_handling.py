@@ -2543,8 +2543,9 @@ class OneProcessExporterMadMatrix(export_mg7.OneProcessExporterMG7):
             else:
                 recycle = True
                 self._hr_calls = self.hr_orig_calls(color_amplitudes[0])
-                # FD: a vector's current has a fifth (Goldstone) component,
-                # which the amplitude split has to carry (CppDialect.peel_spin)
+                # FD: a vector's current has a fifth (Goldstone) component and
+                # a scalar's value is that fifth one, which the amplitude split
+                # has to know (CppDialect.peel_components)
                 self._hr_gauge = 'FD' if aloha.unitary_gauge == 3 else 'U'
                 if self not in OneProcessExporterMadMatrix._hr_warmups:
                     OneProcessExporterMadMatrix._hr_warmups.append(self)
@@ -3194,7 +3195,7 @@ class MadMatrixUFOHelasCallWriter(helas_call_writers.GPUFOHelasCallWriter,
     jamp_orbit = True
     # --hel_recycling. hr_orig: write the calls the way madevent's hel_recycle
     # reads them back (one call per line, every amplitude tagged //HRAMP with its
-    # number and followed by what it adds to the per-row tables, with a ${row}
+    # number and its legs' spins, and followed by what it adds to the per-row tables, with a ${row}
     # hole); see OneProcessExporterMadMatrix.hr_orig_calls. hr_probe: follow every
     # amplitude of the ordinary calls with MG_HR_PROBE_AMP, which only a warm-up
     # build (-DMG_HR_PROBE) compiles to anything.
@@ -3699,7 +3700,8 @@ class MadMatrixUFOHelasCallWriter(helas_call_writers.GPUFOHelasCallWriter,
                 for mother, me_id in sum_original:
                     mother.set('me_id', me_id)
                 if hr_mode == 'rows':
-                    res.extend(self._hr_orig_store(amp_block[0], namp, hr_namp))
+                    res.extend(self._hr_orig_store(amp_block[0], namp, hr_namp,
+                                                   amplitude))
                     hr_rows.extend(self._hr_row_lines(
                         namp, diagram, id_amp in diag_to_config, color,
                         jamp_captures.get(namp, []) if jamp_plan is not None else None,
@@ -3707,7 +3709,8 @@ class MadMatrixUFOHelasCallWriter(helas_call_writers.GPUFOHelasCallWriter,
                     continue
                 if self.hr_orig:
                     res.extend(self._hr_orig_amplitude(
-                        amp_block[0], namp, diagram, id_amp in diag_to_config, color,
+                        amp_block[0], namp, amplitude, diagram, id_amp in diag_to_config,
+                        color,
                         jamp_captures.get(namp, []) if hr_mode == 'fold'
                                                  and jamp_plan is not None else None))
                     continue
@@ -3809,11 +3812,22 @@ class MadMatrixUFOHelasCallWriter(helas_call_writers.GPUFOHelasCallWriter,
             mode = 'rows'
         return mode
 
-    def _hr_orig_store(self, call, namp, nslot):
+    @staticmethod
+    def _hr_amp_tag(call, namp, amplitude):
+        """The call of amplitude namp, tagged for the recycler: its number (all
+        amplitudes write the one scratch amp_sv[0]) and the spin (2s+1) of the
+        wavefunction each argument is, in argument order -- which the amplitude
+        split needs (CppDialect.peel_components), and which the routine name
+        only says by convention."""
+        return '%s //HRAMP %d %s' % (call.rstrip('\n'), namp,
+                                     ','.join(str(mother.get('spin'))
+                                              for mother in amplitude.get('mothers')))
+
+    def _hr_orig_store(self, call, namp, nslot, amplitude):
         """One amplitude in hr_orig form for the rows mode: the call, then its
         store into the row's amplitude table -- nothing else is done with it
         until the row loop (_hr_row_lines)."""
-        return ['%s //HRAMP %d' % (call.rstrip('\n'), namp), '//HRFOLD %d' % namp,
+        return [self._hr_amp_tag(call, namp, amplitude), '//HRFOLD %d' % namp,
                 'ampAll_sv[( ${row} * nParity + iParity ) * %d + %d] = amp_sv[0];'
                 % (nslot, namp - 1), '//HRENDFOLD']
 
@@ -3874,10 +3888,10 @@ class MadMatrixUFOHelasCallWriter(helas_call_writers.GPUFOHelasCallWriter,
                  for amp in sorted(combines) for line in combines[amp]]
         return ntmp, lines + list(final)
 
-    def _hr_orig_amplitude(self, call, namp, diagram, channel, color, captures=None):
-        """One amplitude in hr_orig form: the call, tagged with its number (all
-        amplitudes write the one scratch amp_sv[0], so the call itself cannot say
-        which it is), then a //HRFOLD block of what it adds to its helicity row's
+    def _hr_orig_amplitude(self, call, namp, amplitude, diagram, channel, color,
+                           captures=None):
+        """One amplitude in hr_orig form: the call, tagged with its number and
+        its legs' spins (_hr_amp_tag), then a //HRFOLD block of what it adds to its helicity row's
         tables -- the multichannel numerator and the color flows -- with a
         ${row} hole the recycler stamps out once per row it survives in.
 
@@ -3885,7 +3899,7 @@ class MadMatrixUFOHelasCallWriter(helas_call_writers.GPUFOHelasCallWriter,
         flows are added to as the plain build adds to them: into the row's
         shared sub-expressions (jampTmpAll_sv) and the few color flows it goes
         to directly; hr_post_lines finishes them per row."""
-        out = ['%s //HRAMP %d' % (call.rstrip('\n'), namp), '//HRFOLD %d' % namp]
+        out = [self._hr_amp_tag(call, namp, amplitude), '//HRFOLD %d' % namp]
         slot = '( ${row} * nParity + iParity )'
         if channel:
             out += ['if( storeChannelWeights )', '{',

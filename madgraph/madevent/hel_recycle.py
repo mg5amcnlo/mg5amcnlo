@@ -345,12 +345,20 @@ class CppDialect(Dialect):
                 break               # a scalar has none: nothing to replace
         return args
 
-    _AMP_TAG = re.compile(r'//\s*HRAMP\s+(\d+)')
+    _AMP_TAG = re.compile(r'//\s*HRAMP\s+(\d+)(?:\s+(\d+(?:,\d+)*))?')
 
     def amplitude_diagram(self, line, args):
         # the scratch every amplitude writes to cannot say which diagram it is,
         # so the exporter tags the call with it
         return int(self._AMP_TAG.search(line).group(1))
+
+    def amplitude_spins(self, line):
+        '''The spin (2s+1) of each wavefunction argument of an amplitude call,
+        in argument order, as the exporter tagged it; None when it did not.'''
+        match = self._AMP_TAG.search(line)
+        if not match or not match.group(2):
+            return None
+        return tuple(int(spin) for spin in match.group(2).split(','))
 
     # -- line shape ----------------------------------------------------------
     def is_continuation(self, line):
@@ -428,49 +436,28 @@ class CppDialect(Dialect):
         return [Template(fold).safe_substitute(row=row)
                 for fold in self.folds.get(amp.diag_num, ())]
 
-    # the spin letters of the legs of one Lorentz structure in a routine name:
-    # FFV2 of FFV2_FFS3M, VSV2 of VVV1_VSV2_VSS1 (FFV6_2M is FFV6 and FFV2)
-    _STRUCTURE = re.compile(r'([FVS]+)\d')
+    @staticmethod
+    def peel_components(spin, gauge='U'):
+        """(fermion, components) of the current a P1N leaves on a leg whose
+        wavefunction has spin `spin` (2s+1, as the exporter tags it): the
+        components each member's dot product runs over; None for spin 3/2 and 2,
+        which are not split (as in fortran).
 
-    @classmethod
-    def peel_spin(cls, root, peel, gauge='U'):
-        """(spin, components) of the current a P1N of `root` (the routine
-        name before _0) leaves on leg peel+1 -- the components a member's dot
-        product runs over -- or None when it is not split.
-
-        A combined routine (FFV2_FFS3, VVV1_VSV2_VSS1) names every structure,
-        and they must agree on the leg. The FD gauge changes two things. A
-        vector wavefunction has five components, the fifth its Goldstone, and
-        a scalar keeps its value in that same fifth component (the fortran
-        CombineAmpS of aloha_functions_fd.f reads W(5)). And a vector leg is
-        also its Goldstone: a structure with an S where another has a V reads
-        the fifth component of the same wavefunction. Such a leg is a vector,
-        and the current the P1N writes has all five components (the fifth from
-        the Goldstone structures). Getting either wrong drops or misreads part
-        of every amplitude of the group. The P1N routine names its output
-        after the first structure, so that one has to be the V. Names ALOHA
-        hashes (ALOHA_<n>) say nothing about the legs: not split, as spin 2
-        and 3/2."""
-        spins, legs = set(), None
-        for k, structure in enumerate(root.split('_')):
-            match = cls._STRUCTURE.match(structure)
-            if match:
-                legs = match.group(1)
-            elif not (legs and structure[:1].isdigit()):
-                return None
-            # else FFV1_2: the structures of one base are named by their number
-            if peel >= len(legs):
-                return None
-            if k == 0:
-                first = legs[peel]
-            spins.add(legs[peel])
+        The spin is the particle's, never read off the routine name: the letters
+        of a Lorentz name (FFV1, VVS1) are a naming convention of the UFO
+        generators, not part of the format. The FD gauge changes two things: a
+        vector has five components, the fifth its Goldstone (which the Goldstone
+        structures of a combined vertex such as VVV1_VSV2_VSS1 write), and a
+        scalar keeps its value in that same fifth component (the fortran
+        CombineAmpFD / CombineAmpS of aloha_functions_fd.f).
+        """
         fd = gauge == 'FD'
-        if spins == {'F'}:
-            return 'F', (0, 1, 2, 3)
-        if spins == {'S'}:
-            return 'S', (4,) if fd else (0,)
-        if spins == {'V'} or (fd and spins == {'V', 'S'} and first == 'V'):
-            return 'V', (0, 1, 2, 3, 4) if fd else (0, 1, 2, 3)
+        if spin == 2:
+            return True, (0, 1, 2, 3)
+        if spin == 3:
+            return False, (0, 1, 2, 3, 4) if fd else (0, 1, 2, 3)
+        if spin == 1:
+            return False, (4,) if fd else (0,)
         return None
 
     def _whole_amplitude(self, line, amp):
@@ -500,10 +487,16 @@ class CppDialect(Dialect):
         # the vertex writes an amplitude, the current does not: keep the
         # wavefunction and coupling access classes, drop the amplitude one
         access = [access[0], access[-1]]
-        peeled = self.peel_spin(root, peel, gauge)
+        if root.startswith('ALOHA_'):
+            # a long name ALOHA hashes: its P1N is another hash, not <root>P1N_
+            return None
+        spins = self.amplitude_spins(line)
+        if spins is None or peel >= len(spins):
+            return None
+        peeled = self.peel_components(spins[peel], gauge)
         if peeled is None:
             return None
-        spin, comps = peeled
+        fermion, comps = peeled
         args = list(group[0].args)
         args.pop(peel)
         args[-1] = self.P1N_SCRATCH
@@ -514,7 +507,7 @@ class CppDialect(Dialect):
                  % (indent, access[0], self.P1N_SCRATCH)]
         if self.TABLES:
             table = self._p1n_table(group, peel, indent, access[0], comps,
-                                    spin == 'F')
+                                    fermion)
             if table is not None:
                 return lines[:2] + table + ['%s}' % indent]
         dot = ' + '.join('_pt[%d] * _pw[%d]' % (i, i) for i in comps)
@@ -522,7 +515,7 @@ class CppDialect(Dialect):
             peeled = amp.args[peel]
             lines.append('%s  { const cxtype_sv* _pw = %s::kernelAccessConst( %s.w );'
                          % (indent, access[0], peeled))
-            if spin == 'F':
+            if fermion:
                 lines.append('%s    amp_sv[0] = ( %s.flv_index != %s.flv_index'
                              ' || %s.flv_index == -1 ) ? cxzero_sv() : ( %s ); }'
                              % (indent, self.P1N_SCRATCH, peeled,
