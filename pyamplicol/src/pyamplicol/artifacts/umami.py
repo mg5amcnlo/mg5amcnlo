@@ -324,17 +324,26 @@ def _safe_replay(process: UmamiProcessInput) -> dict[str, tuple[str, tuple[int, 
     return result
 
 
-def _channel_pattern(order, incoming, masses):
+def _channel_pattern(order, incoming, masses, classes=None):
     """The cyclic colour order from the first incoming leg, with the final-state
-    legs known only by their mass: orders with equal patterns share one
-    phase-space map up to relabelling final-state legs of equal mass."""
+    legs known only by their mass and class: orders with equal patterns share
+    one phase-space map up to relabelling final-state legs of equal mass and
+    class. The classes are those of _leg_classes."""
     start = order.index(0)
     rotated = order[start:] + order[:start]
     pattern = tuple(
-        ("initial", slot) if slot < incoming else ("final", masses[slot])
+        ("initial", slot)
+        if slot < incoming
+        else ("final", masses[slot], None if classes is None else classes[slot])
         for slot in rotated
     )
     return pattern, rotated
+
+
+def _leg_classes(pdgs, roles):
+    """The legs that flavour-blind cuts treat alike: coloured partons of any
+    flavour, and colour singlets of the same PDG only."""
+    return ["coloured" if role != 1 else int(pdg) for pdg, role in zip(pdgs, roles)]
 
 
 def _relabelled(values, relabel):
@@ -1074,7 +1083,7 @@ def _build_provider(
             # The exported contribution relabels its final-state legs onto the
             # first colour order of its channel; members keep physical labels.
             pattern, rotated = _channel_pattern(
-                order, incoming, data["provider"]["masses"]
+                order, incoming, data["provider"]["masses"], _leg_classes(pdgs, roles)
             )
             relabel = list(identity)
             representative = channel_patterns.setdefault(pattern, rotated)
@@ -1124,8 +1133,8 @@ def _build_provider(
                     configurations,
                 )
             )
-            # Not keyed by the flavours of the legs: the cuts are flavour blind
-            # (grouping.assumptions), as the launch checks.
+            # Not keyed by the flavours of the legs: the relabelling keeps every
+            # leg class in its slot, and the cuts are flavour blind within one.
             keys = []
             for partner_order, configuration in partners:
                 _, partner_rotated = _channel_pattern(

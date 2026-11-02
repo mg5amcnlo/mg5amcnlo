@@ -13,7 +13,9 @@ import pytest
 from pyamplicol.artifacts.umami import (
     FLAVOR_BLIND_ASSUMPTION,
     UmamiProcessInput,
+    _channel_pattern,
     _identical_orbit,
+    _leg_classes,
     build_umami_metadata,
     umami_bundle_payloads,
 )
@@ -320,6 +322,23 @@ def test_orders_differing_by_massless_flavours_share_a_channel():
     )
     assert len(entries(data)) == 3
     assert len(data["channels"]) == 1
+
+
+def test_massless_singlets_are_not_relabelled_onto_partons():
+    """A lepton and a parton of equal mass are not exchanged by the relabelling
+    onto the channel's first order, which the cuts would see."""
+    masses = [0.0] * 4
+    roles = [8, 8, 1, 8]
+    lepton = _leg_classes((990, 990, 11, 990), roles)
+    parton = _leg_classes((990, 990, 990, 11), roles[:2] + [8, 1])
+    assert lepton == ["coloured", "coloured", 11, "coloured"]
+    order = [0, 1, 2, 3]
+    assert _channel_pattern(order, 2, masses, lepton)[0] != (
+        _channel_pattern(order, 2, masses, parton)[0])
+    quark = _leg_classes((990, 990, 991, -991), [8, 8, 3, -3])
+    gluon = _leg_classes((990, 990, 990, 990), [8] * 4)
+    assert _channel_pattern(order, 2, masses, quark)[0] == (
+        _channel_pattern(order, 2, masses, gluon)[0])
 
 
 def test_permutation_invariant_restricted_helicity_set_is_grouped():
