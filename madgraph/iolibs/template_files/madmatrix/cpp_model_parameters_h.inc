@@ -64,7 +64,10 @@ namespace madmatrix
   {
   public:
 
-    static Parameters* getInstance();
+    // The model parameters of the process whose matrix element this thread evaluates (set by
+    // calculate_jamps): the HelAmps routines that read a model parameter (the custom propagators
+    // of a UFO model) take it from there. Each CPPProcess owns its own Parameters.
+    static thread_local const Parameters* current;
 
     // Define "zero"
     double zero, ZERO;
@@ -162,8 +165,6 @@ namespace madmatrix
     std::map<std::string, double> m_param_overrides;
     std::map<std::string, std::string> m_slha_key_to_name;
     SLHAReader m_slha;
-
-    static Parameters* instance;
   };
 
   // Generic readers for initProc: dereference an array of pointer-to-Parameters-member

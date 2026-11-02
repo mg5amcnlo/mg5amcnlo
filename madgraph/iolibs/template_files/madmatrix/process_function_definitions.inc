@@ -35,8 +35,6 @@ namespace madmatrix
 #endif
     , m_masses()
   {
-    setHelicitiesAndFlavors( &tHel[0][0], &tFlavors[0][0] );
-
     // Enable SIGFPE traps for Floating Point Exceptions
 #ifdef MGONGPUCPP_DEBUG
     fpeEnable();
@@ -58,19 +56,55 @@ namespace madmatrix
 
   //--------------------------------------------------------------------------
 
+  void
+  CPPProcess::setIndependentParams( [[maybe_unused]] const fptype* tIPD )
+  {
+    for( int i = 0; i < nIPD; i++ ) m_params.IPD[i] = tIPD[i];
+  }
+
+  void
+  CPPProcess::setIndependentCouplings( [[maybe_unused]] const cxtype* tIPC )
+  {
+    for( int i = 0; i < nIPC; i++ )
+    {
+      m_params.IPC[2 * i] = cxreal( tIPC[i] );
+      m_params.IPC[2 * i + 1] = cximag( tIPC[i] );
+    }
+  }
+
+  void
+  CPPProcess::setFlavorCouplings( [[maybe_unused]] const int* tIPF_partner1,
+                                  [[maybe_unused]] const int* tIPF_partner2,
+                                  [[maybe_unused]] const cxtype* tIPF_value )
+  {
+    for( int i = 0; i < nMF * nIPF; i++ )
+    {
+      m_params.IPF_partner1[i] = tIPF_partner1[i];
+      m_params.IPF_partner2[i] = tIPF_partner2[i];
+      m_params.IPF_value[2 * i] = cxreal( tIPF_value[i] );
+      m_params.IPF_value[2 * i + 1] = cximag( tIPF_value[i] );
+    }
+  }
+
+  void
+  CPPProcess::setBsmIndepParam( const double* values, int n )
+  {
+    for( int i = 0; i < n; i++ ) m_params.bsmIndepParam[i] = values[i];
+  }
+
+  //--------------------------------------------------------------------------
+
 #ifndef MGONGPU_HARDCODE_PARAM
   // Initialize process (with parameters read from user cards)
   void
   CPPProcess::initProc( const std::string& param_card_name )
   {
-    // Instantiate the model class and set parameters that stay fixed during run
-    m_pars = Parameters::getInstance();
-    // Parameters is a process-wide singleton (not owned per-instance), so a fresh
-    // initProc() must explicitly drop any overrides left by a previous
-    // setParameterByName() call -- otherwise re-initializing from a (possibly
-    // different) param card would silently carry forward stale overrides instead
-    // of giving a clean slate.
-    m_pars->resetParameterOverrides();
+    // Instantiate the model class and set parameters that stay fixed during run. The model
+    // parameters are this process' own: a fresh object, without the overrides that a
+    // previous setParameterByName() call may have left in the one of a previous initProc().
+    m_ownedPars.reset( new Parameters() );
+    m_pars = m_ownedPars.get();
+    m_params.model = m_pars;
     SLHAReader slha( param_card_name, m_verbose );
     m_pars->setIndependentParameters( slha );
     m_pars->setIndependentCouplings();
@@ -84,7 +118,6 @@ namespace madmatrix
       //m_pars->printDependentCouplings(); // now computed event-by-event (running alphas #373)
     }
     %(initProc_lines)s
-    createNormalizedColorMatrix(); // no-op on cpu/simd, pushes to device memory on gpu
     refreshIndependentParams();
   }
 
@@ -92,20 +125,18 @@ namespace madmatrix
   void
   CPPProcess::refreshIndependentParams()
   {
-    Parameters* m_pars = Parameters::getInstance();
     // Read physics parameters like masses and couplings from user configuration files,
-    // then hand them to the backend-owned storage via the setters (see SigmaKin.cc).
+    // then store them in m_params via the setters.
     %(cipdassign)s
     %(cipcassign)s
     %(cipfassign)s
     %(bsmassign)s
+    refreshExternalMasses( m_masses );
   }
 
-  // See declaration in CPPProcess.h for why this exists and when it must be called.
   void
   CPPProcess::refreshExternalMasses( std::vector<fptype>& masses )
   {
-    Parameters* m_pars = Parameters::getInstance();
     masses.clear();
 %(refreshExternalMasses_lines)s
   }
@@ -123,7 +154,6 @@ namespace madmatrix
       //Parameters::printDependentCouplings(); // now computed event-by-event (running alphas #373)
     }
     %(hardcoded_initProc_lines)s
-    createNormalizedColorMatrix(); // no-op on cpu/simd, pushes to device memory on gpu
     %(cipdhrdassign)s
     %(cipchrdassign)s
     %(cipfhrdassign)s

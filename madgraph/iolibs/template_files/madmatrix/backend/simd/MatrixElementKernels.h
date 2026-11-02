@@ -10,6 +10,7 @@
 #include "mgOnGpuConfig.h"
 
 #include "MemoryBuffers.h"
+#include "ProcessParameters.h"
 
 #include <map>
 #include <memory>
@@ -24,7 +25,8 @@ namespace madmatrix
   protected:
 
     // Constructor from existing input and output buffers
-    MatrixElementKernelBase( const BufferMomenta& momenta,         // input: momenta
+    MatrixElementKernelBase( ProcessParameters& params,            // input: parameters of the process (output: good helicities)
+                             const BufferMomenta& momenta,         // input: momenta
                              const BufferGs& gs,                   // input: gs for alphaS
                              const BufferIflavorVec& iflavorVec,   // input: flavor indices for the flavor combination
                              const BufferRndNumHelicity& rndhel,   // input: random numbers for helicity selection
@@ -64,6 +66,9 @@ namespace madmatrix
 #endif
 
   protected:
+
+    // The parameters of the process
+    ProcessParameters& m_params;
 
     // The buffer for the input momenta
     const BufferMomenta& m_momenta;
@@ -109,7 +114,8 @@ namespace madmatrix
   public:
 
     // Constructor from existing input and output buffers
-    MatrixElementKernelHost( const BufferMomenta& momenta,         // input: momenta
+    MatrixElementKernelHost( ProcessParameters& params,            // input: parameters of the process (output: good helicities)
+                             const BufferMomenta& momenta,         // input: momenta
                              const BufferGs& gs,                   // input: gs for alphaS
                              const BufferIflavorVec& iflavorVec,   // input: flavor indices for the flavor combination
                              const BufferRndNumHelicity& rndhel,   // input: random numbers for helicity selection

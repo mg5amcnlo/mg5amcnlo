@@ -723,7 +723,15 @@ public:
             device.tensor_copy(source, *this);
         } else if (is_contiguous()) {
             auto contig_source = source.contiguous();
-            device.memcpy(data(), contig_source.data(), byte_size());
+            // The CPU device copies with std::copy, which cannot read GPU memory:
+            // when copying from a GPU into a CPU tensor, the GPU device copies.
+            if (this->device() == cpu_device()) {
+                contig_source.device()->memcpy(
+                    data(), contig_source.data(), byte_size()
+                );
+            } else {
+                device.memcpy(data(), contig_source.data(), byte_size());
+            }
         } else {
             throw std::runtime_error(
                 "tensor must be contiguous for copy across devices"

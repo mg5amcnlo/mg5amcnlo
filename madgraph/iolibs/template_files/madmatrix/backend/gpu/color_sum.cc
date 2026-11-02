@@ -31,21 +31,9 @@ namespace madmatrix
     }
     T value[ncolor * ncolor];
   };
-  // The fptype_colour version is the default used by kernels (supporting mixed floating point mode)
-  static __device__ fptype_colour s_pNormalizedColorMatrix2[ncolor * ncolor];
-
-  //--------------------------------------------------------------------------
-
-  void createNormalizedColorMatrix()
-  {
-    static bool first = true;
-    if( first )
-    {
-      first = false;
-      constexpr NormalizedColorMatrix<fptype_colour> normalizedColorMatrix2;
-      gpuMemcpyToSymbol( s_pNormalizedColorMatrix2, normalizedColorMatrix2.value, ncolor * ncolor * sizeof( fptype_colour ) );
-    }
-  }
+  // The fptype_colour version is the default used by kernels (supporting mixed floating point mode).
+  // Statically initialized: every device has it as soon as the module is loaded.
+  static __device__ const NormalizedColorMatrix<fptype_colour> s_normalizedColorMatrix2{};
 
   //--------------------------------------------------------------------------
 
@@ -99,12 +87,12 @@ namespace madmatrix
           {
             // ztemp from the jamps of order iao, contracted with those of order jao
             // (Fortran: ZTEMP from JAMP(:,M), times DCONJG(JAMP(I,N)))
-            fptype_colour ztempR = s_pNormalizedColorMatrix2[icol * ncolor + icol] * jampR[iao][icol];
-            fptype_colour ztempI = s_pNormalizedColorMatrix2[icol * ncolor + icol] * jampI[iao][icol];
+            fptype_colour ztempR = s_normalizedColorMatrix2.value[icol * ncolor + icol] * jampR[iao][icol];
+            fptype_colour ztempI = s_normalizedColorMatrix2.value[icol * ncolor + icol] * jampI[iao][icol];
             for( int jcol = 0; jcol < icol; jcol++ )
             {
-              ztempR += 2 * s_pNormalizedColorMatrix2[icol * ncolor + jcol] * jampR[iao][jcol];
-              ztempI += 2 * s_pNormalizedColorMatrix2[icol * ncolor + jcol] * jampI[iao][jcol];
+              ztempR += 2 * s_normalizedColorMatrix2.value[icol * ncolor + jcol] * jampR[iao][jcol];
+              ztempI += 2 * s_normalizedColorMatrix2.value[icol * ncolor + jcol] * jampI[iao][jcol];
             }
             deltaMEs += ztempR * jampR[jao][icol];
             deltaMEs += ztempI * jampI[jao][icol];
@@ -133,18 +121,18 @@ namespace madmatrix
         //{
         //  fptype_colour jampRj = jampR[jcol];
         //  fptype_colour jampIj = jampI[jcol];
-        //  ztempR += s_pNormalizedColorMatrix2[icol * ncolor + jcol] * jampRj; // use fptype_colour version of color matrix
-        //  ztempI += s_pNormalizedColorMatrix2[icol * ncolor + jcol] * jampIj; // use fptype_colour version of color matrix
+        //  ztempR += s_normalizedColorMatrix2.value[icol * ncolor + jcol] * jampRj; // use fptype_colour version of color matrix
+        //  ztempI += s_normalizedColorMatrix2.value[icol * ncolor + jcol] * jampIj; // use fptype_colour version of color matrix
         //}
         // NEW IMPLEMENTATION #475 (ihel3p1: triangular lower diagonal matrix) - Loop over jcol < icol
-        ztempR += s_pNormalizedColorMatrix2[icol * ncolor + icol] * jampRi; // use fptype_colour version of color matrix
-        ztempI += s_pNormalizedColorMatrix2[icol * ncolor + icol] * jampIi; // use fptype_colour version of color matrix
+        ztempR += s_normalizedColorMatrix2.value[icol * ncolor + icol] * jampRi; // use fptype_colour version of color matrix
+        ztempI += s_normalizedColorMatrix2.value[icol * ncolor + icol] * jampIi; // use fptype_colour version of color matrix
         for( int jcol = 0; jcol < icol; jcol++ )
         {
           fptype_colour jampRj = jampR[jcol];
           fptype_colour jampIj = jampI[jcol];
-          ztempR += 2 * s_pNormalizedColorMatrix2[icol * ncolor + jcol] * jampRj; // use fptype_colour version of color matrix
-          ztempI += 2 * s_pNormalizedColorMatrix2[icol * ncolor + jcol] * jampIj; // use fptype_colour version of color matrix
+          ztempR += 2 * s_normalizedColorMatrix2.value[icol * ncolor + jcol] * jampRj; // use fptype_colour version of color matrix
+          ztempI += 2 * s_normalizedColorMatrix2.value[icol * ncolor + jcol] * jampIj; // use fptype_colour version of color matrix
         }
         deltaMEs += ztempR * jampRi;
         deltaMEs += ztempI * jampIi;
@@ -226,9 +214,10 @@ namespace madmatrix
   {
     const int nevt = gpublocks * gputhreads;
 
-    // Get the address associated with the normalized color matrix in device memory
-    static fptype_colour* devNormColMat = nullptr;
-    if( !devNormColMat ) gpuGetSymbolAddress( (void**)&devNormColMat, s_pNormalizedColorMatrix2 );
+    // Get the address associated with the normalized color matrix in the memory of the
+    // current device (each device has its own: not to be kept from one call to the next)
+    fptype_colour* devNormColMat = nullptr;
+    gpuGetSymbolAddress( (void**)&devNormColMat, s_normalizedColorMatrix2 );
 
     // The scratch buffer holds the BLAS intermediate results and, in mixed precision mode,
     // the converted jamps and the fptype2 MEs: see the layout in blasColorSumTmpSize, which

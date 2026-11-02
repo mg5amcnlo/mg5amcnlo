@@ -363,8 +363,9 @@ class MadMatrixALOHAWriter(aloha_writers.ALOHAWriterForGPU):
     # the custom propagators of a UFO model, whose numerator/denominator are
     # written in terms of model parameters (e.g. the width corrections dWT, dWZ,
     # dWW and dWH of SMEFTsim). aloha_writers.ALOHAWriterForCPP reads them from
-    # the Parameters singleton; that is host-only code, so on GPUs the value has
-    # to be a compile-time constant, i.e. HRDCOD=1 is required there.
+    # the Parameters of the process being evaluated (Parameters::current, set by
+    # calculate_jamps); that is host-only code, so on GPUs the value has to be a
+    # compile-time constant, i.e. HRDCOD=1 is required there.
     def get_model_parameter_txt(self, name):
         """Define a model parameter which the routine body uses"""
         # ALOHA sees the UFO name ('dWT'), the generated Parameters class uses
@@ -380,7 +381,7 @@ class MadMatrixALOHAWriter(aloha_writers.ALOHAWriterForGPU):
         return ('#ifdef MGONGPU_HARDCODE_PARAM\n'
                 '    constexpr auto %(var)s = Parameters::%(mdl)s;\n'
                 '#elif !defined MGONGPUCPP_GPUIMPL\n'
-                '    const auto %(var)s = Parameters::getInstance()->%(mdl)s;\n'
+                '    const auto %(var)s = Parameters::current->%(mdl)s;\n'
                 '#else\n'
                 '#error Model parameter %(mdl)s is used inside a HelAmps routine '
                 '(custom propagator) and is not available in device code: rebuild with HRDCOD=1\n'

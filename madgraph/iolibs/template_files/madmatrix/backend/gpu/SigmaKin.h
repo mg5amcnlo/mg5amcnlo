@@ -3,10 +3,9 @@
 // Integrated with the MadGraph7 project in Feb 2026.
 //
 // Backend-owned driver: sigmaKin and everything it calls (calculate_jamps,
-// good-helicity filtering, color/channel selection). Declared here so
-// CPPProcess.cc's constructor/initProc (P1-generated) can call the setters
-// that populate this file's storage, and so umami.cc/MatrixElementKernels.cc
-// can call sigmaKin/computeDependentCouplings.
+// good-helicity filtering, color/channel selection). Declared here so that
+// umami.cc/MatrixElementKernels.cc can call them. They all take the parameters
+// of the process they evaluate (ProcessParameters.h) as an argument.
 
 #ifndef SIGMAKIN_H
 #define SIGMAKIN_H 1
@@ -14,15 +13,63 @@
 #include "mgOnGpuConfig.h"
 #include "mgOnGpuCxtypes.h" // for cxtype, fptype_amp_sv
 #include "GpuAbstraction.h"
+#include "ProcessParameters.h"
+
+#include <type_traits>
+
+// A kernel argument that the kernel reads in place, without a copy per thread: from
+// the constant bank, as __constant__ memory (CUDA 11.7 and later; HIP passes the
+// kernel arguments in a read-only segment of their own)
+#if defined __CUDACC__ && ( __CUDACC_VER_MAJOR__ > 11 || ( __CUDACC_VER_MAJOR__ == 11 && __CUDACC_VER_MINOR__ >= 7 ) )
+#define MGONGPU_GRID_CONSTANT __grid_constant__
+#else
+#define MGONGPU_GRID_CONSTANT
+#endif
 
 namespace madmatrix
 {
+  // The parameters of the process as the kernels take them: by value, which puts them
+  // in the constant bank (as fast as __constant__ memory, and private to each launch,
+  // hence to each instance and device), unless they do not fit in the kernel arguments
+  // (4 kB): a pointer to a copy in global memory (DeviceProcessParameters) then. The
+  // latter can be forced with -DMGONGPU_PARAMS_IN_GLOBAL_MEMORY.
+#ifdef MGONGPU_PARAMS_IN_GLOBAL_MEMORY
+  constexpr bool processParametersByValue = false;
+#else
+  constexpr bool processParametersByValue = sizeof( ProcessParameters ) <= 4000;
+#endif
+  using ProcessParametersArg = std::conditional_t<processParametersByValue, ProcessParameters, const ProcessParameters*>;
+
+  __device__ inline const ProcessParameters&
+  deref( const ProcessParameters& params ) { return params; }
+  __device__ inline const ProcessParameters&
+  deref( const ProcessParameters* params ) { return *params; }
+
+  // The copy of the parameters of a process on the current device, for the kernels
+  // when they take them through a pointer, and the kernel argument made of them
+  class DeviceProcessParameters
+  {
+  public:
+    DeviceProcessParameters();
+    ~DeviceProcessParameters();
+    DeviceProcessParameters( const DeviceProcessParameters& ) = delete;
+    DeviceProcessParameters& operator=( const DeviceProcessParameters& ) = delete;
+    // Copies params to the device (when the kernels take them through a pointer)
+    void update( const ProcessParameters& params );
+    // The kernel argument for params, which update() must have been given
+    ProcessParametersArg arg( const ProcessParameters& params ) const;
+  private:
+    ProcessParameters* m_device; // nullptr when the kernels take the parameters by value
+  };
+
   __global__ void
-  computeDependentCouplings( const fptype* allgs,    // input: Gs[nevt]
-                             fptype* allcouplings ); // output: couplings[nevt*ndcoup*2]
+  computeDependentCouplings( MGONGPU_GRID_CONSTANT const ProcessParametersArg params, // input: parameters of the process
+                             const fptype* allgs,                                 // input: Gs[nevt]
+                             fptype* allcouplings );                              // output: couplings[nevt*ndcoup*2]
 
   void
-  sigmaKin_getGoodHel( const fptype_momenta* allmomenta, // input: momenta[nevt*npar*4]
+  sigmaKin_getGoodHel( const ProcessParametersArg params,  // input: parameters of the process
+                       const fptype_momenta* allmomenta, // input: momenta[nevt*npar*4]
                        const fptype* allcouplings,       // input: couplings[nevt*ndcoup*2]
                        const unsigned int* iflavorVec,   // input: index of the flavor combination
                        fptype* allMEs,                   // output: allMEs[nevt], |M|^2 final_avg_over_helicities
@@ -33,13 +80,13 @@ namespace madmatrix
                        const int nevt );                 // input: #events (for cuda: nevt == ndim == gpublocks*gputhreads)
 
   int                                          // output: nGoodHel (the number of good helicity combinations out of ncomb)
-  sigmaKin_setGoodHel( const bool* isGoodHel ); // input: isGoodHel[ncomb] - host array
-
-  int                    // output: nGoodHel as last set by sigmaKin_setGoodHel (0 before)
-  sigmaKin_getNGoodHel();
+  sigmaKin_setGoodHel( ProcessParameters& params, // output: the good helicities of the process
+                       const bool* isGoodHel );  // input: isGoodHel[ncomb] - host array
 
   void
-  sigmaKin( const fptype_momenta* allmomenta,   // input: momenta[nevt*npar*4]
+  sigmaKin( const ProcessParameters& params,     // input: parameters of the process (host)
+            const ProcessParametersArg kparams,  // input: the same, as the kernels take them
+            const fptype_momenta* allmomenta,   // input: momenta[nevt*npar*4]
             const fptype* allcouplings,         // input: couplings[nevt*ndcoup*2]
             const unsigned int* iflavorVec,     // input: index of the flavor combination
             const fptype* allrndhel,            // input: random numbers[nevt] for helicity selection
@@ -70,17 +117,6 @@ namespace madmatrix
             // evaluated for that helicity alone (and returns its contribution to the helicity-summed
             // |M|^2, see umami_matrix_element); nullptr, the default, sums over the good helicities
             const int* allihel = nullptr );
-
-  // Setters: called once by CPPProcess (P1-generated) to populate this file's
-  // otherwise-internal storage, since it can no longer be written directly
-  // from a different translation unit.
-  void setHelicitiesAndFlavors( const short* tHel, const short* tFlavors );
-  void setIndependentParams( const fptype* tIPD );
-  void setIndependentCouplings( const cxtype* tIPC );
-  void setFlavorCouplings( const int* tIPF_partner1, const int* tIPF_partner2, const cxtype* tIPF_value );
-  void setBsmIndepParam( const double* values, int n );
-  // Window (in widths) of the $-excluded propagators, the run card bw_cutoff
-  void setBwCutoff( const double bwcutoff );
 }
 
 #endif // SIGMAKIN_H
