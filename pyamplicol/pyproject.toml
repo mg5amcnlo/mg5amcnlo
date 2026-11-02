@@ -54,7 +54,7 @@ dependencies = [
   "prettytable==3.18.0",
   "progressbar2==4.6.0",
   "six==1.17.0",
-  "symbolica==3.0.3",
+  "symbolica==3.0.2",
   "tomli-w==1.2.0",
   "ufo-model-loader==1.0.0",
 ]

@@ -12,6 +12,11 @@ flavor_scheme = 5
 coupling_order_policy = "minimal"
 reference_color_order = []
 selected_color_sector_ids = []
+flavor_blind = false
+flavor_blind_strict = false
+consider_charge_conjugation = true
+only_unit_multiplier = false
+analyze_process_groups = "none"
 
 [process.multiparticles]
 
@@ -27,9 +32,10 @@ fft_basis = "adjoint"
 
 [generation]
 output = "."
-mode = "error"
+mode = "replace"
 workers = 1
 emit_api_bundle = true
+pack_payloads = false
 
 [generation.validation]
 enabled = true
@@ -40,7 +46,7 @@ absolute_tolerance = 1e-300
 post_build_validation = false
 
 [generation.relation_discovery]
-mode = "certified-reuse"
+mode = "off"
 precision_digits = 96
 probe_count = 4
 verification_probe_count = 4

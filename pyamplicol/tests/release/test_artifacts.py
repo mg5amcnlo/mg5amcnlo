@@ -221,7 +221,7 @@ def _prepared_model_files(
                 "bundle_sha256": hashlib.sha256(bundle).hexdigest(),
                 "dependencies": {
                     "symbolica_serialization_abi": "symbolica-bincode2-v1",
-                    "symjit_application_abi": "symjit-application-storage-v3",
+                    "symjit_application_abi": "symjit-application-storage-v4",
                     "symjit_plane_application_abi": (
                         "pyamplicol-symjit-plane-application-v2"
                     ),
@@ -232,7 +232,7 @@ def _prepared_model_files(
                     "portable": True,
                     "word_bits": 64,
                     "endianness": "little",
-                    "target_triple": "symjit-storage-v3-portable",
+                    "target_triple": "symjit-storage-v4-portable",
                     "cpu_features": [],
                 },
             }
@@ -281,12 +281,12 @@ def _selftest_arena_stage(
     evaluator = {
         "kind": "symjit-application-evaluator",
         "runtime_capability": "symjit.application.complex-f64.v1",
-        "application_abi": "symjit-application-storage-v3",
+        "application_abi": "symjit-application-storage-v4",
         "application_path": application_path,
         "plane_application": {
             "application_path": plane_application_path,
             "application_abi": "pyamplicol-symjit-plane-application-v2",
-            "storage_abi": "symjit-application-storage-v3",
+            "storage_abi": "symjit-application-storage-v4",
             "element_layout": "split-complex-plane-major",
             "descriptor_order": "inputs-re-im-then-outputs-re-im",
             "input_complex_count": 1,
@@ -1059,7 +1059,7 @@ def test_wheel_rejects_wrong_prepared_model_target_class(tmp_path: Path) -> None
         prefix,
         "x86_64",
         target_values={
-            "target_triple": "symjit-storage-v3-x86_64",
+            "target_triple": "symjit-storage-v4-x86_64",
             "portable": False,
         },
     )
@@ -2052,7 +2052,7 @@ def test_sdist_validates_prepared_model_target_and_bundle_identity(
     metadata_name, metadata = _modified_prepared_metadata(
         prefix,
         "aarch64",
-        target_values={"target_triple": "symjit-storage-v3-x86_64"},
+        target_values={"target_triple": "symjit-storage-v4-x86_64"},
     )
     wrong_target = _sdist(tmp_path, extra_files={metadata_name: metadata})
     with pytest.raises(ArtifactError, match="target class is invalid"):

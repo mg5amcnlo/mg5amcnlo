@@ -3,7 +3,7 @@
 pyAmpliCol defaults to published runtime dependencies and release-mode native
 builds. Historical pinned-source candidate machinery is retained, but its
 upstream pins need a coherent update before use with the current tensor APIs.
-Release mode uses Symbolica **3.0.3** (Python) / **3.0.2** (Rust) and SymJIT **2.27.3**. Historical candidate
+Release mode uses Symbolica **3.0.2** and SymJIT **2.27.3**. Historical candidate
 mode retains SymJIT **2.26.0**; version numbers alone do not establish Python API
 compatibility. Candidate builds do not
 relabel dependency versions or modify upstream source files.

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: 0BSD
 """Cross-architecture prepared-JIT contracts for the CI transfer harness.
 
-SymJIT application storage v3 at optimization level 2 can be reloaded across
+SymJIT application storage v4 at optimization level 2 can be reloaded across
 the supported x86-64 and AArch64 hosts. These checks intentionally run before
 the consumer asks SymJIT to load an application.
 """
@@ -63,9 +63,9 @@ _COFF_MACHINE_IDS = frozenset(
         0xAA64,  # ARM64
     }
 )
-SYMJIT_STORAGE_V3_APPLICATION_ABI = "symjit-application-storage-v3"
+SYMJIT_STORAGE_V4_APPLICATION_ABI = "symjit-application-storage-v4"
 SYMJIT_PLANE_APPLICATION_ABI = "pyamplicol-symjit-plane-application-v2"
-SYMJIT_STORAGE_V3_ARCHITECTURES = ("aarch64", "x86_64")
+SYMJIT_STORAGE_V4_ARCHITECTURES = ("aarch64", "x86_64")
 _MACHINE_ARCHITECTURE_ALIASES = {
     "aarch64": "aarch64",
     "amd64": "x86_64",
@@ -97,33 +97,33 @@ class RuntimeContracts:
 
 
 def architecture_class(machine: str) -> str:
-    """Normalize a host machine name to a supported storage-v3 class."""
+    """Normalize a host machine name to a supported storage-v4 class."""
 
     normalized = machine.strip().lower()
     architecture = _MACHINE_ARCHITECTURE_ALIASES.get(normalized)
     if architecture is None:
-        supported = ", ".join(SYMJIT_STORAGE_V3_ARCHITECTURES)
+        supported = ", ".join(SYMJIT_STORAGE_V4_ARCHITECTURES)
         raise PortabilityError(
-            f"unsupported SymJIT storage-v3 machine {machine!r}; "
+            f"unsupported SymJIT storage-v4 machine {machine!r}; "
             f"supported architecture classes are {supported}"
         )
     return architecture
 
 
-def symjit_storage_v3_target(architecture: str) -> dict[str, object]:
+def symjit_storage_v4_target(architecture: str) -> dict[str, object]:
     """Return the canonical portable target after checking the host class."""
 
-    if architecture not in SYMJIT_STORAGE_V3_ARCHITECTURES:
-        supported = ", ".join(SYMJIT_STORAGE_V3_ARCHITECTURES)
+    if architecture not in SYMJIT_STORAGE_V4_ARCHITECTURES:
+        supported = ", ".join(SYMJIT_STORAGE_V4_ARCHITECTURES)
         raise PortabilityError(
-            f"unsupported SymJIT storage-v3 architecture class {architecture!r}; "
+            f"unsupported SymJIT storage-v4 architecture class {architecture!r}; "
             f"expected one of {supported}"
         )
     return {
         "cpu_features": [],
         "endianness": "little",
         "portable": True,
-        "target_triple": "symjit-storage-v3-portable",
+        "target_triple": "symjit-storage-v4-portable",
         "word_bits": 64,
     }
 
@@ -131,15 +131,15 @@ def symjit_storage_v3_target(architecture: str) -> dict[str, object]:
 def _target_architecture_class(target: dict[str, object]) -> str:
     """Return the storage class encoded by a prepared target.
 
-    Storage-v3 O2 applications contain portable MIR rather than host machine
+    Storage-v4 O2 applications contain portable MIR rather than host machine
     code.  The producing and consuming hosts must each be supported, but their
     architecture classes need not match.
     """
 
-    if target == symjit_storage_v3_target("x86_64"):
+    if target == symjit_storage_v4_target("x86_64"):
         return "portable"
     raise PortabilityError(
-        "prepared JIT target must be portable 64-bit little-endian SymJIT storage-v3"
+        "prepared JIT target must be portable 64-bit little-endian SymJIT storage-v4"
     )
 
 
@@ -273,7 +273,7 @@ def audit_architecture_jit_bundle(
     expected_architecture_class: str | None = None,
     expected_model_source: str = "built-in-sm",
 ) -> dict[str, object]:
-    """Validate archive integrity and the portable storage-v3 contract."""
+    """Validate archive integrity and the portable storage-v4 contract."""
 
     bundle_path = path.expanduser().resolve(strict=True)
     bundle_sha256 = sha256_file(bundle_path)
@@ -340,17 +340,17 @@ def audit_architecture_jit_bundle(
     if expected_architecture_class is not None:
         # Validate that the consumer belongs to a supported host class.  There
         # is deliberately no equality check against ``bundle_architecture``:
-        # portable storage-v3 O2 applications are recompiled when loaded.
+        # portable storage-v4 O2 applications are recompiled when loaded.
         architecture_class(expected_architecture_class)
-    expected_target = symjit_storage_v3_target("x86_64")
+    expected_target = symjit_storage_v4_target("x86_64")
 
     dependency_abis = object_value(
         kernel_pack.get("dependency_abis"), "kernel_pack.dependency_abis"
     )
-    if contracts.symjit_application_abi != SYMJIT_STORAGE_V3_APPLICATION_ABI:
+    if contracts.symjit_application_abi != SYMJIT_STORAGE_V4_APPLICATION_ABI:
         raise PortabilityError(
             "this architecture-class transfer harness applies only to "
-            "SymJIT application storage v3"
+            "SymJIT application storage v4"
         )
     if (
         dependency_abis.get("symbolica_serialization")
@@ -632,8 +632,8 @@ def audit_architecture_jit_bundle(
 __all__ = [
     "FORBIDDEN_SUFFIXES",
     "SYMJIT_PLANE_APPLICATION_ABI",
-    "SYMJIT_STORAGE_V3_APPLICATION_ABI",
-    "SYMJIT_STORAGE_V3_ARCHITECTURES",
+    "SYMJIT_STORAGE_V4_APPLICATION_ABI",
+    "SYMJIT_STORAGE_V4_ARCHITECTURES",
     "PortabilityError",
     "RuntimeContracts",
     "architecture_class",
@@ -646,5 +646,5 @@ __all__ = [
     "object_value",
     "sha256_file",
     "string_value",
-    "symjit_storage_v3_target",
+    "symjit_storage_v4_target",
 ]

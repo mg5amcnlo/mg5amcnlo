@@ -199,7 +199,7 @@ pub const COMPILED_COLOR_CONTRACTION_WALSH_C2K_CAPABILITY: &str =
     "rusticol.compiled.color-contraction-walsh-c2k.v1";
 pub const COMPILED_COLOR_TOPOLOGY_LANES_CAPABILITY: &str =
     "rusticol.compiled.color-topology-lanes.v1";
-pub const SYMJIT_APPLICATION_STORAGE_ABI: &str = "symjit-application-storage-v3";
+pub const SYMJIT_APPLICATION_STORAGE_ABI: &str = "symjit-application-storage-v4";
 pub const SYMJIT_PLANE_APPLICATION_ABI: &str = "pyamplicol-symjit-plane-application-v2";
 
 #[doc(hidden)]

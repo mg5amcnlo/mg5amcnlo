@@ -5736,7 +5736,7 @@ mod direct_binding_tests {
             "role": "source",
             "semantic_template_ids": ["source:test"],
             "simd_axis": "points-contiguous",
-            "target_triple": "symjit-storage-v3-portable",
+            "target_triple": "symjit-storage-v4-portable",
             "template_id": "direct:source:test"
         });
         let template_digest: [u8; 32] =
@@ -5759,7 +5759,7 @@ mod direct_binding_tests {
             "prepared_kernel_pack_digest": prepared_pack.to_string(),
             "prepared_kernel_payload_digest": digest(8),
             "recurrence_template_catalog_digest": semantic_catalog.to_string(),
-            "target_triple": "symjit-storage-v3-portable",
+            "target_triple": "symjit-storage-v4-portable",
             "templates": [template]
         });
         let catalog_digest: [u8; 32] =

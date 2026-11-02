@@ -19,9 +19,9 @@ pub(super) const EAGER_EXECUTION_KIND: &str = "pyamplicol-runtime-eager-executio
 const PREPARED_KERNEL_VARIANT_ABI: &str = "pyamplicol-prepared-kernel-variant-v2";
 const PREPARED_INDEPENDENT_BLOCK_VARIANT_ID: &str = "independent-block-4";
 const PREPARED_INDEPENDENT_BLOCK_PROOF: &str = "prepared-kernel-independent-current-block-v1";
-const SYMJIT_APPLICATION_STORAGE_V3_ABI: &str = "symjit-application-storage-v3";
+const SYMJIT_APPLICATION_STORAGE_V4_ABI: &str = "symjit-application-storage-v4";
 const PREPARED_JIT_PORTABLE_OPTIMIZATION_LEVEL: u64 = 2;
-const PREPARED_JIT_PORTABLE_TARGET: &str = "symjit-storage-v3-portable";
+const PREPARED_JIT_PORTABLE_TARGET: &str = "symjit-storage-v4-portable";
 const RECURRENCE_DIRECT_TEMPLATE_ABI_V1: &str = "pyamplicol-recurrence-direct-template-v1";
 const RECURRENCE_DIRECT_BACKEND_ABI_V1: &str = "rusticol.recurrence-direct-backend.v1";
 const RECURRENCE_DIRECT_CANONICALIZATION_ABI_V1: &str = "pyamplicol-canonical-json-v1";
@@ -698,7 +698,7 @@ impl PreparedKernelPackManifest {
                 .dependency_abis
                 .get("symjit_application")
                 .and_then(Value::as_str)
-                != Some(SYMJIT_APPLICATION_STORAGE_V3_ABI)
+                != Some(SYMJIT_APPLICATION_STORAGE_V4_ABI)
             {
                 return Err(RusticolError::compatibility(
                     "prepared JIT kernels declare an unsupported SymJIT application ABI",
@@ -1348,7 +1348,7 @@ impl RecurrenceDirectPayloadBindingManifest {
                             || plane.get("application_abi").and_then(Value::as_str)
                                 != self.source_application_abi.as_deref()
                             || plane.get("storage_abi").and_then(Value::as_str)
-                                != Some(SYMJIT_APPLICATION_STORAGE_V3_ABI)
+                                != Some(SYMJIT_APPLICATION_STORAGE_V4_ABI)
                             || plane.get("optimization_level").and_then(Value::as_u64)
                                 != Some(PREPARED_JIT_PORTABLE_OPTIMIZATION_LEVEL)
                             || !self.state_plane_indices.is_empty()
@@ -1842,7 +1842,7 @@ impl PreparedKernelManifest {
                         || plane.get("application_abi").and_then(Value::as_str)
                             != Some(crate::eager_layout::EAGER_DIRECT_SOURCE_APPLICATION_ABI)
                         || plane.get("storage_abi").and_then(Value::as_str)
-                            != Some(SYMJIT_APPLICATION_STORAGE_V3_ABI)
+                            != Some(SYMJIT_APPLICATION_STORAGE_V4_ABI)
                         || plane
                             .get("application_path")
                             .and_then(Value::as_str)

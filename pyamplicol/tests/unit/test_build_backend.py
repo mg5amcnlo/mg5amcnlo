@@ -1381,7 +1381,7 @@ def test_retained_pep517_hooks_use_gate_overlay_and_clean_environment(
             os.environ["PATH"].split(os.pathsep)
         )
         assert "CARGO_ENCODED_RUSTFLAGS" in os.environ
-        assert os.environ["RUSTUP_TOOLCHAIN"] == "1.97.1"
+        assert os.environ["RUSTUP_TOOLCHAIN"] == "1.99.1"
         if sys.platform == "darwin":
             assert os.environ["CC"] == "/usr/bin/clang"
             assert os.environ["CXX"] == "/usr/bin/clang++"
@@ -1417,7 +1417,7 @@ def test_retained_pep517_hooks_use_gate_overlay_and_clean_environment(
                 normalize_release_cargo_lock=True,
             )
         )
-        assert os.environ["RUSTUP_TOOLCHAIN"] == "1.97.1"
+        assert os.environ["RUSTUP_TOOLCHAIN"] == "1.99.1"
         if sys.platform == "darwin":
             assert os.environ["CC"] == "/usr/bin/clang"
             assert os.environ["CXX"] == "/usr/bin/clang++"
@@ -1724,7 +1724,7 @@ def test_rust_remap_flags_uses_repository_toolchain_in_clean_environment(
     monkeypatch.setenv("RUSTUP_TOOLCHAIN", "nightly")
     monkeypatch.setenv("RUSTFLAGS", "-Clink-arg=/attacker/library")
     monkeypatch.setenv("RUSTC_WRAPPER", "/attacker/wrapper")
-    sysroot = tmp_path / "rustup" / "toolchains" / "1.97.1"
+    sysroot = tmp_path / "rustup" / "toolchains" / "1.99.1"
     observed: dict[str, object] = {}
 
     def fake_run(command, *, check, capture_output, text, env):
@@ -1752,7 +1752,7 @@ def test_rust_remap_flags_uses_repository_toolchain_in_clean_environment(
     environment = observed["env"]
     assert isinstance(environment, dict)
     assert observed["command"] == ["rustc", "--print", "sysroot"]
-    assert environment["RUSTUP_TOOLCHAIN"] == "1.97.1"
+    assert environment["RUSTUP_TOOLCHAIN"] == "1.99.1"
     assert "RUSTFLAGS" not in environment
     assert "RUSTC_WRAPPER" not in environment
     assert f"{sysroot.resolve()}=/rust/sysroot" in flags

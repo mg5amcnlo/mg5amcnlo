@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 from tools.ci import eager_portability as portability
-from tools.ci.eager_portability_contract import symjit_storage_v3_target
+from tools.ci.eager_portability_contract import symjit_storage_v4_target
 
 ROOT = Path(__file__).resolve().parents[2]
 # The workflow lives in the MadGraph7 repository that contains pyamplicol/.
@@ -33,7 +33,7 @@ def contracts() -> portability.RuntimeContracts:
         eager_kernel_abi="pyamplicol-eager-kernel-v1",
         compiled_model_schema_version=9,
         symbolica_serialization_abi="symbolica-bincode2-v1",
-        symjit_application_abi="symjit-application-storage-v3",
+        symjit_application_abi="symjit-application-storage-v4",
         symjit_plane_application_abi="pyamplicol-symjit-plane-application-v2",
         symjit_runtime_capability="symjit.application.complex-f64.v1",
         eager_runtime_capability="rusticol.eager-runtime-layout.complex-f64.v1",
@@ -58,8 +58,8 @@ def _write_bundle(
     state_path = "kernels/000000/evaluator-state-0.evaluator.bin"
     model_path = "model/model.pyAmplicol-model.json"
     payloads = {
-        application_path: b"portable-symjit-storage-v3-fixture\x00\x01",
-        plane_application_path: b"portable-symjit-plane-storage-v3-fixture\x00\x03",
+        application_path: b"portable-symjit-storage-v4-fixture\x00\x01",
+        plane_application_path: b"portable-symjit-plane-storage-v4-fixture\x00\x03",
         state_path: b"architecture-neutral-symbolica-state-fixture\x00\x02",
         model_path: json.dumps(
             {
@@ -156,7 +156,7 @@ def _write_bundle(
                 "model_name": model,
                 "model_source": {"kind": model},
             },
-            "target": symjit_storage_v3_target(architecture),
+            "target": symjit_storage_v4_target(architecture),
         },
         "kind": contracts.bundle_kind,
         "schema_version": contracts.bundle_schema_version,
@@ -357,7 +357,7 @@ def _write_packed_consumer_artifact(
 
 
 @pytest.mark.parametrize("architecture", ("x86_64", "aarch64"))
-def test_architecture_jit_bundle_audit_accepts_portable_storage_v3_pack(
+def test_architecture_jit_bundle_audit_accepts_portable_storage_v4_pack(
     tmp_path: Path,
     contracts: portability.RuntimeContracts,
     architecture: str,
@@ -381,7 +381,7 @@ def test_architecture_jit_bundle_audit_accepts_portable_storage_v3_pack(
     assert result["symjit_plane_application_count"] == 1
     assert result["exact_state_count"] == 1
     assert result["architecture_class"] == "portable"
-    assert result["target"] == symjit_storage_v3_target(architecture)
+    assert result["target"] == symjit_storage_v4_target(architecture)
 
 
 def test_architecture_jit_bundle_audit_accepts_explicit_heft_model(
@@ -627,14 +627,14 @@ def test_architecture_jit_bundle_audit_accepts_cross_architecture_load(
     )
 
     assert result["architecture_class"] == "portable"
-    assert result["target"] == symjit_storage_v3_target("aarch64")
+    assert result["target"] == symjit_storage_v4_target("aarch64")
 
 
 @pytest.mark.parametrize(
     ("machine", "expected"),
     (("AMD64", "x86_64"), ("x86_64", "x86_64"), ("arm64", "aarch64")),
 )
-def test_machine_names_normalize_to_storage_v3_architecture_classes(
+def test_machine_names_normalize_to_storage_v4_architecture_classes(
     machine: str,
     expected: str,
 ) -> None:

@@ -9,7 +9,7 @@ Heavy invocations of this script must be wrapped by::
 
 The producer writes portable JIT O2 bundles for the built-in SM and scalar-HEFT
 models, plus one SM numerical transfer fixture.  Consumers use that exact SM
-archive; they never prepare a model pack.  SymJIT application storage v3 at O2
+archive; they never prepare a model pack.  SymJIT application storage v4 at O2
 stores portable MIR and may cross the supported x86-64 and AArch64 host
 classes; each consumer recompiles that state for its own CPU when loading it.
 """

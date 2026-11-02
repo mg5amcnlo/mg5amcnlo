@@ -145,7 +145,7 @@ certification performed during generation.
 | --- | --- | --- |
 | Compiled all-JIT O1 or O2 process artifact | `portable-64le`, empty CPU-feature set | **Yes**, on supported 64-bit little-endian hosts. |
 | Eager/recurrence process artifact using a prepared JIT O2 pack | `portable-64le`, empty CPU-feature set | **Yes**, on supported 64-bit little-endian hosts. |
-| Prepared JIT O2 model bundle | portable SymJIT storage-v3 | **Yes**, between supported x86-64 and arm64 hosts. |
+| Prepared JIT O2 model bundle | portable SymJIT storage-v4 | **Yes**, between supported x86-64 and arm64 hosts. |
 | Compiled JIT O0 or O3 process artifact | concrete target, empty CPU-feature set | No; regenerate on the destination. |
 | C++ or ASM process artifact | concrete target; CPU features when native specialization is enabled | No; requires exact compatible target/features. |
 | C++ or ASM prepared bundle | target-native | No. |

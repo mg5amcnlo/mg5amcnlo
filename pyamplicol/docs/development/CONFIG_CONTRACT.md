@@ -181,7 +181,7 @@ increases it. The target does not reject a process whose minimum workspace
 is larger: at least one point is always allowed, with sufficient allocation.
 
 `.pyAmplicol-model.json` IR is architecture-independent. SymJIT application
-storage-v3 prepared packs use optimization level 2 and are portable across the
+storage-v4 prepared packs use optimization level 2 and are portable across the
 supported `x86_64` and `aarch64` targets. Loading rebuilds executable code for
 the receiving CPU. Prepared-pack compilation forces O2 and records any
 requested-to-effective adjustment. C++ and ASM prepared packs remain

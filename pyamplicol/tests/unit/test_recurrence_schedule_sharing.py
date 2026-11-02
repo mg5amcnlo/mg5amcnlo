@@ -108,7 +108,7 @@ def _executor_pack() -> RecurrenceProcessExecutorPack:
         direct_template_catalog_digest=_digest("direct templates"),
         runtime_layout_digest=_digest("runtime layout"),
         backend="jit",
-        target_triple="symjit-storage-v3-portable",
+        target_triple="symjit-storage-v4-portable",
         portable=True,
         cpu_features=(),
         catalog_executor_count=4,
@@ -859,7 +859,7 @@ def test_binding_payload_is_compact_and_process_owned() -> None:
     assert version == 4
     assert fixed_size == 344
     assert word_count == 2
-    assert target_len == len(b"symjit-storage-v3-portable")
+    assert target_len == len(b"symjit-storage-v4-portable")
     assert feature_count == 0
     assert descriptor_count == 1
     assert catalog_count == 4

@@ -1088,7 +1088,7 @@ def test_published_dependencies_resolve_then_replace_same_version_candidates(
         "--force-reinstall",
         "--no-deps",
         "--only-binary=:all:",
-        "symbolica==3.0.0",
+        "symbolica==3.0.2",
         *(selected or ["ufo-model-loader==1.0.0"]),
     ]
 

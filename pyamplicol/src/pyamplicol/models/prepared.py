@@ -34,7 +34,7 @@ PREPARED_KERNEL_VARIANT_ABI = "pyamplicol-prepared-kernel-variant-v2"
 PREPARED_KERNEL_PACK_IDENTITY_ABI = "pyamplicol-prepared-kernel-pack-identity-v2"
 PREPARED_INDEPENDENT_BLOCK_SIZE = 4
 PREPARED_JIT_PORTABLE_OPTIMIZATION_LEVEL = 2
-PREPARED_JIT_PORTABLE_TARGET = "symjit-storage-v3-portable"
+PREPARED_JIT_PORTABLE_TARGET = "symjit-storage-v4-portable"
 PREPARED_SYMJIT_PLANE_APPLICATION_ABI = "pyamplicol-symjit-plane-application-v2"
 
 PREPARED_MODEL_MANIFEST_PATH = "manifest.json"
@@ -1236,7 +1236,7 @@ class PreparedKernelPack:
             ):
                 raise PreparedModelBundleError(
                     "prepared JIT packs must use the portable 64-bit "
-                    "little-endian SymJIT storage-v3 target"
+                    "little-endian SymJIT storage-v4 target"
                 )
         kernels = tuple(sorted(self.kernels, key=lambda kernel: kernel.kernel_id))
         if not kernels:

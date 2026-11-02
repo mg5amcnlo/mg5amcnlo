@@ -22,7 +22,7 @@ use symjit::{
 };
 
 const SYMJIT_APPLICATION_MAGIC: usize = 0x4056_8795_410d_08e9;
-const SYMJIT_APPLICATION_STORAGE_VERSION: usize = 3;
+const SYMJIT_APPLICATION_STORAGE_VERSION: usize = 4;
 const MAX_OPTIMIZATION_LEVEL: u8 = 3;
 
 type PlaneKernelFn = CompiledPlaneFunc<f64>;
@@ -219,14 +219,14 @@ impl std::fmt::Debug for SymjitPlaneKernel {
 }
 
 impl SymjitPlaneKernel {
-    /// Loads, authenticates, recompiles, and seals a storage-v3 P-kernel.
+    /// Loads, authenticates, recompiles, and seals a storage-v4 P-kernel.
     pub(crate) fn load_bytes(
         bytes: &[u8],
         display_path: impl Into<PathBuf>,
         layout: SymjitPlaneLayout,
     ) -> RusticolResult<Self> {
         let display_path = display_path.into();
-        authenticate_storage_v3(bytes, &display_path)?;
+        authenticate_storage_v4(bytes, &display_path)?;
 
         let mut loader_config = explicit_loader_config()?;
         loader_config.set_defuns(Defuns::new());
@@ -237,7 +237,7 @@ impl SymjitPlaneKernel {
         )?
         .map_err(|error| {
             RusticolError::compatibility(format!(
-                "could not load SymJIT storage-v3 plane application {}: {error}",
+                "could not load SymJIT storage-v4 plane application {}: {error}",
                 display_path.display()
             ))
         })?;
@@ -734,7 +734,7 @@ fn invoke_range(
 }
 
 /// Compiles `repr(Evaluator.get_instructions())` into a complex, SIMD-enabled,
-/// direct-arena SymJIT storage-v3 application.
+/// direct-arena SymJIT storage-v4 application.
 ///
 /// This is deliberately a cold-path function. It constructs every SymJIT
 /// option explicitly so a process-local `symjit.toml` cannot alter generated
@@ -782,7 +782,7 @@ pub(crate) fn compile_symbolica_program_to_plane_application_bytes(
             "could not serialize generated SymJIT plane application: {error}"
         ))
     })?;
-    authenticate_storage_v3(&bytes, display_path)?;
+    authenticate_storage_v4(&bytes, display_path)?;
     Ok(bytes)
 }
 
@@ -850,19 +850,19 @@ fn explicit_loader_config() -> RusticolResult<Config> {
     Ok(config)
 }
 
-fn authenticate_storage_v3(bytes: &[u8], display_path: &Path) -> RusticolResult<()> {
+fn authenticate_storage_v4(bytes: &[u8], display_path: &Path) -> RusticolResult<()> {
     let word = std::mem::size_of::<usize>();
     let header_len = word
         .checked_mul(2)
         .ok_or_else(|| RusticolError::internal("SymJIT storage header length overflows usize"))?;
     if word != 8 {
         return Err(RusticolError::compatibility(
-            "SymJIT storage-v3 plane applications require a 64-bit target",
+            "SymJIT storage-v4 plane applications require a 64-bit target",
         ));
     }
     if bytes.len() < header_len {
         return Err(RusticolError::integrity(format!(
-            "SymJIT plane application {} is truncated before its storage-v3 header",
+            "SymJIT plane application {} is truncated before its storage-v4 header",
             display_path.display()
         )));
     }

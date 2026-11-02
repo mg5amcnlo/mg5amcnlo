@@ -347,7 +347,7 @@ def _executor_pack(runtime_layout_digest: str) -> RecurrenceProcessExecutorPack:
         direct_template_catalog_digest=_digest("e"),
         runtime_layout_digest=runtime_layout_digest,
         backend="jit",
-        target_triple="symjit-storage-v3-portable",
+        target_triple="symjit-storage-v4-portable",
         portable=True,
         cpu_features=(),
         catalog_executor_count=1,

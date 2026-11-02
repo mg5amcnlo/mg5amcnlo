@@ -210,7 +210,7 @@ def _validate_bundle(
         PREPARED_MODEL_BUNDLE_SCHEMA_VERSION,
         load_prepared_model_bundle,
     )
-    from pyamplicol.models.prepared_target import symjit_storage_v3_target
+    from pyamplicol.models.prepared_target import symjit_storage_v4_target
 
     try:
         bundle = load_prepared_model_bundle(path)
@@ -303,7 +303,7 @@ def _validate_bundle(
             "packaged prepared-model kernel count is invalid"
         )
     target = _plain_json(pack.target)
-    expected_target = symjit_storage_v3_target(machine=architecture)
+    expected_target = symjit_storage_v4_target(machine=architecture)
     if target != metadata.get("target") or target != expected_target:
         raise PackagedPreparedModelError(
             "packaged prepared model target does not match its architecture asset"

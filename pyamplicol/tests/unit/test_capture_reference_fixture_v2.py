@@ -584,7 +584,7 @@ def test_dependency_snapshot_uses_compact_source_descriptors(
         "version": contributor["symjit"]["candidate_version"],
         "revision": symjit_descriptor["revision"],
         "content_sha256": provenance.canonical_sha256(symjit_descriptor),
-        "serialization_abi": "symjit-application-storage-v3",
+        "serialization_abi": "symjit-application-storage-v4",
         "license": "MIT",
     }
     assert "patch_sha256" not in payloads["dependency:symjit"]

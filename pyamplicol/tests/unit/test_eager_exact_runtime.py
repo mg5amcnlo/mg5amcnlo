@@ -507,7 +507,7 @@ def _build_artifact(
             "portable": True,
             "word_bits": 64,
             "endianness": "little",
-            "target_triple": "symjit-storage-v3-portable",
+            "target_triple": "symjit-storage-v4-portable",
             "cpu_features": [],
         },
         resolver_manifest={

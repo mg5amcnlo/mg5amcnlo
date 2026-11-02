@@ -118,7 +118,7 @@ def _template(
         payload_binding=_payload_binding(kind=payload_kind),
         backend=backend,  # type: ignore[arg-type]
         target_triple=(
-            "symjit-storage-v3-portable" if backend == "jit" else "x86_64-linux"
+            "symjit-storage-v4-portable" if backend == "jit" else "x86_64-linux"
         ),
         portable=backend == "jit",
         optimization_level=2 if backend == "jit" else 3,
@@ -137,7 +137,7 @@ def _catalog(
         templates=templates,
         backend=backend,  # type: ignore[arg-type]
         target_triple=(
-            "symjit-storage-v3-portable" if backend == "jit" else "x86_64-linux"
+            "symjit-storage-v4-portable" if backend == "jit" else "x86_64-linux"
         ),
         portable=backend == "jit",
         optimization_level=2 if backend == "jit" else 3,
@@ -475,7 +475,7 @@ def test_direct_catalog_is_model_generic_and_covers_identity_finalizers(
     direct = build_recurrence_direct_template_catalog(
         semantic,
         backend="jit",
-        target_triple="symjit-storage-v3-portable",
+        target_triple="symjit-storage-v4-portable",
         portable=True,
         optimization_level=2,
         prepared_kernel_pack_digest=_DIGEST_C,

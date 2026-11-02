@@ -4,7 +4,7 @@ schema_version = 1
 
 [abis]
 symbolica_serialization = "symbolica-bincode2-v1"
-symjit_application = "symjit-application-storage-v3"
+symjit_application = "symjit-application-storage-v4"
 symjit_plane_application = "pyamplicol-symjit-plane-application-v2"
 
 [symbolica]
