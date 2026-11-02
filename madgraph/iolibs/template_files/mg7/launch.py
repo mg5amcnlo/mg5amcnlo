@@ -1630,13 +1630,44 @@ class MadgraphProcess:
             nb_core = os.cpu_count() or 1
 
         log_path = os.path.join(self.run_path, "compile_subprocesses.log")
+        # --hel_recycling is a CPU build: on a cuda/hip device the same output
+        # compiles the plain matrix element (see backend/gpu/SigmaKin.cc)
+        recycled = [
+            os.path.basename(meta["path"]) for meta in self.subprocess_data
+            if os.path.isfile(os.path.join(meta["path"], "HelRecycling.inc"))
+        ]
+        gpu_backends = [b for b in resolved if b.startswith(("cuda", "hip"))]
+        if recycled and gpu_backends:
+            logger.info(
+                "--hel_recycling is CPU only: the %s build of %s uses the plain "
+                "matrix element", "/".join(gpu_backends), ", ".join(recycled)
+            )
+        # On a CPU the recycled build itself falls back to the plain matrix
+        # element when its tables are too big for the SIMD width (see
+        # hrUseRecycling in backend/{cpu,simd}/SigmaKin.cc, which prints so when
+        # it runs). The limit and the row-by-row color sum are the hidden
+        # run-card entries hel_recycling_max_mb / hel_recycling_row_color_sum
+        # (else HRMAXMB / HRNOBLAS from the environment), passed to make.
+        hr_args = self.hel_recycling_make_args()
+        if recycled and len(gpu_backends) < len(resolved):
+            limit = hr_args[0].split("=", 1)[1]
+            logger.info(
+                "--hel_recycling: %s use the recycled matrix element on the cpu "
+                "unless its tables exceed %s MB per SIMD page (run.hel_recycling_max_mb, "
+                "0 for no limit)", ", ".join(recycled),
+                {"": "10 (default)", "0": "<no limit>"}.get(limit, limit)
+            )
+        hr_flags = ":".join(arg.split("=", 1)[1] for arg in hr_args)
         for backend in resolved:
-            # by library: the flavours of a split subprocess share one
+            # by library: the flavours of a split subprocess share one; a library
+            # built with other recycling settings is rebuilt too: its SigmaKin.o
+            # records them in build.<backend>/.hrflags (madmatrix.mk)
             missing = list({
                 meta["me_path"]: meta for meta in self.subprocess_data
                 if not os.path.isfile(
                     meta["me_path"].format(device=backend, fptype=fptype)
                 )
+                or self.hel_recycling_flags_changed(meta["path"], backend, hr_flags)
             }.values())
             if not missing:
                 continue
@@ -1647,7 +1678,7 @@ class MadgraphProcess:
             )
             start_time = time.time()
             make_args = [f"BACKEND={backend}", f"FPTYPE={fptype}", "USEBUILDDIR=1"]
-            make_args += self.extra_make_args
+            make_args += self.extra_make_args + hr_args
             if (len(missing) >= PCH_MIN_SUBPROCESSES
                     and not any(arg.startswith("PCH=") for arg in make_args)):
                 make_args.append("PCH=1")
@@ -1656,6 +1687,33 @@ class MadgraphProcess:
                 f"Compilation of SubProcesses done in {time.time() - start_time:.1f} s"
             )
         return resolved
+
+    def hel_recycling_make_args(self) -> list[str]:
+        """HRMAXMB=... and HRNOBLAS=... for make (madmatrix.mk), from the hidden
+        run-card entries, else from the environment; empty values are the
+        build's defaults."""
+        run = self.run_card["run"]
+        max_mb = run.get("hel_recycling_max_mb", -1)
+        max_mb = str(max_mb) if max_mb is not None and max_mb >= 0 \
+            else os.environ.get("HRMAXMB", "")
+        no_blas = "1" if run.get("hel_recycling_row_color_sum", False) \
+            else os.environ.get("HRNOBLAS", "")
+        return [f"HRMAXMB={max_mb}", f"HRNOBLAS={no_blas}"]
+
+    @staticmethod
+    def hel_recycling_flags_changed(proc_path: str, backend: str, hr_flags: str) -> bool:
+        """Whether a --hel_recycling subprocess was built for this backend with
+        other recycling settings than hr_flags (see .hrflags in madmatrix.mk)."""
+        if backend.startswith(("cuda", "hip")):
+            return False
+        if not os.path.isfile(os.path.join(proc_path, "HelRecycling.inc")):
+            return False
+        marker = os.path.join(proc_path, f"build.{backend}", ".hrflags")
+        try:
+            with open(marker) as fsock:
+                return fsock.read().strip() != hr_flags
+        except OSError:
+            return False
 
     @staticmethod
     def make_subprocesses(
@@ -4349,30 +4407,64 @@ def build_selector_cmd(mother=None):
                                     len(run_card["histograms"]))
                                 self.modified_card.add("run")
                             else:
-                                logger.warning(
+                                self.invalid_set(
                                     "no run_card_default.toml to restore the "
                                     "histograms from")
                             return
-                        logger.warning(
+                        self.invalid_set(
                             "'set histograms %s': only OFF (remove them all) "
                             "and default (put the generated ones back) are "
                             "understood; edit the [histograms] section of "
-                            "Cards/run_card.toml for anything else",
-                            rest or "(no value)")
+                            "Cards/run_card.toml for anything else"
+                            % (rest or "(no value)"))
                         return
                     if nlow in ("lhc", "lep", "ilc", "lcc") and rest:
-                        ecm = run_card.set_collider(nlow, rest, masses)
+                        try:
+                            ecm = run_card.set_collider(nlow, rest, masses)
+                        except _banner_mod.InvalidCmd as error:
+                            self.invalid_set("invalid 'set %s %s': %s" % (nlow, rest, error))
+                            return
                         logger.info("set %s collider: e_cm = %s GeV", nlow, ecm)
                         self.modified_card.add("run")
                         return
                     if nlow == "fixed_scale" and rest:
-                        val = run_card.set_fixed_scale(rest, masses)
+                        try:
+                            val = run_card.set_fixed_scale(rest, masses)
+                        except _banner_mod.InvalidCmd as error:
+                            self.invalid_set("invalid 'set %s %s': %s" % (nlow, rest, error))
+                            return
                         logger.info("set fixed scales to %s GeV", val)
                         self.modified_card.add("run")
                         return
 
+                    # the generic editor would say "Ambiguous key 'pdf'"
+                    # without naming the per-beam entries
+                    if nlow == "pdf" and rest:
+                        self.invalid_set("Ambiguous key 'pdf' — use beam.pdf (both beams), "
+                                         "beam.pdf1, beam.pdf2 or systematics.pdf")
+                        return
+                    # custom function parameters are not run_card keys, so the
+                    # generic editor rejects them
+                    if rest and nlow.startswith("custom_functions.") and nlow.count(".") == 2:
+                        # the parameter name is matched as written by the
+                        # custom function: keep its case
+                        try:
+                            run_card.set(name, run_card.evaluate(rest, masses), user=True)
+                        except _banner_mod.InvalidCmd as error:
+                            self.invalid_set("invalid 'set %s %s': %s" % (name, rest, error))
+                            return
+                        logger.info("modify parameter %s of the run_card.toml to %s", name, rest)
+                        self.modified_card.add("run")
+                        return
+
                     if rest and run_card.is_cut_name(name):
-                        cut, bound, val = run_card.set_cut(name, run_card.evaluate(rest, masses))
+                        try:
+                            cut, bound, val = run_card.set_cut(name, rest, masses)
+                        except _banner_mod.InvalidCmd as error:
+                            # an unknown bound, a value that is not a number,
+                            # or a unit on a cut that is not an energy
+                            self.invalid_set("invalid 'set %s %s': %s" % (name, rest, error))
+                            return
                         logger.info("modify cut %s.%s of the run_card.toml to %s", cut, bound, val)
                         self.modified_card.add("run")
                         return
@@ -4383,15 +4475,14 @@ def build_selector_cmd(mother=None):
                     # same "no cut" sentinels (minimum <= 0, maximum < 0).
                     if rest and nlow in run_card._LO_CUT_MAP:
                         if rest.lower().startswith("scan"):
-                            logger.warning("ignoring 'set %s %s': the [cuts] entries of "
-                                           "the mg7 run_card.toml cannot be scanned",
-                                           nlow, rest)
+                            self.invalid_set("invalid 'set %s %s': the [cuts] entries of "
+                                             "the mg7 run_card.toml cannot be scanned"
+                                             % (nlow, rest))
                             return
                         try:
-                            cut, bound, val = run_card.set_lo_cut(
-                                nlow, run_card.evaluate(rest, masses))
-                        except _banner_mod.InvalidCmd:
-                            logger.warning("ignoring 'set %s %s': not a number", nlow, rest)
+                            cut, bound, val = run_card.set_lo_cut(nlow, rest, masses)
+                        except _banner_mod.InvalidCmd as error:
+                            self.invalid_set("invalid 'set %s %s': %s" % (nlow, rest, error))
                             return
                         if val is None:
                             logger.info("set %s (mg7 cut %s.%s) of the run_card.toml: "
@@ -4412,7 +4503,7 @@ def build_selector_cmd(mother=None):
                         try:
                             done = run_card.set_lo_param(nlow, rest, masses)
                         except _banner_mod.InvalidCmd as error:
-                            logger.warning("ignoring 'set %s %s': %s", nlow, rest, error)
+                            self.invalid_set("invalid 'set %s %s': %s" % (nlow, rest, error))
                             return
                         if done is not None:
                             changes, warnings = done
@@ -4439,13 +4530,13 @@ def build_selector_cmd(mother=None):
                     # _LO_SCALAR_MAP, which also drives the LO -> MG7 run_card
                     # conversion and would silently pin those runs to seed 0.
                     if rest and nlow == 'iseed':
-                        value = run_card.evaluate(rest, masses)
                         try:
-                            value = int(value)
-                        except (TypeError, ValueError):
+                            value = int(run_card.evaluate(rest, masses, energy=False,
+                                                          name=nlow))
+                        except (TypeError, ValueError, _banner_mod.InvalidCmd):
                             value = None
                         if value is None:
-                            logger.warning("ignoring 'set iseed %s': not an integer", rest)
+                            self.invalid_set("invalid 'set iseed %s': not an integer" % rest)
                             return
                         seed = -1 if value == 0 else value
                         run_card.set('run.seed', seed, user=True)
@@ -4461,7 +4552,12 @@ def build_selector_cmd(mother=None):
                         try:
                             done = run_card.set_lo_beam_param(nlow, rest, masses, data_paths)
                         except _banner_mod.InvalidRunCard as error:
-                            logger.warning("ignoring 'set %s %s': %s", name, rest, error)
+                            text = "'set %s %s': %s" % (name, rest, error)
+                            # an unknown lhaid is reported, not rejected, in every mode
+                            if nlow == "lhaid" and isinstance(error, _banner_mod.UnknownPDFSet):
+                                logger.warning("ignoring " + text)
+                            else:
+                                self.invalid_set("invalid " + text)
                             return
                         logger.info("set %s %s: %s", nlow, rest, done)
                         self.modified_card.add("run")
@@ -4469,8 +4565,12 @@ def build_selector_cmd(mother=None):
 
                     # quantities the card stores per beam: set both beams
                     if rest and nlow in ("e_cm", "beam.e_cm", "beam.pdf"):
-                        value = rest if nlow == "beam.pdf" else run_card.evaluate(rest, masses)
-                        run_card.set(nlow, value, user=True)
+                        try:
+                            value = rest if nlow == "beam.pdf" else run_card.evaluate(rest, masses)
+                            run_card.set(nlow, value, user=True)
+                        except _banner_mod.InvalidCmd as error:
+                            self.invalid_set("invalid 'set %s %s': %s" % (nlow, rest, error))
+                            return
                         logger.info("set %s of the run_card.toml to %s (both beams)",
                                     nlow, run_card["beam." + nlow.split(".")[-1]])
                         self.modified_card.add("run")
@@ -4484,7 +4584,11 @@ def build_selector_cmd(mother=None):
                     if rest and nlow in run_card._LO_SCALAR_MAP \
                             and nlow not in [k.lower() for k in run_card.keys()]:
                         target = run_card._LO_SCALAR_MAP[nlow]
-                        run_card.set(target, rest, user=True)
+                        try:
+                            run_card.set(target, rest, user=True)
+                        except _banner_mod.InvalidCmd as error:
+                            self.invalid_set("invalid 'set %s %s': %s" % (nlow, rest, error))
+                            return
                         logger.info("set %s (mg7 %s) of the run_card.toml to %s",
                                     nlow, target, run_card[target])
                         self.modified_card.add("run")
@@ -4493,7 +4597,13 @@ def build_selector_cmd(mother=None):
                     if rest and nlow in [k.lower() for k in run_card.keys()]:
                         current = run_card[nlow]
                         if isinstance(current, (int, float)) and not isinstance(current, bool):
-                            resolved = run_card.evaluate(rest, masses)
+                            try:
+                                resolved = run_card.evaluate(
+                                    rest, masses, name=nlow,
+                                    energy=nlow in run_card.energy_parameter)
+                            except _banner_mod.InvalidCmd as error:
+                                self.invalid_set("invalid 'set %s %s': %s" % (name, rest, error))
+                                return
                             if not isinstance(resolved, str):
                                 prefix = "run_card " if start == 1 else ""
                                 line = "%s%s %s" % (prefix, name, resolved)
@@ -5729,6 +5839,29 @@ def _raise_open_file_limit() -> None:
         logger.debug("could not raise the open-file limit: %s", error)
 
 
+def _stdin_is_redirected() -> bool:
+    """True when stdin is a pipe, a socket or a file, i.e. neither a terminal
+    nor a character device such as /dev/null (batch jobs)."""
+    import stat
+    try:
+        return not stat.S_ISCHR(os.fstat(sys.stdin.fileno()).st_mode)
+    except (OSError, ValueError, AttributeError):
+        return False
+
+
+def _stdin_has_input() -> bool:
+    """True when something is waiting on stdin. A forced (-f) run never reads
+    stdin, so a closed or idle pipe (CI runners, agents) is harmless there,
+    but piped answers would be silently dropped."""
+    import select
+    try:
+        if not select.select([sys.stdin], [], [], 0)[0]:
+            return False
+        return bool(os.read(sys.stdin.fileno(), 1))
+    except (OSError, ValueError, AttributeError):
+        return False
+
+
 def main() -> None:
     """``bin/generate_events`` entry point.
 
@@ -5763,7 +5896,25 @@ def main() -> None:
         help="who reweights: the classic module, MadtRex, or auto (the default: "
              "MadtRex when it can run the card)",
     )
+    parser.add_argument(
+        "--allow-stdin", action="store_true", default=False,
+        help="read the answers to the questions piped or redirected into stdin, "
+             "as an interactive session: invalid \"set\" commands then only warn")
     args = parser.parse_args()
+
+    # The answers to the questions are read from stdin as in an interactive
+    # session, where a command that cannot be applied (e.g. an invalid "set")
+    # is only a warning: refuse that mode unless asked for. --decay-widths and
+    # a forced run ask nothing; the latter is still refused when answers are
+    # waiting on stdin, which it would silently drop.
+    if not args.allow_stdin and not args.decay_widths and _stdin_is_redirected() \
+            and (args.ask_edit_cards or _stdin_has_input()):
+        sys.exit("Reading the answers to the questions from stdin is not supported: "
+                 "write the line 'launch %s' and the answers to a file and run "
+                 "'%s PATH' instead, so that an invalid command stops the run.\n"
+                 "Use --allow-stdin to read stdin as an interactive session (invalid "
+                 "commands then only warn)."
+                 % (os.getcwd(), _MG_ROOT / 'bin' / 'madgraph'))
 
     if args.decay_widths:
         results = compute_decay_widths(

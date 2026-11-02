@@ -454,21 +454,27 @@ KERNELSPEC void boost_beam(
     // are the incoming ones.
     //
     // Written as E cosh y + p_z sinh y, a momentum moving against the boost
-    // comes out of the cancellation of terms of order e^{|y|} E and loses a
-    // factor e^{2|y|} of relative precision; light-like momenta ended up off
-    // shell by up to a few 1e-5 of their energy in the lab frame. For those
-    // momenta (lab energy below the partonic one) the boost is done in
-    // light-cone components, q_+ = E + p_z -> e^{+y} q_+,
+    // comes out of the cancellation of terms of order e^{|y|} E and loses up
+    // to a factor e^{2|y|} of relative precision; light-like momenta ended up
+    // off shell by up to a few 1e-5 of their energy in the lab frame. The boost
+    // is done in light-cone components instead, q_+ = E + p_z -> e^{+y} q_+,
     // q_- = E - p_z -> e^{-y} q_-, with the smaller of q_+, q_- taken from the
     // mass shell, q_+ q_- = m^2 + p_T^2, and the known mass of the particle (a
     // negative entry means unknown, and the mass is read off the momentum).
-    // All other momenta keep the linear boost, which is accurate for them.
+    // Both components then keep their relative precision whatever the
+    // direction of the momentum and of the boost, also out of the lab frame.
+    // Only momenta on their mass shell to rounding are projected; one that is
+    // not (a degenerate point, or partonic momenta that carry larger errors
+    // from elsewhere) keeps the linear boost.
     auto exp_rap = sqrt(x1 / x2);
     auto exp_rap_inv = sqrt(x2 / x1);
     auto e_plus = where(sign > 0., exp_rap, exp_rap_inv);
     auto e_minus = where(sign > 0., exp_rap_inv, exp_rap);
     auto cosh_rap = 0.5 * (e_plus + e_minus);
     auto sinh_rap = 0.5 * (e_plus - e_minus);
+    // light-cone components of the outgoing momenta, summed directly and from
+    // the light-cone components the boost uses
+    FVal<T> sum_plus_direct(0.), sum_minus_direct(0.), sum_plus(0.), sum_minus(0.);
     for (std::size_t i = 0; i < q.size(); ++i) {
         auto q_i = q[i];
         auto p_out_i = p_out[i];
@@ -482,34 +488,51 @@ KERNELSPEC void boost_beam(
         auto trans2 = m2 + pt2;
         auto q_plus_direct = q0 + q3;
         auto q_minus_direct = q0 - q3;
-        auto q_plus =
-            where(q3 >= 0., q_plus_direct, trans2 / max(q_minus_direct, FVal<T>(EPS2)));
-        auto q_minus =
-            where(q3 < 0., q_minus_direct, trans2 / max(q_plus_direct, FVal<T>(EPS2)));
-        auto p_plus = e_plus * q_plus;
-        auto p_minus = e_minus * q_minus;
-        // Only for a momentum that is on its mass shell to rounding. The
-        // projection moves it by its mass-shell error times e^{|y|}; for one
-        // that is not (a degenerate point, or partonic momenta that carry
-        // larger errors from elsewhere) that would be more than the precision
-        // gained, and it keeps the linear boost.
         auto on_shell =
             fabs(q_plus_direct * q_minus_direct - trans2) <= 1e-13 * q0 * q0;
-        auto light_cone =
-            (q_plus_direct >= 0.) & (q_minus_direct >= 0.) & on_shell & (lin_0 < q0);
+        auto light_cone = (q_plus_direct >= 0.) & (q_minus_direct >= 0.) & on_shell;
+        auto q_plus = where(
+            light_cone & (q3 < 0.),
+            trans2 / max(q_minus_direct, FVal<T>(EPS2)),
+            q_plus_direct
+        );
+        auto q_minus = where(
+            light_cone & (q3 >= 0.),
+            trans2 / max(q_plus_direct, FVal<T>(EPS2)),
+            q_minus_direct
+        );
+        auto p_plus = e_plus * q_plus;
+        auto p_minus = e_minus * q_minus;
         p_out_i[0] = where(light_cone, 0.5 * (p_plus + p_minus), lin_0);
         p_out_i[1] = q1;
         p_out_i[2] = q2;
         p_out_i[3] = where(light_cone, 0.5 * (p_plus - p_minus), lin_3);
+        if (i >= 2) {
+            sum_plus_direct = sum_plus_direct + q_plus_direct;
+            sum_minus_direct = sum_minus_direct + q_minus_direct;
+            sum_plus = sum_plus + q_plus;
+            sum_minus = sum_minus + q_minus;
+        }
     }
 
-    // The light-cone boost also moves a momentum onto its mass shell, by its
-    // (tiny) partonic mass-shell error amplified by e^{|y|}. So that momentum
-    // stays conserved exactly as with the linear boost, these shifts are handed
-    // to the outgoing momentum with the largest energy: it is set to its linear
-    // boost minus the shifts of all others. It carries at least 1/n of the
-    // energy, so this costs it no relative precision.
+    // The projection onto the mass shell moves a momentum by its mass-shell
+    // error times e^{|y|}. So that momentum stays conserved as by the linear
+    // boost, these shifts are handed to the outgoing momentum with the largest
+    // energy: it is set to the boosted total of the outgoing momenta minus all
+    // others. It carries at least 1/n of the energy, so this costs it no
+    // relative precision. The total is boosted in light-cone components too,
+    // each summed directly where that is precise, as in the partonic frame,
+    // and from the light-cone components of the momenta where the direct sum
+    // cancels, as out of the lab frame. (The linear boost of the total lost
+    // e^{2|y|} of relative precision there, 5e-9 of sqrt(s_hat) in the
+    // hardest momentum for |y| ~ 7, and so did the round trip of
+    // PhaseSpaceMapping.)
     if (q.size() > 3) {
+        auto energy = 0.5 * (sum_plus_direct + sum_minus_direct);
+        auto total_plus =
+            e_plus * where(sum_plus_direct >= 0.5 * energy, sum_plus_direct, sum_plus);
+        auto total_minus = e_minus *
+            where(sum_minus_direct >= 0.5 * energy, sum_minus_direct, sum_minus);
         auto best_e = FVal<T>(p_out[2][0]);
         auto best_i = IVal<T>(2);
         for (std::size_t i = 3; i < q.size(); ++i) {
@@ -518,25 +541,21 @@ KERNELSPEC void boost_beam(
             best_i = where(larger, IVal<T>(static_cast<int>(i)), best_i);
             best_e = where(larger, e_i, best_e);
         }
-        FVal<T> shift_0(0.), shift_3(0.);
-        FVal<T> best_lin_0(0.), best_lin_3(0.);
+        FVal<T> others_plus(0.), others_minus(0.);
         for (std::size_t i = 2; i < q.size(); ++i) {
-            auto q_i = q[i];
-            FVal<T> q0(q_i[0]), q3(q_i[3]);
-            auto lin_0 = q0 * cosh_rap + q3 * sinh_rap;
-            auto lin_3 = q3 * cosh_rap + q0 * sinh_rap;
             auto is_best = best_i == IVal<T>(static_cast<int>(i));
-            shift_0 =
-                shift_0 + where(is_best, FVal<T>(0.), FVal<T>(p_out[i][0]) - lin_0);
-            shift_3 =
-                shift_3 + where(is_best, FVal<T>(0.), FVal<T>(p_out[i][3]) - lin_3);
-            best_lin_0 = where(is_best, lin_0, best_lin_0);
-            best_lin_3 = where(is_best, lin_3, best_lin_3);
+            FVal<T> e_i(p_out[i][0]), pz_i(p_out[i][3]);
+            others_plus = others_plus + where(is_best, FVal<T>(0.), e_i + pz_i);
+            others_minus = others_minus + where(is_best, FVal<T>(0.), e_i - pz_i);
         }
+        auto best_plus = total_plus - others_plus;
+        auto best_minus = total_minus - others_minus;
         for (std::size_t i = 2; i < q.size(); ++i) {
             auto is_best = best_i == IVal<T>(static_cast<int>(i));
-            p_out[i][0] = where(is_best, best_lin_0 - shift_0, FVal<T>(p_out[i][0]));
-            p_out[i][3] = where(is_best, best_lin_3 - shift_3, FVal<T>(p_out[i][3]));
+            p_out[i][0] =
+                where(is_best, 0.5 * (best_plus + best_minus), FVal<T>(p_out[i][0]));
+            p_out[i][3] =
+                where(is_best, 0.5 * (best_plus - best_minus), FVal<T>(p_out[i][3]));
         }
     }
 }

@@ -25,7 +25,7 @@ rw_para.o: ../param_card.inc
 	$(FC) $(FFLAGS) -c -o rw_para.o rw_para.f
 
 ../param_card.inc: ../../Cards/param_card.dat
-	../../bin/madevent treatcards param
+	../../bin/madevent --allow-stdin treatcards param
 helas_couplings: helas_couplings.o $(LIBRARY)
 	$(FC) $(FFLAGS) -o $@ $^
 

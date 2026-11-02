@@ -30,6 +30,8 @@
 #include "ColorData.h" // for mgOnGpu::nchannels/channel2iconfig/icolamp/nconfigSDE
 
 #include <cfloat>
+#include <cmath>
+#include <vector>
 
 namespace madmatrix
 {
@@ -178,6 +180,16 @@ namespace madmatrix
   // blocks/streams for a given event race on the same numerator slot (the helicity
   // dimension has been removed to save memory), so an atomicAdd is mandatory.
 #define NUM_ATOMIC_ADD( DST, VAL ) atomicAdd( &( DST ), VAL )
+// The --hel_recycling warm-up probe hook that a recycled output's diagram calls
+// carry after every amplitude: the probe and the recycled build are CPU only
+// (see backend/{cpu,simd}/SigmaKin.cc), so it is nothing here. The GPU backend
+// never builds the recycled block, by design: it makes every helicity row of an
+// event in one thread and keeps every amplitude of every row until the color
+// flows (g g > t t~ g g g: 3.9 MB of amplitudes and 0.5 MB of wavefunctions per
+// event), where a GPU thread holds one helicity of one event; and the GPU
+// already runs the helicities in parallel (blockIdx.y). A recycled output
+// built for cuda/hip is the plain matrix element (madmatrix.mk says so).
+#define MG_HR_PROBE_AMP( NAMP )
 
   // Evaluate QCD partial amplitudes jamps for this given helicity from Feynman diagrams.
   // Also compute running sums over helicities adding jamp2, numerator, denominator
@@ -345,6 +357,7 @@ namespace madmatrix
   }
 
 #undef NUM_ATOMIC_ADD
+#undef MG_HR_PROBE_AMP
 
   //--------------------------------------------------------------------------
 
@@ -368,6 +381,13 @@ namespace madmatrix
     for( int ihel = 0; ihel < ncomb; ihel++ ) isGoodHel[ihel] = false;
     (void)iflavorVec; // flavor is forced below to scan every flavor combination
     unsigned int hstFlavorVec[maxtry0] = {};
+    // |M|^2 of every helicity at every sampled event (of the current flavor): a
+    // helicity is good if, at one event, it is above limhel/ncomb of the sum over
+    // helicities there -- madevent's filter (matrix_madevent_group_v4.inc, limhel
+    // its hidden run_card parameter, 1e-8 by default). Comparing to an exact 0 kept
+    // the helicities whose amplitudes only cancel to rounding.
+    constexpr double limhel = 1e-8;
+    std::vector<fptype> helMEs( (size_t)ncomb * maxtry0, 0. );
     unsigned int* devFlavorVec = nullptr;
     gpuMalloc( (void**)&devFlavorVec, maxtry * sizeof( unsigned int ) );
     for( int iflav = 0; iflav < nmaxflavor; ++iflav )
@@ -387,12 +407,14 @@ namespace madmatrix
       gpuLaunchKernel( color_sum_kernel, gpublocks, gputhreads, allMEs, allJamps, nOneHel, 0 );
       gpuMemcpy( hstMEs, allMEs, maxtry * sizeof( fptype ), gpuMemcpyDeviceToHost );
       for( int ievt = 0; ievt < maxtry; ++ievt )
-      {
-        if( hstMEs[ievt] != 0 ) // NEW IMPLEMENTATION OF GETGOODHEL (#630): COMPARE EACH HELICITY CONTRIBUTION TO 0
-        {
-          isGoodHel[ihel] = true;
-        }
-      }
+        helMEs[(size_t)ihel * maxtry0 + ievt] = hstMEs[ievt];
+    }
+    for( int ievt = 0; ievt < maxtry; ++ievt )
+    {
+      fptype sumhel = 0;
+      for( int ihel = 0; ihel < ncomb; ihel++ ) sumhel += std::abs( helMEs[(size_t)ihel * maxtry0 + ievt] );
+      for( int ihel = 0; ihel < ncomb; ihel++ )
+        if( std::abs( helMEs[(size_t)ihel * maxtry0 + ievt] ) > sumhel * limhel / ncomb ) isGoodHel[ihel] = true;
     }
     } // end loop over flavor combinations (per-flavor good-helicity union)
     gpuFree( devFlavorVec );

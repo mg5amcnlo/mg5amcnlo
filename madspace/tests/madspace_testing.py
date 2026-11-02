@@ -6,6 +6,7 @@ function on the device of its inputs. torch calls the ROCm devices "cuda" too.
 
 import os
 
+import numpy as np
 import torch
 
 import madspace as ms
@@ -63,5 +64,11 @@ def randint(*args, **kwargs):
 
 
 def to_numpy(tensor):
-    """A tensor as a numpy array on the host, e.g. for scipy."""
+    """A tensor as a numpy array on the host, e.g. for scipy.
+
+    Given numpy inputs, madspace returns read-only numpy arrays. Those are
+    copied rather than passed to torch, which warns about read-only arrays.
+    """
+    if isinstance(tensor, np.ndarray):
+        return np.array(tensor)
     return torch.as_tensor(tensor).detach().cpu().numpy()

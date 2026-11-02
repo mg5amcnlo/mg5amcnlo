@@ -355,7 +355,7 @@ decay z > l+ l-
 
         NB: 'set nevents 500' relies on the mg7 run_card editor accepting the
         legacy madevent name (mapped to generation.events); without it the run
-        would generate the full default 100k events and risk the timeout below.
+        would generate the full default 100k events and hit the timeout below.
         """
         cmd_path = pjoin(self.path, 'test_madspin_mixed_flavor_mg7.cmd')
         log_path = pjoin(self.path, 'test_madspin_mixed_flavor_mg7.log')
@@ -380,27 +380,36 @@ decay z > l+ l-
             fsock.write(command)
 
         # Bounded and with stdin closed so the run never blocks on a prompt.
-        # With 'set nevents 500' honoured the decay is quick; a timeout here
-        # would signal a regression (e.g. nevents no longer applied -> the full
-        # 100k events get decayed).
+        # With 'set nevents 500' honoured the whole run takes 30-110 s on a CI
+        # runner, which varies a lot from one run to the next; a timeout of
+        # 600 s still catches the regression it is there for (nevents no longer
+        # applied -> the full 100k events get decayed) without failing on a
+        # slow runner, as 240 s did.
+        timeout = 600
+        def log_tail(why):
+            # the mg7 run log lives in a tmp dir CI does not upload: show its
+            # tail in the CI output, so that the reason is visible there
+            with open(log_path) as log_file:
+                lines = log_file.read().splitlines()
+            print('\n===== test_madspin_mixed_flavor_decay_log_summary_mg7: '
+                  'madgraph log tail (%s) =====\n%s' % (why, '\n'.join(lines[-150:])),
+                  file=sys.stderr, flush=True)
+
         with open(log_path, 'w') as log_file:
             try:
                 return_code = subprocess.call(
                     [sys.executable, pjoin(_file_path, os.path.pardir, 'bin', 'madgraph'), cmd_path],
                     cwd=pjoin(_file_path, os.path.pardir),
                     stdin=subprocess.DEVNULL,
-                    stdout=log_file, stderr=subprocess.STDOUT, timeout=240)
+                    stdout=log_file, stderr=subprocess.STDOUT, timeout=timeout)
             except subprocess.TimeoutExpired:
+                log_file.flush()
+                log_tail('timed out after %d s' % timeout)
                 self.fail('mg7 + MadSpin run timed out (is set nevents applied?)')
         with open(log_path) as log_file:
             log = log_file.read()
-        # On failure, surface the tail of the mg7 run log (which lives in a tmp
-        # dir CI does not upload) so the reason is visible in the CI output.
         if return_code != 0 or not re.search(r'MadSpin\s+unweight\s+efficiency', log):
-            print('\n===== test_madspin_mixed_flavor_decay_log_summary_mg7: '
-                  'madgraph log tail (rc=%s) =====\n%s'
-                  % (return_code, '\n'.join(log.splitlines()[-150:])),
-                  file=sys.stderr, flush=True)
+            log_tail('rc=%s' % return_code)
         self.assertEqual(return_code, 0)
 
         self.assertIsNotNone(

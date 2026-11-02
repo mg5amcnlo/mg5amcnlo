@@ -30,6 +30,55 @@ CF2PY intent(in) :: value
       END
 
 
+      SUBROUTINE SET_FIXED_EXTRA_SCALE(NEW_VALUE)
+      IMPLICIT NONE
+CF2PY logical, intent(in) :: new_value
+      LOGICAL NEW_VALUE
+      call f77_set_fixed_extra_scale(new_value)
+      RETURN
+      END
+
+      SUBROUTINE SET_MUE_OVER_REF(NEW_VALUE)
+      IMPLICIT NONE
+CF2PY double precision, intent(in) :: new_value
+      DOUBLE PRECISION NEW_VALUE
+      call f77_set_mue_over_ref(new_value)
+      RETURN
+      END
+
+      SUBROUTINE SET_MUE_REF_FIXED(NEW_VALUE)
+      IMPLICIT NONE
+CF2PY double precision, intent(in) :: new_value
+      DOUBLE PRECISION NEW_VALUE
+      call f77_set_mue_ref_fixed(new_value)
+      RETURN
+      END
+
+      SUBROUTINE SET_MAXJETFLAVOR(NEW_VALUE)
+      IMPLICIT NONE
+CF2PY integer, intent(in) :: new_value
+      INTEGER NEW_VALUE
+      call f77_set_maxjetflavor(new_value)
+      RETURN
+      END
+
+      SUBROUTINE SET_ASMZ(NEW_VALUE)
+      IMPLICIT NONE
+CF2PY double precision, intent(in) :: new_value
+      DOUBLE PRECISION NEW_VALUE
+      call f77_set_asmz(new_value)
+      RETURN
+      END
+
+      SUBROUTINE SET_NLOOP(NEW_VALUE)
+      IMPLICIT NONE
+CF2PY integer, intent(in) :: new_value
+      INTEGER NEW_VALUE
+      call f77_set_nloop(new_value)
+      RETURN
+      END
+
+
       SUBROUTINE PY_SET_BEAMPOL(POL1, POL2)
 C     ROUTINE FOR F2PY to set the beam polarisation of the density
 C     matrix evaluation. POL1/POL2 follow the convention of the

@@ -8,7 +8,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       COMPLEX*32 MP__GAL(2)
       COMMON/MP_WEAK/ MP__GAL
 
-      COMPLEX*32 MP__MU_R
+      REAL*16 MP__MU_R
       COMMON/MP_RSCALE/ MP__MU_R
 
 

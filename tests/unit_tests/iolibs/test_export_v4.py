@@ -10909,3 +10909,64 @@ class F2PYSplitterFlavorOrderTest(unittest.TestCase):
         for callee in ('M0_SMATRIXHEL(', 'M0_GET_DENSITY(', 'M0_GET_ALL_INTER('):
             self.assertIn('CALL %sP' % callee, text)
         self.assertIn('CALL M0_GET_ALL_INTER(P, LNHEL, POS,', text)
+
+
+#===============================================================================
+# RunningModelLibraryTest
+#===============================================================================
+class RunningModelLibraryTest(unittest.TestCase):
+    """The model library of a model with running parameters (running.py) in
+    the formats linked as shared libraries (standalone_rw for the tree-level
+    and madloop for the virtual of the NLO reweighting): the evolution and
+    alpha_s routines must be inside it, and the extra-scale setup in the
+    common block the f2py setters write."""
+
+    def export(self, export_format):
+        import madgraph.models.import_ufo as import_ufo
+        model = import_ufo.import_model(
+            pjoin(MG5DIR, 'tests', 'input_files', 'SMEFTatNLO_running-4f'))
+        tmpdir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmpdir)
+        model_dir = pjoin(tmpdir, 'Source', 'MODEL')
+        os.makedirs(model_dir)
+        opt = {'export_format': export_format, 'mp': True,
+               'complex_mass': False, 'loop_induced': False,
+               'output_options': {}}
+        mg4_model = export_v4.UFO_model_to_mg4(model, model_dir, opt)
+        mg4_model.build()
+        return mg4_model, model_dir
+
+    def test_running_in_shared_model_library(self):
+        for export_format in ['standalone_rw', 'madloop']:
+            mg4_model, model_dir = self.export(export_format)
+            self.assertTrue(mg4_model.running_in_model_library())
+            makeinc = open(pjoin(model_dir, 'makeinc.inc')).read()
+            for name in mg4_model.running_sources + ['alfas_functions.f']:
+                self.assertTrue(os.path.exists(pjoin(model_dir, name)), name)
+                self.assertIn(name.replace('.f', '.o'), makeinc)
+            # the Source makefile of both formats builds librunning too
+            self.assertTrue(os.path.isdir(pjoin(model_dir, '..', 'RUNNING')))
+            cuts = open(pjoin(model_dir, '..', 'cuts.inc')).read()
+            self.assertIn('common/model_setup_running/', cuts)
+            # MU_R and muprime are both read (block loop) with
+            # MP_LHA_get_real_silent: same (real) type
+            mp_coupl = open(pjoin(model_dir, 'mp_coupl.inc')).read()
+            self.assertRegex(mp_coupl, r'(?i)REAL\*16\s+MP__MU_R\b')
+
+    def test_madevent_keeps_librunning(self):
+        mg4_model, model_dir = self.export('madevent')
+        self.assertFalse(mg4_model.running_in_model_library())
+        makeinc = open(pjoin(model_dir, 'makeinc.inc')).read()
+        for name in mg4_model.running_sources:
+            self.assertNotIn(name.replace('.f', '.o'), makeinc)
+
+    def test_loop_f2py_running_setters(self):
+        """the reweighting sets up the running on every module, also on the
+        one of the virtual"""
+        loop_dir = pjoin(MG5DIR, 'madgraph', 'iolibs', 'template_files', 'loop')
+        wrapper = open(pjoin(loop_dir, 'f2py_wrapper_subproccesses.f')).read().upper()
+        splitter = open(pjoin(loop_dir, 'all_matrix.f')).read().upper()
+        for name in ['FIXED_EXTRA_SCALE', 'MUE_OVER_REF', 'MUE_REF_FIXED',
+                     'MAXJETFLAVOR', 'ASMZ', 'NLOOP']:
+            self.assertIn('SUBROUTINE SET_%s(' % name, wrapper)
+            self.assertIn('SUBROUTINE F77_SET_%s(' % name, splitter)
