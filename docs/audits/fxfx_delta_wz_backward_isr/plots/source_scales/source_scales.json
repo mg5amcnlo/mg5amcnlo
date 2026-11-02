@@ -1,0 +1,214 @@
+{
+  "created_utc": "2026-11-02T12:10:49.158872+00:00",
+  "comparison_file": "/export/slow1/rikkert/FxFx_Delta/docs/audits/fxfx_delta_wz_backward_isr/comparison.json",
+  "comparison_sha256": "7c09284058c9c696d80b0b2d06a14e679034582512df481ae9c61bfacdcd10ee",
+  "inputs": {
+    "historical_2": {
+      "label": "Historical hard scalar",
+      "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta/Events/run_01/events.lhe.gz",
+      "sha256": "36d9f9dbc84c9b05224b175a9588cdc73aeaeeade3b6f2b4dd66caa2ba6c9a81",
+      "events": 1000000,
+      "source_label": "Original hard scalar"
+    },
+    "historical_1": {
+      "label": "Historical geometric mean",
+      "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_Hgeom/Events/run_hgeom/events.lhe.gz",
+      "sha256": "4d7f86344201d3288caafdb43fed1a3f949c32796afc169895adc63339f86a38",
+      "events": 1000000,
+      "source_label": "Previous geometric mean"
+    },
+    "reference": {
+      "label": "Fresh geometric mean, ISR off",
+      "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardOFF/Events/run_backward_off/events.lhe.gz",
+      "sha256": "c0729af9fa7fb6f3c74c02075b6019ed77cf841267367575f550d06bb5aefaf5",
+      "events": 1000000,
+      "source_label": "Fresh backward ISR OFF"
+    },
+    "new": {
+      "label": "Fresh geometric mean, ISR on",
+      "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardON/Events/run_backward_on/events.lhe.gz",
+      "sha256": "17cbc7d8dddfb179236fb7884e225e92ca9d36ad0260346a4aed0db44e4c1342",
+      "events": 1000000,
+      "source_label": "Fresh backward ISR ON"
+    }
+  },
+  "plot_script_sha256": "6d92fa82baba41715a509e9ec67ad0be7a07f6d5a91487a80ab18ed2e57efebb",
+  "normalization": "Signed source LHE weights / complete source event count; pb per bin. No unit-area scaling.",
+  "uncertainty": "sqrt(max(sum(w**2) - sum(w)**2/N, 0)/(N*(N-1))) for fixed-N conditional source sampling; N is the complete source count. No source integration uncertainty or cross-run covariance.",
+  "ratio_policy": "Positive denominator above three conditional sampling errors; other ratios omitted.",
+  "source_epoch_note": "Historical source epochs also differ from fresh integration and numerical fixes. Historical shower steering omitted the corrected charged-resonance QED-off setting; QED does not enter the pre-shower SCALUP histograms.",
+  "logarithmic_edges_GeV": {
+    "S": [
+      10.0,
+      12.589254117941675,
+      15.848931924611133,
+      19.952623149688797,
+      25.118864315095795,
+      31.622776601683793,
+      39.810717055349734,
+      50.11872336272725,
+      63.09573444801933,
+      79.43282347242814,
+      100.0,
+      125.89254117941675,
+      158.48931924611142,
+      199.52623149688787,
+      251.18864315095823,
+      316.22776601683796,
+      398.1071705534973,
+      501.18723362727246,
+      630.957344480193,
+      794.3282347242822,
+      1000.0,
+      1258.9254117941675,
+      1584.893192461114,
+      1995.262314968881,
+      2511.886431509582,
+      3162.2776601683795,
+      3981.0717055349733,
+      5011.872336272725,
+      6309.573444801937,
+      7943.282347242822,
+      10000.0
+    ],
+    "H": [
+      0.0001,
+      0.00012589254117941674,
+      0.00015848931924611142,
+      0.00019952623149688788,
+      0.00025118864315095795,
+      0.00031622776601683794,
+      0.00039810717055349735,
+      0.0005011872336272725,
+      0.000630957344480193,
+      0.0007943282347242813,
+      0.001,
+      0.0012589254117941675,
+      0.001584893192461114,
+      0.001995262314968879,
+      0.002511886431509582,
+      0.0031622776601683794,
+      0.003981071705534973,
+      0.005011872336272725,
+      0.00630957344480193,
+      0.00794328234724282,
+      0.01,
+      0.012589254117941675,
+      0.01584893192461114,
+      0.01995262314968881,
+      0.025118864315095822,
+      0.03162277660168379,
+      0.039810717055349734,
+      0.05011872336272725,
+      0.06309573444801936,
+      0.07943282347242822,
+      0.1,
+      0.12589254117941676,
+      0.15848931924611143,
+      0.19952623149688808,
+      0.25118864315095824,
+      0.31622776601683794,
+      0.3981071705534973,
+      0.5011872336272725,
+      0.6309573444801936,
+      0.7943282347242822,
+      1.0,
+      1.2589254117941688,
+      1.584893192461114,
+      1.9952623149688788,
+      2.5118864315095824,
+      3.1622776601683795,
+      3.9810717055349776,
+      5.011872336272725,
+      6.309573444801943,
+      7.943282347242821,
+      10.0,
+      12.589254117941687,
+      15.848931924611142,
+      19.95262314968883,
+      25.11886431509582,
+      31.622776601683793,
+      39.81071705534978,
+      50.11872336272725,
+      63.09573444801943,
+      79.43282347242821,
+      100.0,
+      125.89254117941688,
+      158.48931924611142,
+      199.5262314968883,
+      251.18864315095823,
+      316.22776601683796,
+      398.1071705534977,
+      501.18723362727246,
+      630.9573444801943,
+      794.3282347242822,
+      1000.0,
+      1258.9254117941687,
+      1584.893192461114,
+      1995.262314968883,
+      2511.886431509582,
+      3162.2776601683795,
+      3981.0717055349774,
+      5011.872336272725,
+      6309.573444801943,
+      7943.282347242822,
+      10000.0
+    ]
+  },
+  "integrals_pb": {
+    "historical_2": {
+      "S": {
+        "SUM": 42.52116505154799,
+        "0": 20.825076540284012,
+        "1": 21.696088511264
+      },
+      "H": {
+        "SUM": 7.094802346556001,
+        "0": 6.249913074090002,
+        "1": 0.8448892724660001
+      }
+    },
+    "historical_1": {
+      "S": {
+        "SUM": 42.52376966078401,
+        "0": 20.80515894024401,
+        "1": 21.718610720540003
+      },
+      "H": {
+        "SUM": 7.096334469635999,
+        "0": 6.244857067926001,
+        "1": 0.85147740171
+      }
+    },
+    "reference": {
+      "S": {
+        "SUM": 42.46000900196,
+        "0": 20.823095348999992,
+        "1": 21.636913652960008
+      },
+      "H": {
+        "SUM": 7.07920283132,
+        "0": 6.24887736672,
+        "1": 0.8303254645999998
+      }
+    },
+    "new": {
+      "S": {
+        "SUM": 42.48688250514101,
+        "0": 20.765856828185,
+        "1": 21.721025676955996
+      },
+      "H": {
+        "SUM": 7.180824321384999,
+        "0": 6.288137422349002,
+        "1": 0.8926868990360001
+      }
+    }
+  },
+  "outputs": {
+    "source_scales.pdf": "e783d22cee421aab295aa79b5dd8e8847721bc991cf4b33328029b0535a7fc0d",
+    "scalup_s.png": "93b0e2fbb87a87ff0e5f1dcfff37bf3c387c161dc6db8c8920ed2e6b7881a223",
+    "scalup_h.png": "c6b28286fadce2f7c174b5bdbff87662f095d057cb08188f2f77a1deafb73e7d",
+    "source_scales.csv": "19c015077900f811d09cb7dbe08a089870b6d7aaf245aea930e14f427f8a0d99"
+  }
+}

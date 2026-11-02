@@ -134,7 +134,7 @@
   },
   "output_sha256": {
     "comparison.json": "7c09284058c9c696d80b0b2d06a14e679034582512df481ae9c61bfacdcd10ee",
-    "comparison.md": "6b9ae6c730eed05612693e1b00d236bd7a4f19a803e56ad35ee280f414cd6dd3",
+    "comparison.md": "ab7bf7d86fc14c580e94101125a6d81496e0a734258ab48544b199941fbf42c9",
     "histogram_comparison.csv": "f060ff79352ec0afae1069bd750aae6f861d7d253799b67dd2a1ade126dcb951",
     "distributions.pdf": "4b81667a29b770fe952a7f778fa3133060e8d430e71408a756b31f9282acab09",
     "historical_distributions.pdf": "2e7dba390558140ca767a1c2fb030dcdfec29d9bcbbea3bc985b2d07f8bea792",
@@ -145,5 +145,11 @@
     "file": "/export/slow1/rikkert/FxFx_BS_test/MCcntRefactor_Sfun_Granny/HEPTools/pythia8/lib/libpythia8.so",
     "sha256": "d365f45bde0c4046f13ee6e0b56f5d07d324e9e6f1d9bcac925fa653f273d546",
     "matches_historical_library": true
+  },
+  "full_plot_books": {
+    "plots/full_comparison.pdf": "11b90becc3bb65c1946decca6ff98a43d57f4635d5522b0335148e03fdec6608",
+    "plots/manifest.json": "23a1388c7895b0587a5fe7491f04df21a5298f93a1b09a6a43fa26acd6584b6e",
+    "plots/source_scales/source_scales.json": "f985b657e3ec7315fc6437b90aaf9904ec07bca944a0f37ea6747de4ba50155c",
+    "plots/validation.json": "c5045fc9363e6faad0b4ffc5db76aea08e2384226bb98d699cd8b0ff3ccbb4d2"
   }
 }

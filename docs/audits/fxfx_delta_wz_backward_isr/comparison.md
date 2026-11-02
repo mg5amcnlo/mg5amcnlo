@@ -98,6 +98,23 @@ This numerical check establishes neither an exact or universal NLO-matching theo
 
 ## Inputs and reproduction
 
+The [complete 15-page comparison book](plots/full_comparison.pdf) and
+[plot index](plots/README.md) extend the initial figures to all six saved
+linear/logarithmic spectra, native ranges through 1 TeV, low-scale views,
+rebinned tails, and S/H source SCALUP. Each page overlays all four
+prescriptions and separates the historical geometric/hard and fresh
+backward-ISR on/off ratios.
+
+Over 400--1000 GeV, the fresh ON/OFF merged central integrals change by
++5.26% for pT(WZ), +8.39% for leading-jet pT and +8.10% for sqrt(d01).
+Those effects were outside the initial 0--400 GeV plots. Their absolute
+rates are small, the observables are correlated, and conditional sampling
+errors plus separate source integration uncertainty limit interpretation.
+The log spectra also reveal an ultrasoft historical/fresh difference in
+WZ recoil; historical charged-resonance QED steering differs, so this
+cannot be assigned to one source or H-scale change. The inclusive-rate
+agreement should not be read as unchanged distributions in every region.
+
 Each run audit records the LHE/HwU hashes, source and card hashes, banner hashes, saved integration totals and actual shower steering. [Setup](setup.json), when supplied, records the generation commands and source snapshot. [Full comparison](comparison.json) retains all scale quantiles, signs, rates and spectrum integrals.
 
 ```sh

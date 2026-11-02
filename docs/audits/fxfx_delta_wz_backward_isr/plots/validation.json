@@ -1,0 +1,22 @@
+{
+  "pdf_pages": 15,
+  "saved_shower_observables": 6,
+  "categories": [
+    "SUM",
+    "0",
+    "1"
+  ],
+  "variants": 4,
+  "source_events_checked": 4000000,
+  "rebin_integral_and_variance_checks": 36,
+  "ratio_rows": 8415,
+  "all_recorded_output_hashes_verified": true,
+  "source_signed_normalization_reproduced": true,
+  "visual_checks": [
+    "linear full range",
+    "rebinned tails",
+    "log WZ recoil",
+    "S/H source SCALUP"
+  ],
+  "uncertainty": "Conditional sampling only; separate source integration uncertainties and unknown covariance are documented."
+}

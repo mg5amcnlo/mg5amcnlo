@@ -1,0 +1,542 @@
+{
+  "comparison_file": "/export/slow1/rikkert/FxFx_Delta/docs/audits/fxfx_delta_wz_backward_isr/comparison.json",
+  "comparison_sha256": "7c09284058c9c696d80b0b2d06a14e679034582512df481ae9c61bfacdcd10ee",
+  "histogram_sources": {
+    "historical_2": {
+      "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta/Events/run_01/plot_PYTHIA8_1_0.HwU",
+      "sha256": "c6402e11e76d699ea98b2080c4a23b375a848892a40133c8a6c55dfbb3eaa56b"
+    },
+    "historical_1": {
+      "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_Hgeom/Events/run_hgeom/plot_PYTHIA8_1_0.HwU",
+      "sha256": "fc151a73122055bbb769bf841bf163ea398ff14c2eedc4d0c5de31052d3bb856"
+    },
+    "reference": {
+      "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardOFF/Events/run_backward_off/plot_PYTHIA8_1_0.HwU",
+      "sha256": "02c9f779e37ff04cee3fa92573503991ae7764a314533a25577ebb080642e498"
+    },
+    "new": {
+      "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardON/Events/run_backward_on/plot_PYTHIA8_1_0.HwU",
+      "sha256": "d49726de696bc233ffc193b105ba3aabb593cafd3702f836750c75343a2db01e"
+    }
+  },
+  "plot_script_sha256": "d3d6ca89ebd7252ea2219a4ebaf254793cb60022df545696c4d2c5223321aa81",
+  "all_saved_observables_covered": true,
+  "categories": [
+    "SUM",
+    "0",
+    "1"
+  ],
+  "pages": [
+    {
+      "page": 1,
+      "observable": "total rate",
+      "view": "overview",
+      "png": "rates.png"
+    },
+    {
+      "page": 2,
+      "observable": "pT W+Z [GeV]",
+      "view": "full",
+      "png": "pt_wz_full.png",
+      "range": [
+        0.0,
+        1000.0
+      ],
+      "rebin_factor": 1,
+      "negative_bins": {
+        "SUM": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "0": {
+          "historical_2": 2,
+          "historical_1": 0,
+          "reference": 1,
+          "new": 0
+        },
+        "1": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        }
+      }
+    },
+    {
+      "page": 3,
+      "observable": "pT W+Z [GeV]",
+      "view": "low",
+      "png": "pt_wz_low.png",
+      "range": [
+        0.0,
+        150.0
+      ],
+      "rebin_factor": 1,
+      "negative_bins": {
+        "SUM": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "0": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "1": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        }
+      }
+    },
+    {
+      "page": 4,
+      "observable": "pT W+Z [GeV]",
+      "view": "tail",
+      "png": "pt_wz_tail.png",
+      "range": [
+        400.0,
+        1000.0
+      ],
+      "rebin_factor": 5,
+      "negative_bins": {
+        "SUM": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "0": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "1": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        }
+      }
+    },
+    {
+      "page": 5,
+      "observable": "log10 pT W+Z/GeV",
+      "view": "full",
+      "png": "log_pt_wz_full.png",
+      "range": [
+        -3.0,
+        3.0
+      ],
+      "rebin_factor": 1,
+      "negative_bins": {
+        "SUM": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "0": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "1": {
+          "historical_2": 0,
+          "historical_1": 1,
+          "reference": 1,
+          "new": 0
+        }
+      }
+    },
+    {
+      "page": 6,
+      "observable": "pT j1 [GeV]",
+      "view": "full",
+      "png": "pt_j1_full.png",
+      "range": [
+        0.0,
+        1000.0
+      ],
+      "rebin_factor": 1,
+      "negative_bins": {
+        "SUM": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "0": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "1": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        }
+      }
+    },
+    {
+      "page": 7,
+      "observable": "pT j1 [GeV]",
+      "view": "low",
+      "png": "pt_j1_low.png",
+      "range": [
+        0.0,
+        150.0
+      ],
+      "rebin_factor": 1,
+      "negative_bins": {
+        "SUM": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "0": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "1": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        }
+      }
+    },
+    {
+      "page": 8,
+      "observable": "pT j1 [GeV]",
+      "view": "tail",
+      "png": "pt_j1_tail.png",
+      "range": [
+        400.0,
+        1000.0
+      ],
+      "rebin_factor": 5,
+      "negative_bins": {
+        "SUM": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "0": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "1": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        }
+      }
+    },
+    {
+      "page": 9,
+      "observable": "log10 pT j1/GeV",
+      "view": "full",
+      "png": "log_pt_j1_full.png",
+      "range": [
+        -3.0,
+        3.0
+      ],
+      "rebin_factor": 1,
+      "negative_bins": {
+        "SUM": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "0": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "1": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        }
+      }
+    },
+    {
+      "page": 10,
+      "observable": "sqrt d01 [GeV]",
+      "view": "full",
+      "png": "djr01_full.png",
+      "range": [
+        0.0,
+        1000.0
+      ],
+      "rebin_factor": 1,
+      "negative_bins": {
+        "SUM": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 1,
+          "new": 0
+        },
+        "0": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "1": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 1,
+          "new": 0
+        }
+      }
+    },
+    {
+      "page": 11,
+      "observable": "sqrt d01 [GeV]",
+      "view": "low",
+      "png": "djr01_low.png",
+      "range": [
+        0.0,
+        150.0
+      ],
+      "rebin_factor": 1,
+      "negative_bins": {
+        "SUM": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "0": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "1": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        }
+      }
+    },
+    {
+      "page": 12,
+      "observable": "sqrt d01 [GeV]",
+      "view": "tail",
+      "png": "djr01_tail.png",
+      "range": [
+        400.0,
+        1000.0
+      ],
+      "rebin_factor": 5,
+      "negative_bins": {
+        "SUM": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "0": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "1": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        }
+      }
+    },
+    {
+      "page": 13,
+      "observable": "log10 sqrt d01/GeV",
+      "view": "full",
+      "png": "log_djr01_full.png",
+      "range": [
+        -3.0,
+        3.0
+      ],
+      "rebin_factor": 1,
+      "negative_bins": {
+        "SUM": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "0": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        },
+        "1": {
+          "historical_2": 0,
+          "historical_1": 0,
+          "reference": 0,
+          "new": 0
+        }
+      }
+    }
+  ],
+  "diagnostic_integrals": {
+    "pt_wz": {
+      "historical_2": {
+        "pb": 0.23181020625,
+        "conditional_error_pb": 0.004819495101239236
+      },
+      "historical_1": {
+        "pb": 0.23142717915,
+        "conditional_error_pb": 0.004820103922347816
+      },
+      "reference": {
+        "pb": 0.22345806245,
+        "conditional_error_pb": 0.004751706002361763
+      },
+      "new": {
+        "pb": 0.2352081232,
+        "conditional_error_pb": 0.004841439855478684
+      }
+    },
+    "log_pt_wz": {
+      "historical_2": {
+        "pb": 0.008656495,
+        "conditional_error_pb": 0.0008356744320937147
+      },
+      "historical_1": {
+        "pb": 0.0075840088,
+        "conditional_error_pb": 0.0007698822710330882
+      },
+      "reference": {
+        "pb": 0.0027511937,
+        "conditional_error_pb": 0.0004710971413460056
+      },
+      "new": {
+        "pb": 0.00283660345,
+        "conditional_error_pb": 0.0004663347363994191
+      }
+    },
+    "pt_j1": {
+      "historical_2": {
+        "pb": 0.20484484355,
+        "conditional_error_pb": 0.004464239572805284
+      },
+      "historical_1": {
+        "pb": 0.20698981489999999,
+        "conditional_error_pb": 0.00447080745105715
+      },
+      "reference": {
+        "pb": 0.1917429156,
+        "conditional_error_pb": 0.004343972999580691
+      },
+      "new": {
+        "pb": 0.2078387317,
+        "conditional_error_pb": 0.004484081490545831
+      }
+    },
+    "log_pt_j1": {
+      "historical_2": {
+        "pb": 0.0,
+        "conditional_error_pb": 0.0
+      },
+      "historical_1": {
+        "pb": 0.0,
+        "conditional_error_pb": 0.0
+      },
+      "reference": {
+        "pb": 0.0,
+        "conditional_error_pb": 0.0
+      },
+      "new": {
+        "pb": 0.0,
+        "conditional_error_pb": 0.0
+      }
+    },
+    "djr01": {
+      "historical_2": {
+        "pb": 0.26030769725,
+        "conditional_error_pb": 0.005075699568560091
+      },
+      "historical_1": {
+        "pb": 0.2665894009,
+        "conditional_error_pb": 0.005080322269959979
+      },
+      "reference": {
+        "pb": 0.24638467915,
+        "conditional_error_pb": 0.004930258292871226
+      },
+      "new": {
+        "pb": 0.2663341007,
+        "conditional_error_pb": 0.005070331555798324
+      }
+    },
+    "log_djr01": {
+      "historical_2": {
+        "pb": 0.00130230455,
+        "conditional_error_pb": 0.0003339184672874251
+      },
+      "historical_1": {
+        "pb": 0.0007660615,
+        "conditional_error_pb": 0.0002422499134459478
+      },
+      "reference": {
+        "pb": 0.0013755969,
+        "conditional_error_pb": 0.0003242312988649461
+      },
+      "new": {
+        "pb": 0.0009199793999999999,
+        "conditional_error_pb": 0.0002655751785597276
+      }
+    }
+  },
+  "uncertainty_note": "13 TeV; Qcut=70 GeV; stable W/Z; Pythia 8.317; one million events per prescription.\nBands: denominator error; bars: numerator error / denominator. Ratios require denominator > 3 statistical errors. No cross-run/bin covariance.\nErrors condition on source normalization; integration-normalization errors are separate. Historical and fresh shower steering differ (charged-resonance QED).",
+  "source_scale_book": "source_scales/source_scales.pdf",
+  "combined_book": "full_comparison.pdf",
+  "outputs": {
+    "log_pt_j1_full.png": "b8fd4b880c6c39b3079115da41a6790fd2bb4352fd111a48bef7e9b6c7bc3c20",
+    "pt_wz_tail.png": "27f918dfc7378705b568dc96008665b955b0cf905c855bcb7e42643997a3d413",
+    "index.html": "e7163f854690860bb9508ff4bcf8aaa02451dd4c1565d0c63f664dab12a9a30e",
+    "full_comparison.pdf": "11b90becc3bb65c1946decca6ff98a43d57f4635d5522b0335148e03fdec6608",
+    "README.md": "e17f3d6079083bbf610144607cc511a08bb6eb1c7438ca70d60a5b73ee3c49ce",
+    "djr01_full.png": "6c03d008b024d5f52c37fcaa93d8677a6a30289e7f52664e916dd91a8f40d9c0",
+    "ratios.csv": "42c763219eb474aba5b0eed510aab413cebe0be81874517b50fb9d5154ef2d0f",
+    "log_pt_wz_full.png": "492135e7e6ae942feddbb91078aeef9749cbc8cdbf56d06f87346b9f3c8ba368",
+    "pt_j1_low.png": "85326c75361214786093a82e18e235183178462067851a9e49c8f1a7492042f8",
+    "all_variants.pdf": "fc2635525e36bc8ca30e471804508662ff90170722b687d95e2e5594f3e4d59f",
+    "pt_j1_full.png": "bf214abc22d2643830e154f2a11be6d9c23065f77e40acc995926fb3f2554d3a",
+    "pt_wz_full.png": "b8d2b1f4804b66adeb62aeca4c7a0f974e09edb89d1a50b6ea8629cd21d37d7a",
+    "rates.png": "8f571134a4daf1690e043ea5ae0551dd71834fb47b8f657c19595b9ec5a59bd6",
+    "pt_wz_low.png": "4d56379af825708668172fb80cce41b4d46d77d3d51f7c2c346b6cbdc93291c2",
+    "djr01_low.png": "17f72bdac3828da39ef38bac5a6ee58cae3c049fc57590ffaef62e520ad1239f",
+    "log_djr01_full.png": "eda2f02c505af7926fa1bbc89bc79cabdfad90f92d2c3c5ae46b150a3fa661f1",
+    "djr01_tail.png": "a5644a488e39ad73065bbeaa707b65f0ea099048df8957a2b48dffaa69727f5e",
+    "pt_j1_tail.png": "351831ec970ca64d85d1288b93436bf2e8b5bf4a931edd3eaf4e191a05fe08f3"
+  }
+}

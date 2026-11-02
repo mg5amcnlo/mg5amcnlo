@@ -289,6 +289,20 @@ with three optional skips. Cleanup removed duplicate plain LHE shards;
 final compressed events and histograms remain available. The validated
 and final counterterm sources have identical non-comment statements.
 
+A [complete 15-page plot book](audits/fxfx_delta_wz_backward_isr/plots/full_comparison.pdf)
+and [plot index](audits/fxfx_delta_wz_backward_isr/plots/README.md) compare
+all four prescriptions. They cover all six saved linear/logarithmic
+spectra, full ranges through 1 TeV, low-scale and rebinned tail views,
+and S/H source shower-scale distributions. The initial three spectrum
+figures only showed the range through 400 GeV. The expanded range shows
+ON/OFF central changes over 400--1000 GeV of +5.26% in `pT(WZ)`, +8.39%
+in leading-jet `pT`, and +8.10% in `sqrt(d01)`. These correlated tail
+observables have limited statistics and separate integration uncertainty;
+no significance is assigned. Very soft WZ recoil also differs between
+historical and fresh epochs, whose QED steering differs. Thus the small
+inclusive-rate change does not establish that every distribution is
+unchanged.
+
 ## Pythia8 S-event starting scales
 
 Both ordinary MC@NLO and MC@NLO-Delta now sample the S-event scalar
