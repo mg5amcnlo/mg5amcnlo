@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <cstdio>
 #include <string>
 #include <vector>
 #include <array>
@@ -120,12 +121,14 @@ namespace
     const double* diagram_random_in,
     const double* alpha_s_in,
     const unsigned int* flavor_indices_in,
+    const int* helicity_in,
     fptype_momenta* momenta,
     fptype* helicity_random,
     fptype* color_random,
     fptype* diagram_random,
     fptype* g_s,
     unsigned int* flavor_indices,
+    int* helicity_given,
     std::size_t count,
     std::size_t stride,
     std::size_t offset )
@@ -144,6 +147,14 @@ namespace
     color_random[i_event] = color_random_in ? color_random_in[i_in + offset] : 0.5;
     g_s[i_event] = alpha_s_in ? sqrt( 4 * M_PI * alpha_s_in[i_in + offset] ) : 1.2177157847767195;
     flavor_indices[i_event] = flavor_indices_in ? flavor_indices_in[i_in + offset] : 0;
+    if( helicity_in )
+    {
+      // an index out of [0,ncomb) cannot be reported from here (umami_matrix_element returns
+      // before the kernels run): evaluate helicity 0 instead, never out of the helicity table,
+      // and let copy_outputs flag the event (see umami_matrix_element)
+      const int ihel = helicity_in[i_in + offset];
+      helicity_given[i_event] = ( ihel >= 0 && ihel < ProcessData::ncomb ? ihel : 0 );
+    }
   }
 
   __global__ void copy_outputs(
@@ -158,12 +169,24 @@ namespace
     int* diagram_out,
     int* color_out,
     int* helicity_out,
+    const int* helicity_in,
     std::size_t count,
     std::size_t stride,
     std::size_t offset )
   {
     std::size_t i_event = blockDim.x * blockIdx.x + threadIdx.x;
     if( i_event >= count ) return;
+    if( helicity_in )
+    {
+      const int ihel = helicity_in[i_event + offset];
+      if( ihel < 0 || ihel >= ProcessData::ncomb )
+      {
+        // an invalid given helicity: no |M|^2 and no helicity, see umami_matrix_element
+        if( m2_out ) m2_out[i_event + offset] = 0;
+        if( helicity_out ) helicity_out[i_event + offset] = -1;
+        return;
+      }
+    }
 
     if( m2_out ) m2_out[i_event + offset] = matrix_elements[i_event];
     if( amp2_out )
@@ -333,8 +356,8 @@ extern "C"
   UmamiStatus umami_supported_inputs( bool const** supported, int* count )
   {
     // MOMENTA, ALPHA_S, FLAVOR_INDEX, RANDOM_COLOR, RANDOM_HELICITY, RANDOM_DIAGRAM,
-    // HELICITY_INDEX=false, DIAGRAM_INDEX=true, CHANNEL_INDEX=false
-    static const bool data[UMAMI_INPUT_KEY_COUNT] = { true, true, true, true, true, true, false, true };
+    // HELICITY_INDEX, DIAGRAM_INDEX=true, CHANNEL_INDEX=false
+    static const bool data[UMAMI_INPUT_KEY_COUNT] = { true, true, true, true, true, true, true, true };
     *supported = data;
     *count = UMAMI_INPUT_KEY_COUNT;
     return UMAMI_SUCCESS;
@@ -397,7 +420,36 @@ extern "C"
       static_cast<InterfaceInstance*>( handle )->summed_helicity = parameter_real != 0;
       return UMAMI_SUCCESS;
     }
+    // Parameters are process-wide (Parameters::getInstance()), not per-handle,
+    // matching how umami_initialize itself never stores the CPPProcess it
+    // constructs: initProc() only ever populates the Parameters singleton.
+#ifdef MGONGPU_HARDCODE_PARAM
+    // Hardcoded parameters are compile-time constants: there is nothing to set.
     return UMAMI_ERROR_NOT_IMPLEMENTED;
+#else
+    if( !Parameters::getInstance()->setParameterByName( name, parameter_real, parameter_imag ) )
+      return UMAMI_ERROR_UNKNOWN_PARAMETER;
+    // sigmaKin() and friends read cached copies of the independent parameters/couplings
+    // (cIPD/cIPC/cIPF/bsmIndepParam), not the Parameters singleton itself, for
+    // performance; refresh those caches now so the override actually takes effect.
+    CPPProcess::refreshIndependentParams();
+    // Keep g_externalMasses in sync with the (possibly updated) singleton.
+    // Emit a one-time warning if a mass parameter was changed, since any phase-space
+    // generator that cached masses from a prior umami_get_meta(UMAMI_META_MASSES,...) call
+    // will need to re-query them.
+    {
+      std::vector<fptype> updatedMasses;
+      CPPProcess::refreshExternalMasses( updatedMasses );
+      bool changed = ( updatedMasses.size() != g_externalMasses.size() );
+      for( size_t i = 0; !changed && i < updatedMasses.size(); ++i )
+        changed = ( static_cast<double>( updatedMasses[i] ) != g_externalMasses[i] );
+      if( changed )
+      {
+        g_externalMasses.assign( updatedMasses.begin(), updatedMasses.end() );
+      }
+    }
+    return UMAMI_SUCCESS;
+#endif
   }
 
   UmamiStatus umami_get_parameter(
@@ -406,7 +458,13 @@ extern "C"
     [[maybe_unused]] double* parameter_real,
     [[maybe_unused]] double* parameter_imag )
   {
+#ifdef MGONGPU_HARDCODE_PARAM
     return UMAMI_ERROR_NOT_IMPLEMENTED;
+#else
+    if( !Parameters::getInstance()->getParameterByName( name, parameter_real, parameter_imag ) )
+      return UMAMI_ERROR_UNKNOWN_PARAMETER;
+    return UMAMI_SUCCESS;
+#endif
   }
 
   UmamiStatus umami_matrix_element(
@@ -427,6 +485,7 @@ extern "C"
     const double* random_color_in = nullptr;
     const double* random_helicity_in = nullptr;
     const double* random_diagram_in = nullptr;
+    const int* helicity_in = nullptr;
     [[maybe_unused]] const int* diagram_in = nullptr; // TODO: unused
 
     for( std::size_t i = 0; i < input_count; ++i )
@@ -453,7 +512,8 @@ extern "C"
           random_diagram_in = static_cast<const double*>( input );
           break;
         case UMAMI_IN_HELICITY_INDEX:
-          return UMAMI_ERROR_UNSUPPORTED_INPUT;
+          helicity_in = static_cast<const int*>( input );
+          break;
         case UMAMI_IN_DIAGRAM_INDEX:
           diagram_in = static_cast<const int*>( input );
           break;
@@ -462,6 +522,14 @@ extern "C"
       }
     }
     if( !momenta_in ) return UMAMI_ERROR_MISSING_INPUT;
+    // UMAMI_IN_HELICITY_INDEX: evaluate each event for the one helicity it is given, an index
+    // into the full helicity table [0,ncomb) (the UMAMI_OUT_HELICITY_INDEX convention), instead
+    // of summing over the helicities. The |M|^2 is then the contribution of that helicity to
+    // the helicity-summed (and averaged) |M|^2, so that the sum over all ncomb helicities gives
+    // back the |M|^2 without this input; UMAMI_OUT_HELICITY_INDEX returns the given helicity,
+    // the color and diagram are chosen for it, and UMAMI_IN_RANDOM_HELICITY is not used. The
+    // indices live on the device and are only read by the kernels, so that an index out of
+    // [0,ncomb) cannot fail the call as on the CPU: that event gets |M|^2 = 0 and helicity -1.
 
     gpuStream_t gpu_stream = nullptr;
     double* m2_out = nullptr;
@@ -507,11 +575,11 @@ extern "C"
     fptype *couplings, *g_s, *helicity_random, *color_random, *diagram_random;
     fptype *matrix_elements, *ghel_matrix_elements;
     fptype_amp *color_jamps, *ghel_jamps;
-    int *helicity_index, *color_index;
+    int *helicity_index, *color_index, *helicity_given;
     unsigned int *flavor_indices, *diagram_index;
 
     std::size_t n_coup = madmatrix::Parameters_dependentCouplings::ndcoup;
-    std::array<std::pair<void**, std::size_t>, 16> ptrs_and_sizes = {{
+    std::array<std::pair<void**, std::size_t>, 17> ptrs_and_sizes = {{
         {reinterpret_cast<void**>(&momenta), rounded_count * ProcessData::npar * 4 * sizeof( fptype_momenta )},
         {reinterpret_cast<void**>(&couplings), rounded_count * n_coup * 2 * sizeof( fptype )},
         {reinterpret_cast<void**>(&g_s), rounded_count * sizeof( fptype )},
@@ -530,6 +598,7 @@ extern "C"
         {reinterpret_cast<void**>(&denominators), rounded_count * sizeof( fptype_amp )},
         {reinterpret_cast<void**>(&helicity_index), rounded_count * sizeof( int )},
         {reinterpret_cast<void**>(&color_index), rounded_count * sizeof( int )},
+        {reinterpret_cast<void**>(&helicity_given), rounded_count * sizeof( int )},
         {reinterpret_cast<void**>(&ghel_matrix_elements), rounded_count * ProcessData::ncomb * sizeof( fptype )},
         // njampso = ncolor per amplitude split order (just ncolor without split orders)
         {reinterpret_cast<void**>(&ghel_jamps), rounded_count * ProcessData::ncomb * ProcessData::njampso * mgOnGpu::nx2 * sizeof( fptype_amp )},
@@ -557,12 +626,14 @@ extern "C"
       random_diagram_in,
       alpha_s_in,
       flavor_indices_in,
+      helicity_in,
       momenta,
       helicity_random,
       color_random,
       diagram_random,
       g_s,
       flavor_indices,
+      helicity_given,
       count,
       stride,
       offset );
@@ -611,7 +682,8 @@ extern "C"
       // an interference |M|^2 (see add_and_select_hel), unless the instance was asked to
       // keep the helicity sum (interference_helicity_summed); without the random number
       // the |M|^2 stays the helicity sum (systematics re-evaluation, standalone checks)
-      random_helicity_in != nullptr && !instance->summed_helicity );
+      random_helicity_in != nullptr && !instance->summed_helicity,
+      helicity_in ? helicity_given : nullptr );
 
     copy_outputs<<<n_blocks, n_threads, 0, gpu_stream>>>(
       denominators,
@@ -625,6 +697,7 @@ extern "C"
       diagram_out,
       color_out,
       helicity_out,
+      helicity_in,
       count,
       stride,
       offset );

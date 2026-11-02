@@ -236,7 +236,7 @@ def main() -> None:
     config.max_cut_repetitions = gen_args["max_cut_repetitions"]
 
     # set up contexts and generators
-    load_context_data(contexts, backends, madspace_data)
+    load_context_data(contexts, backends, madspace_data, run_args["precision"])
     channel_generators = load_channels(contexts, config, temp_dir)
     event_generator = ms.EventGenerator(
         contexts=contexts,

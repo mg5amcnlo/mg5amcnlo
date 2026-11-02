@@ -3,9 +3,11 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <string>
 #include <type_traits>
 #include <typeindex>
 #include <unordered_map>
+#include <utility>
 
 #include "madspace/compgraphs.hpp"
 #include "madspace/driver/tensor.hpp"
@@ -34,6 +36,7 @@ struct UmamiFunctions {
         supported_outputs;
     std::function<std::remove_pointer_t<decltype(&umami_initialize)>> initialize;
     std::function<std::remove_pointer_t<decltype(&umami_set_parameter)>> set_parameter;
+    std::function<std::remove_pointer_t<decltype(&umami_get_parameter)>> get_parameter;
     std::function<std::remove_pointer_t<decltype(&umami_matrix_element)>>
         matrix_element;
     std::function<std::remove_pointer_t<decltype(&umami_free)>> free;
@@ -174,6 +177,26 @@ public:
     /// Opaque per-thread UMAMI process handle, initialized on first use.
     void* process_instance() const { return _instances.get().get(); }
 
+    // The Device this api's library was loaded on (ie the owning Context's
+    // device). Callers driving umami_matrix_element() need this to know
+    // whether the inputs/outputs it exchanges have to be staged through
+    // device-resident buffers (cuda/hip) or can be passed as plain host
+    // pointers (cpu).
+    DevicePtr device() const noexcept { return _device; }
+
+    // Whether the loaded library actually implements umami_set_parameter/
+    // umami_get_parameter (both optional symbols; a library built without
+    // them still loads fine, it just can't be parameter-reweighted in place
+    // and set_parameter()/get_parameter() will throw UMAMI_ERROR_NOT_IMPLEMENTED
+    // if called anyway).
+    bool supports_set_parameter() const noexcept { return bool(_functions.set_parameter); }
+    bool supports_get_parameter() const noexcept { return bool(_functions.get_parameter); }
+
+    // Directly sets/reads physics parameters according to whatever
+    // convention the library has implemented.
+    void set_parameter(const std::string& name, double real, double imag = 0.0) const;
+    std::pair<double, double> get_parameter(const std::string& name) const;
+
 private:
     MatrixElementApi(
         const std::string& file,
@@ -208,6 +231,7 @@ private:
     ThreadResource<InstanceType> _instances;
     std::string _file_name;
     std::size_t _index;
+    DevicePtr _device;
 
     friend class Context;
 };

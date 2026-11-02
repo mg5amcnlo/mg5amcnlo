@@ -84,6 +84,9 @@ void madspace::copy_channel_event(
     if (extra_flags & EventRecord::f_partial_weights) {
         event_out.partial_weight_product() = event_in.partial_weight_product();
     }
+    if (extra_flags & EventRecord::f_matrix_element) {
+        event_out.matrix_element() = event_in.matrix_element();
+    }
 
     std::size_t i = 0;
     for (; i < in_buffer.particle_count(); ++i) {

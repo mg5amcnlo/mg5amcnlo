@@ -163,7 +163,10 @@ def test_raw_matrix_element_output(tmp_path):
     ]
     (status_a, events_a), (status_b, events_b) = results
     assert status_a.mean == status_b.mean
-    assert np.array_equal(events_a, events_b)
+    # the events of the raw run also store the matrix element
+    names = [n for n in events_a.dtype.names if n in events_b.dtype.names]
+    assert "matrix_element" in events_b.dtype.names
+    assert np.array_equal(events_a[names], events_b[names])
 
 
 def test_diagram_channel_weights_need_amp2(tmp_path):

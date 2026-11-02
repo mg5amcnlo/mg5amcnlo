@@ -54,8 +54,10 @@ namespace madspace {
  * **Outputs**
  * - `momenta` – `float`, shape `(batch, n_out + 2, 4)` – all momenta (incoming
  *   beams first, then outgoing).
- * - `x1` – `float`, shape `(batch,)` – first parton momentum fraction.
- * - `x2` – `float`, shape `(batch,)` – second parton momentum fraction.
+ * - `x1` – `float`, shape `(batch,)` – first parton momentum fraction (1 for
+ *   every event if `leptonic` and for a decay).
+ * - `x2` – `float`, shape `(batch,)` – second parton momentum fraction (1 for
+ *   every event if `leptonic` and for a decay).
  *
  * In addition every mapping returns a `weight` (`float`, shape `(batch,)`), the
  * Jacobian of the transformation.

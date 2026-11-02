@@ -65,6 +65,12 @@ namespace madmatrix
   {
     // Instantiate the model class and set parameters that stay fixed during run
     m_pars = Parameters::getInstance();
+    // Parameters is a process-wide singleton (not owned per-instance), so a fresh
+    // initProc() must explicitly drop any overrides left by a previous
+    // setParameterByName() call -- otherwise re-initializing from a (possibly
+    // different) param card would silently carry forward stale overrides instead
+    // of giving a clean slate.
+    m_pars->resetParameterOverrides();
     SLHAReader slha( param_card_name, m_verbose );
     m_pars->setIndependentParameters( slha );
     m_pars->setIndependentCouplings();
@@ -79,12 +85,29 @@ namespace madmatrix
     }
     %(initProc_lines)s
     createNormalizedColorMatrix(); // no-op on cpu/simd, pushes to device memory on gpu
+    refreshIndependentParams();
+  }
+
+  // See declaration in CPPProcess.h for why this exists and when it must be called.
+  void
+  CPPProcess::refreshIndependentParams()
+  {
+    Parameters* m_pars = Parameters::getInstance();
     // Read physics parameters like masses and couplings from user configuration files,
     // then hand them to the backend-owned storage via the setters (see SigmaKin.cc).
     %(cipdassign)s
     %(cipcassign)s
     %(cipfassign)s
     %(bsmassign)s
+  }
+
+  // See declaration in CPPProcess.h for why this exists and when it must be called.
+  void
+  CPPProcess::refreshExternalMasses( std::vector<fptype>& masses )
+  {
+    Parameters* m_pars = Parameters::getInstance();
+    masses.clear();
+%(refreshExternalMasses_lines)s
   }
 #else
   // Initialize process (with hardcoded parameters)

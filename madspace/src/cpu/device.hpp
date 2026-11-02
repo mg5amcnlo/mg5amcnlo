@@ -105,15 +105,18 @@ public:
             return {1, batch_size};
         }
 
-        std::size_t batch_size_vec = (batch_size + simd_vec_size - 1) / simd_vec_size;
-        std::size_t min_batch_size = 64 / simd_vec_size;
+        // jobs are aligned to the largest vector size, so that only the end of the
+        // batch is left to the scalar kernels for every precision
+        std::size_t batch_size_vec =
+            (batch_size + simd_vec_size_max - 1) / simd_vec_size_max;
+        std::size_t min_batch_size = std::max(64 / simd_vec_size_max, 1);
         std::size_t thread_count = _thread_pool.thread_count();
         // std::size_t job_count = (batch_size + min_batch_size - 1) / min_batch_size;
         std::size_t job_count = batch_size_vec < thread_count * min_batch_size
             ? (batch_size_vec + min_batch_size - 1) / min_batch_size
             : thread_count;
         std::size_t job_size =
-            (batch_size_vec + job_count - 1) / job_count * simd_vec_size;
+            (batch_size_vec + job_count - 1) / job_count * simd_vec_size_max;
         // correct rounding errors to vector size
         job_count = (batch_size + job_size - 1) / job_size;
         return {job_count, job_size};

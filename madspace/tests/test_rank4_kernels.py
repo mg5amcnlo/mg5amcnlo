@@ -11,7 +11,7 @@ import madspace as ms
 
 
 def test_rank4_add(n=4096):
-    rank4 = ms.Type(ms.DataType.float, ms.batch_size, [2, 3, 4])
+    rank4 = ms.Type(ms.DataType.float64, ms.batch_size, [2, 3, 4])
     fb = ms.FunctionBuilder(
         ms.NamedTypes([("x", rank4)]), ms.NamedTypes([("y", rank4)])
     )

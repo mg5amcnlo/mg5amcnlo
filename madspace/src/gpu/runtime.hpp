@@ -91,6 +91,7 @@ private:
     SizeVec _grad_global_indices;
     std::vector<Sizes> _grad_global_shapes;
     std::size_t _grad_global_total_size;
+    DataType _grad_global_dtype = DataType::dt_float64;
     ContextPtr _context;
     ThreadResource<std::vector<gpuStream_t>> _streams;
     ThreadResource<std::vector<gpuEvent_t>> _events;

@@ -40,6 +40,8 @@ typedef enum {
     UMAMI_ERROR_UNSUPPORTED_OUTPUT,
     UMAMI_ERROR_UNSUPPORTED_META,
     UMAMI_ERROR_MISSING_INPUT,
+    UMAMI_ERROR_UNKNOWN_PARAMETER,
+    UMAMI_ERROR_UNINITIALIZED_META,
 } UmamiStatus;
 
 typedef enum {
@@ -54,6 +56,7 @@ typedef enum {
     UMAMI_META_DIAGRAM_COUNT,
     UMAMI_META_HELICITY_COUNT,
     UMAMI_META_COLOR_COUNT,
+    UMAMI_META_MASSES,
 } UmamiMetaKey;
 
 typedef enum {
@@ -97,7 +100,12 @@ typedef void* UmamiHandle;
  *     pointer to an instance of the subprocess. Has to be cleaned up by
  *     the caller with `free_subprocess`.
  * @return
- *     UMAMI_SUCCESS on success, error code otherwise
+ *     UMAMI_SUCCESS on success, error code otherwise. UMAMI_META_MASSES returns
+ *     UMAMI_ERROR_UNINITIALIZED_META if no instance has been created yet with
+ *     umami_initialize(). NB: unlike other meta keys, UMAMI_META_MASSES can vary between
+ *     instances (parameters are stored per-instance in this backend, and are settable via
+ *     umami_set_parameter); since this function takes no handle, it always reports the
+ *     masses of the most recently initialized-or-modified instance, not a specific one.
  */
 UmamiStatus umami_get_meta(UmamiMetaKey meta_key, void* result);
 
@@ -143,18 +151,24 @@ UmamiStatus umami_supported_outputs(bool const** supported, int* count);
 UmamiStatus umami_initialize(UmamiHandle* handle, char const* param_card_path);
 
 /**
- * Sets the value of a model parameter
+ * Sets the value of a model parameter. Only independent, SLHA-card-level
+ * parameters (i.e. those normally read from the param card) can be set this
+ * way; parameters or couplings derived from them are recomputed
+ * automatically and cannot be overridden directly.
  *
  * @param handle
  *     handle of a matrix element instance
  * @param name
- *     name of the parameter
+ *     name of the parameter, given either as its model name (e.g. "mdl_MT")
+ *     or as its SLHA card location, "<block> <index> [<index2>]" (e.g.
+ *     "mass 6"); the block name is matched case-insensitively
  * @param parameter_real
  *     real part of the parameter value
  * @param parameter_imag
  *     imaginary part of the parameter value. Ignored for real valued parameters.
  * @return
- *     UMAMI_SUCCESS on success, error code otherwise
+ *     UMAMI_SUCCESS on success, UMAMI_ERROR_UNKNOWN_PARAMETER if "name" is not
+ *     a settable parameter, error code otherwise
  */
 UmamiStatus umami_set_parameter(
     UmamiHandle handle,
@@ -169,14 +183,16 @@ UmamiStatus umami_set_parameter(
  * @param handle
  *     handle of a matrix element instance
  * @param name
- *     name of the parameter
+ *     name of the parameter; accepts the same two forms as
+ *     umami_set_parameter (model name, or SLHA "<block> <index> [<index2>]")
  * @param parameter_real
  *     pointer to double to return real part of the parameter value
  * @param parameter_imag
  *     pointer to double to return imaginary part of the parameter value. Ignored
  *     for real-valued parameters (i.e. you may pass a null pointer)
  * @return
- *     UMAMI_SUCCESS on success, error code otherwise
+ *     UMAMI_SUCCESS on success, UMAMI_ERROR_UNKNOWN_PARAMETER if "name" is not
+ *     a known parameter or coupling, error code otherwise
  */
 UmamiStatus umami_get_parameter(
     UmamiHandle handle,

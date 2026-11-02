@@ -681,7 +681,7 @@ TensorVec WeightingPipeline::gather_rows(
     for (auto chunk : chunks) {
         count += chunk->size();
     }
-    Tensor indices(DataType::dt_int, {count});
+    Tensor indices(DataType::dt_int32, {count});
     auto view = indices.view<me_int_t, 1>();
     for (std::size_t row = 0; auto chunk : chunks) {
         for (std::size_t i = 0; i < chunk->size(); ++i, ++row) {
@@ -692,7 +692,7 @@ TensorVec WeightingPipeline::gather_rows(
     }
     auto device = _contexts.at(context_index)->device();
     if (device != cpu_device()) {
-        Tensor device_indices(DataType::dt_int, {count}, device);
+        Tensor device_indices(DataType::dt_int32, {count}, device);
         device_indices.copy_from(indices);
         indices = device_indices;
     }

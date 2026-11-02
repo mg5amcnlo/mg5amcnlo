@@ -66,9 +66,17 @@ endif
 #=== Makefile TARGETS and build rules below
 #===============================================================================
 
-# The common library name carries the full BACKEND suffix so each vectorisation/GPU variant is distinct
-# (and LIBTAG, see madmatrix.mk).
-MADMATRIX_COMMONLIB = madmatrix_common$(LIBTAG)_$(BACKEND)
+# The common library name carries the model name and the full BACKEND suffix, so each
+# vectorisation/GPU variant is distinct AND libraries from different regenerated model
+# directories (eg the same process regenerated in several models and loaded into one
+# program) never collide: dlopen resolves a bare NEEDED entry by matching any
+# already-loaded library of that name anywhere in the process, regardless of RUNPATH,
+# so two "libmadmatrix_common_<backend>.so" from different models would otherwise
+# silently alias -- the second model's process code ends up bound to the first
+# model's Parameters implementation. FPTYPE is appended too, purely for naming
+# consistency with MADMATRIX_LIB (SubProcesses/madmatrix.mk); FPTYPE is exported from
+# there, same as BACKEND. LIBTAG as well, see madmatrix.mk.
+MADMATRIX_COMMONLIB = madmatrix_common$(LIBTAG)_%(model)s_$(BACKEND)_$(FPTYPE)
 
 # Name recorded in the library itself, and hence in whatever links against it.
 # Without it the linker bakes in the absolute build path (LIBDIR), so the process
@@ -112,7 +120,7 @@ endif
 
 #-------------------------------------------------------------------------------
 
-objects=$(addprefix $(BUILDDIR)/, read_slha.o Parameters.o)
+objects=$(addprefix $(BUILDDIR)/, read_slha.o Parameters.o HelRecyclingScratch.o)
 
 # Target (and build rules): common (src) library
 ifeq ($(GPUCC),)

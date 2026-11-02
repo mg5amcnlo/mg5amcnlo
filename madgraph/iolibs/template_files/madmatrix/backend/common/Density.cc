@@ -199,7 +199,7 @@ namespace madmatrix
             for( int n = 0; n < nChanging; n++ ) row[pos0[n]] = allowHel[icomb * nChanging + n];
             cxtype_amp_sv* jamp_sv = &s.jamps[(size_t)icomb * nParity * njampso];
             for( int i = 0; i < nParity * njampso; i++ ) jamp_sv[i] = cxzero_sv<cxtype_amp_sv>();
-            calculate_jamps( row, allmomenta, allcouplings, allflavors, jamp_sv, false, numerators, denominators, nullptr, ievt00 );
+            calculate_jamps( row, nullptr, allmomenta, allcouplings, allflavors, jamp_sv, false, numerators, denominators, nullptr, ievt00 );
           }
           bool nonzero = false;
           for( int iParity = 0; iParity < nParity; iParity++ )

@@ -25,6 +25,9 @@ int event_extra_flags(const std::unordered_map<std::string, std::size_t>& index_
     if (index_map.contains("bias")) {
         flags |= EventRecord::f_bias;
     }
+    if (index_map.contains("matrix_element")) {
+        flags |= EventRecord::f_matrix_element;
+    }
     return flags;
 }
 
@@ -1001,6 +1004,14 @@ void ChannelEventGenerator::fill_event_buffers(
         auto bias_view = unweighted_events.at(_field_indices.bias).view<double, 1>();
         for (std::size_t i = 0; i < bias_view.size(); ++i) {
             event_buffer.event(i).bias() = bias_view[i];
+        }
+    }
+
+    if (_field_indices.matrix_element != -1) {
+        auto me_view =
+            unweighted_events.at(_field_indices.matrix_element).view<double, 1>();
+        for (std::size_t i = 0; i < me_view.size(); ++i) {
+            event_buffer.event(i).matrix_element() = me_view[i];
         }
     }
 

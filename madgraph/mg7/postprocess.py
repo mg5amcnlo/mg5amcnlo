@@ -110,8 +110,8 @@ def selected_tools(switch) -> list:
     # analysis == 'MadAnalysis5' and shower != 'OFF').
     ma5 = switch.get("analysis") == "MadAnalysis5"
     showered = not _off(switch.get("shower"))
+    # reweighting is not one of them: run_single runs it (run_reweighting)
     return [t for t, on in (
-        ("reweighting", not _off(switch.get("reweight"))),
         ("MadSpin", not _off(switch.get("madspin"))),
         ("MadAnalysis5 (parton level)", ma5),
         ("Pythia8 shower", switch.get("shower") == "Pythia8"),
@@ -130,9 +130,10 @@ def run_selected_tools(switch, process) -> None:
     output reuses the *exact* madevent tool drivers -- in particular Pythia8 is
     showered in parallel over the cluster/multicore backend, identically to a
     madevent run -- instead of re-implementing each tool here. The command
-    sequence mirrors ``MadEventCmd.do_launch`` (reweight, MadSpin, MA5 parton,
-    shower, Delphes, MA5 hadron, Rivet); each tool checks its own card, so a
-    tool is invoked only when its switch is on.
+    sequence mirrors ``MadEventCmd.do_launch`` (MadSpin, MA5 parton, shower,
+    Delphes, MA5 hadron, Rivet); each tool checks its own card, so a tool is
+    invoked only when its switch is on. Reweighting, which comes first in
+    that sequence, already ran (run_reweighting, from run_single).
     """
     log = logging.getLogger("madevent")
 
@@ -184,12 +185,10 @@ def run_selected_tools(switch, process) -> None:
             log.info("  -> %s done (%.1fs)", tool, time.time() - start)
 
     # Same order as MadEventCmd.do_launch. The commands take no run name and so
-    # act on cmd.run_name: reweight runs on the generated events, then
-    # decay_events (MadSpin) repoints cmd.run_name to the "<run>_decayed_i" run,
-    # so the shower and the analyses that follow act on the decayed events --
-    # exactly as a madevent run does. Each driver still guards on its own card.
-    if not _off(switch.get("reweight")):
-        run("reweight", "reweight -from_cards")
+    # act on cmd.run_name: decay_events (MadSpin) repoints cmd.run_name to the
+    # "<run>_decayed_i" run, so the shower and the analyses that follow act on
+    # the decayed events -- exactly as a madevent run does. Each driver still
+    # guards on its own card.
     if not _off(switch.get("madspin")):
         run("MadSpin", "decay_events -from_cards")
     if ma5:

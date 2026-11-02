@@ -40,7 +40,7 @@ The mapping, cuts, matrix element, PDF and scale are exactly the same building b
     mapping = ms.PhaseSpaceMapping(masses, E_CM, mode="propagator", cuts=cuts)
 
     proc_dir = "PROC_ggttg"
-    me_path = os.path.join(proc_dir, "lib", "libmadmatrix_P0_gg_ttxg_scalar.so")
+    me_path = os.path.join(proc_dir, "lib", "libmadmatrix_sm_P0_gg_ttxg_scalar_m.so")
     param_card = os.path.join(proc_dir, "Cards", "param_card.dat")
 
     ctx = ms.default_context()

@@ -109,6 +109,9 @@ cwnet_hidden_dim = 64
 cwnet_layers = 3
 cwnet_activation = "leaky_relu" # options: relu, leaky_relu, elu, gelu, sigmoid, softplus
 
+# precision of all networks
+nn_float_precision = "float32" # options: float32, float64
+
 # training parameters
 train_batches = 1000
 log_interval = 100

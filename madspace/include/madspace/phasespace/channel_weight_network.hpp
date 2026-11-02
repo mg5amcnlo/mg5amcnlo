@@ -77,6 +77,7 @@ public:
      * @param prefix                  Prefix for the trainable global names.
      * @param include_preprocessing   If true, apply @ref MomentumPreprocessing
      *                                to the input first.
+     * @param precision               Float type of the @ref MLP.
      */
     ChannelWeightNetwork(
         std::size_t channel_count,
@@ -85,7 +86,8 @@ public:
         std::size_t layers = 3,
         MLP::Activation activation = MLP::leaky_relu,
         const std::string& prefix = "",
-        bool include_preprocessing = true
+        bool include_preprocessing = true,
+        DataType precision = DataType::dt_float64
     );
 
     /// The underlying network.

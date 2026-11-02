@@ -12064,7 +12064,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         that build's tag."""
         tag = madspin.density_libtag(self._ms_run_id,
                                      'p' if prod_or_decay == 'prod' else 'd')
-        if os.path.exists(pjoin(tree, 'lib', 'libmadmatrix_common%s_scalar.so' % tag)):
+        if os.path.exists(madmatrix_density.common_library_path(tree, tag)):
             return tag
         try:
             return madmatrix_density.find_libtag(tree)

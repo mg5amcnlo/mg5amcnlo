@@ -243,7 +243,9 @@ def _run_mg7_postproc(test, setup_cmds, run_dir, datadir, switch_lines=None,
     log = pjoin(run_dir, 'mg7_postproc.log')
     if switch_lines:
         stdin_text = '\n'.join(list(switch_lines) + ['done']) + '\n'
-        args = [sys.executable, pjoin(run_dir, 'bin', 'generate_events')]
+        # the switches are answered through stdin on purpose
+        args = [sys.executable, pjoin(run_dir, 'bin', 'generate_events'),
+                '--allow-stdin']
     else:
         stdin_text = None
         args = [sys.executable, pjoin(run_dir, 'bin', 'generate_events'), '-f']
@@ -3675,7 +3677,6 @@ class TestMEfromfile(unittest.TestCase):
         set ickkw 1
         set xqcut 10
         set mmll 50
-        set auto_ptj_mmjj False
         set ptj 0.01
         """ % {'path':self.run_dir})
         command.close()
@@ -3740,8 +3741,8 @@ class TestMEfromfile(unittest.TestCase):
         generate g g > b b~ HIW<=1
         output madevent %(path)s
         launch 
+        shower=OFF
         set nevents 1000
-        set shower none
         """ % {'path':self.run_dir})
         command.close()
         

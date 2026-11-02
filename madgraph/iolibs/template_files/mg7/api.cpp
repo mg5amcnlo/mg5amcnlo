@@ -1,6 +1,16 @@
 #include "CPPProcess.h"
 #include "api.h"
+#include <cstdio>
 #include <vector>
+
+namespace {
+    // Masses reported by umami_get_meta(UMAMI_META_MASSES, ...), which (unlike every other
+    // UMAMI entry point in this file) takes no handle: model parameters are stored per-
+    // instance in this backend (CPPProcess::pars), so this can only ever reflect the most
+    // recently initialized-or-modified instance, not a specific one. See the caveat on
+    // umami_get_meta() in api.h.
+    std::vector<double> g_masses;
+}
 
 extern "C" {
 
@@ -20,6 +30,12 @@ UmamiStatus umami_get_meta(UmamiMetaKey meta_key, void* result) {
         break;
     case UMAMI_META_COLOR_COUNT:
         return UMAMI_ERROR_UNSUPPORTED_META;
+    case UMAMI_META_MASSES: {
+        if (g_masses.size() != (size_t)CPPProcess::nexternal) return UMAMI_ERROR_UNINITIALIZED_META;
+        for (int i = 0; i < CPPProcess::nexternal; ++i)
+            static_cast<double*>(result)[i] = g_masses[i];
+        break;
+    }
     default:
         return UMAMI_ERROR_UNSUPPORTED_META;
     }
@@ -54,6 +70,7 @@ UmamiStatus umami_initialize(UmamiHandle* handle, char const* param_card_path) {
     CPPProcess* process = new CPPProcess(param_card_path);
     std::vector<double*>& momenta = process->getMomenta();
     for (int i = 0; i < CPPProcess::nexternal; ++i) momenta.push_back(new double[4]());
+    g_masses.assign(process->getMasses().begin(), process->getMasses().end());
     *handle = process;
     return UMAMI_SUCCESS;
 }
@@ -65,7 +82,18 @@ UmamiStatus umami_set_parameter(
     double parameter_real,
     double parameter_imag
 ) {
-    return UMAMI_ERROR_NOT_IMPLEMENTED;
+    CPPProcess* process = static_cast<CPPProcess*>(handle);
+    if (!process->getParameters().setParameterByName(name, parameter_real, parameter_imag))
+        return UMAMI_ERROR_UNKNOWN_PARAMETER;
+    process->refreshMasses();
+    const std::vector<double>& masses = process->getMasses();
+    bool changed = (masses.size() != g_masses.size());
+    for (size_t i = 0; !changed && i < masses.size(); ++i)
+        changed = (masses[i] != g_masses[i]);
+    if (changed) {
+        g_masses.assign(masses.begin(), masses.end());
+    }
+    return UMAMI_SUCCESS;
 }
 
 
@@ -75,7 +103,10 @@ UmamiStatus umami_get_parameter(
     double* parameter_real,
     double* parameter_imag
 ) {
-    return UMAMI_ERROR_NOT_IMPLEMENTED;
+    CPPProcess* process = static_cast<CPPProcess*>(handle);
+    if (!process->getParameters().getParameterByName(name, parameter_real, parameter_imag))
+        return UMAMI_ERROR_UNKNOWN_PARAMETER;
+    return UMAMI_SUCCESS;
 }
 
 UmamiStatus umami_matrix_element(

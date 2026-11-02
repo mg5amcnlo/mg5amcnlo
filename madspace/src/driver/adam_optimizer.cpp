@@ -4,20 +4,24 @@
 
 using namespace madspace;
 
-GradientClipper::GradientClipper() :
+GradientClipper::GradientClipper(DataType dtype) :
     FunctionGenerator(
         "Unweighter",
-        {{"gradients_in", batch_float}, {"threshold", single_float}},
-        {{"gradients_out", batch_float}, {"gradient_norm", single_float}}
+        {{"gradients_in", Type(dtype, batch_size, {})}, {"threshold", single_float}},
+        {{"gradients_out", Type(dtype, batch_size, {})},
+         {"gradient_norm", single_float}}
     ) {}
 
 NamedVector<Value> GradientClipper::build_function_impl(
     FunctionBuilder& fb, const NamedVector<Value>& args
 ) const {
+    // only the norm is computed in double precision
     Value grads_in = args.at(0);
-    Value grad_norm = fb.sqrt(fb.batch_reduce_sum(fb.square(grads_in)));
+    bool single = grads_in.type.dtype == DataType::dt_float32;
+    Value grads_sq = fb.square(single ? fb.convert_float64(grads_in) : grads_in);
+    Value grad_norm = fb.sqrt(fb.batch_reduce_sum(grads_sq));
     Value factor = fb.min(fb.div(args.at(1), grad_norm), 1.0);
-    Value grads_out = fb.mul(grads_in, factor);
+    Value grads_out = fb.mul(grads_in, single ? fb.convert_float32(factor) : factor);
     return {
         {"gradients_out", grads_out},
         {"gradient_norm", grad_norm},
@@ -46,11 +50,6 @@ AdamOptimizer::AdamOptimizer(
     _eps(eps),
     _grad_clip_threshold(grad_clip_threshold),
     _weight_decay(weight_decay),
-    _grad_clipper(
-        grad_clip_threshold > 0.
-            ? build_runtime(GradientClipper().function(), context, false)
-            : nullptr
-    ),
     _one(1.0, context->device()),
     _loss_mean(std::numeric_limits<double>::quiet_NaN()) {
     DevicePtr device = context->device();
@@ -61,6 +60,11 @@ AdamOptimizer::AdamOptimizer(
     }
     _parameter = context->reallocate_globals_contiguously(_param_names);
     _runtime = build_runtime(function, context);
+    if (grad_clip_threshold > 0.) {
+        _grad_clipper = build_runtime(
+            GradientClipper(_parameter.dtype()).function(), context, false
+        );
+    }
     _exp_avg = Tensor(_parameter.dtype(), _parameter.shape(), _parameter.device());
     _exp_avg.zero();
     _exp_avg_sq = Tensor(_parameter.dtype(), _parameter.shape(), _parameter.device());
@@ -141,6 +145,11 @@ void AdamOptimizer::replace_function(const Function& function) {
     _runtime.reset();
     _parameter = _context->reallocate_globals_contiguously(_param_names);
     _runtime = build_runtime(function, _context);
+    if (_grad_clipper) {
+        _grad_clipper = build_runtime(
+            GradientClipper(_parameter.dtype()).function(), _context, false
+        );
+    }
     Tensor old_ea = _exp_avg, old_eas = _exp_avg_sq;
     _exp_avg = Tensor(_parameter.dtype(), _parameter.shape(), _parameter.device());
     _exp_avg_sq = Tensor(_parameter.dtype(), _parameter.shape(), _parameter.device());

@@ -1,0 +1,34 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "packaging>=22"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "madtrex"
+# Taken from the MadGraph VERSION file, like madspace: madtrex is never
+# released on its own.
+dynamic = ["version"]
+description = "MadtRex: event reweighting for MadGraph7, bridging madspace matrix elements and Rex/teaRex"
+readme = "README.md"
+authors = [
+  { name = "Zenny Wettersten" },
+]
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+# madspace provides MatrixElementApi/Context/LHEMeta (and libmadspace, which
+# _madtrex_py links against); pyrex is the Python package of the Rex fork
+# bundled in Rex/ (pip install ./Rex), providing the REX::tea types that
+# TupperWare/WareHouse build and consume.
+dependencies = ["madspace", "pyrex"]
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+cmake.build-type = "Release"
+wheel.packages = ["madtrex"]
+
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+input = "../VERSION"
+regex = '(?m)^version\s*=\s*(?P<value>\S+)'

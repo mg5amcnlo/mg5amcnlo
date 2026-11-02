@@ -62,6 +62,28 @@ nb_f2py_module = 0 # each time the process/model is changed this number is modif
 #lhapdf = None
 
 
+# The "change <option>" lines of a reweight card that ReweightInterface.do_change
+# understands, and those DensityInterface adds (its do_change_<option>
+# methods). The reweighting-backend selector (madgraph/various/
+# reweight_backend.py) uses them to tell which lines need this (the classic)
+# backend.
+REWEIGHT_CHANGE_OPTIONS = frozenset([
+    'backend', 'model', 'process', 'keep_ordering', 'use_eventid',
+    'allow_missing_finalstate', 'boost', 'virtual_path', 'tree_path',
+    'output', 'helicity', 'mode', 'rwgt_dir', 'systematics', 'soft_threshold',
+    'multicore', 'identical_particle_in_prod_and_decay', 'include_sudakov'])
+DENSITY_CHANGE_OPTIONS = frozenset([
+    'helicity_direction', 'boost_choice', 'order_helicities',
+    'symmetrise_initial_state', 'axis_referential', 'matrix_normalisation',
+    'particle_in_density_matrix'])
+# "change" options of the shared reweight-card vocabulary that only MadtRex
+# (MG7 outputs) understands; an error here rather than a discarded line.
+MADTREX_ONLY_CHANGE_OPTIONS = frozenset([
+    'fptype', 'verbose', 'max_batch', 'max_deferred_iterations', 'streaming',
+    'stream_batch_size', 'nb_core', 'min_batch', 'alpha_s_power',
+    'scale_variation_output'])
+
+
 class ReweightInterface(extended_cmd.Cmd):
     """Basic interface for reweighting operation"""
 
@@ -376,6 +398,8 @@ class ReweightInterface(extended_cmd.Cmd):
     def help_change(self):
         """help for change command"""
 
+        print("change backend classic|auto: the reweighting program (MadtRex, the other")
+        print("               backend, needs an MG7 output)")
         print("change model X :use model X for the reweighting")
         print("change process p p > e+ e-: use a new process for the reweighting")
         print("change process p p > mu+ mu- --add : add one new process to existing ones")
@@ -390,7 +414,23 @@ class ReweightInterface(extended_cmd.Cmd):
         args = self.split_arg(line)
         if len(args)<2:
             logger.critical("not enough argument (need at least two). Discard line")
-        if args[0] == "model":
+        if args[0] in MADTREX_ONLY_CHANGE_OPTIONS or \
+                (args[0] == 'mode' and len(args) > 1 and args[1].lower() == 'pdf'):
+            raise self.InvalidCmd(
+                "'change %s' is MadtRex only: MadtRex reweights MG7 outputs "
+                "(change backend madtrex)" % ' '.join(args))
+        if args[0] not in REWEIGHT_CHANGE_OPTIONS:
+            logger.critical("unknown option! %s.  Discard line." % args[0])
+        elif args[0] == "backend":
+            # which backend reads the card (madgraph/various/reweight_backend.py)
+            if len(args) < 2 or args[1].lower() not in ('classic', 'auto', 'madtrex'):
+                raise self.InvalidCmd(
+                    "change backend: expected classic, madtrex or auto")
+            if args[1].lower() == 'madtrex':
+                raise self.InvalidCmd(
+                    "the reweight card asks for MadtRex ('change backend madtrex'): "
+                    "MadtRex needs an MG7 output; use 'change backend classic' or auto")
+        elif args[0] == "model":
             nb_f2py_module += 1 # tag to force the f2py to reload
             self.second_model = " ".join(args[1:])
             if self.has_standalone_dir:
@@ -463,8 +503,6 @@ class ReweightInterface(extended_cmd.Cmd):
             if args[1] == 'True':
                 self.inc_sudakov = True
                 self.rwgt_mode = 'LO'
-        else:
-            logger.critical("unknown option! %s.  Discard line." % args[0])
         
             
     def check_launch(self, args):

@@ -38,6 +38,10 @@ MADSPACE_DIR = MG_ROOT / "madspace"
 INSTALL_DIR = MADSPACE_DIR / "install"
 PYAMPLICOL_DIR = MG_ROOT / "pyamplicol"
 PYAMPLICOL_INSTALL_DIR = PYAMPLICOL_DIR / "install"
+# MadtRex (event reweighting) is installed separately, on top of madspace;
+# nothing here installs it -- see madtrex/install.py.
+MADTREX_DIR = MG_ROOT / "madtrex"
+MADTREX_INSTALL_DIR = MADTREX_DIR / "install"
 
 
 def madspace_is_installed() -> bool:

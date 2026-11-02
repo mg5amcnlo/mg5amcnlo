@@ -264,6 +264,32 @@ ValueVec FunctionBuilder::instruction(const std::string& name, const ValueVec& a
 }
 
 ValueVec
+FunctionBuilder::precision_instruction(const std::string& name, const ValueVec& args) {
+    auto is_literal = [](const Value& arg) {
+        return !std::holds_alternative<std::monostate>(arg.literal_value);
+    };
+    DataType dtype = DataType::dt_float64;
+    for (auto& arg : args) {
+        if (!is_literal(arg) && is_float(arg.type.dtype)) {
+            dtype = arg.type.dtype;
+            break;
+        }
+    }
+    if (dtype == DataType::dt_float64) {
+        return instruction(name + "_float64", args);
+    }
+    ValueVec converted_args;
+    for (auto& arg : args) {
+        converted_args.push_back(
+            is_literal(arg) && arg.type.dtype == DataType::dt_float64
+                ? convert_float32(arg)
+                : arg
+        );
+    }
+    return instruction(name + "_float32", converted_args);
+}
+
+ValueVec
 FunctionBuilder::instruction(InstructionPtr instruction, const ValueVec& args) {
     // check argument types and determine if all arguments are constant
     auto params = args;
@@ -328,7 +354,7 @@ FunctionBuilder::instruction(InstructionPtr instruction, const ValueVec& args) {
             return {arg(0) + arg(1)};
         case opcodes::sub:
             return {arg(0) - arg(1)};
-        case opcodes::mul:
+        case opcodes::mul_float64:
             return {arg(0) * arg(1)};
         case opcodes::sqrt:
             return {std::sqrt(arg(0))};
@@ -376,7 +402,7 @@ FunctionBuilder::instruction(InstructionPtr instruction, const ValueVec& args) {
                     return {var_arg};
                 }
                 break;
-            case opcodes::mul:
+            case opcodes::mul_float64:
                 if (const_val == 1.) {
                     return {var_arg};
                 }

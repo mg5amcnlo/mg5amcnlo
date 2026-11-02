@@ -18,7 +18,7 @@ allocation per workflow run, and every CI job of that run executes in it:
 
 | job | runs on | what it does |
 |---|---|---|
-| `start_runner` | vmadgraph | ask `ceci-gate` on the VM to `sbatch` `runner_batch.sh` on the GPU partition, wait until the runner is online (`remote_start_runner.sh`) |
+| `start_runner` | vmadgraph | ask `ceci-gate` on the VM to `sbatch` `runner_batch.sh` on the GPU partition, wait until the runner is online (`remote_start_runner.sh`); if cancelled, timed out or failed before that, `scancel` the runner job (`ceci-gate cancel-runner`, `remote_cancel_runner.sh`) |
 | `build_madspace` | cluster | build madspace with `ENABLE_CUDA`/`ENABLE_HIP` for the GPU of the node (`build_madspace_gpu.sh`). The build is kept in `$GLOBALSCRATCH/mg7-gpu-ci/cache` and redone only when the madspace sources, the modules or the GPU architecture change |
 | `pp_ttx` | cluster | `generate p p > t t~`, `output mg7`, `device = ["cuda"]` or `["hip"]` in `run_card.toml`, `bin/generate_events -f`, check the cross section in `info.json` (`pp_ttx_mg7.sh`). The logs and cards are uploaded as an artifact, and the cross section is shown in the run summary |
 | `pp_jj` | cluster | the same with `generate p p > j j` (`PROCESS`/`TAG` of `pp_ttx_mg7.sh`): its jet cuts act on several objects, which `p p > t t~` has none of |
@@ -43,8 +43,15 @@ Other safeguards:
 * **One run at a time per cluster.** The runner jobs of a cluster share the name
   `mg7-gh-runner-<label>` and use `--dependency=singleton`, so a second runner waits until the
   first one has stopped. The workflows also use a concurrency group per cluster.
-* **Cancelled runs.** If a run is cancelled before its runner starts, the runner stops by
-  itself after 10 minutes without a job.
+* **Cancelled runs.** If a run is cancelled (or `start_runner` times out or fails) before its
+  runner is online, the last step of `start_runner` scancels the runner job
+  (`ceci-gate cancel-runner`): otherwise it could stay queued for hours when the partition is
+  full, and through `--dependency=singleton` hold back every later run of the cluster. Before
+  it submits, `ceci-gate start-runner` also scancels the runner jobs still queued for run
+  attempts that are over on GitHub (completed or deleted), in case that step could not run.
+  Jobs with another name are never touched. Once the runner is online, a cancelled run still
+  runs `stop_runner` (`if: always()`), which ends the allocation; a runner that gets no job
+  stops by itself after 10 minutes.
 * **Allocations that end early.** When Slurm ends the allocation before `stop_runner` ran
   (time limit, node failure, preemption, or the runner stopped after 10 minutes without a
   job), the runner dies with it. The job in progress fails, but the jobs not started yet,
@@ -102,7 +109,8 @@ repository, and 3 organisation owners can change any repository setting. Hence:
   targets the runner label while it is online.
 * **Cluster files come from the VM.** `ceci-gate` copies `runner_batch.sh` and
   `job_started_hook.sh` to the cluster at every start, and pipes `remote_start_runner.sh`,
-  `remote_watch_runner.sh` and `remote_modules.sh`, all from `/usr/local/share/ceci-gate`. After a change to one of them,
+  `remote_watch_runner.sh`, `remote_cancel_runner.sh` and `remote_modules.sh`, all from
+  `/usr/local/share/ceci-gate`. After a change to one of them,
   install it there again (step 1).
 
 What an allowed run executes on the cluster is still the code of its commit: dispatch only
@@ -129,7 +137,7 @@ change rulesets.
    install -o root -g root -m 755 vm_gate/ceci-gate /usr/local/sbin/ceci-gate
    install -d -o root -g root -m 755 /usr/local/share/ceci-gate /etc/ceci-gate
    install -o root -g root -m 755 remote_start_runner.sh runner_batch.sh job_started_hook.sh \
-     remote_modules.sh remote_watch_runner.sh /usr/local/share/ceci-gate/
+     remote_modules.sh remote_watch_runner.sh remote_cancel_runner.sh /usr/local/share/ceci-gate/
    # the GitHub logins whose runs may use the cluster, and the branches whose runs may use
    # it whoever started them, one per line
    echo oliviermattelaer > /etc/ceci-gate/allowed_actors
@@ -183,5 +191,10 @@ change rulesets.
 * **`start_runner` fails with "Runner registration has been deleted".** GitHub removes a
   self-hosted runner that has not connected for 14 days. Run the install command of step 2 again.
 * **A runner job is stuck on the cluster.** Look for it with
-  `squeue -u $USER -n mg7-gh-runner-<label>`, and remove it with `scancel`.
+  `squeue -u $USER -n mg7-gh-runner-<label>` (in a login shell: `ssh <cluster> 'bash -lc "..."'`).
+  Its comment is the run attempt that submitted it, `mg7-run-<run id>-<attempt>`. The next
+  start removes it if that attempt is over; otherwise remove it with `scancel`, but only when
+  no run of the cluster is in progress on GitHub.
+* **`start_runner` fails with "remote_cancel_runner.sh is missing".** The gate on the VM was
+  updated without that script: install it too (step 1).
 * **Runner logs** are in `~/mg7-gpu-ci/runner-<label>/slurm-<jobid>.out`.

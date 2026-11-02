@@ -1066,6 +1066,9 @@ void EventGenerator::copy_event_fields(
     if (contains("partial_weight_product")) {
         event_out.partial_weight_product() = event_in.partial_weight_product();
     }
+    if (contains("matrix_element")) {
+        event_out.matrix_element() = event_in.matrix_element();
+    }
     if (_systematics) {
         std::size_t count = _systematics->weight_count();
         for (std::size_t k = 0; k < count; ++k) {

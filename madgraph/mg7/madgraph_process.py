@@ -21,9 +21,13 @@ from madgraph.mg7 import plots
 from madgraph.mg7 import systematics_summary
 from madgraph.mg7.bootstrap import INSTALL_DIR as _INSTALL_DIR
 from madgraph.mg7.bootstrap import MADSPACE_DIR as _MADSPACE_DIR
+from madgraph.mg7.bootstrap import MADTREX_DIR as _MADTREX_DIR
+from madgraph.mg7.bootstrap import MADTREX_INSTALL_DIR as _MADTREX_INSTALL_DIR
+from madgraph.mg7.bootstrap import MG_ROOT as _MG_ROOT
 from madgraph.iolibs.template_files.mg7.custom_function_loader import load_custom_function
 from madgraph.mg7.observables import CutItem, HistItem, build_observable, clean_pids, observable_pids
 from madgraph.mg7.options import lhapdf_paths
+from madgraph.mg7.postprocess import _find_event_file
 from madgraph.mg7.subprocess_amplicol import AmplicolSubprocess, amplicol_subproc_args, is_amplicol
 from madgraph.mg7.subprocess_madmatrix import MadgraphSubprocess, PhaseSpace, build_multi_channel_data
 
@@ -35,6 +39,11 @@ PCH_MIN_SUBPROCESSES = 4
 
 
 class MadgraphProcess:
+    # write each event's squared matrix element into the events (the
+    # "matrix_element" column of events.npy), for MadtRex to normalise its
+    # reweighting with instead of evaluating it again; set before survey()
+    store_matrix_elements = False
+
     def __init__(self, extra_make_args=(), split_flavors=False):
         # appended to the make command that builds the matrix elements
         self.extra_make_args = list(extra_make_args)
@@ -347,7 +356,8 @@ class MadgraphProcess:
         the param card, or the artifact of an AmpliCol library."""
         for context, backend in zip(self.contexts, self.backends):
             api = context.load_matrix_element(
-                path_format.format(device=backend), os.path.abspath(init_path),
+                path_format.format(device=backend, fptype=self.fptype),
+                os.path.abspath(init_path),
                 parameters
             )
         self.loaded_matrix_elements.append([path_format, init_path, parameters])
@@ -1118,7 +1128,8 @@ class MadgraphProcess:
                 matrix_elements.append(None)
                 continue
             api = context.load_matrix_element(
-                meta["me_path"].format(device=backend), self.param_card_path,
+                meta["me_path"].format(device=backend, fptype=self.fptype),
+                self.param_card_path,
                 me_parameters(self.run_card))
             matrix_elements.append(ms.MatrixElement(
                 api,
@@ -1406,6 +1417,8 @@ class MadgraphProcess:
             device_names = [device_names]
         cpu_mode = self.run_card["run"]["cpu_mode"]
         backends = [backend_of(name, cpu_mode) for name in device_names]
+        # FPTYPE is part of the library names ({fptype} in me_path)
+        fptype = self.fptype = fptype_of(self.run_card["run"]["precision"])
         self.compile_amplicol()
         madmatrix_data = [
             meta for meta in self.subprocess_data if not is_amplicol(meta)
@@ -1415,8 +1428,6 @@ class MadgraphProcess:
 
         first_proc_path = madmatrix_data[0]["path"]
         subproc_path = os.path.dirname(first_proc_path)
-
-        fptype = fptype_of(self.run_card["run"]["precision"])
 
         # Resolve cpu_mode='auto' once (the build rules pick the best SIMD
         # backend available here), so all subprocesses agree on the library names.
@@ -1434,11 +1445,44 @@ class MadgraphProcess:
             nb_core = os.cpu_count() or 1
 
         log_path = os.path.join(self.run_path, "compile_subprocesses.log")
+        # --hel_recycling is a CPU build: on a cuda/hip device the same output
+        # compiles the plain matrix element (see backend/gpu/SigmaKin.cc)
+        recycled = [
+            os.path.basename(meta["path"]) for meta in madmatrix_data
+            if os.path.isfile(os.path.join(meta["path"], "HelRecycling.inc"))
+        ]
+        gpu_backends = [b for b in resolved if b.startswith(("cuda", "hip"))]
+        if recycled and gpu_backends:
+            logger.info(
+                "--hel_recycling is CPU only: the %s build of %s uses the plain "
+                "matrix element", "/".join(gpu_backends), ", ".join(recycled)
+            )
+        # On a CPU the recycled build itself falls back to the plain matrix
+        # element when its tables are too big for the SIMD width (see
+        # hrUseRecycling in backend/{cpu,simd}/SigmaKin.cc, which prints so when
+        # it runs). The limit and the row-by-row color sum are the hidden
+        # run-card entries hel_recycling_max_mb / hel_recycling_row_color_sum
+        # (else HRMAXMB / HRNOBLAS from the environment), passed to make.
+        hr_args = self.hel_recycling_make_args()
+        if recycled and len(gpu_backends) < len(resolved):
+            limit = hr_args[0].split("=", 1)[1]
+            logger.info(
+                "--hel_recycling: %s use the recycled matrix element on the cpu "
+                "unless its tables exceed %s MB per SIMD page (run.hel_recycling_max_mb, "
+                "0 for no limit)", ", ".join(recycled),
+                {"": "10 (default)", "0": "<no limit>"}.get(limit, limit)
+            )
+        hr_flags = ":".join(arg.split("=", 1)[1] for arg in hr_args)
         for backend in resolved:
-            # by library: the flavours of a split subprocess share one
+            # by library: the flavours of a split subprocess share one; a library
+            # built with other recycling settings is rebuilt too: its SigmaKin.o
+            # records them in build.<backend>/.hrflags (madmatrix.mk)
             missing = list({
                 meta["me_path"]: meta for meta in madmatrix_data
-                if not os.path.isfile(meta["me_path"].format(device=backend))
+                if not os.path.isfile(
+                    meta["me_path"].format(device=backend, fptype=fptype)
+                )
+                or self.hel_recycling_flags_changed(meta["path"], backend, hr_flags)
             }.values())
             if not missing:
                 continue
@@ -1449,7 +1493,7 @@ class MadgraphProcess:
             )
             start_time = time.time()
             make_args = [f"BACKEND={backend}", f"FPTYPE={fptype}", "USEBUILDDIR=1"]
-            make_args += self.extra_make_args
+            make_args += self.extra_make_args + hr_args
             if (len(missing) >= PCH_MIN_SUBPROCESSES
                     and not any(arg.startswith("PCH=") for arg in make_args)):
                 make_args.append("PCH=1")
@@ -1478,6 +1522,33 @@ class MadgraphProcess:
         for path in paths:
             logger.info(f"Compiling the AmpliCol matrix elements in {path}, see {log_path}")
             self.make_subprocesses(path, [], 1, log_path)
+
+    def hel_recycling_make_args(self) -> list[str]:
+        """HRMAXMB=... and HRNOBLAS=... for make (madmatrix.mk), from the hidden
+        run-card entries, else from the environment; empty values are the
+        build's defaults."""
+        run = self.run_card["run"]
+        max_mb = run.get("hel_recycling_max_mb", -1)
+        max_mb = str(max_mb) if max_mb is not None and max_mb >= 0 \
+            else os.environ.get("HRMAXMB", "")
+        no_blas = "1" if run.get("hel_recycling_row_color_sum", False) \
+            else os.environ.get("HRNOBLAS", "")
+        return [f"HRMAXMB={max_mb}", f"HRNOBLAS={no_blas}"]
+
+    @staticmethod
+    def hel_recycling_flags_changed(proc_path: str, backend: str, hr_flags: str) -> bool:
+        """Whether a --hel_recycling subprocess was built for this backend with
+        other recycling settings than hr_flags (see .hrflags in madmatrix.mk)."""
+        if backend.startswith(("cuda", "hip")):
+            return False
+        if not os.path.isfile(os.path.join(proc_path, "HelRecycling.inc")):
+            return False
+        marker = os.path.join(proc_path, f"build.{backend}", ".hrflags")
+        try:
+            with open(marker) as fsock:
+                return fsock.read().strip() != hr_flags
+        except OSError:
+            return False
 
     @staticmethod
     def check_pyamplicol(script: str) -> None:
@@ -1770,25 +1841,32 @@ class MadgraphProcess:
         self.build_systematics()
         self.save_gridpack()
 
-    def generate_events(self) -> None:
+    def generate_events(self, output_format=None) -> None:
+        """Generate the events and write them in output_format, by default the
+        run_card's. run_single() passes "lhe_npy" when MadtRex reweights an
+        "lhe" run: the LHE file is then made from the reweighted npy events
+        (see lhe_via_binary())."""
         if self.gridpack_run_mode != "regular":
             self.finish_without_events()
             return
         self.event_generator.generate()
-        output_format = self.run_card["run"]["output_format"]
+        if output_format is None:
+            output_format = self.run_card["run"]["output_format"]
         systematics = self.build_systematics()
         histograms = self.build_event_histograms()
         if output_format == "compact_npy":
             self.lhe_completer = None
+            self.events_path = os.path.join(self.run_path, "events.npy")
             self.event_generator.combine_to_compact_npy(
-                os.path.join(self.run_path, "events.npy"), systematics, histograms
+                self.events_path, systematics, histograms
             )
             self.write_lhe_header(systematics)
             self.save_lhe_completer()
         elif output_format == "lhe_npy":
             self.lhe_completer = self.build_lhe_completer()
+            self.events_path = os.path.join(self.run_path, "events.npy")
             self.event_generator.combine_to_lhe_npy(
-                os.path.join(self.run_path, "events.npy"), self.lhe_completer,
+                self.events_path, self.lhe_completer,
                 systematics, histograms
             )
             self.write_lhe_header(systematics)
@@ -1806,6 +1884,7 @@ class MadgraphProcess:
             # events.lhe.gz, and switches to an external multithreaded tool
             # above 256 MB.
             misc.gzip(lhe_path)
+            self.events_path = _find_event_file(self.run_path)
         else:
             raise ValueError("Unknown output format")
         self.write_hwu(histograms)
@@ -2129,6 +2208,57 @@ class MadgraphProcess:
                 ignore=shutil.ignore_patterns("include"),
             )
 
+        # MadtRex (event reweighting) is optional and installed separately on
+        # top of madspace (madtrex/install.py), so a missing install is
+        # skipped rather than an error.
+        if self.run_card["gridpack"]["include_madtrex_source"]:
+            shutil.copytree(
+                _MADTREX_DIR,
+                os.path.join(gridpack_path, "madtrex"),
+                ignore=shutil.ignore_patterns("build", "install", "__pycache__"),
+            )
+
+        # madspace/madtrex sources build with their pyproject.toml, which takes
+        # the version from the MadGraph VERSION file one level above them
+        if (self.run_card["gridpack"]["include_madspace_source"]
+                or self.run_card["gridpack"]["include_madtrex_source"]):
+            shutil.copy(_MG_ROOT / "VERSION", os.path.join(gridpack_path, "VERSION"))
+
+        include_madtrex = (
+            self.run_card["gridpack"]["include_madtrex"]
+            and (_MADTREX_INSTALL_DIR / "madtrex").is_dir()
+        )
+        if include_madtrex:
+            # only the runtime pieces: madtrex itself, the bundled Rex fork
+            # (pyrex, plus librex/libtearex in lib/), not the build tools
+            # install.py also put there
+            for name in ("madtrex", "pyrex", "lib"):
+                if (_MADTREX_INSTALL_DIR / name).is_dir():
+                    shutil.copytree(
+                        _MADTREX_INSTALL_DIR / name,
+                        os.path.join(gridpack_path, "madtrex", "install", name),
+                        ignore=shutil.ignore_patterns("__pycache__"),
+                    )
+        elif self.run_card["gridpack"]["include_madtrex"]:
+            logger.info(
+                "madtrex is not installed (python madtrex/install.py), so it is "
+                "not included in the gridpack%s",
+                "; bin/reweight builds it from the included sources on first use"
+                if self.run_card["gridpack"]["include_madtrex_source"] else "")
+        # bin/reweight (below) with an installed madtrex, or with its sources,
+        # which bin/reweight builds when the gridpack has no (usable) install
+        with_reweight = include_madtrex or self.run_card["gridpack"]["include_madtrex_source"]
+        if with_reweight:
+            # the standalone reweighting driver finds the matrix elements
+            # through subprocesses.json, which the gridpack otherwise only has
+            # with include_source
+            gridpack_subprocesses_json = os.path.join(
+                gridpack_path, "SubProcesses", "subprocesses.json")
+            if not os.path.exists(gridpack_subprocesses_json):
+                os.makedirs(os.path.dirname(gridpack_subprocesses_json), exist_ok=True)
+                shutil.copy(os.path.join("SubProcesses", "subprocesses.json"),
+                            gridpack_subprocesses_json)
+
         # the AmpliCol artifacts are read at run time; the ratio library finds
         # them next to its own, otherwise empty, reweight directory
         for artifact_dir in sorted({
@@ -2201,6 +2331,16 @@ class MadgraphProcess:
         shutil.copy(os.path.join(template_dir, "custom_function_loader.py"), bin_path)
         os.chmod(gen_events_file, 0o755)
         shutil.copy(os.path.join(template_dir, "gridpack_setup.py"), bin_path)
+        if with_reweight:
+            # MadtRex reweighting of the gridpack's events, with the modules
+            # parsing its reweight cards
+            reweight_file = os.path.join(bin_path, "reweight")
+            shutil.copy(os.path.join(template_dir, "madtrex_driver.py"), reweight_file)
+            os.chmod(reweight_file, 0o755)
+            for name in ("param_reweight_card.py", "pdf_reweight_card.py",
+                         "generic_reweight_card.py"):
+                shutil.copy(os.path.join(template_dir, name),
+                            os.path.join(bin_path, name))
         # streaming needs the fixed maximum weights of this mode
         if self.gridpack_run_mode == "fix_max_weight":
             shutil.copy(os.path.join(template_dir, "event_stream.py"), bin_path)

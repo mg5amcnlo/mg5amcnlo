@@ -24,6 +24,7 @@
 #else
 #include "mgOnGpuCxtypes.h"
 #endif
+#include "MadMatrixDenom.h"
 
 #include "Parameters.h"
 
@@ -141,7 +142,7 @@ namespace madmatrix
   __host__ __device__ INLINE void
   ixxxxx( const fptype_momenta momenta[], // input: momenta
           const fptype_amp fmass,     // input: fermion mass
-          const int nhel,         // input: -1 or +1 (helicity of fermion)
+          const fptype_amp_sv nhel, // input: -1 or +1 (helicity of fermion, per SIMD lane/GPU thread)
           const int nsf,          // input: +1 (particle) or -1 (antiparticle)
           const int flv,          // input: flavour
           ALOHAOBJ & fi,          // output: aloha objects
@@ -156,7 +157,7 @@ namespace madmatrix
   __host__ __device__ INLINE void
   ipzxxx( const fptype_momenta momenta[], // input: momenta
           //const fptype_amp fmass,   // [skip: ASSUME fermion mass==0]
-          const int nhel,         // input: -1 or +1 (helicity of fermion)
+          const fptype_amp_sv nhel, // input: -1 or +1 (helicity of fermion, per SIMD lane/GPU thread)
           const int nsf,          // input: +1 (particle) or -1 (antiparticle)
           const int flv,          // input: flavor index
           ALOHAOBJ & fi,          // output: wavefunctions
@@ -171,7 +172,7 @@ namespace madmatrix
   __host__ __device__ INLINE void
   imzxxx( const fptype_momenta momenta[], // input: momenta
           //const fptype_amp fmass,   // [skip: ASSUME fermion mass==0]
-          const int nhel,         // input: -1 or +1 (helicity of fermion)
+          const fptype_amp_sv nhel, // input: -1 or +1 (helicity of fermion, per SIMD lane/GPU thread)
           const int nsf,          // input: +1 (particle) or -1 (antiparticle)
           const int flv,          // input: flavor index
           ALOHAOBJ & fi,          // output: wavefunctions
@@ -186,7 +187,7 @@ namespace madmatrix
   __host__ __device__ INLINE void
   ixzxxx( const fptype_momenta momenta[], // input: momenta
           //const fptype_amp fmass,   // [skip: ASSUME fermion mass==0]
-          const int nhel,         // input: -1 or +1 (helicity of fermion)
+          const fptype_amp_sv nhel, // input: -1 or +1 (helicity of fermion, per SIMD lane/GPU thread)
           const int nsf,          // input: +1 (particle) or -1 (antiparticle)
           const int flv,          // input: flavor index
           ALOHAOBJ & fi,          // output: wavefunctions
@@ -200,7 +201,7 @@ namespace madmatrix
   __host__ __device__ INLINE void
   vxxxxx( const fptype_momenta momenta[], // input: momenta
           const fptype_amp vmass,     // input: vector boson mass
-          const int nhel,         // input: -1, 0 (only if vmass!=0) or +1 (helicity of vector boson)
+          const fptype_amp_sv nhel, // input: -1, 0 (only if vmass!=0) or +1 (helicity of vector boson, per SIMD lane/GPU thread)
           const int nsv,          // input: +1 (final) or -1 (initial)
           const int flv,          // input: flavor index
           ALOHAOBJ & vc,          // output: wavefunctions
@@ -228,7 +229,7 @@ namespace madmatrix
   __host__ __device__ INLINE void
   oxxxxx( const fptype_momenta momenta[], // input: momenta
           const fptype_amp fmass,     // input: fermion mass
-          const int nhel,         // input: -1, 0 (only if vmass!=0) or +1 (helicity of vector boson)
+          const fptype_amp_sv nhel, // input: -1, 0 (only if vmass!=0) or +1 (helicity of vector boson, per SIMD lane/GPU thread)
           const int nsf,          // input: +1 (particle) or -1 (antiparticle)
           const int flv,          // input: flavor index
           ALOHAOBJ & fo,          // output: wavefunctions
@@ -243,7 +244,7 @@ namespace madmatrix
   __host__ __device__ INLINE void
   opzxxx( const fptype_momenta momenta[], // input: momenta
           //const fptype_amp fmass,   // [skip: ASSUME fermion mass==0]
-          const int nhel,         // input: -1 or +1 (helicity of fermion)
+          const fptype_amp_sv nhel, // input: -1 or +1 (helicity of fermion, per SIMD lane/GPU thread)
           const int nsf,          // input: +1 (particle) or -1 (antiparticle)
           const int flv,          // input: flavor index
           ALOHAOBJ & fo,          // output: wavefunctions
@@ -258,7 +259,7 @@ namespace madmatrix
   __host__ __device__ INLINE void
   omzxxx( const fptype_momenta momenta[], // input: momenta
           //const fptype_amp fmass,   // [skip: ASSUME fermion mass==0]
-          const int nhel,         // input: -1 or +1 (helicity of fermion)
+          const fptype_amp_sv nhel, // input: -1 or +1 (helicity of fermion, per SIMD lane/GPU thread)
           const int nsf,          // input: +1 (particle) or -1 (antiparticle)
           const int flv,          // input: flavor index
           ALOHAOBJ & fo,          // output: wavefunctions
@@ -272,7 +273,7 @@ namespace madmatrix
   __host__ __device__ INLINE void
   oxzxxx( const fptype_momenta momenta[], // input: momenta
           //const fptype_amp fmass,   // [skip: ASSUME fermion mass==0]
-          const int nhel,         // input: -1 or +1 (helicity of fermion)
+          const fptype_amp_sv nhel, // input: -1 or +1 (helicity of fermion, per SIMD lane/GPU thread)
           const int nsf,          // input: +1 (particle) or -1 (antiparticle)
           const int flv,          // input: flavor index
           ALOHAOBJ & fo,          // output: wavefunctions
@@ -313,7 +314,7 @@ namespace madmatrix
   __host__ __device__ void
   ixxxxx( const fptype_momenta momenta[], // input: momenta
           const fptype_amp fmass,     // input: fermion mass
-          const int nhel,         // input: -1 or +1 (helicity of fermion)
+          const fptype_amp_sv nhel, // input: -1 or +1 (helicity of fermion, per SIMD lane/GPU thread)
           const int nsf,          // input: +1 (particle) or -1 (antiparticle)
           const int flv,          // input: flavour
           ALOHAOBJ & fi,          // output: wavefunctions
@@ -338,7 +339,12 @@ namespace madmatrix
     fi.pvec[2] = -pvec2_ * static_cast<fptype_momenta>(nsf);
     fi.pvec[3] = -pvec3_ * static_cast<fptype_momenta>(nsf);
     fi.flv_index = flv;
-    const int nh = nhel * nsf;
+    const fptype_amp_sv nh = nhel * static_cast<fptype_amp>( nsf );
+    // BRANCHLESS HELICITY: the helicity is not a branch condition but enters as the truth values
+    // tp (nh == +1) and tm (nh == -1), 1 or 0, which multiply the two alternatives. Different
+    // SIMD lanes or GPU threads can then carry different helicities and still run in lock-step.
+    const fptype_amp_sv tp = ( 1 + nh ) * (fptype_amp)0.5;
+    const fptype_amp_sv tm = 1 - tp;
     if( fmass != 0. )
     {
 #ifndef MGONGPU_CPPSIMD
@@ -347,11 +353,9 @@ namespace madmatrix
       volatile fptype_amp_sv p2 = pvec1 * pvec1 + pvec2 * pvec2 + pvec3 * pvec3; // volatile fixes #736
       const fptype_amp_sv pp = fpmin( pvec0, fpsqrt( p2 ) );
 #endif
-      // In C++ ixxxxx, use a single ip/im numbering that is valid both for pp==0 and pp>0, which have two numbering schemes in Fortran ixxxxx:
-      // for pp==0, Fortran sqm(0:1) has indexes 0,1 as in C++; but for Fortran pp>0, omega(2) has indexes 1,2 and not 0,1
-      // NB: this is only possible in ixxxx, but in oxxxxx two different numbering schemes must be used
-      const int ip = ( 1 + nh ) / 2; // NB: same as in Fortran pp==0, differs from Fortran pp>0, which is (3+nh)/2 because omega(2) has indexes 1,2
-      const int im = ( 1 - nh ) / 2; // NB: same as in Fortran pp==0, differs from Fortran pp>0, which is (3-nh)/2 because omega(2) has indexes 1,2
+      // The Fortran ip/im indices ( 1 + nh ) / 2 and ( 1 - nh ) / 2 (for pp > 0, ( 3 +- nh ) / 2 as omega(2) has
+      // indexes 1,2) are the truth values tp and tm: an array element x[ip] is tm * x[0] + tp * x[1], and
+      // ip * x[ip] is just tp * x[1] (and likewise for im)
 #ifndef MGONGPU_CPPSIMD
       if( pp == 0. )
       {
@@ -359,10 +363,10 @@ namespace madmatrix
         fptype_amp sqm[2] = { fpsqrt( std::abs( fmass ) ), 0. }; // possibility of negative fermion masses
         //sqm[1] = ( fmass < 0. ? -abs( sqm[0] ) : abs( sqm[0] ) ); // AV: why abs here?
         sqm[1] = ( fmass < 0. ? -sqm[0] : sqm[0] ); // AV: removed an abs here
-        w[0] = cxmake( ip * sqm[ip], 0 );
-        w[1] = cxmake( im * nsf * sqm[ip], 0 );
-        w[2] = cxmake( ip * nsf * sqm[im], 0 );
-        w[3] = cxmake( im * sqm[im], 0 );
+        w[0] = cxmake( tp * sqm[1], 0 );
+        w[1] = cxmake( tm * nsf * sqm[0], 0 );
+        w[2] = cxmake( tp * nsf * sqm[0], 0 );
+        w[3] = cxmake( tm * sqm[1], 0 );
       }
       else
       {
@@ -370,30 +374,32 @@ namespace madmatrix
                                fptype_amp( 1 + nsf - ( 1 - nsf ) * nh ) * (fptype_amp)0.5 };
         fptype_amp omega[2] = { fpsqrt( pvec0 + pp ), 0. };
         omega[1] = fmass / omega[0];
-        const fptype_amp sfomega[2] = { sf[0] * omega[ip], sf[1] * omega[im] };
+        const fptype_amp sfomega[2] = { sf[0] * ( tm * omega[0] + tp * omega[1] ), sf[1] * ( tp * omega[0] + tm * omega[1] ) };
         const fptype_amp pp3 = fpmax( fpternary( fpsignbit( pvec3 ), ( pvec1 * pvec1 + pvec2 * pvec2 ) / ( pp - pvec3 ), pp + pvec3 ), 0. );
         const cxtype_amp chi[2] = { cxmake( fpsqrt( pp3 * (fptype_amp)0.5 / pp ), 0. ),
                                 ( pp3 == 0. ? cxmake( -nh, 0. ) : cxmake( nh * pvec1, pvec2 ) / fpsqrt( (fptype_amp)2. * pp * pp3 ) ) };
-        w[0] = sfomega[0] * chi[im];
-        w[1] = sfomega[0] * chi[ip];
-        w[2] = sfomega[1] * chi[im];
-        w[3] = sfomega[1] * chi[ip];
+        const cxtype_amp chi_im = tp * chi[0] + tm * chi[1]; // chi[im]
+        const cxtype_amp chi_ip = tm * chi[0] + tp * chi[1]; // chi[ip]
+        w[0] = sfomega[0] * chi_im;
+        w[1] = sfomega[0] * chi_ip;
+        w[2] = sfomega[1] * chi_im;
+        w[3] = sfomega[1] * chi_ip;
       }
 #else
       // Branch A: pp == 0.
       // NB: Do not use "abs" for floats! It returns an integer with no build warning! Use std::abs!
       fptype_amp sqm[2] = { fpsqrt( std::abs( fmass ) ), 0 }; // possibility of negative fermion masses (NB: SCALAR!)
       sqm[1] = ( fmass < 0 ? -sqm[0] : sqm[0] );          // AV: removed an abs here (as above)
-      const cxtype_amp fiA_2 = ip * sqm[ip];                  // scalar cxtype: real part initialised from fptype, imag part = 0
-      const cxtype_amp fiA_3 = im * nsf * sqm[ip];            // scalar cxtype: real part initialised from fptype, imag part = 0
-      const cxtype_amp fiA_4 = ip * nsf * sqm[im];            // scalar cxtype: real part initialised from fptype, imag part = 0
-      const cxtype_amp fiA_5 = im * sqm[im];                  // scalar cxtype: real part initialised from fptype, imag part = 0
+      const cxtype_amp_v fiA_2 = cxmake( tp * sqm[1], 0 );
+      const cxtype_amp_v fiA_3 = cxmake( tm * (fptype_amp)nsf * sqm[0], 0 );
+      const cxtype_amp_v fiA_4 = cxmake( tp * (fptype_amp)nsf * sqm[0], 0 );
+      const cxtype_amp_v fiA_5 = cxmake( tm * sqm[1], 0 );
       // Branch B: pp != 0.
-      const fptype_amp sf[2] = { fptype_amp( 1 + nsf + ( 1 - nsf ) * nh ) * (fptype_amp)0.5,
-                             fptype_amp( 1 + nsf - ( 1 - nsf ) * nh ) * (fptype_amp)0.5 };
+      const fptype_amp_v sf[2] = { ( (fptype_amp)( 1 + nsf ) + (fptype_amp)( 1 - nsf ) * nh ) * (fptype_amp)0.5,
+                                   ( (fptype_amp)( 1 + nsf ) - (fptype_amp)( 1 - nsf ) * nh ) * (fptype_amp)0.5 };
       fptype_v omega[2] = { fpsqrt( pvec0 + pp ), 0 };
       omega[1] = fmass / omega[0];
-      const fptype_amp_v sfomega[2] = { sf[0] * omega[ip], sf[1] * omega[im] };
+      const fptype_amp_v sfomega[2] = { sf[0] * ( tm * omega[0] + tp * omega[1] ), sf[1] * ( tp * omega[0] + tm * omega[1] ) };
       const fptype_amp_v pp3 = fpmax( fpternary( fpsignbit( pvec3 ), ( pvec1 * pvec1 + pvec2 * pvec2 ) / ( pp - pvec3 ), pp + pvec3 ), 0 );
       volatile fptype_amp_v ppDENOM = fpternary( pp != 0, pp, 1. );    // hack: ppDENOM[ieppV]=1 if pp[ieppV]==0
       volatile fptype_amp_v pp3DENOM = fpternary( pp3 != 0, pp3, 1. ); // hack: pp3DENOM[ieppV]=1 if pp3[ieppV]==0
@@ -401,11 +407,13 @@ namespace madmatrix
       const cxtype_amp_v chi[2] = { cxmake( fpsqrt( chi0r2 ), 0 ),     // hack: dummy[ieppV] is not used if pp[ieppV]==0
                                 cxternary( ( pp3 == 0. ),
                                            cxmake( -nh, 0 ),
-                                           cxmake( (fptype_amp)nh * pvec1, pvec2 ) / fpsqrt( (fptype_amp)2. * ppDENOM * pp3DENOM ) ) }; // hack: dummy[ieppV] is not used if pp[ieppV]==0
-      const cxtype_amp_v fiB_2 = sfomega[0] * chi[im];
-      const cxtype_amp_v fiB_3 = sfomega[0] * chi[ip];
-      const cxtype_amp_v fiB_4 = sfomega[1] * chi[im];
-      const cxtype_amp_v fiB_5 = sfomega[1] * chi[ip];
+                                           cxmake( nh * pvec1, pvec2 ) / fpsqrt( (fptype_amp)2. * ppDENOM * pp3DENOM ) ) }; // hack: dummy[ieppV] is not used if pp[ieppV]==0
+      const cxtype_amp_v chi_im = tp * chi[0] + tm * chi[1]; // chi[im]
+      const cxtype_amp_v chi_ip = tm * chi[0] + tp * chi[1]; // chi[ip]
+      const cxtype_amp_v fiB_2 = sfomega[0] * chi_im;
+      const cxtype_amp_v fiB_3 = sfomega[0] * chi_ip;
+      const cxtype_amp_v fiB_4 = sfomega[1] * chi_im;
+      const cxtype_amp_v fiB_5 = sfomega[1] * chi_ip;
       // Choose between the results from branch A and branch B
       const bool_v mask = ( pp == 0. );
       w[0] = cxternary( mask, fiA_2, fiB_2 );
@@ -431,8 +439,8 @@ namespace madmatrix
       volatile fptype_amp_sv sqp0p3DENOM = fpternary( sqp0p3 != 0, (fptype_sv)sqp0p3, 1. ); // hack: dummy sqp0p3DENOM[ieppV]=1 if sqp0p3[ieppV]==0
       cxtype_sv chi[2] = { cxmake( (fptype_v)sqp0p3, 0. ),
                            cxternary( sqp0p3 == 0,
-                                      cxmake( -(fptype_amp)nhel * fpsqrt( (fptype_amp)2. * pvec0 ), 0. ),
-                                      cxmake( (fptype_amp)nh * pvec1, pvec2 ) / (const fptype_v)sqp0p3DENOM ) }; // hack: dummy[ieppV] is not used if sqp0p3[ieppV]==0
+                                      cxmake( -nhel * fpsqrt( (fptype_amp)2. * pvec0 ), 0. ),
+                                      cxmake( nh * pvec1, pvec2 ) / (const fptype_v)sqp0p3DENOM ) }; // hack: dummy[ieppV] is not used if sqp0p3[ieppV]==0
 #else
       // pvec0+pvec3 is a cancelling difference of two ~|p| numbers for a
       // backward-moving massless fermion, and everything below divides by it.
@@ -445,22 +453,12 @@ namespace madmatrix
                                           fptype_sv{ 0 },
                                           fpsqrt( p0p3stable ) * (fptype_amp)nsf );
       const cxtype_amp_sv chi[2] = { cxmake( sqp0p3, 0. ),
-                                 ( sqp0p3 == 0. ? cxmake( -(fptype_amp)nhel * fpsqrt( (fptype_amp)2. * pvec0 ), 0. ) : cxmake( (fptype_amp)nh * pvec1, pvec2 ) / sqp0p3 ) };
+                                 ( sqp0p3 == 0. ? cxmake( -nhel * fpsqrt( (fptype_amp)2. * pvec0 ), 0. ) : cxmake( nh * pvec1, pvec2 ) / sqp0p3 ) };
 #endif
-      if( nh == 1 )
-      {
-        w[0] = cxzero_sv();
-        w[1] = cxzero_sv();
-        w[2] = chi[0];
-        w[3] = chi[1];
-      }
-      else
-      {
-        w[0] = chi[1];
-        w[1] = chi[0];
-        w[2] = cxzero_sv();
-        w[3] = cxzero_sv();
-      }
+      w[0] = tm * chi[1];
+      w[1] = tm * chi[0];
+      w[2] = tp * chi[0];
+      w[3] = tp * chi[1];
     }
     mgDebug( 1, __FUNCTION__ );
     return;
@@ -474,7 +472,7 @@ namespace madmatrix
   __host__ __device__ void
   ipzxxx( const fptype_momenta momenta[], // input: momenta
           //const fptype_amp fmass,   // [skip: ASSUME fermion mass==0]
-          const int nhel,         // input: -1 or +1 (helicity of fermion)
+          const fptype_amp_sv nhel, // input: -1 or +1 (helicity of fermion, per SIMD lane/GPU thread)
           const int nsf,          // input: +1 (particle) or -1 (antiparticle)
           const int flv,          // input: flavour
           ALOHAOBJ & fi,          // output: wavefunctions
@@ -489,20 +487,17 @@ namespace madmatrix
     fi.pvec[2] = fptype_momenta_sv{ 0 };
     fi.pvec[3] = -pvec3_ * static_cast<fptype_momenta>(nsf);
     fi.flv_index = flv;
-    const int nh = nhel * nsf;
+    const fptype_amp_sv nh = nhel * static_cast<fptype_amp>( nsf );
+    // BRANCHLESS HELICITY: the helicity is not a branch condition but enters as the truth values
+    // tp (nh == +1) and tm (nh == -1), 1 or 0, which multiply the two alternatives. Different
+    // SIMD lanes or GPU threads can then carry different helicities and still run in lock-step.
+    const fptype_amp_sv tp = ( 1 + nh ) * (fptype_amp)0.5;
+    const fptype_amp_sv tm = 1 - tp;
     const cxtype_amp_sv sqp0p3 = cxmake( fpsqrt( (fptype_amp)2. * pvec3 ) * (fptype_amp)nsf, 0. );
-    w[0] = cxmake( fpamp_of_mom( fi.pvec[1] ), fpamp_of_mom( fi.pvec[2] ) );
-    if( nh == 1 )
-    {
-      w[1] = cxmake( fpamp_of_mom( fi.pvec[1] ), fpamp_of_mom( fi.pvec[2] ) );
-      w[2] = sqp0p3;
-    }
-    else
-    {
-      w[1] = sqp0p3;
-      w[2] = cxmake( fpamp_of_mom( fi.pvec[1] ), fpamp_of_mom( fi.pvec[2] ) );
-    }
-    w[3] = cxmake( fpamp_of_mom( fi.pvec[1] ), fpamp_of_mom( fi.pvec[2] ) );
+    w[0] = cxzero_sv();
+    w[1] = tm * sqp0p3;
+    w[2] = tp * sqp0p3;
+    w[3] = cxzero_sv();
     mgDebug( 1, __FUNCTION__ );
     return;
   }
@@ -515,7 +510,7 @@ namespace madmatrix
   __host__ __device__ void
   imzxxx( const fptype_momenta momenta[], // input: momenta
           //const fptype_amp fmass,   // [skip: ASSUME fermion mass==0]
-          const int nhel,         // input: -1 or +1 (helicity of fermion)
+          const fptype_amp_sv nhel, // input: -1 or +1 (helicity of fermion, per SIMD lane/GPU thread)
           const int nsf,          // input: +1 (particle) or -1 (antiparticle)
           const int flv,          // input: flavour
           ALOHAOBJ & fi,          // output: wavefunctions
@@ -530,20 +525,17 @@ namespace madmatrix
     fi.pvec[2] = fptype_momenta_sv{ 0 };
     fi.pvec[3] = -pvec3_ * static_cast<fptype_momenta>(nsf);
     fi.flv_index = flv;
-    const int nh = nhel * nsf;
-    const cxtype_amp_sv chi = cxmake( -(fptype_amp)nhel * fpsqrt( -(fptype_amp)2. * pvec3 ), 0. );
+    const fptype_amp_sv nh = nhel * static_cast<fptype_amp>( nsf );
+    // BRANCHLESS HELICITY: the helicity is not a branch condition but enters as the truth values
+    // tp (nh == +1) and tm (nh == -1), 1 or 0, which multiply the two alternatives. Different
+    // SIMD lanes or GPU threads can then carry different helicities and still run in lock-step.
+    const fptype_amp_sv tp = ( 1 + nh ) * (fptype_amp)0.5;
+    const fptype_amp_sv tm = 1 - tp;
+    const cxtype_amp_sv chi = cxmake( -nhel * fpsqrt( -(fptype_amp)2. * pvec3 ), 0. );
+    w[0] = tm * chi;
     w[1] = cxzero_sv();
     w[2] = cxzero_sv();
-    if( nh == 1 )
-    {
-      w[0] = cxzero_sv();
-      w[3] = chi;
-    }
-    else
-    {
-      w[0] = chi;
-      w[3] = cxzero_sv();
-    }
+    w[3] = tp * chi;
     mgDebug( 1, __FUNCTION__ );
     return;
   }
@@ -556,7 +548,7 @@ namespace madmatrix
   __host__ __device__ void
   ixzxxx( const fptype_momenta momenta[], // input: momenta
           //const fptype_amp fmass,   // [skip: ASSUME fermion mass==0]
-          const int nhel,         // input: -1 or +1 (helicity of fermion)
+          const fptype_amp_sv nhel, // input: -1 or +1 (helicity of fermion, per SIMD lane/GPU thread)
           const int nsf,          // input: +1 (particle) or -1 (antiparticle)
           const int flv,          // input: flavour
           ALOHAOBJ & fi,          // output: wavefunctions
@@ -578,7 +570,12 @@ namespace madmatrix
     fi.pvec[3] = -pvec3_ * static_cast<fptype_momenta>(nsf);
     fi.flv_index = flv;
 
-    const int nh = nhel * nsf;
+    const fptype_amp_sv nh = nhel * static_cast<fptype_amp>( nsf );
+    // BRANCHLESS HELICITY: the helicity is not a branch condition but enters as the truth values
+    // tp (nh == +1) and tm (nh == -1), 1 or 0, which multiply the two alternatives. Different
+    // SIMD lanes or GPU threads can then carry different helicities and still run in lock-step.
+    const fptype_amp_sv tp = ( 1 + nh ) * (fptype_amp)0.5;
+    const fptype_amp_sv tm = 1 - tp;
     //const float sqp0p3 = sqrtf( pvec0 + pvec3 ) * nsf; // AV: why force a float here?
     // pvec0+pvec3 is a cancelling difference of two ~|p| numbers for a
     // backward-moving massless fermion, and everything below divides by it.
@@ -590,21 +587,11 @@ namespace madmatrix
                                             pvec0 + pvec3 );
     const fptype_amp_sv sqp0p3 = fpsqrt( p0p3stable ) * static_cast<fptype_amp>(nsf);
     const cxtype_amp_sv chi0 = cxmake( sqp0p3, 0. );
-    const cxtype_amp_sv chi1 = cxmake( (fptype_amp)nh * pvec1 / sqp0p3, pvec2 / sqp0p3 );
-    if( nh == 1 )
-    {
-      w[0] = cxzero_sv();
-      w[1] = cxzero_sv();
-      w[2] = chi0;
-      w[3] = chi1;
-    }
-    else
-    {
-      w[0] = chi1;
-      w[1] = chi0;
-      w[2] = cxzero_sv();
-      w[3] = cxzero_sv();
-    }
+    const cxtype_amp_sv chi1 = cxmake( nh * pvec1 / sqp0p3, pvec2 / sqp0p3 );
+    w[0] = tm * chi1;
+    w[1] = tm * chi0;
+    w[2] = tp * chi0;
+    w[3] = tp * chi1;
     mgDebug( 1, __FUNCTION__ );
     return;
   }
@@ -616,7 +603,7 @@ namespace madmatrix
   __host__ __device__ void
   vxxxxx( const fptype_momenta momenta[], // input: momenta
           const fptype_amp vmass,     // input: vector boson mass
-          const int nhel,         // input: -1, 0 (only if vmass!=0) or +1 (helicity of vector boson)
+          const fptype_amp_sv nhel, // input: -1, 0 (only if vmass!=0) or +1 (helicity of vector boson, per SIMD lane/GPU thread)
           const int nsv,          // input: +1 (final) or -1 (initial)
           const int flv,          // input: flavour
           ALOHAOBJ & vc,          // output: wavefunctions
@@ -642,7 +629,10 @@ namespace madmatrix
     vc.pvec[3] = pvec3_ * static_cast<fptype_momenta>(nsv);
     vc.flv_index = flv;
     const fptype_amp sqh = fpsqrt( 0.5 ); // AV this is > 0!
-    const fptype_amp hel = nhel;
+    const fptype_amp_sv hel = nhel;
+    // BRANCHLESS HELICITY: |hel| is hel * hel for hel in { -1, 0, +1 }, so that the helicity can
+    // differ from one SIMD lane or GPU thread to the next with no branch and no std::abs
+    const fptype_amp_sv abshel = hel * hel;
 
     // FD gauge
      const cxtype_amp_sv cI = cxmake( 0. + fptype_amp_sv{ 0. },  1. + fptype_amp_sv{ 0. }  );
@@ -653,8 +643,8 @@ namespace madmatrix
 
     if( vmass != 0. )
     {
-      const int nsvahl = nsv * std::abs( hel );
-      const fptype_amp hel0 = 1. - std::abs( hel );
+      const fptype_amp_sv nsvahl = static_cast<fptype_amp>( nsv ) * abshel;
+      const fptype_amp_sv hel0 = 1 - abshel; // truth value of hel == 0 (longitudinal polarisation)
 #ifndef MGONGPU_CPPSIMD
       const fptype_amp_sv pt2 = ( pvec1 * pvec1 ) + ( pvec2 * pvec2 );
       const fptype_amp_sv pp = fpmin( pvec0, fpsqrt( pt2 + ( pvec3 * pvec3 ) ) );
@@ -709,17 +699,14 @@ namespace madmatrix
 
       nk = n[0]*pvec0 - n[1]*pvec1 - n[2]*pvec2 - n[3]*pvec3;
 
-      if ( abs(nhel) == 1)
-      {
-        w[4] = cxzero_sv<cxtype_amp_sv>();
-      }
-      else{
-        w[0] = cxmake( -vmass/nk * n[0], zero );
-        w[1] = cxmake( -vmass/nk * n[1], zero );
-        w[2] = cxmake( -vmass/nk * n[2], zero );
-        w[3] = cxmake( -vmass/nk * n[3], zero );
-        w[4] = -static_cast<fptype_amp>(nsv)*cI;
-      }
+      // BRANCHLESS HELICITY: |hel| = 1 keeps w[0..3] with w[4] = 0, hel = 0 (hel0 = 1) takes the
+      // FD-gauge longitudinal polarisation instead (nk > 0 for a massive momentum, so the unused
+      // alternative is finite and vanishes when multiplied by its zero truth value)
+      w[0] = abshel * w[0] + hel0 * cxmake( -vmass / nk * n[0], zero );
+      w[1] = abshel * w[1] + hel0 * cxmake( -vmass / nk * n[1], zero );
+      w[2] = abshel * w[2] + hel0 * cxmake( -vmass / nk * n[2], zero );
+      w[3] = abshel * w[3] + hel0 * cxmake( -vmass / nk * n[3], zero );
+      w[4] = hel0 * ( -static_cast<fptype_amp>( nsv ) * cI );
 
 #else
       volatile fptype_amp_sv pt2 = ( pvec1 * pvec1 ) + ( pvec2 * pvec2 );
@@ -728,9 +715,9 @@ namespace madmatrix
       const fptype_amp_sv pt = fpmin( pp, fpsqrt( pt2 ) );
       // Branch A: pp == 0.
       const cxtype_amp vcA_2 = cxmake( 0, 0 );
-      const cxtype_amp vcA_3 = cxmake( -hel * sqh, 0 );
-      const cxtype_amp vcA_4 = cxmake( 0, nsvahl * sqh );
-      const cxtype_amp vcA_5 = cxmake( hel0, 0 );
+      const cxtype_amp_v vcA_3 = cxmake( -hel * sqh, 0 );
+      const cxtype_amp_v vcA_4 = cxmake( 0., nsvahl * sqh );
+      const cxtype_amp_v vcA_5 = cxmake( hel0, 0 );
       // Branch B: pp != 0.
       volatile fptype_amp_v ppDENOM = fpternary( pp != 0, pp, 1. ); // hack: ppDENOM[ieppV]=1 if pp[ieppV]==0
       const fptype_amp_v emp = pvec0 / ( vmass * ppDENOM );         // hack: dummy[ieppV] is not used if pp[ieppV]==0
@@ -739,11 +726,11 @@ namespace madmatrix
       // Branch B1: pp != 0. and pt != 0.
       volatile fptype_amp_v ptDENOM = fpternary( pt != 0, pt, 1. );                                                     // hack: ptDENOM[ieppV]=1 if pt[ieppV]==0
       const fptype_amp_v pzpt = pvec3 / ( ppDENOM * ptDENOM ) * sqh * hel;                                              // hack: dummy[ieppV] is not used if pp[ieppV]==0
-      const cxtype_amp_v vcB1_3 = cxmake( hel0 * pvec1 * emp - pvec1 * pzpt, -fpamp_scalar(nsvahl) * pvec2 / ptDENOM * sqh ); // hack: dummy[ieppV] is not used if pt[ieppV]==0
-      const cxtype_amp_v vcB1_4 = cxmake( hel0 * pvec2 * emp - pvec2 * pzpt, fpamp_scalar(nsvahl) * pvec1 / ptDENOM * sqh );  // hack: dummy[ieppV] is not used if pt[ieppV]==0
+      const cxtype_amp_v vcB1_3 = cxmake( hel0 * pvec1 * emp - pvec1 * pzpt, -nsvahl * pvec2 / ptDENOM * sqh ); // hack: dummy[ieppV] is not used if pt[ieppV]==0
+      const cxtype_amp_v vcB1_4 = cxmake( hel0 * pvec2 * emp - pvec2 * pzpt, nsvahl * pvec1 / ptDENOM * sqh );  // hack: dummy[ieppV] is not used if pt[ieppV]==0
       // Branch B2: pp != 0. and pt == 0.
-      const cxtype_amp vcB2_3 = cxmake( -hel * sqh, 0. );
-      const cxtype_amp_v vcB2_4 = cxmake( 0., fpamp_scalar(nsvahl) * fpternary( ( pvec3 < 0 ), -sqh, sqh ) ); // AV: removed an abs here
+      const cxtype_amp_v vcB2_3 = cxmake( -hel * sqh, 0. );
+      const cxtype_amp_v vcB2_4 = cxmake( 0., nsvahl * fpternary( ( pvec3 < 0 ), -sqh, sqh ) ); // AV: removed an abs here
       // Choose between the results from branch A and branch B (and from branch B1 and branch B2)
       const bool_v mask = ( pp == 0. );
       const bool_v maskB = ( pt != 0. );
@@ -765,20 +752,14 @@ namespace madmatrix
 
       nk = n[0]*pvec0 - n[1]*pvec1 - n[2]*pvec2 - n[3]*pvec3;
 
-      // nhel is a scalar: no need for a per-lane mask here (and a bool_v built
-      // from a single value would only set the first lane)
-      if ( abs(nhel) == 1 )
-      {
-        w[4] = zero;
-      }
-      else
-      {
-        w[0] = cxmake( -vmass/nk * n[0], zero );
-        w[1] = cxmake( -vmass/nk * n[1], zero );
-        w[2] = cxmake( -vmass/nk * n[2], zero );
-        w[3] = cxmake( -vmass/nk * n[3], zero );
-        w[4] = -static_cast<fptype_amp>(nsv)*cI;
-      }
+      // BRANCHLESS HELICITY: |hel| = 1 keeps w[0..3] with w[4] = 0, hel = 0 (hel0 = 1) takes the
+      // FD-gauge longitudinal polarisation instead (nk > 0 for a massive momentum, so the unused
+      // alternative is finite and vanishes when multiplied by its zero truth value)
+      w[0] = abshel * w[0] + hel0 * cxmake( -vmass / nk * n[0], zero );
+      w[1] = abshel * w[1] + hel0 * cxmake( -vmass / nk * n[1], zero );
+      w[2] = abshel * w[2] + hel0 * cxmake( -vmass / nk * n[2], zero );
+      w[3] = abshel * w[3] + hel0 * cxmake( -vmass / nk * n[3], zero );
+      w[4] = hel0 * ( -static_cast<fptype_amp>( nsv ) * cI );
 #endif
     }
     else
@@ -810,11 +791,11 @@ namespace madmatrix
       // Branch A: pt != 0.
       volatile fptype_amp_v ptDENOM = fpternary( pt != 0, pt, 1. );                             // hack: ptDENOM[ieppV]=1 if pt[ieppV]==0
       const fptype_amp_v pzpt = pvec3 / ( pp * ptDENOM ) * sqh * hel;                           // hack: dummy[ieppV] is not used if pt[ieppV]==0
-      const cxtype_amp_v vcA_3 = cxmake( -pvec1 * pzpt, -fpamp_scalar(nsv) * pvec2 / ptDENOM * sqh ); // hack: dummy[ieppV] is not used if pt[ieppV]==0
-      const cxtype_amp_v vcA_4 = cxmake( -pvec2 * pzpt, fpamp_scalar(nsv) * pvec1 / ptDENOM * sqh );  // hack: dummy[ieppV] is not used if pt[ieppV]==0
+      const cxtype_amp_v vcA_3 = cxmake( -pvec1 * pzpt, -(fptype_amp)nsv * pvec2 / ptDENOM * sqh ); // hack: dummy[ieppV] is not used if pt[ieppV]==0
+      const cxtype_amp_v vcA_4 = cxmake( -pvec2 * pzpt, (fptype_amp)nsv * pvec1 / ptDENOM * sqh );  // hack: dummy[ieppV] is not used if pt[ieppV]==0
       // Branch B: pt == 0.
-      const cxtype_amp vcB_3 = cxmake( -(fptype_amp)hel * sqh, 0 );
-      const cxtype_amp_v vcB_4 = cxmake( 0, fpamp_scalar(nsv) * fpternary( ( pvec3 < 0 ), -sqh, sqh ) ); // AV: removed an abs here
+      const cxtype_amp_v vcB_3 = cxmake( -hel * sqh, 0 );
+      const cxtype_amp_v vcB_4 = cxmake( 0, (fptype_amp)nsv * fpternary( ( pvec3 < 0 ), -sqh, sqh ) ); // AV: removed an abs here
       // Choose between the results from branch A and branch B
       const bool_v mask = ( pt != 0. );
       w[1] = cxternary( mask, vcA_3, vcB_3 );
@@ -873,7 +854,7 @@ namespace madmatrix
   __host__ __device__ void
   oxxxxx( const fptype_momenta momenta[], // input: momenta
           const fptype_amp fmass,     // input: fermion mass
-          const int nhel,         // input: -1 or +1 (helicity of fermion)
+          const fptype_amp_sv nhel, // input: -1 or +1 (helicity of fermion, per SIMD lane/GPU thread)
           const int nsf,          // input: +1 (particle) or -1 (antiparticle)
           int flv,                // input: flavour
           ALOHAOBJ & fo,          // output: wavefunctions
@@ -899,7 +880,12 @@ namespace madmatrix
     fo.pvec[2] = pvec2_ * static_cast<fptype_momenta>(nsf);
     fo.pvec[3] = pvec3_ * static_cast<fptype_momenta>(nsf);
     fo.flv_index = flv;
-    const int nh = nhel * nsf;
+    const fptype_amp_sv nh = nhel * static_cast<fptype_amp>( nsf );
+    // BRANCHLESS HELICITY: the helicity is not a branch condition but enters as the truth values
+    // tp (nh == +1) and tm (nh == -1), 1 or 0, which multiply the two alternatives. Different
+    // SIMD lanes or GPU threads can then carry different helicities and still run in lock-step.
+    const fptype_amp_sv tp = ( 1 + nh ) * (fptype_amp)0.5;
+    const fptype_amp_sv tm = 1 - tp;
     if( fmass != 0. )
     {
 #ifndef MGONGPU_CPPSIMD
@@ -910,12 +896,12 @@ namespace madmatrix
         fptype_amp sqm[2] = { fpsqrt( std::abs( fmass ) ), 0. }; // possibility of negative fermion masses
         //sqm[1] = ( fmass < 0. ? -abs( sqm[0] ) : abs( sqm[0] ) ); // AV: why abs here?
         sqm[1] = ( fmass < 0. ? -sqm[0] : sqm[0] ); // AV: removed an abs here
-        const int ip = -( ( 1 - nh ) / 2 ) * nhel;  // NB: Fortran sqm(0:1) also has indexes 0,1 as in C++
-        const int im = ( 1 + nh ) / 2 * nhel;       // NB: Fortran sqm(0:1) also has indexes 0,1 as in C++
-        w[0] = cxmake( im * sqm[std::abs( ip )], 0 );
-        w[1] = cxmake( ip * nsf * sqm[std::abs( ip )], 0 );
-        w[2] = cxmake( im * nsf * sqm[std::abs( im )], 0 );
-        w[3] = cxmake( ip * sqm[std::abs( im )], 0 );
+        // The Fortran ip = -( ( 1 - nh ) / 2 ) * nhel and im = ( 1 + nh ) / 2 * nhel are -tm * nhel and
+        // tp * nhel, so that |ip| = tm and |im| = tp: sqm[|ip|] is sqm[1] wherever ip != 0, and so on
+        w[0] = cxmake( tp * nhel * sqm[0], 0 );
+        w[1] = cxmake( -tm * nhel * nsf * sqm[1], 0 );
+        w[2] = cxmake( tp * nhel * nsf * sqm[1], 0 );
+        w[3] = cxmake( -tm * nhel * sqm[0], 0 );
       }
       else
       {
@@ -923,17 +909,18 @@ namespace madmatrix
                                fptype_amp( 1 + nsf - ( 1 - nsf ) * nh ) * (fptype_amp)0.5 };
         fptype_amp omega[2] = { fpsqrt( pvec0 + pp ), 0. };
         omega[1] = fmass / omega[0];
-        const int ip = ( 1 + nh ) / 2; // NB: Fortran is (3+nh)/2 because omega(2) has indexes 1,2 and not 0,1
-        const int im = ( 1 - nh ) / 2; // NB: Fortran is (3-nh)/2 because omega(2) has indexes 1,2 and not 0,1
-        const fptype_amp sfomeg[2] = { sf[0] * omega[ip], sf[1] * omega[im] };
+        // The Fortran ip/im indices ( 3 +- nh ) / 2 (omega(2) has indexes 1,2) are the truth values tp/tm
+        const fptype_amp sfomeg[2] = { sf[0] * ( tm * omega[0] + tp * omega[1] ), sf[1] * ( tp * omega[0] + tm * omega[1] ) };
         const fptype_amp pp3 = fpmax( fpternary( fpsignbit( pvec3 ), ( pvec1 * pvec1 + pvec2 * pvec2 ) / ( pp - pvec3 ), pp + pvec3 ), 0. );
         const cxtype_amp chi[2] = { cxmake( fpsqrt( pp3 * (fptype_amp)0.5 / pp ), 0. ),
                                 ( ( pp3 == 0. ) ? cxmake( -nh, 0. )
                                                 : cxmake( nh * pvec1, -pvec2 ) / fpsqrt( (fptype_amp)2. * pp * pp3 ) ) };
-        w[0] = sfomeg[1] * chi[im];
-        w[1] = sfomeg[1] * chi[ip];
-        w[2] = sfomeg[0] * chi[im];
-        w[3] = sfomeg[0] * chi[ip];
+        const cxtype_amp chi_im = tp * chi[0] + tm * chi[1]; // chi[im]
+        const cxtype_amp chi_ip = tm * chi[0] + tp * chi[1]; // chi[ip]
+        w[0] = sfomeg[1] * chi_im;
+        w[1] = sfomeg[1] * chi_ip;
+        w[2] = sfomeg[0] * chi_im;
+        w[3] = sfomeg[0] * chi_ip;
       }
 #else
       volatile fptype_amp_sv p2 = pvec1 * pvec1 + pvec2 * pvec2 + pvec3 * pvec3; // volatile fixes #736
@@ -942,20 +929,17 @@ namespace madmatrix
       // NB: Do not use "abs" for floats! It returns an integer with no build warning! Use std::abs!
       fptype_amp sqm[2] = { fpsqrt( std::abs( fmass ) ), 0 }; // possibility of negative fermion masses
       sqm[1] = ( fmass < 0 ? -sqm[0] : sqm[0] );          // AV: removed an abs here (as above)
-      const int ipA = -( ( 1 - nh ) / 2 ) * nhel;
-      const int imA = ( 1 + nh ) / 2 * nhel;
-      const cxtype_amp foA_2 = imA * sqm[std::abs( ipA )];
-      const cxtype_amp foA_3 = ipA * nsf * sqm[std::abs( ipA )];
-      const cxtype_amp foA_4 = imA * nsf * sqm[std::abs( imA )];
-      const cxtype_amp foA_5 = ipA * sqm[std::abs( imA )];
+      // (see the scalar code above for the truth values tp/tm in place of the Fortran ip/im indices)
+      const cxtype_amp_v foA_2 = cxmake( tp * nhel * sqm[0], 0 );
+      const cxtype_amp_v foA_3 = cxmake( -tm * nhel * (fptype_amp)nsf * sqm[1], 0 );
+      const cxtype_amp_v foA_4 = cxmake( tp * nhel * (fptype_amp)nsf * sqm[1], 0 );
+      const cxtype_amp_v foA_5 = cxmake( -tm * nhel * sqm[0], 0 );
       // Branch B: pp != 0.
-      const fptype_amp sf[2] = { fptype_amp( 1 + nsf + ( 1 - nsf ) * nh ) * (fptype_amp)0.5,
-                             fptype_amp( 1 + nsf - ( 1 - nsf ) * nh ) * (fptype_amp)0.5 };
+      const fptype_amp_v sf[2] = { ( (fptype_amp)( 1 + nsf ) + (fptype_amp)( 1 - nsf ) * nh ) * (fptype_amp)0.5,
+                                   ( (fptype_amp)( 1 + nsf ) - (fptype_amp)( 1 - nsf ) * nh ) * (fptype_amp)0.5 };
       fptype_v omega[2] = { fpsqrt( pvec0 + pp ), 0 };
       omega[1] = fmass / omega[0];
-      const int ipB = ( 1 + nh ) / 2;
-      const int imB = ( 1 - nh ) / 2;
-      const fptype_amp_v sfomeg[2] = { sf[0] * omega[ipB], sf[1] * omega[imB] };
+      const fptype_amp_v sfomeg[2] = { sf[0] * ( tm * omega[0] + tp * omega[1] ), sf[1] * ( tp * omega[0] + tm * omega[1] ) };
       const fptype_amp_v pp3 = fpmax( fpternary( fpsignbit( pvec3 ), ( pvec1 * pvec1 + pvec2 * pvec2 ) / ( pp - pvec3 ), pp + pvec3 ), 0. );
       volatile fptype_amp_v ppDENOM = fpternary( pp != 0, pp, 1. );    // hack: ppDENOM[ieppV]=1 if pp[ieppV]==0
       volatile fptype_amp_v pp3DENOM = fpternary( pp3 != 0, pp3, 1. ); // hack: pp3DENOM[ieppV]=1 if pp3[ieppV]==0
@@ -963,11 +947,13 @@ namespace madmatrix
       const cxtype_amp_v chi[2] = { cxmake( fpsqrt( chi0r2 ), 0. ),    // hack: dummy[ieppV] is not used if pp[ieppV]==0
                                 ( cxternary( ( pp3 == 0. ),
                                              cxmake( -nh, 0. ),
-                                             cxmake( (fptype_amp)nh * pvec1, -pvec2 ) / fpsqrt( (fptype_amp)2. * ppDENOM * pp3DENOM ) ) ) }; // hack: dummy[ieppV] is not used if pp[ieppV]==0
-      const cxtype_amp_v foB_2 = sfomeg[1] * chi[imB];
-      const cxtype_amp_v foB_3 = sfomeg[1] * chi[ipB];
-      const cxtype_amp_v foB_4 = sfomeg[0] * chi[imB];
-      const cxtype_amp_v foB_5 = sfomeg[0] * chi[ipB];
+                                             cxmake( nh * pvec1, -pvec2 ) / fpsqrt( (fptype_amp)2. * ppDENOM * pp3DENOM ) ) ) }; // hack: dummy[ieppV] is not used if pp[ieppV]==0
+      const cxtype_amp_v chi_im = tp * chi[0] + tm * chi[1]; // chi[im]
+      const cxtype_amp_v chi_ip = tm * chi[0] + tp * chi[1]; // chi[ip]
+      const cxtype_amp_v foB_2 = sfomeg[1] * chi_im;
+      const cxtype_amp_v foB_3 = sfomeg[1] * chi_ip;
+      const cxtype_amp_v foB_4 = sfomeg[0] * chi_im;
+      const cxtype_amp_v foB_5 = sfomeg[0] * chi_ip;
       // Choose between the results from branch A and branch B
       const bool_v mask = ( pp == 0. );
       w[0] = cxternary( mask, foA_2, foB_2 );
@@ -994,7 +980,7 @@ namespace madmatrix
       const cxtype_amp_v chi[2] = { cxmake( (fptype_v)sqp0p3, 0. ),
                                 cxternary( ( sqp0p3 == 0. ),
                                            cxmake( -nhel, 0. ) * fpsqrt( (fptype_amp)2. * pvec0 ),
-                                           cxmake( (fptype_amp)nh * pvec1, -pvec2 ) / (const fptype_amp_sv)sqp0p3DENOM ) }; // hack: dummy[ieppV] is not used if sqp0p3[ieppV]==0
+                                           cxmake( nh * pvec1, -pvec2 ) / (const fptype_amp_sv)sqp0p3DENOM ) }; // hack: dummy[ieppV] is not used if sqp0p3[ieppV]==0
 #else
       // pvec0+pvec3 is a cancelling difference of two ~|p| numbers for a
       // backward-moving massless fermion, and everything below divides by it.
@@ -1007,22 +993,12 @@ namespace madmatrix
                                           fptype_sv{ 0 },
                                           fpsqrt( p0p3stable ) * (fptype_amp)nsf );
       const cxtype_amp_sv chi[2] = { cxmake( sqp0p3, 0. ),
-                                 ( sqp0p3 == 0. ? cxmake( -nhel, 0. ) * fpsqrt( (fptype_amp)2. * pvec0 ) : cxmake( (fptype_amp)nh * pvec1, -pvec2 ) / sqp0p3 ) };
+                                 ( sqp0p3 == 0. ? cxmake( -nhel, 0. ) * fpsqrt( (fptype_amp)2. * pvec0 ) : cxmake( nh * pvec1, -pvec2 ) / sqp0p3 ) };
 #endif
-      if( nh == 1 )
-      {
-        w[0] = chi[0];
-        w[1] = chi[1];
-        w[2] = cxzero_sv();
-        w[3] = cxzero_sv();
-      }
-      else
-      {
-        w[0] = cxzero_sv();
-        w[1] = cxzero_sv();
-        w[2] = chi[1];
-        w[3] = chi[0];
-      }
+      w[0] = tp * chi[0];
+      w[1] = tp * chi[1];
+      w[2] = tm * chi[1];
+      w[3] = tm * chi[0];
     }
     mgDebug( 1, __FUNCTION__ );
     return;
@@ -1036,7 +1012,7 @@ namespace madmatrix
   __host__ __device__ void
   opzxxx( const fptype_momenta momenta[], // input: momenta
           //const fptype_amp fmass,   // [skip: ASSUME fermion mass==0]
-          const int nhel,         // input: -1 or +1 (helicity of fermion)
+          const fptype_amp_sv nhel, // input: -1 or +1 (helicity of fermion, per SIMD lane/GPU thread)
           const int nsf,          // input: +1 (particle) or -1 (antiparticle)
           const int flv,          // input: flavour
           ALOHAOBJ & fo,          // output: wavefunctions
@@ -1051,20 +1027,17 @@ namespace madmatrix
     fo.pvec[2] = fptype_momenta_sv{ 0 };
     fo.pvec[3] = pvec3_ * static_cast<fptype_momenta>(nsf);
     fo.flv_index = flv;
-    const int nh = nhel * nsf;
+    const fptype_amp_sv nh = nhel * static_cast<fptype_amp>( nsf );
+    // BRANCHLESS HELICITY: the helicity is not a branch condition but enters as the truth values
+    // tp (nh == +1) and tm (nh == -1), 1 or 0, which multiply the two alternatives. Different
+    // SIMD lanes or GPU threads can then carry different helicities and still run in lock-step.
+    const fptype_amp_sv tp = ( 1 + nh ) * (fptype_amp)0.5;
+    const fptype_amp_sv tm = 1 - tp;
     const cxtype_amp_sv csqp0p3 = cxmake( fpsqrt( (fptype_amp)2. * pvec3 ) * (fptype_amp)nsf, 0. );
+    w[0] = tp * csqp0p3;
     w[1] = cxzero_sv();
     w[2] = cxzero_sv();
-    if( nh == 1 )
-    {
-      w[0] = csqp0p3;
-      w[3] = cxzero_sv();
-    }
-    else
-    {
-      w[0] = cxzero_sv();
-      w[3] = csqp0p3;
-    }
+    w[3] = tm * csqp0p3;
     mgDebug( 1, __FUNCTION__ );
     return;
   }
@@ -1077,7 +1050,7 @@ namespace madmatrix
   __host__ __device__ void
   omzxxx( const fptype_momenta momenta[], // input: momenta
           //const fptype_amp fmass,   // [skip: ASSUME fermion mass==0]
-          const int nhel,         // input: -1 or +1 (helicity of fermion)
+          const fptype_amp_sv nhel, // input: -1 or +1 (helicity of fermion, per SIMD lane/GPU thread)
           const int nsf,          // input: +1 (particle) or -1 (antiparticle)
           const int flv,          // input: flavour
           ALOHAOBJ & fo,          // output: wavefunctions
@@ -1092,23 +1065,17 @@ namespace madmatrix
     fo.pvec[2] = fptype_momenta_sv{ 0 };
     fo.pvec[3] = pvec3_ * static_cast<fptype_momenta>(nsf);
     fo.flv_index = flv;
-    const int nh = nhel * nsf;
+    const fptype_amp_sv nh = nhel * static_cast<fptype_amp>( nsf );
+    // BRANCHLESS HELICITY: the helicity is not a branch condition but enters as the truth values
+    // tp (nh == +1) and tm (nh == -1), 1 or 0, which multiply the two alternatives. Different
+    // SIMD lanes or GPU threads can then carry different helicities and still run in lock-step.
+    const fptype_amp_sv tp = ( 1 + nh ) * (fptype_amp)0.5;
+    const fptype_amp_sv tm = 1 - tp;
     const cxtype_amp_sv chi1 = cxmake( -nhel, 0. ) * fpsqrt( -(fptype_amp)2. * pvec3 );
-    if( nh == 1 )
-    {
-      w[0] = cxzero_sv();
-      w[1] = chi1;
-      w[2] = cxzero_sv();
-      w[3] = cxzero_sv();
-    }
-    else
-    {
-      w[0] = cxzero_sv();
-      w[1] = cxzero_sv();
-      w[2] = chi1;
-      //w[3] = chi1; // AV: BUG!
-      w[3] = cxzero_sv(); // AV: BUG FIX
-    }
+    w[0] = cxzero_sv();
+    w[1] = tp * chi1;
+    w[2] = tm * chi1;
+    w[3] = cxzero_sv();
     mgDebug( 1, __FUNCTION__ );
     return;
   }
@@ -1121,7 +1088,7 @@ namespace madmatrix
   __host__ __device__ void
   oxzxxx( const fptype_momenta momenta[], // input: momenta
           //const fptype_amp fmass,   // [skip: ASSUME fermion mass==0]
-          const int nhel,         // input: -1 or +1 (helicity of fermion)
+          const fptype_amp_sv nhel, // input: -1 or +1 (helicity of fermion, per SIMD lane/GPU thread)
           const int nsf,          // input: +1 (particle) or -1 (antiparticle)
           const int flv,          // input: flavour
           ALOHAOBJ & fo,          // output: wavefunctions
@@ -1143,7 +1110,12 @@ namespace madmatrix
     fo.pvec[2] = pvec2_ * static_cast<fptype_momenta>(nsf);
     fo.pvec[3] = pvec3_ * static_cast<fptype_momenta>(nsf);
     fo.flv_index = flv;
-    const int nh = nhel * nsf;
+    const fptype_amp_sv nh = nhel * static_cast<fptype_amp>( nsf );
+    // BRANCHLESS HELICITY: the helicity is not a branch condition but enters as the truth values
+    // tp (nh == +1) and tm (nh == -1), 1 or 0, which multiply the two alternatives. Different
+    // SIMD lanes or GPU threads can then carry different helicities and still run in lock-step.
+    const fptype_amp_sv tp = ( 1 + nh ) * (fptype_amp)0.5;
+    const fptype_amp_sv tm = 1 - tp;
     //const float sqp0p3 = sqrtf( pvec0 + pvec3 ) * nsf; // AV: why force a float here?
     // pvec0+pvec3 is a cancelling difference of two ~|p| numbers for a
     // backward-moving massless fermion, and everything below divides by it.
@@ -1155,21 +1127,11 @@ namespace madmatrix
                                             pvec0 + pvec3 );
     const fptype_amp_sv sqp0p3 = fpsqrt( p0p3stable ) * static_cast<fptype_amp>(nsf);
     const cxtype_amp_sv chi0 = cxmake( sqp0p3, 0. );
-    const cxtype_amp_sv chi1 = cxmake( (fptype_amp)nh * pvec1 / sqp0p3, -pvec2 / sqp0p3 );
-    if( nh == 1 )
-    {
-      w[0] = chi0;
-      w[1] = chi1;
-      w[2] = cxzero_sv();
-      w[3] = cxzero_sv();
-    }
-    else
-    {
-      w[0] = cxzero_sv();
-      w[1] = cxzero_sv();
-      w[2] = chi1;
-      w[3] = chi0;
-    }
+    const cxtype_amp_sv chi1 = cxmake( nh * pvec1 / sqp0p3, -pvec2 / sqp0p3 );
+    w[0] = tp * chi0;
+    w[1] = tp * chi1;
+    w[2] = tm * chi1;
+    w[3] = tm * chi0;
     mgDebug( 1, __FUNCTION__ );
     return;
   }
@@ -1566,12 +1528,11 @@ namespace madmatrix
       return;
     }
     COUP = C_ACCESS::kernelAccessConst( MCOUP.value + C_ACCESS::flv_stride*flv_sel );
-    const cxtype_denom cId( 0., 1. );
-    const cxtype_denom_sv denom = static_cast<fptype_denom>(Ccoeff) * static_cast<cxtype_denom_sv>(COUP) / ( ( dP3[0] * dP3[0] ) - ( dP3[1] * dP3[1] ) - ( dP3[2] * dP3[2] ) - ( dP3[3] * dP3[3] ) - static_cast<fptype_denom>(M3) * ( static_cast<fptype_denom>(M3) - cId * static_cast<fptype_denom>(W3) ) );
-    wV3[0] = static_cast<cxtype_amp_sv>(denom) * ( -cI ) * ( wF2[2] * wF1[0] + wF2[3] * wF1[1] + wF2[0] * wF1[2] + wF2[1] * wF1[3] );
-    wV3[1] = static_cast<cxtype_amp_sv>(denom) * ( -cI ) * ( -wF2[3] * wF1[0] - wF2[2] * wF1[1] + wF2[1] * wF1[2] + wF2[0] * wF1[3] );
-    wV3[2] = static_cast<cxtype_amp_sv>(denom) * ( -cI ) * ( -cI * ( wF2[3] * wF1[0] + wF2[0] * wF1[3] ) + cI * ( wF2[2] * wF1[1] + wF2[1] * wF1[2] ) );
-    wV3[3] = static_cast<cxtype_amp_sv>(denom) * ( -cI ) * ( -wF2[2] * wF1[0] - wF2[1] * wF1[3] + wF2[3] * wF1[1] + wF2[0] * wF1[2] );
+    const cxtype_amp_sv denom = madmatrix::denom( Ccoeff, COUP, dP3, M3, W3 );
+    wV3[0] = denom * ( -cI ) * ( wF2[2] * wF1[0] + wF2[3] * wF1[1] + wF2[0] * wF1[2] + wF2[1] * wF1[3] );
+    wV3[1] = denom * ( -cI ) * ( -wF2[3] * wF1[0] - wF2[2] * wF1[1] + wF2[1] * wF1[2] + wF2[0] * wF1[3] );
+    wV3[2] = denom * ( -cI ) * ( -cI * ( wF2[3] * wF1[0] + wF2[0] * wF1[3] ) + cI * ( wF2[2] * wF1[1] + wF2[1] * wF1[2] ) );
+    wV3[3] = denom * ( -cI ) * ( -wF2[2] * wF1[0] - wF2[1] * wF1[3] + wF2[3] * wF1[1] + wF2[0] * wF1[2] );
     const cxtype_sv FDJS1 = ( FDN[0] * wV3[0] - FDN[1] * wV3[1] - FDN[2] * wV3[2] - FDN[3] * wV3[3] ) / FDNQ;
     const cxtype_sv FDJS2 = ( FDQ[0] * wV3[0] - FDQ[1] * wV3[1] - FDQ[2] * wV3[2] - FDQ[3] * wV3[3] - cxconj( FDQ[4] ) * wV3[4] ) / FDNQ;
     wV3[0] = wV3[0] - FDQ[0] * FDJS1 - FDN[0] * FDJS2;
@@ -1632,12 +1593,11 @@ namespace madmatrix
       return;
     }
     COUP = C_ACCESS::kernelAccessConst( MCOUP.value + C_ACCESS::flv_stride*flv_sel );
-    const cxtype_denom cId( 0., 1. );
-    const cxtype_denom_sv denom = static_cast<fptype_denom>(Ccoeff) * static_cast<cxtype_denom_sv>(COUP) / ( ( dP3[0] * dP3[0] ) - ( dP3[1] * dP3[1] ) - ( dP3[2] * dP3[2] ) - ( dP3[3] * dP3[3] ) - static_cast<fptype_denom>(M3) * ( static_cast<fptype_denom>(M3) - cId * static_cast<fptype_denom>(W3) ) );
-    wV3[0] = static_cast<cxtype_amp_sv>(denom) * ( -cI ) * ( wF2[0] * wF1[2] + wF2[1] * wF1[3] );
-    wV3[1] = static_cast<cxtype_amp_sv>(denom) * ( -cI ) * ( wF2[1] * wF1[2] + wF2[0] * wF1[3] );
-    wV3[2] = static_cast<cxtype_amp_sv>(denom) * ( -cI ) * ( +cI * ( wF2[1] * wF1[2] ) - cI * ( wF2[0] * wF1[3] ) );
-    wV3[3] = static_cast<cxtype_amp_sv>(denom) * ( -cI ) * ( wF2[0] * wF1[2] - wF2[1] * wF1[3] );
+    const cxtype_amp_sv denom = madmatrix::denom( Ccoeff, COUP, dP3, M3, W3 );
+    wV3[0] = denom * ( -cI ) * ( wF2[0] * wF1[2] + wF2[1] * wF1[3] );
+    wV3[1] = denom * ( -cI ) * ( wF2[1] * wF1[2] + wF2[0] * wF1[3] );
+    wV3[2] = denom * ( -cI ) * ( +cI * ( wF2[1] * wF1[2] ) - cI * ( wF2[0] * wF1[3] ) );
+    wV3[3] = denom * ( -cI ) * ( wF2[0] * wF1[2] - wF2[1] * wF1[3] );
     const cxtype_sv FDJS1 = ( FDN[0] * wV3[0] - FDN[1] * wV3[1] - FDN[2] * wV3[2] - FDN[3] * wV3[3] ) / FDNQ;
     const cxtype_sv FDJS2 = ( FDQ[0] * wV3[0] - FDQ[1] * wV3[1] - FDQ[2] * wV3[2] - FDQ[3] * wV3[3] - cxconj( FDQ[4] ) * wV3[4] ) / FDNQ;
     wV3[0] = wV3[0] - FDQ[0] * FDJS1 - FDN[0] * FDJS2;
@@ -1708,17 +1668,16 @@ namespace madmatrix
     }
     if(zero_coup1 ==0) { COUP1 = C_ACCESS::kernelAccessConst( MCOUP1.value + C_ACCESS::flv_stride*flv_index1 ); }
     if(zero_coup2 ==0) { COUP2 = C_ACCESS::kernelAccessConst( MCOUP2.value + C_ACCESS::flv_stride*flv_index1 ); }
-    const cxtype_denom cId( 0., 1. );
-    const cxtype_denom_sv denom1 = static_cast<fptype_denom>(Ccoeff1) * static_cast<cxtype_denom_sv>(COUP1) / ( ( dP3[0] * dP3[0] ) - ( dP3[1] * dP3[1] ) - ( dP3[2] * dP3[2] ) - ( dP3[3] * dP3[3] ) - static_cast<fptype_denom>(M3) * ( static_cast<fptype_denom>(M3) - cId * static_cast<fptype_denom>(W3) ) );
-    wV3[0] = wV3[0] + static_cast<cxtype_amp_sv>(denom1) * ( -cI ) * ( wF2[0] * wF1[2] + wF2[1] * wF1[3] );
-    wV3[1] = wV3[1] + static_cast<cxtype_amp_sv>(denom1) * ( -cI ) * ( wF2[1] * wF1[2] + wF2[0] * wF1[3] );
-    wV3[2] = wV3[2] + static_cast<cxtype_amp_sv>(denom1) * ( -cI ) * ( +cI * ( wF2[1] * wF1[2] ) - cI * ( wF2[0] * wF1[3] ) );
-    wV3[3] = wV3[3] + static_cast<cxtype_amp_sv>(denom1) * ( -cI ) * ( wF2[0] * wF1[2] - wF2[1] * wF1[3] );
-    const cxtype_denom_sv denom2 = static_cast<fptype_denom>(Ccoeff2) * static_cast<cxtype_denom_sv>(COUP2) / ( ( dP3[0] * dP3[0] ) - ( dP3[1] * dP3[1] ) - ( dP3[2] * dP3[2] ) - ( dP3[3] * dP3[3] ) - static_cast<fptype_denom>(M3) * ( static_cast<fptype_denom>(M3) - cId * static_cast<fptype_denom>(W3) ) );
-    wV3[0] = wV3[0] + static_cast<cxtype_amp_sv>(denom2) * ( -cI ) * ( wF2[2] * wF1[0] + wF2[3] * wF1[1] );
-    wV3[1] = wV3[1] + static_cast<cxtype_amp_sv>(denom2) * ( -cI ) * ( -wF2[3] * wF1[0] - wF2[2] * wF1[1] );
-    wV3[2] = wV3[2] + static_cast<cxtype_amp_sv>(denom2) * ( -cI ) * ( -cI * ( wF2[3] * wF1[0] ) + cI * ( wF2[2] * wF1[1] ) );
-    wV3[3] = wV3[3] + static_cast<cxtype_amp_sv>(denom2) * ( -cI ) * ( -wF2[2] * wF1[0] + wF2[3] * wF1[1] );
+    const cxtype_amp_sv denom1 = madmatrix::denom( Ccoeff1, COUP1, dP3, M3, W3 );
+    wV3[0] = wV3[0] + denom1 * ( -cI ) * ( wF2[0] * wF1[2] + wF2[1] * wF1[3] );
+    wV3[1] = wV3[1] + denom1 * ( -cI ) * ( wF2[1] * wF1[2] + wF2[0] * wF1[3] );
+    wV3[2] = wV3[2] + denom1 * ( -cI ) * ( +cI * ( wF2[1] * wF1[2] ) - cI * ( wF2[0] * wF1[3] ) );
+    wV3[3] = wV3[3] + denom1 * ( -cI ) * ( wF2[0] * wF1[2] - wF2[1] * wF1[3] );
+    const cxtype_amp_sv denom2 = madmatrix::denom( Ccoeff2, COUP2, dP3, M3, W3 );
+    wV3[0] = wV3[0] + denom2 * ( -cI ) * ( wF2[2] * wF1[0] + wF2[3] * wF1[1] );
+    wV3[1] = wV3[1] + denom2 * ( -cI ) * ( -wF2[3] * wF1[0] - wF2[2] * wF1[1] );
+    wV3[2] = wV3[2] + denom2 * ( -cI ) * ( -cI * ( wF2[3] * wF1[0] ) + cI * ( wF2[2] * wF1[1] ) );
+    wV3[3] = wV3[3] + denom2 * ( -cI ) * ( -wF2[2] * wF1[0] + wF2[3] * wF1[1] );
     const cxtype_sv FDJS1 = ( FDN[0] * wV3[0] - FDN[1] * wV3[1] - FDN[2] * wV3[2] - FDN[3] * wV3[3] ) / FDNQ;
     const cxtype_sv FDJS2 = ( FDQ[0] * wV3[0] - FDQ[1] * wV3[1] - FDQ[2] * wV3[2] - FDQ[3] * wV3[3] - cxconj( FDQ[4] ) * wV3[4] ) / FDNQ;
     wV3[0] = wV3[0] - FDQ[0] * FDJS1 - FDN[0] * FDJS2;
@@ -1811,12 +1770,11 @@ namespace madmatrix
     COUP = C_ACCESS::kernelAccessConst( MCOUP.value + C_ACCESS::flv_stride*flv_index1 );
     constexpr fptype_amp one( 1. );
     constexpr fptype_denom oned( 1. );
-    const cxtype_denom cId( 0., 1. );
-    const cxtype_denom_sv denom = static_cast<fptype_denom>(Ccoeff) * static_cast<cxtype_denom_sv>(COUP) / ( ( dP2[0] * dP2[0] ) - ( dP2[1] * dP2[1] ) - ( dP2[2] * dP2[2] ) - ( dP2[3] * dP2[3] ) - static_cast<fptype_denom>(M2) * ( static_cast<fptype_denom>(M2) - cId * static_cast<fptype_denom>(W2) ) );
-    wF2[0] = static_cast<cxtype_amp_sv>(denom) * cI * ( wF1[0] * ( P2[0] * ( wV3[0] + wV3[3] ) + ( P2[1] * ( -one ) * ( wV3[1] + cI * wV3[2] ) + ( P2[2] * ( +cI * wV3[1] - wV3[2] ) - P2[3] * ( wV3[0] + wV3[3] ) ) ) ) + wF1[1] * ( P2[0] * ( wV3[1] - cI * wV3[2] ) + ( P2[1] * ( -wV3[0] + wV3[3] ) + ( P2[2] * ( +cI * wV3[0] - cI * wV3[3] ) + P2[3] * ( -wV3[1] + cI * wV3[2] ) ) ) ) );
-    wF2[1] = static_cast<cxtype_amp_sv>(denom) * cI * ( wF1[0] * ( P2[0] * ( wV3[1] + cI * wV3[2] ) + ( P2[1] * ( -one ) * ( wV3[0] + wV3[3] ) + ( P2[2] * ( -one ) * ( +cI * ( wV3[0] + wV3[3] ) ) + P2[3] * ( wV3[1] + cI * wV3[2] ) ) ) ) + wF1[1] * ( P2[0] * ( wV3[0] - wV3[3] ) + ( P2[1] * ( -wV3[1] + cI * wV3[2] ) + ( P2[2] * ( -one ) * ( +cI * wV3[1] + wV3[2] ) + P2[3] * ( wV3[0] - wV3[3] ) ) ) ) );
-    wF2[2] = static_cast<cxtype_amp_sv>(denom) * -cI * M2 * ( wF1[0] * ( -one ) * ( wV3[0] + wV3[3] ) + wF1[1] * ( -wV3[1] + cI * wV3[2] ) );
-    wF2[3] = static_cast<cxtype_amp_sv>(denom) * cI * M2 * ( wF1[0] * ( wV3[1] + cI * wV3[2] ) + wF1[1] * ( wV3[0] - wV3[3] ) );
+    const cxtype_amp_sv denom = madmatrix::denom( Ccoeff, COUP, dP2, M2, W2 );
+    wF2[0] = denom * cI * ( wF1[0] * ( P2[0] * ( wV3[0] + wV3[3] ) + ( P2[1] * ( -one ) * ( wV3[1] + cI * wV3[2] ) + ( P2[2] * ( +cI * wV3[1] - wV3[2] ) - P2[3] * ( wV3[0] + wV3[3] ) ) ) ) + wF1[1] * ( P2[0] * ( wV3[1] - cI * wV3[2] ) + ( P2[1] * ( -wV3[0] + wV3[3] ) + ( P2[2] * ( +cI * wV3[0] - cI * wV3[3] ) + P2[3] * ( -wV3[1] + cI * wV3[2] ) ) ) ) );
+    wF2[1] = denom * cI * ( wF1[0] * ( P2[0] * ( wV3[1] + cI * wV3[2] ) + ( P2[1] * ( -one ) * ( wV3[0] + wV3[3] ) + ( P2[2] * ( -one ) * ( +cI * ( wV3[0] + wV3[3] ) ) + P2[3] * ( wV3[1] + cI * wV3[2] ) ) ) ) + wF1[1] * ( P2[0] * ( wV3[0] - wV3[3] ) + ( P2[1] * ( -wV3[1] + cI * wV3[2] ) + ( P2[2] * ( -one ) * ( +cI * wV3[1] + wV3[2] ) + P2[3] * ( wV3[0] - wV3[3] ) ) ) ) );
+    wF2[2] = denom * -cI * M2 * ( wF1[0] * ( -one ) * ( wV3[0] + wV3[3] ) + wF1[1] * ( -wV3[1] + cI * wV3[2] ) );
+    wF2[3] = denom * cI * M2 * ( wF1[0] * ( wV3[1] + cI * wV3[2] ) + wF1[1] * ( wV3[0] - wV3[3] ) );
     mgDebug( 1, __FUNCTION__ );
     return;
   }
@@ -1870,12 +1828,11 @@ namespace madmatrix
       return;
     }
     COUP = C_ACCESS::kernelAccessConst( MCOUP.value + C_ACCESS::flv_stride*flv_sel );
-    const cxtype_denom cId( 0., 1. );
-    const cxtype_denom_sv denom = static_cast<fptype_denom>(Ccoeff) * static_cast<cxtype_denom_sv>(COUP) / ( ( dP3[0] * dP3[0] ) - ( dP3[1] * dP3[1] ) - ( dP3[2] * dP3[2] ) - ( dP3[3] * dP3[3] ) - static_cast<fptype_denom>(M3) * ( static_cast<fptype_denom>(M3) - cId * static_cast<fptype_denom>(W3) ) );
-    wV3[0] = static_cast<cxtype_amp_sv>(denom) * ( -cI ) * ( wF2[2] * wF1[0] + wF2[3] * wF1[1] );
-    wV3[1] = static_cast<cxtype_amp_sv>(denom) * ( -cI ) * ( -wF2[3] * wF1[0] - wF2[2] * wF1[1] );
-    wV3[2] = static_cast<cxtype_amp_sv>(denom) * ( -cI ) * ( -cI * ( wF2[3] * wF1[0] ) + cI * ( wF2[2] * wF1[1] ) );
-    wV3[3] = static_cast<cxtype_amp_sv>(denom) * ( -cI ) * ( -wF2[2] * wF1[0] + wF2[3] * wF1[1] );
+    const cxtype_amp_sv denom = madmatrix::denom( Ccoeff, COUP, dP3, M3, W3 );
+    wV3[0] = denom * ( -cI ) * ( wF2[2] * wF1[0] + wF2[3] * wF1[1] );
+    wV3[1] = denom * ( -cI ) * ( -wF2[3] * wF1[0] - wF2[2] * wF1[1] );
+    wV3[2] = denom * ( -cI ) * ( -cI * ( wF2[3] * wF1[0] ) + cI * ( wF2[2] * wF1[1] ) );
+    wV3[3] = denom * ( -cI ) * ( -wF2[2] * wF1[0] + wF2[3] * wF1[1] );
     const cxtype_sv FDJS1 = ( FDN[0] * wV3[0] - FDN[1] * wV3[1] - FDN[2] * wV3[2] - FDN[3] * wV3[3] ) / FDNQ;
     const cxtype_sv FDJS2 = ( FDQ[0] * wV3[0] - FDQ[1] * wV3[1] - FDQ[2] * wV3[2] - FDQ[3] * wV3[3] - cxconj( FDQ[4] ) * wV3[4] ) / FDNQ;
     wV3[0] = wV3[0] - FDQ[0] * FDJS1 - FDN[0] * FDJS2;

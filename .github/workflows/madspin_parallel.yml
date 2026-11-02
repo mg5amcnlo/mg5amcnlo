@@ -65,7 +65,7 @@ jobs:
       - uses: ./.github/actions/checkout_mg5
       # the LO run_card defaults to pdlabel=lhapdf (NNPDF40_lo_as_01180), so a
       # madevent run needs an lhapdf-config on this runner
-      - uses: ./.github/actions/restore_heptools
+      - uses: ./.github/actions/restore_heptools_core
       - uses: ./.github/actions/restore-pip-cache
 
 

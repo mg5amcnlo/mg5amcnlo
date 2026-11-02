@@ -19,7 +19,8 @@ the LHE file from what the npy run left behind.
 In both cases the LHE header and ``<init>`` block (with the systematics
 ``<initrwgt>``) are taken verbatim from the ``header.lhe`` file the run writes
 next to its npy events; the ``rwgt_<id>`` columns become the per-event
-``<rwgt>`` block. The ``<mgrwt>`` reweighting-input block (``[systematics]
+``<rwgt>`` block: the systematics' numbered ones, then the named ones MadtRex
+reweighting adds (``rwgt_<name>``, listed in header.lhe's ``<initrwgt>``). The ``<mgrwt>`` reweighting-input block (``[systematics]
 write_inputs``) is not reconstructed.
 
 Usage::
@@ -147,6 +148,19 @@ def _lhe_npy_events(ms, events, columns):
         yield event, [float(w[n]) for w in rwgt]
 
 
+def _add_named_weights(text, names, values):
+    """The formatted LHE event text with the named weights (ids madspace's
+    integer-id ``rwgt`` cannot carry) appended to its ``<rwgt>`` block, which
+    is created when the event has none."""
+    if not names:
+        return text
+    extra = "".join("<wgt id='%s'> %+.7e </wgt>\n" % (name, value)
+                    for name, value in zip(names, values))
+    if "</rwgt>" in text:
+        return text.replace("</rwgt>", extra + "</rwgt>", 1)
+    return text.replace("</event>", "<rwgt>\n" + extra + "</rwgt>\n</event>", 1)
+
+
 def convert(path, output=None, seed=None, compress=True, me_dir=None) -> str:
     """Write the LHE file for the npy events at ``path`` (npy file, run
     directory or run name) and return its path. By default it is written as
@@ -170,10 +184,13 @@ def convert(path, output=None, seed=None, compress=True, me_dir=None) -> str:
             "and cannot be converted." % os.path.join(run_path, HEADER_FILE))
     header = _read_header(run_path)
 
-    events = np.load(npy_path, mmap_mode="r")
+    events = np.load(npy_path, mmap_mode="r", max_header_size=1 << 30)
     names = events.dtype.names
     columns = [n for n in names if re.fullmatch(r"rwgt_\d+", n)]
     ids = [int(c.split("_", 1)[1]) for c in columns]
+    # MadtRex reweighting's named weights (rwgt_<name>)
+    named = [n for n in names if n.startswith("rwgt_") and n not in columns]
+    named_ids = [n[len("rwgt_"):] for n in named]
     if "diagram_index" in names:
         completer_path = os.path.join(run_path, COMPLETER_FILE)
         if not os.path.isfile(completer_path):
@@ -196,11 +213,13 @@ def convert(path, output=None, seed=None, compress=True, me_dir=None) -> str:
         for start in range(0, len(events), _CHUNK):
             chunk = np.asarray(events[start:start + _CHUNK])
             text = []
-            for event, weights in stream(chunk):
+            named_values = [chunk[n] for n in named]
+            for i, (event, weights) in enumerate(stream(chunk)):
                 if ids:
                     event.rwgt_ids = ids
                     event.rwgt = weights
-                text.append(event.format())
+                text.append(_add_named_weights(event.format(), named_ids,
+                                               [float(v[i]) for v in named_values]))
             out.write("".join(text))
         out.write("</LesHouchesEvents>\n")
     if compress:

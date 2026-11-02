@@ -1,0 +1,16 @@
+# makefile build output
+*.o
+*.d
+librex.so
+libtearex.so
+
+# CMake build output
+build/
+build-*/
+
+# Python packaging output
+*.egg-info/
+__pycache__/
+dist/
+wheelhouse/
+rex/_rex_py*.so

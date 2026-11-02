@@ -5,12 +5,24 @@ import json
 import os
 import re
 import resource
+import sys
 
 from madgraph.mg7.common import logger
 from madgraph.interface.extended_cmd import Cmd
 from madgraph.various.banner import RunCardMG7
 from madgraph.mg7 import npy_to_lhe
-from madgraph.mg7.driver import compute_decay_widths, force_lhe_output_if_needed, run_generation
+from madgraph.mg7.bootstrap import MG_ROOT as _MG_ROOT
+from madgraph.mg7.driver import (
+    ExistingRun,
+    REWEIGHT_CARD,
+    compute_decay_widths,
+    force_lhe_output_if_needed,
+    install_reweight_card,
+    list_runs,
+    prepare_reweighting,
+    run_generation,
+    run_reweighting,
+)
 from madgraph.mg7.model_widths import compute_auto_widths, load_process_model
 from madgraph.mg7.options import lhapdf_index_paths, load_mg5_options
 from madgraph.mg7.postprocess import _off, _setup_logging
@@ -113,30 +125,91 @@ class MG7Cmd(Cmd):
     # running
     # ------------------------------------------------------------------
     def do_generate_events(self, line):
-        """generate_events [-f] [-n NAME] [--laststep=parton]
+        """generate_events [-f] [-n NAME] [--laststep=parton] [--reweight=CARD]
+                           [--reweight-backend=classic|madtrex|auto]
 
-        Run the mg7 generation and the selected post-processing tools."""
+        Run the mg7 generation and the selected post-processing tools.
+        --reweight=CARD is a shortcut for switching reweighting on with CARD
+        as Cards/reweight_card.dat; --reweight-backend chooses who reweights
+        (see madgraph/various/reweight_backend.py)."""
 
         opts = self._parse_run_options(line)
         cwd = os.getcwd()
         target = self.me_dir if self.me_dir != '.' else cwd
+        if opts['reweight_card']:
+            opts['reweight_card'] = os.path.abspath(opts['reweight_card'])
         try:
             os.chdir(target)
             _setup_logging()
             if opts['name']:
                 self._set_run_name(opts['name'])
+            if opts['reweight_card']:
+                install_reweight_card(opts['reweight_card'])
             switch = {}
             if not opts['force']:
                 switch = ask_edit_cards(mother=self)
             switch = self._apply_laststep(switch, opts)
-            force_lhe_output_if_needed(switch)
+            if opts['reweight_card'] and _off(switch.get('reweight')):
+                switch = dict(switch, reweight='ON')
+            reweight = prepare_reweighting(switch, opts['reweight_backend'],
+                                           self.options)
+            force_lhe_output_if_needed(switch, reweight)
             _raise_open_file_limit()
-            run_generation(switch)
+            run_generation(switch, reweight)
         finally:
             os.chdir(cwd)
 
     # ``launch`` is the name MG5 users type; keep it working here too.
     do_launch = do_generate_events
+
+    def do_reweight(self, line):
+        """reweight RUN_NAME [--reweight=CARD] [--reweight-backend=classic|madtrex|auto]
+
+        Reweight the events of an earlier run with Cards/reweight_card.dat
+        (or CARD, which then becomes Cards/reweight_card.dat), as
+        generate_events does after the generation: the weights are added to
+        the run's event file, after the weights already there."""
+        args = self.split_arg(line)
+        run_name, card, backend = None, None, None
+        for arg in args:
+            if arg.startswith('--reweight='):
+                card = os.path.abspath(arg.split('=', 1)[1])
+            elif arg.startswith('--reweight-backend='):
+                backend = arg.split('=', 1)[1]
+            elif arg.startswith('-'):
+                logger.warning("'%s' is not an option of reweight and is ignored", arg)
+            else:
+                run_name = arg
+        cwd = os.getcwd()
+        target = self.me_dir if self.me_dir != '.' else cwd
+        try:
+            os.chdir(target)
+            _setup_logging()
+            if run_name is None:
+                runs = list_runs()
+                raise self.InvalidCmd(
+                    'reweight: give the run to reweight%s'
+                    % (' (%s)' % ', '.join(runs) if runs else ': there is no run yet'))
+            try:
+                run = ExistingRun(run_name)
+            except ValueError as error:
+                raise self.InvalidCmd('reweight: %s' % error)
+            if card:
+                install_reweight_card(card)
+            if not os.path.exists(REWEIGHT_CARD):
+                raise self.InvalidCmd('reweight: %s is missing' % REWEIGHT_CARD)
+            decision = prepare_reweighting({'reweight': 'ON'}, backend, self.options)
+            if decision is None:
+                return
+            run_reweighting(run, REWEIGHT_CARD, decision=decision)
+        finally:
+            os.chdir(cwd)
+
+    def complete_reweight(self, text, line, begidx, endidx):
+        me_dir = self.me_dir if self.me_dir != '.' else os.getcwd()
+        options = ['--reweight=', '--reweight-backend=']
+        return self.list_completion(text, list_runs(os.path.join(me_dir, 'Events'))
+                                    + options, line)
 
     def do_npy_to_lhe(self, line):
         """npy_to_lhe [RUN_NAME] [-o OUTPUT] [--seed N] [--no-gzip]
@@ -163,7 +236,8 @@ class MG7Cmd(Cmd):
     def _parse_run_options(self, line):
         """Understand the subset of MG5's `launch` options that mean something
         for an mg7 run, and say so out loud for the ones that do not."""
-        out = {'force': False, 'name': '', 'laststep': ''}
+        out = {'force': False, 'name': '', 'laststep': '', 'reweight_card': None,
+               'reweight_backend': None}
         args = self.split_arg(line)
         index = 0
         while index < len(args):
@@ -181,6 +255,16 @@ class MG7Cmd(Cmd):
                 index += 1
             elif arg.startswith(('-s=', '--laststep=')):
                 out['laststep'] = arg.split('=', 1)[1]
+            elif arg == '--reweight' and index < len(args):
+                out['reweight_card'] = args[index]
+                index += 1
+            elif arg.startswith('--reweight='):
+                out['reweight_card'] = arg.split('=', 1)[1]
+            elif arg == '--reweight-backend' and index < len(args):
+                out['reweight_backend'] = args[index]
+                index += 1
+            elif arg.startswith('--reweight-backend='):
+                out['reweight_backend'] = arg.split('=', 1)[1]
             elif arg.startswith('-'):
                 logger.warning(
                     "'%s' is not supported by the mg7 output and is ignored; "
@@ -331,30 +415,64 @@ def build_selector_cmd(mother=None):
                                     len(run_card["histograms"]))
                                 self.modified_card.add("run")
                             else:
-                                logger.warning(
+                                self.invalid_set(
                                     "no run_card_default.toml to restore the "
                                     "histograms from")
                             return
-                        logger.warning(
+                        self.invalid_set(
                             "'set histograms %s': only OFF (remove them all) "
                             "and default (put the generated ones back) are "
                             "understood; edit the [histograms] section of "
-                            "Cards/run_card.toml for anything else",
-                            rest or "(no value)")
+                            "Cards/run_card.toml for anything else"
+                            % (rest or "(no value)"))
                         return
                     if nlow in ("lhc", "lep", "ilc", "lcc") and rest:
-                        ecm = run_card.set_collider(nlow, rest, masses)
+                        try:
+                            ecm = run_card.set_collider(nlow, rest, masses)
+                        except _banner_mod.InvalidCmd as error:
+                            self.invalid_set("invalid 'set %s %s': %s" % (nlow, rest, error))
+                            return
                         logger.info("set %s collider: e_cm = %s GeV", nlow, ecm)
                         self.modified_card.add("run")
                         return
                     if nlow == "fixed_scale" and rest:
-                        val = run_card.set_fixed_scale(rest, masses)
+                        try:
+                            val = run_card.set_fixed_scale(rest, masses)
+                        except _banner_mod.InvalidCmd as error:
+                            self.invalid_set("invalid 'set %s %s': %s" % (nlow, rest, error))
+                            return
                         logger.info("set fixed scales to %s GeV", val)
                         self.modified_card.add("run")
                         return
 
+                    # the generic editor would say "Ambiguous key 'pdf'"
+                    # without naming the per-beam entries
+                    if nlow == "pdf" and rest:
+                        self.invalid_set("Ambiguous key 'pdf' — use beam.pdf (both beams), "
+                                         "beam.pdf1, beam.pdf2 or systematics.pdf")
+                        return
+                    # custom function parameters are not run_card keys, so the
+                    # generic editor rejects them
+                    if rest and nlow.startswith("custom_functions.") and nlow.count(".") == 2:
+                        # the parameter name is matched as written by the
+                        # custom function: keep its case
+                        try:
+                            run_card.set(name, run_card.evaluate(rest, masses), user=True)
+                        except _banner_mod.InvalidCmd as error:
+                            self.invalid_set("invalid 'set %s %s': %s" % (name, rest, error))
+                            return
+                        logger.info("modify parameter %s of the run_card.toml to %s", name, rest)
+                        self.modified_card.add("run")
+                        return
+
                     if rest and run_card.is_cut_name(name):
-                        cut, bound, val = run_card.set_cut(name, run_card.evaluate(rest, masses))
+                        try:
+                            cut, bound, val = run_card.set_cut(name, rest, masses)
+                        except _banner_mod.InvalidCmd as error:
+                            # an unknown bound, a value that is not a number,
+                            # or a unit on a cut that is not an energy
+                            self.invalid_set("invalid 'set %s %s': %s" % (name, rest, error))
+                            return
                         logger.info("modify cut %s.%s of the run_card.toml to %s", cut, bound, val)
                         self.modified_card.add("run")
                         return
@@ -365,15 +483,14 @@ def build_selector_cmd(mother=None):
                     # same "no cut" sentinels (minimum <= 0, maximum < 0).
                     if rest and nlow in run_card._LO_CUT_MAP:
                         if rest.lower().startswith("scan"):
-                            logger.warning("ignoring 'set %s %s': the [cuts] entries of "
-                                           "the mg7 run_card.toml cannot be scanned",
-                                           nlow, rest)
+                            self.invalid_set("invalid 'set %s %s': the [cuts] entries of "
+                                             "the mg7 run_card.toml cannot be scanned"
+                                             % (nlow, rest))
                             return
                         try:
-                            cut, bound, val = run_card.set_lo_cut(
-                                nlow, run_card.evaluate(rest, masses))
-                        except _banner_mod.InvalidCmd:
-                            logger.warning("ignoring 'set %s %s': not a number", nlow, rest)
+                            cut, bound, val = run_card.set_lo_cut(nlow, rest, masses)
+                        except _banner_mod.InvalidCmd as error:
+                            self.invalid_set("invalid 'set %s %s': %s" % (nlow, rest, error))
                             return
                         if val is None:
                             logger.info("set %s (mg7 cut %s.%s) of the run_card.toml: "
@@ -394,7 +511,7 @@ def build_selector_cmd(mother=None):
                         try:
                             done = run_card.set_lo_param(nlow, rest, masses)
                         except _banner_mod.InvalidCmd as error:
-                            logger.warning("ignoring 'set %s %s': %s", nlow, rest, error)
+                            self.invalid_set("invalid 'set %s %s': %s" % (nlow, rest, error))
                             return
                         if done is not None:
                             changes, warnings = done
@@ -421,13 +538,13 @@ def build_selector_cmd(mother=None):
                     # _LO_SCALAR_MAP, which also drives the LO -> MG7 run_card
                     # conversion and would silently pin those runs to seed 0.
                     if rest and nlow == 'iseed':
-                        value = run_card.evaluate(rest, masses)
                         try:
-                            value = int(value)
-                        except (TypeError, ValueError):
+                            value = int(run_card.evaluate(rest, masses, energy=False,
+                                                          name=nlow))
+                        except (TypeError, ValueError, _banner_mod.InvalidCmd):
                             value = None
                         if value is None:
-                            logger.warning("ignoring 'set iseed %s': not an integer", rest)
+                            self.invalid_set("invalid 'set iseed %s': not an integer" % rest)
                             return
                         seed = -1 if value == 0 else value
                         run_card.set('run.seed', seed, user=True)
@@ -443,7 +560,12 @@ def build_selector_cmd(mother=None):
                         try:
                             done = run_card.set_lo_beam_param(nlow, rest, masses, data_paths)
                         except _banner_mod.InvalidRunCard as error:
-                            logger.warning("ignoring 'set %s %s': %s", name, rest, error)
+                            text = "'set %s %s': %s" % (name, rest, error)
+                            # an unknown lhaid is reported, not rejected, in every mode
+                            if nlow == "lhaid" and isinstance(error, _banner_mod.UnknownPDFSet):
+                                logger.warning("ignoring " + text)
+                            else:
+                                self.invalid_set("invalid " + text)
                             return
                         logger.info("set %s %s: %s", nlow, rest, done)
                         self.modified_card.add("run")
@@ -451,8 +573,12 @@ def build_selector_cmd(mother=None):
 
                     # quantities the card stores per beam: set both beams
                     if rest and nlow in ("e_cm", "beam.e_cm", "beam.pdf"):
-                        value = rest if nlow == "beam.pdf" else run_card.evaluate(rest, masses)
-                        run_card.set(nlow, value, user=True)
+                        try:
+                            value = rest if nlow == "beam.pdf" else run_card.evaluate(rest, masses)
+                            run_card.set(nlow, value, user=True)
+                        except _banner_mod.InvalidCmd as error:
+                            self.invalid_set("invalid 'set %s %s': %s" % (nlow, rest, error))
+                            return
                         logger.info("set %s of the run_card.toml to %s (both beams)",
                                     nlow, run_card["beam." + nlow.split(".")[-1]])
                         self.modified_card.add("run")
@@ -466,7 +592,11 @@ def build_selector_cmd(mother=None):
                     if rest and nlow in run_card._LO_SCALAR_MAP \
                             and nlow not in [k.lower() for k in run_card.keys()]:
                         target = run_card._LO_SCALAR_MAP[nlow]
-                        run_card.set(target, rest, user=True)
+                        try:
+                            run_card.set(target, rest, user=True)
+                        except _banner_mod.InvalidCmd as error:
+                            self.invalid_set("invalid 'set %s %s': %s" % (nlow, rest, error))
+                            return
                         logger.info("set %s (mg7 %s) of the run_card.toml to %s",
                                     nlow, target, run_card[target])
                         self.modified_card.add("run")
@@ -475,7 +605,13 @@ def build_selector_cmd(mother=None):
                     if rest and nlow in [k.lower() for k in run_card.keys()]:
                         current = run_card[nlow]
                         if isinstance(current, (int, float)) and not isinstance(current, bool):
-                            resolved = run_card.evaluate(rest, masses)
+                            try:
+                                resolved = run_card.evaluate(
+                                    rest, masses, name=nlow,
+                                    energy=nlow in run_card.energy_parameter)
+                            except _banner_mod.InvalidCmd as error:
+                                self.invalid_set("invalid 'set %s %s': %s" % (name, rest, error))
+                                return
                             if not isinstance(resolved, str):
                                 prefix = "run_card " if start == 1 else ""
                                 line = "%s%s %s" % (prefix, name, resolved)
@@ -553,6 +689,29 @@ def _raise_open_file_limit() -> None:
         logger.debug("could not raise the open-file limit: %s", error)
 
 
+def _stdin_is_redirected() -> bool:
+    """True when stdin is a pipe, a socket or a file, i.e. neither a terminal
+    nor a character device such as /dev/null (batch jobs)."""
+    import stat
+    try:
+        return not stat.S_ISCHR(os.fstat(sys.stdin.fileno()).st_mode)
+    except (OSError, ValueError, AttributeError):
+        return False
+
+
+def _stdin_has_input() -> bool:
+    """True when something is waiting on stdin. A forced (-f) run never reads
+    stdin, so a closed or idle pipe (CI runners, agents) is harmless there,
+    but piped answers would be silently dropped."""
+    import select
+    try:
+        if not select.select([sys.stdin], [], [], 0)[0]:
+            return False
+        return bool(os.read(sys.stdin.fileno(), 1))
+    except (OSError, ValueError, AttributeError):
+        return False
+
+
 def main() -> None:
     """``bin/generate_events`` entry point.
 
@@ -576,7 +735,36 @@ def main() -> None:
     parser.add_argument(
         "--make-arg", action="append", default=[],
         help="extra argument of the matrix element build (--decay-widths)")
+    parser.add_argument(
+        "--reweight", dest="reweight_card", default=None,
+        help="reweight the events after generation with this reweight card "
+             "(it becomes Cards/reweight_card.dat and switches reweighting on)",
+    )
+    parser.add_argument(
+        "--reweight-backend", dest="reweight_backend", default=None,
+        choices=("classic", "madtrex", "auto"),
+        help="who reweights: the classic module, MadtRex, or auto (the default: "
+             "MadtRex when it can run the card)",
+    )
+    parser.add_argument(
+        "--allow-stdin", action="store_true", default=False,
+        help="read the answers to the questions piped or redirected into stdin, "
+             "as an interactive session: invalid \"set\" commands then only warn")
     args = parser.parse_args()
+
+    # The answers to the questions are read from stdin as in an interactive
+    # session, where a command that cannot be applied (e.g. an invalid "set")
+    # is only a warning: refuse that mode unless asked for. --decay-widths and
+    # a forced run ask nothing; the latter is still refused when answers are
+    # waiting on stdin, which it would silently drop.
+    if not args.allow_stdin and not args.decay_widths and _stdin_is_redirected() \
+            and (args.ask_edit_cards or _stdin_has_input()):
+        sys.exit("Reading the answers to the questions from stdin is not supported: "
+                 "write the line 'launch %s' and the answers to a file and run "
+                 "'%s PATH' instead, so that an invalid command stops the run.\n"
+                 "Use --allow-stdin to read stdin as an interactive session (invalid "
+                 "commands then only warn)."
+                 % (os.getcwd(), _MG_ROOT / 'bin' / 'madgraph'))
 
     if args.decay_widths:
         results = compute_decay_widths(
@@ -586,4 +774,9 @@ def main() -> None:
             json.dump(results, f)
         return
 
-    MG7Cmd().run_cmd("generate_events" if args.ask_edit_cards else "generate_events -f")
+    line = "generate_events" if args.ask_edit_cards else "generate_events -f"
+    if args.reweight_card:
+        line += " --reweight=%s" % args.reweight_card
+    if args.reweight_backend:
+        line += " --reweight-backend=%s" % args.reweight_backend
+    MG7Cmd().run_cmd(line)

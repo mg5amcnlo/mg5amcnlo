@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include "madspace/compgraphs/function.hpp"
 #include "madspace/driver/tensor.hpp"
 #include "madspace/util.hpp"
@@ -81,13 +83,12 @@ void backward_batch_foreach(
             if (!input_grad || input_grad.size(0) != batch_size) {
                 Sizes shape = input.shape();
                 shape[0] = batch_size;
-                input_grad =
-                    Tensor(input.dtype(), shape, device, AllocHint::temporary);
+                input_grad = Tensor(input.dtype(), shape, device, AllocHint::temporary);
             }
         } else if (!input_grad) {
             auto& input = locals[input_index];
-            /*if (input.size(0) != batch_size && input.dtype() == DataType::dt_float) {
-                throw std::runtime_error("backward not possible for broadcasting args");
+            /*if (input.size(0) != batch_size && input.dtype() == DataType::dt_float64)
+            { throw std::runtime_error("backward not possible for broadcasting args");
             }*/
             input_grad = Tensor(
                 input.dtype(),
@@ -102,6 +103,61 @@ void backward_batch_foreach(
 
     device.sync_barrier();
     foreach_func(args, input_grads, batch_size, device);
+}
+
+// integers carry no gradient, so structural ops skip them (all their inputs share
+// one dtype)
+template <typename I>
+inline bool skip_int_grad(const I& instruction, const TensorVec& locals) {
+    return !is_float(locals[instruction.input_indices[0]].dtype());
+}
+
+// Adds the i-th source tensor to the gradient of the i-th input of a structural op.
+// On the concurrent CPU device every add is a separate job, so adds into the
+// gradient of an input that is passed more than once would race and lose updates.
+// The adds into such a gradient are chained in a single job instead.
+template <typename I, typename D>
+void add_input_grads(
+    const I& instruction,
+    TensorVec& local_grads,
+    const TensorVec& sources,
+    const D& device
+) {
+    auto& input_indices = instruction.input_indices;
+    for (std::size_t i = 0; i < input_indices.size(); ++i) {
+        auto first =
+            std::find(input_indices.begin(), input_indices.end(), input_indices[i]);
+        if (first != input_indices.begin() + i) {
+            continue; // already added together with its first occurrence
+        }
+        auto& input_grad = local_grads[input_indices[i]];
+        if (std::find(first + 1, input_indices.end(), input_indices[i]) ==
+            input_indices.end()) {
+            input_grad.add(sources[i], device);
+            continue;
+        }
+        TensorVec repeated_sources;
+        for (std::size_t j = i; j < input_indices.size(); ++j) {
+            if (input_indices[j] == input_indices[i]) {
+                repeated_sources.push_back(sources[j]);
+            }
+        }
+        if constexpr (requires { D::is_concurrent; }) {
+            if constexpr (D::is_concurrent) {
+                device.submit([input_grad, repeated_sources]() mutable {
+                    // synchronous adds on the tensor's own device
+                    for (auto& source : repeated_sources) {
+                        input_grad.add(source);
+                    }
+                });
+                continue;
+            }
+        }
+        // devices that run the adds in order
+        for (auto& source : repeated_sources) {
+            input_grad.add(source, device);
+        }
+    }
 }
 
 template <typename I, typename D>
@@ -129,13 +185,15 @@ template <typename I, typename D>
 void backward_op_stack(
     const I& instruction, TensorVec& locals, TensorVec& local_grads, const D& device
 ) {
-    // TODO: differentiate integer and float here (also other backwards)
+    if (skip_int_grad(instruction, locals)) {
+        return;
+    }
     auto& output_grad = local_grads[instruction.output_indices[0]];
     for (std::size_t i = 0; std::size_t input_index : instruction.input_indices) {
         auto& input_grad = local_grads[input_index];
         if (!input_grad) {
             input_grad = Tensor(
-                DataType::dt_float,
+                locals[input_index].dtype(),
                 locals[input_index].shape(),
                 device,
                 instruction.input_grad_alloc_hints[i]
@@ -146,11 +204,11 @@ void backward_op_stack(
     }
 
     device.sync_barrier();
-    for (std::size_t index = 0; auto input_index : instruction.input_indices) {
-        auto& input_grad = local_grads[input_index];
-        input_grad.add(output_grad.select(1, index), device);
-        ++index;
+    TensorVec sources;
+    for (std::size_t index = 0; index < instruction.input_indices.size(); ++index) {
+        sources.push_back(output_grad.select(1, index));
     }
+    add_input_grads(instruction, local_grads, sources, device);
 }
 
 template <typename I, typename D>
@@ -182,11 +240,14 @@ template <typename I, typename D>
 void backward_op_unstack(
     const I& instruction, TensorVec& locals, TensorVec& local_grads, const D& device
 ) {
+    if (skip_int_grad(instruction, locals)) {
+        return;
+    }
     auto input_index = instruction.input_indices[0];
     auto& input_grad = local_grads[input_index];
     if (!input_grad) {
         input_grad = Tensor(
-            DataType::dt_float,
+            locals[input_index].dtype(),
             locals[input_index].shape(),
             device,
             instruction.input_grad_alloc_hints[0]
@@ -212,11 +273,14 @@ template <typename I, typename D>
 void backward_op_pop(
     const I& instruction, TensorVec& locals, TensorVec& local_grads, const D& device
 ) {
+    if (skip_int_grad(instruction, locals)) {
+        return;
+    }
     auto input_index = instruction.input_indices[0];
-    auto input_grad = local_grads[input_index];
+    auto& input_grad = local_grads[input_index];
     if (!input_grad) {
         input_grad = Tensor(
-            DataType::dt_float,
+            locals[input_index].dtype(),
             locals[input_index].shape(),
             device,
             instruction.input_grad_alloc_hints[0]
@@ -264,12 +328,15 @@ template <typename I, typename D>
 void backward_op_batch_cat(
     const I& instruction, TensorVec& locals, TensorVec& local_grads, const D& device
 ) {
+    if (skip_int_grad(instruction, locals)) {
+        return;
+    }
     auto output_grad = local_grads[instruction.output_indices[0]];
     for (std::size_t i = 0; std::size_t input_index : instruction.input_indices) {
         auto& input_grad = local_grads[input_index];
         if (!input_grad) {
             input_grad = Tensor(
-                DataType::dt_float,
+                locals[input_index].dtype(),
                 locals[input_index].shape(),
                 device,
                 instruction.input_grad_alloc_hints[i]
@@ -279,12 +346,13 @@ void backward_op_batch_cat(
         ++i;
     }
     device.sync_barrier();
+    TensorVec sources;
     for (std::size_t offset = 0; auto input_index : instruction.input_indices) {
-        auto& input_grad = local_grads[input_index];
-        auto next_offset = offset + input_grad.size(0);
-        input_grad.add(output_grad.slice(0, offset, next_offset), device);
+        auto next_offset = offset + local_grads[input_index].size(0);
+        sources.push_back(output_grad.slice(0, offset, next_offset));
         offset = next_offset;
     }
+    add_input_grads(instruction, local_grads, sources, device);
 }
 
 template <typename I, typename D>
@@ -300,12 +368,15 @@ template <typename I, typename D>
 void backward_op_batch_split(
     const I& instruction, TensorVec& locals, TensorVec& local_grads, const D& device
 ) {
+    if (skip_int_grad(instruction, locals)) {
+        return;
+    }
     auto& sizes = locals[instruction.input_indices[1]].batch_sizes();
     auto input_index = instruction.input_indices[0];
     auto& input_grad = local_grads[input_index];
     if (!input_grad) {
         input_grad = Tensor(
-            DataType::dt_float,
+            locals[input_index].dtype(),
             locals[input_index].shape(),
             device,
             instruction.input_grad_alloc_hints[0]
@@ -352,12 +423,15 @@ template <typename I, typename D>
 void backward_op_cat(
     const I& instruction, TensorVec& locals, TensorVec& local_grads, const D& device
 ) {
+    if (skip_int_grad(instruction, locals)) {
+        return;
+    }
     auto& output_grad = local_grads[instruction.output_indices[0]];
     for (std::size_t i = 0; std::size_t input_index : instruction.input_indices) {
         auto& input_grad = local_grads[input_index];
         if (!input_grad) {
             input_grad = Tensor(
-                DataType::dt_float,
+                locals[input_index].dtype(),
                 locals[input_index].shape(),
                 device,
                 instruction.input_grad_alloc_hints[i]
@@ -368,12 +442,13 @@ void backward_op_cat(
     }
 
     device.sync_barrier();
+    TensorVec sources;
     for (std::size_t offset = 0; auto input_index : instruction.input_indices) {
-        auto& input_grad = local_grads[input_index];
-        auto next_offset = offset + input_grad.size(1);
-        input_grad.add(output_grad.slice(1, offset, next_offset), device);
+        auto next_offset = offset + local_grads[input_index].size(1);
+        sources.push_back(output_grad.slice(1, offset, next_offset));
         offset = next_offset;
     }
+    add_input_grads(instruction, local_grads, sources, device);
 }
 
 template <typename I, typename D>
@@ -465,13 +540,16 @@ template <typename I, typename D>
 void backward_op_rqs_reshape(
     const I& instruction, TensorVec& locals, TensorVec& local_grads, const D& device
 ) {
+    if (skip_int_grad(instruction, locals)) {
+        return;
+    }
     auto n_dims = instruction.output_shapes[0][0];
     auto n_bins = instruction.output_shapes[0][1];
     auto input_index = instruction.input_indices[0];
     auto& input_grad = local_grads[input_index];
     if (!input_grad) {
         input_grad = Tensor(
-            DataType::dt_float,
+            locals[input_index].dtype(),
             locals[input_index].shape(),
             device,
             instruction.input_grad_alloc_hints[0]

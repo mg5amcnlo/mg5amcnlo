@@ -30,7 +30,22 @@ elif (_LOCAL_MADSPACE_DIR / "install.py").is_file():
         raise RuntimeError("madspace installation failed — see output above")
     sys.path.insert(0, str(_LOCAL_INSTALL_DIR))
 
+# MadtRex (event reweighting), if the gridpack was made with include_madtrex:
+# put it on the path so it can be imported next to madspace. Nothing in this
+# script imports it.
+_LOCAL_MADTREX_INSTALL_DIR = GRIDPACK_DIR / "madtrex" / "install"
+if (_LOCAL_MADTREX_INSTALL_DIR / "madtrex").is_dir():
+    sys.path.insert(1, str(_LOCAL_MADTREX_INSTALL_DIR))
+
 import madspace as ms
+
+_PRECISION_2_FPTYPE = {"all64": "d", "all32": "f", "color32": "m", "denom64": "v"}
+
+
+def fptype_of(precision: str) -> str:
+    """[run] precision -> FPTYPE the matrix elements were compiled with (as
+    fptype_of() in madgraph/mg7/common.py, which a gridpack can't import)."""
+    return _PRECISION_2_FPTYPE.get(str(precision).lower(), str(precision).lower())
 
 
 def gridpack_path(*parts) -> str:
@@ -96,9 +111,10 @@ def make_context(device_name: str, cpu_mode: str, cpu_thread_pool_size: int,
     return ms.Context(device=device, thread_count=pool_size), backend
 
 
-def load_context_data(contexts, backends, madspace_data: dict) -> None:
+def load_context_data(contexts, backends, madspace_data: dict, precision: str) -> None:
     """Load the globals and the matrix elements of the gridpack into every
-    context."""
+    context; precision is the run's, which selects the {fptype} libraries."""
+    fptype = fptype_of(precision)
     for context in contexts:
         context.load_globals(gridpack_path("data", "globals.tar"))
     # custom functions come first, as in the run that made the gridpack
@@ -115,7 +131,7 @@ def load_context_data(contexts, backends, madspace_data: dict) -> None:
     for context, backend in zip(contexts, backends):
         for path_format, init_path, parameters in madspace_data["matrix_elements"]:
             context.load_matrix_element(
-                _gridpack_relative(path_format.format(device=backend)),
+                _gridpack_relative(path_format.format(device=backend, fptype=fptype)),
                 _gridpack_relative(init_path),
                 parameters,
             )
@@ -295,7 +311,9 @@ def load_systematics(run_card, backends=(), me_parameters=None):
             if i not in need:
                 matrix_elements.append(None)
                 continue
-            lib = _gridpack_relative(me_path.format(device=backend))
+            lib = _gridpack_relative(me_path.format(
+                device=backend, fptype=fptype_of(run_card["run"]["precision"])
+            ))
             if not os.path.exists(lib):
                 print("WARNING systematics: %s not found, mu_R variations of the "
                       "mixed-order subprocesses are dropped" % lib)

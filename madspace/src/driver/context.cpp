@@ -36,7 +36,7 @@ MatrixElementApi::MatrixElementApi(
     std::size_t index,
     const std::unordered_map<std::string, double>& parameters
 ) :
-    _file_name(file), _index(index) {
+    _file_name(file), _index(index), _device(device) {
     _shared_lib = std::unique_ptr<void, std::function<void(void*)>>(
         dlopen(file.c_str(), RTLD_NOW), [file](void* lib) { dlclose(lib); }
     );
@@ -53,6 +53,7 @@ MatrixElementApi::MatrixElementApi(
     resolve_symbol(lib, "umami_supported_outputs", _functions.supported_outputs);
     resolve_symbol(lib, "umami_initialize", _functions.initialize);
     resolve_symbol(lib, "umami_set_parameter", _functions.set_parameter);
+    resolve_symbol(lib, "umami_get_parameter", _functions.get_parameter);
     resolve_symbol(lib, "umami_matrix_element", _functions.matrix_element);
     resolve_symbol(lib, "umami_free", _functions.free);
     init_functions(parameters);
@@ -148,6 +149,8 @@ void MatrixElementApi::check_umami_status(UmamiStatus status) const {
         throw_error("unsupported metadata key");
     case UMAMI_ERROR_MISSING_INPUT:
         throw_error("missing input");
+    case UMAMI_ERROR_UNKNOWN_PARAMETER:
+        throw_error("unknown or non-settable parameter");
     default:
         throw_error("unknown error");
     }
@@ -157,6 +160,22 @@ void MatrixElementApi::throw_error(const std::string& message) const {
     throw std::runtime_error(
         std::format("Error in call to matrix element API {}: {}", _file_name, message)
     );
+}
+
+void MatrixElementApi::set_parameter(const std::string& name, double real, double imag) const {
+    if (!_functions.set_parameter) {
+        check_umami_status(UMAMI_ERROR_NOT_IMPLEMENTED);
+    }
+    check_umami_status(_functions.set_parameter(process_instance(), name.c_str(), real, imag));
+}
+
+std::pair<double, double> MatrixElementApi::get_parameter(const std::string& name) const {
+    if (!_functions.get_parameter) {
+        check_umami_status(UMAMI_ERROR_NOT_IMPLEMENTED);
+    }
+    double real = 0.0, imag = 0.0;
+    check_umami_status(_functions.get_parameter(process_instance(), name.c_str(), &real, &imag));
+    return {real, imag};
 }
 
 const MatrixElementApi& Context::load_matrix_element(
@@ -387,7 +406,7 @@ Tensor Context::cached_tensor(std::size_t size) {
         }
     }
     std::size_t word_count = (size + 7) / 8;
-    Tensor new_tensor(DataType::dt_float, {word_count}, device());
+    Tensor new_tensor(DataType::dt_float64, {word_count}, device());
     tensors.insert(tensors.begin() + size_pos, new_tensor);
     return new_tensor;
 }

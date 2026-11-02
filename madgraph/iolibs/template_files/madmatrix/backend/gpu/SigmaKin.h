@@ -65,7 +65,11 @@ namespace madmatrix
             // input: when the |M|^2 keeps an interference (squared split orders, nampso > 1),
             // choose the helicity on |T_i| and return sign(T_i) * sum_j |T_j| as madevent does,
             // so that the chosen helicity is exact; false returns sum_j T_j (no effect otherwise)
-            const bool sampleSignedHelicity = false );
+            const bool sampleSignedHelicity = false,
+            // input: the helicity index [0,ncomb) of each event (a device array), which is then
+            // evaluated for that helicity alone (and returns its contribution to the helicity-summed
+            // |M|^2, see umami_matrix_element); nullptr, the default, sums over the good helicities
+            const int* allihel = nullptr );
 
   // Setters: called once by CPPProcess (P1-generated) to populate this file's
   // otherwise-internal storage, since it can no longer be written directly

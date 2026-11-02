@@ -45,6 +45,8 @@
 #define gpublasSetStream cublasSetStream
 #define gpublasDgemm cublasDgemm
 #define gpublasDgemv cublasDgemv
+#define gpublasSgemm cublasSgemm
+#define gpublasSgemv cublasSgemv
 #define GPUBLAS_OP_N CUBLAS_OP_N
 #define GPUBLAS_OP_T CUBLAS_OP_T
 
@@ -95,6 +97,8 @@
 #define gpublasSetStream rocblas_set_stream
 #define gpublasDgemm rocblas_dgemm
 #define gpublasDgemv rocblas_dgemv
+#define gpublasSgemm rocblas_sgemm
+#define gpublasSgemv rocblas_sgemv
 #define GPUBLAS_OP_N rocblas_operation_none
 #define GPUBLAS_OP_T rocblas_operation_transpose
 

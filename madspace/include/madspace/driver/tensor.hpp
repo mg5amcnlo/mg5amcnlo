@@ -448,11 +448,7 @@ public:
     /// Single-value tensor holding `value`, allocated on `device`.
     template <ScalarType T>
     Tensor(T value, DevicePtr device, AllocHint hint = AllocHint::normal) :
-        impl(new TensorImpl{
-            std::is_same_v<T, me_int_t> ? DataType::dt_int : DataType::dt_float,
-            {1},
-            device
-        }) {
+        impl(new TensorImpl{dtype_of<T>(), {1}, device}) {
         auto size = init_stride();
         allocate(size, *device, hint);
         device->memcpy(impl->data, &value, sizeof(value));
@@ -463,11 +459,7 @@ public:
 
     template <ScalarType T, typename D>
     Tensor(T value, const D& device, AllocHint hint = AllocHint::normal) :
-        impl(new TensorImpl{
-            std::is_same_v<T, me_int_t> ? DataType::dt_int : DataType::dt_float,
-            {1},
-            device.device_ptr()
-        }) {
+        impl(new TensorImpl{dtype_of<T>(), {1}, device.device_ptr()}) {
         auto size = init_stride();
         allocate(size, device, hint);
         device.memcpy(impl->data, &value, sizeof(value));
@@ -481,8 +473,8 @@ public:
         impl(new TensorImpl{
             std::visit(
                 Overloaded{
-                    [](std::vector<me_int_t>) { return DataType::dt_int; },
-                    [](std::vector<double>) { return DataType::dt_float; },
+                    [](std::vector<me_int_t>) { return DataType::dt_int32; },
+                    [](std::vector<double>) { return DataType::dt_float64; },
                 },
                 std::get<1>(value)
             ),
@@ -532,6 +524,7 @@ public:
     TensorView<T, dim> view() {
         check_impl();
         check_view_dim(dim, impl->shape.size());
+        check_view_dtype<T>();
         T* data = static_cast<T*>(impl->data);
         return TensorView<T, dim>(data, impl->stride.data(), impl->shape.data());
     }
@@ -541,6 +534,7 @@ public:
     const TensorView<T, dim> view() const {
         check_impl();
         check_view_dim(dim, impl->shape.size());
+        check_view_dtype<T>();
         T* data = static_cast<T*>(impl->data);
         return TensorView<T, dim>(data, impl->stride.data(), impl->shape.data());
     }
@@ -549,6 +543,7 @@ public:
     /// Like @ref view, with the leading `flatten_count` dimensions merged into one.
     PackedTensorView<T, dim> flat_view(std::size_t flatten_count) const {
         check_impl();
+        check_view_dtype<T>();
         T* data = static_cast<T*>(impl->data);
         if (flatten_count <= 1) {
             check_view_dim(dim, impl->shape.size());
@@ -634,9 +629,11 @@ public:
     std::size_t dtype_size() const {
         check_impl();
         switch (impl->dtype) {
-        case DataType::dt_int:
+        case DataType::dt_int32:
             return sizeof(me_int_t);
-        case DataType::dt_float:
+        case DataType::dt_float32:
+            return sizeof(float);
+        case DataType::dt_float64:
             return sizeof(double);
         case DataType::batch_sizes:
             return 0;
@@ -705,6 +702,9 @@ public:
     }
     /// A copy of this tensor on the CPU, or `*this` if it is already there.
     Tensor cpu() const { return cpu(*impl->device); }
+    /// A contiguous CPU copy with the element type converted to `dtype`, or the
+    /// CPU tensor itself if it already has that type.
+    Tensor cast(DataType dtype) const;
 
     template <typename D>
     /// Sets every element to zero.
@@ -809,7 +809,7 @@ public:
 
     /// Maximum number of stored elements (value elements times lanes) of a
     /// literal for which @ref simd_padded_literal pads the storage.
-    static constexpr std::size_t max_simd_padded_size = 256;
+    static constexpr std::size_t max_simd_padded_size = 512;
 
     /**
      * Literal constant for the CPU SIMD kernels.
@@ -920,6 +920,16 @@ private:
                 "view of dimension " + std::to_string(view_dim) +
                 " of a tensor of dimension " + std::to_string(tensor_dim)
             );
+        }
+    }
+
+    // reading a tensor through the wrong element type gives garbage without an error
+    template <typename T>
+    void check_view_dtype() const {
+        if constexpr (ScalarType<T>) {
+            if (impl->dtype != dtype_of<T>() && impl->dtype != DataType::batch_sizes) {
+                throw std::invalid_argument("view element type does not match dtype");
+            }
         }
     }
 

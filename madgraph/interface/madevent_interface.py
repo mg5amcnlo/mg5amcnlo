@@ -523,8 +523,8 @@ class AskRun(cmd.ControlSwitch):
     def __init__(self, question, line_args=[], mode=None, force=False,
                                                                   *args, **opt):
         
-        self.check_available_module(opt['mother_interface'].options)
         self.me_dir = opt['mother_interface'].me_dir
+        self.check_available_module(opt['mother_interface'].options)
         super(AskRun,self).__init__(self.to_control, opt['mother_interface'],
                                      *args, **opt)
         
@@ -555,6 +555,18 @@ class AskRun(cmd.ControlSwitch):
         if not MADEVENT or ('mg5_path' in options and options['mg5_path']):
             self.available_module.add('MadSpin')
             if misc.has_f2py() or options['f2py_compiler']:
+                self.available_module.add('reweight')
+
+        # An MG7 output reweights with the classic module or with MadtRex
+        # (see madgraph/various/reweight_backend.py): reweighting is
+        # available when either one can run.
+        self.reweight_env = None
+        if not MADEVENT and os.path.exists(pjoin(self.me_dir, 'Cards', 'run_card.toml')):
+            from madgraph.various import reweight_backend
+            self.reweight_env = reweight_backend.probe_environment(
+                self.me_dir, dict(options, mg5_path=options.get('mg5_path') or MG5DIR),
+                has_f2py='reweight' in self.available_module)
+            if reweight_backend.available_backends(self.reweight_env):
                 self.available_module.add('reweight')
 
 #   old mode to activate the shower            
@@ -907,7 +919,16 @@ class AskRun(cmd.ControlSwitch):
         if 'reweight' not in self.available_module:
             self.allowed_reweight = []
             return self.allowed_reweight
-        self.allowed_reweight = ['OFF', 'ON', 'density']
+        if self.reweight_env is not None:
+            # MG7 output: ON is auto; then the backends that can run here
+            from madgraph.various import reweight_backend
+            backends = reweight_backend.available_backends(self.reweight_env)
+            self.allowed_reweight = ['OFF', 'ON'] + backends
+            if 'classic' not in backends:
+                return self.allowed_reweight
+            self.allowed_reweight.append('density')
+        else:
+            self.allowed_reweight = ['OFF', 'ON', 'density']
         
         # check for plugin mode
         plugin_path = self.mother_interface.plugin_path
@@ -920,13 +941,7 @@ class AskRun(cmd.ControlSwitch):
         
         if 'reweight' in self.available_module:
             if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
-                reweightcard = open(pjoin(self.me_dir,'Cards','reweight_card.dat'), 'r')
-                content = reweightcard.read()
-                if 'change particle_in_density_matrix' in content:
-                    self.switch['reweight'] = 'density'
-                else:
-                    self.switch['reweight'] = 'ON'
-                reweightcard.close()
+                self.switch['reweight'] = self.switch_value_from_card_reweight()
             else:
                 self.switch['reweight'] = 'OFF'
         else:
@@ -934,6 +949,9 @@ class AskRun(cmd.ControlSwitch):
 
     def get_cardcmd_for_reweight(self, value):
         """set some command to run before allowing the user to modify the cards."""
+        if value in ['classic', 'madtrex']:
+            # the two backends of an MG7 output read the same card as ON
+            value = 'ON'
         if value in ['density']:
             content_rwgt_card = open(pjoin(self.me_dir, "Cards", "reweight_card.dat"), "r")
             if 'change particle_in_density_matrix' in content_rwgt_card.read():
@@ -961,14 +979,26 @@ class AskRun(cmd.ControlSwitch):
 
     def switch_value_from_card_reweight(self):
         """re-derive the reweight switch (ON vs density) from the content of
-        reweight_card.dat (called after the user has edited the cards)."""
+        reweight_card.dat (called after the user has edited the cards). For
+        an MG7 output, a "change backend classic|madtrex" line of the card
+        gives that backend (when it can run here)."""
 
         path = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
         if not os.path.exists(path):
             return None
         with open(path) as fsock:
-            if 'change particle_in_density_matrix' in fsock.read():
-                return 'density'
+            content = fsock.read()
+        if 'change particle_in_density_matrix' in content:
+            return 'density'
+        if getattr(self, 'reweight_env', None) is not None:
+            # a backend picked in the question outranks the card's line
+            # (the run warns when the two disagree)
+            current = getattr(self, 'switch', {}).get('reweight')
+            if current in ('classic', 'madtrex'):
+                return current
+            match = re.search(r'^\s*change\s+backend\s+(\w+)', content, re.M | re.I)
+            if match and match.group(1).lower() in self.get_allowed_reweight():
+                return match.group(1).lower()
         return 'ON'
 
 

@@ -568,13 +568,13 @@ NamedVector<Value> Integrand::build_function_impl(
 }
 
 NamedVector<Type> Integrand::compute_channel_part_ret_types() const {
-    auto acc_float = Type(DataType::dt_float, acc_batch_size, {});
-    auto acc_int = Type(DataType::dt_int, acc_batch_size, {});
+    auto acc_float = Type(DataType::dt_float64, acc_batch_size, {});
+    auto acc_int = Type(DataType::dt_int32, acc_batch_size, {});
     auto acc_float_array = [](int n) {
-        return Type(DataType::dt_float, acc_batch_size, {n});
+        return Type(DataType::dt_float64, acc_batch_size, {n});
     };
     auto acc_four_vec_array = [](int n) {
-        return Type(DataType::dt_float, acc_batch_size, {n, 4});
+        return Type(DataType::dt_float64, acc_batch_size, {n, 4});
     };
 
     bool has_multi_flavor = _pid_options.size() > 1;
@@ -598,7 +598,7 @@ NamedVector<Type> Integrand::compute_channel_part_ret_types() const {
     }
 
     // outputs after cuts
-    ret.push_back("indices_acc", Type(DataType::dt_int, acc_batch_size, {}));
+    ret.push_back("indices_acc", Type(DataType::dt_int32, acc_batch_size, {}));
     ret.push_back("momenta_acc", acc_four_vec_array(particle_count));
     ret.push_back("x1_acc", acc_float);
     ret.push_back("x2_acc", acc_float);

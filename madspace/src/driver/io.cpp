@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <filesystem>
 
 #include <nlohmann/json.hpp>
@@ -15,10 +16,13 @@ namespace {
 
 std::string dtype_to_str(DataType dtype) {
     switch (dtype) {
-    case DataType::dt_float:
+    case DataType::dt_float32:
+        return "<f4";
+        break;
+    case DataType::dt_float64:
         return "<f8";
         break;
-    case DataType::dt_int:
+    case DataType::dt_int32:
         return "<i4";
         break;
     default:
@@ -27,26 +31,57 @@ std::string dtype_to_str(DataType dtype) {
 }
 
 DataType str_to_dtype(std::string dtype) {
-    if (dtype == "<f8") {
-        return DataType::dt_float;
+    if (dtype == "<f4") {
+        return DataType::dt_float32;
+    } else if (dtype == "<f8") {
+        return DataType::dt_float64;
     } else if (dtype == "<i4") {
-        return DataType::dt_int;
+        return DataType::dt_int32;
     } else {
         throw std::invalid_argument("Unsupported data type");
     }
 }
 
+// The header-length field's width depends on the npy format version: 1.0
+// uses 2 bytes (uint16, so the header itself must fit in 65535 bytes), 2.0/3.0
+// use 4 bytes (uint32) -- write_event_header() switches to 2.0 whenever the
+// header would otherwise be too long to describe in 2 bytes (eg several "add
+// process" channels of different final-state multiplicity combined into one
+// binary EventFile can easily need a header longer than 65535 bytes' worth of
+// field descriptors). Only ever reading the 2-byte case silently truncated the
+// *declared* length for any such oversized header, cutting a field name off
+// mid-string for every reader (this one and numpy alike).
 constexpr std::size_t npy_preamble_size = 10;
+constexpr std::size_t npy_wide_preamble_size = 12;
 
-/// Check the magic number and version of the first 10 bytes of an npy file and
-/// return the length of the header that follows.
-std::size_t parse_preamble(const char* bytes) {
-    if (std::memcmp(bytes, "\x93NUMPY\x01\x00", 8) != 0) {
+/// Check the magic number and version (the first 8 bytes) of an npy file and
+/// return the size of its preamble: 10 bytes for format 1.0, 12 for 2.0/3.0.
+std::size_t preamble_size(const char* bytes) {
+    if (std::memcmp(bytes, "\x93NUMPY", 6) != 0) {
         throw std::runtime_error("invalid header of npy file");
     }
-    // little-endian 16 bit length
-    return static_cast<std::size_t>(static_cast<unsigned char>(bytes[8])) |
-        (static_cast<std::size_t>(static_cast<unsigned char>(bytes[9])) << 8);
+    switch (static_cast<unsigned char>(bytes[6])) {
+    case 1:
+        return npy_preamble_size;
+    case 2:
+    case 3:
+        return npy_wide_preamble_size;
+    default:
+        throw std::runtime_error("invalid header of npy file");
+    }
+}
+
+/// Return the length of the header that follows the preamble of an npy file.
+/// bytes must hold the full preamble (see preamble_size()).
+std::size_t parse_preamble(const char* bytes) {
+    // little-endian 16 or 32 bit length
+    std::size_t length_bytes = preamble_size(bytes) - 8;
+    std::size_t length = 0;
+    for (std::size_t i = 0; i < length_bytes; ++i) {
+        length |= static_cast<std::size_t>(static_cast<unsigned char>(bytes[8 + i]))
+            << (8 * i);
+    }
+    return length;
 }
 
 json parse_header_text(std::string header) {
@@ -82,8 +117,12 @@ json parse_header_text(std::string header) {
 }
 
 json parse_header(std::fstream& file_stream) {
-    char preamble[npy_preamble_size];
-    file_stream.read(preamble, npy_preamble_size);
+    char preamble[npy_wide_preamble_size];
+    file_stream.read(preamble, 8);
+    if (file_stream.fail()) {
+        throw std::runtime_error("invalid header of npy file");
+    }
+    file_stream.read(preamble + 8, preamble_size(preamble) - 8);
     if (file_stream.fail()) {
         throw std::runtime_error("invalid header of npy file");
     }
@@ -157,6 +196,25 @@ full_descr(std::size_t particle_count, const DataLayout& layout) {
     return field_descr;
 }
 
+} // namespace
+
+std::vector<std::string> madspace::peek_npy_field_names(const std::string& file) {
+    std::fstream file_stream(file, std::ios::binary | std::ios::in);
+    if (!file_stream) {
+        throw std::runtime_error(std::format("Could not open file {}", file));
+    }
+    json header = parse_header(file_stream);
+    json descr = header.at("descr");
+    std::vector<std::string> names;
+    names.reserve(descr.size());
+    for (auto& item : descr) {
+        names.push_back(item.at(0).get<std::string>());
+    }
+    return names;
+}
+
+namespace {
+
 std::tuple<std::size_t, std::size_t, std::size_t>
 read_event_header(std::fstream& file_stream, const DataLayout& layout) {
     json header = parse_header(file_stream);
@@ -208,28 +266,62 @@ std::tuple<std::size_t, std::size_t> write_event_header(
     std::size_t header_size = 0
 ) {
     using namespace std::string_literals;
-    file_stream << "\x93NUMPY\x01\x00\x00\x00{'descr':["s;
+    // Built into a string first (rather than written straight to
+    // file_stream, as this function used to) so its true length is known
+    // before deciding whether npy format 1.0's 2-byte header-length field
+    // (max 65535) is wide enough, or format 2.0's 4-byte field is needed
+    // instead -- see parse_header()'s matching version-selection logic for
+    // why: silently wrapping an oversized length into 16 bits (the old
+    // behavior here) corrupts the file for every reader, this project's own
+    // and numpy's alike. A large particle_count (eg several "add process"
+    // channels of different final-state multiplicity combined into one
+    // binary EventFile) easily needs a header longer than 65535 bytes'
+    // worth of field descriptors.
+    std::string content = "{'descr':["s;
     auto field_descr = full_descr(particle_count, layout);
     for (auto [field_name, field_type] : field_descr) {
-        file_stream << std::format("('{}','{}'),", field_name, field_type);
+        content += std::format("('{}','{}'),", field_name, field_type);
     }
-    file_stream << "],'fortran_order':False,'shape':(";
-    std::size_t shape_pos = file_stream.tellp();
+    content += "],'fortran_order':False,'shape':(";
+
+    // prefix_len: magic (6) + major/minor version (2) + header-length field
+    // (2 for v1.0, 4 for v2.0) -- header_size is always the *absolute* file
+    // offset where the header ends and event data begins (matching
+    // EventFile's own _header_size-based seek math), regardless of format.
+    bool wide = false;
+    std::size_t prefix_len = 10;
     if (header_size == 0) {
-        header_size = (shape_pos + 100) / 64 * 64;
+        header_size = (prefix_len + content.size() + 100) / 64 * 64;
+        if (header_size - prefix_len > 0xFFFF) {
+            wide = true;
+            prefix_len = 12;
+            header_size = (prefix_len + content.size() + 100) / 64 * 64;
+        }
+    } else {
+        wide = (header_size - prefix_len > 0xFFFF);
+        if (wide) prefix_len = 12;
     }
-    for (int i = shape_pos; i < header_size - 1; ++i) {
+
+    file_stream << (wide ? "\x93NUMPY\x02\x00"s : "\x93NUMPY\x01\x00"s);
+    if (wide) {
+        uint32_t zero32 = 0;
+        file_stream.write(reinterpret_cast<char*>(&zero32), 4);
+    } else {
+        uint16_t zero16 = 0;
+        file_stream.write(reinterpret_cast<char*>(&zero16), 2);
+    }
+    file_stream << content;
+    std::size_t shape_pos = file_stream.tellp();
+    for (std::size_t i = shape_pos; i < header_size - 1; ++i) {
         file_stream.put(' ');
     }
     file_stream.put('\n');
     file_stream.seekp(8);
-    // little-endian 16 bit length
-    std::size_t header_length = header_size - npy_preamble_size;
-    char length_bytes[2] = {
-        static_cast<char>(header_length & 0xff),
-        static_cast<char>((header_length >> 8) & 0xff)
-    };
-    file_stream.write(length_bytes, 2);
+    // little-endian 16 bit (v1.0) or 32 bit (v2.0) length
+    std::size_t header_length = header_size - prefix_len;
+    for (std::size_t i = 0; i < prefix_len - 8; ++i) {
+        file_stream.put(static_cast<char>((header_length >> (8 * i)) & 0xff));
+    }
     file_stream.seekp(header_size);
     return {header_size, shape_pos};
 }
@@ -262,16 +354,18 @@ void madspace::save_tensor(const std::string& file, Tensor tensor) {
 
 Tensor madspace::load_tensor(TarReader& tar, const std::string& name) {
     std::vector<char> data = tar.read(name);
-    if (data.size() < npy_preamble_size) {
+    if (data.size() < npy_preamble_size ||
+        data.size() < preamble_size(data.data())) {
         throw std::runtime_error(std::format("Invalid npy file '{}'", name));
     }
+    std::size_t preamble_length = preamble_size(data.data());
     std::size_t header_length = parse_preamble(data.data());
-    std::size_t data_offset = npy_preamble_size + header_length;
+    std::size_t data_offset = preamble_length + header_length;
     if (data.size() < data_offset) {
         throw std::runtime_error(std::format("Invalid npy file '{}'", name));
     }
     auto [dtype, shape] = parse_tensor_header(
-        parse_header_text(std::string(data.data() + npy_preamble_size, header_length))
+        parse_header_text(std::string(data.data() + preamble_length, header_length))
     );
     Tensor tensor(dtype, shape);
     if (data.size() - data_offset != tensor.byte_size()) {
@@ -304,7 +398,8 @@ EventFile::EventFile(
     _particle_count(particle_count),
     _event_size(layout.event_size() + particle_count * layout.particle_size()),
     _mode(mode),
-    _delete_on_close(delete_on_close) {
+    _delete_on_close(delete_on_close),
+    _layout(layout) {
     auto file_mode = std::ios::binary | std::ios::in;
     if (mode == EventFile::create) {
         file_mode |= std::ios::out | std::ios::trunc;

@@ -45,6 +45,8 @@ save_gridpack = %(gridpack.save_gridpack)s
 include_source = %(gridpack.include_source)s
 include_madspace = %(gridpack.include_madspace)s
 include_madspace_source = %(gridpack.include_madspace_source)s
+include_madtrex = %(gridpack.include_madtrex)s
+include_madtrex_source = %(gridpack.include_madtrex_source)s
 compress = %(gridpack.compress)s
 # end of a run creating a gridpack; options: regular, minimal (no events), fix_max_weight (no events, adds bin/event_stream.py)
 run_mode = %(gridpack.run_mode)s
@@ -211,6 +213,9 @@ discrete_activation = %(madnis.discrete_activation)s # options: relu, leaky_relu
 cwnet_hidden_dim = %(madnis.cwnet_hidden_dim)s
 cwnet_layers = %(madnis.cwnet_layers)s
 cwnet_activation = %(madnis.cwnet_activation)s # options: relu, leaky_relu, elu, gelu, sigmoid, softplus
+
+# precision of all networks
+nn_float_precision = %(madnis.nn_float_precision)s # options: float32, float64
 
 # training parameters
 train_batches = %(madnis.train_batches)s

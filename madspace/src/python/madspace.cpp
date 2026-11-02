@@ -8,6 +8,7 @@
 #include "function_runtime.hpp"
 #include "instruction_set.hpp"
 #include "madspace/compgraphs.hpp"
+#include "madspace/compgraphs/optimizer.hpp"
 #include "madspace/driver.hpp"
 #include "madspace/phasespace.hpp"
 #include "madspace/util.hpp"
@@ -209,8 +210,9 @@ PYBIND11_MODULE(_madspace_py, m) {
         m,
         "DataType",
         {
-            {"int", DataType::dt_int},
-            {"float", DataType::dt_float},
+            {"int32", DataType::dt_int32},
+            {"float32", DataType::dt_float32},
+            {"float64", DataType::dt_float64},
             {"batch_sizes", DataType::batch_sizes},
         },
         "",
@@ -344,6 +346,15 @@ PYBIND11_MODULE(_madspace_py, m) {
             pydoc::doc("Function::instructions")
         );
 
+    m.def(
+        "fuse_instructions",
+        &fuse_instructions,
+        py::arg("function"),
+        "Fuses single-precision conversions and network activations into the "
+        "instructions producing their inputs (the lowering the GPU backend applies "
+        "when it builds a runtime)."
+    );
+
     py::classh<Device> device(m, "Device", pydoc::doc("Device"));
     m.def(
         "cpu_device",
@@ -397,7 +408,21 @@ PYBIND11_MODULE(_madspace_py, m) {
             &MatrixElementApi::helicity_count,
             pydoc::doc("MatrixElementApi::helicity_count")
         )
-        .def("index", &MatrixElementApi::index, pydoc::doc("MatrixElementApi::index"));
+        .def("index", &MatrixElementApi::index, pydoc::doc("MatrixElementApi::index"))
+        .def("file_name", &MatrixElementApi::file_name)
+        .def("supported_inputs", &MatrixElementApi::supported_inputs)
+        .def("required_inputs", &MatrixElementApi::required_inputs)
+        .def("supported_outputs", &MatrixElementApi::supported_outputs)
+        .def("supports_set_parameter", &MatrixElementApi::supports_set_parameter)
+        .def("supports_get_parameter", &MatrixElementApi::supports_get_parameter)
+        .def(
+            "set_parameter",
+            &MatrixElementApi::set_parameter,
+            py::arg("name"),
+            py::arg("real"),
+            py::arg("imag") = 0.0
+        )
+        .def("get_parameter", &MatrixElementApi::get_parameter, py::arg("name"));
 
     py::classh<Tensor>(m, "Tensor", py::dynamic_attr(), pydoc::doc("Tensor"))
         .def(
@@ -1736,17 +1761,20 @@ PYBIND11_MODULE(_madspace_py, m) {
                std::size_t,
                std::size_t,
                MLP::Activation,
-               const std::string&>(),
+               const std::string&,
+               DataType>(),
            py::arg("input_dim"),
            py::arg("output_dim"),
            py::arg("hidden_dim") = 32,
            py::arg("layers") = 3,
            py::arg("activation") = MLP::leaky_relu,
            py::arg("prefix") = "",
+           py::arg("precision") = DataType::dt_float64,
            pydoc::doc("MLP::MLP")
     )
         .def("input_dim", &MLP::input_dim, pydoc::doc("MLP::input_dim"))
         .def("output_dim", &MLP::output_dim, pydoc::doc("MLP::output_dim"))
+        .def("precision", &MLP::precision, pydoc::doc("MLP::precision"))
         .def(
             "initialize_globals",
             &MLP::initialize_globals,
@@ -1771,7 +1799,8 @@ PYBIND11_MODULE(_madspace_py, m) {
                 std::size_t,
                 std::size_t,
                 MLP::Activation,
-                bool>(),
+                bool,
+                DataType>(),
             py::arg("input_dim"),
             py::arg("condition_dim") = 0,
             py::arg("prefix") = "",
@@ -1780,6 +1809,7 @@ PYBIND11_MODULE(_madspace_py, m) {
             py::arg("subnet_layers") = 3,
             py::arg("subnet_activation") = MLP::leaky_relu,
             py::arg("invert_spline") = true,
+            py::arg("subnet_precision") = DataType::dt_float64,
             pydoc::doc("Flow::Flow")
         )
         .def("input_dim", &Flow::input_dim, pydoc::doc("Flow::input_dim"))
@@ -1889,7 +1919,8 @@ PYBIND11_MODULE(_madspace_py, m) {
                 std::size_t,
                 MLP::Activation,
                 const std::string&,
-                bool>(),
+                bool,
+                DataType>(),
             py::arg("channel_count"),
             py::arg("particle_count"),
             py::arg("hidden_dim") = 32,
@@ -1897,6 +1928,7 @@ PYBIND11_MODULE(_madspace_py, m) {
             py::arg("activation") = MLP::leaky_relu,
             py::arg("prefix") = "",
             py::arg("include_preprocessing") = true,
+            py::arg("precision") = DataType::dt_float64,
             pydoc::doc("ChannelWeightNetwork::ChannelWeightNetwork")
         )
         .def("mlp", &ChannelWeightNetwork::mlp, pydoc::doc("ChannelWeightNetwork::mlp"))
@@ -1966,7 +1998,8 @@ PYBIND11_MODULE(_madspace_py, m) {
                 std::size_t,
                 std::size_t,
                 std::size_t,
-                MLP::Activation>(),
+                MLP::Activation,
+                DataType>(),
             py::arg("option_counts"),
             py::arg("prefix") = "",
             py::arg("dims_with_prior") = std::vector<std::size_t>{},
@@ -1974,6 +2007,7 @@ PYBIND11_MODULE(_madspace_py, m) {
             py::arg("subnet_hidden_dim") = 32,
             py::arg("subnet_layers") = 3,
             py::arg("subnet_activation") = MLP::leaky_relu,
+            py::arg("subnet_precision") = DataType::dt_float64,
             pydoc::doc("DiscreteFlow::DiscreteFlow")
         )
         .def(

@@ -42,7 +42,7 @@ examples, generated with ``output mg7 PROC_ggttg`` and ``make BACKEND=scalar`` b
 .. code-block:: python
 
     proc_dir = "PROC_ggttg"
-    me_path = os.path.join(proc_dir, "lib", "libmadmatrix_P0_gg_ttxg_scalar.so")
+    me_path = os.path.join(proc_dir, "lib", "libmadmatrix_sm_P0_gg_ttxg_scalar_m.so")
     param_card = os.path.join(proc_dir, "Cards", "param_card.dat")
 
     ctx = ms.default_context()

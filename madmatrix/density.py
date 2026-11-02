@@ -38,6 +38,10 @@ except ImportError:
 
 PROCESSES_FILE = 'madmatrix_processes.json'
 
+# The FPTYPE of the libraries this module builds and loads: the default of
+# madmatrix.mk, made explicit since it is part of the library names
+FPTYPE = 'm'
+
 
 class MadDensityError(Exception):
     pass
@@ -65,7 +69,7 @@ def make_variables(backend='scalar', libtag=''):
     the standalone check_sa.exe) when make runs in SubProcesses. DENSITY=1
     adds Density.o, which only this module calls: other builds of the same
     output (check_sa, mg7) leave it out."""
-    variables = ['PGOAL=lib', 'BACKEND=%s' % backend, 'DENSITY=1']
+    variables = ['PGOAL=lib', 'BACKEND=%s' % backend, 'FPTYPE=%s' % FPTYPE, 'DENSITY=1']
     if libtag:
         variables.append('LIBTAG=%s' % libtag)
     return variables
@@ -76,11 +80,30 @@ def build_command(nb_core=1, backend='scalar', libtag=''):
     return ['make', '-j%d' % max(1, int(nb_core))] + make_variables(backend, libtag)
 
 
+def common_library(output_dir):
+    """The name of the common library of output_dir, with '{libtag}', '{backend}'
+    and '{fptype}' left open, as its process table gives it (the name without the
+    model and FPTYPE for an output whose table predates them)."""
+    try:
+        with open(os.path.join(output_dir, 'SubProcesses', PROCESSES_FILE)) as fsock:
+            data = json.load(fsock)
+    except (IOError, OSError, ValueError):
+        data = {}
+    return data.get('common_library', 'libmadmatrix_common{libtag}_{backend}.so')
+
+
+def common_library_path(output_dir, libtag, backend='scalar'):
+    """The path of the common library of output_dir built with libtag."""
+    return os.path.join(output_dir, 'lib', common_library(output_dir).format(
+        libtag=libtag, backend=backend, fptype=FPTYPE))
+
+
 def find_libtag(output_dir, backend='scalar'):
     """The LIBTAG the libraries of output_dir were built with, read off the
     name of its common library."""
     lib = os.path.join(output_dir, 'lib')
-    prefix, suffix = 'libmadmatrix_common', '_%s.so' % backend
+    prefix, suffix = common_library(output_dir).format(
+        libtag='{libtag}', backend=backend, fptype=FPTYPE).split('{libtag}')
     found = sorted(name[len(prefix):-len(suffix)] for name in
                    (os.listdir(lib) if os.path.isdir(lib) else [])
                    if name.startswith(prefix) and name.endswith(suffix))
@@ -224,8 +247,7 @@ class MadDensityLibrary(object):
         self.libtag = libtag
         # the common library first, by its path: the process libraries only name
         # it, and the check of _load has to see it
-        _load(os.path.join(output_dir, 'lib',
-                           'libmadmatrix_common%s_%s.so' % (libtag, backend)))
+        _load(common_library_path(output_dir, libtag, backend))
         self.subprocesses = []
         # raw pdg combination (leg order of the process) -> (subprocess, flavor index)
         self._by_pdgs = {}
@@ -236,7 +258,8 @@ class MadDensityLibrary(object):
         self._process_slots = []
         for entry in entries:
             lib_path = os.path.join(output_dir, 'lib',
-                                    entry['library'].format(libtag=libtag, backend=backend))
+                                    entry['library'].format(libtag=libtag, backend=backend,
+                                                            fptype=FPTYPE))
             if not os.path.exists(lib_path):
                 raise MadDensityError('missing %s: build the libraries first (%s in %s)'
                                       % (lib_path, ' '.join(build_command(backend=backend,

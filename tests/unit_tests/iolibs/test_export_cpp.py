@@ -911,6 +911,7 @@ class BrokenSymmetryCPPExportTest(unittest.TestCase):
             'process_lines': '',
             'model_name': 'sm',
             'initProc_lines': '',
+            'refreshMasses_lines': '',
             'reset_jamp_lines': '',
             'sigmaKin_lines': '',
             'sigmaHat_lines': 'return 0.;',

@@ -30,9 +30,8 @@ else:
     #    Example: new_output = {'myformat': MYCLASS}
     #    allows the command "output myformat PATH" in madgraph.
     #    MYCLASS should inherit from class madgraph.iolibs.export_v4.VirtualExporter
-    from . import output, trex
-    new_output = { 'standalone_trex' : trex.TREX_ProcessExporter }
-    new_reweight = {'madtrex': trex.TREX_ReweightInterface}
+    from . import output
+    new_output = {}
 
     # 2. Define new way to handle the cluster.
     #    Example: new_cluster = {'mycluster': MYCLUSTERCLASS}

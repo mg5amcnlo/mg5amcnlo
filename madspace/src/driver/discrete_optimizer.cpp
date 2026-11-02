@@ -35,7 +35,7 @@ void DiscreteOptimizer::optimize() {
     //_sample_count = next_sample_count;
     for (auto [prob_name, data_item] : zip(_prob_names, _data)) {
         auto& [weight_sums, counts] = data_item;
-        Tensor prob(DataType::dt_float, _contexts.at(0)->global(prob_name).shape());
+        Tensor prob(DataType::dt_float64, _contexts.at(0)->global(prob_name).shape());
         auto prob_view = prob.view<double, 2>()[0];
 
         double norm = 0.;

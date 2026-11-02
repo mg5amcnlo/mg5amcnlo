@@ -1,5 +1,6 @@
 #include "madspace/driver/tensor.hpp"
 
+#include <algorithm>
 #include <variant>
 
 using namespace madspace;
@@ -231,6 +232,44 @@ std::size_t Tensor::init_stride() {
     return stride_prod * dtype_size();
 }
 
+Tensor Tensor::cast(DataType dtype) const {
+    Tensor source = cpu().contiguous();
+    if (source.dtype() == dtype) {
+        return source;
+    }
+    Tensor target(dtype, source.shape());
+    std::size_t count = source.shape().product();
+    auto convert = [&]<typename From>(From* from) {
+        switch (dtype) {
+        case DataType::dt_int32:
+            std::copy_n(from, count, static_cast<me_int_t*>(target.data()));
+            break;
+        case DataType::dt_float32:
+            std::copy_n(from, count, static_cast<float*>(target.data()));
+            break;
+        case DataType::dt_float64:
+            std::copy_n(from, count, static_cast<double*>(target.data()));
+            break;
+        default:
+            throw std::invalid_argument("invalid dtype in cast");
+        }
+    };
+    switch (source.dtype()) {
+    case DataType::dt_int32:
+        convert(static_cast<me_int_t*>(source.data()));
+        break;
+    case DataType::dt_float32:
+        convert(static_cast<float*>(source.data()));
+        break;
+    case DataType::dt_float64:
+        convert(static_cast<double*>(source.data()));
+        break;
+    default:
+        throw std::invalid_argument("invalid dtype in cast");
+    }
+    return target;
+}
+
 Tensor Tensor::simd_padded_literal(
     const LiteralValue& value, std::size_t lanes, DevicePtr device
 ) {
@@ -275,8 +314,7 @@ Tensor Tensor::simd_padded_literal(
     // element j of lane l is stored at l + lanes * j
     auto [dtype, buffer] = std::visit(
         [&]<typename T>(const std::vector<T>& vec) {
-            auto dtype =
-                std::is_same_v<T, me_int_t> ? DataType::dt_int : DataType::dt_float;
+            auto dtype = dtype_of<T>();
             std::vector<T> padded(count * lanes);
             for (std::size_t j = 0; j < count; ++j) {
                 std::fill_n(padded.begin() + j * lanes, lanes, vec[j]);
@@ -294,7 +332,16 @@ Tensor Tensor::simd_padded_literal(
         stride_prod *= shape[i];
     }
     Tensor ret(new TensorImpl{
-        dtype, shape, device, buffer.data(), false, std::nullopt, buffer.impl, 1, stride, 1
+        dtype,
+        shape,
+        device,
+        buffer.data(),
+        false,
+        std::nullopt,
+        buffer.impl,
+        1,
+        stride,
+        1
     });
     ret.impl->simd_padded = true;
     // non-negative integer scalars double as batch sizes, see the scalar constructor
