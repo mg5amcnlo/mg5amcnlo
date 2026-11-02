@@ -157,13 +157,24 @@ def test_unmapped_singlet_resonances_are_dropped_with_one_warning(caplog):
         (data,) = export(p)
     (warning,) = caplog.records
     assert "25 > 995 990, 25 > 995 990" in warning.getMessage()
-    (channel,) = data["channels"]
-    assert {
-        tuple(r["pdg"] for r in ps["resonances"])
-        for ps in channel["phasespace_channels"]
-    } == {(), (23,)}
+    # one channel samples the non-resonant map, one the Z, each a partner of
+    # the other
+    assert sorted(
+        tuple(r["pdg"] for r in c["phasespace_channels"][0]["resonances"])
+        for c in data["channels"]
+    ) == [(), (23,)]
+    for channel in data["channels"]:
+        for entry in channel["processes"]:
+            assert entry["multichannels"][0] == 0
+            assert {
+                tuple(r["pdg"] for r in channel["phasespace_channels"][i]["resonances"])
+                for i in entry["multichannels"]
+            } == {(), (23,)}
     # a coloured resonance is not followed; the launch checks it
-    assert [(r["pdg"], r["color"]) for r in channel["colored_resonances"]] == [(6, 3)]
+    for channel in data["channels"]:
+        assert {(r["pdg"], r["color"]) for r in channel["colored_resonances"]} == {
+            (6, 3)
+        }
 
 
 def test_singlet_resonance_inside_a_gluon_trace_is_dropped_with_a_warning(caplog):
@@ -224,10 +235,9 @@ def test_line_resonance_of_some_colour_orders_is_not_warned(caplog):
         (data,) = export(replace(p, color_sectors=sectors))
     assert not caplog.records
     resonant = [
-        ps
+        c["phasespace_channels"][0]
         for c in data["channels"]
-        for ps in c["phasespace_channels"]
-        if ps["resonances"]
+        if c["phasespace_channels"][0]["resonances"]
     ]
     assert [r["pdg"] for ps in resonant for r in ps["resonances"]] == [23]
 
@@ -321,3 +331,28 @@ def test_a_resonance_decays_to_at_most_three_daughters():
     assert (z_4l, z_ee) in configurations and (z_ee, z_mm) in configurations
     z_3l = (23, frozenset({2, 3, 4}))
     assert _configurations([z_3l])[0] == [(), (z_3l,)]
+
+
+def test_every_partner_channel_samples_a_copy_of_its_own():
+    """A contribution is copied into each phase-space channel integrating it,
+    relabelled so that the channel is canonical: one copy per partner, which
+    samples its own map first, the physical members on the first copy only."""
+    # q q~ > s s g with a Z between the singlets: two placements and the Z
+    p = process(pdgs=(991, -991, 995, 995, 990), words=((2, 5, 1),))
+    p.physics["extensions"]["s_channel_resonances"] = [
+        {"pdg": 23, "labels": [3, 4], "color": 1}
+    ]
+    (data,) = export(p)
+    copies = [e for c in data["channels"] for e in c["processes"]]
+    primaries = [e for e in copies if e["members"]]
+    assert len(primaries) == 1
+    assert len(copies) == len(primaries[0]["multichannels"]) == 3
+    for channel in data["channels"]:
+        assert channel["phasespace_order"] == (
+            channel["phasespace_channels"][0]["phasespace_order"]
+        )
+        for entry in channel["processes"]:
+            assert entry["multichannels"][0] == 0
+            assert len(set(entry["multichannels"])) == 3
+    # the identical singlets swapped: two copies in the non-resonant channel
+    assert sorted(len(c["processes"]) for c in data["channels"]) == [1, 2]

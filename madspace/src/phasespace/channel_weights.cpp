@@ -7,6 +7,18 @@
 
 using namespace madspace;
 
+namespace {
+
+std::vector<me_int_t> first_indices(std::size_t count) {
+    std::vector<me_int_t> indices(count);
+    for (std::size_t i = 0; i < count; ++i) {
+        indices[i] = static_cast<me_int_t>(i);
+    }
+    return indices;
+}
+
+} // namespace
+
 PropagatorChannelWeights::PropagatorChannelWeights(
     const std::vector<Topology>& topologies,
     const nested_vector3<std::size_t>& permutations,
@@ -219,7 +231,8 @@ MappingChannelWeights::MappingChannelWeights(
     const std::vector<PhaseSpaceMapping>& mappings,
     const nested_vector2<double>& flavor_masks,
     const std::vector<me_int_t>& diagram_channels,
-    const nested_vector2<double>& flavor_diagram_masks
+    const nested_vector2<double>& flavor_diagram_masks,
+    const std::vector<PhaseSpaceMapping>& partner_mappings
 ) :
     FunctionGenerator(
         "MappingChannelWeights",
@@ -249,11 +262,20 @@ MappingChannelWeights::MappingChannelWeights(
         }()
     ),
     _mappings(mappings),
+    _channel_count(mappings.size()),
     _flavor_masks(flavor_masks),
     _diagram_channels(diagram_channels),
     _flavor_diagram_masks(flavor_diagram_masks),
     _mirror_beams(mappings.at(0).mirror_beams()) {
-    for (auto& mapping : mappings) {
+    if (!partner_mappings.empty() && mappings.size() != 1) {
+        // a learned weight of channels that also partner elsewhere is not a
+        // partition of the contribution any more
+        throw std::invalid_argument(
+            "MappingChannelWeights: partner mappings need a single channel"
+        );
+    }
+    _mappings.insert(_mappings.end(), partner_mappings.begin(), partner_mappings.end());
+    for (auto& mapping : _mappings) {
         if (mapping.channel_count() > 1) {
             throw std::invalid_argument(
                 "MappingChannelWeights: the mappings cannot have permutations"
@@ -267,9 +289,10 @@ MappingChannelWeights::MappingChannelWeights(
         }
     }
     for (auto& mask : flavor_masks) {
-        if (mask.size() != mappings.size()) {
+        if (mask.size() != _mappings.size()) {
             throw std::invalid_argument(
-                "MappingChannelWeights: one flavor mask entry per channel expected"
+                "MappingChannelWeights: one flavor mask entry per channel and "
+                "partner expected"
             );
         }
     }
@@ -277,7 +300,7 @@ MappingChannelWeights::MappingChannelWeights(
         throw std::invalid_argument("MappingChannelWeights needs a flavor");
     }
     for (auto channel : diagram_channels) {
-        if (channel < 0 || std::cmp_greater_equal(channel, mappings.size())) {
+        if (channel < 0 || std::cmp_greater_equal(channel, _mappings.size())) {
             throw std::invalid_argument(
                 "MappingChannelWeights: diagram channel out of range"
             );
@@ -328,7 +351,11 @@ NamedVector<Value> MappingChannelWeights::build_function_impl(
     Value channel_weights = fb.density_channel_weights(
         fb.stack(densities), fb.gather_vector(flavor, _flavor_masks)
     );
-    NamedVector<Value> ret{{"channel_weights", channel_weights}};
+    NamedVector<Value> ret{
+        {"channel_weights",
+         has_partners() ? fb.select(channel_weights, first_indices(_channel_count))
+                        : channel_weights}
+    };
     if (!_diagram_channels.empty()) {
         Value probs = fb.mul(
             fb.select(channel_weights, _diagram_channels),

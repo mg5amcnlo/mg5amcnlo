@@ -2,6 +2,8 @@
 
 - The weights are the masked densities of the inverse mappings, normalised per
   event, and the sampled diagram follows them.
+- Partner mappings enter the normalisation only: the weights of the channels
+  are their share of the contribution.
 - A color-ordered chain with a resonance among its children integrates to the
   same as the plain chain, and can be inverted at the events of the plain one.
 """
@@ -157,3 +159,45 @@ def test_uniform_weights_without_valid_densities():
     alpha = torch.from_dlpack(runtime.call([p, x1, x2, flavors])[0])
     expected = torch.tensor([0.5, 0.0, 0.5], dtype=alpha.dtype).expand(n, 3)
     torch.testing.assert_close(alpha, expected)
+
+
+def test_partners_only_enter_the_normalisation():
+    """A single channel with a partner: its weight is its share of the
+    contribution, and a diagram can sit on the partner."""
+    weights = ms.MappingChannelWeights(
+        [RESONANT],
+        [[1.0, 1.0], [1.0, 0.0]],
+        [0, 1],
+        [[1.0, 1.0], [1.0, 0.0]],
+        partner_mappings=[PLAIN],
+    )
+    assert weights.channel_count() == 1
+    assert weights.has_partners()
+    runtime = ms.FunctionRuntime(weights.function(), default_context())
+    p, x1, x2, w = sample(RESONANT, 20_000, 6)
+    ok = w > 0
+    p, x1, x2 = p[ok], x1[ok], x2[ok]
+    n = p.shape[0]
+    resonant, plain = density(RESONANT, p, x1, x2), density(PLAIN, p, x1, x2)
+    for flavor, expected in ((0, resonant / (resonant + plain)), (1, torch.ones(n))):
+        flavors = torch.full((n,), flavor, dtype=torch.int32)
+        alpha, diagram = (
+            torch.from_dlpack(t) for t in runtime.call([p, x1, x2, flavors])
+        )
+        assert alpha.shape == (n, 1)
+        torch.testing.assert_close(
+            alpha[:, 0], expected.to(alpha.dtype), rtol=1e-12, atol=1e-14
+        )
+        if flavor == 1:
+            assert torch.all(diagram == 0)
+        else:
+            on_partner = (diagram == 1).double().sum()
+            mean = (1 - alpha[:, 0]).sum()
+            assert abs(on_partner - mean) < 5 * mean**0.5
+
+
+def test_partners_need_a_single_channel():
+    with pytest.raises(ValueError, match="single channel"):
+        ms.MappingChannelWeights(
+            [RESONANT, PLAIN], [[1.0, 1.0, 1.0]], partner_mappings=[PLAIN]
+        )

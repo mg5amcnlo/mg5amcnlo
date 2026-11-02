@@ -298,28 +298,30 @@ class AmplicolLaunchResonancesTest(unittest.TestCase):
         self.assertEqual(meta['phasespace_channels'], self.meta['phasespace_channels'])
         self.assertEqual(meta['flavors'], self.meta['flavors'])
 
-    def test_stable_resonance_is_dropped_and_channels_merged(self):
-        # without a Higgs width, H > Z Z becomes Z and H the non-resonant channel
+    def test_stable_resonance_is_dropped_and_channels_kept_apart(self):
+        # without a Higgs width, H > Z Z becomes Z and H the non-resonant
+        # channel: each still the channel of a copy of the flavours, so kept
         meta = self.active({23: 91., 25: 125.}, {23: 2.5})
         self.assertEqual(meta['phasespace_channels'], [
             {'order': self.order, 'resonances': []},
             {'order': self.order, 'resonances': [self.z_e, self.z_mu]},
             {'order': self.order, 'resonances': [self.z_e]},
+            {'order': self.order, 'resonances': []},
         ])
         self.assertEqual([(f['channels'], f['resonance_pdgs']) for f in meta['flavors']],
-                         [([0, 1, 2], [[], [23, 23], [23]]), ([0, 1], [[], [23, 23]])])
-        # the LHE diagram masks follow the merged channels
+                         [([0, 1, 2, 3], [[], [23, 23], [23], []]),
+                          ([3, 1], [[], [23, 23]])])
         diagrams, masks = self.module.lhe_diagrams(meta)
-        self.assertEqual(diagrams, [(0, ()), (1, (23, 23)), (2, (23,))])
-        self.assertEqual(masks, [[1., 1., 1.], [1., 1., 0.]])
+        self.assertEqual(diagrams, [(0, ()), (1, (23, 23)), (2, (23,)), (3, ())])
+        self.assertEqual(masks, [[1., 1., 1., 1.], [0., 1., 0., 1.]])
 
     def test_resonance_below_its_decay_threshold_is_dropped(self):
         # mu+ mu- of 2 x 70 GeV: neither Z > mu+ mu- nor H > 4l are on shell
         meta = self.active({13: 70., 23: 91., 25: 125.}, {23: 2.5, 25: 4e-3})
         self.assertEqual(
-            [c['resonances'] for c in meta['phasespace_channels']], [[], [self.z_e]])
-        self.assertEqual([f['channels'] for f in meta['flavors']], [[0, 1], [0, 1]])
-        self.assertEqual(self.meta['flavors'][1]['channels'], [3, 1])
+            [c['resonances'] for c in meta['phasespace_channels']],
+            [[], [self.z_e], [self.z_e], []])
+        self.assertEqual([f['channels'] for f in meta['flavors']], [[0, 1, 2, 3], [3, 1]])
 
     def test_coloured_resonance_on_shell_is_an_error(self):
         masses, widths = {6: 173., 23: 91.}, {23: 2.5}

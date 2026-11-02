@@ -1871,11 +1871,13 @@ PYBIND11_MODULE(_madspace_py, m) {
                 const std::vector<PhaseSpaceMapping>&,
                 const nested_vector2<double>&,
                 const std::vector<me_int_t>&,
-                const nested_vector2<double>&>(),
+                const nested_vector2<double>&,
+                const std::vector<PhaseSpaceMapping>&>(),
             py::arg("mappings"),
             py::arg("flavor_masks"),
             py::arg("diagram_channels") = std::vector<me_int_t>{},
             py::arg("flavor_diagram_masks") = nested_vector2<double>{},
+            py::arg("partner_mappings") = std::vector<PhaseSpaceMapping>{},
             pydoc::doc("MappingChannelWeights::MappingChannelWeights")
         )
         .def(
@@ -1892,6 +1894,11 @@ PYBIND11_MODULE(_madspace_py, m) {
             "has_diagrams",
             &MappingChannelWeights::has_diagrams,
             pydoc::doc("MappingChannelWeights::has_diagrams")
+        )
+        .def(
+            "has_partners",
+            &MappingChannelWeights::has_partners,
+            pydoc::doc("MappingChannelWeights::has_partners")
         );
 
     py::classh<MomentumPreprocessing, FunctionGenerator>(

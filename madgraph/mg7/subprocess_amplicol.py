@@ -1,11 +1,13 @@
 """Subprocesses with AmpliCol matrix elements ('[amplicol]' processes).
 
 Each subprocess is one UMAMI channel of an AmpliCol provider: colour orderings
-integrated at leading colour over a common set of colour-ordered phase-space
-channels. They differ in where the colour singlets attach to the colour lines
-and in the s-channel resonances they map out, and are weighted by the densities
-of their mappings. Resonances that cannot go on shell with the param card
-masses and widths are dropped at launch. A second pass re- or
+integrated at leading colour over one colour-ordered phase-space mapping, its
+first phase-space channel. A colour ordering with partners (where the colour
+singlets attach to the colour lines, the s-channel resonances it maps out) is
+copied into the subprocess of each partner, and every copy weighted by its
+mapping's density over the partners' densities, as in AmpliCol. Resonances that
+cannot go on shell with the param card masses and widths are dropped at launch.
+A second pass re- or
 unweights the events to full colour with the ratio of the full-colour to the
 leading-colour matrix element summed over all colour orderings, at the
 helicity of the event.
@@ -141,8 +143,9 @@ def channel_topologies(meta: dict, process: MadgraphProcess) -> list[tuple]:
 def active_resonances(meta: dict, get_mass, get_width) -> dict:
     """The subprocess meta without the s-channel resonances that cannot go on
     shell: a resonance is active if its width is positive and its mass above
-    the masses of its decay legs. Phase-space channels that then agree are
-    merged, and the flavours renumbered to them."""
+    the masses of its decay legs. Phase-space channels that then agree are kept
+    apart: each is the channel of a copy of the flavours, in this subprocess or
+    another one, and its density counts once in the weights of every copy."""
     leg_masses = [
         get_mass(pid) for pid in clean_pids(meta["incoming"] + meta["outgoing"])
     ]
@@ -161,27 +164,24 @@ def active_resonances(meta: dict, get_mass, get_width) -> dict:
                 "generate the process with on-shell decays or with the madmatrix "
                 "backend"
             )
-    channels, lookup, remap, kept = [], {}, [], []
-    for channel in meta["phasespace_channels"]:
-        keep = [i for i, r in enumerate(channel["resonances"]) if active(r)]
-        resonances = [channel["resonances"][i] for i in keep]
-        key = (
-            tuple(channel["order"]),
-            tuple((abs(r["pdg"]), tuple(r["legs"])) for r in resonances),
-        )
-        if key not in lookup:
-            lookup[key] = len(channels)
-            channels.append({**channel, "resonances": resonances})
-        remap.append(lookup[key])
-        kept.append(keep)
-    flavors = []
-    for flavor in meta["flavors"]:
-        indices, pdgs = [], []
-        for index, resonance_pdgs in zip(flavor["channels"], flavor["resonance_pdgs"]):
-            if remap[index] not in indices:
-                indices.append(remap[index])
-                pdgs.append([resonance_pdgs[i] for i in kept[index]])
-        flavors.append({**flavor, "channels": indices, "resonance_pdgs": pdgs})
+    kept = [
+        [i for i, r in enumerate(channel["resonances"]) if active(r)]
+        for channel in meta["phasespace_channels"]
+    ]
+    channels = [
+        {**channel, "resonances": [channel["resonances"][i] for i in keep]}
+        for channel, keep in zip(meta["phasespace_channels"], kept)
+    ]
+    flavors = [
+        {
+            **flavor,
+            "resonance_pdgs": [
+                [pdgs[i] for i in kept[index]]
+                for index, pdgs in zip(flavor["channels"], flavor["resonance_pdgs"])
+            ],
+        }
+        for flavor in meta["flavors"]
+    ]
     return {**meta, "phasespace_channels": channels, "flavors": flavors}
 
 
@@ -331,15 +331,15 @@ class AmplicolSubprocess(MadgraphSubprocess):
         return None
 
     def build_multichannel_phasespace(self) -> PhaseSpace:
-        """One channel per phase-space channel of the UMAMI channel, weighted
-        by the densities of their mappings."""
+        """The first phase-space channel of the UMAMI channel, weighted by the
+        density of its mapping over those of each flavour's partners, the other
+        phase-space channels, which are sampled by the subprocesses of the
+        flavour's copies."""
         flavors = self.meta["flavors"]
         particle_count = len(self.incoming_masses) + len(self.outgoing_masses)
-        channels = []
-        for index, (topology, color_order, _) in enumerate(
-            channel_topologies(self.meta, self.process)
-        ):
-            mapping = ms.PhaseSpaceMapping(
+        mappings = []
+        for topology, color_order, _ in channel_topologies(self.meta, self.process):
+            mappings.append(ms.PhaseSpaceMapping(
                 topology,
                 self.process.e_cm,
                 leptonic=self.process.leptonic,
@@ -350,38 +350,40 @@ class AmplicolSubprocess(MadgraphSubprocess):
                 color_ordered=ms.ColorOrderedMapping.Options(color_order),
                 beam_rapidity=self.process.beam_rapidity,
                 mirror_beams=self.mirror_beams,
-            )
-            prefix = f"subproc{self.subproc_id}.amplicol{index}"
-            discrete_sym, discrete_flavor = self.build_discrete(
-                1, len(flavors), prefix
-            )
-            channels.append(Channel(
-                phasespace_mapping=mapping,
-                adaptive_mapping=self.build_vegas(mapping, prefix),
-                discrete_sym=discrete_sym,
-                discrete_flavor=discrete_flavor,
-                channel_weight_indices=[index],
-                name=f"C{index}",
-                active_flavors=[[
-                    f for f, flavor in enumerate(flavors) if index in flavor["channels"]
-                ]],
             ))
+        if any(flavor["channels"][0] != 0 for flavor in flavors):
+            raise RuntimeError(
+                "the [amplicol] flavours of a subprocess must sample its first "
+                "phase-space channel: regenerate the output"
+            )
+        prefix = f"subproc{self.subproc_id}.amplicol0"
+        discrete_sym, discrete_flavor = self.build_discrete(1, len(flavors), prefix)
+        channel = Channel(
+            phasespace_mapping=mappings[0],
+            adaptive_mapping=self.build_vegas(mappings[0], prefix),
+            discrete_sym=discrete_sym,
+            discrete_flavor=discrete_flavor,
+            channel_weight_indices=[0],
+            name="C0",
+            active_flavors=[list(range(len(flavors)))],
+        )
         diagrams, diagram_masks = lhe_diagrams(self.meta)
         weights = None
-        if len(channels) > 1 or diagrams:
+        if len(mappings) > 1 or diagrams:
             weights = ms.MappingChannelWeights(
-                [channel.phasespace_mapping for channel in channels],
+                mappings[:1],
                 [
-                    [float(index in flavor["channels"]) for index in range(len(channels))]
+                    [float(index in flavor["channels"]) for index in range(len(mappings))]
                     for flavor in flavors
                 ],
                 [channel for channel, _ in diagrams],
                 diagram_masks,
+                partner_mappings=mappings[1:],
             )
         return PhaseSpace(
             mode="multichannel",
-            channels=channels,
-            symfact=[None] * len(channels),
+            channels=[channel],
+            symfact=[None],
             mapping_chan_weights=weights,
         )
 

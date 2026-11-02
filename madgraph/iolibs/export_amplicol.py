@@ -18,10 +18,11 @@ pyamplicol generates the colour-ordered matrix elements of a process definition
 in SubProcesses/A<n>_<name>: a leading-colour artifact (lc), a full-colour one
 (full), and the sources of the UMAMI library returning their ratio (reweight).
 Its makefile builds the libraries into lib/. Every UMAMI channel of every
-provider becomes one entry of subprocesses.json: colour orderings integrated
-over a common set of colour-ordered phase-space channels, which differ in where
-the colour singlets attach and in the s-channel resonances they follow, and are
-weighted by their mapping densities. Subprocesses related by a flavour
+provider becomes one entry of subprocesses.json: the colour orderings sampled
+by one colour-ordered phase-space channel, each weighted by its density over
+those of its partners (where the colour singlets attach, the s-channel
+resonances followed), which sample copies of it in their own subprocesses.
+Subprocesses related by a flavour
 relabelling that is a symmetry of the allowed vertices are generated once
 (pyamplicol's strict flavour-blind grouping) and evaluated through their
 representative.

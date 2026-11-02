@@ -1309,7 +1309,8 @@ NamedVector<Value> Integrand::build_common_part(
     Value chan_weights_acc;
     Value mapping_diagram_acc;
     if (_mapping_chan_weights &&
-        (channel_count > 1 || _mapping_chan_weights->has_diagrams())) {
+        (channel_count > 1 || _mapping_chan_weights->has_diagrams() ||
+         _mapping_chan_weights->has_partners())) {
         ValueVec cw_args{momenta_acc, x1_acc, x2_acc, flavor_id};
         if (_mapping_chan_weights->mirror_beams()) {
             cw_args.push_back(args.at("mirror_index_acc"));
@@ -1614,6 +1615,11 @@ NamedVector<Value> Integrand::build_common_part(
     if (channel_count > 1 && !_madnis_training) {
         Value chan_index_acc = fb.batch_gather(indices_acc, args.at("chan_index"));
         weights_after_cuts.push_back(fb.gather(chan_index_acc, chan_weights_acc));
+    } else if (channel_count == 1 && _mapping_chan_weights &&
+               _mapping_chan_weights->has_partners()) {
+        // the share of the contribution this integrand samples, the partners
+        // sampling the rest: part of the integrand, also in training
+        weights_after_cuts.push_back(fb.unstack(chan_weights_acc).at(0));
     }
     auto weight = fb.mul(
         args.at("weight_before_cuts"),

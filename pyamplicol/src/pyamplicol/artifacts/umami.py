@@ -631,26 +631,89 @@ def _add_terms(entry, terms):
             existing["factor"] += term["factor"]
 
 
+def _exported_entry(data, relabel, member, contribution, helicity_groups, mappings):
+    """An exported contribution with its final-state legs relabelled; its
+    ``multichannels`` are filled in by _group_phasespace_channels."""
+    pdgs, order, flow, runtime = contribution
+    color_index = (
+        None if flow is None else _intern(data["color_flows"], _relabelled(flow, relabel))
+    )
+    entry_runtime = _relabelled_runtime(runtime, relabel)
+    if color_index is not None:
+        entry_runtime["color_index"] = color_index
+    return {
+        "matrix_elements": [
+            {
+                "pdg_ids": _intern(data["pdg_ids"], _relabelled(list(pdgs), relabel)),
+                "factor": 1.0,
+            }
+        ],
+        "color_order": _intern(data["color_orders"], [relabel[slot] for slot in order]),
+        "color_flows": color_index,
+        "helicities": [
+            [_intern(data["helicities"], _relabelled(v, relabel)) for v in group]
+            for group in helicity_groups.values()
+        ],
+        "helicity_mappings": [
+            {
+                **mapping,
+                "helicity": _intern(
+                    data["helicities"], _relabelled(mapping["helicity"], relabel)
+                ),
+            }
+            for mapping in mappings
+        ],
+        "runtime": entry_runtime,
+        "members": [] if member is None else [member],
+        "multichannels": [],
+    }
+
+
+def _unique_partners(partners, incoming, masses):
+    """The partners ``(order, configuration)`` without repeated phase-space maps:
+    equal cyclic orders following the same resonances."""
+    unique, seen = [], set()
+    for order, configuration in partners:
+        _, rotated = _channel_pattern(order, incoming, masses)
+        key = (tuple(rotated), frozenset((abs(pdg), legs) for pdg, legs in configuration))
+        if key not in seen:
+            seen.add(key)
+            unique.append((order, configuration))
+    return unique
+
+
+def _phasespace_key(order, configuration, relabel, incoming, masses, channels):
+    """The phase-space channel of a partner in relabelled legs, recorded in
+    ``channels`` under its (cyclic order, resonances) key."""
+    _, rotated = _channel_pattern([relabel[slot] for slot in order], incoming, masses)
+    resonances = sorted(
+        (sorted(relabel[slot] for slot in legs), pdg) for pdg, legs in configuration
+    )
+    key = (
+        tuple(rotated),
+        tuple((tuple(legs), abs(pdg)) for legs, pdg in resonances),
+    )
+    channels.setdefault(
+        key,
+        {
+            "phasespace_order": rotated,
+            "resonances": [{"pdg": pdg, "legs": legs} for legs, pdg in resonances],
+        },
+    )
+    return key
+
+
 def _group_phasespace_channels(data, selectors, phasespace_channels):
-    """One UMAMI channel per set of contributions linked by shared phase-space
-    channels: its contributions are integrated together, each over the
-    phase-space channels listed in its ``multichannels``. The coloured
-    resonances of its contributions are listed for the launch to check."""
-    parent = {key: key for key in phasespace_channels}
-
-    def root(key):
-        while parent[key] != key:
-            parent[key] = parent[parent[key]]
-            key = parent[key]
-        return key
-
-    for _, keys, _ in selectors:
-        for key in keys[1:]:
-            parent[root(key)] = root(keys[0])
+    """One UMAMI channel per canonical phase-space channel, which samples it: the
+    copies of contributions it integrates. Each copy lists its own channel first
+    in ``multichannels`` (index 0 of ``phasespace_channels``), then those of its
+    partners, which only enter its weight g_0 / sum_k g_k: every partner has a
+    copy of its own in its channel, so the copies add up to the contribution.
+    The coloured resonances of its contributions are listed for the launch."""
     groups: dict[tuple, dict] = {}
-    for entry, keys, colored in selectors:
+    for entry, channel_key, keys, colored in selectors:
         group = groups.setdefault(
-            root(keys[0]), {"lookup": {}, "processes": [], "colored": []}
+            channel_key, {"lookup": {}, "processes": [], "colored": []}
         )
         entry["multichannels"] = [
             group["lookup"].setdefault(key, len(group["lookup"])) for key in keys
@@ -860,7 +923,7 @@ def _build_provider(
         assumptions.append(FLAVOR_BLIND_ASSUMPTION)
     data: dict[str, Any] = {
         "kind": "pyamplicol-umami-metadata",
-        "schema_version": 2,
+        "schema_version": 3,
         "provider": {
             "id": provider_id,
             "library": "libumami.so" if single else f"libumami_{provider_id}.so",
@@ -883,12 +946,13 @@ def _build_provider(
         ),
     }
     structural_representatives: dict[str, dict] = {}
-    orbit_entries: dict[tuple, tuple[dict, list[int]]] = {}
+    orbit_entries: dict[tuple, tuple[list[tuple[dict, list[int]]], list[int], dict]] = {}
     channel_patterns: dict[tuple, list[int]] = {}
+    leg_masses = data["provider"]["masses"]
     # (order, resonances) of every phase-space channel, and the exported
     # contributions with the channels integrating them and coloured resonances
     phasespace_channels: dict[tuple, dict] = {}
-    selectors: list[tuple[dict, list[tuple], list[dict]]] = []
+    selectors: list[tuple[dict, tuple, list[tuple], list[dict]]] = []
     physical_count = 0
     runtime_helicities: list[list[list[int]]] = []
     runtime_indices: dict[str, int] = {}
@@ -1060,9 +1124,10 @@ def _build_provider(
                 helicities,
                 len(word),
             )
+
             orbit = (source_id, orbit_key)
             if orbit in orbit_entries:
-                entry, representative_order, representative_runtime, relabel = (
+                copies, representative_order, representative_runtime = (
                     orbit_entries[orbit]
                 )
                 # Evaluate each physical member through the exported entry,
@@ -1074,56 +1139,16 @@ def _build_provider(
                         slots[i] for i in representative_runtime["permutation"]
                     ],
                 }
-                pdg_index = _intern(
-                    data["pdg_ids"], _relabelled(list(pdgs), relabel)
-                )
-                _add_terms(entry, [{"pdg_ids": pdg_index, "factor": 1.0}])
-                entry["members"].append(member)
+                for entry, relabel in copies:
+                    pdg_index = _intern(
+                        data["pdg_ids"], _relabelled(list(pdgs), relabel)
+                    )
+                    _add_terms(entry, [{"pdg_ids": pdg_index, "factor": 1.0}])
+                copies[0][0]["members"].append(member)
                 continue
-            # The exported contribution relabels its final-state legs onto the
-            # first colour order of its channel; members keep physical labels.
-            pattern, rotated = _channel_pattern(
-                order, incoming, data["provider"]["masses"], _leg_classes(pdgs, roles)
-            )
-            relabel = list(identity)
-            representative = channel_patterns.setdefault(pattern, rotated)
-            for slot, target in zip(rotated, representative, strict=True):
-                relabel[slot] = target
-            channel_order = [relabel[slot] for slot in order]
-            entry_color_index = (
-                None if flow is None else _intern(data["color_flows"], _relabelled(flow, relabel))
-            )
-            entry_runtime = _relabelled_runtime(runtime, relabel)
-            if entry_color_index is not None:
-                entry_runtime["color_index"] = entry_color_index
-            pdg_index = _intern(
-                data["pdg_ids"], _relabelled(list(pdgs), relabel)
-            )
-            entry = {
-                "matrix_elements": [{"pdg_ids": pdg_index, "factor": 1.0}],
-                "color_order": _intern(data["color_orders"], channel_order),
-                "color_flows": entry_color_index,
-                "helicities": [
-                    [_intern(data["helicities"], _relabelled(v, relabel)) for v in group]
-                    for group in helicity_groups.values()
-                ],
-                "helicity_mappings": [
-                    {
-                        **mapping,
-                        "helicity": _intern(
-                            data["helicities"], _relabelled(mapping["helicity"], relabel)
-                        ),
-                    }
-                    for mapping in helicity_mappings
-                ],
-                "runtime": entry_runtime,
-                "members": [member],
-                "multichannels": [],
-            }
-            # The phase-space channels of the contribution, in the relabelled
-            # legs. Maps are shared only if their fixed external masses agree
-            # (already a provider invariant) and they follow the same resonances.
-            partners = (
+            # The phase-space channels integrating the contribution: its own
+            # colour order and its partners, in the physical legs.
+            partners = _unique_partners(
                 [(order, ())]
                 if flow is None
                 else _phasespace_partners(
@@ -1131,52 +1156,75 @@ def _build_provider(
                     [slot for slot in order if roles[slot] == 1],
                     roles,
                     configurations,
-                )
+                ),
+                incoming,
+                leg_masses,
             )
-            # Not keyed by the flavours of the legs: the relabelling keeps every
-            # leg class in its slot, and the cuts are flavour blind within one.
-            keys = []
-            for partner_order, configuration in partners:
-                _, partner_rotated = _channel_pattern(
-                    [relabel[slot] for slot in partner_order],
-                    incoming,
-                    data["provider"]["masses"],
+            classes = _leg_classes(pdgs, roles)
+            copies = []
+            for index, (partner_order, configuration) in enumerate(partners):
+                # One exported copy per channel, its final-state legs relabelled
+                # so that the channel is the canonical one of its pattern; members
+                # keep physical labels and are listed by the first copy only.
+                pattern, rotated = _channel_pattern(
+                    partner_order, incoming, leg_masses, classes
                 )
-                partner_resonances = sorted(
-                    (sorted(relabel[slot] for slot in legs), pdg)
-                    for pdg, legs in configuration
+                position = {slot: i for i, slot in enumerate(rotated)}
+                channel_key = (
+                    pattern,
+                    tuple(
+                        sorted(
+                            (tuple(sorted(position[slot] for slot in legs)), abs(pdg))
+                            for pdg, legs in configuration
+                        )
+                    ),
                 )
-                key = (
-                    tuple(partner_rotated),
-                    tuple((tuple(legs), abs(pdg)) for legs, pdg in partner_resonances),
+                representative = channel_patterns.setdefault(channel_key, rotated)
+                relabel = list(identity)
+                for slot, target in zip(rotated, representative, strict=True):
+                    relabel[slot] = target
+                entry = _exported_entry(
+                    data,
+                    relabel,
+                    member if index == 0 else None,
+                    (pdgs, order, flow, runtime),
+                    helicity_groups,
+                    helicity_mappings,
                 )
-                if key not in keys:
-                    keys.append(key)
-                phasespace_channels.setdefault(
-                    key,
-                    {
-                        "phasespace_order": partner_rotated,
-                        "resonances": [
-                            {"pdg": pdg, "legs": legs}
-                            for legs, pdg in partner_resonances
-                        ],
-                    },
-                )
-            # not followed by the channels: the launch rejects those that go on shell
-            colored_resonances = (
-                []
-                if flow is None
-                else [
-                    {
-                        "pdg": pdg,
-                        "legs": sorted(relabel[slot] for slot in legs),
-                        "color": color,
-                    }
-                    for pdg, legs, color in coloured
+                # Its own channel first: the copy is weighted by its density
+                # over those of all its partners, in the copy's legs.
+                keys = [
+                    _phasespace_key(
+                        other_order,
+                        other_configuration,
+                        relabel,
+                        incoming,
+                        leg_masses,
+                        phasespace_channels,
+                    )
+                    for other_order, other_configuration in [
+                        partners[index],
+                        *partners[:index],
+                        *partners[index + 1 :],
+                    ]
                 ]
-            )
-            selectors.append((entry, keys, colored_resonances))
-            orbit_entries[orbit] = (entry, aligned_order, runtime, relabel)
+                # not followed by the channels: the launch rejects those that go
+                # on shell
+                colored_resonances = (
+                    []
+                    if flow is None
+                    else [
+                        {
+                            "pdg": pdg,
+                            "legs": sorted(relabel[slot] for slot in legs),
+                            "color": color,
+                        }
+                        for pdg, legs, color in coloured
+                    ]
+                )
+                selectors.append((entry, channel_key, keys, colored_resonances))
+                copies.append((entry, relabel))
+            orbit_entries[orbit] = (copies, aligned_order, runtime)
         unmapped += [
             (pdg, legs)
             for pdg, legs in mappable
