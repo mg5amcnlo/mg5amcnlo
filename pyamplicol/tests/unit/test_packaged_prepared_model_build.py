@@ -366,8 +366,8 @@ def test_release_source_ready_asset_uses_only_release_lock_identity(
     assert metadata["build_contract"] == {"mode": "release"}
     assert "native_build_inputs_sha256" not in metadata["producer"]
     assert metadata["producer"]["package_version"] == RELEASE_VERSION
-    assert metadata["dependencies"]["symbolica_version"] == "3.0.3"
-    assert metadata["dependencies"]["symjit_version"] == "2.27.3"
+    assert metadata["dependencies"]["symbolica_version"] == "3.0.0"
+    assert metadata["dependencies"]["symjit_version"] == "2.26.4"
     assert bundle_path.read_bytes() == source_bundle.read_bytes()
 
 
