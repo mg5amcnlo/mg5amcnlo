@@ -749,11 +749,12 @@ class TestRunCardNLOMeFramePartonicCM(unittest.TestCase):
     massive final-state particles."""
 
     def _card(self, me_frame, cm_legs, unsafe_legs, real_emission=True,
-              default_legs=()):
+              default_legs=(), ninitial=2):
         run_card = bannermod.RunCardNLO()
         if me_frame is not None:
             run_card.set('me_frame', me_frame, user=True)
         charac = bannermod.ProcCharacteristic()
+        charac['ninitial'] = ninitial
         charac['me_frame_cm_legs'] = cm_legs
         charac['me_frame_unsafe_legs'] = unsafe_legs
         charac['me_frame_default_legs'] = list(default_legs)
@@ -822,7 +823,33 @@ class TestRunCardNLOMeFramePartonicCM(unittest.TestCase):
     def test_decay_is_the_rest_frame_of_the_decaying_particle(self):
         # t > w+{0} b [QCD]: frame_id 6 used to select the top AND leg 2,
         # the first decay product, and boost to the rest frame of the pair
-        self.assertEqual(self._frame_id(self._card([1, 2], [1], [3])), 2)
+        self.assertEqual(self._frame_id(self._card([1, 2], [1], [3],
+                                                   ninitial=1)), 2)
+        # the decaying particle may be named: FKS never splits it, so it has
+        # the same momentum in every configuration, coloured or not. This
+        # used to be refused as 'part of the initial state'.
+        self.assertEqual(self._frame_id(self._card([1], [1], [3],
+                                                   ninitial=1)), 2)
+        # ... also without ninitial: [1] as the c.m. legs is a decay
+        self.assertEqual(self._frame_id(self._card([1], [1], [3],
+                                                   ninitial=0)), 2)
+        # with a decay product, unless it is a jet
+        self.assertEqual(self._frame_id(self._card([1, 2], [1], [3],
+                                                   ninitial=1)), 2)
+        with self.assertRaises(bannermod.InvalidRunCard):
+            self._card([1, 3], [1], [3], ninitial=1).check_validity()
+
+    def test_a_beam_may_enter_only_if_it_does_not_radiate(self):
+        # p p > t{+} t~ [QCD]: the partons radiate
+        with self.assertRaisesRegex(bannermod.InvalidRunCard, 'radiate'):
+            self._card([1, 3], [3, 4], [1, 2],
+                       default_legs=[3, 4]).check_validity()
+        # e+ e- > t{L} t~ [QCD]: the beams do not, so e+ and the top is a
+        # frame like any other (frame_id 2**1 + 2**3)
+        self.assertEqual(self._frame_id(self._card([1, 3], [1, 2], [])), 10)
+        # but a single massless beam has no rest frame
+        with self.assertRaises(bannermod.InvalidRunCard):
+            self._card([1], [1, 2], []).check_validity()
 
     def test_without_process_information_me_frame_is_literal(self):
         # unpolarised processes, or a card read outside a launch

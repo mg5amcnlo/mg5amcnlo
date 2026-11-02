@@ -320,8 +320,22 @@ default of `e+ e-` and decays, and anyone who sets it by hand:
   jet, which a final-state collinear splitting changes by a finite amount.
   The message points to the default, e.g. `[3]`.
 
-For the same reason any `me_frame` containing a massless coloured
-final-state parton is refused. `[3,4]` on `p p > w+{0} j` used to pass and
+**Which legs may enter a frame at NLO.** These are the legs whose momentum
+no infrared limit changes (`me_frame_unsafe_legs` lists the others):
+
+- Colourless or massive final-state particles.
+- The decaying particle of a `1 -> n` process, even a coloured one. FKS never
+  splits it (`fks_base.find_reals`), and its momentum is the total momentum
+  in every configuration. `me_frame = [1]` used to be refused for a decay as
+  "part of the initial state".
+- A beam that is not charged under the perturbation, e.g. `e+ e-` with
+  `[QCD]`. `[1,3]` on `e+ e- > t{L} t~ [QCD]` used to be refused for mixing
+  initial and final legs.
+
+Refused are a beam that radiates (the partons of `p p`) and a massless
+coloured final-state parton. Without process information (a card edited
+outside a launch) the old blanket rule still applies. In the same way, any
+`me_frame` containing a massless coloured final-state parton is refused. `[3,4]` on `p p > w+{0} j` used to pass and
 built the rest frame of the W and `j_fks`. Runs of the Born alone (`launch
 LO`, `aMC@LO`) refuse nothing.
 

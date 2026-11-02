@@ -2094,7 +2094,9 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         cm_legs, unsafe_legs, default_legs = \
             fks_common.me_frame_characteristics(
                 getattr(self, 'proc_defs', None) or [],
-                density=self.proc_characteristic['density_matrix'])
+                density=self.proc_characteristic['density_matrix'],
+                splitting_types=self.proc_characteristic['splitting_types']
+                                or ['QCD'])
         self.proc_characteristic['me_frame_cm_legs'] = cm_legs
         self.proc_characteristic['me_frame_unsafe_legs'] = unsafe_legs
         self.proc_characteristic['me_frame_default_legs'] = default_legs

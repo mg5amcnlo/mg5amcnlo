@@ -3704,7 +3704,8 @@ class TestMeFrameCharacteristics(unittest.TestCase):
     """fks_common.me_frame_characteristics: the default me_frame of the
     NLO run_card (the massive final state when the initial state radiates,
     else [1, 2]), what me_frame = [1, 2] means at NLO for a process, and
-    which legs may not enter a frame once real emission is computed. The
+    which legs may not enter a frame once real emission is computed (a jet,
+    or a beam that radiates; never the decaying particle of a decay). The
     run_card resolves me_frame against these (RunCardNLO.get_me_frame_legs).
     Each result is (cm_legs, unsafe_legs, default_legs)."""
 
@@ -3714,7 +3715,8 @@ class TestMeFrameCharacteristics(unittest.TestCase):
 
     partons = [1, 2, 3, 4, -1, -2, -3, -4, 21]
 
-    def proc(self, initial, final, nlo_mode='all'):
+    def proc(self, initial, final, nlo_mode='all',
+             couplings=('QCD',)):
         """legs are (ids, polarisation) pairs, in the user's order"""
         legs = MG.MultiLegList(
             [MG.MultiLeg({'ids': ids, 'state': False, 'polarization': pol})
@@ -3723,10 +3725,11 @@ class TestMeFrameCharacteristics(unittest.TestCase):
              for ids, pol in final])
         return MG.ProcessDefinition({'legs': legs, 'model': self.model,
                                      'NLO_mode': nlo_mode,
-                                     'perturbation_couplings': ['QCD']})
+                                     'perturbation_couplings': list(couplings)})
 
-    def charac(self, *procs):
-        return fks_common.me_frame_characteristics(list(procs))
+    def charac(self, *procs, splitting_types=('QCD',)):
+        return fks_common.me_frame_characteristics(
+            list(procs), splitting_types=splitting_types)
 
     def test_initial_state_radiation_and_a_jet(self):
         # p p > w+{0} j [QCD]: the Born final state contains a jet, so the
@@ -3735,12 +3738,12 @@ class TestMeFrameCharacteristics(unittest.TestCase):
         p = (self.partons, [])
         self.assertEqual(self.charac(self.proc([p, p], [([24], [0]),
                                                         (self.partons, [])])),
-                         ([3, 4], [4], [3]))
+                         ([3, 4], [1, 2, 4], [3]))
         # p p > t{+} t~ j [QCD]: both tops, never the jet
         self.assertEqual(self.charac(self.proc([p, p], [([6], [1]),
                                                         ([-6], []),
                                                         (self.partons, [])])),
-                         ([3, 4, 5], [5], [3, 4]))
+                         ([3, 4, 5], [1, 2, 5], [3, 4]))
 
     def test_initial_state_radiation_colourless_final_state(self):
         # p p > w+{0} w- [QCD]: the W W rest frame, also with a photon in p
@@ -3748,7 +3751,7 @@ class TestMeFrameCharacteristics(unittest.TestCase):
             p = (ids, [])
             self.assertEqual(self.charac(self.proc([p, p], [([24], [0]),
                                                             ([-24], [])])),
-                             ([3, 4], [], [3, 4]))
+                             ([3, 4], [1, 2], [3, 4]))
 
     def test_no_initial_state_radiation(self):
         # e+ e- > t{-1} t~ [QCD]: a massive coloured final state is safe
@@ -3760,13 +3763,23 @@ class TestMeFrameCharacteristics(unittest.TestCase):
                                                [([6], [-1]), ([-6], []),
                                                 (self.partons, [])])),
                          ([1, 2], [5], []))
+        # what radiates is decided by the splittings FKS generates, not by
+        # perturbation_couplings, which the mixed expansion fills with
+        # ['QCD', 'QED'] for e+ e- > t t~ [QCD]: the beams stay safe ...
+        ee_tt = self.proc([([-11], []), ([11], [])], [([6], [-1]), ([-6], [])],
+                          couplings=('QCD', 'QED'))
+        self.assertEqual(self.charac(ee_tt), ([1, 2], [], []))
+        # ... unless QED splittings are generated: then they radiate
+        self.assertEqual(self.charac(ee_tt, splitting_types=('QCD', 'QED')),
+                         ([3, 4], [1, 2], [3, 4]))
         # a a > w+{0} w- [QCD]: no coloured initial parton
         self.assertEqual(self.charac(self.proc([([22], []), ([22], [])],
                                                [([24], [0]), ([-24], [])])),
                          ([1, 2], [], []))
 
     def test_decay(self):
-        # t > w+{0} d [QCD]: the decaying particle, never split
+        # t > w+{0} d [QCD]: the decaying particle, never split, so it may
+        # enter a frame although it is coloured; the d may not
         self.assertEqual(self.charac(self.proc([([6], [])],
                                                [([24], [0]), ([1], [])])),
                          ([1], [3], []))

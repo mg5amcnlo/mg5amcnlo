@@ -674,7 +674,7 @@ class TestFKSOutput(unittest.TestCase):
             charac = banner_mod.ProcCharacteristic(os.path.join(
                 path, 'W', 'SubProcesses', 'proc_characteristics'))
             self.assertEqual(charac['me_frame_cm_legs'], [3, 4])
-            self.assertEqual(charac['me_frame_unsafe_legs'], [4])
+            self.assertEqual(charac['me_frame_unsafe_legs'], [1, 2, 4])
             self.assertEqual(charac['me_frame_default_legs'], [3])
 
             # the card as written: the W rest frame, accepted at launch

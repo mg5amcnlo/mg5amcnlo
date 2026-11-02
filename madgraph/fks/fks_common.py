@@ -869,7 +869,8 @@ def get_user_leg_order(process, pert = 'QCD'):
     return [leg['number'] for leg in leglist]
 
 
-def me_frame_characteristics(processes, density=False):
+def me_frame_characteristics(processes, density=False,
+                             splitting_types=('QCD',)):
     """What the run_card me_frame may mean for these NLO processes, in the
     leg numbering of the process as the user wrote it (the numbering of
     me_frame). Returns (cm_legs, unsafe_legs, default_legs), sorted lists.
@@ -900,10 +901,22 @@ def me_frame_characteristics(processes, density=False):
         the Born, the virtual and every counterterm, and for the real it
         is a function of its physical momenta alone.
 
-    unsafe_legs: massless coloured final-state legs. A collinear splitting
-    changes such a leg by a finite amount, so a frame containing it is not
-    infrared safe once real emission is computed. When cm_legs contains
-    one, me_frame = [1, 2] has no infrared-safe NLO definition at all.
+    unsafe_legs: the legs whose momentum changes by a finite amount in an
+    infrared limit, so that a frame containing them is not infrared safe
+    once real emission is computed:
+      - massless final-state legs charged under the perturbation (a jet for
+        [QCD]): a collinear splitting shares their momentum;
+      - initial-state legs of a collision charged under it (the partons of
+        p p for [QCD]): the real emission and the reduced Born carry
+        different momentum fractions even in the collinear limit.
+    Never the decaying particle of a 1 -> n process, whatever its charge:
+    FKS does not split it (fks_base.find_reals), and its momentum is the
+    total momentum in every configuration. Nor a beam that is not charged
+    under the perturbation (e+ e- with [QCD]). When cm_legs contains an
+    unsafe leg, me_frame = [1, 2] has no infrared-safe NLO definition.
+
+    splitting_types: the kinds of splitting the real emission was
+    generated with (proc_characteristics), 'QCD' and/or 'QED'.
 
     All three are empty when no massive particle is polarised and no
     spin-density matrix is asked for (output --density, density=True): the
@@ -937,24 +950,38 @@ def me_frame_characteristics(processes, density=False):
         final = [n for n, leg in enumerate(legs, 1) if leg.get('state')]
         # [LOonly=...]: no real emission, so nothing to be infrared safe for
         has_real = proc.get('NLO_mode') != 'LOonly'
-        initial_coloured = any(p.get('color') != 1
-                               for n in initial for p in particles[n - 1])
+        # what splits is what FKS generated splittings for (the run's
+        # splitting_types), not perturbation_couplings: with the mixed
+        # expansion e+ e- > t t~ [QCD] carries ['QCD', 'QED'] there
+        orders = splitting_types
 
-        if len(initial) == 2 and has_real and initial_coloured:
+        def splits(p):
+            """the particle radiates or splits under the perturbation"""
+            return ('QCD' in orders and p.get('color') != 1) or \
+                   ('QED' in orders and (p.get('charge') != 0 or
+                                         p.get('pdg_code') == 22))
+
+        initial_radiates = any(splits(p) for n in initial
+                               for p in particles[n - 1])
+
+        if len(initial) == 2 and has_real and initial_radiates:
             cm_legs_isr.update(final)
         else:
             cm_legs.update(initial)
 
-        if len(initial) == 2 and initial_coloured:
+        if len(initial) == 2 and initial_radiates:
             default_legs.update(
                 n for n in final if all(p.get('mass').lower() != 'zero'
                                         for p in particles[n - 1]))
 
         if has_real:
             unsafe_legs.update(
-                n for n in final if any(p.get('color') != 1 and
+                n for n in final if any(splits(p) and
                                         p.get('mass').lower() == 'zero'
                                         for p in particles[n - 1]))
+            if len(initial) == 2:
+                unsafe_legs.update(n for n in initial
+                                   if any(splits(p) for p in particles[n - 1]))
 
     return (sorted(cm_legs_isr or cm_legs), sorted(unsafe_legs),
             sorted(default_legs))
