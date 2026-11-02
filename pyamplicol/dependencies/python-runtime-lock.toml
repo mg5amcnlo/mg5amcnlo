@@ -159,22 +159,22 @@ dependencies = []
 
 [[packages]]
 distribution = "symbolica"
-version = "3.0.0"
+version = "3.0.3"
 license = "LicenseRef-Symbolica-Proprietary"
 direct = true
 dependencies = []
 
   [[packages.artifacts]]
-  filename = "symbolica-3.0.0-cp39-abi3-macosx_10_12_x86_64.whl"
-  sha256 = "b2ea03b9be72a3ebc3fa950d7380b09223084cb5554aa0877c59e12d7749c2a7"
+  filename = "symbolica-3.0.3-cp39-abi3-macosx_10_12_x86_64.whl"
+  sha256 = "c7f11e7cd407a7c550dc7f658d367b6962e25ebdd78a1c3233f87735236655e9"
 
   [[packages.artifacts]]
-  filename = "symbolica-3.0.0-cp39-abi3-macosx_11_0_arm64.whl"
-  sha256 = "6b7414d8d06ac20c92460e0685c794d97afe976968b5fba5cc9562c471b2365d"
+  filename = "symbolica-3.0.3-cp39-abi3-macosx_11_0_arm64.whl"
+  sha256 = "459328cfaa156c6b979bfa168c8aaa552ead1477e1dd1990a79c9905cca5800b"
 
   [[packages.artifacts]]
-  filename = "symbolica-3.0.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
-  sha256 = "a2977f78d8f40ce3206ba49850cf75f473785a32a9368e6115d059755a48d15e"
+  filename = "symbolica-3.0.3-cp39-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
+  sha256 = "3d4325d6741ecc9994971c7a5c8e29958c4fa6f0ac219c00cb8302a2b2ebe7d6"
 
 [[packages]]
 distribution = "tomli-w"
