@@ -1551,8 +1551,8 @@ class MG7ReweightingTest(unittest.TestCase):
         def fake_run(process, card_path, decision):
             seen.append(('run', os.path.basename(process.run_path),
                          process.run_card['run']['output_format'], decision))
-        with mock.patch.object(launch, 'prepare_reweighting', fake_prepare), \
-                mock.patch.object(launch, 'run_reweighting', fake_run):
+        with mock.patch.object(cli, 'prepare_reweighting', fake_prepare), \
+                mock.patch.object(cli, 'run_reweighting', fake_run):
             cmd.do_reweight('run_01 --reweight=%s --reweight-backend=madtrex' % card)
         self.assertEqual(seen, [('prepare', {'reweight': 'ON'}, 'madtrex'),
                                 ('run', 'run_01', 'lhe', 'DECISION')])

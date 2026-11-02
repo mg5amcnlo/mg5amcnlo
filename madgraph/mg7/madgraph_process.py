@@ -1519,9 +1519,13 @@ class MadgraphProcess:
             # older outputs have no check script
             if os.path.isfile(check):
                 self.check_pyamplicol(check)
+        # as for the madmatrix libraries (the sub-makes share the jobs)
+        nb_core = self.run_card["run"]["cpu_thread_pool_size"]
+        if not nb_core or nb_core < 0:
+            nb_core = os.cpu_count() or 1
         for path in paths:
             logger.info(f"Compiling the AmpliCol matrix elements in {path}, see {log_path}")
-            self.make_subprocesses(path, [], 1, log_path)
+            self.make_subprocesses(path, [], nb_core, log_path)
 
     def hel_recycling_make_args(self) -> list[str]:
         """HRMAXMB=... and HRNOBLAS=... for make (madmatrix.mk), from the hidden

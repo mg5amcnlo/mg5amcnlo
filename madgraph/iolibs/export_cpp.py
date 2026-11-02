@@ -3647,12 +3647,17 @@ class ProcessExporterMG7(ProcessExporterCPP):
         }
 
     def amplicol_processes(self):
-        """MG processes standing for the [amplicol] processes."""
+        """MG processes standing for the [amplicol] processes (built once: for
+        p p it is the product of all initial-state flavours)."""
         if not getattr(self, 'amplicol_defs', None):
             return []
-        import madgraph.iolibs.export_amplicol as export_amplicol
-        return export_amplicol.representative_processes(
-            self.amplicol_defs, self.amplicol_model)
+        cached = getattr(self, '_amplicol_processes', None)
+        if cached is None or cached[0] is not self.amplicol_defs:
+            import madgraph.iolibs.export_amplicol as export_amplicol
+            cached = (self.amplicol_defs, export_amplicol.representative_processes(
+                self.amplicol_defs, self.amplicol_model))
+            self._amplicol_processes = cached
+        return cached[1]
 
     def export_amplicol(self):
         """The [amplicol] processes, as subprocesses after the madmatrix ones."""
@@ -3756,9 +3761,10 @@ class ProcessExporterMG7(ProcessExporterCPP):
                              for me in matrix_elements['matrix_elements']]
         except (KeyError, TypeError):
             processes = None
-        amplicol = bool(self.amplicol_processes())
+        amplicol_procs = self.amplicol_processes()
+        amplicol = bool(amplicol_procs)
         if amplicol:
-            processes = (processes or []) + [self.amplicol_processes()]
+            processes = (processes or []) + [amplicol_procs]
 
         if processes:
             run_card.create_default_for_process(self.proc_characteristic,
@@ -3797,10 +3803,11 @@ class ProcessExporterMG7(ProcessExporterCPP):
             me_list = []
 
         procs = list(self.amplicol_processes())
+        amplicol_nexternal = max((len(p.get('legs')) for p in procs), default=0)
         qcd_orders = set(entry['qcd_power'] for entry in self.process_info
                          if entry.get('backend') == 'amplicol')
         if procs:
-            pc['nexternal'] = max(pc['nexternal'], len(procs[0].get('legs')))
+            pc['nexternal'] = max(pc['nexternal'], amplicol_nexternal)
             pc['ninitial'] = 2
         for me in me_list:
             if not me.get('processes'):

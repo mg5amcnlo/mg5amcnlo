@@ -62,10 +62,11 @@ def channel_topology(
     order: list[int],
     resonances: list[tuple[int, list[int]]],
     process: MadgraphProcess,
-) -> tuple[ms.Topology, list[int]]:
+) -> tuple[ms.Topology, list[int], int]:
     """The topology of a colour-ordered phase-space channel, a t-channel chain
     through the final-state legs and the resonances (pdg, legs) that decay to
-    them, and its colour order over the children of that chain."""
+    them, its colour order over the children of that chain, and the number of
+    chain propagators (which come first among the propagators)."""
     n_in = len(incoming_masses)
     legs = [frozenset(r_legs) for _, r_legs in resonances]
     top = [i for i, r in enumerate(legs) if not any(r < other for other in legs)]
@@ -118,7 +119,7 @@ def channel_topology(
         )
         if node not in color_order:
             color_order.append(node)
-    return topology, color_order
+    return topology, color_order, chain_count
 
 
 def channel_topologies(meta: dict, process: MadgraphProcess) -> list[tuple]:
@@ -219,9 +220,9 @@ def amplicol_subproc_args(meta: dict, process: MadgraphProcess) -> ms.SubprocArg
             for channel in range(len(topologies))
         ]
         # the chain propagators come first: one less than the root's children
-        chain_counts = [len(order) - len(meta["incoming"]) - 1 for _, order in topologies]
+        chain_counts = [count for _, _, count in topologies]
         layout = dict(
-            topologies=[topology for topology, _ in topologies],
+            topologies=[topology for topology, _, _ in topologies],
             permutations=[
                 [list(range(particle_count))] * len(channel) for channel in by_channel
             ],
@@ -335,7 +336,7 @@ class AmplicolSubprocess(MadgraphSubprocess):
         flavors = self.meta["flavors"]
         particle_count = len(self.incoming_masses) + len(self.outgoing_masses)
         channels = []
-        for index, (topology, color_order) in enumerate(
+        for index, (topology, color_order, _) in enumerate(
             channel_topologies(self.meta, self.process)
         ):
             mapping = ms.PhaseSpaceMapping(

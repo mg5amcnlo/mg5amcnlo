@@ -4145,7 +4145,18 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     # Add a process to the existing multiprocess definition
     # Generate a new amplitude
-    def add_backend_process(self, procdef, backend):
+    def check_amplicol_overlap(self, procdef, others, what):
+        """Refuse a process sharing a subprocess with another one, which would
+        count it twice (the duplicate check of 'add process')."""
+        import madgraph.iolibs.export_amplicol as export_amplicol
+        model = procdef.get('model')
+        for other in others:
+            if export_amplicol.overlapping(procdef, other, model):
+                raise self.InvalidCmd(
+                    "Duplicate process %s found: it overlaps %s. Please check "
+                    "your processes." % (procdef.nice_string(prefix=False), what(other)))
+
+    def add_backend_process(self, procdef, backend, warning_duplicate=True):
         """Keep a process whose matrix elements come from another backend than
         MG diagrams. It is exported by the mg7 output, without diagrams."""
 
@@ -4164,6 +4175,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if initial and initial[0] != procdef.get_ninitial():
             raise self.InvalidCmd(
                 "Can not mix processes with different number of initial states.")
+        if warning_duplicate:
+            self.check_amplicol_overlap(
+                procdef, list(self._curr_amplicol_defs),
+                lambda other: other.nice_string(prefix=False))
+            self.check_amplicol_overlap(
+                procdef, [amp.get('process') for amp in self._curr_amps],
+                lambda other: other.nice_string())
         self._curr_amplicol_defs.append(procdef)
         self._done_export = False
         logger.info("Process %s is computed by %s at output time" %
@@ -4270,7 +4288,7 @@ This implies that with decay chains:
                 line, backend = split_backend_line(line)
                 myprocdef = self.extract_process(line, proc_number=nb_proc)
                 if backend:
-                    return self.add_backend_process(myprocdef, backend)
+                    return self.add_backend_process(myprocdef, backend, warning_duplicate)
                 # 'left [treextree] right': hidden order selecting the
                 # interference, minimal orders of the right-hand process
                 diagram_generation.prepare_interference_process(myprocdef)
@@ -4284,6 +4302,10 @@ This implies that with decay chains:
             # existing processes
             if self._curr_amps and self._curr_amps[0].get_ninitial() != \
                myprocdef.get_ninitial() and not standalone_only:
+                raise self.InvalidCmd("Can not mix processes with different number of initial states.")
+            # [amplicol] processes are always 2 -> n
+            if self._curr_amplicol_defs and myprocdef.get_ninitial() != 2 \
+                    and not standalone_only:
                 raise self.InvalidCmd("Can not mix processes with different number of initial states.")
 
             # Check the propagator-only polarization braces: {G},{H},{Q},{W}
@@ -4353,6 +4375,10 @@ This implies that with decay chains:
     
                 for amp in amplitudes:
                     if amp not in self._curr_amps:
+                        if warning_duplicate and self._curr_amplicol_defs:
+                            self.check_amplicol_overlap(
+                                amp.get('process'), list(self._curr_amplicol_defs),
+                                lambda other: other.nice_string(prefix=False))
                         self._curr_amps.append(amp)
                     elif warning_duplicate:
                         raise self.InvalidCmd( "Duplicate process %s found. Please check your processes." % \
@@ -13019,7 +13045,8 @@ in the MadGraph7 option 'samurai' (instead of leaving it to its default 'auto').
                         mode['mode'] = 'MadSpin'
                     # The conditional statement tests whether we are dealing
                     # with a loop induced process.
-                    if isinstance(self._curr_amps[0], 
+                    # (an output with only [amplicol] processes has no amplitudes)
+                    if self._curr_amps and isinstance(self._curr_amps[0], 
                                          loop_diagram_generation.LoopAmplitude):
                         mode['optimized_output']=self.options['loop_optimized_output']
                         HelasMultiProcessClass = loop_helas_objects.LoopHelasProcess
@@ -13272,7 +13299,8 @@ in the MadGraph7 option 'samurai' (instead of leaving it to its default 'auto').
                                                        ('true', '1', 'yes')
             if (self._export_format == 'madevent' or cpp_recycling) and \
                 not 'no_helrecycling' in flaglist and \
-                not isinstance(self._curr_amps[0], loop_diagram_generation.LoopAmplitude):
+                not (self._curr_amps and isinstance(
+                    self._curr_amps[0], loop_diagram_generation.LoopAmplitude)):
                 for (name, flag, out) in wanted_lorentz[:]:
                     if out == 0:
                         newflag = list(flag) + ['P1N']

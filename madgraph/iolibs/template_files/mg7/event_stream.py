@@ -214,7 +214,9 @@ class EventStream:
         )
 
         self.seed = resolve_seed(pick(seed, run_args.get("seed", -1)))
-        load_context_data([self._context], [backend], madspace_data)
+        load_context_data(
+            [self._context], [backend], madspace_data, run_args["precision"]
+        )
         channel_generators = load_channels([self._context], config)
         # the maxima of all passes are fixed, so their settings do not matter
         groups = load_weighting_groups(

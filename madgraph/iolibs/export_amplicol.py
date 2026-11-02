@@ -195,6 +195,40 @@ def leg_pdgs(leg, model):
     return pdgs
 
 
+def leg_sets(process, model):
+    """(initial, final): the sets of pdg ids of the legs of a process definition
+    or of a process, which has one id per leg."""
+    initial, final = [], []
+    for leg in process.get('legs'):
+        if 'ids' in leg or leg.get('flavor'):
+            pdgs = set(leg_pdgs(leg, model))
+        else:
+            # one id, which may stand for the flavours MG merged into it
+            pid = leg.get('id')
+            members = model.get('merged_particles').get(abs(pid), [abs(pid)])
+            pdgs = {member if pid > 0 else -member for member in members}
+        (final if leg.get('state') else initial).append(pdgs)
+    return initial, final
+
+
+def overlapping(first, second, model):
+    """Whether two process definitions (or processes) have a process in common:
+    the initial legs in order, the final ones in any order."""
+    initial1, final1 = leg_sets(first, model)
+    initial2, final2 = leg_sets(second, model)
+    if len(initial1) != len(initial2) or len(final1) != len(final2) or \
+            any(not (one & two) for one, two in zip(initial1, initial2)):
+        return False
+
+    def match(index, free):
+        if index == len(final1):
+            return True
+        return any(final1[index] & final2[other] and
+                   match(index + 1, free - {other}) for other in free)
+
+    return match(0, frozenset(range(len(final2))))
+
+
 def process_name(procdef, model, multiparticles):
     """A directory name for a process definition, e.g. 'pp_jjj', with the
     multiparticle labels of the interface."""
@@ -245,7 +279,10 @@ def coupling_orders(procdef, model):
     import madgraph.core.diagram_generation as diagram_generation
     weighted = diagram_generation.MultiProcess.find_optimal_process_orders(
         procdef)['WEIGHTED']
-    hierarchy = model.get('order_hierarchy')
+    # a hierarchy 0 is a hidden order (INTERF, from the [treextree] processes),
+    # not a coupling: as in find_optimal_process_orders, it does not count
+    hierarchy = {order: weight for order, weight
+                 in model.get('order_hierarchy').items() if weight}
     lowest = min(hierarchy.values())
     vertices = len(procdef.get('legs')) - 2
     return {order: max((weighted - vertices * lowest) // (weight - lowest), 0)
@@ -430,10 +467,23 @@ def parameter_references(metadata):
     return references
 
 
-def export_amplicol_processes(dir_path, proc_defs, model, multiparticles=None,
-                              interactive=None, jobs=None):
+def export_amplicol_processes(*args, **kwargs):
     """Write SubProcesses/A<n>_<name> for every '[amplicol]' process definition
-    and return the subprocesses.json entries. ``interactive`` and ``jobs`` are
+    and return the subprocesses.json entries; see _export_amplicol_processes.
+
+    pyamplicol/install, which holds pinned dependencies (numpy, ...) too, is on
+    sys.path only while this runs: the worker gets it through PYTHONPATH, and it
+    must not shadow the packages of the rest of the MG5 session."""
+    saved = list(sys.path)
+    try:
+        return _export_amplicol_processes(*args, **kwargs)
+    finally:
+        sys.path[:] = saved
+
+
+def _export_amplicol_processes(dir_path, proc_defs, model, multiparticles=None,
+                               interactive=None, jobs=None):
+    """The body of export_amplicol_processes. ``interactive`` and ``jobs`` are
     those of the pyamplicol installation, see bootstrap.ensure_pyamplicol."""
     pyamplicol = check_pyamplicol(interactive, jobs)
     subproc_dir = pjoin(dir_path, 'SubProcesses')
