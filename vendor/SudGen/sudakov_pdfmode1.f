@@ -4,6 +4,24 @@ c     Raw FF probabilities cover two radiators. Other types cover one.
 c     Each gluon radiator has two colour lines. Convert the raw return
 c     to one emitter and one directed colour line in pysudakov below.
 c     See docs/audits/delta_noemission/investigation_report.md.
+      subroutine pysudakov_isr_parameters(alpha_mz,order,cmw,nfmax,
+     $     thresholds,pdfmode,status)
+c     Audited effective-coupling fingerprint of this archived grid;
+c     these parameters are not a recovered original generation log.
+c     See the archive investigation cited above for its numerical evidence.
+      implicit none
+      real*8 alpha_mz,thresholds(2)
+      integer order,nfmax,pdfmode,status
+      logical cmw
+      alpha_mz=0.1365d0
+      order=1
+      cmw=.false.
+      nfmax=5
+      thresholds=(/1.5d0,4.8d0/)
+      pdfmode=1
+      status=0
+      end subroutine pysudakov_isr_parameters
+
       function pysudakov(st,xm,id,itype,xmpart)
       implicit none
       real*8 pysudakov,st,xm,xmpart(21)

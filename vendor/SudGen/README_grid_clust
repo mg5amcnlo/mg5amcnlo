@@ -23,6 +23,17 @@ The previous sudakov_template.f and compressed archives are retained for
 historical comparisons. The investigation and validation are recorded in
 docs/audits/delta_noemission/investigation_report.md.
 
+The selected provider also exports pysudakov_isr_parameters, consumed by
+the optional DeltaBackwardISR source correction. It declares the audited
+archived ISR profile: alpha_s(MZ)=0.1365, order 1, CMW off, nfmax=5,
+thresholds 1.5/4.8 GeV, PDFmode=1. This is the archive's effective-coupling
+fingerprint, not a recovered generation log. There is no independent
+backward-ISR coupling override. New/replacement grids must serialize their
+actual initialized generation settings in this same provider API; do not
+infer an old grid's settings from the current generation interface.
+Exports of providers without metadata get an unknown-status routine:
+they remain usable with backward ISR off, but cannot enable it.
+
 This default selects an existing archive and adjusts its lookup function.
 To generate a replacement with the same prescription, select ISR PDFmode
 1 in the generation interface and preserve these radiator/colour-line

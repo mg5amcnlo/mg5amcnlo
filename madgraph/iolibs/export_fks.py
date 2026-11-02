@@ -64,6 +64,42 @@ if madgraph.ordering:
 # the base to compute the orders_tag
 orderstag_base = 100
 
+
+def copy_sudakov_table(source, destination):
+    """Copy the standalone Delta provider and retain its coupling contract.
+
+    Historical/custom tables without metadata remain usable with backward
+    ISR disabled. Their explicit unknown status lets the runtime reject
+    backward ISR without guessing the table's generation settings.
+    """
+    copied = shutil.copy(source, destination, follow_symlinks=True)
+    with open(copied) as stream:
+        contents = stream.read()
+    if not re.search(r'^\s*subroutine\s+pysudakov_isr_parameters\b',
+                     contents, re.IGNORECASE | re.MULTILINE):
+        with open(copied, 'a') as stream:
+            stream.write("""
+
+c     This provider predates the ISR coupling metadata contract.
+c     Backward ISR requires a table with known generation parameters.
+      subroutine pysudakov_isr_parameters(alpha_mz,order,cmw,nfmax,
+     $     thresholds,pdfmode,status)
+      implicit none
+      real*8 alpha_mz,thresholds(2)
+      integer order,nfmax,pdfmode,status
+      logical cmw
+      alpha_mz=-1d0
+      order=-1
+      cmw=.false.
+      nfmax=-1
+      thresholds=-1d0
+      pdfmode=-1
+      status=1
+      end subroutine pysudakov_isr_parameters
+""")
+    return copied
+
+
 def get_orderstag(ords):
     step = 1
     tag = 0
@@ -187,8 +223,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             return 0
 
         # Copy the Pythia8 Sudakov tables (needed for MC@NLO-DELTA matching)
-        shutil.copy(os.path.join(self.mgme_dir,'vendor','SudGen','sudakov.f'), \
-                    os.path.join(self.dir_path,'SubProcesses','sudakov.f'),follow_symlinks=True)
+        copy_sudakov_table(os.path.join(self.mgme_dir,'vendor','SudGen','sudakov.f'),
+                          os.path.join(self.dir_path,'SubProcesses','sudakov.f'))
 
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
@@ -5090,8 +5126,8 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
             return 0
 
         # Copy the Pythia8 Sudakov tables (needed for MC@NLO-DELTA matching)
-        shutil.copy(os.path.join(self.mgme_dir,'vendor','SudGen','sudakov.f'), \
-                    os.path.join(self.dir_path,'SubProcesses','sudakov.f'),follow_symlinks=True)
+        copy_sudakov_table(os.path.join(self.mgme_dir,'vendor','SudGen','sudakov.f'),
+                          os.path.join(self.dir_path,'SubProcesses','sudakov.f'))
         
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",

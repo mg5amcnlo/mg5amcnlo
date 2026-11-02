@@ -1,0 +1,3306 @@
+{
+  "created_utc": "2026-11-02T11:02:49.413407+00:00",
+  "runs": {
+    "reference": {
+      "label": "Fresh backward ISR OFF",
+      "process": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardOFF",
+      "run": "run_backward_off",
+      "lhe": {
+        "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardOFF/Events/run_backward_off/events.lhe.gz",
+        "events": 1000000,
+        "scales_tags": 1000000,
+        "samples": {
+          "0": {
+            "events": 392559,
+            "S": 292737,
+            "positive": 373401,
+            "H": 99822,
+            "negative": 19158
+          },
+          "1": {
+            "events": 607441,
+            "S": 522082,
+            "positive": 450715,
+            "negative": 156726,
+            "H": 85359
+          }
+        },
+        "negative_fraction": 0.175884,
+        "absolute_weight_min": 76.42204,
+        "absolute_weight_max": 76.42204,
+        "physical_event_order_sha256": "cf297c81a74bd1a52c069c7f2c3120c369710dbfeb645a61115048fbf75763df",
+        "headers_without_scalup_sha256": "9b0414c63980dee3e66149bc5a82e9155cc14725e6a037f515d3af5b164e0006",
+        "scalup_GeV": {
+          "0:H": {
+            "min": 0.067643265,
+            "p01": 6.849177922,
+            "p10": 29.4510078,
+            "median": 86.62428349999999,
+            "p90": 219.32672700000006,
+            "p99": 468.6692170999992,
+            "max": 1435.9412
+          },
+          "0:S": {
+            "min": 10.08592,
+            "p01": 34.56924116,
+            "p10": 60.8319236,
+            "median": 81.716555,
+            "p90": 128.75174800000002,
+            "p99": 258.54000360000083,
+            "max": 1216.7542
+          },
+          "1:H": {
+            "min": 0.0039185794,
+            "p01": 0.8807179196,
+            "p10": 3.31039358,
+            "median": 14.411882,
+            "p90": 78.04762019999995,
+            "p99": 271.8822371999999,
+            "max": 1309.1005
+          },
+          "1:S": {
+            "min": 10.000006,
+            "p01": 10.11482191,
+            "p10": 11.6314173,
+            "median": 27.316572,
+            "p90": 246.377607,
+            "p99": 624.3312475000001,
+            "max": 4186.8729
+          }
+        },
+        "sample_type_signs": {
+          "0:S": {
+            "events": 292737,
+            "negative": 10131,
+            "positive": 282606,
+            "negative_fraction": 0.034607856198567315,
+            "signed_weight_sum": 20823095.348999992,
+            "absolute_weight_sum": 22371558.72347999
+          },
+          "0:H": {
+            "events": 99822,
+            "negative": 9027,
+            "positive": 90795,
+            "negative_fraction": 0.09043096712147623,
+            "signed_weight_sum": 6248877.36672,
+            "absolute_weight_sum": 7628600.876880001
+          },
+          "1:S": {
+            "events": 522082,
+            "negative": 119479,
+            "positive": 402603,
+            "negative_fraction": 0.22885102340245403,
+            "signed_weight_sum": 21636913.652960006,
+            "absolute_weight_sum": 39898571.48728001
+          },
+          "1:H": {
+            "events": 85359,
+            "negative": 37247,
+            "positive": 48112,
+            "negative_fraction": 0.436357033236097,
+            "signed_weight_sum": 830325.4645999998,
+            "absolute_weight_sum": 6523308.91236
+          }
+        },
+        "signed_weight_mean_pb": 49.53921183327998,
+        "sha256": "c0729af9fa7fb6f3c74c02075b6019ed77cf841267367575f550d06bb5aefaf5"
+      },
+      "hwu": {
+        "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardOFF/Events/run_backward_off/plot_PYTHIA8_1_0.HwU",
+        "rates_pb": {
+          "0": {
+            "central": 20.929782,
+            "stat_error": 0.042567214
+          },
+          "1": {
+            "central": 10.008458,
+            "stat_error": 0.032693721
+          },
+          "SUM": {
+            "central": 30.938241,
+            "stat_error": 0.05367352
+          }
+        },
+        "max_histogram_sum_relative_residual": 1.4475891004567156e-07,
+        "sha256": "02c9f779e37ff04cee3fa92573503991ae7764a314533a25577ebb080642e498"
+      },
+      "shower": {
+        "jobs": 20,
+        "counts": {
+          "SUM": {
+            "tried": 1000000,
+            "selected": 1000000,
+            "accepted": 493268
+          },
+          "0": {
+            "tried": 392559,
+            "selected": 392559,
+            "accepted": 310251
+          },
+          "1": {
+            "tried": 607441,
+            "selected": 607441,
+            "accepted": 183017
+          }
+        },
+        "messages": {
+          "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 20,
+          "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 20,
+          "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 20,
+          "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 20,
+          "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 188,
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1886,
+          "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 20,
+          "Abort from Pythia::next: reached end of Les Houches Events File": 11
+        },
+        "errors_or_unexpected_aborts": 0
+      },
+      "shower_provenance": {
+        "mode": "live split logs"
+      },
+      "integration": {
+        "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardOFF/Events/run_backward_off/res_2.txt",
+        "absolute_pb": 76.4220397,
+        "absolute_error_pb": 0.11461,
+        "signed_pb": 49.4660754,
+        "signed_error_pb": 0.11447
+      },
+      "provenance": {
+        "file_sha256": {
+          "Cards/run_card.dat": "597d3057d7febc52c6b66ded35801420f75ffcdad1712470cfd6fe55fd7612e0",
+          "Cards/shower_card.dat": "92b14979289fd88e4fb31fb4362b412057ae8fab3a22f7d503ff35938e82c5c2",
+          "Cards/FKS_params.dat": "86f334a151b4abf18e7c37397059b7c7faf34de7f857c8ef55add4c8ea9f5f31",
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/MadLoopParams.dat": "a9f1e587e43241a5dc0797f1a238459f422729ec9979ffd7f0f0848499f1c814",
+          "Cards/proc_card_mg5.dat": "eb9666920ec6927df045b63554f5272c4dfadfbb5aa46e332c1d2bffc3a7f954",
+          "SubProcesses/montecarlocounter.f": "713100848880ee93c4879f62aefb506111e9ede9b2b511b24ef15357b8ec819b",
+          "SubProcesses/FKSParams.f90": "fbafffd0463c12036dfcf5901c45b529814fc958ce0326b390a10d9c963e1973",
+          "SubProcesses/sudakov.f": "0014fb594718bd1273724a4c9d08beceeaf30d037e19a9712b9a9617e007a226",
+          "SubProcesses/scale_module.f90": "8bf8b2f7fbe205b26ecf8e1d16c8e829f7ba196ca47e6e189009fc44c87b4868",
+          "SubProcesses/driver_mintMC.f": "db0645a918d7e8499621e2b92f1041eeb87adadf633235e7ac9bfb397785434c",
+          "Events/run_backward_off/run_backward_off_tag_1_banner.txt": "98194f5321fb7d934db30bafd974fac9984e0c379b7a6427aaddd7fb618bde6c"
+        },
+        "steering_variants": {
+          "e2fc0264666c6d51dc8afc77e7aa8055308b3876a023bbe6402b05dc34ed9e14": [
+            "MCatNLO/RUN_PYTHIA8_1/run_1/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_10/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_11/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_12/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_13/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_14/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_15/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_16/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_17/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_18/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_19/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_2/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_20/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_3/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_4/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_5/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_6/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_7/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_8/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_9/Pythia8.cmd"
+          ]
+        },
+        "steering_settings": {
+          "e2fc0264666c6d51dc8afc77e7aa8055308b3876a023bbe6402b05dc34ed9e14": {
+            "main:numberofevents": "50000",
+            "main:sparemode1": "50000",
+            "main:spareword1": "average",
+            "main:timesallowerrors": "5001",
+            "init:showchangedparticledata": "off",
+            "next:numbershowevent": "2",
+            "stat:showprocesslevel": "on",
+            "stat:showerrors": "on",
+            "check:eptolerr": "0.001",
+            "beams:frametype": "4",
+            "beams:lhef": "events.lhe",
+            "pdf:pset": "LHAPDF6:NNPDF23_nlo_as_0119_qed",
+            "partonlevel:mpi": "off",
+            "hadronlevel:hadronize": "off",
+            "timeshower:ptmaxmatch": "1",
+            "timeshower:ptmaxfudge": "1.",
+            "timeshower:alphasvalue": "0.118",
+            "timeshower:alphasorder": "1",
+            "timeshower:alphaemorder": "0",
+            "timeshower:dampenbeamrecoil": "off",
+            "timeshower:globalrecoil": "on",
+            "timeshower:nmaxglobalrecoil": "1",
+            "timeshower:globalrecoilmode": "2",
+            "timeshower:nmaxglobalbranch": "1",
+            "timeshower:npartonsinborn": "-1",
+            "timeshower:limitptmaxglobal": "on",
+            "timeshower:qedshowerbyq": "off",
+            "timeshower:qedshowerbyl": "off",
+            "timeshower:qedshowerbygamma": "off",
+            "timeshower:qedshowerbyother": "off",
+            "timeshower:mmaxgamma": "10e0",
+            "timeshower:alphasusecmw": "false",
+            "timeshower:weightgluontoquark": "1",
+            "timeshower:recoildeadcone": "on",
+            "spaceshower:ptmaxmatch": "1",
+            "spaceshower:ptmaxfudge": "1.",
+            "spaceshower:alphasvalue": "0.118",
+            "spaceshower:alphasorder": "1",
+            "spaceshower:alphaemorder": "0",
+            "spaceshower:qedshowerbyq": "off",
+            "spaceshower:qedshowerbyl": "off",
+            "spaceshower:rapidityorder": "off",
+            "spaceshower:alphasusecmw": "false",
+            "beamremnants:primordialkt": "off",
+            "1:m0": "0.33",
+            "2:m0": "0.33",
+            "3:m0": "0.5",
+            "4:m0": "1.5",
+            "5:m0": "4.8",
+            "6:m0": "173.0",
+            "11:m0": "0.000510999",
+            "13:m0": "0.105658",
+            "15:m0": "1.77682",
+            "23:m0": "91.188",
+            "24:m0": "80.419",
+            "25:m0": "125.0",
+            "6:mwidth": "1.4915",
+            "23:mwidth": "2.441404",
+            "24:mwidth": "2.0476",
+            "25:mwidth": "0.006382339",
+            "jetmatching:dofxfx": "on",
+            "jetmatching:merge": "on",
+            "jetmatching:qcut": "70.000",
+            "jetmatching:qcutme": "10.0",
+            "jetmatching:coneradius": "1.0",
+            "jetmatching:etajetmax": "1000.0",
+            "jetmatching:njetmax": "1",
+            "jetmatching:scheme": "1",
+            "jetmatching:setmad": "off",
+            "beams:setproductionscalesfromlhef": "on",
+            "spaceshower:mecorrections": "off",
+            "timeshower:mecorrections": "on",
+            "timeshower:meextended": "off",
+            "timeshower:meafterfirst": "off",
+            "111:maydecay": "false",
+            "24:maydecay": "false",
+            "23:maydecay": "false"
+          }
+        },
+        "run_summary": "\n   --------------------------------------------------------------\n      Summary:\n      Process p p > w+ z [QCD] @0 ; p p > w+ z j [QCD] @1\n      Run at p-p collider (6500.0 + 6500.0 GeV)\n      Number of events generated: 1000000\n      Total cross section: 4.947e+01 +- 1.1e-01 pb\n   --------------------------------------------------------------\n"
+      },
+      "accepted_signs_from_uniform_weights": {
+        "0": {
+          "positive": 292061,
+          "negative": 18190,
+          "negative_fraction": 0.058629948009837195
+        },
+        "1": {
+          "positive": 156990,
+          "negative": 26027,
+          "negative_fraction": 0.1422108328734489
+        },
+        "SUM": {
+          "positive": 449051,
+          "negative": 44217,
+          "negative_fraction": 0.0896409254198529
+        }
+      }
+    },
+    "new": {
+      "label": "Fresh backward ISR ON",
+      "process": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardON",
+      "run": "run_backward_on",
+      "lhe": {
+        "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardON/Events/run_backward_on/events.lhe.gz",
+        "events": 1000000,
+        "scales_tags": 1000000,
+        "samples": {
+          "0": {
+            "events": 392280,
+            "H": 101091,
+            "positive": 372583,
+            "S": 291189,
+            "negative": 19697
+          },
+          "1": {
+            "events": 607720,
+            "S": 522460,
+            "negative": 156376,
+            "positive": 451344,
+            "H": 85260
+          }
+        },
+        "negative_fraction": 0.176073,
+        "absolute_weight_min": 76.664969,
+        "absolute_weight_max": 76.664969,
+        "physical_event_order_sha256": "e156a329f9c375dc674960da02cecfa16b20aadeeb474138664924ca9cb0cede",
+        "headers_without_scalup_sha256": "64a6ce9f3cc65f213cc34fca88d7949172d49a2d9ebeaa73465e416c85e3128f",
+        "scalup_GeV": {
+          "0:H": {
+            "min": 0.31918252,
+            "p01": 6.66545968,
+            "p10": 28.283018,
+            "median": 85.59201,
+            "p90": 217.6999,
+            "p99": 466.23629000000204,
+            "max": 1575.6698
+          },
+          "0:S": {
+            "min": 10.040637,
+            "p01": 34.79828392,
+            "p10": 60.929343,
+            "median": 81.723284,
+            "p90": 128.295918,
+            "p99": 258.43910359999984,
+            "max": 1080.3282
+          },
+          "1:H": {
+            "min": 0.0015520665,
+            "p01": 0.8809663624,
+            "p10": 3.31046715,
+            "median": 14.4400935,
+            "p90": 78.49325420000001,
+            "p99": 270.0056457,
+            "max": 1344.1334
+          },
+          "1:S": {
+            "min": 10.00001,
+            "p01": 10.115398879999999,
+            "p10": 11.6274603,
+            "median": 27.3181075,
+            "p90": 246.57515600000022,
+            "p99": 625.0986654999988,
+            "max": 4381.08
+          }
+        },
+        "sample_type_signs": {
+          "0:S": {
+            "events": 291189,
+            "negative": 10162,
+            "positive": 281027,
+            "negative_fraction": 0.03489829629553314,
+            "signed_weight_sum": 20765856.828185,
+            "absolute_weight_sum": 22323995.65814099
+          },
+          "0:H": {
+            "events": 101091,
+            "negative": 9535,
+            "positive": 91556,
+            "negative_fraction": 0.09432095834446191,
+            "signed_weight_sum": 6288137.422349002,
+            "absolute_weight_sum": 7750138.381179001
+          },
+          "1:S": {
+            "events": 522460,
+            "negative": 119568,
+            "positive": 402892,
+            "negative_fraction": 0.22885579757301994,
+            "signed_weight_sum": 21721025.676955998,
+            "absolute_weight_sum": 40054379.70374001
+          },
+          "1:H": {
+            "events": 85260,
+            "negative": 36808,
+            "positive": 48452,
+            "negative_fraction": 0.43171475486746425,
+            "signed_weight_sum": 892686.899036,
+            "absolute_weight_sum": 6536455.256940001
+          }
+        },
+        "signed_weight_mean_pb": 49.66770682652601,
+        "sha256": "17cbc7d8dddfb179236fb7884e225e92ca9d36ad0260346a4aed0db44e4c1342"
+      },
+      "hwu": {
+        "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardON/Events/run_backward_on/plot_PYTHIA8_1_0.HwU",
+        "rates_pb": {
+          "0": {
+            "central": 20.881391,
+            "stat_error": 0.042666242
+          },
+          "1": {
+            "central": 10.098387,
+            "stat_error": 0.032787253
+          },
+          "SUM": {
+            "central": 30.979777,
+            "stat_error": 0.053809031
+          }
+        },
+        "max_histogram_sum_relative_residual": 1.5688289172239381e-07,
+        "sha256": "d49726de696bc233ffc193b105ba3aabb593cafd3702f836750c75343a2db01e"
+      },
+      "shower": {
+        "jobs": 20,
+        "counts": {
+          "SUM": {
+            "tried": 1000000,
+            "selected": 1000000,
+            "accepted": 492625
+          },
+          "0": {
+            "tried": 392280,
+            "selected": 392280,
+            "accepted": 309724
+          },
+          "1": {
+            "tried": 607720,
+            "selected": 607720,
+            "accepted": 182901
+          }
+        },
+        "messages": {
+          "Abort from Pythia::next: reached end of Les Houches Events File": 11,
+          "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 20,
+          "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 20,
+          "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 20,
+          "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 20,
+          "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 153,
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1916,
+          "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 20
+        },
+        "errors_or_unexpected_aborts": 0
+      },
+      "shower_provenance": {
+        "mode": "live split logs"
+      },
+      "integration": {
+        "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardON/Events/run_backward_on/res_2.txt",
+        "absolute_pb": 76.6649687,
+        "absolute_error_pb": 0.066773,
+        "signed_pb": 49.5514544,
+        "signed_error_pb": 0.067357
+      },
+      "provenance": {
+        "file_sha256": {
+          "Cards/run_card.dat": "597d3057d7febc52c6b66ded35801420f75ffcdad1712470cfd6fe55fd7612e0",
+          "Cards/shower_card.dat": "92b14979289fd88e4fb31fb4362b412057ae8fab3a22f7d503ff35938e82c5c2",
+          "Cards/FKS_params.dat": "520e00995aa0c4fa06b7fb1c98d403b076ddb492407562d88037856838b1c7ff",
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/MadLoopParams.dat": "a9f1e587e43241a5dc0797f1a238459f422729ec9979ffd7f0f0848499f1c814",
+          "Cards/proc_card_mg5.dat": "eb9666920ec6927df045b63554f5272c4dfadfbb5aa46e332c1d2bffc3a7f954",
+          "SubProcesses/montecarlocounter.f": "713100848880ee93c4879f62aefb506111e9ede9b2b511b24ef15357b8ec819b",
+          "SubProcesses/FKSParams.f90": "fbafffd0463c12036dfcf5901c45b529814fc958ce0326b390a10d9c963e1973",
+          "SubProcesses/sudakov.f": "0014fb594718bd1273724a4c9d08beceeaf30d037e19a9712b9a9617e007a226",
+          "SubProcesses/scale_module.f90": "8bf8b2f7fbe205b26ecf8e1d16c8e829f7ba196ca47e6e189009fc44c87b4868",
+          "SubProcesses/driver_mintMC.f": "db0645a918d7e8499621e2b92f1041eeb87adadf633235e7ac9bfb397785434c",
+          "Events/run_backward_on/run_backward_on_tag_1_banner.txt": "98194f5321fb7d934db30bafd974fac9984e0c379b7a6427aaddd7fb618bde6c"
+        },
+        "steering_variants": {
+          "e2fc0264666c6d51dc8afc77e7aa8055308b3876a023bbe6402b05dc34ed9e14": [
+            "MCatNLO/RUN_PYTHIA8_1/run_1/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_10/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_11/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_12/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_13/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_14/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_15/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_16/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_17/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_18/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_19/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_2/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_20/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_3/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_4/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_5/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_6/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_7/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_8/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_9/Pythia8.cmd"
+          ]
+        },
+        "steering_settings": {
+          "e2fc0264666c6d51dc8afc77e7aa8055308b3876a023bbe6402b05dc34ed9e14": {
+            "main:numberofevents": "50000",
+            "main:sparemode1": "50000",
+            "main:spareword1": "average",
+            "main:timesallowerrors": "5001",
+            "init:showchangedparticledata": "off",
+            "next:numbershowevent": "2",
+            "stat:showprocesslevel": "on",
+            "stat:showerrors": "on",
+            "check:eptolerr": "0.001",
+            "beams:frametype": "4",
+            "beams:lhef": "events.lhe",
+            "pdf:pset": "LHAPDF6:NNPDF23_nlo_as_0119_qed",
+            "partonlevel:mpi": "off",
+            "hadronlevel:hadronize": "off",
+            "timeshower:ptmaxmatch": "1",
+            "timeshower:ptmaxfudge": "1.",
+            "timeshower:alphasvalue": "0.118",
+            "timeshower:alphasorder": "1",
+            "timeshower:alphaemorder": "0",
+            "timeshower:dampenbeamrecoil": "off",
+            "timeshower:globalrecoil": "on",
+            "timeshower:nmaxglobalrecoil": "1",
+            "timeshower:globalrecoilmode": "2",
+            "timeshower:nmaxglobalbranch": "1",
+            "timeshower:npartonsinborn": "-1",
+            "timeshower:limitptmaxglobal": "on",
+            "timeshower:qedshowerbyq": "off",
+            "timeshower:qedshowerbyl": "off",
+            "timeshower:qedshowerbygamma": "off",
+            "timeshower:qedshowerbyother": "off",
+            "timeshower:mmaxgamma": "10e0",
+            "timeshower:alphasusecmw": "false",
+            "timeshower:weightgluontoquark": "1",
+            "timeshower:recoildeadcone": "on",
+            "spaceshower:ptmaxmatch": "1",
+            "spaceshower:ptmaxfudge": "1.",
+            "spaceshower:alphasvalue": "0.118",
+            "spaceshower:alphasorder": "1",
+            "spaceshower:alphaemorder": "0",
+            "spaceshower:qedshowerbyq": "off",
+            "spaceshower:qedshowerbyl": "off",
+            "spaceshower:rapidityorder": "off",
+            "spaceshower:alphasusecmw": "false",
+            "beamremnants:primordialkt": "off",
+            "1:m0": "0.33",
+            "2:m0": "0.33",
+            "3:m0": "0.5",
+            "4:m0": "1.5",
+            "5:m0": "4.8",
+            "6:m0": "173.0",
+            "11:m0": "0.000510999",
+            "13:m0": "0.105658",
+            "15:m0": "1.77682",
+            "23:m0": "91.188",
+            "24:m0": "80.419",
+            "25:m0": "125.0",
+            "6:mwidth": "1.4915",
+            "23:mwidth": "2.441404",
+            "24:mwidth": "2.0476",
+            "25:mwidth": "0.006382339",
+            "jetmatching:dofxfx": "on",
+            "jetmatching:merge": "on",
+            "jetmatching:qcut": "70.000",
+            "jetmatching:qcutme": "10.0",
+            "jetmatching:coneradius": "1.0",
+            "jetmatching:etajetmax": "1000.0",
+            "jetmatching:njetmax": "1",
+            "jetmatching:scheme": "1",
+            "jetmatching:setmad": "off",
+            "beams:setproductionscalesfromlhef": "on",
+            "spaceshower:mecorrections": "off",
+            "timeshower:mecorrections": "on",
+            "timeshower:meextended": "off",
+            "timeshower:meafterfirst": "off",
+            "111:maydecay": "false",
+            "24:maydecay": "false",
+            "23:maydecay": "false"
+          }
+        },
+        "run_summary": "\n   --------------------------------------------------------------\n      Summary:\n      Process p p > w+ z [QCD] @0 ; p p > w+ z j [QCD] @1\n      Run at p-p collider (6500.0 + 6500.0 GeV)\n      Number of events generated: 1000000\n      Total cross section: 4.955e+01 +- 6.7e-02 pb\n   --------------------------------------------------------------\n"
+      },
+      "accepted_signs_from_uniform_weights": {
+        "0": {
+          "positive": 291048,
+          "negative": 18676,
+          "negative_fraction": 0.06029884671513993
+        },
+        "1": {
+          "positive": 157311,
+          "negative": 25590,
+          "negative_fraction": 0.13991175553988222
+        },
+        "SUM": {
+          "positive": 448359,
+          "negative": 44266,
+          "negative_fraction": 0.08985739659984776
+        }
+      }
+    },
+    "historical_1": {
+      "label": "Previous geometric mean",
+      "process": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_Hgeom",
+      "run": "run_hgeom",
+      "lhe": {
+        "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_Hgeom/Events/run_hgeom/events.lhe.gz",
+        "events": 1000000,
+        "scales_tags": 1000000,
+        "samples": {
+          "0": {
+            "events": 391267,
+            "H": 99501,
+            "positive": 372186,
+            "S": 291766,
+            "negative": 19081
+          },
+          "1": {
+            "events": 608733,
+            "S": 523204,
+            "negative": 157054,
+            "positive": 451679,
+            "H": 85529
+          }
+        },
+        "negative_fraction": 0.176135,
+        "absolute_weight_min": 76.606154,
+        "absolute_weight_max": 76.606154,
+        "physical_event_order_sha256": "7f276ab5720d7eecbae0604cc8c59a63483bbf1b67dd9ee9253ddbe8c9723914",
+        "headers_without_scalup_sha256": "ca537361256c0709fedfbf0454910c1da00ece8f1dfea155ddc7ae0eaaacfc08",
+        "scalup_GeV": {
+          "0:H": {
+            "min": 0.067643265,
+            "p01": 6.8491006,
+            "p10": 29.452768,
+            "median": 86.634489,
+            "p90": 219.40727,
+            "p99": 468.56455,
+            "max": 1435.9412
+          },
+          "0:S": {
+            "min": 10.08592,
+            "p01": 34.5643874,
+            "p10": 60.832246,
+            "median": 81.7168525,
+            "p90": 128.769675,
+            "p99": 258.6294679999989,
+            "max": 1216.7542
+          },
+          "1:H": {
+            "min": 0.00092630423,
+            "p01": 0.8946882392,
+            "p10": 3.30190096,
+            "median": 14.36382,
+            "p90": 79.6698864,
+            "p99": 269.7237412,
+            "max": 1411.9971
+          },
+          "1:S": {
+            "min": 10.000002,
+            "p01": 10.114804209999999,
+            "p10": 11.6330554,
+            "median": 27.421125,
+            "p90": 246.96969200000004,
+            "p99": 625.2040549999969,
+            "max": 4947.8512
+          }
+        },
+        "sample_type_signs": {
+          "0:S": {
+            "events": 291766,
+            "negative": 10090,
+            "positive": 281676,
+            "negative_fraction": 0.03458250790016657,
+            "signed_weight_sum": 20805158.940244008,
+            "absolute_weight_sum": 22351071.127964012
+          },
+          "0:H": {
+            "events": 99501,
+            "negative": 8991,
+            "positive": 90510,
+            "negative_fraction": 0.09036090089546839,
+            "signed_weight_sum": 6244857.067926002,
+            "absolute_weight_sum": 7622388.929154005
+          },
+          "1:S": {
+            "events": 523204,
+            "negative": 119847,
+            "positive": 403357,
+            "negative_fraction": 0.22906361572159234,
+            "signed_weight_sum": 21718610.720540002,
+            "absolute_weight_sum": 40080646.19741602
+          },
+          "1:H": {
+            "events": 85529,
+            "negative": 37207,
+            "positive": 48322,
+            "negative_fraction": 0.4350220393083048,
+            "signed_weight_sum": 851477.40171,
+            "absolute_weight_sum": 6552047.745466004
+          }
+        },
+        "signed_weight_mean_pb": 49.620104130419996,
+        "sha256": "4d7f86344201d3288caafdb43fed1a3f949c32796afc169895adc63339f86a38"
+      },
+      "hwu": {
+        "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_Hgeom/Events/run_hgeom/plot_PYTHIA8_1_0.HwU",
+        "rates_pb": {
+          "0": {
+            "central": 20.924817,
+            "stat_error": 0.042614512
+          },
+          "1": {
+            "central": 10.121129,
+            "stat_error": 0.032874396
+          },
+          "SUM": {
+            "central": 31.045946,
+            "stat_error": 0.053821206
+          }
+        },
+        "max_histogram_sum_relative_residual": 1.374866788580195e-07,
+        "sha256": "fc151a73122055bbb769bf841bf163ea398ff14c2eedc4d0c5de31052d3bb856"
+      },
+      "shower": {
+        "jobs": 20,
+        "counts": {
+          "SUM": {
+            "tried": 1000000,
+            "selected": 1000000,
+            "accepted": 493605
+          },
+          "0": {
+            "tried": 391267,
+            "selected": 391267,
+            "accepted": 309448
+          },
+          "1": {
+            "tried": 608733,
+            "selected": 608733,
+            "accepted": 184157
+          }
+        },
+        "messages": {
+          "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 20,
+          "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 20,
+          "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 20,
+          "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 20,
+          "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 173,
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1980,
+          "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 20,
+          "Abort from Pythia::next: reached end of Les Houches Events File": 7
+        },
+        "errors_or_unexpected_aborts": 0
+      },
+      "shower_provenance": {
+        "mode": "saved audit; split logs no longer retained",
+        "file": "/export/slow1/rikkert/FxFx_Delta/docs/audits/fxfx_delta_wz_h_scales/comparison.json",
+        "selection": "new",
+        "sha256": "e5f4bd76adc475f7ec5ee0699aa5c743ff7c55c30b1371b7caf7111ad3bf341c",
+        "event_cohort_checks": [
+          "events",
+          "physical_event_order_sha256",
+          "headers_without_scalup_sha256",
+          "scalup_GeV"
+        ]
+      },
+      "integration": {
+        "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_Hgeom/Events/run_hgeom/res_2.txt",
+        "absolute_pb": 76.6061538,
+        "absolute_error_pb": 0.065455,
+        "signed_pb": 49.5160924,
+        "signed_error_pb": 0.06647
+      },
+      "provenance": {
+        "file_sha256": {
+          "Cards/run_card.dat": "597d3057d7febc52c6b66ded35801420f75ffcdad1712470cfd6fe55fd7612e0",
+          "Cards/shower_card.dat": "92b14979289fd88e4fb31fb4362b412057ae8fab3a22f7d503ff35938e82c5c2",
+          "Cards/FKS_params.dat": "3a42a5704b3824b355946f44d26131cd52ba3e108de62c5004641a0639fe3233",
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/MadLoopParams.dat": "a9f1e587e43241a5dc0797f1a238459f422729ec9979ffd7f0f0848499f1c814",
+          "Cards/proc_card_mg5.dat": "eb9666920ec6927df045b63554f5272c4dfadfbb5aa46e332c1d2bffc3a7f954",
+          "SubProcesses/montecarlocounter.f": "554432b7b09075c21a8484e5d7d34b261d345af1849d23c2402659bd9a14071f",
+          "SubProcesses/FKSParams.f90": "e2b157c3926c0fdf7327f3de7374df76a4fae21cfd8cca287f4996abaac40d5b",
+          "SubProcesses/sudakov.f": "020c561c3d09fee13ea93c2faae4052206ac64bb2f1250b0ba552af7da63f10a",
+          "SubProcesses/scale_module.f90": "8bf8b2f7fbe205b26ecf8e1d16c8e829f7ba196ca47e6e189009fc44c87b4868",
+          "SubProcesses/driver_mintMC.f": "db0645a918d7e8499621e2b92f1041eeb87adadf633235e7ac9bfb397785434c",
+          "Events/run_hgeom/run_hgeom_tag_1_banner.txt": "98194f5321fb7d934db30bafd974fac9984e0c379b7a6427aaddd7fb618bde6c"
+        },
+        "steering_variants": {
+          "f66bebee916cbd522026c1db8a13d55719991157beb3c95c933e31cb558ce85d": [
+            "/export/slow1/rikkert/FxFx_Delta/docs/audits/fxfx_delta_wz_h_scales/cards/new_Pythia8.cmd"
+          ]
+        },
+        "steering_settings": {
+          "f66bebee916cbd522026c1db8a13d55719991157beb3c95c933e31cb558ce85d": {
+            "main:numberofevents": "50000",
+            "main:sparemode1": "50000",
+            "main:spareword1": "average",
+            "main:timesallowerrors": "5001",
+            "init:showchangedparticledata": "off",
+            "next:numbershowevent": "2",
+            "stat:showprocesslevel": "on",
+            "stat:showerrors": "on",
+            "check:eptolerr": "0.001",
+            "beams:frametype": "4",
+            "beams:lhef": "events.lhe",
+            "pdf:pset": "LHAPDF6:NNPDF23_nlo_as_0119_qed",
+            "partonlevel:mpi": "off",
+            "hadronlevel:hadronize": "off",
+            "timeshower:ptmaxmatch": "1",
+            "timeshower:ptmaxfudge": "1.",
+            "timeshower:alphasvalue": "0.118",
+            "timeshower:alphasorder": "1",
+            "timeshower:alphaemorder": "0",
+            "timeshower:dampenbeamrecoil": "off",
+            "timeshower:globalrecoil": "on",
+            "timeshower:nmaxglobalrecoil": "1",
+            "timeshower:globalrecoilmode": "2",
+            "timeshower:nmaxglobalbranch": "1",
+            "timeshower:npartonsinborn": "-1",
+            "timeshower:limitptmaxglobal": "on",
+            "timeshower:qedshowerbyq": "off",
+            "timeshower:qedshowerbyl": "off",
+            "timeshower:qedshowerbygamma": "off",
+            "timeshower:mmaxgamma": "10e0",
+            "timeshower:alphasusecmw": "false",
+            "timeshower:weightgluontoquark": "1",
+            "timeshower:recoildeadcone": "on",
+            "spaceshower:ptmaxmatch": "1",
+            "spaceshower:ptmaxfudge": "1.",
+            "spaceshower:alphasvalue": "0.118",
+            "spaceshower:alphasorder": "1",
+            "spaceshower:alphaemorder": "0",
+            "spaceshower:qedshowerbyq": "off",
+            "spaceshower:qedshowerbyl": "off",
+            "spaceshower:rapidityorder": "off",
+            "spaceshower:alphasusecmw": "false",
+            "beamremnants:primordialkt": "off",
+            "1:m0": "0.33",
+            "2:m0": "0.33",
+            "3:m0": "0.5",
+            "4:m0": "1.5",
+            "5:m0": "4.8",
+            "6:m0": "173.0",
+            "11:m0": "0.000510999",
+            "13:m0": "0.105658",
+            "15:m0": "1.77682",
+            "23:m0": "91.188",
+            "24:m0": "80.419",
+            "25:m0": "125.0",
+            "6:mwidth": "1.4915",
+            "23:mwidth": "2.441404",
+            "24:mwidth": "2.0476",
+            "25:mwidth": "0.006382339",
+            "jetmatching:dofxfx": "on",
+            "jetmatching:merge": "on",
+            "jetmatching:qcut": "70.000",
+            "jetmatching:qcutme": "10.0",
+            "jetmatching:coneradius": "1.0",
+            "jetmatching:etajetmax": "1000.0",
+            "jetmatching:njetmax": "1",
+            "jetmatching:scheme": "1",
+            "jetmatching:setmad": "off",
+            "beams:setproductionscalesfromlhef": "on",
+            "spaceshower:mecorrections": "off",
+            "timeshower:mecorrections": "on",
+            "timeshower:meextended": "off",
+            "timeshower:meafterfirst": "off",
+            "111:maydecay": "false",
+            "24:maydecay": "false",
+            "23:maydecay": "false"
+          }
+        },
+        "run_summary": "\n   --------------------------------------------------------------\n      Summary:\n      Process p p > w+ z [QCD] @0 ; p p > w+ z j [QCD] @1\n      Run at p-p collider (6500.0 + 6500.0 GeV)\n      Number of events generated: 1000000\n      Total cross section: 4.952e+01 +- 6.6e-02 pb\n   --------------------------------------------------------------\n"
+      },
+      "accepted_signs_from_uniform_weights": {
+        "0": {
+          "positive": 291298,
+          "negative": 18150,
+          "negative_fraction": 0.0586528269693131
+        },
+        "1": {
+          "positive": 158138,
+          "negative": 26019,
+          "negative_fraction": 0.14128705398111394
+        },
+        "SUM": {
+          "positive": 449436,
+          "negative": 44169,
+          "negative_fraction": 0.08948248093110889
+        }
+      }
+    },
+    "historical_2": {
+      "label": "Original hard scalar",
+      "process": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta",
+      "run": "run_01",
+      "lhe": {
+        "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta/Events/run_01/events.lhe.gz",
+        "events": 1000000,
+        "scales_tags": 1000000,
+        "samples": {
+          "0": {
+            "events": 391633,
+            "H": 99589,
+            "positive": 372532,
+            "negative": 19101,
+            "S": 292044
+          },
+          "1": {
+            "events": 608367,
+            "S": 522906,
+            "positive": 451306,
+            "H": 85461,
+            "negative": 157061
+          }
+        },
+        "negative_fraction": 0.176162,
+        "absolute_weight_min": 76.606154,
+        "absolute_weight_max": 76.606154,
+        "physical_event_order_sha256": "da2ea9765f3eff6a68a3f921404ce2e874306f8d835f51e00516f1e832423c52",
+        "headers_without_scalup_sha256": "a4e90e5525927bf08b590233996ba42c6bc811806de414f02bd5a6863465c5fa",
+        "scalup_GeV": {
+          "0:H": {
+            "min": 3.0039035,
+            "p01": 42.256382,
+            "p10": 74.02850600000001,
+            "median": 154.616,
+            "p90": 338.48990599999996,
+            "p99": 694.2846047999998,
+            "max": 2137.5709
+          },
+          "0:S": {
+            "min": 10.08592,
+            "p01": 34.56601603,
+            "p10": 60.8300134,
+            "median": 81.7155415,
+            "p90": 128.75711900000002,
+            "p99": 258.5358918000004,
+            "max": 1216.7542
+          },
+          "1:H": {
+            "min": 3.0015337,
+            "p01": 3.12192676,
+            "p10": 7.4962121,
+            "median": 25.808998,
+            "p90": 243.63548,
+            "p99": 653.8800119999999,
+            "max": 3166.2551
+          },
+          "1:S": {
+            "min": 10.000002,
+            "p01": 10.11471645,
+            "p10": 11.6311945,
+            "median": 27.372539500000002,
+            "p90": 246.510495,
+            "p99": 624.2297580000009,
+            "max": 4947.8512
+          }
+        },
+        "sample_type_signs": {
+          "0:S": {
+            "events": 292044,
+            "negative": 10099,
+            "positive": 281945,
+            "negative_fraction": 0.03458040569229294,
+            "signed_weight_sum": 20825076.54028401,
+            "absolute_weight_sum": 22372367.638776015
+          },
+          "0:H": {
+            "events": 99589,
+            "negative": 9002,
+            "positive": 90587,
+            "negative_fraction": 0.09039150910241091,
+            "signed_weight_sum": 6249913.074090002,
+            "absolute_weight_sum": 7629130.270706005
+          },
+          "1:S": {
+            "events": 522906,
+            "negative": 119845,
+            "positive": 403061,
+            "negative_fraction": 0.22919033248805712,
+            "signed_weight_sum": 21696088.511264,
+            "absolute_weight_sum": 40057817.56352402
+          },
+          "1:H": {
+            "events": 85461,
+            "negative": 37216,
+            "positive": 48245,
+            "negative_fraction": 0.4354734908320754,
+            "signed_weight_sum": 844889.272466,
+            "absolute_weight_sum": 6546838.526994004
+          }
+        },
+        "signed_weight_mean_pb": 49.61596739810403,
+        "sha256": "36d9f9dbc84c9b05224b175a9588cdc73aeaeeade3b6f2b4dd66caa2ba6c9a81"
+      },
+      "hwu": {
+        "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta/Events/run_01/plot_PYTHIA8_1_0.HwU",
+        "rates_pb": {
+          "0": {
+            "central": 20.886361,
+            "stat_error": 0.042526146
+          },
+          "1": {
+            "central": 10.07325,
+            "stat_error": 0.032801214
+          },
+          "SUM": {
+            "central": 30.959611,
+            "stat_error": 0.053706541
+          }
+        },
+        "max_histogram_sum_relative_residual": 1.1480304186185442e-07,
+        "sha256": "c6402e11e76d699ea98b2080c4a23b375a848892a40133c8a6c55dfbb3eaa56b"
+      },
+      "shower": {
+        "jobs": 20,
+        "counts": {
+          "SUM": {
+            "tried": 1000000,
+            "selected": 1000000,
+            "accepted": 491504
+          },
+          "0": {
+            "tried": 391633,
+            "selected": 391633,
+            "accepted": 308166
+          },
+          "1": {
+            "tried": 608367,
+            "selected": 608367,
+            "accepted": 183338
+          }
+        },
+        "messages": {
+          "Abort from Pythia::next: reached end of Les Houches Events File": 9,
+          "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 20,
+          "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 20,
+          "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 20,
+          "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 20,
+          "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 173,
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1811,
+          "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 20
+        },
+        "errors_or_unexpected_aborts": 0
+      },
+      "shower_provenance": {
+        "mode": "live split logs"
+      },
+      "integration": {
+        "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta/Events/run_01/res_2.txt",
+        "absolute_pb": 76.6061538,
+        "absolute_error_pb": 0.065455,
+        "signed_pb": 49.5160924,
+        "signed_error_pb": 0.06647
+      },
+      "provenance": {
+        "file_sha256": {
+          "Cards/run_card.dat": "5b3ef64123f2da034b2a1efd21af0d1e94dd5ab1a47ac1de141f9e19fe80e643",
+          "Cards/shower_card.dat": "92b14979289fd88e4fb31fb4362b412057ae8fab3a22f7d503ff35938e82c5c2",
+          "Cards/FKS_params.dat": "3a42a5704b3824b355946f44d26131cd52ba3e108de62c5004641a0639fe3233",
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/MadLoopParams.dat": "a9f1e587e43241a5dc0797f1a238459f422729ec9979ffd7f0f0848499f1c814",
+          "Cards/proc_card_mg5.dat": "eb9666920ec6927df045b63554f5272c4dfadfbb5aa46e332c1d2bffc3a7f954",
+          "SubProcesses/montecarlocounter.f": "554432b7b09075c21a8484e5d7d34b261d345af1849d23c2402659bd9a14071f",
+          "SubProcesses/FKSParams.f90": "e2b157c3926c0fdf7327f3de7374df76a4fae21cfd8cca287f4996abaac40d5b",
+          "SubProcesses/sudakov.f": "020c561c3d09fee13ea93c2faae4052206ac64bb2f1250b0ba552af7da63f10a",
+          "SubProcesses/scale_module.f90": "8a5fdffad4e1eb21573c91e43d7fa6e68dfb5909d1e4e44e9b5632feae1905ce",
+          "SubProcesses/driver_mintMC.f": "e0fc76f0a9ce6c517e3c1d83d51d23e9382b51fe18807e74b564aeaca0cff846",
+          "Events/run_01/run_01_tag_1_banner.txt": "cf568b92d812a0dbc920ad7f5d9a4515941c97e361c0455324c3d0c2a7136bf3"
+        },
+        "steering_variants": {
+          "f66bebee916cbd522026c1db8a13d55719991157beb3c95c933e31cb558ce85d": [
+            "MCatNLO/RUN_PYTHIA8_1/run_1/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_10/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_11/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_12/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_13/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_14/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_15/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_16/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_17/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_18/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_19/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_2/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_20/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_3/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_4/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_5/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_6/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_7/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_8/Pythia8.cmd",
+            "MCatNLO/RUN_PYTHIA8_1/run_9/Pythia8.cmd"
+          ]
+        },
+        "steering_settings": {
+          "f66bebee916cbd522026c1db8a13d55719991157beb3c95c933e31cb558ce85d": {
+            "main:numberofevents": "50000",
+            "main:sparemode1": "50000",
+            "main:spareword1": "average",
+            "main:timesallowerrors": "5001",
+            "init:showchangedparticledata": "off",
+            "next:numbershowevent": "2",
+            "stat:showprocesslevel": "on",
+            "stat:showerrors": "on",
+            "check:eptolerr": "0.001",
+            "beams:frametype": "4",
+            "beams:lhef": "events.lhe",
+            "pdf:pset": "LHAPDF6:NNPDF23_nlo_as_0119_qed",
+            "partonlevel:mpi": "off",
+            "hadronlevel:hadronize": "off",
+            "timeshower:ptmaxmatch": "1",
+            "timeshower:ptmaxfudge": "1.",
+            "timeshower:alphasvalue": "0.118",
+            "timeshower:alphasorder": "1",
+            "timeshower:alphaemorder": "0",
+            "timeshower:dampenbeamrecoil": "off",
+            "timeshower:globalrecoil": "on",
+            "timeshower:nmaxglobalrecoil": "1",
+            "timeshower:globalrecoilmode": "2",
+            "timeshower:nmaxglobalbranch": "1",
+            "timeshower:npartonsinborn": "-1",
+            "timeshower:limitptmaxglobal": "on",
+            "timeshower:qedshowerbyq": "off",
+            "timeshower:qedshowerbyl": "off",
+            "timeshower:qedshowerbygamma": "off",
+            "timeshower:mmaxgamma": "10e0",
+            "timeshower:alphasusecmw": "false",
+            "timeshower:weightgluontoquark": "1",
+            "timeshower:recoildeadcone": "on",
+            "spaceshower:ptmaxmatch": "1",
+            "spaceshower:ptmaxfudge": "1.",
+            "spaceshower:alphasvalue": "0.118",
+            "spaceshower:alphasorder": "1",
+            "spaceshower:alphaemorder": "0",
+            "spaceshower:qedshowerbyq": "off",
+            "spaceshower:qedshowerbyl": "off",
+            "spaceshower:rapidityorder": "off",
+            "spaceshower:alphasusecmw": "false",
+            "beamremnants:primordialkt": "off",
+            "1:m0": "0.33",
+            "2:m0": "0.33",
+            "3:m0": "0.5",
+            "4:m0": "1.5",
+            "5:m0": "4.8",
+            "6:m0": "173.0",
+            "11:m0": "0.000510999",
+            "13:m0": "0.105658",
+            "15:m0": "1.77682",
+            "23:m0": "91.188",
+            "24:m0": "80.419",
+            "25:m0": "125.0",
+            "6:mwidth": "1.4915",
+            "23:mwidth": "2.441404",
+            "24:mwidth": "2.0476",
+            "25:mwidth": "0.006382339",
+            "jetmatching:dofxfx": "on",
+            "jetmatching:merge": "on",
+            "jetmatching:qcut": "70.000",
+            "jetmatching:qcutme": "10.0",
+            "jetmatching:coneradius": "1.0",
+            "jetmatching:etajetmax": "1000.0",
+            "jetmatching:njetmax": "1",
+            "jetmatching:scheme": "1",
+            "jetmatching:setmad": "off",
+            "beams:setproductionscalesfromlhef": "on",
+            "spaceshower:mecorrections": "off",
+            "timeshower:mecorrections": "on",
+            "timeshower:meextended": "off",
+            "timeshower:meafterfirst": "off",
+            "111:maydecay": "false",
+            "24:maydecay": "false",
+            "23:maydecay": "false"
+          }
+        },
+        "run_summary": "\n   --------------------------------------------------------------\n      Summary:\n      Process p p > w+ z [QCD] @0 ; p p > w+ z j [QCD] @1\n      Run at p-p collider (6500.0 + 6500.0 GeV)\n      Number of events generated: 1000000\n      Total cross section: 4.952e+01 +- 6.6e-02 pb\n   --------------------------------------------------------------\n"
+      },
+      "accepted_signs_from_uniform_weights": {
+        "0": {
+          "positive": 290406,
+          "negative": 17760,
+          "negative_fraction": 0.05763127664959795
+        },
+        "1": {
+          "positive": 157416,
+          "negative": 25922,
+          "negative_fraction": 0.14138912827673478
+        },
+        "SUM": {
+          "positive": 447822,
+          "negative": 43682,
+          "negative_fraction": 0.08887414954913897
+        }
+      }
+    }
+  },
+  "rate_changes": {
+    "reference": {
+      "0": {
+        "reference_pb": 20.929782,
+        "reference_error_pb": 0.042567214,
+        "new_pb": 20.881391,
+        "new_error_pb": 0.042666242,
+        "difference_pb": -0.04839099999999874,
+        "relative_change": -0.0023120642154800253
+      },
+      "1": {
+        "reference_pb": 10.008458,
+        "reference_error_pb": 0.032693721,
+        "new_pb": 10.098387,
+        "new_error_pb": 0.032787253,
+        "difference_pb": 0.08992900000000148,
+        "relative_change": 0.008985300233063098
+      },
+      "SUM": {
+        "reference_pb": 30.938241,
+        "reference_error_pb": 0.05367352,
+        "new_pb": 30.979777,
+        "new_error_pb": 0.053809031,
+        "difference_pb": 0.04153599999999713,
+        "relative_change": 0.0013425456217759368
+      }
+    },
+    "historical_1": {
+      "0": {
+        "reference_pb": 20.924817,
+        "reference_error_pb": 0.042614512,
+        "new_pb": 20.881391,
+        "new_error_pb": 0.042666242,
+        "difference_pb": -0.04342600000000019,
+        "relative_change": -0.002075334756810543
+      },
+      "1": {
+        "reference_pb": 10.121129,
+        "reference_error_pb": 0.032874396,
+        "new_pb": 10.098387,
+        "new_error_pb": 0.032787253,
+        "difference_pb": -0.022741999999999152,
+        "relative_change": -0.0022469825253683684
+      },
+      "SUM": {
+        "reference_pb": 31.045946,
+        "reference_error_pb": 0.053821206,
+        "new_pb": 30.979777,
+        "new_error_pb": 0.053809031,
+        "difference_pb": -0.06616900000000214,
+        "relative_change": -0.0021313249723491356
+      }
+    },
+    "historical_2": {
+      "0": {
+        "reference_pb": 20.886361,
+        "reference_error_pb": 0.042526146,
+        "new_pb": 20.881391,
+        "new_error_pb": 0.042666242,
+        "difference_pb": -0.004970000000000141,
+        "relative_change": -0.00023795432818574103
+      },
+      "1": {
+        "reference_pb": 10.07325,
+        "reference_error_pb": 0.032801214,
+        "new_pb": 10.098387,
+        "new_error_pb": 0.032787253,
+        "difference_pb": 0.025137000000000853,
+        "relative_change": 0.002495421040875634
+      },
+      "SUM": {
+        "reference_pb": 30.959611,
+        "reference_error_pb": 0.053706541,
+        "new_pb": 30.979777,
+        "new_error_pb": 0.053809031,
+        "difference_pb": 0.020165999999999684,
+        "relative_change": 0.0006513647732848682
+      }
+    }
+  },
+  "steering_differences": {
+    "reference": {},
+    "historical_1": {
+      "timeshower:qedshowerbyother": {
+        "reference": [
+          "<absent>"
+        ],
+        "new": [
+          "off"
+        ]
+      }
+    },
+    "historical_2": {
+      "timeshower:qedshowerbyother": {
+        "reference": [
+          "<absent>"
+        ],
+        "new": [
+          "off"
+        ]
+      }
+    }
+  },
+  "uncertainty_note": "HwU rate/bin errors and plot bands are conditional event/shower sampling errors at the estimated source normalization. Separately reported source integration-normalization errors are not propagated into them. Cross-run and bin covariance are not estimated; no significance is assigned to differences or ratios.",
+  "reproduction_command": "/usr/bin/python3 fxfx_diagnostics/compare_wz_backward_isr.py --reference-process PROC_pp_wz01j_EWjets_Delta_BackwardOFF --reference-run run_backward_off --new-process PROC_pp_wz01j_EWjets_Delta_BackwardON --new-run run_backward_on --historical PROC_pp_wz01j_EWjets_Delta_Hgeom run_hgeom 'Previous geometric mean' --historical PROC_pp_wz01j_EWjets_Delta run_01 'Original hard scalar' --historical-audit docs/audits/fxfx_delta_wz_h_scales/comparison.json --historical-audit docs/audits/fxfx_delta_wz_h_scales/comparison.json --historical-steering docs/audits/fxfx_delta_wz_h_scales/cards/new_Pythia8.cmd --historical-steering docs/audits/fxfx_delta_wz_h_scales/cards/old_Pythia8.cmd --setup docs/audits/fxfx_delta_wz_backward_isr/setup.json",
+  "binned_integrals": [
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        0,
+        10
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 7.854428,
+          "error_pb": 0.025667227
+        },
+        "new": {
+          "central_pb": 7.8833056,
+          "error_pb": 0.025794087
+        },
+        "historical_1": {
+          "central_pb": 7.8568038,
+          "error_pb": 0.025720624
+        },
+        "historical_2": {
+          "central_pb": 7.8747296,
+          "error_pb": 0.025595285
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.003676601275102387,
+        "historical_1": 0.0033731019221836522,
+        "historical_2": 0.0010890532673020203
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        10,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 4.9310558,
+          "error_pb": 0.020602226
+        },
+        "new": {
+          "central_pb": 4.8907651,
+          "error_pb": 0.020566512
+        },
+        "historical_1": {
+          "central_pb": 4.8919924,
+          "error_pb": 0.020538594
+        },
+        "historical_2": {
+          "central_pb": 4.8847148,
+          "error_pb": 0.020433893
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.008170805935718617,
+        "historical_1": -0.00025087937585510645,
+        "historical_2": 0.001238618885180287
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 12.785483800000002,
+          "error_pb": 0.03291288893464998
+        },
+        "new": {
+          "central_pb": 12.7740707,
+          "error_pb": 0.03298963988905779
+        },
+        "historical_1": {
+          "central_pb": 12.748796200000001,
+          "error_pb": 0.03291480430514835
+        },
+        "historical_2": {
+          "central_pb": 12.7594444,
+          "error_pb": 0.03275152816841794
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.0008926607845689549,
+        "historical_1": 0.0019825009046734454,
+        "historical_2": 0.0011463116685550556
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 7.65053425,
+          "error_pb": 0.026142258947530094
+        },
+        "new": {
+          "central_pb": 7.61620463,
+          "error_pb": 0.02621067564313067
+        },
+        "historical_1": {
+          "central_pb": 7.68398027,
+          "error_pb": 0.026222253751020975
+        },
+        "historical_2": {
+          "central_pb": 7.61825231,
+          "error_pb": 0.026209047180850993
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.004487218654043557,
+        "historical_1": -0.008820381835779934,
+        "historical_2": -0.00026878605704772074
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.49238721809999997,
+          "error_pb": 0.006721230447761177
+        },
+        "new": {
+          "central_pb": 0.4898891705,
+          "error_pb": 0.006708075315218482
+        },
+        "historical_1": {
+          "central_pb": 0.4908922374,
+          "error_pb": 0.006702053197642802
+        },
+        "historical_2": {
+          "central_pb": 0.5074391576999999,
+          "error_pb": 0.006981674654281562
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.005073339656620823,
+        "historical_1": -0.0020433545767859496,
+        "historical_2": -0.03458540188255543
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.0013755969,
+          "error_pb": 0.0003417697989957682
+        },
+        "new": {
+          "central_pb": 0.0012266393,
+          "error_pb": 0.0003066598168368158
+        },
+        "historical_1": {
+          "central_pb": 0.0011490922499999999,
+          "error_pb": 0.0002966943419387239
+        },
+        "historical_2": {
+          "central_pb": 0.0012256984,
+          "error_pb": 0.0003906162433044559
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.1082857921532101,
+        "historical_1": 0.06748548691369227,
+        "historical_2": 0.0007676439815862413
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "new": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_1": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_2": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        }
+      },
+      "new_relative_changes": {
+        "reference": null,
+        "historical_1": null,
+        "historical_2": null
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        0,
+        10
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.062895339,
+          "error_pb": 0.0025678258
+        },
+        "new": {
+          "central_pb": 0.057422062,
+          "error_pb": 0.0023987682
+        },
+        "historical_1": {
+          "central_pb": 0.053547701,
+          "error_pb": 0.002433376
+        },
+        "historical_2": {
+          "central_pb": 0.054466976,
+          "error_pb": 0.0024357866
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.087021981072397,
+        "historical_1": 0.07235345173829222,
+        "historical_2": 0.05425463679129172
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        10,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.16491876,
+          "error_pb": 0.0042508792
+        },
+        "new": {
+          "central_pb": 0.17954933,
+          "error_pb": 0.0043933776
+        },
+        "historical_1": {
+          "central_pb": 0.17244044,
+          "error_pb": 0.0043678945
+        },
+        "historical_2": {
+          "central_pb": 0.15497424,
+          "error_pb": 0.0042741839
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.08871380066161061,
+        "historical_1": 0.041225190564347924,
+        "historical_2": 0.1585753219373749
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.227814099,
+          "error_pb": 0.004966256468622848
+        },
+        "new": {
+          "central_pb": 0.236971392,
+          "error_pb": 0.005005582444982102
+        },
+        "historical_1": {
+          "central_pb": 0.225988141,
+          "error_pb": 0.004999982112018627
+        },
+        "historical_2": {
+          "central_pb": 0.209441216,
+          "error_pb": 0.004919522778863695
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.04019634008692319,
+        "historical_1": 0.04860100601473594,
+        "historical_2": 0.1314458372892564
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 2.5424848300000003,
+          "error_pb": 0.016789036950414837
+        },
+        "new": {
+          "central_pb": 2.57072977,
+          "error_pb": 0.01681813487139416
+        },
+        "historical_1": {
+          "central_pb": 2.5718218,
+          "error_pb": 0.016850219668781585
+        },
+        "historical_2": {
+          "central_pb": 2.55719004,
+          "error_pb": 0.016795626273962302
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.011109187227677397,
+        "historical_1": -0.00042461340050858887,
+        "historical_2": 0.005294768784567916
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 4.42239062,
+          "error_pb": 0.021781756281520903
+        },
+        "new": {
+          "central_pb": 4.42671195,
+          "error_pb": 0.02176326629338982
+        },
+        "historical_1": {
+          "central_pb": 4.45717589,
+          "error_pb": 0.021855052674437544
+        },
+        "historical_2": {
+          "central_pb": 4.45480107,
+          "error_pb": 0.021778255424338738
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.0009771479661830895,
+        "historical_1": -0.006834807679084176,
+        "historical_2": -0.006305358995525423
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 2.254068062,
+          "error_pb": 0.015186849551984216
+        },
+        "new": {
+          "central_pb": 2.276719544,
+          "error_pb": 0.01532129765951694
+        },
+        "historical_1": {
+          "central_pb": 2.291902938,
+          "error_pb": 0.015366743707442718
+        },
+        "historical_2": {
+          "central_pb": 2.276351877,
+          "error_pb": 0.015393262538068163
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.01004915618204616,
+        "historical_1": -0.006624798000062437,
+        "historical_2": 0.00016151589027812996
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.55734595445,
+          "error_pb": 0.007536391211453811
+        },
+        "new": {
+          "central_pb": 0.5829604252,
+          "error_pb": 0.007634999602275704
+        },
+        "historical_1": {
+          "central_pb": 0.56971995315,
+          "error_pb": 0.0075878770681490635
+        },
+        "historical_2": {
+          "central_pb": 0.57132868025,
+          "error_pb": 0.007616054022449708
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.045957937875904964,
+        "historical_1": 0.0232403165393682,
+        "historical_2": 0.02035911263007173
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        0,
+        10
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 7.9173233,
+          "error_pb": 0.025795355
+        },
+        "new": {
+          "central_pb": 7.9407275,
+          "error_pb": 0.025905386
+        },
+        "historical_1": {
+          "central_pb": 7.9103515,
+          "error_pb": 0.025835479
+        },
+        "historical_2": {
+          "central_pb": 7.9291966,
+          "error_pb": 0.025710924
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.0029560748138199866,
+        "historical_1": 0.0038400316344981977,
+        "historical_2": 0.0014542330808142712
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        10,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 5.0959746,
+          "error_pb": 0.021036199
+        },
+        "new": {
+          "central_pb": 5.0703143,
+          "error_pb": 0.02103053
+        },
+        "historical_1": {
+          "central_pb": 5.0644329,
+          "error_pb": 0.020997913
+        },
+        "historical_2": {
+          "central_pb": 5.039689,
+          "error_pb": 0.020876126
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.005035405788718084,
+        "historical_1": 0.0011613146261646445,
+        "historical_2": 0.00607682339128468
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 13.0132979,
+          "error_pb": 0.03328546241144362
+        },
+        "new": {
+          "central_pb": 13.011041800000001,
+          "error_pb": 0.033367232667542206
+        },
+        "historical_1": {
+          "central_pb": 12.9747844,
+          "error_pb": 0.033292406424213467
+        },
+        "historical_2": {
+          "central_pb": 12.9688856,
+          "error_pb": 0.03311894095078603
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.0001733688122208532,
+        "historical_1": 0.0027944510584700932,
+        "historical_2": 0.003250564566627201
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 10.1930193,
+          "error_pb": 0.031069107644262236
+        },
+        "new": {
+          "central_pb": 10.1869345,
+          "error_pb": 0.031142400941573965
+        },
+        "historical_1": {
+          "central_pb": 10.2558022,
+          "error_pb": 0.03116948086860952
+        },
+        "historical_2": {
+          "central_pb": 10.175442,
+          "error_pb": 0.031128880427247315
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.0005969575668320903,
+        "historical_1": -0.006714998852064502,
+        "historical_2": 0.0011294349670509796
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 4.91477781,
+          "error_pb": 0.022795171787049456
+        },
+        "new": {
+          "central_pb": 4.91660114,
+          "error_pb": 0.02277362534471264
+        },
+        "historical_1": {
+          "central_pb": 4.94806818,
+          "error_pb": 0.02285959011691184
+        },
+        "historical_2": {
+          "central_pb": 4.96224023,
+          "error_pb": 0.02286998466476841
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.00037098930419388054,
+        "historical_1": -0.006359459662902189,
+        "historical_2": -0.00919727540075177
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 2.255443662,
+          "error_pb": 0.015190694761114601
+        },
+        "new": {
+          "central_pb": 2.277946174,
+          "error_pb": 0.015324366374418195
+        },
+        "historical_1": {
+          "central_pb": 2.293052025,
+          "error_pb": 0.015369607679964774
+        },
+        "historical_2": {
+          "central_pb": 2.277577557,
+          "error_pb": 0.015398217729690482
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.009976978090441957,
+        "historical_1": -0.006587661699476666,
+        "historical_2": 0.0001618460802212951
+      }
+    },
+    {
+      "observable": "pT W+Z [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.55734595445,
+          "error_pb": 0.007536391211453811
+        },
+        "new": {
+          "central_pb": 0.5829604252,
+          "error_pb": 0.007634999602275704
+        },
+        "historical_1": {
+          "central_pb": 0.56971995315,
+          "error_pb": 0.0075878770681490635
+        },
+        "historical_2": {
+          "central_pb": 0.57132868025,
+          "error_pb": 0.007616054022449708
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.045957937875904964,
+        "historical_1": 0.0232403165393682,
+        "historical_2": 0.02035911263007173
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        0,
+        10
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "new": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_1": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_2": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        }
+      },
+      "new_relative_changes": {
+        "reference": null,
+        "historical_1": null,
+        "historical_2": null
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        10,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "new": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_1": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_2": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        }
+      },
+      "new_relative_changes": {
+        "reference": null,
+        "historical_1": null,
+        "historical_2": null
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "new": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_1": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_2": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        }
+      },
+      "new_relative_changes": {
+        "reference": null,
+        "historical_1": null,
+        "historical_2": null
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 6.06194903,
+          "error_pb": 0.023338645644175888
+        },
+        "new": {
+          "central_pb": 6.04441932,
+          "error_pb": 0.023419359950527914
+        },
+        "historical_1": {
+          "central_pb": 6.07685983,
+          "error_pb": 0.02337881267467999
+        },
+        "historical_2": {
+          "central_pb": 6.0598532,
+          "error_pb": 0.023582256000786388
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.0028917613647437834,
+        "historical_1": -0.005338367332392457,
+        "historical_2": -0.0025469065818293224
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "new": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_1": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_2": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        }
+      },
+      "new_relative_changes": {
+        "reference": null,
+        "historical_1": null,
+        "historical_2": null
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "new": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_1": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_2": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        }
+      },
+      "new_relative_changes": {
+        "reference": null,
+        "historical_1": null,
+        "historical_2": null
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "new": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_1": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_2": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        }
+      },
+      "new_relative_changes": {
+        "reference": null,
+        "historical_1": null,
+        "historical_2": null
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        0,
+        10
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "new": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_1": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_2": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        }
+      },
+      "new_relative_changes": {
+        "reference": null,
+        "historical_1": null,
+        "historical_2": null
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        10,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "new": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_1": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_2": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        }
+      },
+      "new_relative_changes": {
+        "reference": null,
+        "historical_1": null,
+        "historical_2": null
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "new": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_1": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_2": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        }
+      },
+      "new_relative_changes": {
+        "reference": null,
+        "historical_1": null,
+        "historical_2": null
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 3.16700578,
+          "error_pb": 0.018652458282613832
+        },
+        "new": {
+          "central_pb": 3.20551576,
+          "error_pb": 0.018709080208718327
+        },
+        "historical_1": {
+          "central_pb": 3.21523689,
+          "error_pb": 0.018773510076522584
+        },
+        "historical_2": {
+          "central_pb": 3.18474764,
+          "error_pb": 0.01864301696655336
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.01215974414798815,
+        "historical_1": -0.003023456850173134,
+        "historical_2": 0.006521119519536045
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 4.33878491,
+          "error_pb": 0.021578639608663464
+        },
+        "new": {
+          "central_pb": 4.37197318,
+          "error_pb": 0.021635691115350634
+        },
+        "historical_1": {
+          "central_pb": 4.3772756600000005,
+          "error_pb": 0.021682654628919346
+        },
+        "historical_2": {
+          "central_pb": 4.38616195,
+          "error_pb": 0.02170348471467153
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.007649208404755914,
+        "historical_1": -0.0012113653358536425,
+        "historical_2": -0.0032348942336704045
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 1.910321757,
+          "error_pb": 0.013918255806790054
+        },
+        "new": {
+          "central_pb": 1.90750103,
+          "error_pb": 0.013942700201336132
+        },
+        "historical_1": {
+          "central_pb": 1.925648912,
+          "error_pb": 0.013993786352908173
+        },
+        "historical_2": {
+          "central_pb": 1.90879555,
+          "error_pb": 0.014015995431765968
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.0014765716768204706,
+        "historical_1": -0.009424294266160649,
+        "historical_2": -0.0006781868283379788
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.4816881376,
+          "error_pb": 0.006888589728492451
+        },
+        "new": {
+          "central_pb": 0.4970189957,
+          "error_pb": 0.006948654970288738
+        },
+        "historical_1": {
+          "central_pb": 0.4928073719,
+          "error_pb": 0.006937405102834788
+        },
+        "historical_2": {
+          "central_pb": 0.48752155355,
+          "error_pb": 0.006915800473818531
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.03182735239523571,
+        "historical_1": 0.008546186684996737,
+        "historical_2": 0.019481071310267772
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        0,
+        10
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "new": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_1": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_2": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        }
+      },
+      "new_relative_changes": {
+        "reference": null,
+        "historical_1": null,
+        "historical_2": null
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        10,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "new": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_1": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_2": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        }
+      },
+      "new_relative_changes": {
+        "reference": null,
+        "historical_1": null,
+        "historical_2": null
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "new": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_1": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_2": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        }
+      },
+      "new_relative_changes": {
+        "reference": null,
+        "historical_1": null,
+        "historical_2": null
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 9.228955,
+          "error_pb": 0.029876521085543912
+        },
+        "new": {
+          "central_pb": 9.249935,
+          "error_pb": 0.02997492423067416
+        },
+        "historical_1": {
+          "central_pb": 9.2920966,
+          "error_pb": 0.029983554892955153
+        },
+        "historical_2": {
+          "central_pb": 9.2446011,
+          "error_pb": 0.030061351518280776
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.0022732801275986425,
+        "historical_1": -0.0045373613528727486,
+        "historical_2": 0.0005769745976385021
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 4.33878491,
+          "error_pb": 0.021578639608663464
+        },
+        "new": {
+          "central_pb": 4.37197318,
+          "error_pb": 0.021635691115350634
+        },
+        "historical_1": {
+          "central_pb": 4.3772756600000005,
+          "error_pb": 0.021682654628919346
+        },
+        "historical_2": {
+          "central_pb": 4.38616195,
+          "error_pb": 0.02170348471467153
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.007649208404755914,
+        "historical_1": -0.0012113653358536425,
+        "historical_2": -0.0032348942336704045
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 1.910321757,
+          "error_pb": 0.013918255806790054
+        },
+        "new": {
+          "central_pb": 1.90750103,
+          "error_pb": 0.013942700201336132
+        },
+        "historical_1": {
+          "central_pb": 1.925648912,
+          "error_pb": 0.013993786352908173
+        },
+        "historical_2": {
+          "central_pb": 1.90879555,
+          "error_pb": 0.014015995431765968
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.0014765716768204706,
+        "historical_1": -0.009424294266160649,
+        "historical_2": -0.0006781868283379788
+      }
+    },
+    {
+      "observable": "pT j1 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.4816881376,
+          "error_pb": 0.006888589728492451
+        },
+        "new": {
+          "central_pb": 0.4970189957,
+          "error_pb": 0.006948654970288738
+        },
+        "historical_1": {
+          "central_pb": 0.4928073719,
+          "error_pb": 0.006937405102834788
+        },
+        "historical_2": {
+          "central_pb": 0.48752155355,
+          "error_pb": 0.006915800473818531
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.03182735239523571,
+        "historical_1": 0.008546186684996737,
+        "historical_2": 0.019481071310267772
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        0,
+        10
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 8.1050159,
+          "error_pb": 0.026092949
+        },
+        "new": {
+          "central_pb": 8.1401332,
+          "error_pb": 0.026225695
+        },
+        "historical_1": {
+          "central_pb": 8.1189501,
+          "error_pb": 0.026150092
+        },
+        "historical_2": {
+          "central_pb": 8.1607004,
+          "error_pb": 0.026022423
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.0043327860714004185,
+        "historical_1": 0.0026090935082849764,
+        "historical_2": -0.0025202738725710327
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        10,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 5.1821022,
+          "error_pb": 0.021104248
+        },
+        "new": {
+          "central_pb": 5.1236733,
+          "error_pb": 0.021066831
+        },
+        "historical_1": {
+          "central_pb": 5.1229598,
+          "error_pb": 0.021049832
+        },
+        "historical_2": {
+          "central_pb": 5.0692591,
+          "error_pb": 0.020822647
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.011275134635515327,
+        "historical_1": 0.00013927495585663863,
+        "historical_2": 0.010734152452377188
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 13.2871181,
+          "error_pb": 0.033559369349886556
+        },
+        "new": {
+          "central_pb": 13.2638065,
+          "error_pb": 0.033639239685456415
+        },
+        "historical_1": {
+          "central_pb": 13.2419099,
+          "error_pb": 0.03356966992445246
+        },
+        "historical_2": {
+          "central_pb": 13.2299595,
+          "error_pb": 0.033327903127522714
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.001754451177791605,
+        "historical_1": 0.001653583219139776,
+        "historical_2": 0.002558360061495346
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 7.64258598,
+          "error_pb": 0.026186455143305636
+        },
+        "new": {
+          "central_pb": 7.61758454,
+          "error_pb": 0.02624518553132588
+        },
+        "historical_1": {
+          "central_pb": 7.68290771,
+          "error_pb": 0.026250213511230018
+        },
+        "historical_2": {
+          "central_pb": 7.65640201,
+          "error_pb": 0.02641446397949748
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.003271332513029801,
+        "historical_1": -0.008502402015707733,
+        "historical_2": -0.005069936237582673
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 7.642205e-05,
+          "error_pb": 7.642205e-05
+        },
+        "new": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_1": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_2": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        }
+      },
+      "new_relative_changes": {
+        "reference": -1.0,
+        "historical_1": null,
+        "historical_2": null
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "new": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_1": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_2": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        }
+      },
+      "new_relative_changes": {
+        "reference": null,
+        "historical_1": null,
+        "historical_2": null
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "0",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "new": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_1": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        },
+        "historical_2": {
+          "central_pb": 0.0,
+          "error_pb": 0.0
+        }
+      },
+      "new_relative_changes": {
+        "reference": null,
+        "historical_1": null,
+        "historical_2": null
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        0,
+        10
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.006419452,
+          "error_pb": 0.00080877483
+        },
+        "new": {
+          "central_pb": 0.0060565336,
+          "error_pb": 0.00075506242
+        },
+        "historical_1": {
+          "central_pb": 0.0064349166,
+          "error_pb": 0.00079611451
+        },
+        "historical_2": {
+          "central_pb": 0.0065115225,
+          "error_pb": 0.00076222159
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.05653417145264106,
+        "historical_1": -0.05880153909065422,
+        "historical_2": -0.06987442644942099
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        10,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.041038635,
+          "error_pb": 0.0023393134
+        },
+        "new": {
+          "central_pb": 0.045385662,
+          "error_pb": 0.0023975432
+        },
+        "historical_1": {
+          "central_pb": 0.035698468,
+          "error_pb": 0.0023007366
+        },
+        "historical_2": {
+          "central_pb": 0.037307198,
+          "error_pb": 0.0021923281
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.10592523362436412,
+        "historical_1": 0.27136161697471173,
+        "historical_2": 0.21653901748397186
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.047458086999999996,
+          "error_pb": 0.0024751775510175205
+        },
+        "new": {
+          "central_pb": 0.051442195600000004,
+          "error_pb": 0.0025136293787992084
+        },
+        "historical_1": {
+          "central_pb": 0.0421333846,
+          "error_pb": 0.002434581527821999
+        },
+        "historical_2": {
+          "central_pb": 0.0438187205,
+          "error_pb": 0.0023210524014575236
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.08395004627978375,
+        "historical_1": 0.22093670110708374,
+        "historical_2": 0.1739775833938375
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 2.23389266,
+          "error_pb": 0.015560285689687167
+        },
+        "new": {
+          "central_pb": 2.25709338,
+          "error_pb": 0.015603346350311843
+        },
+        "historical_1": {
+          "central_pb": 2.27535599,
+          "error_pb": 0.015664413138337958
+        },
+        "historical_2": {
+          "central_pb": 2.24486675,
+          "error_pb": 0.015453950864818938
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.010385781024948804,
+        "historical_1": -0.008026264936239591,
+        "historical_2": 0.005446483627591814
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 4.81558201,
+          "error_pb": 0.022897935537468328
+        },
+        "new": {
+          "central_pb": 4.84806261,
+          "error_pb": 0.02293461714869507
+        },
+        "historical_1": {
+          "central_pb": 4.866789,
+          "error_pb": 0.02301629329160138
+        },
+        "historical_2": {
+          "central_pb": 4.86380133,
+          "error_pb": 0.023009025489592983
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.006744896033864967,
+        "historical_1": -0.003847791634278619,
+        "historical_2": -0.0032358887487700105
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 2.297399362,
+          "error_pb": 0.015343520891683211
+        },
+        "new": {
+          "central_pb": 2.309762129,
+          "error_pb": 0.01540565335107716
+        },
+        "historical_1": {
+          "central_pb": 2.3099053990000002,
+          "error_pb": 0.015422589969686533
+        },
+        "historical_2": {
+          "central_pb": 2.30124886,
+          "error_pb": 0.015505509126016516
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.005381200676071174,
+        "historical_1": -6.202418508660656e-05,
+        "historical_2": 0.003699412587650386
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "1",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.60801377415,
+          "error_pb": 0.0077665250629688
+        },
+        "new": {
+          "central_pb": 0.6265061287,
+          "error_pb": 0.007834094555765388
+        },
+        "historical_1": {
+          "central_pb": 0.6213525059,
+          "error_pb": 0.007828459177943023
+        },
+        "historical_2": {
+          "central_pb": 0.61330885825,
+          "error_pb": 0.00782958341448852
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.030414367792657604,
+        "historical_1": 0.008294201360844689,
+        "historical_2": 0.021518147459433035
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        0,
+        10
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 8.1114354,
+          "error_pb": 0.026105482
+        },
+        "new": {
+          "central_pb": 8.1461896,
+          "error_pb": 0.02623656
+        },
+        "historical_1": {
+          "central_pb": 8.125385,
+          "error_pb": 0.026162207
+        },
+        "historical_2": {
+          "central_pb": 8.167212,
+          "error_pb": 0.026033586
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.00428459308200857,
+        "historical_1": 0.0025604448281526526,
+        "historical_2": -0.0025739995484382883
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        10,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 5.2231408,
+          "error_pb": 0.021233503
+        },
+        "new": {
+          "central_pb": 5.169059,
+          "error_pb": 0.02120282
+        },
+        "historical_1": {
+          "central_pb": 5.1586584,
+          "error_pb": 0.021175194
+        },
+        "historical_2": {
+          "central_pb": 5.1065663,
+          "error_pb": 0.020937738
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.010354268067979455,
+        "historical_1": 0.0020161443525703593,
+        "historical_2": 0.01223771441095356
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        0,
+        20
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 13.3345762,
+          "error_pb": 0.033650525108879545
+        },
+        "new": {
+          "central_pb": 13.3152486,
+          "error_pb": 0.03373302027073769
+        },
+        "historical_1": {
+          "central_pb": 13.2840434,
+          "error_pb": 0.03365783587886311
+        },
+        "historical_2": {
+          "central_pb": 13.2737783,
+          "error_pb": 0.03340862871439114
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.0014494348909266375,
+        "historical_1": 0.002349073927295331,
+        "historical_2": 0.0031242272593929865
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        20,
+        70
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 9.876479,
+          "error_pb": 0.030460678048136274
+        },
+        "new": {
+          "central_pb": 9.8746781,
+          "error_pb": 0.030533165511593487
+        },
+        "historical_1": {
+          "central_pb": 9.9582637,
+          "error_pb": 0.030568734948304387
+        },
+        "historical_2": {
+          "central_pb": 9.9012689,
+          "error_pb": 0.030603079969087017
+        }
+      },
+      "new_relative_changes": {
+        "reference": -0.00018234231045288762,
+        "historical_1": -0.00839359174632015,
+        "historical_2": -0.0026855951765939468
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        70,
+        150
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 4.81565843,
+          "error_pb": 0.022898063340845026
+        },
+        "new": {
+          "central_pb": 4.84806261,
+          "error_pb": 0.02293461714869507
+        },
+        "historical_1": {
+          "central_pb": 4.866789,
+          "error_pb": 0.02301629329160138
+        },
+        "historical_2": {
+          "central_pb": 4.86380133,
+          "error_pb": 0.023009025489592983
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.006728919932969646,
+        "historical_1": -0.003847791634278619,
+        "historical_2": -0.0032358887487700105
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        150,
+        300
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 2.297399362,
+          "error_pb": 0.015343520891683211
+        },
+        "new": {
+          "central_pb": 2.309762129,
+          "error_pb": 0.01540565335107716
+        },
+        "historical_1": {
+          "central_pb": 2.3099053990000002,
+          "error_pb": 0.015422589969686533
+        },
+        "historical_2": {
+          "central_pb": 2.30124886,
+          "error_pb": 0.015505509126016516
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.005381200676071174,
+        "historical_1": -6.202418508660656e-05,
+        "historical_2": 0.003699412587650386
+      }
+    },
+    {
+      "observable": "sqrt d01 [GeV]",
+      "sample": "SUM",
+      "range_GeV": [
+        300,
+        1000
+      ],
+      "runs": {
+        "reference": {
+          "central_pb": 0.60801377415,
+          "error_pb": 0.0077665250629688
+        },
+        "new": {
+          "central_pb": 0.6265061287,
+          "error_pb": 0.007834094555765388
+        },
+        "historical_1": {
+          "central_pb": 0.6213525059,
+          "error_pb": 0.007828459177943023
+        },
+        "historical_2": {
+          "central_pb": 0.61330885825,
+          "error_pb": 0.00782958341448852
+        }
+      },
+      "new_relative_changes": {
+        "reference": 0.030414367792657604,
+        "historical_1": 0.008294201360844689,
+        "historical_2": 0.021518147459433035
+      }
+    }
+  ],
+  "assessment": {
+    "scope": "One fixed WZ+0,1-jet FxFx-Delta setup and merging scale.",
+    "interpretation": "The observed total-rate and broad merged-spectrum changes are modest, giving a reasonable implementation check for this fixed setup. The comparison does not demonstrate a reduction of negative-weight fractions.",
+    "uncertainty_note": "HwU rate/bin errors and plot bands are conditional event/shower sampling errors at the estimated source normalization. Separately reported source integration-normalization errors are not propagated into them. Cross-run and bin covariance are not estimated; no significance is assigned to differences or ratios.",
+    "source_normalizations": {
+      "reference": {
+        "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardOFF/Events/run_backward_off/res_2.txt",
+        "absolute_pb": 76.4220397,
+        "absolute_error_pb": 0.11461,
+        "signed_pb": 49.4660754,
+        "signed_error_pb": 0.11447
+      },
+      "new": {
+        "file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardON/Events/run_backward_on/res_2.txt",
+        "absolute_pb": 76.6649687,
+        "absolute_error_pb": 0.066773,
+        "signed_pb": 49.5514544,
+        "signed_error_pb": 0.067357
+      }
+    },
+    "merged_rate_relative_change": 0.0013425456217759368,
+    "merged_pt_wz_relative_changes": {
+      "0-10": 0.0029560748138199866,
+      "10-20": -0.005035405788718084,
+      "0-20": -0.0001733688122208532,
+      "20-70": -0.0005969575668320903,
+      "70-150": 0.00037098930419388054,
+      "150-300": 0.009976978090441957,
+      "300-1000": 0.045957937875904964
+    },
+    "negative_fraction_changes_percentage_points": {
+      "before_shower": 0.018899999999999473,
+      "after_merging": 0.02164711799948621
+    },
+    "demonstrated_negative_weight_reduction_claim": false,
+    "formal_accuracy_limit": "This numerical check establishes neither an exact or universal NLO-matching theorem nor logarithmic accuracy or exact competing-shower correspondence."
+  }
+}

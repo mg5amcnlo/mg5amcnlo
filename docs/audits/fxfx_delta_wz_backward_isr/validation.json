@@ -1,0 +1,300 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-11-02T11:06:05.252427+00:00",
+  "method": "Independent read-only verification against actual completed process clones; no additional full LHE scan.",
+  "sources": {
+    "off": {
+      "checked": 4,
+      "all_match_recorded_hashes": true
+    },
+    "on": {
+      "checked": 4,
+      "all_match_recorded_hashes": true
+    }
+  },
+  "cards": {
+    "off": {
+      "checked": 7,
+      "all_match_recorded_hashes": true
+    },
+    "on": {
+      "checked": 7,
+      "all_match_recorded_hashes": true
+    },
+    "off_on_differ_only_DeltaBackwardISR": true
+  },
+  "compiled": {
+    "off": {
+      "checked_files": 32,
+      "all_match_recorded_hashes": true,
+      "subprocesses": [
+        "P0_udx_wpz",
+        "P0_dxu_wpz",
+        "P1_gu_wpzd",
+        "P1_gdx_wpzux",
+        "P1_ug_wpzd",
+        "P1_udx_wpzg",
+        "P1_dxg_wpzux",
+        "P1_dxu_wpzg"
+      ]
+    },
+    "on": {
+      "checked_files": 32,
+      "all_match_recorded_hashes": true,
+      "subprocesses": [
+        "P0_udx_wpz",
+        "P0_dxu_wpz",
+        "P1_gu_wpzd",
+        "P1_gdx_wpzux",
+        "P1_ug_wpzd",
+        "P1_udx_wpzg",
+        "P1_dxg_wpzux",
+        "P1_dxu_wpzg"
+      ]
+    },
+    "off_on_identical_by_subprocess": {
+      "P0_udx_wpz": true,
+      "P0_dxu_wpz": true,
+      "P1_gu_wpzd": true,
+      "P1_gdx_wpzux": true,
+      "P1_ug_wpzd": true,
+      "P1_udx_wpzg": true,
+      "P1_dxg_wpzux": true,
+      "P1_dxu_wpzg": true
+    }
+  },
+  "runtime": {
+    "off": {
+      "card_flag": ".false.",
+      "sampled_MINT0_subprocesses": {
+        "P0_udx_wpz": {
+          "flag": "F",
+          "table_coupling_confirmed": false,
+          "log": "SubProcesses/P0_udx_wpz/GF1.0/log_MINT0.txt"
+        },
+        "P0_dxu_wpz": {
+          "flag": "F",
+          "table_coupling_confirmed": false,
+          "log": "SubProcesses/P0_dxu_wpz/GF1.0/log_MINT0.txt"
+        },
+        "P1_gu_wpzd": {
+          "flag": "F",
+          "table_coupling_confirmed": false,
+          "log": "SubProcesses/P1_gu_wpzd/GF1.0/log_MINT0.txt"
+        },
+        "P1_gdx_wpzux": {
+          "flag": "F",
+          "table_coupling_confirmed": false,
+          "log": "SubProcesses/P1_gdx_wpzux/GF1.0/log_MINT0.txt"
+        },
+        "P1_ug_wpzd": {
+          "flag": "F",
+          "table_coupling_confirmed": false,
+          "log": "SubProcesses/P1_ug_wpzd/GF1.0/log_MINT0.txt"
+        },
+        "P1_udx_wpzg": {
+          "flag": "F",
+          "table_coupling_confirmed": false,
+          "log": "SubProcesses/P1_udx_wpzg/GF1.0/log_MINT0.txt"
+        },
+        "P1_dxg_wpzux": {
+          "flag": "F",
+          "table_coupling_confirmed": false,
+          "log": "SubProcesses/P1_dxg_wpzux/GF1.0/log_MINT0.txt"
+        },
+        "P1_dxu_wpzg": {
+          "flag": "F",
+          "table_coupling_confirmed": false,
+          "log": "SubProcesses/P1_dxu_wpzg/GF1.0/log_MINT0.txt"
+        }
+      },
+      "fresh_MINT_stages": {
+        "Setting up grids": true,
+        "Computing upper envelope": true,
+        "Generating events": true
+      },
+      "table_alpha_s_MZ": null,
+      "table_running_order": null
+    },
+    "on": {
+      "card_flag": ".true.",
+      "sampled_MINT0_subprocesses": {
+        "P0_udx_wpz": {
+          "flag": "T",
+          "table_coupling_confirmed": true,
+          "log": "SubProcesses/P0_udx_wpz/GF1.0/log_MINT0.txt"
+        },
+        "P0_dxu_wpz": {
+          "flag": "T",
+          "table_coupling_confirmed": true,
+          "log": "SubProcesses/P0_dxu_wpz/GF1.0/log_MINT0.txt"
+        },
+        "P1_gu_wpzd": {
+          "flag": "T",
+          "table_coupling_confirmed": true,
+          "log": "SubProcesses/P1_gu_wpzd/GF1.0/log_MINT0.txt"
+        },
+        "P1_gdx_wpzux": {
+          "flag": "T",
+          "table_coupling_confirmed": true,
+          "log": "SubProcesses/P1_gdx_wpzux/GF1.0/log_MINT0.txt"
+        },
+        "P1_ug_wpzd": {
+          "flag": "T",
+          "table_coupling_confirmed": true,
+          "log": "SubProcesses/P1_ug_wpzd/GF1.0/log_MINT0.txt"
+        },
+        "P1_udx_wpzg": {
+          "flag": "T",
+          "table_coupling_confirmed": true,
+          "log": "SubProcesses/P1_udx_wpzg/GF1.0/log_MINT0.txt"
+        },
+        "P1_dxg_wpzux": {
+          "flag": "T",
+          "table_coupling_confirmed": true,
+          "log": "SubProcesses/P1_dxg_wpzux/GF1.0/log_MINT0.txt"
+        },
+        "P1_dxu_wpzg": {
+          "flag": "T",
+          "table_coupling_confirmed": true,
+          "log": "SubProcesses/P1_dxu_wpzg/GF1.0/log_MINT0.txt"
+        }
+      },
+      "fresh_MINT_stages": {
+        "Setting up grids": true,
+        "Computing upper envelope": true,
+        "Generating events": true
+      },
+      "table_alpha_s_MZ": 0.1365,
+      "table_running_order": 1
+    }
+  },
+  "steering": {
+    "checked_files": 40,
+    "all_byte_identical": true,
+    "sha256": "e2fc0264666c6d51dc8afc77e7aa8055308b3876a023bbe6402b05dc34ed9e14",
+    "QEDshowerByOther": "off",
+    "ISR_alpha_s_MZ": 0.118,
+    "ISR_alpha_s_order": 1
+  },
+  "shower": {
+    "off": {
+      "jobs": 20,
+      "counts": {
+        "tried": 1000000,
+        "selected": 1000000,
+        "accepted": 493268
+      },
+      "errors_or_unexpected_aborts": 0,
+      "expected_EOF_aborts": 11,
+      "messages": {
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 20,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 20,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 20,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 20,
+        "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 188,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1886,
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 20,
+        "Abort from Pythia::next: reached end of Les Houches Events File": 11
+      }
+    },
+    "on": {
+      "jobs": 20,
+      "counts": {
+        "tried": 1000000,
+        "selected": 1000000,
+        "accepted": 492625
+      },
+      "errors_or_unexpected_aborts": 0,
+      "expected_EOF_aborts": 11,
+      "messages": {
+        "Abort from Pythia::next: reached end of Les Houches Events File": 11,
+        "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 20,
+        "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 20,
+        "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 20,
+        "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 20,
+        "Warning in SimpleSpaceShower::pT2nextQCD: small daughter PDF": 153,
+        "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1916,
+        "Info from SLHAinterface::initSLHA: No MODSEL found, keeping internal SUSY switched off": 20
+      }
+    }
+  },
+  "cleanup": {
+    "status": "complete",
+    "scope": "Only duplicated plain LHE inputs; no final gzip, histogram, card, log, grid or executable deletion.",
+    "samples": {
+      "off": {
+        "process": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardOFF",
+        "groups": [
+          {
+            "kind": "event_shower_splits",
+            "pattern": "Events/run_backward_off/events.lhe_*.lhe",
+            "files": 20,
+            "bytes": 1015983361
+          },
+          {
+            "kind": "shower_staged_inputs",
+            "pattern": "MCatNLO/RUN_PYTHIA8_1/run_*/events.lhe",
+            "files": 20,
+            "bytes": 1015983361
+          },
+          {
+            "kind": "integration_channel_events",
+            "pattern": "SubProcesses/P*/GF*/events.lhe",
+            "files": 131,
+            "bytes": 1197759051
+          }
+        ]
+      },
+      "on": {
+        "process": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardON",
+        "groups": [
+          {
+            "kind": "event_shower_splits",
+            "pattern": "Events/run_backward_on/events.lhe_*.lhe",
+            "files": 20,
+            "bytes": 1016221855
+          },
+          {
+            "kind": "shower_staged_inputs",
+            "pattern": "MCatNLO/RUN_PYTHIA8_1/run_*/events.lhe",
+            "files": 20,
+            "bytes": 1016221855
+          },
+          {
+            "kind": "integration_channel_events",
+            "pattern": "SubProcesses/P*/GF*/events.lhe",
+            "files": 132,
+            "bytes": 1198051874
+          }
+        ]
+      }
+    },
+    "total_files": 343,
+    "total_bytes": 6460221357,
+    "preserve": [
+      "Events/run_backward_{off,on}/events.lhe.gz",
+      "Events/run_backward_{off,on}/plot_PYTHIA8_1_0.*",
+      "Cards/**",
+      "MCatNLO/RUN_PYTHIA8_1/**/Pythia8.cmd",
+      "MCatNLO/RUN_PYTHIA8_1/mcatnlo_run_*.log",
+      "SubProcesses/P*/GF*/log*.txt",
+      "SubProcesses/P*/GF*/grid*, mint*, results*",
+      "Recorded source, executable and object files"
+    ],
+    "completed_utc": "2026-11-02T11:09:51.178979+00:00",
+    "removed_files": 343,
+    "removed_bytes": 6460221357,
+    "final_lhe_and_histogram_hashes_checked": true
+  },
+  "source_validation": {
+    "tests": 180,
+    "skipped_optional": 3,
+    "failures": 0,
+    "exit_code": 0,
+    "log": "/tmp/fxfx_delta_backward_final_tests.log",
+    "suite": "Expanded unittest_native_born command in .github/workflows/unittest.yml",
+    "source_arithmetic_unchanged_after_validation": true,
+    "details": "source_cleanup.json"
+  }
+}

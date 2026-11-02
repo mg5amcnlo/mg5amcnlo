@@ -277,6 +277,19 @@
 ! Default :: .true.
 !
 ! ==========================================================================
+! MC@NLO-Delta prototype for incoming quarks and gluons, on every colour
+! connection. .true. replaces the forward Sudakov table and PDF ratio by
+! the PYTHIA8 backward no-emission probability, from the LO identity
+! forward Sudakov x PDF ratio x exp(C). Its alpha_s and running always come
+! from the active Delta Sudakov tables; no independent coupling override is
+! allowed. C adds PDF evolution outside the massless II z bound.
+! Final-state legs and colour lines below the table's 1.01 GeV continuation
+! keep the table. Rerun integration/grid setup after changing these settings.
+#DeltaBackwardISR
+.false.
+! Default :: .false.
+!
+! ==========================================================================
 ! FxFx analytic Sudakov finite terms (ickkw=3 only).
 ! Always enabled for FxFx with PYTHIA8 matching, regardless of this flag.
 ! Other modes default to .false.; fixed-order runs do not enable them

@@ -9,6 +9,7 @@ import tempfile
 import unittest
 
 from tests.unit_tests.fks.test_momentum_maps import fortran_routine, mc_counterterm_test_module
+from tests.unit_tests.fks.test_delta_backward_isr import ROUTINES as BACKWARD_ROUTINES
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -77,7 +78,7 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
             'born_nhel.inc': 'integer max_bcol\nparameter(max_bcol=1)',
             'nFKSconfigs.inc': 'integer fks_configs\nparameter(fks_configs=1)',
             'run.inc': 'integer lpp(2)\ncommon/test_lpp/lpp',
-            'orders.inc': '',
+            'orders.inc': 'integer nsplitorders\nparameter(nsplitorders=1)',
             'genps.inc': 'integer maxproc\nparameter(maxproc=1)',
             'born_leshouche.inc': 'integer iproc_born\nparameter(iproc_born=1)\n'
                                   'common/test_born/idup,mothup,icolup',
@@ -93,8 +94,7 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
         (work / 'delta_matching.f').write_text(mc_counterterm_test_module(
                         ('compute_delta', 'get_delta_stopping_scales',
                          'get_delta_connections', 'delta_leg_probability',
-                         'gl_safe', 'get_parton_id',
-                         'setSudType'),
+                         'delta_backward_parameters', 'setSudType') + BACKWARD_ROUTINES,
                         external_functions=(('double precision', 'pysudakov_safe'),)))
         cls.executable = work / 'check_delta_matching'
         result = subprocess.run([
@@ -102,6 +102,7 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
             '-ffixed-line-length-none', '-ffunction-sections', '-fdata-sections',
             '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',
             '-I', str(work), str(TEMPLATE / 'qed_shower_support.f90'),
+            str(TEMPLATE / 'FKSParams.f90'),
                 str(TEMPLATE / 'process_module.f90'),
             str(TEMPLATE / 'fks_phase_space_data.f'),
             str(TEMPLATE / 'genps_fks_helpers.f'),
@@ -125,6 +126,44 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
                                 capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn('MC@NLO-Delta scale reconstruction failed', result.stdout)
+
+    def test_backward_switch_does_not_consult_metadata_for_all_final_radiators(self):
+        result = subprocess.run([str(self.executable), 'matching_backward'],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('PASS native Delta matching and starting-scale veto', result.stdout)
+
+    def test_legacy_incoming_weights_remain_bitwise_unchanged(self):
+        for flavour in ('quark', 'gluon'):
+            with self.subTest(flavour=flavour):
+                result = subprocess.run([str(self.executable), 'legacy_' + flavour],
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn('PASS incoming Delta backward dispatch', result.stdout)
+
+    def test_backward_dispatch_uses_table_coupling_and_cutoff_fallback(self):
+        for mode in ('backward_quark_two', 'backward_gluon_two',
+                     'backward_quark_one', 'backward_gluon_one',
+                     'backward_quark_cutoff', 'backward_gluon_cutoff'):
+            with self.subTest(mode=mode):
+                result = subprocess.run([str(self.executable), mode],
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn('PASS incoming Delta backward dispatch', result.stdout)
+
+    def test_unknown_or_unsupported_table_metadata_is_fatal(self):
+        cases = {
+            'unknown': 'requires coupling metadata from the active Sudakov table',
+            'nan': 'Nonfinite Delta Sudakov table coupling metadata',
+        }
+        cases.update((kind, 'Unsupported Delta Sudakov table ISR parameters')
+                     for kind in ('order', 'cmw', 'nf', 'threshold', 'pdfmode'))
+        for kind, message in cases.items():
+            with self.subTest(kind=kind):
+                result = subprocess.run([str(self.executable), 'backward_quark_' + kind],
+                                        capture_output=True, text=True)
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn(message, result.stdout + result.stderr)
 
 
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')

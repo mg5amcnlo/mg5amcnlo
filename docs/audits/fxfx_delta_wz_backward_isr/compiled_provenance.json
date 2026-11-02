@@ -1,0 +1,114 @@
+{
+  "binaries": {
+    "off": {
+      "P0_udx_wpz": {
+        "madevent_mintMC": "47d06bc1938675347fda6d952cc9885e9b1247788a7486c9936df60f628cef05",
+        "FKSParams.o": "01b2a20fad0415eea99ec6d12325f417e7eb41911bf960f91e2cb484c0b64731",
+        "montecarlocounter.o": "8dbc51cf2bae33eee8ae92b5bbde7a700c81681dae28dc3912eb22bc523e33c7",
+        "sudakov.o": "dc79d2ff3abf1d2bb5210750dbaa7cd3bb25aac1b3b7ec2b0e17e2dd51e01293"
+      },
+      "P0_dxu_wpz": {
+        "madevent_mintMC": "d3a04ba1e06fe9397b16d7a1fa474caf3cb96e93c0e3b07536da2eed2ca7d1c8",
+        "FKSParams.o": "01b2a20fad0415eea99ec6d12325f417e7eb41911bf960f91e2cb484c0b64731",
+        "montecarlocounter.o": "8dbc51cf2bae33eee8ae92b5bbde7a700c81681dae28dc3912eb22bc523e33c7",
+        "sudakov.o": "dc79d2ff3abf1d2bb5210750dbaa7cd3bb25aac1b3b7ec2b0e17e2dd51e01293"
+      },
+      "P1_gu_wpzd": {
+        "madevent_mintMC": "33cb3a0ef946cdfd9832f41c28504ad0a76f19d96e439b0e9a508b78bdc2bad5",
+        "FKSParams.o": "01b2a20fad0415eea99ec6d12325f417e7eb41911bf960f91e2cb484c0b64731",
+        "montecarlocounter.o": "3c8277467b247834ac716c64ce781c0655f293ffaed3aee717c8fd001e93c581",
+        "sudakov.o": "dc79d2ff3abf1d2bb5210750dbaa7cd3bb25aac1b3b7ec2b0e17e2dd51e01293"
+      },
+      "P1_gdx_wpzux": {
+        "madevent_mintMC": "d22314234dccce8eab20efd5223584edf5cb4387a11017a1d8fbbebc265cd89b",
+        "FKSParams.o": "01b2a20fad0415eea99ec6d12325f417e7eb41911bf960f91e2cb484c0b64731",
+        "montecarlocounter.o": "3c8277467b247834ac716c64ce781c0655f293ffaed3aee717c8fd001e93c581",
+        "sudakov.o": "dc79d2ff3abf1d2bb5210750dbaa7cd3bb25aac1b3b7ec2b0e17e2dd51e01293"
+      },
+      "P1_ug_wpzd": {
+        "madevent_mintMC": "6218285ca9313390bddf6090f8fd4bf2c8885de9643ab8c1b4303b13fb8af304",
+        "FKSParams.o": "01b2a20fad0415eea99ec6d12325f417e7eb41911bf960f91e2cb484c0b64731",
+        "montecarlocounter.o": "3c8277467b247834ac716c64ce781c0655f293ffaed3aee717c8fd001e93c581",
+        "sudakov.o": "dc79d2ff3abf1d2bb5210750dbaa7cd3bb25aac1b3b7ec2b0e17e2dd51e01293"
+      },
+      "P1_udx_wpzg": {
+        "madevent_mintMC": "c8c30ca0b361894a1d7bd945b28928bd6d32b2d90e1ebb50d765b08d46bb8ae0",
+        "FKSParams.o": "01b2a20fad0415eea99ec6d12325f417e7eb41911bf960f91e2cb484c0b64731",
+        "montecarlocounter.o": "a5db391990c5736a56cd6bfc657bf90844d592239c0ffb271a5d603d676bb455",
+        "sudakov.o": "dc79d2ff3abf1d2bb5210750dbaa7cd3bb25aac1b3b7ec2b0e17e2dd51e01293"
+      },
+      "P1_dxg_wpzux": {
+        "madevent_mintMC": "c30927cd427d67f98f8c78056ead269d280bb3fa3f60b916de96782fadadc71c",
+        "FKSParams.o": "01b2a20fad0415eea99ec6d12325f417e7eb41911bf960f91e2cb484c0b64731",
+        "montecarlocounter.o": "3c8277467b247834ac716c64ce781c0655f293ffaed3aee717c8fd001e93c581",
+        "sudakov.o": "dc79d2ff3abf1d2bb5210750dbaa7cd3bb25aac1b3b7ec2b0e17e2dd51e01293"
+      },
+      "P1_dxu_wpzg": {
+        "madevent_mintMC": "5f54e0ea3212910e590d9bbbd166bf126fa9e4585dd904009045f904cd0c5bfa",
+        "FKSParams.o": "01b2a20fad0415eea99ec6d12325f417e7eb41911bf960f91e2cb484c0b64731",
+        "montecarlocounter.o": "a5db391990c5736a56cd6bfc657bf90844d592239c0ffb271a5d603d676bb455",
+        "sudakov.o": "dc79d2ff3abf1d2bb5210750dbaa7cd3bb25aac1b3b7ec2b0e17e2dd51e01293"
+      }
+    },
+    "on": {
+      "P0_udx_wpz": {
+        "madevent_mintMC": "47d06bc1938675347fda6d952cc9885e9b1247788a7486c9936df60f628cef05",
+        "FKSParams.o": "01b2a20fad0415eea99ec6d12325f417e7eb41911bf960f91e2cb484c0b64731",
+        "montecarlocounter.o": "8dbc51cf2bae33eee8ae92b5bbde7a700c81681dae28dc3912eb22bc523e33c7",
+        "sudakov.o": "dc79d2ff3abf1d2bb5210750dbaa7cd3bb25aac1b3b7ec2b0e17e2dd51e01293"
+      },
+      "P0_dxu_wpz": {
+        "madevent_mintMC": "d3a04ba1e06fe9397b16d7a1fa474caf3cb96e93c0e3b07536da2eed2ca7d1c8",
+        "FKSParams.o": "01b2a20fad0415eea99ec6d12325f417e7eb41911bf960f91e2cb484c0b64731",
+        "montecarlocounter.o": "8dbc51cf2bae33eee8ae92b5bbde7a700c81681dae28dc3912eb22bc523e33c7",
+        "sudakov.o": "dc79d2ff3abf1d2bb5210750dbaa7cd3bb25aac1b3b7ec2b0e17e2dd51e01293"
+      },
+      "P1_gu_wpzd": {
+        "madevent_mintMC": "33cb3a0ef946cdfd9832f41c28504ad0a76f19d96e439b0e9a508b78bdc2bad5",
+        "FKSParams.o": "01b2a20fad0415eea99ec6d12325f417e7eb41911bf960f91e2cb484c0b64731",
+        "montecarlocounter.o": "3c8277467b247834ac716c64ce781c0655f293ffaed3aee717c8fd001e93c581",
+        "sudakov.o": "dc79d2ff3abf1d2bb5210750dbaa7cd3bb25aac1b3b7ec2b0e17e2dd51e01293"
+      },
+      "P1_gdx_wpzux": {
+        "madevent_mintMC": "d22314234dccce8eab20efd5223584edf5cb4387a11017a1d8fbbebc265cd89b",
+        "FKSParams.o": "01b2a20fad0415eea99ec6d12325f417e7eb41911bf960f91e2cb484c0b64731",
+        "montecarlocounter.o": "3c8277467b247834ac716c64ce781c0655f293ffaed3aee717c8fd001e93c581",
+        "sudakov.o": "dc79d2ff3abf1d2bb5210750dbaa7cd3bb25aac1b3b7ec2b0e17e2dd51e01293"
+      },
+      "P1_ug_wpzd": {
+        "madevent_mintMC": "6218285ca9313390bddf6090f8fd4bf2c8885de9643ab8c1b4303b13fb8af304",
+        "FKSParams.o": "01b2a20fad0415eea99ec6d12325f417e7eb41911bf960f91e2cb484c0b64731",
+        "montecarlocounter.o": "3c8277467b247834ac716c64ce781c0655f293ffaed3aee717c8fd001e93c581",
+        "sudakov.o": "dc79d2ff3abf1d2bb5210750dbaa7cd3bb25aac1b3b7ec2b0e17e2dd51e01293"
+      },
+      "P1_udx_wpzg": {
+        "madevent_mintMC": "c8c30ca0b361894a1d7bd945b28928bd6d32b2d90e1ebb50d765b08d46bb8ae0",
+        "FKSParams.o": "01b2a20fad0415eea99ec6d12325f417e7eb41911bf960f91e2cb484c0b64731",
+        "montecarlocounter.o": "a5db391990c5736a56cd6bfc657bf90844d592239c0ffb271a5d603d676bb455",
+        "sudakov.o": "dc79d2ff3abf1d2bb5210750dbaa7cd3bb25aac1b3b7ec2b0e17e2dd51e01293"
+      },
+      "P1_dxg_wpzux": {
+        "madevent_mintMC": "c30927cd427d67f98f8c78056ead269d280bb3fa3f60b916de96782fadadc71c",
+        "FKSParams.o": "01b2a20fad0415eea99ec6d12325f417e7eb41911bf960f91e2cb484c0b64731",
+        "montecarlocounter.o": "3c8277467b247834ac716c64ce781c0655f293ffaed3aee717c8fd001e93c581",
+        "sudakov.o": "dc79d2ff3abf1d2bb5210750dbaa7cd3bb25aac1b3b7ec2b0e17e2dd51e01293"
+      },
+      "P1_dxu_wpzg": {
+        "madevent_mintMC": "5f54e0ea3212910e590d9bbbd166bf126fa9e4585dd904009045f904cd0c5bfa",
+        "FKSParams.o": "01b2a20fad0415eea99ec6d12325f417e7eb41911bf960f91e2cb484c0b64731",
+        "montecarlocounter.o": "a5db391990c5736a56cd6bfc657bf90844d592239c0ffb271a5d603d676bb455",
+        "sudakov.o": "dc79d2ff3abf1d2bb5210750dbaa7cd3bb25aac1b3b7ec2b0e17e2dd51e01293"
+      }
+    }
+  },
+  "off_on_equal": {
+    "P0_udx_wpz": true,
+    "P0_dxu_wpz": true,
+    "P1_gu_wpzd": true,
+    "P1_gdx_wpzux": true,
+    "P1_ug_wpzd": true,
+    "P1_udx_wpzg": true,
+    "P1_dxg_wpzux": true,
+    "P1_dxu_wpzg": true
+  }
+}

@@ -176,6 +176,119 @@ and [setup with source/card hashes](audits/fxfx_delta_wz_h_scales/setup.json)
 retain the results and reproduction details. The analysis script is
 `fxfx_diagnostics/compare_wz_h_scales.py`.
 
+## Optional backward-ISR source correction
+
+Set `#DeltaBackwardISR` to `.true.` in `Cards/FKS_params.dat` to enable
+the incoming-parton correction; its default is `.false.`. This applies
+to standalone MC@NLO-Delta and FxFx-Delta. It leaves the H-event scale
+prescription and the FxFx analytic Sudakov endpoints unchanged.
+
+For each supported incoming quark or gluon, the correction replaces the
+forward Sudakov-table/PDF-ratio approximation by the LO-derived backward
+factor `F * R * exp(C)`. `F` is the analytic PDF-free forward probability,
+`R` the grouped starting/stopping PDF ratio, and `C` restores PDF evolution
+outside the finite massless-II shower `z` boundary. Every live incoming
+colour connection contributes, including both ends of an incoming gluon.
+Final-state legs retain their tables. Incoming legs fall back to the
+original calculation for unsupported beams or flavour groups, stopping
+scales at or below 1.01 GeV, or missing PDF support at the start or a
+quadrature node.
+
+The running coupling always comes from `pysudakov_isr_parameters` in
+the active standalone `sudakov.f` provider. There are no independent
+coupling controls in the FKS card, and shower-card or hard-process
+couplings do not override it. The shipped archived PDFmode-1 provider
+declares its audited effective profile: `alpha_s(MZ)=0.1365`, one-loop
+running, CMW off, at most five flavours, and thresholds 1.5 and 4.8 GeV.
+This coupling is local to the no-emission probability. It does not replace
+the coupling or running used in the hard matrix elements, the hard PDFs,
+the FxFx analytic factors or the subsequent Pythia shower. It changes the
+paired H/S source weights through Delta alone.
+This identification comes from the archive comparison documented in
+[the investigation](audits/delta_noemission/investigation_report.md);
+the original producing run's settings log is unavailable.
+
+The exporter preserves provider metadata. For old or custom providers
+without the API it appends an explicit unknown-status implementation,
+preserving their ordinary use with the option disabled. Enabling backward
+ISR with unknown metadata stops with an error. The prototype supports
+PDFmode 1, one- or two-loop running, CMW off, five-flavour running and the
+thresholds above; incompatible metadata also stops rather than silently
+substituting another coupling. Replacement or regenerated grids must
+carry their own generation parameters in this API.
+
+Changing this switch changes the paired H/S source weights before
+unweighting. Rerun integration, grid setup and event generation; reshowering
+existing LHE files does not apply the correction. The finite quadrature,
+grouped flavour treatment and LO PDF-evolution identity remain
+approximations, particularly with NLO PDFs. This option does not establish
+exact agreement with the competing shower or validate FxFx predictions.
+
+Focused compiled checks cover the running coupling, backward identity,
+colour-line factors, fallbacks, source dispatch, provider metadata and
+legacy table exports:
+
+```sh
+python3 -m unittest tests.unit_tests.fks.test_delta_backward_isr tests.unit_tests.fks.test_mcatnlo_delta_scales tests.unit_tests.fks.test_sudakov_table -v
+```
+
+Validation on 2 November 2026 passed all 35 checks. The complete modified
+`FKSParams.f90` and `montecarlocounter.f` also compiled against generated
+WZ and WZ+jet subprocess includes and modules. These checks validate the
+implementation and its coupling contract, rather than a merged prediction.
+
+### WZ comparison with backward ISR enabled
+
+Two fresh integrations and one-million-event samples on 2 November 2026
+compare `DeltaBackwardISR=False` and `True` for the same
+`p p > w+ z [QCD] @0` plus `p p > w+ z j [QCD] @1` setup. Both use
+13 TeV beams, `ptj=10` GeV, `Qcut=70` GeV, geometric-mean H scales and
+Pythia 8.317. Their eight subprocess executables are byte-identical;
+the FKS cards differ only in the switch. Actual shower steering is
+byte-identical, including the corrected charged-resonance QED-off setting.
+
+| Sample | Backward ISR off (pb) | Backward ISR on (pb) | Change |
+| --- | ---: | ---: | ---: |
+| @0 | 20.929782 +/- 0.042567 | 20.881391 +/- 0.042666 | -0.231% |
+| @1 | 10.008458 +/- 0.032694 | 10.098387 +/- 0.032787 | +0.899% |
+| Sum | 30.938241 +/- 0.053674 | 30.979777 +/- 0.053809 | +0.134% |
+
+The independently integrated signed source rates are
+`49.466075 +/- 0.114470` pb (off) and `49.551454 +/- 0.067357` pb (on).
+Their integration uncertainties are separate from the conditional shower
+sampling errors in the table. No cross-run covariance or uncertainty on
+the difference is estimated.
+
+Negative fractions are essentially unchanged: 17.5884% to 17.6073%
+before showering and 8.9641% to 8.9857% after merging. This test does not
+demonstrate negative-weight reduction. Both showers selected all one
+million events with zero errors or unexpected aborts; merged accepted
+counts are 493,268 and 492,625. The merged `pT(WZ)` integrals change by
+-0.017% over 0--20 GeV, -0.060% over 20--70 GeV and +0.037% over
+70--150 GeV. Larger relative changes in small, subdominant @1 low-pT
+contributions are retained in the report and bin tables.
+
+The enabled result is -0.213% relative to the previous geometric-mean
+sample (31.045946 pb), and +0.065% relative to the original hard-scalar
+sample (30.959611 pb). These historical comparisons also include the
+charged-resonance QED switch fix and fresh integration, so only the
+new off/on comparison isolates the source correction.
+
+These results support retaining the implementation as an optional
+prescription for this setup; they do not establish exact competing-shower
+agreement or universal merging accuracy. The
+[full comparison](audits/fxfx_delta_wz_backward_isr/comparison.md),
+[primary plots](audits/fxfx_delta_wz_backward_isr/distributions.pdf),
+[historical plots](audits/fxfx_delta_wz_backward_isr/historical_distributions.pdf),
+[bin tables](audits/fxfx_delta_wz_backward_isr/histogram_comparison.csv) and
+[setup](audits/fxfx_delta_wz_backward_isr/setup.json) preserve the numerical
+results and reproduction details.
+
+After the comparison, the expanded native CI command passed 180 tests
+with three optional skips. Cleanup removed duplicate plain LHE shards;
+final compressed events and histograms remain available. The validated
+and final counterterm sources have identical non-comment statements.
+
 ## Pythia8 S-event starting scales
 
 Both ordinary MC@NLO and MC@NLO-Delta now sample the S-event scalar

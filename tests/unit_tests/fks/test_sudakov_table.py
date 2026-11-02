@@ -15,6 +15,96 @@ SUDGEN = ROOT / 'vendor/SudGen'
 CERNLIB = ROOT / 'Template/NLO/Source/CERNLIB'
 
 
+def isr_parameters(library):
+    """Read the standalone table's Fortran coupling metadata."""
+    function = library.pysudakov_isr_parameters_
+    function.argtypes = [ctypes.POINTER(kind) for kind in (
+        ctypes.c_double, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+        ctypes.c_double, ctypes.c_int, ctypes.c_int)]
+    function.restype = None
+    alpha, order, cmw, nfmax = (ctypes.c_double(), ctypes.c_int(),
+                                ctypes.c_int(), ctypes.c_int())
+    thresholds = (ctypes.c_double * 2)()
+    pdfmode, status = ctypes.c_int(), ctypes.c_int()
+    function(ctypes.byref(alpha), ctypes.byref(order), ctypes.byref(cmw),
+             ctypes.byref(nfmax), thresholds, ctypes.byref(pdfmode),
+             ctypes.byref(status))
+    return (alpha.value, order.value, bool(cmw.value), nfmax.value,
+            tuple(thresholds), pdfmode.value, status.value)
+
+
+class TestSudakovTableExport(unittest.TestCase):
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory(prefix='mg5_sudakov_export_')
+        self.addCleanup(self.tempdir.cleanup)
+        self.work = Path(self.tempdir.name)
+
+    def test_selected_provider_remains_standalone_with_its_metadata(self):
+        from madgraph.iolibs.export_fks import copy_sudakov_table
+        exported = self.work / 'exported.f'
+        copy_sudakov_table(SUDGEN / 'sudakov.f', exported)
+        self.assertFalse(exported.is_symlink())
+        self.assertEqual(exported.read_bytes(), (SUDGEN / 'sudakov.f').read_bytes())
+
+    def test_custom_provider_metadata_is_preserved(self):
+        from madgraph.iolibs.export_fks import copy_sudakov_table
+        provider = self.work / 'custom.f'
+        provider.write_text('''      SUBROUTINE PYSUDAKOV_ISR_PARAMETERS(
+     $     alpha_mz,order,cmw,nfmax,thresholds,pdfmode,status)
+      implicit none
+      real*8 alpha_mz,thresholds(2)
+      integer order,nfmax,pdfmode,status
+      logical cmw
+      alpha_mz=0.120d0
+      order=2
+      cmw=.false.
+      nfmax=5
+      thresholds=(/1.4d0,4.7d0/)
+      pdfmode=1
+      status=0
+      end
+''')
+        selected = self.work / 'selected.f'
+        selected.symlink_to(provider.name)
+        exported = self.work / 'exported.f'
+        copy_sudakov_table(selected, exported)
+        self.assertEqual(exported.read_bytes(), provider.read_bytes())
+
+    @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
+    def test_old_provider_links_with_explicit_unknown_metadata(self):
+        from madgraph.iolibs.export_fks import copy_sudakov_table
+        provider = self.work / 'old.f'
+        # A comment mentioning the API is not an implementation.
+        provider.write_text('''c     subroutine pysudakov_isr_parameters is absent here.
+      real*8 function pysudakov(st,xm,id,itype,xmpart)
+      implicit none
+      real*8 st,xm,xmpart(21)
+      integer id,itype
+      pysudakov=0.25d0
+      end
+''')
+        exported = self.work / 'exported.f'
+        copy_sudakov_table(provider, exported)
+        self.assertTrue(exported.read_bytes().startswith(provider.read_bytes()))
+        library = self.work / 'exported.so'
+        subprocess.run([shutil.which('gfortran'), '-shared', '-fPIC',
+                        str(exported), '-o', str(library)], check=True,
+                       cwd=self.work, capture_output=True, text=True)
+        loaded = ctypes.CDLL(str(library))
+        self.assertEqual(isr_parameters(loaded),
+                         (-1., -1, False, -1, (-1., -1.), -1, 1))
+        loaded.pysudakov_.restype = ctypes.c_double
+        scale, mass = ctypes.c_double(10.), ctypes.c_double(100.)
+        pdg, topology = ctypes.c_int(1), ctypes.c_int(1)
+        masses = (ctypes.c_double * 21)()
+        self.assertEqual(loaded.pysudakov_(ctypes.byref(scale), ctypes.byref(mass),
+                         ctypes.byref(pdg), ctypes.byref(topology), masses), .25)
+        # Re-exporting a legacy export must not add duplicate symbols.
+        second = self.work / 'second.f'
+        copy_sudakov_table(exported, second)
+        self.assertEqual(second.read_bytes(), exported.read_bytes())
+
+
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
 class TestDefaultSudakovTable(unittest.TestCase):
     @classmethod
@@ -88,6 +178,10 @@ class TestDefaultSudakovTable(unittest.TestCase):
                                 self.assertGreaterEqual(actual, 0.)
                                 self.assertAlmostEqual(actual**ends, max(raw, 0.),
                                                        delta=2.e-15)
+
+    def test_archive_coupling_metadata_is_exposed_by_standalone_copy(self):
+        self.assertEqual(isr_parameters(self.libraries[0]),
+                         (.1365, 1, False, 5, (1.5, 4.8), 1, 0))
 
     def test_two_gluon_lines_reconstruct_single_raw_radiator(self):
         # II, IF and FI trials contain one active radiator. Its two colour

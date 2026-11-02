@@ -672,7 +672,7 @@ jobs:
         run: |
           ./tests/test_manager.py \
             test_born_support test_real_helicity_filter \
-            test_mcatnlo_delta_scales test_herwig7_scales \
+            test_mcatnlo_delta_scales test_delta_backward_isr test_sudakov_table test_herwig7_scales \
             test_fxfx_delta_weights test_fxfx_delta_event_scales \
             test_fxfx_delta_lhe test_fxfx_delta_hook \
             test_soft_col_limits test_momentum_maps test_mc_dead_zones \

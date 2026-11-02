@@ -1,0 +1,6 @@
+{
+  "validated_source_sha256": "713100848880ee93c4879f62aefb506111e9ede9b2b511b24ef15357b8ec819b",
+  "final_source_sha256": "afb51d119565342eb44b9e5ef25a636a18a16ee14bd0e91a5053669f503eacab",
+  "fixed_form_statements_identical": true,
+  "cleanup": "Clarified that delta_backward_ratios returns an additive boundary exponent; added missing CI selectors. No numerical statement or evaluation order changed."
+}

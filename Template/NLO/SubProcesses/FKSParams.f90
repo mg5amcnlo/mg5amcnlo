@@ -23,6 +23,9 @@ module FKSParams
   logical :: MCSubtractionAtFixedFlow=.true.
   logical :: FKSExplicitSum=.false.
   logical :: FxFxPythia8FiniteTerms=.false.
+  ! Default-off incoming-parton Delta prototype. Its coupling/running
+  ! always come from the active Sudakov-table provider, without overrides.
+  logical :: delta_backward_isr=.false.
   logical, private :: FxFxPythia8Matching=.false.
   integer :: FKSFinalRecoil=0
   integer :: FKSISRMapping=0
@@ -113,6 +116,8 @@ contains
              read(68,*,end=999) MCSubtractionAtFixedFlow
           else if (buff .eq. '#FxFxPythia8FiniteTerms') then
              read(68,*,end=999) FxFxPythia8FiniteTerms
+          else if (buff .eq. '#DeltaBackwardISR') then
+             read(68,*,end=999) delta_backward_isr
           else if (buff .eq. '#FKSExplicitSum') then
              read(68,*,end=999) FKSExplicitSum
           else if (buff .eq. '#UsePolyVirtual') then
@@ -257,6 +262,7 @@ contains
        write(*,*) ' > MCSubtractionAtFixedFlow  = ',MCSubtractionAtFixedFlow
        write(*,*) ' > FKSExplicitSum            = ',FKSExplicitSum
        write(*,*) ' > FxFxPythia8FiniteTerms     = ',FxFxPythia8FiniteTerms
+       write(*,*) ' > DeltaBackwardISR          = ',delta_backward_isr
        write(*,*) &
             '==============================================================='
        paramPrinted=.TRUE.
@@ -288,6 +294,7 @@ contains
     MCSubtractionAtFixedFlow=.true.
     FKSExplicitSum=.false.
     FxFxPythia8FiniteTerms=.false.
+    delta_backward_isr=.false.
     IncludeBornContributions=.true.
     SelectedContributionTypes(0)=0
     VetoedContributionTypes(0)=0

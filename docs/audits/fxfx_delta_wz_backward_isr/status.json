@@ -1,0 +1,39 @@
+{
+  "controller_pid": 304057,
+  "stage": "complete",
+  "samples": {
+    "off": {
+      "stage": "complete",
+      "child_pid": null,
+      "log": "/export/slow1/rikkert/FxFx_Delta/docs/audits/fxfx_delta_wz_backward_isr/shower_off.log",
+      "command": [
+        "python3",
+        "bin/shower",
+        "run_backward_off",
+        "-f"
+      ],
+      "returncode": 0,
+      "event_file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardOFF/Events/run_backward_off/events.lhe.gz",
+      "summary": "\n   --------------------------------------------------------------\n      Summary:\n      Process p p > w+ z [QCD] @0 ; p p > w+ z j [QCD] @1\n      Run at p-p collider (6500.0 + 6500.0 GeV)\n      Number of events generated: 1000000\n      Total cross section: 4.947e+01 +- 1.1e-01 pb\n   --------------------------------------------------------------\n",
+      "histogram": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardOFF/Events/run_backward_off/plot_PYTHIA8_1_0.HwU"
+    },
+    "on": {
+      "stage": "complete",
+      "child_pid": null,
+      "log": "/export/slow1/rikkert/FxFx_Delta/docs/audits/fxfx_delta_wz_backward_isr/shower_on.log",
+      "command": [
+        "python3",
+        "bin/shower",
+        "run_backward_on",
+        "-f"
+      ],
+      "returncode": 0,
+      "event_file": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardON/Events/run_backward_on/events.lhe.gz",
+      "summary": "\n   --------------------------------------------------------------\n      Summary:\n      Process p p > w+ z [QCD] @0 ; p p > w+ z j [QCD] @1\n      Run at p-p collider (6500.0 + 6500.0 GeV)\n      Number of events generated: 1000000\n      Total cross section: 4.955e+01 +- 6.7e-02 pb\n   --------------------------------------------------------------\n",
+      "histogram": "/export/slow1/rikkert/FxFx_Delta/PROC_pp_wz01j_EWjets_Delta_BackwardON/Events/run_backward_on/plot_PYTHIA8_1_0.HwU"
+    }
+  },
+  "updated_utc": "2026-11-02T11:09:51.180603+00:00",
+  "analysis_complete": true,
+  "cleanup_complete": true
+}
