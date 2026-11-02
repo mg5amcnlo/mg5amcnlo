@@ -41,19 +41,21 @@ void warn_once(const std::string& key, const std::string& message) {
 namespace {
 
 // Keyed by MatrixElementApi::file_name(), the library: the values set on it
-// (see parameters_lock() in tupperware.hpp for why they are kept).
+// (see parameters_lock() in tupperware.hpp for why they are kept), and the
+// instances reloaded from it, which each have parameters of their own and so
+// get every later value too. A reloaded instance lives as long as the Context
+// it was loaded into.
+struct ReloadedApi {
+    std::weak_ptr<madspace::Context> context;
+    const madspace::MatrixElementApi* api;
+};
 struct LibraryParameters {
     std::map<std::string, std::pair<double, double>> values;
+    std::vector<ReloadedApi> reloaded;
 };
 
 std::mutex parameters_mutex;
 std::unordered_map<std::string, LibraryParameters> parameters_registry;
-
-LibraryParameters library_parameters(const std::string& library) {
-    std::lock_guard<std::mutex> lock(parameters_mutex);
-    auto found = parameters_registry.find(library);
-    return found == parameters_registry.end() ? LibraryParameters{} : found->second;
-}
 
 void apply_parameters(const madspace::MatrixElementApi& target, const LibraryParameters& parameters) {
     for (auto& [location, value] : parameters.values) {
@@ -72,9 +74,24 @@ void set_api_parameter(
     const madspace::MatrixElementApi& api, const std::string& location, double real, double imag
 ) {
     api.set_parameter(location, real, imag);
-    std::lock_guard<std::mutex> lock(parameters_mutex);
-    auto& entry = parameters_registry[api.file_name()];
-    entry.values[location] = {real, imag};
+    std::vector<ReloadedApi> reloaded;
+    {
+        std::lock_guard<std::mutex> lock(parameters_mutex);
+        auto& entry = parameters_registry[api.file_name()];
+        entry.values[location] = {real, imag};
+        std::erase_if(entry.reloaded, [](const ReloadedApi& r) { return r.context.expired(); });
+        reloaded = entry.reloaded;
+    }
+    // the UMAMI instances of a library have parameters of their own: the
+    // instances reloaded for the batches follow the launches of api
+    for (auto& [weak_context, target] : reloaded) {
+        auto context = weak_context.lock();
+        if (!context || target == &api) {
+            continue;
+        }
+        std::lock_guard<std::mutex> guard(api_call_mutex(*target));
+        target->set_parameter(location, real, imag);
+    }
 }
 
 void forget_api_parameters(const madspace::MatrixElementApi& api) {
@@ -98,7 +115,16 @@ reload_matrix_element(const ReloadSpec& reload, REX::process& proc) {
         // load into concurrently)
         std::unique_lock<std::shared_mutex> exclusive(parameters_lock());
         api = &reload.context->load_matrix_element(reload.me_path, reload.param_card);
-        apply_parameters(*api, library_parameters(api->file_name()));
+        LibraryParameters parameters;
+        {
+            // recorded and registered at once: a value set_api_parameter()
+            // records after this reaches the new instance through the registry
+            std::lock_guard<std::mutex> lock(parameters_mutex);
+            auto& entry = parameters_registry[api->file_name()];
+            entry.reloaded.push_back({reload.context, api});
+            parameters.values = entry.values;
+        }
+        apply_parameters(*api, parameters);
     }
     proc.set_device_data(key, nullptr, 0, std::any(api));
     return *api;

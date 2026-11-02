@@ -73,19 +73,19 @@ std::mutex& api_call_mutex(const madspace::MatrixElementApi& api);
 // its definition); shared by TupperWare and Driver for conditions that change
 // what is computed, such as falling back to helicity summation.
 void warn_once(const std::string& key, const std::string& message);
-// MadMatrix libraries keep their model parameters in a process-wide
-// singleton, in the common library all subprocess libraries of a process
-// directory link against: every MatrixElementApi of the process shares them
-// (an instance reloaded from a ReloadSpec follows ParamHandler's launches
-// like the api it was reloaded for), and umami_initialize() -- run by each
-// load_matrix_element() -- resets them to the param_card. So:
+// Each UMAMI instance of a MadMatrix library has model parameters of its own,
+// which umami_initialize() -- run by each load_matrix_element() -- sets to the
+// param_card; an instance reloaded from a ReloadSpec has to follow
+// ParamHandler's launches like the api it was reloaded for. So:
 // - set_api_parameter(): api.set_parameter(), with the value recorded per
-//   library (file_name()) (madtrex::ParamHandler's launches). Callers hold
+//   library (file_name()) (madtrex::ParamHandler's launches), and set on every
+//   instance reloaded from that library too. Callers hold
 //   api_call_mutex(api), as for any other set_parameter() call;
 // - reload_matrix_element(): the instance reloaded from reload for the batch
 //   proc, loaded on its first use (and kept in proc's device_data, shared by
 //   the batch's weightors) holding parameters_lock() exclusively, with the
-//   recorded parameter values set again right after;
+//   recorded parameter values set again right after, and registered for the
+//   later ones;
 // - forget_api_parameters(): drops what is recorded for api's library, for a
 //   Driver that has just loaded it (umami_initialize() reset its parameters
 //   to the param_card): the values a previous Driver's launches set on the
