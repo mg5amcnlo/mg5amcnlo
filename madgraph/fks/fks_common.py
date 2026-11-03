@@ -24,6 +24,7 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
 import madgraph.various.misc as misc
+import madgraph.various.banner as banner_mod
 from operator import itemgetter
 import copy
 import logging
@@ -867,6 +868,121 @@ def get_user_leg_order(process, pert = 'QCD'):
     leglist = to_fks_legs(process.get('legs'), process.get('model'))
     leglist.sort(pert = pert)
     return [leg['number'] for leg in leglist]
+
+
+def me_frame_characteristics(processes, density=False,
+                             splitting_types=('QCD',)):
+    """What the run_card me_frame may mean for these NLO processes, in the
+    leg numbering of the process as the user wrote it (the numbering of
+    me_frame). Returns (cm_legs, unsafe_legs, default_legs), sorted lists.
+
+    default_legs: the default me_frame of the run_card. For a collision
+    with an initial-state QCD splitting, the massive final-state legs: e.g.
+    [3, 4] for p p > w+{0} w- [QCD], [3] for p p > w+{0} j [QCD] (the
+    Collins-Soper frame of the W). Infrared safe and the same in every FKS
+    sector, unlike the partonic c.m. (see cm_legs). Empty otherwise
+    (e+ e-, decays), meaning the partonic c.m., [1, 2], is kept. It does
+    not depend on whether real emission is computed, so that [LOonly=QCD]
+    and [QCD] samples of a merged set share one frame.
+
+    cm_legs: the legs whose rest frame stands for the partonic c.m., which
+    is how me_frame = [1, 2] is read.
+      - A decay: the decaying particle, [1].
+      - A collision with no initial-state QCD splitting (e+ e-): [1, 2].
+        Every FKS sector then hands the real emission its momenta in its
+        own c.m., so the partonic c.m. is one well defined frame.
+      - A collision with one: the Born final state. FKS hands the real of
+        an initial-state sector its momenta in the c.m. of that sector's
+        underlying Born, and that differs between sectors by a boost along
+        z, so 'the frame the momenta come in' depends on the subtraction
+        partition (+9.5% on p p > w+{0} j [QCD] when only fks_b changes).
+        The real's own c.m. is no way out: it moves by a finite boost when
+        an initial-state parton goes collinear, so it is not infrared safe.
+        The rest frame of the Born final state is the partonic c.m. for
+        the Born, the virtual and every counterterm, and for the real it
+        is a function of its physical momenta alone.
+
+    unsafe_legs: the legs whose momentum changes by a finite amount in an
+    infrared limit, so that a frame containing them is not infrared safe
+    once real emission is computed:
+      - massless final-state legs charged under the perturbation (a jet for
+        [QCD]): a collinear splitting shares their momentum;
+      - initial-state legs of a collision charged under it (the partons of
+        p p for [QCD]): the real emission and the reduced Born carry
+        different momentum fractions even in the collinear limit.
+    Never the decaying particle of a 1 -> n process, whatever its charge:
+    FKS does not split it (fks_base.find_reals), and its momentum is the
+    total momentum in every configuration. Nor a beam that is not charged
+    under the perturbation (e+ e- with [QCD]). When cm_legs contains an
+    unsafe leg, me_frame = [1, 2] has no infrared-safe NLO definition.
+
+    splitting_types: the kinds of splitting the real emission was
+    generated with (proc_characteristics), 'QCD' and/or 'QED'.
+
+    All three are empty when no massive particle is polarised and no
+    spin-density matrix is asked for (output --density, density=True): the
+    matrix elements are then Lorentz invariant, and the frame does not
+    matter.
+    Legs of a multiparticle label count as coloured or massless if any of
+    its particles is, and as massive if all of them are. If only some
+    processes have an initial-state QCD splitting (a photon in the
+    proton), the Born final state is used for all: it is the partonic c.m.
+    of every Born too.
+    """
+    # what splits is what FKS generated splittings for (the run's
+    # splitting_types), not perturbation_couplings: with the mixed expansion
+    # e+ e- > t t~ [QCD] carries ['QCD', 'QED'] there
+    def splits(p):
+        """the particle radiates or splits under the perturbation"""
+        return ('QCD' in splitting_types and p.get('color') != 1) or \
+               ('QED' in splitting_types and (p.get('charge') != 0 or
+                                              p.get('pdg_code') == 22))
+
+    # the run_card default: one rule for LO and NLO, so that they agree
+    default_legs = banner_mod.default_me_frame_for_process(
+                        processes, density=density, radiates=splits)
+    default_legs = default_legs if isinstance(default_legs, list) else []
+
+    cm_legs = set()
+    cm_legs_isr = set()
+    unsafe_legs = set()
+    for proc in processes:
+        model = proc.get('model')
+        legs = proc.get('legs')
+        particles = []
+        for leg in legs:
+            ids = leg.get('ids') if 'ids' in leg else [leg.get('id')]
+            particles.append([model.get_particle(i) for i in ids])
+
+        if not density and not any(
+                leg.get('polarization') and
+                any(p.get('mass').lower() != 'zero' for p in parts)
+                for leg, parts in zip(legs, particles)):
+            continue
+
+        initial = [n for n, leg in enumerate(legs, 1) if not leg.get('state')]
+        final = [n for n, leg in enumerate(legs, 1) if leg.get('state')]
+        # [LOonly=...]: no real emission, so nothing to be infrared safe for
+        has_real = proc.get('NLO_mode') != 'LOonly'
+        initial_radiates = any(splits(p) for n in initial
+                               for p in particles[n - 1])
+
+        if len(initial) == 2 and has_real and initial_radiates:
+            cm_legs_isr.update(final)
+        else:
+            cm_legs.update(initial)
+
+        if has_real:
+            unsafe_legs.update(
+                n for n in final if any(splits(p) and
+                                        p.get('mass').lower() == 'zero'
+                                        for p in particles[n - 1]))
+            if len(initial) == 2:
+                unsafe_legs.update(n for n in initial
+                                   if any(splits(p) for p in particles[n - 1]))
+
+    return (sorted(cm_legs_isr or cm_legs), sorted(unsafe_legs),
+            default_legs)
 
 
 def sort_proc(process,pert = 'QCD'):

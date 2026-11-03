@@ -398,6 +398,8 @@ class ProcessExporterFortran(VirtualExporter,
         
         #place holder to pass information to the run_interface
         self.proc_characteristic = banner_mod.ProcCharacteristic()
+        self.proc_characteristic['density_matrix'] = \
+            isinstance(self.cmd_options, dict) and 'density' in self.cmd_options
         # call mother class
         super(ProcessExporterFortran,self).__init__(dir_path, opt)
 

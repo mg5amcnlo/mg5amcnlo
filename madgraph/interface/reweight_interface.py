@@ -2130,26 +2130,37 @@ class ReweightInterface(extended_cmd.Cmd):
         element's leg order) in the rest frame of the legs ``selected``
         (counted from 1), a single one exactly at rest.
 
-        madevent applies that boost to momenta that are in the partonic CM
-        frame -- genps.f builds them there and unwgt.f boosts them to the lab
-        only when it writes the event -- so the event is first taken back to
-        the rest frame of its initial state (the z boost the default frame
-        does below). Boosting to the selected legs straight from the lab is
-        not the same frame: two boosts along different directions compose to
-        a boost *and* a rotation (Wigner), and the quantisation axis of a
-        single leg at rest turns with it -- by 25 degrees already for a W of
-        pT = 100 GeV in a partonic CM at rapidity 1. Only a frame that
-        is the partonic CM itself (e.g. the whole final state) is unaffected.
+        For a collision that frame is reached by a boost along z, to zero
+        rapidity of the selected legs, and then a transverse one
+        (get_me_frame_boosts in Template/Common/Source/impose_frame_rest.f),
+        which lands in the same frame whichever frame along the beam it
+        starts from -- the lab here, the partonic CM in madevent. A single
+        boost from either would not: two boosts along different directions
+        compose to a boost *and* a rotation (Wigner), and the quantisation
+        axis of a single leg at rest turns with it -- by 25 degrees already
+        for a W of pT = 100 GeV in a partonic CM at rapidity 1. A decay has
+        no beam: its frame is a single boost from the rest frame of the
+        decaying particle, the frame madevent works in.
         """
-        pinit = lhe_parser.FourMomentum()
-        for i in range(nb_initial):
-            pinit += lhe_parser.FourMomentum(momenta[i])
-        cm = cls.boost_momenta_to_rest_frame(momenta, pinit)
+        rest_leg = selected[0] - 1 if len(selected) == 1 else None
+        if nb_initial != 2:
+            pinit = lhe_parser.FourMomentum()
+            for i in range(nb_initial):
+                pinit += lhe_parser.FourMomentum(momenta[i])
+            rest = cls.boost_momenta_to_rest_frame(momenta, pinit)
+            pboost = lhe_parser.FourMomentum()
+            for n in selected:
+                pboost += lhe_parser.FourMomentum(rest[n - 1])
+            return cls.boost_momenta_to_rest_frame(rest, pboost, rest_leg)
         pboost = lhe_parser.FourMomentum()
         for n in selected:
-            pboost += lhe_parser.FourMomentum(cm[n - 1])
-        rest_leg = selected[0] - 1 if len(selected) == 1 else None
-        return cls.boost_momenta_to_rest_frame(cm, pboost, rest_leg)
+            pboost += lhe_parser.FourMomentum(momenta[n - 1])
+        along_z = cls.boost_momenta_to_rest_frame(
+            momenta, lhe_parser.FourMomentum(pboost.E, 0., 0., pboost.pz))
+        transverse = lhe_parser.FourMomentum(
+            math.sqrt((pboost.E - pboost.pz) * (pboost.E + pboost.pz)),
+            pboost.px, pboost.py, 0.)
+        return cls.boost_momenta_to_rest_frame(along_z, transverse, rest_leg)
 
     def get_me_frame(self, n_incoming, n_external):
         """The legs -- counted from 1, in the matrix element's order -- whose

@@ -12667,8 +12667,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         momentum is the sum of the selected legs (in the lab), ready to be
         handed to ``_boost_momenta``, which negates the spatial part itself
         (HELAS ``boostx``, exactly what ``boost_to_frame`` does in driver.f);
-        its ``initial`` attribute is the initial state's total momentum, the
-        partonic CM that ``_boost_momenta`` goes through first.
+        its ``along_beam`` and ``initial`` attributes tell ``_boost_momenta``
+        how to get there (along the beam for a collision, through the rest
+        frame of the decaying particle for a decay).
 
         Three things switch it on -- the three clauses of ``_needs_frame_axis``
         -- and all of them are cases where the frame is *observable*:
@@ -12736,15 +12737,12 @@ class MadSpinInterface(extended_cmd.Cmd):
                 "frame_id = %s selects legs %s, a massless system (m^2 = %g "
                 "GeV^2): it has no rest frame. Select massive legs, or several "
                 "legs." % (frame_id, selected, pboost.mass_sqr))
-        # madevent's boost_to_frame acts on momenta in the partonic CM frame
-        # (genps.f builds them there, unwgt.f boosts them to the lab only when
-        # it writes the event), so _boost_momenta first takes the lab momenta
-        # back to the rest frame of the initial state. Going to the selected
-        # legs straight from the lab is not the same frame: two boosts along
-        # different directions compose to a boost and a (Wigner) rotation, and
-        # the quantisation axis of a leg at rest turns with it -- 25 degrees
-        # for a W of pT = 100 GeV in a partonic CM at rapidity 1.
+        # A collision has a beam axis, and its frame is reached along it first
+        # (see _boost_momenta). A decay has none: madevent hands its matrix
+        # element momenta in the rest frame of the decaying particle and
+        # boosts once from there, so _boost_momenta goes through that frame.
         nb_initial = len(orig_order[0]) if orig_order else 2
+        pboost.along_beam = (nb_initial == 2)
         pboost.initial = lhe_parser.FourMomentum()
         for i in range(nb_initial):
             pboost.initial += lhe_parser.FourMomentum(momenta[i])
@@ -12790,11 +12788,24 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         if rest_leg == -1:
             rest_leg = getattr(pboost, 'rest_leg', None)
-        initial = getattr(pboost, 'initial', None)
-        if initial is not None:
-            # through the partonic CM first, as madevent (see _frame_boost)
-            momenta = to_rest(momenta, initial)
-            pboost = to_rest([pboost], initial)[0]
+        if getattr(pboost, 'along_beam', False):
+            # Along z to zero rapidity of pboost, then transverse to its rest
+            # frame: the frame madevent, madspace, aMC@NLO and driver.f all
+            # use, and the same whichever frame along the beam the momenta
+            # come in -- here the lab. A single boost straight from the lab
+            # would differ by a Wigner rotation, and the quantisation axis of
+            # a leg at rest would turn with it (get_me_frame_boosts,
+            # Template/Common/Source/impose_frame_rest.f).
+            momenta = to_rest(momenta, lhe_parser.FourMomentum(
+                pboost.E, 0., 0., pboost.pz))
+            pboost = lhe_parser.FourMomentum(
+                math.sqrt((pboost.E - pboost.pz) * (pboost.E + pboost.pz)),
+                pboost.px, pboost.py, 0.)
+        elif getattr(pboost, 'initial', None) is not None:
+            # a decay: through the rest frame of the decaying particle first,
+            # as madevent (see _frame_boost)
+            momenta = to_rest(momenta, pboost.initial)
+            pboost = to_rest([pboost], pboost.initial)[0]
         out = [(new.E, new.px, new.py, new.pz)
                for new in to_rest(momenta, pboost)]
         if rest_leg is not None and rest_leg <= len(out):

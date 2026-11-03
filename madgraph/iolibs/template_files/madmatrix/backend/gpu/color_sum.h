@@ -85,10 +85,6 @@ namespace madmatrix
 
   //--------------------------------------------------------------------------
 
-  void createNormalizedColorMatrix();
-
-  //--------------------------------------------------------------------------
-
   void
   color_sum_gpu( fptype* ghelAllMEs,               // output: allMEs super-buffer for nGoodHel <= ncomb individual helicities (index is ighel)
                  const fptype_amp* ghelAllJamps,   // input: allJamps super-buffer[2][ncol][nGoodHel][nevt] for nGoodHel <= ncomb individual helicities

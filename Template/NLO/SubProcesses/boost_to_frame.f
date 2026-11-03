@@ -84,7 +84,7 @@ c**************************************************************************
       double precision p_i(0:3), p_j(0:3), y_ij_fks
       double complex azifact
       logical boosted
-      double precision pboost(0:3), pm(0:3), kp(0:3)
+      double precision pboost(0:3,2), pm(0:3), kp(0:3)
       double precision pib(0:3), pjb(0:3)
       double precision cphi_m, sphi_m, vtiny
       parameter (vtiny=1d-8)
@@ -101,14 +101,14 @@ c**************************************************************************
          return
       endif
 
-      call boostx(p_born_in(0,imother), pboost, pm)
+      call me_frame_apply(p_born_in(0,imother), pboost, pm)
       call snap_mother_at_rest(ids, nexternal-1, imother, pm)
 
       if (1d0-y_ij_fks.lt.vtiny) then
 c        Collinear: <ij>/[ij] is 0/0, so rebuild -exp(2 i psi) from the
 c        stored emission direction. Same threshold as the legacy branch
 c        in sborncol_fsr/isr, so boosted and unboosted switch together.
-         call boostx(xij_kperp, pboost, kp)
+         call me_frame_apply(xij_kperp, pboost, kp)
          call azifact_from_kperp(pm, kp, azifact)
       else
 c        Away from the collinear point the spinors are exact, while the
@@ -119,8 +119,8 @@ c        here whenever 1-y_ij_fks < tiny (1e-6 in production), not only
 c        at y=1, so this branch is reached with genuinely off-collinear
 c        kinematics. Convert <ij>/[ij] to the -exp(2 i psi) this routine
 c        contracts to return, using <ij>/[ij] = -exp(2 i psi) e^(2 i phi_m).
-         call boostx(p_i, pboost, pib)
-         call boostx(p_j, pboost, pjb)
+         call me_frame_apply(p_i, pboost, pib)
+         call me_frame_apply(p_j, pboost, pjb)
          call azifact_from_spinors(pib, pjb, azifact)
          call getaziangles(pm, cphi_m, sphi_m)
          azifact=azifact*dcmplx(cphi_m,-sphi_m)**2
@@ -133,13 +133,14 @@ c        contracts to return, using <ij>/[ij] = -exp(2 i psi) e^(2 i phi_m).
 
       subroutine me_frame_born_boost(p_born_in, pboost, boosted)
 c**************************************************************************
-c     The boost sborn_frame() would apply to these Born momenta, exposed so
-c     the MC counterterms can put their azimuthal ingredients in the same
-c     frame. boosted=.false. means no frame was requested.
+c     The boosts sborn_frame() would apply to these Born momenta, exposed
+c     so the MC counterterms can put their azimuthal ingredients in the
+c     same frame (apply them with me_frame_apply). boosted=.false. means no
+c     frame was requested.
 c**************************************************************************
       implicit none
       include 'nexternal.inc'
-      double precision p_born_in(0:3,nexternal-1), pboost(0:3)
+      double precision p_born_in(0:3,nexternal-1), pboost(0:3,2)
       logical boosted
       integer ids(nexternal-1)
       logical trivial
@@ -194,7 +195,7 @@ c     so that the caller's existing multiply comes out right:
 c         ISR   -(cphi_mother + i sphi_mother)**2 * conjg(azifact)
 c         FSR   -(cphi_mother - i sphi_mother)**2 *       azifact
 c     both = +-exp(-+2 i psi), psi the emission azimuth about the mother.
-c     The boost (pboost, from me_frame_born_boost) is the Born's own, since
+c     The boosts (pboost, from me_frame_born_boost) are the Born's own, since
 c     the phase multiplies borntilde. azifact is <ij>/[ij] only in the
 c     generic branch; the collinear one pre-cancels the caller's mother
 c     factor instead, so do not assume it if you change the caller.
@@ -203,7 +204,7 @@ c**************************************************************************
       include 'nexternal.inc'
       double precision p_born_in(0:3,nexternal-1)
       integer imother
-      double precision p_i(0:3), p_j(0:3), y_ij_fks, pboost(0:3)
+      double precision p_i(0:3), p_j(0:3), y_ij_fks, pboost(0:3,2)
       double complex azifact
       double precision cphi_mother, sphi_mother
       double precision pm(0:3), kp(0:3), pib(0:3), pjb(0:3)
@@ -211,7 +212,7 @@ c**************************************************************************
       double precision xij_kperp(0:3)
       common/cxij_kperp/xij_kperp
 
-      call boostx(p_born_in(0,imother), pboost, pm)
+      call me_frame_apply(p_born_in(0,imother), pboost, pm)
       call get_frame_mask_born(ids)
       call snap_mother_at_rest(ids, nexternal-1, imother, pm)
       call getaziangles(pm, cphi_mother, sphi_mother)
@@ -226,12 +227,12 @@ c
 c        Taken at kt exactly zero and nowhere else, on purpose: the spinors
 c        are exact at any kt>0, while this reconstruction carries an
 c        O((kt/E)/betaT) error, betaT the transverse velocity of the boost.
-         call boostx(xij_kperp, pboost, kp)
+         call me_frame_apply(xij_kperp, pboost, kp)
          call azifact_from_kperp(pm, kp, azifact)
          azifact=azifact*dcmplx(cphi_mother,sphi_mother)**2
       else
-         call boostx(p_i, pboost, pib)
-         call boostx(p_j, pboost, pjb)
+         call me_frame_apply(p_i, pboost, pib)
+         call me_frame_apply(p_j, pboost, pjb)
          call azifact_from_spinors(pib, pjb, azifact)
       endif
 
@@ -650,11 +651,15 @@ c           the extra parton: no Born counterpart, never part of the frame
 
       subroutine get_me_frame_boost(p, npart, ids, pboost, trivial)
 c**************************************************************************
-c     Build the boost 4-vector that takes the selected system to rest.
+c     Build the boosts that take the selected system to rest.
 c
-c     pboost is (E, -Pvec) of the sum of the selected momenta, i.e. exactly
-c     the argument boostx() wants in order to express a momentum given in
-c     the current frame in the rest frame of that system.
+c     pboost(:,1) and pboost(:,2) are the longitudinal and the transverse
+c     step of get_me_frame_boosts (Template/Common/Source), to be applied
+c     in that order -- me_frame_apply does both. Not the single boost along
+c     the momentum of the system: that one depends on the frame the
+c     momenta come in, and FKS hands the real emission its momenta in the
+c     c.m. frame of the Born of whichever FKS sector generated it. See
+c     get_me_frame_boosts for what that did to a single leg at rest.
 c
 c     trivial is returned .true. when the boost should be skipped rather
 c     than applied. Applying an identity boost is not free: it is a
@@ -670,25 +675,36 @@ c       - the selection is exactly the initial state;
 c       - the selection is exactly the whole final state;
 c       - the selected system already has exactly zero 3-momentum.
 c
-c     The middle two are both "the partonic c.m.". Note they are *not*
-c     identity boosts here the way they are at LO: MadFKS works in a frame
-c     boosted along z (the two initial momenta carry different energies),
-c     so honouring them literally would apply a real longitudinal boost. It
-c     would also not be infrared safe -- a frame defined from the initial
-c     state jumps between the real emission and the reduced Born, because
-c     their momentum fractions differ by a finite amount even in the
-c     singular limit. Skipping is both the safe and the meaningful choice.
+c     The middle two are both "the partonic c.m.", and skipping them means
+c     "the frame the momenta come in". For the Born, the virtual and every
+c     counter-event that is the Born c.m., so the whole-final-state skip is
+c     exact there. For the real emission it is the FKS 'tilde' frame: the
+c     real's own c.m. in a final-state sector, but the c.m. of the
+c     underlying Born in an initial-state one, a boost along z away. So
+c     with initial-state QCD radiation, skipping the initial-state
+c     selection made the real depend on the FKS sector, and the polarised
+c     result on the subtraction partition (+9.5% on p p > w+{0} j [QCD]
+c     when only fks_b changes). Honouring it literally is no better: the
+c     real's own c.m. jumps by a finite boost across the initial-state
+c     collinear limit, so it is not infrared safe. The run_card therefore
+c     never sends the initial state here for such a process: its default
+c     is the massive final state, and RunCardNLO.get_me_frame_legs
+c     replaces an explicit [1,2] by the Born final state (refusing it when
+c     that contains a jet). What still reaches this skip
+c     is a process without initial-state QCD splittings (e+ e-), where the
+c     tilde frame is the partonic c.m. in every sector.
 c
 c     input:  p(0:3,npart)  momenta of this configuration
 c             ids(npart)    0/1 mask, bit n of frame_id = leg n+1
-c     output: pboost(0:3)   boost 4-vector
+c     output: pboost(0:3,2) the two boosts, as boostx arguments
 c             trivial       .true. if the boost may be skipped
 c**************************************************************************
       implicit none
       integer npart
-      double precision p(0:3,npart), pboost(0:3)
+      double precision p(0:3,npart), pboost(0:3,2)
       integer ids(npart)
       logical trivial
+      double precision psum(0:3)
       integer i, j
       integer nsel, nini, nfin
       double precision m2, pvec2
@@ -697,7 +713,7 @@ c**************************************************************************
       logical massive_ini
       include 'nexternal.inc'
 
-      pboost(0:3)=0d0
+      psum(0:3)=0d0
       nsel=0
       nini=0
       nfin=0
@@ -710,7 +726,7 @@ c**************************************************************************
                nfin=nfin+1
             endif
             do j=0,3
-               pboost(j)=pboost(j)+p(j,i)
+               psum(j)=psum(j)+p(j,i)
             enddo
          endif
       enddo
@@ -742,7 +758,7 @@ c     the same case anyway. The skip is kept for parity with LO.
          return
       endif
 
-      pvec2=pboost(1)**2+pboost(2)**2+pboost(3)**2
+      pvec2=psum(1)**2+psum(2)**2+psum(3)**2
 
 c     Already at rest: skip, so the default costs nothing and changes nothing.
       if (pvec2.eq.0d0) then
@@ -772,7 +788,7 @@ c     guard is what stops a massive beam leg losing its precision here.
          m2i=p(0,i)**2-p(1,i)**2-p(2,i)**2-p(3,i)**2
          if (m2i.gt.mtiny*p(0,i)**2) massive_ini=.true.
       enddo
-      if (massive_ini .and. pvec2.lt.(betamin*pboost(0))**2) then
+      if (massive_ini .and. pvec2.lt.(betamin*psum(0))**2) then
          trivial=.true.
          return
       endif
@@ -780,7 +796,7 @@ c     guard is what stops a massive beam leg losing its precision here.
 c     The selected system must be timelike for its rest frame to exist. A
 c     lightlike or spacelike sum means the run_card selection is nonsense
 c     (e.g. a single massless leg); the LO boost_to_frame has no such guard.
-      m2=pboost(0)**2-pvec2
+      m2=psum(0)**2-pvec2
       if (m2.le.0d0) then
          write (*,*) 'ERROR in get_me_frame_boost: the system'
          write (*,*) 'selected by me_frame is not timelike, so its'
@@ -789,10 +805,25 @@ c     (e.g. a single massless leg); the LO boost_to_frame has no such guard.
          stop 1
       endif
 
-      do j=1,3
-         pboost(j)=-pboost(j)
-      enddo
+      call get_me_frame_boosts(ids, npart, nincoming, p, pboost(0,1),
+     &                         pboost(0,2))
       trivial=.false.
+
+      return
+      end
+
+
+      subroutine me_frame_apply(v, pboost, vout)
+c**************************************************************************
+c     Express v in the me_frame, given the boosts of get_me_frame_boost.
+c     v and vout must not be the same array.
+c**************************************************************************
+      implicit none
+      double precision v(0:3), pboost(0:3,2), vout(0:3)
+      double precision vz(0:3)
+
+      call boostx(v, pboost(0,1), vz)
+      call boostx(vz, pboost(0,2), vout)
 
       return
       end
@@ -800,13 +831,17 @@ c     (e.g. a single massless leg); the LO boost_to_frame has no such guard.
 
       subroutine boost_to_me_frame(p, npart, ids, p_out)
 c**************************************************************************
-c     Express all npart momenta in the rest frame of the selected system.
-c     Pure boost, no rotation: for fixed external helicities |M|^2 is
-c     rotation invariant (HELAS builds the polarisation vectors in each
-c     particle's own momentum-direction basis, so a rotation only produces
-c     per-particle phases which cancel in the modulus). Orientation does
-c     matter for the collinear counterterm azimuthal phases, but that is
-c     handled by the caller, not here.
+c     Express all npart momenta in the rest frame of the selected system,
+c     reached by a boost along z and then a transverse one, so that the
+c     frame does not depend on which boost along z the momenta come in
+c     (get_me_frame_boosts). For two or more selected legs the orientation
+c     would not matter: for fixed external helicities |M|^2 is rotation
+c     invariant (HELAS builds the polarisation vectors in each particle's
+c     own momentum-direction basis, so a rotation only produces
+c     per-particle phases which cancel in the modulus). It matters for a
+c     single leg, held at rest with its spin along the frame z axis, and
+c     for the collinear counterterm azimuthal phases, which the callers
+c     build with the same boosts.
 c
 c     p and p_out may be the same array.
 c**************************************************************************
@@ -814,7 +849,7 @@ c**************************************************************************
       integer npart
       double precision p(0:3,npart), p_out(0:3,npart)
       integer ids(npart)
-      double precision pboost(0:3)
+      double precision pboost(0:3,2)
       logical trivial
       integer i
 
@@ -828,7 +863,7 @@ c**************************************************************************
       endif
 
       do i=1,npart
-         call boostx(p(0,i), pboost, p_out(0,i))
+         call me_frame_apply(p(0,i), pboost, p_out(0,i))
       enddo
 
 c     A selection made of a single leg puts that leg at rest, and there

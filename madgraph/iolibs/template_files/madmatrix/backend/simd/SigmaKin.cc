@@ -6,12 +6,13 @@
 // The diagram/vertex-call sequence (helas_calls) is process-specific and
 // lives in the P1-generated EvaluateDiagrams.inc, #include'd below.
 //
-// This is a first, foundational slice: the process-independent storage the
-// rest of this file operates on (cHel/cFlavors/cIPD/cIPC/cIPF/bsmIndepParam),
-// its setters, and the two helpers (getChannelId, computeDependentCouplings)
-// that don't depend on calculate_jamps/sigmaKin, which land in a later slice.
+// The parameters of the process (cIPD/cIPC/cIPF/bsmIndepParam, the good
+// helicities) are an argument of every function here (ProcessParameters.h):
+// they belong to the CPPProcess, and so to the UMAMI instance, evaluated.
 
 #include "SigmaKin.h"
+
+#include "ProcessParameters.h"
 
 #include "CPPProcess.h" // ProcessData.h, Parameters.h, HelAmps_<model>.h transitively
 #include "ProcessTables.h"
@@ -64,54 +65,10 @@ namespace madmatrix
   // a CPPProcess-generated constant (see process_class.inc/set_color_flow_lines_cpp).
   constexpr int ncolor_flow = CPPProcess::ncolor_flow;
 
-  // Helicity/flavor tables and SM parameter/coupling storage, populated once
-  // by CPPProcess's constructor/initProc via the setters below.
-  static short cHel[ncomb][npar];
-  static short cFlavors[nmaxflavor][npar];
-  static int cNGoodHel;
-  static int cGoodHel[ncomb];
-  static fptype cIPD[nIPD > 0 ? nIPD : 1];
-  static fptype cIPC[nIPC > 0 ? nIPC * 2 : 1];
-  static int cIPF_partner1[ProcessTables::nMF * nIPF > 0 ? ProcessTables::nMF * nIPF : 1];
-  static int cIPF_partner2[ProcessTables::nMF * nIPF > 0 ? ProcessTables::nMF * nIPF : 1];
-  static fptype cIPF_value[ProcessTables::nMF * nIPF * 2 > 0 ? ProcessTables::nMF * nIPF * 2 : 1];
-  static double bsmIndepParam[Parameters::nBsmIndepParam > 0 ? Parameters::nBsmIndepParam : 1];
-  // BWCUTOFF of the $-excluded propagators (ALOHA P1D tag), see setBwCutoff
-  static fptype cBWCUTOFF = 15.;
-
-  void setHelicitiesAndFlavors( const short* tHel, const short* tFlavors )
-  {
-    memcpy( cHel, tHel, ncomb * npar * sizeof( short ) );
-    memcpy( cFlavors, tFlavors, nmaxflavor * npar * sizeof( short ) );
-  }
-
-  void setIndependentParams( const fptype* tIPD )
-  {
-    if( nIPD > 0 ) memcpy( cIPD, tIPD, nIPD * sizeof( fptype ) );
-  }
-
-  void setIndependentCouplings( const cxtype* tIPC )
-  {
-    if( nIPC > 0 ) memcpy( cIPC, tIPC, nIPC * sizeof( cxtype ) );
-  }
-
-  void setFlavorCouplings( const int* tIPF_partner1, const int* tIPF_partner2, const cxtype* tIPF_value )
-  {
-    if( nIPF == 0 ) return;
-    memcpy( cIPF_partner1, tIPF_partner1, ProcessTables::nMF * nIPF * sizeof( int ) );
-    memcpy( cIPF_partner2, tIPF_partner2, ProcessTables::nMF * nIPF * sizeof( int ) );
-    memcpy( cIPF_value, tIPF_value, ProcessTables::nMF * nIPF * sizeof( cxtype ) );
-  }
-
-  void setBsmIndepParam( const double* values, int n )
-  {
-    if( n > 0 ) memcpy( bsmIndepParam, values, n * sizeof( double ) );
-  }
-
-  void setBwCutoff( const double bwcutoff )
-  {
-    cBWCUTOFF = bwcutoff;
-  }
+  // The helicity and flavor tables of the process (ProcessData.h), which are the
+  // same for every CPPProcess
+  static constexpr const short ( &cHel )[ncomb][npar] = tHel;
+  static constexpr const short ( &cFlavors )[nmaxflavor][npar] = tFlavors;
 
   const short* getHelicities()
   {
@@ -167,7 +124,7 @@ namespace madmatrix
   //--------------------------------------------------------------------------
 
   __global__ void
-  computeDependentCouplings( const fptype* allgs, fptype* allcouplings, const int nevt )
+  computeDependentCouplings( const ProcessParameters& params, const fptype* allgs, fptype* allcouplings, const int nevt )
   {
     using G_ACCESS = HostAccessGs;
     using C_ACCESS = HostAccessCouplings;
@@ -176,7 +133,7 @@ namespace madmatrix
       const int ievt0 = ipagV * neppV;
       const fptype* gs = MemoryAccessGs::ieventAccessRecordConst( allgs, ievt0 );
       fptype* couplings = MemoryAccessCouplings::ieventAccessRecord( allcouplings, ievt0 );
-      G2COUP<G_ACCESS, C_ACCESS>( gs, couplings, bsmIndepParam );
+      G2COUP<G_ACCESS, C_ACCESS>( gs, couplings, params.bsmIndepParam );
     }
   }
 
@@ -357,7 +314,8 @@ namespace madmatrix
   // to the next: the external wavefunctions are branch-free in the helicity (see helas.h),
   // so that the events of a page with different helicities are computed in lock-step.
   void
-  calculate_jamps( const short* hel,                   // input: helicity of each leg, hel[npar], of all events (if allihel == nullptr): a row of cHel, or not (see Density.cc)
+  calculate_jamps( const ProcessParameters& params,    // input: parameters of the process
+                   const short* hel,                   // input: helicity of each leg, hel[npar], of all events (if allihel == nullptr): a row of cHel, or not (see Density.cc)
                    const int* allihel,                 // input: helicity index [0,ncomb) of each event[nevt] (nullptr: hel for all events)
                    const fptype_momenta* allmomenta,   // input: momenta[nevt*npar*4]
                    const fptype* allcouplings,         // input: couplings[nevt*ndcoup*2]
@@ -378,6 +336,20 @@ namespace madmatrix
     using F_ACCESS = HostAccessIflavorVec;      // non-trivial access: buffer includes all events
     using NUM_ACCESS = HostAccessNumerators;    // non-trivial access: buffer includes all events
     mgDebug( 0, __FUNCTION__ );
+
+    // The parameters of the process, under the names EvaluateDiagrams.inc uses. The
+    // independent parameters are copied: a local array cannot alias the buffers written
+    // below, so that they are not read again after every store.
+    fptype cIPD[ProcessParameters::nIPD];
+    for( int i = 0; i < ProcessParameters::nIPD; i++ ) cIPD[i] = params.IPD[i];
+    const fptype* cIPC = params.IPC;
+    const int* cIPF_partner1 = params.IPF_partner1;
+    const int* cIPF_partner2 = params.IPF_partner2;
+    const fptype* cIPF_value = params.IPF_value;
+    [[maybe_unused]] const fptype cBWCUTOFF = params.bwcutoff; // the $-excluded propagators (ALOHA P1D tag)
+#ifndef MGONGPU_HARDCODE_PARAM
+    Parameters::current = params.model; // for the HelAmps routines that read a model parameter
+#endif
 
     // Local TEMPORARY variables for a subset of Feynman diagrams in the given C++ event
     // page (ipagV) [NB these variables are reused several times (and re-initialised each
@@ -545,7 +517,8 @@ namespace madmatrix
   // jampAll_sv[nHrRows][nParity][njampso], and if storeChannelWeights the
   // multichannel numerators numAll_sv[nHrRows][nParity][ndiagrams].
   void
-  calculate_all_jamps( const fptype_momenta* allmomenta, // input: momenta[nevt*npar*4]
+  calculate_all_jamps( const ProcessParameters& params,  // input: parameters of the process
+                       const fptype_momenta* allmomenta, // input: momenta[nevt*npar*4]
                        const fptype* allcouplings,       // input: couplings[nevt*ndcoup*2]
                        const unsigned int* iflavorVec,   // input: indices of the flavor combinations
                        cxtype_amp_sv* ampAll_sv,         // output: amplitudes of every row (rows mode)
@@ -565,6 +538,17 @@ namespace madmatrix
     using CI_ACCESS = HostAccessCouplingsFixed;
     using F_ACCESS = HostAccessIflavorVec;
     mgDebug( 0, __FUNCTION__ );
+    // The parameters of the process, under the names the recycled calls use (as in calculate_jamps)
+    fptype cIPD[ProcessParameters::nIPD];
+    for( int i = 0; i < ProcessParameters::nIPD; i++ ) cIPD[i] = params.IPD[i];
+    const fptype* cIPC = params.IPC;
+    const int* cIPF_partner1 = params.IPF_partner1;
+    const int* cIPF_partner2 = params.IPF_partner2;
+    const fptype* cIPF_value = params.IPF_value;
+    [[maybe_unused]] const fptype cBWCUTOFF = params.bwcutoff; // the $-excluded propagators (ALOHA P1D tag)
+#ifndef MGONGPU_HARDCODE_PARAM
+    Parameters::current = params.model; // for the HelAmps routines that read a model parameter
+#endif
     // one wavefunction slot per COPY, which is more than the nwf of one row and
     // far fewer than one row's worth per row. A big process has thousands of
     // them (g g > t t~ g g g: 4826, 1.0 MB at simd_128), more than the stack of a worker
@@ -663,7 +647,8 @@ namespace madmatrix
   // did not build, with the plain code of that helicity (calculate_jamps): the
   // matrix element stays complete, that helicity is just not recycled.
   inline void
-  hr_row_or_plain( int ihel,
+  hr_row_or_plain( const ProcessParameters& params,
+                   int ihel,
                    const fptype_momenta* allmomenta,
                    const fptype* allcouplings,
                    const unsigned int* iflavorVec,
@@ -683,7 +668,7 @@ namespace madmatrix
       return;
     }
     hr_unbaked_row( ihel );
-    calculate_jamps( cHel[ihel], nullptr, allmomenta, allcouplings, iflavorVec, allJamp_sv, storeChannelWeights,
+    calculate_jamps( params, cHel[ihel], nullptr, allmomenta, allcouplings, iflavorVec, allJamp_sv, storeChannelWeights,
                      allNumerators, allDenominators, jamp2_sv, ievt00 );
   }
 
@@ -692,7 +677,8 @@ namespace madmatrix
   // its color sum. MEs_ighel[ighel] (and MEs_ighel2 for the second page in mixed
   // precision) get the running sum over the helicities up to ighel.
   inline void
-  hr_page( const fptype_momenta* allmomenta,
+  hr_page( const ProcessParameters& params,
+           const fptype_momenta* allmomenta,
            const fptype* allcouplings,
            const unsigned int* iflavorVec,
            fptype* allMEs,
@@ -705,6 +691,8 @@ namespace madmatrix
            const int ievt00 )
   {
     using E_ACCESS = HostAccessMatrixElements;
+    const int cNGoodHel = params.nGoodHel;
+    const int* cGoodHel = params.goodHel;
     // The tables of the page, the wavefunction slots and the jamps of every
     // helicity for BLAS: MBs for a big process, in this thread's scratch area
     // (HelRecyclingScratch.h), which every recycled subprocess library of the
@@ -745,7 +733,7 @@ namespace madmatrix
 #endif
     fptype_momenta_sv* pvec_sv = reinterpret_cast<fptype_momenta_sv*>( scratch + tableBytes );
     cxtype_amp_sv* w_sv = reinterpret_cast<cxtype_amp_sv*>( scratch + tableBytes + pvecBytes );
-    calculate_all_jamps( allmomenta, allcouplings, iflavorVec, ampAll_sv, jampTmpAll_sv, jampAll_sv, numAll_sv,
+    calculate_all_jamps( params, allmomenta, allcouplings, iflavorVec, ampAll_sv, jampTmpAll_sv, jampAll_sv, numAll_sv,
                          pvec_sv, w_sv, storeChannelWeights, ievt00 );
 #if defined MGONGPU_CPP_HAS_BLAS and !defined MGONGPU_HR_NO_BLAS
     // The color matrix does not depend on the helicity: for a large-enough one
@@ -757,7 +745,7 @@ namespace madmatrix
       {
         cxtype_sv* jamp_sv = ghelJamp_sv + (size_t)ighel * nParity * ncolor;
         for( int i = 0; i < nParity * ncolor; i++ ) jamp_sv[i] = cxzero_sv<cxtype_sv>();
-        hr_row_or_plain( cGoodHel[ighel], allmomenta, allcouplings, iflavorVec, ampAll_sv, jampAll_sv, numAll_sv, jamp_sv,
+        hr_row_or_plain( params, cGoodHel[ighel], allmomenta, allcouplings, iflavorVec, ampAll_sv, jampAll_sv, numAll_sv, jamp_sv,
                          storeChannelWeights, allNumerators, allDenominators, jamp2_sv, ievt00 );
       }
       color_sum_cpu_blas( allMEs, MEs_ighel, MEs_ighel2, ghelJamp_sv, cNGoodHel, ievt00 );
@@ -767,7 +755,7 @@ namespace madmatrix
     for( int ighel = 0; ighel < cNGoodHel; ighel++ )
     {
       cxtype_amp_sv jamp_sv[nParity * njampso] = {};
-      hr_row_or_plain( cGoodHel[ighel], allmomenta, allcouplings, iflavorVec, ampAll_sv, jampAll_sv, numAll_sv, jamp_sv,
+      hr_row_or_plain( params, cGoodHel[ighel], allmomenta, allcouplings, iflavorVec, ampAll_sv, jampAll_sv, numAll_sv, jamp_sv,
                        storeChannelWeights, allNumerators, allDenominators, jamp2_sv, ievt00 );
       color_sum_cpu( allMEs, jamp_sv, ievt00 );
       MEs_ighel[ighel] = E_ACCESS::kernelAccess( E_ACCESS::ieventAccessRecord( allMEs, ievt00 ) );
@@ -801,7 +789,8 @@ namespace madmatrix
   //--------------------------------------------------------------------------
 
   void
-  sigmaKin_getGoodHel( const fptype_momenta* allmomenta, // input: momenta[nevt*npar*4]
+  sigmaKin_getGoodHel( const ProcessParameters& params,   // input: parameters of the process
+                       const fptype_momenta* allmomenta, // input: momenta[nevt*npar*4]
                        const fptype* allcouplings,       // input: couplings[nevt*ndcoup*2]
                        const unsigned int* iflavorVec,   // input: index of the flavor combination
                        fptype* allMEs,                   // output: allMEs[nevt], |M|^2 final_avg_over_helicities
@@ -869,7 +858,7 @@ namespace madmatrix
 #else
         cxtype_amp_sv jamp_sv[njampso] = {}; // all zeros
 #endif
-        calculate_jamps( cHel[ihel], nullptr, allmomenta, allcouplings, hgFlavorVec, jamp_sv, false, allNumerators, allDenominators, jamp2_sv, ievt00 );
+        calculate_jamps( params, cHel[ihel], nullptr, allmomenta, allcouplings, hgFlavorVec, jamp_sv, false, allNumerators, allDenominators, jamp2_sv, ievt00 );
         color_sum_cpu( allMEs, jamp_sv, ievt00 );
         for( int ieppV = 0; ieppV < neppV; ++ieppV )
         {
@@ -897,7 +886,8 @@ namespace madmatrix
   //--------------------------------------------------------------------------
 
   int                                          // output: nGoodHel (the number of good helicity combinations out of ncomb)
-  sigmaKin_setGoodHel( const bool* isGoodHel ) // input: isGoodHel[ncomb] - host array
+  sigmaKin_setGoodHel( ProcessParameters& params, // output: the good helicities of the process
+                       const bool* isGoodHel )   // input: isGoodHel[ncomb] - host array
   {
     int nGoodHel = 0;
     int goodHel[ncomb] = { 0 }; // all zeros https://en.cppreference.com/w/c/language/array_initialization#Notes
@@ -909,8 +899,8 @@ namespace madmatrix
         nGoodHel++;
       }
     }
-    cNGoodHel = nGoodHel;
-    for( int ihel = 0; ihel < ncomb; ihel++ ) cGoodHel[ihel] = goodHel[ihel];
+    params.nGoodHel = nGoodHel;
+    for( int ihel = 0; ihel < ncomb; ihel++ ) params.goodHel[ihel] = goodHel[ihel];
 #ifdef MG_HR_PROBE
     // --hel_recycling warm-up: the good helicities and, for each, the amplitudes
     // the probe never saw alive, in the protocol the madevent warm-up prints
@@ -929,14 +919,6 @@ namespace madmatrix
     }
 #endif
     return nGoodHel;
-  }
-
-  //--------------------------------------------------------------------------
-
-  int
-  sigmaKin_getNGoodHel()
-  {
-    return cNGoodHel;
   }
 
   //--------------------------------------------------------------------------
@@ -1001,10 +983,13 @@ namespace madmatrix
   // average and the channel weight) and sets selhel; a vanishing |M|^2 returns 0 and
   // leaves selhel alone, as the positive case does.
   [[maybe_unused]] static inline fptype
-  select_helicity_signed( const fptype* ighelSum, // input: running sums over the good helicities
+  select_helicity_signed( const ProcessParameters& params, // input: parameters of the process (good helicities)
+                          const fptype* ighelSum, // input: running sums over the good helicities
                           const fptype rndhel,    // input: random number for the helicity choice
                           int& selhel )           // output: chosen helicity (Fortran range [1,ncomb])
   {
+    const int cNGoodHel = params.nGoodHel;
+    const int* cGoodHel = params.goodHel;
     fptype absTotal = 0;
     for( int ighel = 0; ighel < cNGoodHel; ighel++ )
       absTotal += std::abs( ighelSum[ighel] - ( ighel > 0 ? ighelSum[ighel - 1] : 0 ) );
@@ -1029,7 +1014,8 @@ namespace madmatrix
   // Evaluate |M|^2, part independent of incoming flavour
 
   void
-  sigmaKin( const fptype_momenta* allmomenta,  // input: momenta[nevt*npar*4]
+  sigmaKin( const ProcessParameters& params,   // input: parameters of the process
+            const fptype_momenta* allmomenta,  // input: momenta[nevt*npar*4]
             const fptype* allcouplings,        // input: couplings[nevt*ndcoup*2]
             const unsigned int* iflavorVec,    // input: index of the flavor combination
             const fptype* allrndhel,           // input: random numbers[nevt] for helicity selection
@@ -1059,6 +1045,10 @@ namespace madmatrix
     using E_ACCESS = HostAccessMatrixElements; // non-trivial access: buffer includes all events
     using NUM_ACCESS = HostAccessNumerators;   // non-trivial access: buffer includes all events
     using DEN_ACCESS = HostAccessDenominators; // non-trivial access: buffer includes all events
+
+    // The good helicities of the process
+    const int cNGoodHel = params.nGoodHel;
+    const int* cGoodHel = params.goodHel;
 
     // === PART 0 - INITIALISATION (before calculate_jamps) ===
     // Reset the "matrix elements" - running sums of |M|^2 over helicities for the given event
@@ -1096,7 +1086,7 @@ namespace madmatrix
 #endif
 #ifdef _OPENMP
     // OMP multithreading #575 (NB: tested only with gcc11 so far)
-#define _OMPLIST0 allcouplings, allMEs, allmomenta, allrndcol, allrndhel, allselcol, allselhel, allihel, cGoodHel, nhelEval, npagV2, sampleSignedHelicity
+#define _OMPLIST0 allcouplings, allMEs, allmomenta, allrndcol, allrndhel, allselcol, allselhel, allihel, params, cNGoodHel, cGoodHel, nhelEval, npagV2, sampleSignedHelicity
 #define _OMPLIST1 , allDenominators, allNumerators, allChannelIds, mgOnGpu::icolamp, mgOnGpu::channel2iconfig
 #pragma omp parallel for default( none ) shared( _OMPLIST0 _OMPLIST1 )
 #undef _OMPLIST0
@@ -1124,7 +1114,7 @@ namespace madmatrix
       // for the good helicities, not per SIMD lane)
       if( hrUseRecycling && allihel == nullptr )
       {
-        hr_page( allmomenta, allcouplings, iflavorVec, allMEs, allNumerators, allDenominators, jamp2_sv, MEs_ighel,
+        hr_page( params, allmomenta, allcouplings, iflavorVec, allMEs, allNumerators, allDenominators, jamp2_sv, MEs_ighel,
 #if defined MGONGPU_CPPSIMD and defined MGONGPU_FPTYPE_DOUBLE and defined MGONGPU_FPTYPE2_FLOAT
                  MEs_ighel2,
 #else
@@ -1155,7 +1145,7 @@ namespace madmatrix
           for( int i = 0; i < nParity * ncolor; i++ ) jamp_sv[i] = cxzero_sv<cxtype_sv>(); // calculate_jamps accumulates into jamp_sv
           // **NB! in "mixed" precision, using SIMD, calculate_jamps computes MEs for TWO neppV pages with a single channelId! #924
           bool storeChannelWeights = allChannelIds != nullptr || allrnddiagram != nullptr;
-          calculate_jamps( ( allihel != nullptr ? nullptr : cHel[ihel] ), allihel, allmomenta, allcouplings, iflavorVec, jamp_sv, storeChannelWeights, allNumerators, allDenominators, jamp2_sv, ievt00 );
+          calculate_jamps( params, ( allihel != nullptr ? nullptr : cHel[ihel] ), allihel, allmomenta, allcouplings, iflavorVec, jamp_sv, storeChannelWeights, allNumerators, allDenominators, jamp2_sv, ievt00 );
         }
         // nhelEval may be 0 (no good helicity): the color sum of no helicity leaves allMEs at 0
         if( nhelEval > 0 )
@@ -1176,7 +1166,7 @@ namespace madmatrix
           cxtype_amp_sv jamp_sv[nParity * njampso] = {}; // fixed nasty bug (omitting 'nParity' caused memory corruptions after calling calculate_jamps)
           // **NB! in "mixed" precision, using SIMD, calculate_jamps computes MEs for TWO neppV pages with a single channelId! #924
           bool storeChannelWeights = allChannelIds != nullptr || allrnddiagram != nullptr;
-          calculate_jamps( ( allihel != nullptr ? nullptr : cHel[ihel] ), allihel, allmomenta, allcouplings, iflavorVec, jamp_sv, storeChannelWeights, allNumerators, allDenominators, jamp2_sv, ievt00 );
+          calculate_jamps( params, ( allihel != nullptr ? nullptr : cHel[ihel] ), allihel, allmomenta, allcouplings, iflavorVec, jamp_sv, storeChannelWeights, allNumerators, allDenominators, jamp2_sv, ievt00 );
           color_sum_cpu( allMEs, jamp_sv, ievt00 );
           MEs_ighel[ighel] = E_ACCESS::kernelAccess( E_ACCESS::ieventAccessRecord( allMEs, ievt00 ) );
 #if defined MGONGPU_CPPSIMD and defined MGONGPU_FPTYPE_DOUBLE and defined MGONGPU_FPTYPE2_FLOAT
@@ -1212,12 +1202,12 @@ namespace madmatrix
 #else
               ighelSum[ighel] = MEs_ighel[ighel];
 #endif
-            *E_ACCESS::ieventAccessRecord( allMEs, ievt ) = select_helicity_signed( ighelSum, allrndhel[ievt], allselhel[ievt] );
+            *E_ACCESS::ieventAccessRecord( allMEs, ievt ) = select_helicity_signed( params, ighelSum, allrndhel[ievt], allselhel[ievt] );
 #if defined MGONGPU_CPPSIMD and defined MGONGPU_FPTYPE_DOUBLE and defined MGONGPU_FPTYPE2_FLOAT
             const int ievt2 = ievt00 + ieppV + neppV;
             for( int ighel = 0; ighel < cNGoodHel; ighel++ )
               ighelSum[ighel] = MEs_ighel2[ighel][ieppV];
-            *E_ACCESS::ieventAccessRecord( allMEs, ievt2 ) = select_helicity_signed( ighelSum, allrndhel[ievt2], allselhel[ievt2] );
+            *E_ACCESS::ieventAccessRecord( allMEs, ievt2 ) = select_helicity_signed( params, ighelSum, allrndhel[ievt2], allselhel[ievt2] );
 #endif
             continue;
           }

@@ -191,11 +191,19 @@ MatrixElement::MatrixElement(
         }
         auto mask = particle_mask(particle_count, incoming, "incoming_count");
         // asking for the rest frame of the incoming system is the reference
-        // frame itself: one boost gets there
-        if (mask == _frame_mask) {
+        // frame itself: one boost gets there. A collision does not go through
+        // it at all, see _along_beam.
+        if (mask == _frame_mask || incoming_count == 2) {
             mask.clear();
         }
         return mask;
+    }()),
+    _along_beam([&] {
+        if (_frame_mask.empty() || incoming_count != 2) {
+            return false;
+        }
+        std::vector<me_int_t> incoming{1, 2};
+        return particle_mask(particle_count, incoming, "incoming_count") != _frame_mask;
     }()) {
     auto has_output = [&](MatrixElementOutput output) {
         return std::find(outputs.begin(), outputs.end(), output) != outputs.end();
@@ -292,17 +300,20 @@ NamedVector<Value> MatrixElement::build_function_impl(
             // everything else -- cuts, scales, momentum fractions, the event
             // that gets written out -- keeps using the momenta as generated.
             //
-            // madevent defines that frame as a single boost away from the rest
-            // frame of the incoming system, because that is the frame its
-            // matrix element is handed the momenta in. madspace generates them
-            // in the lab frame instead, so it has to go through that rest frame
-            // rather than boost straight there: two boosts along different
-            // directions do not compose into the boost between the end frames,
-            // and the Wigner rotation left over would rotate the polarisation
-            // axes (it drops out only for a Lorentz invariant matrix element,
-            // which is exactly the case where none of this matters).
+            // The single boost along the momentum of the selected particles
+            // would depend on the frame it starts from: two boosts along
+            // different directions do not compose into the boost between the
+            // end frames, and the Wigner rotation left over turns the spin
+            // axis of a single selected particle, held at rest. So a collision
+            // first boosts along the beam, to zero rapidity of the selection,
+            // and only then into its rest frame: that frame is the same from
+            // the lab madspace generates in, from the partonic CM madevent
+            // hands its matrix element, and from the frames aMC@NLO uses. A
+            // decay starts from the rest frame of the decaying particle.
             Value momenta = args.at(arg_index);
-            if (!_reference_mask.empty()) {
+            if (_along_beam) {
+                momenta = fb.boost_to_zero_rapidity(momenta, _frame_mask);
+            } else if (!_reference_mask.empty()) {
                 momenta = fb.boost_to_frame(momenta, _reference_mask);
             }
             matrix_args.push_back(fb.boost_to_frame(momenta, _frame_mask));

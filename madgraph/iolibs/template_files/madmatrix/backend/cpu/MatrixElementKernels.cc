@@ -23,7 +23,8 @@ namespace madmatrix
 {
   //--------------------------------------------------------------------------
 
-  MatrixElementKernelBase::MatrixElementKernelBase( const BufferMomenta& momenta,         // input: momenta
+  MatrixElementKernelBase::MatrixElementKernelBase( ProcessParameters& params,            // input: parameters of the process (output: good helicities)
+                                                    const BufferMomenta& momenta,         // input: momenta
                                                     const BufferGs& gs,                   // input: gs for alphaS
                                                     const BufferIflavorVec& iflavorVec,   // input: flavor indices for the flavor combination
                                                     const BufferRndNumHelicity& rndhel,   // input: random numbers for helicity selection
@@ -32,7 +33,8 @@ namespace madmatrix
                                                     BufferMatrixElements& matrixElements, // output: matrix elements
                                                     BufferSelectedHelicity& selhel,       // output: helicity selection
                                                     BufferSelectedColor& selcol )         // output: color selection
-    : m_momenta( momenta )
+    : m_params( params )
+    , m_momenta( momenta )
     , m_gs( gs )
     , m_iflavorVec( iflavorVec )
     , m_rndhel( rndhel )
@@ -149,7 +151,8 @@ namespace madmatrix
 
   //--------------------------------------------------------------------------
 
-  MatrixElementKernelHost::MatrixElementKernelHost( const BufferMomenta& momenta,         // input: momenta
+  MatrixElementKernelHost::MatrixElementKernelHost( ProcessParameters& params,            // input: parameters of the process (output: good helicities)
+                                                    const BufferMomenta& momenta,         // input: momenta
                                                     const BufferGs& gs,                   // input: gs for alphaS
                                                     const BufferIflavorVec& iflavorVec,   // input: flavor indices for the flavor combination
                                                     const BufferRndNumHelicity& rndhel,   // input: random numbers for helicity selection
@@ -159,7 +162,7 @@ namespace madmatrix
                                                     BufferSelectedHelicity& selhel,       // output: helicity selection
                                                     BufferSelectedColor& selcol,          // output: color selection
                                                     const size_t nevt )
-    : MatrixElementKernelBase( momenta, gs, iflavorVec, rndhel, rndcol, channelIds, matrixElements, selhel, selcol )
+    : MatrixElementKernelBase( params, momenta, gs, iflavorVec, rndhel, rndcol, channelIds, matrixElements, selhel, selcol )
     , NumberOfEvents( nevt )
     , m_couplings( nevt )
     , m_numerators( nevt * ProcessData::ndiagrams )
@@ -202,20 +205,19 @@ namespace madmatrix
   {
     HostBufferHelicityMask hstIsGoodHel( ProcessData::ncomb );
     // ... 0d1. Compute good helicity mask on the host
-    computeDependentCouplings( m_gs.data(), m_couplings.data(), m_gs.size() );
-    sigmaKin_getGoodHel( m_momenta.data(), m_couplings.data(), m_iflavorVec.data(), m_matrixElements.data(), m_numerators.data(), m_denominators.data(), hstIsGoodHel.data(), nevt() );
-    // ... 0d2. Copy good helicity list to static memory on the host
-    // [FIXME! REMOVE THIS STATIC THAT BREAKS MULTITHREADING?]
-    return sigmaKin_setGoodHel( hstIsGoodHel.data() );
+    computeDependentCouplings( m_params, m_gs.data(), m_couplings.data(), m_gs.size() );
+    sigmaKin_getGoodHel( m_params, m_momenta.data(), m_couplings.data(), m_iflavorVec.data(), m_matrixElements.data(), m_numerators.data(), m_denominators.data(), hstIsGoodHel.data(), nevt() );
+    // ... 0d2. Copy good helicity list to the parameters of the process
+    return sigmaKin_setGoodHel( m_params, hstIsGoodHel.data() );
   }
 
   //--------------------------------------------------------------------------
 
   void MatrixElementKernelHost::computeMatrixElements( const bool useChannelIds )
   {
-    computeDependentCouplings( m_gs.data(), m_couplings.data(), m_gs.size() );
+    computeDependentCouplings( m_params, m_gs.data(), m_couplings.data(), m_gs.size() );
     const unsigned int* pChannelIds = ( useChannelIds ? m_channelIds.data() : nullptr );
-    sigmaKin( m_momenta.data(), m_couplings.data(), m_iflavorVec.data(), m_rndhel.data(), m_rndcol.data(), pChannelIds, nullptr, m_matrixElements.data(), m_selhel.data(), m_selcol.data(), m_numerators.data(), m_denominators.data(), nullptr, true, nevt() );
+    sigmaKin( m_params, m_momenta.data(), m_couplings.data(), m_iflavorVec.data(), m_rndhel.data(), m_rndcol.data(), pChannelIds, nullptr, m_matrixElements.data(), m_selhel.data(), m_selcol.data(), m_numerators.data(), m_denominators.data(), nullptr, true, nevt() );
 #ifdef MGONGPU_CHANNELID_DEBUG
     //std::cout << "DEBUG: MatrixElementKernelHost::computeMatrixElements " << this << " " << ( useChannelIds ? "T" : "F" ) << " " << nevt() << std::endl;
     MatrixElementKernelBase::updateNevtProcessedByChannel( pChannelIds, nevt() );
