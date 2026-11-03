@@ -849,7 +849,9 @@ def test_real_generation_exercises_structural_proofs(providers):
                 for channel in provider.data["channels"]
                 for entry in channel["processes"]
             ]
-            assert len(entries) == 1
+            # A contribution is exported once per partner; only its first copy
+            # lists the members.
+            assert sum(bool(entry["members"]) for entry in entries) == 1
             assert all(
                 entry["runtime"]["process_id"] == "flavour_one" for entry in entries
             )
