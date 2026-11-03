@@ -532,6 +532,14 @@ jobs:
             echo "::error::cannot watch the allocation of the runner through ceci-gate (is it up to date on the VM? .github/gpu_ci/README.md). If the allocation ends early, cancel this run by hand."
             exit 1
           fi
+          # ENDED is "JOBID STATE ...": a state of a job still alive is no end (an older
+          # remote_watch_runner.sh on the VM gave up on a job that squeue left out once)
+          STATE=${ENDED#* }
+          case ${STATE%% *} in
+            PENDING|CONFIGURING|RUNNING|SUSPENDED|COMPLETING|REQUEUED|RESIZING|SIGNALING|STAGE_OUT)
+              echo "::error::ceci-gate watch-runner returned while the runner job is still alive ($ENDED): not cancelling the run. Install remote_watch_runner.sh on the VM again (.github/gpu_ci/README.md); if the allocation ends early, cancel this run by hand."
+              exit 1 ;;
+          esac
           # the normal end: stop_runner completed, then runner_batch.sh stopped the runner
           for _ in $(seq 12); do
             STOP=$(printf 'Authorization: Bearer %s\n' "$GH_TOKEN" | # not on the command line
@@ -551,8 +559,12 @@ jobs:
       - name: cancel the run
         if: failure() && steps.watch.outputs.early == 'true'
         shell: bash
-        # force-cancel: a plain cancel would still queue stop_runner (if: always()) for the dead runner
+        # force-cancel: a plain cancel would still queue stop_runner (if: always()) for the dead runner.
+        # Before, while the run is in progress (ceci-gate checks it), scancel the runner job in case
+        # it is still there: it would hold the runner, and the next runner job behind it
         run: |
+          sudo -n -u ceci /usr/local/sbin/ceci-gate cancel-runner "$CLUSTER" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" ||
+            echo "::warning::could not scancel the runner job; the next start_runner cancels it"
           printf 'Authorization: Bearer %s\n' "$GH_TOKEN" |
             curl -sS --fail --max-time 60 -X POST -H @- -H 'Accept: application/vnd.github+json' \
               "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/force-cancel"
