@@ -6,7 +6,7 @@ holder of the CECI ssh key (/var/lib/ceci/.ssh/id_ceci), through one sudoers rul
     github-runner, ghrunner2 ALL=(ceci) NOPASSWD: /usr/local/sbin/ceci-gate
 The CI jobs never see the key. Before touching a cluster, the gate asks GitHub whether the
 workflow run it is called for
-  - belongs to MadGraphTeam/MadGraph7 (not a fork) and is in progress,
+  - belongs to MadGraphTeam/MadGraph7 (not a fork) and is not over,
   - comes from the expected workflow file (gpu_lemaitre4_hip.yml, gpu_manneback_cuda.yml,
     gpu_cluster_modules.yml),
   - was started, or re-run, by a GitHub login listed in /etc/ceci-gate/allowed_actors, OR
@@ -146,7 +146,9 @@ def check_run(run_id, attempt, workflow, events, job_names):
           "run %s is not a run of %s" % (run_id, REPO))
     check(wf.get("path") == workflow, "run %s is from %s, not %s" % (run_id, wf.get("path"), workflow))
     check(wf.get("event") in events, "run %s was triggered by %s, not %s" % (run_id, wf.get("event"), "/".join(events)))
-    check(wf.get("status") == "in_progress", "run %s is %s, not in progress" % (run_id, wf.get("status")))
+    # not "in_progress" only: a run some of whose jobs wait for a runner is "queued" (e.g. when the
+    # cluster runner died, as the watchdog finds it). That the run is live is the job check below.
+    check(wf.get("status") != "completed", "run %s is completed" % run_id)
     actor = ((wf.get("triggering_actor") or wf.get("actor") or {}).get("login") or "?")
     branch = wf.get("head_branch") or "?"
     who = "started by %s on branch %s" % (actor, branch)

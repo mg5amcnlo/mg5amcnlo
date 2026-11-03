@@ -103,7 +103,7 @@ repository, and 3 organisation owners can change any repository setting. Hence:
   user `ceci` (`/var/lib/ceci/.ssh/id_ceci`). The runner users may run one program as `ceci`,
   `/usr/local/sbin/ceci-gate` ([vm_gate/ceci-gate](vm_gate/ceci-gate)), and nothing else.
   Before it touches a cluster, the gate asks the GitHub API whether the run it is called for
-  is in progress, comes from `gpu_lemaitre4_hip.yml`, `gpu_manneback_cuda.yml` or
+  is not over, comes from `gpu_lemaitre4_hip.yml`, `gpu_manneback_cuda.yml` or
   `gpu_cluster_modules.yml` of this repository (not a fork), was started or re-run by a login
   listed in `/etc/ceci-gate/allowed_actors` on the VM **or** is on a branch listed in
   `/etc/ceci-gate/allowed_branches` (e.g. `main`, so that every commit landing there is tested,

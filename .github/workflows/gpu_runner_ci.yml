@@ -27,7 +27,7 @@
 # The runner runs under a personal cluster account, hence:
 #   - the ssh key is not on GitHub: only the Unix user `ceci` of the vmadgraph VM holds it,
 #     and the CI reaches the cluster through /usr/local/sbin/ceci-gate (.github/gpu_ci/vm_gate),
-#     which checks with the GitHub API that the run is in progress, comes from
+#     which checks with the GitHub API that the run is not over, comes from
 #     gpu_lemaitre4_hip.yml or gpu_manneback_cuda.yml, and was started by a GitHub login or
 #     is on a branch listed on the VM (/etc/ceci-gate/allowed_actors, allowed_branches);
 #   - the runner refuses every job that is not part of the workflow run that started it
@@ -560,7 +560,7 @@ jobs:
         if: failure() && steps.watch.outputs.early == 'true'
         shell: bash
         # force-cancel: a plain cancel would still queue stop_runner (if: always()) for the dead runner.
-        # Before, while the run is in progress (ceci-gate checks it), scancel the runner job in case
+        # Before, while the run is not over (ceci-gate checks it), scancel the runner job in case
         # it is still there: it would hold the runner, and the next runner job behind it
         run: |
           sudo -n -u ceci /usr/local/sbin/ceci-gate cancel-runner "$CLUSTER" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" ||
