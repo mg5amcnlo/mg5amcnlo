@@ -74,7 +74,7 @@ is not a working current-source setup route. The retained pin table is:
 
 | Dependency | Upstream source | Revision |
 | --- | --- | --- |
-| Symbolica 3.0.0, including Numerica and Graphica | `symbolica-dev/symbolica`, `main` | `7b31114c7a77571aabacf96a311f27ef0f44d007` |
+| Symbolica 3.0.2, including Numerica and Graphica | `symbolica-dev/symbolica`, `main` | `afbf7aa4ae13d330aab95cad0b04ebf5889165fd` |
 | SymJIT 2.26.0 | `siravan/symjit-crate` | `530304a07d1be6d5abc80291aa5e92cf28ac5546` |
 | GammaLoop, including Spenso/Idenso/Vakint | `alphal00p/gammaloop`, `main` | `312cf6aaf4cd1414f6742ad87ce39922c497a0b6` |
 | symbolica-integrate 2.0.1 | `symbolica-dev/symbolica-integrate`, `main` | `716354a07f2660b38390c95702aa617d1f9472c7` |
