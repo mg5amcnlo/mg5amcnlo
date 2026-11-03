@@ -182,7 +182,8 @@ def _mg7_tool_or_skip(test, cmd, *option_keys):
 
 def _run_mg7_postproc(test, setup_cmds, run_dir, datadir, switch_lines=None,
                       toml_edits=None, precopy_cards=None, extra_cards=None,
-                      events=100, require_tools=(), timeout=1800):
+                      events=100, require_tools=(), timeout=1800,
+                      tolerated_crashes=()):
     """Drive an mg7 post-processing chain through the command interface.
 
     Runs *setup_cmds* (MG5 lines ending with the ``generate``) + ``output mg7
@@ -199,8 +200,12 @@ def _run_mg7_postproc(test, setup_cmds, run_dir, datadir, switch_lines=None,
 
     Returns the run directory (``Events/run_01``). Assertions/skips are made on
     *test*; the run self-skips when the mg7 runtime stack or a *require_tools*
-    program is unavailable.
+    program is unavailable. A tool failure (a ``*_crash.log`` in the run) fails
+    the test, unless its name matches one of the *tolerated_crashes* patterns:
+    the tools' output is otherwise easy to mistake for a success (a glob on
+    ``*delphes*`` matched ``Delphes_crash.log``).
     """
+    import fnmatch
     import glob
     if os.path.isdir(run_dir):
         shutil.rmtree(run_dir)
@@ -256,17 +261,24 @@ def _run_mg7_postproc(test, setup_cmds, run_dir, datadir, switch_lines=None,
     # Surface any per-tool *_crash.log written by run_selected_tools when a
     # post-processing tool fails *without* failing generate_events (rc stays 0),
     # so a silently-swallowed tool failure is visible in CI.
+    crashes = []
     for cl in sorted(glob.glob(pjoin(run_dir, '**', '*_crash.log'), recursive=True)):
         try:
             print('\n----- %s -----\n%s' % (cl, open(cl).read()),
                   file=sys.stderr, flush=True)
         except Exception:
             pass
+        if not any(fnmatch.fnmatch(os.path.basename(cl), pattern)
+                   for pattern in tolerated_crashes):
+            crashes.append(cl)
     if proc.returncode != 0:
         # surface the generate_events output (the log lives in a tmp dir that CI
         # does not upload) so the real crash is visible in the test failure.
         test.fail('mg7 generate_events failed (rc=%s)\n%s'
                   % (proc.returncode, _mg7_postproc_report(run_dir)))
+    if crashes:
+        test.fail('mg7 post-processing tool(s) failed: %s\n%s'
+                  % (', '.join(crashes), _mg7_postproc_report(run_dir)))
     runs = sorted(glob.glob(pjoin(run_dir, 'Events', 'run_*')))
     test.assertTrue(runs, 'no mg7 run directory under %s' % run_dir)
     return runs[0]
@@ -1492,7 +1504,7 @@ class TestMECmdShell(unittest.TestCase):
                         (r'\nsystematics = false\n', '\nsystematics = true\n'),
                         (r'systematics_pdf = \[[^\]]*\]',
                          'systematics_pdf = ["central"]')],
-            events=100)
+            events=100, tolerated_crashes=('*systematics*',))
 
         lhe_path = pjoin(run, 'events.lhe')
         if not os.path.exists(lhe_path):
@@ -4173,7 +4185,6 @@ set draw_rivet_plots True
     def test_delphes_mg7(self):
         """Delphes detector simulation chained on the mg7 output (Pythia8 shower
         + Delphes) through the command interface."""
-        import glob
         datadir = _mg7_datadir_or_skip(self)
         run = _run_mg7_postproc(
             self,
@@ -4186,8 +4197,10 @@ set draw_rivet_plots True
             require_tools=('pythia8_path', 'delphes_path'),
             events=100)
 
-        self.assertTrue(glob.glob(pjoin(run, '*delphes*')),
-                        'mg7 Delphes run produced no output in %s\n%s'
+        # the ROOT file itself: a glob on '*delphes*' also matched the
+        # Delphes_crash.log of a run where Delphes could not start
+        self.assertTrue(os.path.exists(pjoin(run, 'tag_1_delphes_events.root')),
+                        'mg7 Delphes run produced no ROOT file in %s\n%s'
                         % (run, _mg7_postproc_report(pjoin(self.path, 'MG7_delphes'))))
 
     def test_rivet_from_file_mg7(self):

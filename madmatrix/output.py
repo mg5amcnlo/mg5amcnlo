@@ -133,7 +133,11 @@ class ProcessExporterMadMatrix(export_cpp.ProcessExporterMG7):
                                   ['pythia8_card_default.dat',
                                    'madanalysis5_parton_card_default.dat',
                                    'madanalysis5_hadron_card_default.dat',
-                                   'rivet_card_default.dat'])}
+                                   'rivet_card_default.dat']),
+                     # the script do_delphes launches (from Events/): without
+                     # it Delphes failed with "No such file or directory"
+                     'bin/internal': relative_path_list(pjoin(MG5DIR, 'Template', 'LO', 'bin', 'internal'),
+                                  ['run_delphes3'])}
 
     # Backend split: mirror template_files/madmatrix/backend/{common,cpu,simd,gpu}/
     # as a top-level backend/ dir, sibling of SubProcesses/src/lib; madmatrix.mk
@@ -176,7 +180,7 @@ class ProcessExporterMadMatrix(export_cpp.ProcessExporterMG7):
     # 'makefile'.
     p_makefiles = ['madmatrix.mk']
 
-    dirs_to_create = ['bin', 'src', 'src/rambo', 'lib', 'Cards', 'SubProcesses',
+    dirs_to_create = ['bin', 'bin/internal', 'src', 'src/rambo', 'lib', 'Cards', 'SubProcesses',
                       'backend',
                       'backend/common',
                       'backend/cpu',
@@ -243,8 +247,9 @@ class ProcessExporterMadMatrix(export_cpp.ProcessExporterMG7):
     def copy_template(self, model):
         if not getattr(self, 'has_madmatrix', True):
             # only the cards and the launcher: no src/, backend/ or makefiles
-            self.dirs_to_create = ['bin', 'lib', 'Cards', 'SubProcesses']
-            self.from_template = {key: self.from_template[key] for key in ('.', 'Cards')}
+            self.dirs_to_create = ['bin', 'bin/internal', 'lib', 'Cards', 'SubProcesses']
+            self.from_template = {key: self.from_template[key]
+                                  for key in ('.', 'Cards', 'bin/internal')}
             self.template_src_make = self.template_Sub_make = None
             return super().copy_template(model)
         super().copy_template(model)
@@ -499,6 +504,8 @@ class ProcessExporterMadMatrixStandalone(ProcessExporterMadMatrix):
 
     # We don't need the run_card.toml
     from_template['Cards'] = []
+    # nor, without the tool cards, the Delphes script
+    from_template['bin/internal'] = []
 
     # Symlink the madmatrix.mk file to each P* folder (madmatrix_standalone.mk,
     # linked there as 'makefile', includes it by name)

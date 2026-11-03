@@ -193,10 +193,11 @@ def run_selected_tools(switch, process) -> None:
         run("MadSpin", "decay_events -from_cards")
     if ma5:
         run("MadAnalysis5 (parton)", "madanalysis5_parton --no_default")
+    # Delphes has no step of its own, as in MadEventCmd.do_launch: do_pythia8
+    # runs it on the shower output when Cards/delphes_card.dat exists. Calling
+    # it here too ran the detector simulation a second time on the same HepMC.
     if switch.get("shower") == "Pythia8":
         run("Pythia8 shower", "shower --no_default")
-    if switch.get("detector") == "Delphes":
-        run("Delphes", "delphes --no_default")
     # hadron-level MA5 needs the shower/detector output: only run it if a shower
     # was requested (otherwise there is no hadron-level event file to analyse).
     if ma5 and showered:
