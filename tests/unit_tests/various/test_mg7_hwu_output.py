@@ -29,7 +29,7 @@ import tempfile
 import unittest
 
 import madgraph.various.histograms as histograms
-from madgraph.iolibs.template_files.mg7 import hwu_output
+from madgraph.mg7 import hwu_output
 
 
 def make_histogram(name='jet-pt', bin_count=2, weights=True):

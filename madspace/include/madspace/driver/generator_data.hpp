@@ -112,6 +112,57 @@ struct GeneratorConfig {
     double batch_overshoot_sigma = 1.0;
 };
 
+/// Settings of a re- or unweighting step after the first unweighting, as far
+/// as the channels need them; see @ref WeightingStep.
+struct StepSettings {
+    /// Unweighting step if true, reweighting step otherwise.
+    bool unweight = true;
+    /// See @ref GeneratorConfig::max_overweight_truncation.
+    double max_overweight_truncation = 0.01;
+    /// See @ref GeneratorConfig::freeze_max_weight_after.
+    std::size_t freeze_max_weight_after = 10000;
+    /// Whether the step returns the ratio instead of the matrix element.
+    bool ratio = false;
+};
+
+/// Result of @ref evaluate_step_chain.
+struct StepChainResult {
+    /// Probability that the event is accepted by all steps.
+    double acceptance;
+    /// Signed weight of the event after all steps, in units of the product of
+    /// the maximum weights of the unweighting steps.
+    double weight;
+};
+
+/**
+ * Acceptance probability and weight of an event after the first unweighting and
+ * the re- and unweighting steps that follow.
+ *
+ * The first step accepts the event with probability
+ * @f$\min(1, |w_0| / m_0)@f$ and carries the overweight factor
+ * @f$o_0 = \max(1, |w_0| / m_0)@f$. Each reweighting step multiplies the weight
+ * by its ratio @f$r_k@f$. Each unweighting step unweights
+ * @f$u_k = o \prod r@f$, the overweight factor of the last unweighting step
+ * times the ratios since, with probability @f$\min(1, u_k / m_k)@f$, and carries
+ * @f$o_k = \max(1, u_k / m_k)@f$. Raising any maximum weight only lowers the
+ * acceptance, so the events can be unweighted again with larger maxima.
+ *
+ * @param weight0      The stored weight of the first step, @f$\max(|w_0|, m)@f$
+ *                     with the sign of @f$w_0@f$, for a maximum @f$m \le m_0@f$.
+ * @param max_weight0  The maximum weight @f$m_0@f$ of the first step.
+ * @param ratios       The ratios @f$r_k@f$ of the steps.
+ * @param max_weights  The maximum weights @f$m_k@f$ of the steps, ignored for
+ *                     reweighting steps.
+ * @param steps        The steps.
+ */
+StepChainResult evaluate_step_chain(
+    double weight0,
+    double max_weight0,
+    const double* ratios,
+    const double* max_weights,
+    const std::vector<StepSettings>& steps
+);
+
 /**
  * Number of events to schedule in the next generation batch.
  *
@@ -200,6 +251,9 @@ struct GeneratorStatus {
     bool optimized;
     /// Whether generation of this subprocess is complete.
     bool done;
+    /// Events given the weight 0 by a weighting step, because their matrix
+    /// element ratio was not finite or the earlier matrix element was 0.
+    std::size_t count_invalid_step_values = 0;
 };
 
 /// One binned observable, accumulated during event generation; see @ref
@@ -257,6 +311,8 @@ struct GeneratorBatchJob {
     std::size_t context_index;
     std::size_t job_id;
     double max_weight;
+    // target count of the channel when max_weight was taken
+    std::size_t count_target = 0;
     // Top-level seed plus job identity, used to derive this job's DerivedSeed(s)
     // independently for generate vs unweight (see start_job()/submit_unweight_job()).
     std::optional<std::uint64_t> rng_seed;
@@ -271,6 +327,9 @@ struct GeneratorBatchJob {
     // Nominal batch size start_job() requested; the job generates more raw points
     // when it repeats batches to get enough of them past the cuts.
     std::size_t requested_event_count = 0;
+    // With re- and unweighting steps: unweighted_events stay on the device and
+    // these are their weights, matrix elements and biases on the CPU
+    TensorVec step_host;
 };
 
 void to_json(nlohmann::json& j, const GeneratorStatus& status);

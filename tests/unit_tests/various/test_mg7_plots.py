@@ -29,7 +29,7 @@ import tempfile
 import unittest
 
 from madgraph import MG5DIR
-from madgraph.iolibs.template_files.mg7 import plots
+from madgraph.mg7 import plots
 
 
 def make_histogram(name='jet-pt', values=None, bin_count=4):
@@ -156,7 +156,7 @@ class TestPlotRendering(unittest.TestCase):
             'import json, logging, os, shutil, sys\n'
             'logging.basicConfig(level=logging.DEBUG)\n'
             'sys.path.insert(0, %r)\n' % MG5DIR +
-            'from madgraph.iolibs.template_files.mg7 import plots\n'
+            'from madgraph.mg7 import plots\n'
             'out = %r\n' % os.path.join(self.path, 'sub') +
             'plots.render([%r], out)\n' % make_histogram()
         )

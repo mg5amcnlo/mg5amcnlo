@@ -78,6 +78,7 @@ void op_matrix_element(
             // implemented at LUMI hackathon where the coffee was indeed terrible
             switch (output_keys[i]) {
             case UMAMI_OUT_MATRIX_ELEMENT:
+            case UMAMI_OUT_MATRIX_ELEMENT_RATIO:
                 thrust::fill_n(
                     thrust_par.on(device.stream()),
                     thrust::device_pointer_cast(static_cast<double*>(output_ptrs[i])),

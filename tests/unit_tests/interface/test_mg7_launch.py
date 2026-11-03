@@ -44,9 +44,9 @@ from unittest import mock
 import madgraph
 import madgraph.interface.extended_cmd as ext_cmd
 import madgraph.interface.master_interface as mgcmd
-from madgraph.iolibs.template_files.mg7 import bootstrap as mg7_bootstrap
+from madgraph.mg7 import bootstrap as mg7_bootstrap
 
-LAUNCH_MODULE = 'madgraph.iolibs.template_files.mg7.launch'
+LAUNCH_MODULE = 'madgraph.mg7.launch'
 _MG_ROOT = str(mg7_bootstrap.MG_ROOT)
 
 
@@ -119,7 +119,7 @@ class MG7LaunchWiringTest(unittest.TestCase):
         # `from pkg import launch` resolves through the parent package's
         # attribute when the real module has already been imported (which
         # MG7CmdTest does), so sys.modules alone is not enough to stub it.
-        import madgraph.iolibs.template_files.mg7 as mg7_pkg
+        import madgraph.mg7 as mg7_pkg
         self.mg7_pkg = mg7_pkg
         self._saved_attr = getattr(mg7_pkg, 'launch', None)
         mg7_pkg.launch = stub
@@ -502,7 +502,7 @@ class MG7CmdTest(unittest.TestCase):
     """The real run interface (needs a compiled madspace to import)."""
 
     def setUp(self):
-        from madgraph.iolibs.template_files.mg7 import launch as mg7_launch
+        from madgraph.mg7 import launch as mg7_launch
         self.launch = mg7_launch
         self.tmpdir = tempfile.TemporaryDirectory()
         self.me_dir = make_mg7_dir(os.path.join(self.tmpdir.name, 'PROC'))
@@ -662,7 +662,7 @@ class MG7CmdTest(unittest.TestCase):
 
     def test_missing_matplotlib_does_not_fail_the_run(self):
         """the numbers are in info.json: a run without the backend carries on"""
-        from madgraph.iolibs.template_files.mg7 import plots
+        from madgraph.mg7 import plots
         saved = plots._pyplot
 
         def no_matplotlib():
@@ -1101,14 +1101,15 @@ class MG7CmdTest(unittest.TestCase):
         lg = logging.getLogger('madgraph')
         handler = logging.NullHandler()
         lg.addHandler(handler)
-        saved = self.launch._TOOL_LOGGING_READY
-        self.launch._TOOL_LOGGING_READY = False
+        from madgraph.mg7 import postprocess
+        saved = postprocess._TOOL_LOGGING_READY
+        postprocess._TOOL_LOGGING_READY = False
         try:
             before = list(lg.handlers)
             self.launch._setup_logging()
             self.assertEqual(list(lg.handlers), before)
         finally:
-            self.launch._TOOL_LOGGING_READY = saved
+            postprocess._TOOL_LOGGING_READY = saved
             lg.removeHandler(handler)
 
 
@@ -1139,7 +1140,7 @@ class TestPostProcessingIsQuiet(unittest.TestCase):
         self.logger.setLevel(self.saved)
 
     def test_info_is_dropped_during_setup(self):
-        from madgraph.iolibs.template_files.mg7.run_interface import _quiet_setup
+        from madgraph.mg7.run_interface import _quiet_setup
 
         with _quiet_setup():
             self.logger.info('W E L C O M E to')
@@ -1150,14 +1151,14 @@ class TestPostProcessingIsQuiet(unittest.TestCase):
     def test_warnings_still_get_through(self):
         """Quiet is not silent: anything that needs saying still says it."""
 
-        from madgraph.iolibs.template_files.mg7.run_interface import _quiet_setup
+        from madgraph.mg7.run_interface import _quiet_setup
 
         with _quiet_setup():
             self.logger.warning('something worth knowing')
         self.assertIn('something worth knowing', self.captured.getvalue())
 
     def test_the_level_is_restored_afterwards(self):
-        from madgraph.iolibs.template_files.mg7.run_interface import _quiet_setup
+        from madgraph.mg7.run_interface import _quiet_setup
 
         with _quiet_setup():
             pass
@@ -1165,7 +1166,7 @@ class TestPostProcessingIsQuiet(unittest.TestCase):
         self.assertIn('back to normal', self.captured.getvalue())
 
     def test_it_restores_the_level_after_a_failure(self):
-        from madgraph.iolibs.template_files.mg7.run_interface import _quiet_setup
+        from madgraph.mg7.run_interface import _quiet_setup
 
         try:
             with _quiet_setup():
@@ -1185,7 +1186,7 @@ class MG7ReweightingTest(unittest.TestCase):
     CARD = "change helicity False\nlaunch --rwgt_name=mt\nset MT 175\n"
 
     def setUp(self):
-        from madgraph.iolibs.template_files.mg7 import launch
+        from madgraph.mg7 import launch
         self.launch = launch
         self.tmpdir = tempfile.TemporaryDirectory()
         self.cwd = os.getcwd()
@@ -1260,6 +1261,7 @@ class MG7ReweightingTest(unittest.TestCase):
             run_path = 'Events/run_01'
 
         launch = self.launch
+        from madgraph.mg7 import cli, driver
 
         def fake_run_generation(switch, reweight):
             launch.run_single(switch, reweight)
@@ -1270,18 +1272,18 @@ class MG7ReweightingTest(unittest.TestCase):
         def fake_prepare(switch, cli, options):
             calls.append(('prepare', switch.get('reweight'), cli))
             return 'DECISION'
-        with mock.patch.object(launch, 'ask_edit_cards', return_value={'reweight': 'ON'}), \
-                mock.patch.object(launch, 'prepare_reweighting', fake_prepare), \
-                mock.patch.object(launch, 'force_lhe_output_if_needed'), \
-                mock.patch.object(launch, 'run_generation', fake_run_generation), \
-                mock.patch.object(launch, 'compute_auto_widths'), \
-                mock.patch.object(launch, 'MadgraphProcess', lambda: mock.Mock(**{
+        with mock.patch.object(cli, 'ask_edit_cards', return_value={'reweight': 'ON'}), \
+                mock.patch.object(cli, 'prepare_reweighting', fake_prepare), \
+                mock.patch.object(cli, 'force_lhe_output_if_needed'), \
+                mock.patch.object(cli, 'run_generation', fake_run_generation), \
+                mock.patch.object(driver, 'compute_auto_widths'), \
+                mock.patch.object(driver, 'MadgraphProcess', lambda: mock.Mock(**{
                     'gridpack_run_mode': 'regular'})), \
-                mock.patch.object(launch, 'run_lhe_postprocessing',
+                mock.patch.object(driver, 'run_lhe_postprocessing',
                                   lambda p: calls.append(('systematics',))), \
-                mock.patch.object(launch, 'run_reweighting',
+                mock.patch.object(driver, 'run_reweighting',
                                   lambda p, c, decision: calls.append(('reweight', decision))), \
-                mock.patch.object(launch, 'run_selected_tools', fake_tools):
+                mock.patch.object(driver, 'run_selected_tools', fake_tools):
             launch.MG7Cmd(me_dir=self.me_dir).do_generate_events('--reweight=%s' % card)
         self.assertEqual(calls, [('prepare', 'ON', None), ('systematics',),
                                  ('reweight', 'DECISION'), ('tools', ())])
@@ -1292,10 +1294,11 @@ class MG7ReweightingTest(unittest.TestCase):
         card = self.write_card(self.CARD, os.path.join(self.tmpdir.name, 'rw.dat'))
         seen = []
         launch = self.launch
-        with mock.patch.object(launch, 'prepare_reweighting',
+        from madgraph.mg7 import cli, driver
+        with mock.patch.object(cli, 'prepare_reweighting',
                                lambda switch, cli, options: seen.append((switch, cli))), \
-                mock.patch.object(launch, 'force_lhe_output_if_needed'), \
-                mock.patch.object(launch, 'run_generation'):
+                mock.patch.object(cli, 'force_lhe_output_if_needed'), \
+                mock.patch.object(cli, 'run_generation'):
             launch.MG7Cmd(me_dir=self.me_dir).do_generate_events(
                 '-f --reweight=%s --reweight-backend=classic' % card)
         self.assertEqual(seen, [({'reweight': 'ON'}, 'classic')])
@@ -1333,7 +1336,7 @@ class MG7ReweightingTest(unittest.TestCase):
         generation, the reweighting (reweighting(process)) and the npy->LHE
         conversion faked; returns (process, calls)."""
         from madgraph.various import reweight_backend as rb
-        from madgraph.iolibs.template_files.mg7 import npy_to_lhe
+        from madgraph.mg7 import npy_to_lhe
         run_path = os.path.abspath(os.path.join('Events', 'run_01'))
         os.makedirs(run_path)
         calls = []
@@ -1357,10 +1360,11 @@ class MG7ReweightingTest(unittest.TestCase):
             calls.append(('reweight', p.events_path))
             reweighting(p)
         launch = self.launch
-        with mock.patch.object(launch, 'compute_auto_widths'), \
-                mock.patch.object(launch, 'MadgraphProcess', lambda: process), \
-                mock.patch.object(launch, 'run_lhe_postprocessing'), \
-                mock.patch.object(launch, 'run_reweighting', run_reweighting), \
+        from madgraph.mg7 import cli, driver
+        with mock.patch.object(driver, 'compute_auto_widths'), \
+                mock.patch.object(driver, 'MadgraphProcess', lambda: process), \
+                mock.patch.object(driver, 'run_lhe_postprocessing'), \
+                mock.patch.object(driver, 'run_reweighting', run_reweighting), \
                 mock.patch.object(npy_to_lhe, 'convert', convert):
             launch.run_single(None, rb.Decision('madtrex', 'param'))
         return process, calls
@@ -1457,7 +1461,7 @@ class MG7ReweightingTest(unittest.TestCase):
 
     def test_sync_lhe_copy(self):
         import gzip
-        from madgraph.iolibs.template_files.mg7.run_interface import sync_lhe_copy
+        from madgraph.mg7.run_interface import sync_lhe_copy
         with gzip.open('a.lhe.gz', 'wt') as f:
             f.write('events\n')
         sync_lhe_copy('a.lhe.gz', 'b.lhe')
@@ -1489,17 +1493,18 @@ class MG7ReweightingTest(unittest.TestCase):
         failure is logged with how to reweight again."""
         os.makedirs(os.path.join('Events', 'run_01'))
         launch = self.launch
+        from madgraph.mg7 import cli, driver
         process = mock.Mock(gridpack_run_mode='regular',
                             run_path=os.path.abspath(os.path.join('Events', 'run_01')))
         calls = []
 
         def failing(p, c, decision):
             raise RuntimeError('SPINUP 9 in event 3')
-        with mock.patch.object(launch, 'compute_auto_widths'), \
-                mock.patch.object(launch, 'MadgraphProcess', lambda: process), \
-                mock.patch.object(launch, 'run_lhe_postprocessing'), \
-                mock.patch.object(launch, 'run_reweighting', failing), \
-                mock.patch.object(launch, 'run_selected_tools',
+        with mock.patch.object(driver, 'compute_auto_widths'), \
+                mock.patch.object(driver, 'MadgraphProcess', lambda: process), \
+                mock.patch.object(driver, 'run_lhe_postprocessing'), \
+                mock.patch.object(driver, 'run_reweighting', failing), \
+                mock.patch.object(driver, 'run_selected_tools',
                                   lambda switch, p: calls.append('tools')), \
                 self.assertLogs('madevent', 'WARNING') as logs:
             launch.run_single({'reweight': 'ON', 'shower': 'Pythia8'}, 'DECISION')
@@ -1535,6 +1540,7 @@ class MG7ReweightingTest(unittest.TestCase):
         open(os.path.join('Events', 'run_01', 'events.lhe.gz'), 'w').close()
         card = self.write_card(self.CARD, os.path.join(self.tmpdir.name, 'rw.dat'))
         launch = self.launch
+        from madgraph.mg7 import cli, driver
         cmd = launch.MG7Cmd(me_dir=self.me_dir)
         seen = []
 
@@ -1545,8 +1551,8 @@ class MG7ReweightingTest(unittest.TestCase):
         def fake_run(process, card_path, decision):
             seen.append(('run', os.path.basename(process.run_path),
                          process.run_card['run']['output_format'], decision))
-        with mock.patch.object(launch, 'prepare_reweighting', fake_prepare), \
-                mock.patch.object(launch, 'run_reweighting', fake_run):
+        with mock.patch.object(cli, 'prepare_reweighting', fake_prepare), \
+                mock.patch.object(cli, 'run_reweighting', fake_run):
             cmd.do_reweight('run_01 --reweight=%s --reweight-backend=madtrex' % card)
         self.assertEqual(seen, [('prepare', {'reweight': 'ON'}, 'madtrex'),
                                 ('run', 'run_01', 'lhe', 'DECISION')])
@@ -1670,7 +1676,7 @@ class TestPostProcessingIsSkippedWhenThereIsNothingToDo(unittest.TestCase):
     def tools_for(self, switch):
         """The tool list run_selected_tools builds, without running it."""
 
-        from madgraph.iolibs.template_files.mg7 import launch
+        from madgraph.mg7 import launch
         return launch.selected_tools(switch)
 
     def test_a_not_available_switch_selects_no_tool(self):
@@ -1704,7 +1710,7 @@ class TestPostProcessingIsSkippedWhenThereIsNothingToDo(unittest.TestCase):
         """With no tool selected it must not construct MG7RunCmd -- that is
         what printed the MADEVENT banner and the configuration lines."""
 
-        from madgraph.iolibs.template_files.mg7 import launch
+        from madgraph.mg7 import launch
 
         class _Process(object):
             run_path = '/nonexistent/run_01'
@@ -1740,7 +1746,7 @@ class TestPostProcessingResultsStayInMemory(unittest.TestCase):
 
     def test_store_result_bookkeeping_writes_nothing(self):
         import madgraph.various.banner as banner_mod
-        from madgraph.iolibs.template_files.mg7.run_interface import MG7RunCmd
+        from madgraph.mg7.run_interface import MG7RunCmd
 
         # load_results_db only needs me_dir, process and the model name
         # (__del__ reads the other two); building a real MG7RunCmd needs a
@@ -1782,7 +1788,7 @@ class MG7MeFrameTest(unittest.TestCase):
     def resolve(self, me_frame, is_decay, particle_count=4, outgoing=None):
         """``outgoing``, if given, lists the final states of several
         subprocesses of one output (g g > each of them)"""
-        from madgraph.iolibs.template_files.mg7 import launch as mg7_launch
+        from madgraph.mg7 import launch as mg7_launch
         process = object.__new__(mg7_launch.MadgraphProcess)
         process.run_card = {'run': {'me_frame': me_frame}}
         process.is_decay = is_decay
@@ -1869,15 +1875,17 @@ class TestForceLHEOutput(unittest.TestCase):
     the LHE format only when something that reads LHE will run."""
 
     def setUp(self):
-        from madgraph.iolibs.template_files.mg7 import launch
+        import madgraph
+        from madgraph.mg7 import launch
         from madgraph.various.banner import RunCardMG7
         self.launch = launch
         self.tmpdir = tempfile.TemporaryDirectory()
         self.cwd = os.getcwd()
         os.chdir(self.tmpdir.name)
         os.mkdir('Cards')
-        template = os.path.join(os.path.dirname(launch.__file__),
-                                'run_card.toml')
+        template = os.path.join(madgraph.MG5DIR, 'madgraph', 'iolibs',
+                                'template_files', 'mg7', 'run_card.toml')
+        self.assertTrue(os.path.isfile(template), template)
         RunCardMG7().write(self.card, template=template)
 
     def tearDown(self):
@@ -1969,7 +1977,7 @@ class TestNpyToLHE(unittest.TestCase):
 
     def setUp(self):
         import numpy as np
-        from madgraph.iolibs.template_files.mg7 import npy_to_lhe
+        from madgraph.mg7 import npy_to_lhe
         self.np = np
         self.npy_to_lhe = npy_to_lhe
         self.ms = npy_to_lhe._madspace()
@@ -2067,14 +2075,14 @@ class TestHistogramSwitches(unittest.TestCase):
     def test_mean_ignores_under_and_overflow(self):
         """Both histogram kinds carry the under/overflow bins first and last;
         they have no position and must not shift the in-range bins."""
-        from madgraph.iolibs.template_files.mg7 import launch
+        from madgraph.mg7 import launch
         mean = launch.MadgraphProcess._histogram_mean
         # bins [0,10) and [10,20) with weights 1 and 3, plus 100 in overflow
         self.assertAlmostEqual(mean(0., 20., [5., 1., 3., 100.]), 12.5)
         self.assertIsNone(mean(0., 20., [5., 0., 0., 100.]))
 
     def test_postprocessing_off_builds_no_event_histograms(self):
-        from madgraph.iolibs.template_files.mg7 import launch
+        from madgraph.mg7 import launch
         from madgraph.various.banner import RunCardMG7
         process = launch.MadgraphProcess.__new__(launch.MadgraphProcess)
         process.run_card = RunCardMG7()
@@ -2094,7 +2102,7 @@ class MG7ObservablePidsTest(unittest.TestCase):
     flavours, consistent over every flavour a subprocess groups together."""
 
     def setUp(self):
-        from madgraph.iolibs.template_files.mg7 import launch as mg7_launch
+        from madgraph.mg7 import launch as mg7_launch
         self.launch = mg7_launch
 
     @staticmethod
@@ -2140,7 +2148,7 @@ class MG7DecayProductsTest(unittest.TestCase):
     on-shell (decay-chain) propagator decays into, as MadEvent's check_decay."""
 
     def setUp(self):
-        from madgraph.iolibs.template_files.mg7 import launch as mg7_launch
+        from madgraph.mg7 import launch as mg7_launch
         self.launch = mg7_launch
 
     @staticmethod
@@ -2201,7 +2209,7 @@ class MG7AutoPtjMjjCutNamesTest(unittest.TestCase):
     OUTGOING_PDGS = [21, 21, 25, 1, -1]
 
     def setUp(self):
-        from madgraph.iolibs.template_files.mg7 import launch as mg7_launch
+        from madgraph.mg7 import launch as mg7_launch
         self.launch = mg7_launch
 
     def make_process(self, cuts, xqcut=20.0, auto=True):

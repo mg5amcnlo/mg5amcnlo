@@ -195,6 +195,7 @@ void op_matrix_element(
             // implemented at LUMI hackathon where the coffee was indeed terrible
             switch (output_keys[i]) {
             case UMAMI_OUT_MATRIX_ELEMENT:
+            case UMAMI_OUT_MATRIX_ELEMENT_RATIO:
                 device.submit([=]() mutable {
                     double* ptr = static_cast<double*>(output_ptrs[i]);
                     std::fill(ptr, ptr + batch_size, 1.);

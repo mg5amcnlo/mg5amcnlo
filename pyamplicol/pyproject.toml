@@ -54,7 +54,7 @@ dependencies = [
   "prettytable==3.18.0",
   "progressbar2==4.6.0",
   "six==1.17.0",
-  "symbolica==3.0.0",
+  "symbolica==3.0.2",
   "tomli-w==1.2.0",
   "ufo-model-loader==1.0.0",
 ]
@@ -208,7 +208,7 @@ exclude = [
 show_error_codes = true
 warn_unused_configs = true
 
-# Symbolica 3.0.0's FactorProjector overloads crash mypy 1.20.2. These
+# Symbolica 3.0's FactorProjector overloads crash mypy 1.20.2. These
 # implementation-only tensor bindings are exercised by numerical tests;
 # keep checking all pyAmpliCol public types and the other Symbolica stubs.
 [[tool.mypy.overrides]]

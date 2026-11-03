@@ -39,6 +39,7 @@ _OUTPUT_TYPES = {
     "fact_scale2": DataType.float64,
     "pdf": DataType.float64,
     "bias": DataType.float64,
+    "matrix_element_ratio": DataType.float64,
 }
 
 

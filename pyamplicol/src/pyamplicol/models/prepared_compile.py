@@ -74,7 +74,7 @@ from .prepared_target import (
     PreparedTargetError,
     canonical_architecture,
     native_prepared_target,
-    symjit_storage_v3_target,
+    symjit_storage_v4_target,
 )
 from .recurrence_catalog_builder import build_recurrence_template_catalog
 from .recurrence_direct_template import (
@@ -564,7 +564,7 @@ def prepared_symbolica_settings(
         n_cores=cores,
         jit_direct_translation=False,
         # Saved SymJIT applications are process-independent model assets.  O2
-        # is the only storage-v3 optimization level whose MIR is portable
+        # is the only storage-v4 optimization level whose MIR is portable
         # across the supported architecture classes.  Process-local compiled
         # DAG evaluators continue to honor evaluator.jit.optimization_level.
         jit_optimization_level=(
@@ -2043,7 +2043,7 @@ def _prepared_target(
 ) -> dict[str, object]:
     try:
         if backend == "jit":
-            return symjit_storage_v3_target()
+            return symjit_storage_v4_target()
         return native_prepared_target(include_cpu_features=evaluator.cpp.native_arch)
     except PreparedTargetError as error:
         raise PreparedModelBundleError(str(error)) from error

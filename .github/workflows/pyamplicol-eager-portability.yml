@@ -78,10 +78,6 @@ jobs:
   produce-architecture-packs:
     name: Produce prepared JIT pack (${{ matrix.target }})
     runs-on: ${{ matrix.runner }}
-    concurrency:
-      group: "pyamplicol-symbolica-${{ startsWith(matrix.runner, 'macos-') && matrix.runner || format('{0}-{1}', matrix.runner, github.run_id) }}"
-      cancel-in-progress: false
-      queue: max
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -113,7 +109,7 @@ jobs:
             pyamplicol/pyproject.toml
             pyamplicol/dependencies/release-lock.toml
             pyamplicol/dependencies/python-runtime-lock.toml
-      - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
+      - uses: dtolnay/rust-toolchain@d124f86f28ff42855784ff3319f48ac182c248f8 # 1.99.1
       - name: Install pinned build tools
         run: python -m pip install "maturin==1.15.0" "packaging==26.3"
       - name: Build the non-publishable release bootstrap wheel
@@ -145,10 +141,6 @@ jobs:
     name: Consume portable pack (${{ matrix.target }})
     needs: produce-architecture-packs
     runs-on: ${{ matrix.runner }}
-    concurrency:
-      group: "pyamplicol-symbolica-${{ startsWith(matrix.runner, 'macos-') && matrix.runner || format('{0}-{1}', matrix.runner, github.run_id) }}"
-      cancel-in-progress: false
-      queue: max
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -185,7 +177,7 @@ jobs:
             pyamplicol/pyproject.toml
             pyamplicol/dependencies/release-lock.toml
             pyamplicol/dependencies/python-runtime-lock.toml
-      - uses: dtolnay/rust-toolchain@46511b1c83438f0dd37c02d843619ece5a4abb5b # 1.97.1
+      - uses: dtolnay/rust-toolchain@d124f86f28ff42855784ff3319f48ac182c248f8 # 1.99.1
       - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: pyamplicol-eager-jit-transfer-${{ matrix.pack_architecture }}

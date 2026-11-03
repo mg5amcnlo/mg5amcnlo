@@ -45,6 +45,7 @@ from pyamplicol.api.results import (
     WarmUpResult,
 )
 from pyamplicol.artifacts import MANIFEST_NAME, ArtifactManifest, load_manifest
+from pyamplicol.artifacts.manifest import ArtifactPayloads
 from pyamplicol.reporting import (
     ProgressEnd,
     ProgressSink,
@@ -405,12 +406,12 @@ def _has_reusable_runtime_selector_contract(
 ) -> bool:
     relative = str(process["physics_path"])
     try:
-        payload = json.loads((manifest.root / relative).read_text(encoding="utf-8"))
+        payload = json.loads(ArtifactPayloads(manifest).read_bytes(relative))
     except OSError as exc:
         raise ArtifactError(
             f"could not read runtime selector metadata {relative}: {exc}"
         ) from exc
-    except json.JSONDecodeError as exc:
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ArtifactError(
             f"invalid runtime selector metadata {relative}: {exc}"
         ) from exc
@@ -1622,8 +1623,8 @@ class RusticolRuntimeBackend:
                 f"process {process_id!r} must declare exactly one validation point"
             )
         try:
-            raw = json.loads((manifest.root / payloads[0].path).read_text("utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
+            raw = json.loads(ArtifactPayloads(manifest).read_bytes(payloads[0].path))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise ArtifactError(
                 f"could not read validation point for process {process_id!r}: {exc}"
             ) from exc

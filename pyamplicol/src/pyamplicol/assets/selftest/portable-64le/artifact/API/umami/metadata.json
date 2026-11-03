@@ -1,0 +1,463 @@
+{
+  "aliases": [],
+  "channels": [
+    {
+      "colored_resonances": [],
+      "phasespace_channels": [
+        {
+          "phasespace_order": [
+            0,
+            2,
+            1
+          ],
+          "resonances": []
+        }
+      ],
+      "phasespace_order": [
+        0,
+        2,
+        1
+      ],
+      "processes": [
+        {
+          "color_flows": 0,
+          "color_order": 0,
+          "helicities": [
+            [
+              0
+            ],
+            [
+              1
+            ],
+            [
+              2
+            ],
+            [
+              3,
+              4,
+              5
+            ],
+            [
+              6,
+              7,
+              8
+            ],
+            [
+              9
+            ],
+            [
+              10
+            ],
+            [
+              11
+            ]
+          ],
+          "helicity_mappings": [
+            {
+              "coefficient": 0.0,
+              "helicity": 0,
+              "representative_id": "h:-1,-1,-1",
+              "structural_zero": true
+            },
+            {
+              "coefficient": 0.0,
+              "helicity": 1,
+              "representative_id": "h:-1,-1,+0",
+              "structural_zero": true
+            },
+            {
+              "coefficient": 0.0,
+              "helicity": 2,
+              "representative_id": "h:-1,-1,+1",
+              "structural_zero": true
+            },
+            {
+              "coefficient": 1.0,
+              "helicity": 3,
+              "representative_id": "h:-1,+1,-1",
+              "structural_zero": false
+            },
+            {
+              "coefficient": 1.0,
+              "helicity": 4,
+              "representative_id": "h:-1,+1,-1",
+              "structural_zero": false
+            },
+            {
+              "coefficient": 1.0,
+              "helicity": 5,
+              "representative_id": "h:-1,+1,-1",
+              "structural_zero": false
+            },
+            {
+              "coefficient": 1.0,
+              "helicity": 6,
+              "representative_id": "h:+1,-1,-1",
+              "structural_zero": false
+            },
+            {
+              "coefficient": 1.0,
+              "helicity": 7,
+              "representative_id": "h:+1,-1,-1",
+              "structural_zero": false
+            },
+            {
+              "coefficient": 1.0,
+              "helicity": 8,
+              "representative_id": "h:+1,-1,-1",
+              "structural_zero": false
+            },
+            {
+              "coefficient": 0.0,
+              "helicity": 9,
+              "representative_id": "h:+1,+1,-1",
+              "structural_zero": true
+            },
+            {
+              "coefficient": 0.0,
+              "helicity": 10,
+              "representative_id": "h:+1,+1,+0",
+              "structural_zero": true
+            },
+            {
+              "coefficient": 0.0,
+              "helicity": 11,
+              "representative_id": "h:+1,+1,+1",
+              "structural_zero": true
+            }
+          ],
+          "matrix_elements": [
+            {
+              "factor": 1.0,
+              "pdg_ids": 0
+            }
+          ],
+          "members": [
+            {
+              "color_flows": 0,
+              "color_id": "flow:2,1",
+              "factor": 1.0,
+              "pdgs": [
+                1,
+                -1,
+                23
+              ],
+              "process_id": "d_dbar_to_z",
+              "runtime": {
+                "color_id": "flow:2,1",
+                "color_index": 0,
+                "factor": 1.0,
+                "helicity_export": [
+                  0,
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11
+                ],
+                "permutation": [
+                  0,
+                  1,
+                  2
+                ],
+                "process_id": "d_dbar_to_z",
+                "process_index": 0
+              }
+            }
+          ],
+          "multichannels": [
+            0
+          ],
+          "runtime": {
+            "color_id": "flow:2,1",
+            "color_index": 0,
+            "factor": 1.0,
+            "helicity_export": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "permutation": [
+              0,
+              1,
+              2
+            ],
+            "process_id": "d_dbar_to_z",
+            "process_index": 0
+          }
+        }
+      ]
+    }
+  ],
+  "color_flows": [
+    [
+      [
+        501,
+        0
+      ],
+      [
+        0,
+        501
+      ],
+      [
+        0,
+        0
+      ]
+    ]
+  ],
+  "color_orders": [
+    [
+      1,
+      0,
+      2
+    ]
+  ],
+  "grouping": {
+    "assumptions": [
+      "identical-final-particle permutation-invariant observables and cuts",
+      "final-state flavour-blind observables and cuts"
+    ],
+    "exported_contributions": 1,
+    "physical_contributions": 1
+  },
+  "helicities": [
+    [
+      -1,
+      -1,
+      -1
+    ],
+    [
+      -1,
+      -1,
+      0
+    ],
+    [
+      -1,
+      -1,
+      1
+    ],
+    [
+      -1,
+      1,
+      -1
+    ],
+    [
+      -1,
+      1,
+      0
+    ],
+    [
+      -1,
+      1,
+      1
+    ],
+    [
+      1,
+      -1,
+      -1
+    ],
+    [
+      1,
+      -1,
+      0
+    ],
+    [
+      1,
+      -1,
+      1
+    ],
+    [
+      1,
+      1,
+      -1
+    ],
+    [
+      1,
+      1,
+      0
+    ],
+    [
+      1,
+      1,
+      1
+    ]
+  ],
+  "kind": "pyamplicol-umami-metadata",
+  "pdg_ids": [
+    [
+      1,
+      -1,
+      23
+    ]
+  ],
+  "provider": {
+    "alpha_s_parameter": null,
+    "artifact_id": "a74e458c6e7fa85d55e2e6ae494a2328a76fd69be74e40c867a35887e2fbd449",
+    "color_accuracy": "lc",
+    "color_count": 1,
+    "helicity_count": 12,
+    "id": "p0",
+    "incoming_count": 2,
+    "library": "libumami.so",
+    "mass_parameters": [
+      "0",
+      "0",
+      "mass_23"
+    ],
+    "masses": [
+      0.0,
+      0.0,
+      91.188
+    ],
+    "particle_count": 3,
+    "supports_alpha_s": false
+  },
+  "runtime_processes": [
+    {
+      "alpha_s_parameter": null,
+      "color_accuracy": "lc",
+      "coverage": {
+        "color": "complete",
+        "color_kind": "physical-lc-flows",
+        "helicities": "complete",
+        "structural_zero_helicity_count": 6
+      },
+      "expression": "d d~ > z",
+      "helicity_ids": [
+        "h:-1,-1,-1",
+        "h:-1,-1,+0",
+        "h:-1,-1,+1",
+        "h:-1,+1,-1",
+        "h:-1,+1,+0",
+        "h:-1,+1,+1",
+        "h:+1,-1,-1",
+        "h:+1,-1,+0",
+        "h:+1,-1,+1",
+        "h:+1,+1,-1",
+        "h:+1,+1,+0",
+        "h:+1,+1,+1"
+      ],
+      "id": "d_dbar_to_z",
+      "parameters": [
+        {
+          "default_imaginary": 0.0,
+          "default_real": 0.0075467711139788835,
+          "is_complex": false,
+          "kind": "normalization",
+          "mutable": true,
+          "name": "normalization.alpha_ew"
+        },
+        {
+          "default_imaginary": 0.0,
+          "default_real": 0.118,
+          "is_complex": false,
+          "kind": "normalization",
+          "mutable": true,
+          "name": "normalization.alpha_s_me_check"
+        },
+        {
+          "default_imaginary": 0.0,
+          "default_real": 173.0,
+          "is_complex": false,
+          "kind": "mass",
+          "mutable": true,
+          "name": "particle.6.mass"
+        },
+        {
+          "default_imaginary": 0.0,
+          "default_real": 1.4915,
+          "is_complex": false,
+          "kind": "width",
+          "mutable": true,
+          "name": "particle.6.width"
+        },
+        {
+          "default_imaginary": 0.0,
+          "default_real": 91.188,
+          "is_complex": false,
+          "kind": "mass",
+          "mutable": true,
+          "name": "particle.23.mass"
+        },
+        {
+          "default_imaginary": 0.0,
+          "default_real": 2.441404,
+          "is_complex": false,
+          "kind": "width",
+          "mutable": true,
+          "name": "particle.23.width"
+        },
+        {
+          "default_imaginary": 0.0,
+          "default_real": 80.41900244575616,
+          "is_complex": false,
+          "kind": "mass",
+          "mutable": true,
+          "name": "particle.24.mass"
+        },
+        {
+          "default_imaginary": 0.0,
+          "default_real": 2.0476,
+          "is_complex": false,
+          "kind": "width",
+          "mutable": true,
+          "name": "particle.24.width"
+        },
+        {
+          "default_imaginary": 0.0,
+          "default_real": 125.0,
+          "is_complex": false,
+          "kind": "mass",
+          "mutable": true,
+          "name": "particle.25.mass"
+        },
+        {
+          "default_imaginary": 0.0,
+          "default_real": 0.006382339,
+          "is_complex": false,
+          "kind": "width",
+          "mutable": true,
+          "name": "particle.25.width"
+        },
+        {
+          "default_imaginary": 0.0,
+          "default_real": -1.0244420275940371,
+          "is_complex": true,
+          "kind": "coupling",
+          "mutable": true,
+          "name": "coupling.10.1_23_1.component_0"
+        },
+        {
+          "default_imaginary": 0.0,
+          "default_real": 0.17818666745287456,
+          "is_complex": true,
+          "kind": "coupling",
+          "mutable": true,
+          "name": "coupling.10.1_23_1.component_1"
+        }
+      ],
+      "pdgs": [
+        1,
+        -1,
+        23
+      ]
+    }
+  ],
+  "schema_version": 2,
+  "xml_header": "<generator name=\"pyAmpliCol\">UMAMI artifact provider</generator>"
+}

@@ -30,7 +30,7 @@ rayon.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
-symbolica = { version = "=3.0.0", default-features = false, features = ["bincode", "integer-gmp", "float-mpfr", "native_code_generation"], optional = true }
-symjit = { version = "=2.26.4", default-features = false, optional = true }
+symbolica = { version = "=3.0.2", default-features = false, features = ["bincode", "integer-gmp", "float-mpfr", "native_code_generation"], optional = true }
+symjit = { version = "=2.27.3", default-features = false, optional = true }
 thiserror.workspace = true
 wide.workspace = true

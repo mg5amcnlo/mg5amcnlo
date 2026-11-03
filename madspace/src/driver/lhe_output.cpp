@@ -3,6 +3,7 @@
 #include "madspace/util.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <span>
 
@@ -240,11 +241,46 @@ LHECompleter::append_colors(const SubprocArgs& args, std::size_t particle_count)
 }
 
 void LHECompleter::append_pdg_ids(const SubprocArgs& args, std::size_t particle_count) {
-    for (auto& pdg_id_options : args.pdg_ids) {
+    if (args.pdg_id_weights.size() != 0 &&
+        args.pdg_id_weights.size() != args.pdg_ids.size()) {
+        throw std::invalid_argument("Need PDG-id option weights for every flavor");
+    }
+    for (std::size_t flavor = 0; auto& pdg_id_options : args.pdg_ids) {
         if (pdg_id_options.size() == 0) {
             throw std::invalid_argument(
                 "Must provide at least one option per flavor index"
             );
+        }
+        std::span<const double> weights;
+        if (args.pdg_id_weights.size() != 0) {
+            weights = args.pdg_id_weights.at(flavor);
+        }
+        ++flavor;
+        if (weights.size() != 0) {
+            if (weights.size() != pdg_id_options.size()) {
+                throw std::invalid_argument("Need one weight per PDG-id option");
+            }
+            double total = 0.;
+            for (double weight : weights) {
+                if (!(weight > 0.) || !std::isfinite(weight)) {
+                    throw std::invalid_argument(
+                        "PDG-id option weights must be positive and finite"
+                    );
+                }
+                total += weight;
+            }
+            // equal weights keep the uniform draw
+            if (std::any_of(weights.begin(), weights.end(), [&](double weight) {
+                    return weight != weights[0];
+                })) {
+                _pdg_id_weight_offsets[_pdg_id_and_count.size()] =
+                    _pdg_id_cumulative.size();
+                double sum = 0.;
+                for (double weight : weights) {
+                    sum += weight;
+                    _pdg_id_cumulative.push_back(sum / total);
+                }
+            }
         }
         _pdg_id_and_count.push_back({_pdg_ids.size(), pdg_id_options.size()});
         for (auto& pdg_ids : pdg_id_options) {
@@ -579,7 +615,10 @@ void LHECompleter::complete_event_data(
     if (event.particles.size() != subproc_data.particle_count) {
         throw std::runtime_error("Invalid particle number for subprocess");
     }
-    if (diagram_index < 0 || diagram_index >= subproc_data.diagram_count) {
+    // a subprocess without diagrams has no propagators to insert
+    bool has_diagrams = subproc_data.diagram_count > 0;
+    if (has_diagrams ? diagram_index < 0 || diagram_index >= subproc_data.diagram_count
+                     : diagram_index != -1) {
         throw std::runtime_error("Diagram index out of range");
     }
     if (color_index < 0 || color_index >= subproc_data.color_count) {
@@ -607,9 +646,20 @@ void LHECompleter::complete_event_data(
         subproc_data.helicity_offset + subproc_data.particle_count * helicity_index;
     std::size_t mass_offset = subproc_data.mass_offset;
 
-    auto [pdg_index, pdg_count] =
-        _pdg_id_and_count.at(subproc_data.pdg_id_offset + flavor_index);
-    std::size_t pdg_random = rand_gen.generate_int(pdg_count);
+    std::size_t flavor_slot = subproc_data.pdg_id_offset + flavor_index;
+    auto [pdg_index, pdg_count] = _pdg_id_and_count.at(flavor_slot);
+    std::size_t pdg_random;
+    if (auto weights = _pdg_id_weight_offsets.find(flavor_slot);
+        weights != _pdg_id_weight_offsets.end()) {
+        auto begin = _pdg_id_cumulative.begin() + weights->second;
+        pdg_random = std::min<std::size_t>(
+            std::upper_bound(begin, begin + pdg_count, rand_gen.generate_double()) -
+                begin,
+            pdg_count - 1
+        );
+    } else {
+        pdg_random = rand_gen.generate_int(pdg_count);
+    }
     std::size_t pdg_offset = pdg_index + subproc_data.particle_count * pdg_random;
 
     for (std::size_t particle_index = 0; auto& particle : event.particles) {
@@ -640,6 +690,9 @@ void LHECompleter::complete_event_data(
         std::swap(event.particles.at(0), event.particles.at(1));
     }
 
+    if (!has_diagrams) {
+        return;
+    }
     auto find_propagators = _propagator_index_and_count.find(
         cantor_pairing(subprocess_index, diagram_index, color_index)
     );
@@ -788,6 +841,8 @@ void madspace::to_json(nlohmann::json& j, const LHECompleter& lhe_completer) {
         {"helicities", lhe_completer._helicities},
         {"pdg_id_and_count", lhe_completer._pdg_id_and_count},
         {"pdg_ids", lhe_completer._pdg_ids},
+        {"pdg_id_weight_offsets", lhe_completer._pdg_id_weight_offsets},
+        {"pdg_id_cumulative", lhe_completer._pdg_id_cumulative},
         {"propagator_index_and_count", propagator_index_and_count},
         {"propagators", lhe_completer._propagators},
         {"propagator_colors", lhe_completer._propagator_colors},
@@ -806,6 +861,12 @@ void madspace::from_json(const nlohmann::json& j, LHECompleter& lhe_completer) {
     lhe_completer._pdg_id_and_count =
         j.at("pdg_id_and_count").get<std::vector<std::array<std::size_t, 2>>>();
     lhe_completer._pdg_ids = j.at("pdg_ids").get<std::vector<int>>();
+    // absent from completers saved before weighted options: all uniform
+    lhe_completer._pdg_id_weight_offsets = j.value(
+        "pdg_id_weight_offsets", std::unordered_map<std::size_t, std::size_t>{}
+    );
+    lhe_completer._pdg_id_cumulative =
+        j.value("pdg_id_cumulative", std::vector<double>{});
     lhe_completer._propagator_index_and_count = {};
     for (auto& item : j.at("propagator_index_and_count")) {
         lhe_completer._propagator_index_and_count[item.at(0).get<std::size_t>()] =

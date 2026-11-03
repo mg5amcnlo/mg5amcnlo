@@ -34,7 +34,7 @@ PREPARED_KERNEL_VARIANT_ABI = "pyamplicol-prepared-kernel-variant-v2"
 PREPARED_KERNEL_PACK_IDENTITY_ABI = "pyamplicol-prepared-kernel-pack-identity-v2"
 PREPARED_INDEPENDENT_BLOCK_SIZE = 4
 PREPARED_JIT_PORTABLE_OPTIMIZATION_LEVEL = 2
-PREPARED_JIT_PORTABLE_TARGET = "symjit-storage-v3-portable"
+PREPARED_JIT_PORTABLE_TARGET = "symjit-storage-v4-portable"
 PREPARED_SYMJIT_PLANE_APPLICATION_ABI = "pyamplicol-symjit-plane-application-v2"
 
 PREPARED_MODEL_MANIFEST_PATH = "manifest.json"
@@ -1151,6 +1151,12 @@ class PreparedKernelPack:
             default=None,
         )
     )
+    _recurrence_template_catalog: RecurrenceTemplateCatalog | None = field(
+        init=False,
+        repr=False,
+        compare=False,
+        default=None,
+    )
 
     def __post_init__(self) -> None:
         if self.backend not in _BACKENDS:
@@ -1230,7 +1236,7 @@ class PreparedKernelPack:
             ):
                 raise PreparedModelBundleError(
                     "prepared JIT packs must use the portable 64-bit "
-                    "little-endian SymJIT storage-v3 target"
+                    "little-endian SymJIT storage-v4 target"
                 )
         kernels = tuple(sorted(self.kernels, key=lambda kernel: kernel.kernel_id))
         if not kernels:
@@ -1412,12 +1418,18 @@ class PreparedKernelPack:
         recurrence_template = self.recurrence_template
         if recurrence_template is None:
             return None
+        # The catalog is immutable and model-wide, but rebuilding it is costly
+        cached = self._recurrence_template_catalog
+        if cached is not None:
+            return cached
         from .recurrence_template import RecurrenceTemplateCatalog
 
         thawed = _thaw_json(recurrence_template)
-        return RecurrenceTemplateCatalog.from_dict(
+        catalog = RecurrenceTemplateCatalog.from_dict(
             _mapping(thawed, "kernel_pack.recurrence_template")
         )
+        object.__setattr__(self, "_recurrence_template_catalog", catalog)
+        return catalog
 
     @property
     def recurrence_direct_template_catalog(

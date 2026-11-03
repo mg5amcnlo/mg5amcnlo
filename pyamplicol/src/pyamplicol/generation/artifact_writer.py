@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 import importlib.metadata
+import io
 import json
 import math
 import os
@@ -33,7 +34,7 @@ from pyamplicol.artifacts.process_groups import (
     process_groups_payload,
     validate_process_groups,
 )
-from pyamplicol.artifacts.security import sha256_file
+from pyamplicol.artifacts.writer import PAYLOAD_CONTAINER_PATH, PAYLOAD_CONTAINER_ROLE
 from pyamplicol.config import (
     ConfigClamp,
     ConfigResolution,
@@ -118,7 +119,10 @@ from .recurrence_schedule_sharing import (
 from .structural_source_proof import (
     ROLE as STRUCTURAL_SOURCE_PROOF_ROLE,
 )
-from .structural_source_proof import build_generation_structural_proof
+from .structural_source_proof import (
+    StructuralProofCache,
+    build_generation_structural_proof,
+)
 from .validation import ValidationPointRecord, validation_point_map
 
 if TYPE_CHECKING:
@@ -146,6 +150,14 @@ _EAGER_PACK_IDENTITY_SCHEMA_VERSION = 1
 _EVALUATOR_PAYLOAD_CONTAINER_EXTENSION = "evaluator_payload_container"
 _RECURRENCE_BOOTSTRAP_FILENAME = "recurrence-bootstrap.bin"
 _EVALUATOR_PAYLOAD_CONTAINER_PATH = "evaluators.pacbin"
+_PAYLOAD_CONTAINER_PATH = PAYLOAD_CONTAINER_PATH
+_PAYLOAD_CONTAINER_ROLE = PAYLOAD_CONTAINER_ROLE
+# trees whose payloads generation.pack_payloads moves into payloads.pacbin
+_PACKED_PAYLOAD_PREFIXES = (
+    "processes/",
+    "recurrence/schedules/",
+    "model/eager-kernels/",
+)
 _COMPILED_COLOR_CONTRACTION_MEMBER_PATH = "compiled-color.pacrclr3"
 _EVALUATOR_PAYLOAD_CONTAINER_KIND = "pyamplicol-evaluator-payload-container"
 _EVALUATOR_PAYLOAD_CONTAINER_SCHEMA_VERSION = 1
@@ -601,8 +613,12 @@ class _EvaluatorPayloadCollector:
         relative: str,
         kind: PacbinMemberKind,
     ) -> None:
-        path = self._builder.staged_path(relative)
-        self._new_sources[relative] = PacbinMemberSource(relative, kind, path)
+        source: Path | BinaryIO = (
+            io.BytesIO(self._builder.read_staged(relative))
+            if self._builder.is_spooled(relative)
+            else self._builder.staged_path(relative)
+        )
+        self._new_sources[relative] = PacbinMemberSource(relative, kind, source)
         self._staged_loose_paths.add(relative)
 
     def _is_discarded(self, relative: str) -> bool:
@@ -848,11 +864,7 @@ def _write_umami_bundle(
         physics = (
             process.umami_physics
             if process is not None and process.umami_physics is not None
-            else json.loads(
-                builder.staged_path(str(record["physics_path"])).read_text(
-                    encoding="utf-8"
-                )
-            )
+            else json.loads(builder.read_staged(str(record["physics_path"])))
         )
         umami_input = UmamiProcessInput(
             process_id=identifier,
@@ -942,6 +954,11 @@ def write_schema_v3_artifact(
     existing = load_manifest(output) if mode == "append" else None
     if existing is not None:
         _reject_legacy_eager_append(existing)
+        if any(record.role == _PAYLOAD_CONTAINER_ROLE for record in existing.payloads):
+            raise ValueError(
+                "cannot append to an artifact with packed payloads; regenerate it "
+                "with mode='replace'"
+            )
     hook = api_bundle_hook or _default_api_bundle_hook()
     requested_config = _config_payload(configuration.requested)
     effective_config = _config_payload(configuration.effective)
@@ -1029,6 +1046,7 @@ def write_schema_v3_artifact(
         output,
         mode=write_mode,
         expected_artifact_id=(existing.artifact_id if existing is not None else None),
+        packs=_packs_payload if _payloads_packed(configuration.effective) else None,
     ) as builder:
         evaluator_payloads = _EvaluatorPayloadCollector(
             builder,
@@ -1151,13 +1169,12 @@ def write_schema_v3_artifact(
             staged_root = builder.root
             if staged_root is None:  # pragma: no cover - builder invariant
                 raise RuntimeError("artifact builder is not active")
+            proof_cache = StructuralProofCache()
             for process_record in process_records:
                 process_id = str(process_record["id"])
                 execution_path = f"processes/{process_id}/execution.json"
-                execution_file = builder.staged_path(execution_path)
-                execution_payload = json.loads(
-                    execution_file.read_text(encoding="utf-8")
-                )
+                execution_bytes = builder.read_staged(execution_path)
+                execution_payload = json.loads(execution_bytes.decode("utf-8"))
                 if not isinstance(execution_payload, Mapping):
                     raise ValueError(
                         f"execution payload for {process_id!r} is not an object"
@@ -1170,10 +1187,12 @@ def write_schema_v3_artifact(
                     source_revision=source_revision,
                     native_build_inputs_sha256=native_build_inputs_sha256,
                     execution_path=execution_path,
-                    execution_sha256=sha256_file(execution_file),
+                    execution_sha256=hashlib.sha256(execution_bytes).hexdigest(),
                     execution=execution_payload,
                     evaluator_container_path=evaluator_container_path,
                     evaluator_container_index_sha256=(evaluator_container_index_sha256),
+                    cache=proof_cache,
+                    payloads=builder,
                 )
                 builder.add_json(
                     f"processes/{process_id}/structural-source-proof.json",
@@ -1182,6 +1201,9 @@ def write_schema_v3_artifact(
                     process_id=process_id,
                     compact=True,
                 )
+        if _payloads_packed(configuration.effective):
+            # the native recurrence bootstrap reads the packed payloads
+            builder.seal_payload_container()
         _write_recurrence_bootstraps(
             builder,
             processes=recurrence_processes,
@@ -1264,9 +1286,13 @@ def write_schema_v3_artifact(
             )
 
     manifest = load_manifest(output)
-    _validate_artifact_references(manifest)
+    packed = _validate_artifact_references(manifest)
     files = tuple(
-        [output / record.path for record in manifest.payloads]
+        [
+            output / record.path
+            for record in manifest.payloads
+            if record.path not in packed
+        ]
         + [output / "artifact.json"]
     )
     return ArtifactWriteResult(
@@ -2143,8 +2169,8 @@ def _write_recurrence_bootstraps(
                 separators=(",", ":"),
                 allow_nan=False,
             ).encode("utf-8"),
-            builder.staged_path(execution_path).read_bytes(),
-            builder.staged_path(physics_path).read_bytes(),
+            builder.read_staged(execution_path),
+            builder.read_staged(physics_path),
         )
         if not isinstance(image, bytes) or not image:
             raise RuntimeError(
@@ -5361,8 +5387,11 @@ def _call_api_bundle_hook(
     return "API"
 
 
-def _validate_artifact_references(manifest: ArtifactManifest) -> None:
+def _validate_artifact_references(manifest: ArtifactManifest) -> frozenset[str]:
+    """Check the payload references and files; return the packed payload paths."""
+
     declared = {record.path for record in manifest.payloads}
+    packed = _validate_payload_container(manifest)
     _validate_evaluator_payload_container(manifest)
     _validate_recurrence_schedule_sharing(manifest)
     required = {
@@ -5395,6 +5424,63 @@ def _validate_artifact_references(manifest: ArtifactManifest) -> None:
         raise ValueError(
             "artifact contains undeclared files: " + ", ".join(sorted(undeclared))
         )
+    if actual & packed:
+        raise ValueError(
+            "packed payloads are also stored as files: "
+            + ", ".join(sorted(actual & packed))
+        )
+    return packed
+
+
+def _payloads_packed(config: GenerationConfig | RunConfig) -> bool:
+    generation = config if isinstance(config, GenerationConfig) else config.generation
+    return bool(generation.pack_payloads)
+
+
+def _packs_payload(path: str) -> bool:
+    """Whether generation.pack_payloads stores ``path`` in payloads.pacbin."""
+
+    return (
+        path.startswith(_PACKED_PAYLOAD_PREFIXES)
+        # nested containers below processes/ are opened as files by their loaders
+        and not (path.startswith("processes/") and path.endswith(".pacbin"))
+        # a loose bootstrap sidecar selects the fast recurrence loading path
+        and not path.endswith("/recurrence-bootstrap.bin")
+    )
+
+
+def _validate_payload_container(manifest: ArtifactManifest) -> frozenset[str]:
+    """Check that the payload container holds exactly declared payloads."""
+
+    containers = [
+        record for record in manifest.payloads if record.role == _PAYLOAD_CONTAINER_ROLE
+    ]
+    if not containers:
+        return frozenset()
+    if len(containers) != 1 or containers[0].path != _PAYLOAD_CONTAINER_PATH:
+        raise ValueError(
+            f"an artifact declares at most one payload container, at "
+            f"{_PAYLOAD_CONTAINER_PATH!r}"
+        )
+    records = {record.path: record for record in manifest.payloads}
+    with PacbinReader.open(
+        manifest.root / _PAYLOAD_CONTAINER_PATH, verify_payloads=False
+    ) as reader:
+        members = reader.members
+    for member in members:
+        record = records.get(member.logical_path)
+        if (
+            record is None
+            or member.kind is not PacbinMemberKind.DECLARED_PAYLOAD
+            or record.role == _PAYLOAD_CONTAINER_ROLE
+            or record.executable
+            or member.length != record.size_bytes
+            or member.sha256 != record.sha256
+        ):
+            raise ValueError(
+                f"invalid payload container member {member.logical_path!r}"
+            )
+    return frozenset(member.logical_path for member in members)
 
 
 def _validate_recurrence_schedule_sharing(manifest: ArtifactManifest) -> None:

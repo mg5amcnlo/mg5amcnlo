@@ -12,8 +12,12 @@ from decimal import Decimal
 from pathlib import Path, PurePosixPath
 
 from pyamplicol.api.errors import ArtifactError, CompatibilityError
-from pyamplicol.artifacts.manifest import ArtifactManifest, PayloadRecord
-from pyamplicol.artifacts.security import confined_path, normalize_relative_path
+from pyamplicol.artifacts.manifest import (
+    ArtifactManifest,
+    ArtifactPayloads,
+    PayloadRecord,
+)
+from pyamplicol.artifacts.security import normalize_relative_path
 from pyamplicol.color.symmetric_group import (
     _inverse_permutation,
     _lexicographic_permutation_rank,
@@ -252,7 +256,7 @@ def _load_recurrence_color_contraction(
             "recurrence color-contraction payload disagrees with execution metadata"
         )
     try:
-        payload = confined_path(artifact_root, logical_path).read_bytes()
+        payload = ArtifactPayloads(manifest).read_bytes(logical_path)
     except OSError as exc:
         raise ArtifactError(
             f"could not read recurrence color-contraction payload: {exc}"

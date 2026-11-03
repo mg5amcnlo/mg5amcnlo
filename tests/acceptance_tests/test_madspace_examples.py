@@ -55,7 +55,8 @@ pjoin = os.path.join
 # in the subprocess env run_doc_example() builds.
 os.environ.setdefault('KMP_DUPLICATE_LIB_OK', 'TRUE')
 
-_EXAMPLES_DIR = pjoin(MG5DIR, 'docs', 'source', 'madspace', 'examples')
+_DOCS_DIR = pjoin(MG5DIR, 'docs', 'source')
+_EXAMPLES_DIR = pjoin(_DOCS_DIR, 'madspace', 'examples')
 _MADSPACE_INSTALL = pjoin(MG5DIR, 'madspace', 'install')
 
 _CODE_BLOCK_RE = re.compile(r'^(?P<indent>[ \t]*)\.\.[ \t]+code-block::[ \t]*python[ \t]*$')
@@ -106,6 +107,30 @@ def extract_python_blocks(rst_path):
     return blocks
 
 
+def extract_named_block(rst_path, name):
+    """Return the dedented body of the code block whose directive carries
+    ``:name: <name>``, or None if there is none."""
+    with open(rst_path) as f:
+        lines = f.read().splitlines()
+    for i, line in enumerate(lines):
+        if line.strip() != ':name: %s' % name:
+            continue
+        j = i
+        while not lines[j].lstrip().startswith('.. code-block::'):
+            j -= 1
+        base_indent = len(lines[j]) - len(lines[j].lstrip())
+        k = i + 1
+        while k < len(lines) and lines[k].strip().startswith(':'):
+            k += 1
+        body = []
+        for line in lines[k:]:
+            if line.strip() and len(line) - len(line.lstrip()) <= base_indent:
+                break
+            body.append(line)
+        return textwrap.dedent('\n'.join(body)).strip()
+    return None
+
+
 def has_madspace():
     try:
         import madspace
@@ -147,7 +172,7 @@ def has_madnis():
         return False
 
 
-def run_doc_example(test, page_name, cwd=None):
+def run_doc_example(test, page_name, cwd=None, examples_dir=_EXAMPLES_DIR):
     """Extract the python blocks of ``examples/<page_name>.rst``, concatenate
     them into one script, and run it as a subprocess. Fails the test if the
     script raises or if the page has no python blocks at all (a moved or
@@ -157,7 +182,7 @@ def run_doc_example(test, page_name, cwd=None):
     ``ggttg_process_dir`` below) run with that directory as its working
     directory, matching what the page's shell commands build. Without it, a
     fresh empty temporary directory is used and cleaned up afterwards."""
-    rst_path = pjoin(_EXAMPLES_DIR, page_name + '.rst')
+    rst_path = pjoin(examples_dir, page_name + '.rst')
     if not os.path.isfile(rst_path):
         test.fail('documentation page not found: %s' % rst_path)
 
@@ -365,6 +390,45 @@ class TestMadSpaceExamples(unittest.TestCase):
             self.skipTest('could not generate/compile g g > t t~ g: %s'
                           % _GGTTG_PROCESS_CACHE.get('make_error', 'mg7 unavailable'))
         run_doc_example(self, 'flow-training', cwd=scratch)
+
+
+class TestGridpackExamples(unittest.TestCase):
+
+    def test_gridpack_example_event_stream(self):
+        """docs/source/event_stream.rst -- creating a fix_max_weight gridpack
+        for p p > e+ e- with the MadGraph commands of the page, then filling
+        an m_ee histogram from its bin/event_stream.py. Needs madspace, numpy,
+        a C++ compiler and lhapdf/NNPDF40_lo_as_01180."""
+        if not has_madspace():
+            self.skipTest('madspace unavailable')
+        if not has_pdf_set('NNPDF40_lo_as_01180'):
+            self.skipTest('NNPDF40_lo_as_01180 LHAPDF data not found '
+                          '(set $LHAPDF_DATA_PATH)')
+        rst_path = pjoin(_DOCS_DIR, 'event_stream.rst')
+        commands = extract_named_block(rst_path, 'event-stream-mg5-commands')
+        self.assertTrue(commands, 'MadGraph commands not found in %s' % rst_path)
+
+        with tempfile.TemporaryDirectory(prefix='doc_event_stream_') as scratch:
+            script = pjoin(scratch, 'mg5_commands.txt')
+            with open(script, 'w') as f:
+                f.write('set automatic_html_opening False --no_save\n')
+                f.write(commands + '\n')
+            env = dict(os.environ)
+            if os.path.isdir(_MADSPACE_INSTALL):
+                env['PYTHONPATH'] = os.pathsep.join(
+                    [_MADSPACE_INSTALL]
+                    + ([env['PYTHONPATH']] if env.get('PYTHONPATH') else [])
+                )
+            result = subprocess.run(
+                [sys.executable, pjoin(MG5DIR, 'bin', 'madgraph'), '-f', script],
+                cwd=scratch, env=env, capture_output=True, text=True,
+            )
+            self.assertEqual(
+                result.returncode, 0,
+                'MadGraph commands failed\n--- stdout ---\n%s\n--- stderr ---\n%s'
+                % (result.stdout[-5000:], result.stderr[-5000:]),
+            )
+            run_doc_example(self, 'event_stream', cwd=scratch, examples_dir=_DOCS_DIR)
 
 
 if __name__ == '__main__':

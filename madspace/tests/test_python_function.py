@@ -126,6 +126,33 @@ def test_multiple_outputs_fixed_particle_count(context, momenta):
     assert (np.asarray(helicity) == 3).all()
 
 
+def test_fixed_channel(context, momenta):
+    def matrix_element(p, flavor, channel):
+        return p[:, 2, 0] * (channel + 10 * flavor)
+
+    api = context.add_matrix_element(
+        ms.PythonFunction(
+            matrix_element,
+            ["momenta", "flavor_index", "channel_index"],
+            ["matrix_element"],
+            particle_count=4,
+        )
+    )
+    inputs = [
+        ms.MatrixElement.momenta_in,
+        ms.MatrixElement.flavor_in,
+        ms.MatrixElement.channel_in,
+    ]
+    generator = ms.MatrixElement(
+        api.index(), 4, inputs, [ms.MatrixElement.matrix_element_out], channel=3
+    )
+    assert generator.channel() == 3
+    assert generator.external_inputs() == inputs[:2]
+    flavor = np.full(len(momenta), 2, dtype=np.int32)
+    me = ms.FunctionRuntime(generator.function(), context)(momenta, flavor)
+    assert np.allclose(me, momenta[:, 2, 0] * 23)
+
+
 @pytest.mark.parametrize(
     "result, message",
     [

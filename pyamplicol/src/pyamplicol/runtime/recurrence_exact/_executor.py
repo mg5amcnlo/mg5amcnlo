@@ -12,7 +12,6 @@ from pyamplicol.api.errors import ArtifactError, EvaluationError
 from pyamplicol.api.protocols import Momenta
 from pyamplicol.api.results import ResolvedEvaluation
 from pyamplicol.artifacts import load_manifest
-from pyamplicol.artifacts.security import confined_path
 from pyamplicol.runtime._evaluator_payloads import ExactEvaluatorPayloadResolver
 from pyamplicol.runtime._native_selection import (
     native_physics_axes,
@@ -24,7 +23,6 @@ from pyamplicol.runtime.eager_exact._contracts import (
     _KernelLoader,
     _mapping,
     _PayloadIndex,
-    _read_json,
     _sequence,
 )
 from pyamplicol.runtime.symbolica_exact import (
@@ -176,13 +174,11 @@ class RecurrenceExactExecutor:
             role="runtime-physics",
             process_id=representative_id,
         )
-        execution = _read_json(
-            confined_path(self._artifact, execution_records[0].path),
-            "recurrence execution metadata",
+        execution = payloads.read_json(
+            execution_records[0].path, "recurrence execution metadata"
         )
-        representative_physics = _read_json(
-            confined_path(self._artifact, physics_path),
-            "runtime physics metadata",
+        representative_physics = payloads.read_json(
+            physics_path, "runtime physics metadata"
         )
         axes = native_physics_axes(native_runtime, representative_physics)
         if execution.get("key") != selection.representative_process_key:

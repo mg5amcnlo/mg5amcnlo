@@ -27,7 +27,8 @@ from pyamplicol.api.errors import (
 from pyamplicol.api.protocols import Momenta
 from pyamplicol.api.results import ResolvedEvaluation
 from pyamplicol.artifacts import load_manifest
-from pyamplicol.artifacts.security import confined_path, normalize_relative_path
+from pyamplicol.artifacts.manifest import ArtifactPayloads
+from pyamplicol.artifacts.security import normalize_relative_path
 from pyamplicol.runtime._color_topology_exact import (
     apply_exact_color_replay_input_mapping,
     parse_exact_color_topology_replay,
@@ -508,12 +509,12 @@ class SymbolicaExactExecutor:
             )
         try:
             self._execution = json.loads(
-                (artifact / records[0].path).read_text(encoding="utf-8")
+                self._payloads.payloads.read_text(records[0].path)
             )
             representative_physics = json.loads(
-                confined_path(artifact, physics_path).read_text(encoding="utf-8")
+                self._payloads.payloads.read_text(physics_path)
             )
-        except (OSError, json.JSONDecodeError) as exc:
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise ArtifactError(
                 f"could not load exact-runtime metadata: {exc}"
             ) from exc
@@ -841,7 +842,7 @@ class SymbolicaExactExecutor:
                     "exact parameter derivation requires one compiled model"
                 )
             model = json.loads(
-                confined_path(self._artifact, model_records[0].path).read_text()
+                ArtifactPayloads(manifest).read_text(model_records[0].path)
             )["ir"]
             self._exact_compiled_model = model
         definitions = {

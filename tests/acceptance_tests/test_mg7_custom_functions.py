@@ -208,7 +208,7 @@ def _import_madspace():
     """The madspace of this MadGraph, as bin/generate_events imports it, or
     None. Done before anything imports another madspace from the path."""
     try:
-        from madgraph.iolibs.template_files.mg7.bootstrap import (
+        from madgraph.mg7.bootstrap import (
             ensure_madspace, drop_install_path)
         ensure_madspace(interactive=False)
         import madspace
@@ -508,7 +508,7 @@ class MG7CustomFunctionsTest(unittest.TestCase):
             self.skipTest('madspace with custom functions unavailable')
         compilers = {'c': 'cc', 'cpp': 'c++', 'fortran': 'gfortran',
                      'cuda': 'nvcc', 'hip': 'hipcc'}
-        from madgraph.iolibs.template_files.mg7 import init_custom_func
+        from madgraph.mg7 import init_custom_func
 
         tested = []
         for language, compiler in compilers.items():

@@ -159,22 +159,44 @@ dependencies = []
 
 [[packages]]
 distribution = "symbolica"
-version = "3.0.0"
+version = "3.0.2"
 license = "LicenseRef-Symbolica-Proprietary"
 direct = true
+dependencies = ["symbolica-fonts", "symbolica-vakint-data"]
+
+  [[packages.artifacts]]
+  filename = "symbolica-3.0.2-cp39-abi3-macosx_10_12_x86_64.whl"
+  sha256 = "849013ff0b1628dfc01f9a07b732e495aa81c1250f8d514289a81acd50796f9a"
+
+  [[packages.artifacts]]
+  filename = "symbolica-3.0.2-cp39-abi3-macosx_11_0_arm64.whl"
+  sha256 = "eec329725c645664c79341172c28e7c32cd1ff57dfbdc48770a18b14d78984f6"
+
+  [[packages.artifacts]]
+  filename = "symbolica-3.0.2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
+  sha256 = "25ddf0b492b1f00a856decdac6f957d97d3f368e50ffb03a4df76e9d68e4d04e"
+
+[[packages]]
+distribution = "symbolica-fonts"
+version = "3.0.2"
+license = "LicenseRef-Symbolica-Proprietary"
+direct = false
 dependencies = []
 
   [[packages.artifacts]]
-  filename = "symbolica-3.0.0-cp39-abi3-macosx_10_12_x86_64.whl"
-  sha256 = "b2ea03b9be72a3ebc3fa950d7380b09223084cb5554aa0877c59e12d7749c2a7"
+  filename = "symbolica_fonts-3.0.2-py3-none-any.whl"
+  sha256 = "7643ef33072e9f972bc76f0805cb8fb3d57c29c7996e408d63ea12961d5d86f2"
+
+[[packages]]
+distribution = "symbolica-vakint-data"
+version = "3.0.2"
+license = "LicenseRef-Symbolica-Proprietary"
+direct = false
+dependencies = []
 
   [[packages.artifacts]]
-  filename = "symbolica-3.0.0-cp39-abi3-macosx_11_0_arm64.whl"
-  sha256 = "6b7414d8d06ac20c92460e0685c794d97afe976968b5fba5cc9562c471b2365d"
-
-  [[packages.artifacts]]
-  filename = "symbolica-3.0.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
-  sha256 = "a2977f78d8f40ce3206ba49850cf75f473785a32a9368e6115d059755a48d15e"
+  filename = "symbolica_vakint_data-3.0.2-py3-none-any.whl"
+  sha256 = "50f0df817ebb0fa839160da3bad76781d39d3d1fc97ab875319ae316e7e91158"
 
 [[packages]]
 distribution = "tomli-w"

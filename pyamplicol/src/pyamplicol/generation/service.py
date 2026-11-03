@@ -162,6 +162,7 @@ from .process_grouping import (
     flavor_blind_classes,
     flavor_blind_mapping,
     particle_table,
+    profile_mappings,
 )
 from .progress import GenerationPhaseReporter, PhaseHandle
 from .recurrence_color import (
@@ -227,6 +228,7 @@ from .runtime_schema import (
     build_runtime_expression_schema,
     build_runtime_schema_layout,
 )
+from .s_channel_resonances import s_channel_resonances
 from .stage_compiler import (
     build_and_write_generic_stage_evaluator_artifacts,
     write_model_parameter_evaluator_artifact,
@@ -4488,6 +4490,7 @@ class GenerationBackend:
                 table,
                 consider_charge_conjugation=self._consider_charge_conjugation,
                 relation_warning=self._flavor_blind_relation_warning(resolved, table),
+                strict=self._flavor_blind_strict,
             )
         return tuple(result)
 
@@ -6145,6 +6148,9 @@ class GenerationBackend:
             ),
             color_plan=prepared.complete_color_plan,
         )
+        physics["extensions"]["s_channel_resonances"] = s_channel_resonances(
+            expanded.process_ir, model, self._coupling_order_limits or None
+        )
         profile["physics-metadata"] = time.perf_counter() - physics_started
         run = self._run_config
         assert run is not None
@@ -6741,6 +6747,9 @@ class GenerationBackend:
             runtime_model_parameters=(
                 runtime_model_parameter_records_from_eager_input(lowering_input)
             ),
+        )
+        physics["extensions"]["s_channel_resonances"] = s_channel_resonances(
+            ir, model, self._coupling_order_limits or None
         )
         return EagerPlanV3ProcessArtifact(
             process_id=process_name,
@@ -7561,7 +7570,14 @@ class GenerationBackend:
     @property
     def _flavor_blind(self) -> bool:
         run = self._run_config
-        return run is not None and run.process.flavor_blind
+        return run is not None and (
+            run.process.flavor_blind or run.process.flavor_blind_strict
+        )
+
+    @property
+    def _flavor_blind_strict(self) -> bool:
+        run = self._run_config
+        return run is not None and run.process.flavor_blind_strict
 
     @property
     def _consider_charge_conjugation(self) -> bool:
@@ -8655,42 +8671,86 @@ def _grouping_process(entry: _ExpandedProcess) -> GroupingProcess:
     )
 
 
+def _flavor_blind_relation(
+    process: GroupingProcess,
+    representative: GroupingProcess,
+    table: Mapping[int, GroupingParticle],
+    *,
+    consider_charge_conjugation: bool,
+    relation_warning: _RelationWarning,
+    representative_ir: CanonicalProcessIR,
+    strict: bool,
+) -> tuple[LegMapping, str | None]:
+    """The assumed mapping and its warning; ``strict`` tries every flavour
+    pairing, conjugated ones last, for one that draws no warning."""
+
+    assumed = flavor_blind_mapping(
+        process,
+        representative,
+        table,
+        consider_charge_conjugation=consider_charge_conjugation,
+    )
+    warning = relation_warning(process, representative, assumed, representative_ir)
+    if warning is None or not strict:
+        return assumed, warning
+    candidates = profile_mappings(process, representative, table)
+    if consider_charge_conjugation:
+        candidates += profile_mappings(process, representative, table, conjugated=True)
+    for candidate in candidates:
+        mapping = replace(candidate, method="flavor-blind")
+        if (
+            mapping != assumed
+            and relation_warning(process, representative, mapping, representative_ir)
+            is None
+        ):
+            return mapping, None
+    return assumed, warning
+
+
 def _collapse_flavor_blind_classes(
     entries: Sequence[_ExpandedProcess],
     table: Mapping[int, GroupingParticle],
     *,
     consider_charge_conjugation: bool,
     relation_warning: _RelationWarning,
+    strict: bool = False,
 ) -> list[_ExpandedProcess]:
     """Keep the representative of each flavour class and record the others on it.
 
-    Processes with explicit aliases keep their own artifact entry.
+    Processes with explicit aliases keep their own artifact entry. With
+    ``strict``, a member joins the first representative of its class whose
+    relation draws no warning, and becomes a generated representative otherwise.
     """
 
     by_name = {entry.request.name: entry for entry in entries}
     members: dict[str, list[GroupMember]] = {}
     warnings: list[str] = []
+    split = 0
     for flavour_class in flavor_blind_classes(
         [_grouping_process(entry) for entry in entries],
         table,
         consider_charge_conjugation=consider_charge_conjugation,
     ):
-        representative = flavour_class[0]
+        representatives = [flavour_class[0]]
         for process in flavour_class[1:]:
             if by_name[process.process_id].aliases:
                 continue
-            mapping = flavor_blind_mapping(
-                process,
-                representative,
-                table,
-                consider_charge_conjugation=consider_charge_conjugation,
-            )
-            warning = relation_warning(
-                process,
-                representative,
-                mapping,
-                by_name[representative.process_id].process_ir,
-            )
+            for representative in representatives:
+                mapping, warning = _flavor_blind_relation(
+                    process,
+                    representative,
+                    table,
+                    consider_charge_conjugation=consider_charge_conjugation,
+                    relation_warning=relation_warning,
+                    representative_ir=by_name[representative.process_id].process_ir,
+                    strict=strict,
+                )
+                if warning is None or not strict:
+                    break
+            else:
+                representatives.append(process)
+                split += 1
+                continue
             if warning is not None:
                 warnings.append(warning)
             members.setdefault(representative.process_id, []).append(
@@ -8727,6 +8787,13 @@ def _collapse_flavor_blind_classes(
         len(warnings),
         "" if len(warnings) == 1 else "s",
     )
+    if strict and split:
+        _LOGGER.info(
+            "Strict flavor-blind grouping: %d subprocess%s generated because "
+            "their relabelling is not a symmetry of the allowed vertices",
+            split,
+            "" if split == 1 else "es",
+        )
     return [
         replace(entry, group_members=tuple(members.get(entry.request.name, ())))
         for entry in entries

@@ -636,6 +636,8 @@ def _snapshot(case: _GoldenCase) -> dict[str, object]:
 # to the retained candidate pack. Restoring that pack's exact strings/signatures
 # and remapping IDs reproduces every preceding exact and table digest; all other
 # sections remain unchanged.
+# Symbolica 3.0.2 changes the printed expressions again: only the exact and table
+# digests (and the semantic hash over them) move.
 _EXPECTED: dict[str, dict[str, object]] = {
     "lc-topology-replay": {
         "counts": {
@@ -656,14 +658,14 @@ _EXPECTED: dict[str, dict[str, object]] = {
             "value_slots": 69,
         },
         "digests": {
-            "exact": "b1c2417ad5ef0283b529f4d347f7e174df526a191df598899e1737aa76065824",
+            "exact": "c2f94b0e269885590d8867a3d8af07fd84347b91ba1f7114cb230404a24a2ebc",
             "layout": "b62b48a5e371e65041aff8f7f0f47ccc6b354a838360b1ba8480de104744d83b",
             "reductions": "3864a2185e4b6613de4cd650431a1cb6a42c224556e73ffb57d471dc5424b6f1",
             "resolved": "4347816ea9472a7c77bd4638259933ac67a562a9fa7478795233da6dc43cab7b",
             "selectors": "e05447b4632d2b06aed2ecc2ecec8526d3aa65e62583ae58f52f4881207435cb",
-            "tables": "c636926e14178c9b2a833a1c976a1100db7a4796aac323d44abb6fcf2b68a1c3",
+            "tables": "45666559b60c51bea36743893b38d6b5ca6078d0d66988f7a402e48e4cc15c64",
         },
-        "semantic_sha256": "15068225c280e5bb16516b044556e60bdd1e175664da650a2d00da154c65a189",
+        "semantic_sha256": "df2162e8459d21569ec63845773909c908277c5adcd38b3f583f4cae5d6be882",
     },
     "lc-all-flow-union": {
         "counts": {
@@ -684,14 +686,14 @@ _EXPECTED: dict[str, dict[str, object]] = {
             "value_slots": 117,
         },
         "digests": {
-            "exact": "907d6b5d5681b55224a7582b600236d63aceb4bbed8e2ca5ab3409f394eceed0",
+            "exact": "a4e889e7464c81788f9fa87f665333b6f30c29c9dae7b5e7ab858c3d48e4cc8c",
             "layout": "24432cc2b2d22a0c83adaddfe58e0beb1ce8447c5df44417e4b6c7e00fffb690",
             "reductions": "b7d5c3c614f70ad6c4bf7f8afb1b3a0a8a5c33dcae0a0c12d271992928ec3a2a",
             "resolved": "f038d7b438a5b59baabc439fb712dbe3fd455f433f20e9da7490e574acc22927",
             "selectors": "7eafd41c8048e0c0d992c5078af4d67e94a9295688d8166a4962ff129a99b419",
-            "tables": "ef1d7173787a43a39214419b103b7a96f6abba3efc54743b4e00ba938de6c9fb",
+            "tables": "73f82acd2604b23b2284c391a8b09ff9fff58b82857b463fb841920fcf211022",
         },
-        "semantic_sha256": "e19d09c7b176933d503d84a821fac830573a8ddb90ccc5fe40f0906bf37966ca",
+        "semantic_sha256": "8d9bba20f6b7ad2d0fb2ca9bb601a903377c797cd37e20315b5fbdde61d52cee",
     },
     "nlc-contracted": {
         "counts": {
@@ -712,14 +714,14 @@ _EXPECTED: dict[str, dict[str, object]] = {
             "value_slots": 42,
         },
         "digests": {
-            "exact": "d488c9d3052b05076ec2c05c9ab16d258fff27125769ed0e777371d2fe4bf065",
+            "exact": "0aeb67c23bf8c2dcde4e57c72d6feb3e92e0b3ce655051991809a4f82133549f",
             "layout": "6c829c0734a995d06f4dcc63bc0967d77bd838c7c733c0ef204f68b4c80ac32a",
             "reductions": "2aac0b41a34bf54335d14337c4cc130f078b11c8a13dce0e5ed7ff2eb7c0bb4d",
             "resolved": "673928032c4063e5aacb8eab41076de0d6c49ea64e56b13c0fa43c149c2c2393",
             "selectors": "72534cf8b4737ba7bbf91913532f6240828386a1cd1d3146b253f44680af0a00",
-            "tables": "0831eff6d1237197672f30cecbeb763edf2682803920f07e52e11b2bfa2002a3",
+            "tables": "4dbd556e6301980f7dfc3431261473eaa27ca8c7cd3821e527b859e35887a5d7",
         },
-        "semantic_sha256": "90ae984c8e55ef27182edd2e8b4bad27e3f39c8d054c1834b95e707d15e54da7",
+        "semantic_sha256": "451872bf7503e84cfd76ec7b94150faf394e224a8cccdaaea60bc6bddf4cae07",
     },
     "full-contracted": {
         "counts": {
@@ -740,14 +742,14 @@ _EXPECTED: dict[str, dict[str, object]] = {
             "value_slots": 42,
         },
         "digests": {
-            "exact": "d488c9d3052b05076ec2c05c9ab16d258fff27125769ed0e777371d2fe4bf065",
+            "exact": "0aeb67c23bf8c2dcde4e57c72d6feb3e92e0b3ce655051991809a4f82133549f",
             "layout": "71ddc16d027bd79283f4861d26a53e3233faf17f2411db49c9607bd21fbb8318",
             "reductions": "0c27a7a5da29bf9569e5477991283edf65c1acd5e424af9a8a15d828d985dd82",
             "resolved": "19acacf5110579b2c157b48dc5c4aacac3da5b51d76f13658ce4a5cbd73754de",
             "selectors": "6f33e6fbd9d47db7a6f0bb8434606ef5b24eb2c644fd3d03006a35201b89a6d3",
-            "tables": "387438ecdc15df79663950e05408d4cd675c1157946ff7a451d89cd48b2a222d",
+            "tables": "b461b0e65ab80fee912a72bc671b70d07133522d4b39af77298cd47126a90ae4",
         },
-        "semantic_sha256": "d64112012b5cc7280936f2ec8b55ef14b213b226e93734c436954d94716ec545",
+        "semantic_sha256": "8fac165d3c55fc17adaca74b0fc331778aefd65c8a54da928e0b543220bdb22d",
     },
 }
 

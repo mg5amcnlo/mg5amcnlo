@@ -78,7 +78,7 @@ def test_release_contract_is_lean_exact_and_schema_8() -> None:
         "rust_version",
         "serialization_abi",
     }
-    assert lock["symjit"] == {"version": "2.26.4"}
+    assert lock["symjit"] == {"version": "2.27.3"}
     assert set(lock["ufo_model_loader"]) == {
         "python_distribution",
         "required_version",

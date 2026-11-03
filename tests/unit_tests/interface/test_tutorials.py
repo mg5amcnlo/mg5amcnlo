@@ -1924,7 +1924,7 @@ class TestRealRunNumbers(unittest.TestCase):
         """Not a third implementation: the run's own box and the scan summary
         read the same one."""
 
-        from madgraph.iolibs.template_files.mg7 import systematics_summary
+        from madgraph.mg7 import systematics_summary
 
         up, down = systematics_summary.scale_percentages(self.INFO['systematics'])
         rows = self.module()._systematics_rows(self.INFO)

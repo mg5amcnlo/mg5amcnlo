@@ -209,6 +209,27 @@ A provider's metadata contains:
   optional αs parameter.
 - `channels[].processes`: the channel/flavour selectors consumed by UMAMI, with
   physical PDGs and integration weights referenced by `matrix_elements`.
+- `channels[].phasespace_channels`: the colour-ordered phase-space channels
+  of a channel, each a cyclic `phasespace_order` of the legs and the s-channel
+  `resonances` (`pdg`, decay `legs`) it maps out. The first one is the
+  channel's own, which samples it; the others only enter the weights. A
+  selector lists its own and its partners' phase-space channels in
+  `multichannels`, its own first; the partners differ in where its colour
+  singlets attach to the colour lines (after the antiquark ends, in every
+  order and distribution, as in AmpliCol), in the non-cyclic order of three or
+  more lines, and in which compatible (nested or disjoint) set of
+  colour-singlet resonances of the process they follow, with a non-resonant one
+  always included. The candidates are every resonance whose mass and width are
+  not zero in the model: drop those that cannot go on shell with the
+  parameter-card values, without merging the channels that then agree. A
+  contribution is exported once per partner, as a selector of that partner's
+  channel with its final-state legs relabelled so that the channel is the
+  canonical one of its pattern; the physical `members` are listed by the first
+  copy only. Weight each copy by its own density over the densities of all its
+  `multichannels`: the copies then add up to the contribution.
+- `channels[].colored_resonances`: the coloured resonances (`pdg`, decay
+  `legs`, `color`) of its selectors, which the phase-space channels do not
+  follow; reject the parameters if one of them can go on shell.
 - `pdg_ids`, `color_orders`, `color_flows` and `helicities`: shared physical
   configuration tables. Indices are zero-based and colour-flow references can
   be absent for contracted colour.
@@ -219,8 +240,8 @@ A provider's metadata contains:
 
 Physical incoming PDGs remain oriented for PDF evaluation. Aliases name the
 same computation; they are not automatically extra integrable contributions.
-Each exported contribution uses one phase-space ordering, rather than several
-alternative maps whose naive sum would double count it.
+The copies of a contribution must be weighted as above, since their naive sum
+would count it once per partner.
 
 ## Automatic symmetry grouping
 

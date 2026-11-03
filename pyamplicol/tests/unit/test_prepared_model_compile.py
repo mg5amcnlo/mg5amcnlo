@@ -61,13 +61,13 @@ class _FakeJitAdapter:
             "input_len": self.input_len,
             "output_len": self.output_len,
             "application_path": str(application.relative_to(artifact_dir)),
-            "application_abi": "symjit-application-storage-v3",
+            "application_abi": "symjit-application-storage-v4",
             "plane_application": {
                 "application_path": str(
                     plane_application.relative_to(artifact_dir)
                 ),
                 "application_abi": "pyamplicol-symjit-plane-application-v2",
-                "storage_abi": "symjit-application-storage-v3",
+                "storage_abi": "symjit-application-storage-v4",
                 "element_layout": "split-complex-plane-major",
                 "descriptor_order": "inputs-re-im-then-outputs-re-im",
                 "input_complex_count": self.input_len,
@@ -1099,7 +1099,7 @@ def test_prepared_compiler_writes_structured_architecture_kernel_pack(
     assert result.bundle.kernel_pack.target["portable"] is True
     assert (
         result.bundle.kernel_pack.target["target_triple"]
-        == "symjit-storage-v3-portable"
+        == "symjit-storage-v4-portable"
     )
     assert result.bundle.kernel_pack.resolver_manifest["model_name"] == "built-in-sm"
     kernel = result.bundle.kernel_pack.kernels[0]

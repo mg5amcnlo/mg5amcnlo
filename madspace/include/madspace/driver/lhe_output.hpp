@@ -189,7 +189,8 @@ public:
     struct SubprocArgs {
         /// Process id shared by every event of this subprocess.
         int process_id;
-        /// Decay topology of each diagram channel.
+        /// Decay topology of each diagram channel. A subprocess without diagrams
+        /// has one topology and no permutations and diagram indices.
         std::vector<Topology> topologies;
         /// Final-state particle permutation of each channel.
         nested_vector3<std::size_t> permutations;
@@ -209,6 +210,10 @@ public:
         /// then by `Topology::Decay::flat_propagator_index`. Falls back to
         /// `Topology::Decay::pdg_id` if empty.
         nested_vector3<int> diagram_propagator_pdgs;
+        /// Relative weight of each PDG-id option of each flavor: an option is
+        /// written with probability proportional to its weight. Uniform if empty,
+        /// or for a flavor whose weights are empty.
+        nested_vector2<double> pdg_id_weights;
     };
 
     /// @param subproc_args  Bookkeeping for every subprocess, indexed like
@@ -224,7 +229,8 @@ public:
      * @param event              The event to complete, modified in place.
      * @param subprocess_index   Index into the `subproc_args` passed to the
      *                           constructor.
-     * @param diagram_index      Sampled diagram.
+     * @param diagram_index      Sampled diagram, -1 for a subprocess without
+     *                           diagrams.
      * @param color_index        Sampled color configuration.
      * @param flavor_index       Sampled flavor assignment.
      * @param helicity_index     Sampled helicity configuration.
@@ -269,6 +275,9 @@ private:
     std::vector<double> _helicities;
     std::vector<std::array<std::size_t, 2>> _pdg_id_and_count;
     std::vector<int> _pdg_ids;
+    // flavor slot -> offset of its cumulative option probabilities, if not uniform
+    std::unordered_map<std::size_t, std::size_t> _pdg_id_weight_offsets;
+    std::vector<double> _pdg_id_cumulative;
     std::unordered_map<std::size_t, std::array<std::size_t, 3>>
         _propagator_index_and_count;
     std::vector<PropagatorData> _propagators;

@@ -32,7 +32,7 @@ import unittest
 
 import madgraph.interface.master_interface as mgcmd
 import madgraph.models.check_param_card as check_param_card
-from madgraph.iolibs.template_files.mg7 import bootstrap as mg7_bootstrap
+from madgraph.mg7 import bootstrap as mg7_bootstrap
 
 pjoin = os.path.join
 
@@ -214,7 +214,7 @@ class TestAutoWidthOptionsInCard(unittest.TestCase):
         with open(card, 'w') as stream:
             stream.write(text)
 
-        from madgraph.iolibs.template_files.mg7 import launch as mg7_launch
+        from madgraph.mg7 import launch as mg7_launch
         os.chdir(run_dir)
         mg7_launch.compute_auto_widths(card)
         os.chdir(self.cwd)

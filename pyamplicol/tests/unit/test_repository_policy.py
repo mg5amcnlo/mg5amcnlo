@@ -100,6 +100,9 @@ def test_first_party_source_has_explicit_0bsd_spdx_identifier() -> None:
             # license; do not relicense it or exempt the first-party adapter.
             if path == ROOT / "src/pyamplicol/assets/api_templates/umami/umami.h":
                 continue
+            # ... and so does the copy generated into an artifact fixture
+            if path.name == "umami.h" and path.parent.name == "umami":
+                continue
             header = "\n".join(path.read_text(encoding="utf-8").splitlines()[:5])
             if "SPDX-License-Identifier: 0BSD" not in header:
                 missing.append(path.relative_to(ROOT).as_posix())
@@ -112,6 +115,8 @@ def test_release_source_roots_contain_no_symlinks() -> None:
         for source_root in FIRST_PARTY_ROOTS
         for path in source_root.rglob("*")
         if _eligible(path) and path.is_symlink()
+        # shared with madspace, copied by content (_SHARED_SYMLINKS)
+        and path != ROOT / "src/pyamplicol/assets/api_templates/umami/umami.h"
     ]
     assert not links, "release source contains symlinks:\n" + "\n".join(links)
 
@@ -285,7 +290,7 @@ def test_python_rust_and_release_lock_wire_versions_are_identical() -> None:
         ROOT / "rust/crates/rusticol-core/src/engine/eager_manifest.rs"
     ).read_text(encoding="utf-8")
     match = re.search(
-        r'const SYMJIT_APPLICATION_STORAGE_V3_ABI: &str = "([^"]+)";',
+        r'const SYMJIT_APPLICATION_STORAGE_V4_ABI: &str = "([^"]+)";',
         eager_manifest,
     )
     assert match is not None

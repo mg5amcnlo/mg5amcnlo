@@ -48,7 +48,7 @@ include_madspace_source = %(gridpack.include_madspace_source)s
 include_madtrex = %(gridpack.include_madtrex)s
 include_madtrex_source = %(gridpack.include_madtrex_source)s
 compress = %(gridpack.compress)s
-# end of a run creating a gridpack; options: regular, minimal (no events), fix_max_weight (no events)
+# end of a run creating a gridpack; options: regular, minimal (no events), fix_max_weight (no events, adds bin/event_stream.py)
 run_mode = %(gridpack.run_mode)s
 # temporary npy files; "" uses the output directory, "auto" a new temporary directory
 temp_output_dir = %(gridpack.temp_output_dir)s
@@ -157,6 +157,27 @@ pdf = %(custom_functions.pdf)s # replaces the PDF set, alpha_s still comes from 
 bias = %(custom_functions.bias)s # events are generated with |w| b and written with w / b
 # parameters declared by a function, e.g. cut_parameters.pt_min = 30.0
 $custom_function_parameters
+
+[surrogate]
+# a fast surrogate of the matrix element in the integrand: a .so library, which can
+# contain {subprocess} and {device}, or a Python file defining
+# custom_surrogate(momenta, pdg_ids, alpha_s); "" disables it
+function = %(surrogate.function)s
+# unweight or reweight the events with the full matrix element in a second pass
+mode = %(surrogate.mode)s
+# unweighting with the surrogate (unweight mode); [generation] sets the second pass
+first_pass_max_overweight_truncation = %(surrogate.first_pass_max_overweight_truncation)s
+first_pass_freeze_max_weight_after = %(surrogate.first_pass_freeze_max_weight_after)s
+param_card = %(surrogate.param_card)s # for a .so surrogate, "" uses Cards/param_card.dat
+
+[amplicol]
+# the [amplicol] processes are integrated at leading colour; their events are
+# re- or unweighted to color_accuracy in a second pass (lc: no second pass)
+color_accuracy = %(amplicol.color_accuracy)s
+mode = %(amplicol.mode)s
+# unweighting at leading colour (unweight mode); [generation] sets the second pass
+first_pass_max_overweight_truncation = %(amplicol.first_pass_max_overweight_truncation)s
+first_pass_freeze_max_weight_after = %(amplicol.first_pass_freeze_max_weight_after)s
 
 [multiparticles]
 $multiparticles

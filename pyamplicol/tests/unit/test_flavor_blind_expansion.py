@@ -251,6 +251,34 @@ def test_flavor_blind_warns_when_couplings_distinguish_the_flavours(
     assert dijet["s c > s c"][1].warning is None
 
 
+def test_strict_flavor_blind_generates_the_members_it_cannot_verify(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(licensing, "detect_symbolica_license", _restricted_license)
+
+    assumed = _expanded("p p > j j", flavor_scheme=4, coupling_order_policy="explicit")
+    strict = _expanded(
+        "p p > j j",
+        flavor_scheme=4,
+        coupling_order_policy="explicit",
+        flavor_blind_strict=True,
+    )
+
+    members = _members(strict)
+    assert all(member.warning is None for _, member in members.values())
+    generated = {entry.request.expression for entry in strict}
+    assert "u u~ > g g" in generated
+    assert "u u~ > g g" not in {entry.request.expression for entry in assumed}
+    assert members["s c > s c"][0] == "d u > d u"
+    # Every subprocess is still generated or routed exactly once.
+    assert len(generated) + len(members) == len(assumed) + len(_members(assumed))
+    # Pure QCD needs no split.
+    qcd = _expanded("p p > j j", flavor_scheme=4, flavor_blind_strict=True)
+    assert [e.request.name for e in qcd] == [
+        e.request.name for e in _expanded("p p > j j", flavor_scheme=4)
+    ]
+
+
 def test_flavor_blind_keeps_processes_with_explicit_aliases(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

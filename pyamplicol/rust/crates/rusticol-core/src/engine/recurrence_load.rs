@@ -27,7 +27,7 @@ use super::recurrence_process_pack::{
     decode_process_executor_descriptors, read_string, semantic_digest_from_bytes,
 };
 use super::*;
-use crate::pacbin::{PacbinMemberKind, PacbinReader};
+use crate::pacbin::PacbinMemberKind;
 #[cfg(feature = "on-the-fly-test-support")]
 use crate::recurrence::direct_backend::{
     DirectCurrentObservation, begin_direct_current_observation, take_direct_current_observation,
@@ -1248,7 +1248,6 @@ fn load_plan_reference(
     )?;
     validate_ready_plan_reference(&spec)?;
     let container = spec.plan.runtime_schedule;
-    let path = artifact.root().join(&container.path);
     let payload = artifact.payload(&container.path)?;
     if payload.role != PayloadRole::EvaluatorState
         || payload.media_type != "application/octet-stream"
@@ -1265,8 +1264,7 @@ fn load_plan_reference(
     let process_binding = validate_process_binding(artifact, evaluator_root, &spec)?;
 
     let expected_file_sha = decode_sha256(&container.sha256)?;
-    let container_file = artifact.open_payload_file(&container.path)?;
-    let reader = PacbinReader::open_file_with_sha256(container_file, &path, &expected_file_sha)?;
+    let reader = artifact.open_payload_pacbin(&container.path, &expected_file_sha)?;
     let index = reader.index();
     if index.file_size() != container.size_bytes
         || reader.container_size() as u64 != container.size_bytes

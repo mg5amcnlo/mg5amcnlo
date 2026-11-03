@@ -3,13 +3,17 @@ name: MadSpace docs examples
 # The other MG7 acceptance workflows all carry `paths-ignore: ['docs/**']`, so a
 # docs-only commit currently triggers none of them. This workflow does the
 # opposite: it triggers ONLY on the paths that can affect the documentation
-# examples, so editing docs/source/madspace/examples/*.rst is actually tested.
+# examples, so editing docs/source/madspace/examples/*.rst (or the event
+# streaming example in docs/source/event_stream.rst) is actually tested.
 on:
   push:
     branches:
       - '**'
     paths:
       - 'docs/source/madspace/examples/**'
+      - 'docs/source/event_stream.rst'
+      - 'madgraph/iolibs/template_files/mg7/**'
+      - 'madgraph/mg7/**'
       - 'madspace/**'
       - 'tests/acceptance_tests/test_madspace_examples.py'
       - '.github/workflows/docs_examples.yml'
@@ -18,6 +22,9 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - 'docs/source/madspace/examples/**'
+      - 'docs/source/event_stream.rst'
+      - 'madgraph/iolibs/template_files/mg7/**'
+      - 'madgraph/mg7/**'
       - 'madspace/**'
       - 'tests/acceptance_tests/test_madspace_examples.py'
       - '.github/workflows/docs_examples.yml'
@@ -55,4 +62,4 @@ jobs:
       - name: run the madspace doc examples
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_madspace_example_simple_mappings test_madspace_example_cuts test_madspace_example_diagram_mapping test_madspace_example_integration_order test_madspace_example_matrix_element test_madspace_example_pdf test_madspace_example_integrator test_madspace_example_integrator_madnis test_madspace_example_flow_training -pA -t0 -l INFO
+            ./tests/test_manager.py test_madspace_example_simple_mappings test_madspace_example_cuts test_madspace_example_diagram_mapping test_madspace_example_integration_order test_madspace_example_matrix_element test_madspace_example_pdf test_madspace_example_integrator test_madspace_example_integrator_madnis test_madspace_example_flow_training test_gridpack_example_event_stream -pA -t0 -l INFO

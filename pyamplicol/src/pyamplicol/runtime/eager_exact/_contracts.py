@@ -15,8 +15,12 @@ from pyamplicol._internal.versions import (
     PROCESS_ARTIFACT_SCHEMA_VERSION,
 )
 from pyamplicol.api.errors import ArtifactError, CompatibilityError, EvaluationError
-from pyamplicol.artifacts.manifest import ArtifactManifest, PayloadRecord
-from pyamplicol.artifacts.security import confined_path, normalize_relative_path
+from pyamplicol.artifacts.manifest import (
+    ArtifactManifest,
+    ArtifactPayloads,
+    PayloadRecord,
+)
+from pyamplicol.artifacts.security import normalize_relative_path
 from pyamplicol.generation.eager_tables import (
     EAGER_PLAN_ABI,
     EAGER_RUNTIME_CAPABILITY,
@@ -180,10 +184,12 @@ def _integer(value: object, context: str, *, minimum: int = 0) -> int:
     return value
 
 
-def _read_json(path: Path, context: str) -> Mapping[str, object]:
+def _read_payload_json(
+    payloads: ArtifactPayloads, path: str, context: str
+) -> Mapping[str, object]:
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        value = json.loads(payloads.read_bytes(path))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ArtifactError(f"could not load {context}: {exc}") from exc
     return _mapping(value, context)
 
@@ -199,10 +205,19 @@ def _joined_payload_path(prefix: str, member: str) -> str:
 @dataclass(frozen=True, slots=True)
 class _PayloadIndex:
     records: Mapping[str, PayloadRecord]
+    files: ArtifactPayloads
 
     @classmethod
     def from_manifest(cls, manifest: ArtifactManifest) -> _PayloadIndex:
-        return cls({record.path: record for record in manifest.payloads})
+        return cls(
+            {record.path: record for record in manifest.payloads},
+            ArtifactPayloads(manifest),
+        )
+
+    def read_json(self, path: str, context: str) -> Mapping[str, object]:
+        """Load one declared JSON payload, loose or packed."""
+
+        return _read_payload_json(self.files, path, context)
 
     def require(
         self,
@@ -469,9 +484,9 @@ def _load_table(
         )
     global_path = _joined_payload_path(process_prefix, path)
     payloads.require(global_path, role="evaluator-state", process_id=process_id)
-    table_path = confined_path(process_root, path)
+    del process_root
     try:
-        content = table_path.read_bytes()
+        content = payloads.files.read_bytes(global_path)
     except OSError as exc:
         raise ArtifactError(f"could not read {context}: {exc}") from exc
     if len(content) != count * expected_size:

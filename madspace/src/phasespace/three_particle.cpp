@@ -178,6 +178,7 @@ std::array<Value, 4> TwoToThreeParticleScattering::sampling_ranges(
     FunctionBuilder& fb,
     Value s23_min,
     Value s23_max,
+    Value m2_squared,
     const NamedVector<Value>& conditions
 ) const {
     // returns the sampled and the kinematic range of the sampled variable
@@ -188,8 +189,11 @@ std::array<Value, 4> TwoToThreeParticleScattering::sampling_ranges(
     auto v_phys_min = negated(fb, s23_max), v_phys_max = negated(fb, s23_min);
     auto v_min = v_phys_min, v_max = v_phys_max;
     if (_has_cut) {
-        // |(p2 - k)^2| >= m_T(p2)^2 for a massless k along the beam axis
-        v_min = fb.max(v_min, fb.square(conditions.at(4)));
+        // |(p2 - k)^2| >= m_T(p2)^2 - m2^2 = p_T(p2)^2 for a massless k along
+        // the beam axis: the ETmin floor of a massive particle bounds m_T
+        v_min = fb.max(
+            v_min, fb.max(fb.sub(fb.square(conditions.at(4)), m2_squared), Value(0.))
+        );
         // an empty range keeps a small width; the weight is zero there, as
         // the point then lies outside the kinematic range
         auto width = fb.max(fb.mul(v_min, Value(1e-10)), Value(1e-300));
@@ -217,7 +221,7 @@ Mapping::Result TwoToThreeParticleScattering::build_forward_impl(
     std::array<Value, 4> ranges;
     if (_incoming_recoil) {
         auto [lo, hi] = fb.s23_min_max(p_a, p_12, p_3, t1, m1, m2);
-        ranges = sampling_ranges(fb, lo, hi, conditions);
+        ranges = sampling_ranges(fb, lo, hi, fb.square(m2), conditions);
     } else if (_has_cut) {
         auto [s_min, s_max] = fb.s23_min_max_cut(
             p_a,
@@ -303,7 +307,10 @@ Mapping::Result TwoToThreeParticleScattering::build_inverse_impl(
     if (_incoming_recoil) {
         auto [s23, lo, hi] = fb.s23_value_and_min_max(p_a, p_3, t1_abs, p1, p2);
         v = negated(fb, s23);
-        ranges = sampling_ranges(fb, lo, hi, conditions);
+        nested_vector2<double> factors_p2{{1.0}};
+        auto m2_squared =
+            fb.unstack(fb.invariants_from_momenta(fb.stack({p2}), factors_p2)).at(0);
+        ranges = sampling_ranges(fb, lo, hi, m2_squared, conditions);
     } else if (_has_cut) {
         auto [s23, s_min, s_max] = fb.s23_value_and_min_max_cut(
             p_a,

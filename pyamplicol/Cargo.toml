@@ -37,7 +37,7 @@ rayon = "1.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["float_roundtrip", "raw_value"] }
 sha2 = "0.10"
-symbolica = { version = "=3.0.0", default-features = true, features = ["bincode"] }
+symbolica = { version = "=3.0.2", default-features = true, features = ["bincode"] }
 thiserror = "2.0"
 wide = "1.7"
 

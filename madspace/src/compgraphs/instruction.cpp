@@ -1003,6 +1003,7 @@ TypeVec MatrixElementInstruction::signature(const ValueVec& args) const {
         case UMAMI_OUT_FACT_SCALE_2:
         case UMAMI_OUT_PDF:
         case UMAMI_OUT_BIAS:
+        case UMAMI_OUT_MATRIX_ELEMENT_RATIO:
             dtype = DataType::dt_float64;
             shape = {};
             break;

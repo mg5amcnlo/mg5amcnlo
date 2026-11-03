@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import json
 import re
@@ -23,6 +24,12 @@ from pyamplicol._internal.versions import (
     verify_native_module,
 )
 from pyamplicol.api.errors import ArtifactError, CompatibilityError
+from pyamplicol.generation.evaluator_container import (
+    PacbinError,
+    PacbinMember,
+    PacbinMemberKind,
+    PacbinReader,
+)
 
 from .security import (
     confined_path,
@@ -37,6 +44,8 @@ ARTIFACT_IDENTITY_EXTENSION = "artifact_identity"
 ARTIFACT_IDENTITY_KIND = "pyamplicol-runtime-payload-identity"
 ARTIFACT_IDENTITY_SCHEMA_VERSION = 1
 PORTABLE_64LE_TARGET = "portable-64le"
+PAYLOAD_CONTAINER_PATH = "payloads.pacbin"
+PAYLOAD_CONTAINER_ROLE = "payload-container"
 _SHA256 = re.compile(r"^[a-f0-9]{64}$")
 _GIT_REVISION = re.compile(r"^[a-f0-9]{40}$")
 _PUBLIC_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:+,~-]{0,254}$")
@@ -70,6 +79,7 @@ _PAYLOAD_ROLES = {
     "api-build-file",
     "sdk-metadata",
     "process-groups",
+    "payload-container",
 }
 _RUNTIME_IDENTITY_PAYLOAD_ROLES = frozenset(
     {
@@ -905,6 +915,97 @@ def _validate_target_compatibility(
             )
 
 
+class ArtifactPayloads:
+    """Read declared payloads stored as files or packed in payloads.pacbin.
+
+    The container index is checked against the payload declarations once;
+    each packed read opens its own stream and verifies the member digest.
+    """
+
+    def __init__(self, manifest: ArtifactManifest) -> None:
+        self.root = manifest.root
+        self._records = {record.path: record for record in manifest.payloads}
+        self.container_path: Path | None = None
+        self._members: Mapping[str, PacbinMember] = {}
+        containers = [
+            record
+            for record in manifest.payloads
+            if record.role == PAYLOAD_CONTAINER_ROLE
+        ]
+        if not containers:
+            return
+        if len(containers) != 1 or containers[0].path != PAYLOAD_CONTAINER_PATH:
+            raise ArtifactError(
+                "an artifact declares at most one payload container, at "
+                f"{PAYLOAD_CONTAINER_PATH!r}"
+            )
+        container = containers[0]
+        path = confined_path(self.root, container.path)
+        try:
+            with PacbinReader.open(path, verify_payloads=False) as reader:
+                index = reader.index
+        except (OSError, PacbinError) as exc:
+            raise ArtifactError(
+                f"could not open payload container {container.path}: {exc}"
+            ) from exc
+        if index.file_size != container.size_bytes:
+            raise ArtifactError("payload container size disagrees with its declaration")
+        for member in index.members:
+            record = self._records.get(member.logical_path)
+            if (
+                record is None
+                or member.kind is not PacbinMemberKind.DECLARED_PAYLOAD
+                or record.role == PAYLOAD_CONTAINER_ROLE
+                or record.executable
+                or member.length != record.size_bytes
+                or member.sha256 != record.sha256
+            ):
+                raise ArtifactError(
+                    f"invalid payload container member {member.logical_path!r}"
+                )
+        self.container_path = path
+        self._members = {member.logical_path: member for member in index.members}
+
+    def is_packed(self, relative: str) -> bool:
+        """Whether ``relative`` is stored in the payload container."""
+
+        return normalize_relative_path(relative) in self._members
+
+    def read_bytes(self, relative: str) -> bytes:
+        """The bytes of one payload, wherever it is stored."""
+
+        normalized = normalize_relative_path(relative)
+        member = self._members.get(normalized)
+        if member is None or self.container_path is None:
+            return confined_path(self.root, normalized).read_bytes()
+        with self.container_path.open("rb") as stream:
+            stream.seek(member.offset)
+            payload = stream.read(member.length)
+        if len(payload) != member.length:
+            raise ArtifactError(f"packed payload is truncated: {normalized}")
+        if hashlib.sha256(payload).hexdigest() != member.sha256:
+            raise ArtifactError(f"packed payload digest mismatch: {normalized}")
+        return payload
+
+    def read_text(self, relative: str) -> str:
+        """The UTF-8 text of one payload, wherever it is stored."""
+
+        return self.read_bytes(relative).decode("utf-8")
+
+    def verify_packed(self) -> None:
+        """Stream and verify the digest of every packed payload."""
+
+        if self.container_path is None:
+            return
+        try:
+            with PacbinReader.open(self.container_path, verify_payloads=True):
+                pass
+        except (OSError, PacbinError) as exc:
+            raise ArtifactError(
+                f"payload container verification failed: {exc}"
+            ) from exc
+
+
 def validate_payloads(
     manifest: ArtifactManifest,
     *,
@@ -914,7 +1015,15 @@ def validate_payloads(
         raise ArtifactError("artifact manifest identity digest mismatch")
     _validate_target_compatibility(manifest, expected_target=expected_target)
     seen = {record.path for record in manifest.payloads}
+    payloads = ArtifactPayloads(manifest)
+    payloads.verify_packed()
     for record in manifest.payloads:
+        if payloads.is_packed(record.path):
+            if confined_path(manifest.root, record.path, must_exist=False).exists():
+                raise ArtifactError(
+                    f"packed artifact payload is also stored as a file: {record.path}"
+                )
+            continue
         path = confined_path(manifest.root, record.path)
         if path.stat().st_size != record.size_bytes:
             raise ArtifactError(f"artifact payload size mismatch: {record.path}")
@@ -999,9 +1108,12 @@ __all__ = [
     "ARTIFACT_IDENTITY_KIND",
     "ARTIFACT_IDENTITY_SCHEMA_VERSION",
     "MANIFEST_NAME",
+    "PAYLOAD_CONTAINER_PATH",
+    "PAYLOAD_CONTAINER_ROLE",
     "PORTABLE_64LE_TARGET",
     "SCHEMA_VERSION",
     "ArtifactManifest",
+    "ArtifactPayloads",
     "PayloadRecord",
     "artifact_identity_extension",
     "canonical_manifest_bytes",

@@ -16,7 +16,7 @@ process_artifact = 3
 runtime_physics = 1
 c_abi = 1
 symbolica_serialization = "symbolica-bincode2-v1"
-symjit_application = "symjit-application-storage-v3"
+symjit_application = "symjit-application-storage-v4"
 symjit_plane_application = "pyamplicol-symjit-plane-application-v2"
 prepared_model_bundle = 1
 prepared_kernel_variant = "pyamplicol-prepared-kernel-variant-v2"
@@ -29,8 +29,8 @@ just = "1.46.0"
 maturin = "1.15.0"
 packaging = "26.3"
 rust_minimum = "1.89.0"
-rust_toolchain = "1.97.1"
-rust_toolchain_action_sha = "46511b1c83438f0dd37c02d843619ece5a4abb5b"
+rust_toolchain = "1.99.1"
+rust_toolchain_action_sha = "d124f86f28ff42855784ff3319f48ac182c248f8"
 manylinux_image = "quay.io/pypa/manylinux_2_28_x86_64"
 manylinux_image_digest = "sha256:b04887b645dde99b9e955aeae3ff4da414992d0bd88259f046295b56361c5614"
 
@@ -72,7 +72,7 @@ version = "1.17.0"
 
 [[python_dependencies]]
 distribution = "symbolica"
-version = "3.0.0"
+version = "3.0.2"
 
 [[python_dependencies]]
 distribution = "tomli-w"
@@ -84,13 +84,13 @@ version = "1.0.0"
 
 [symbolica]
 python_distribution = "symbolica"
-python_version = "3.0.0"
+python_version = "3.0.2"
 rust_crate = "symbolica"
-rust_version = "3.0.0"
+rust_version = "3.0.2"
 serialization_abi = "symbolica-bincode2-v1"
 
 [symjit]
-version = "2.26.4"
+version = "2.27.3"
 
 [ufo_model_loader]
 python_distribution = "ufo-model-loader"

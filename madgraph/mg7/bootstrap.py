@@ -19,9 +19,11 @@ bootstrap *before* importing :mod:`launch`, which is what makes the heavy import
 safe to do lazily.
 """
 
-import importlib
+import importlib.metadata
+import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -47,9 +49,39 @@ def madspace_is_installed() -> bool:
     return (INSTALL_DIR / "madspace").is_dir()
 
 
+def _pyamplicol_package():
+    """The directory of the pyamplicol package that ``import pyamplicol`` would
+    load, or None. Found, not imported."""
+    spec = importlib.util.find_spec("pyamplicol")
+    if spec is None or not spec.origin:
+        return None  # e.g. the source directory as a namespace package
+    package = Path(spec.origin).parent
+    if (package.resolve().is_relative_to(PYAMPLICOL_DIR.resolve())
+            and not package.resolve().is_relative_to(PYAMPLICOL_INSTALL_DIR.resolve())):
+        return None
+    return package
+
+
 def pyamplicol_is_installed() -> bool:
-    """True when a compiled pyamplicol is already available to import."""
-    return (PYAMPLICOL_INSTALL_DIR / "pyamplicol").is_dir()
+    """True when a compiled pyamplicol is already available to import, in
+    pyamplicol/install or system-wide (``install pyamplicol --system``)."""
+    return (PYAMPLICOL_INSTALL_DIR / "pyamplicol").is_dir() or _pyamplicol_package() is not None
+
+
+def installed_pyamplicol() -> dict:
+    """The version and source hash of the pyamplicol that would be imported
+    (None where unknown), read without importing it."""
+    package = _pyamplicol_package()
+    if package is None:
+        return {"version": None, "source_hash": None}
+    source_hash = None
+    hash_file = package / "_source_hash.py"
+    if hash_file.is_file():
+        match = re.search(r'SOURCE_HASH\s*=\s*"([0-9a-f]*)"', hash_file.read_text())
+        source_hash = match.group(1) if match else None
+    dist = next(importlib.metadata.distributions(
+        name="pyamplicol", path=[str(package.parent)]), None)
+    return {"version": dist.version if dist else None, "source_hash": source_hash}
 
 
 def _run_installer(name, source_dir, interactive, jobs) -> None:
@@ -117,29 +149,47 @@ def ensure_pyamplicol(interactive=None, jobs=None) -> None:
     sys.path.insert(0, str(PYAMPLICOL_INSTALL_DIR))
 
 
-def check_pyamplicol_source_hash() -> bool:
-    """Warn if the installed pyamplicol was built from other sources.
+def check_pyamplicol_source_hash() -> dict:
+    """Fail unless the installed pyamplicol was built from the sources in
+    pyamplicol/, and return :func:`installed_pyamplicol`.
 
-    Returns whether the hashes match. Must run after :func:`ensure_pyamplicol`.
+    Must run after :func:`ensure_pyamplicol`.
     """
-    try:
-        installed = importlib.import_module("pyamplicol._source_hash").SOURCE_HASH
-    except ImportError:
-        installed = None
-    source = subprocess.run(
+    installed = installed_pyamplicol()
+    result = subprocess.run(
         [sys.executable, str(PYAMPLICOL_DIR / "source_hash.py")],
-        capture_output=True, text=True, check=True,
-    ).stdout.strip()
-    if installed == source:
-        return True
-    print()
-    print(
-        "\033[1m\033[31mWARNING\033[39m: pyamplicol source and installed package "
-        "are not compatible (source hash mismatch) — consider recompiling "
-        "pyamplicol (e.g. `install pyamplicol -y`)\033[0m"
+        capture_output=True, text=True,
     )
-    print()
-    return False
+    if result.returncode != 0:
+        raise RuntimeError(
+            "cannot compute the hash of the pyamplicol sources:\n"
+            + result.stdout + result.stderr
+        )
+    if installed["source_hash"] != result.stdout.strip():
+        raise RuntimeError(
+            "the installed pyamplicol was not built from the sources in "
+            f"{PYAMPLICOL_DIR} (source hash mismatch): run `install pyamplicol` "
+            "to rebuild it"
+        )
+    return installed
+
+
+def check_pyamplicol_build(record_path) -> None:
+    """Exit with an error unless the pyamplicol that would be imported is the
+    one recorded in record_path by the output. Run by SubProcesses/check-pyamplicol
+    before the [amplicol] libraries are compiled."""
+    with open(record_path) as stream:
+        recorded = json.load(stream)
+    installed = installed_pyamplicol()
+    if installed != {key: recorded.get(key) for key in installed}:
+        sys.exit(
+            f"The [amplicol] matrix elements of this output were generated with "
+            f"pyamplicol {recorded.get('version')} (source hash "
+            f"{recorded.get('source_hash')}), but the installed one is "
+            f"{installed['version']} (source hash {installed['source_hash']}): "
+            "output the process again, or reinstall the pyamplicol it was "
+            "generated with (`install pyamplicol`)."
+        )
 
 
 def check_pyamplicol_license(pythonpath=None) -> None:
@@ -167,8 +217,6 @@ def check_pyamplicol_license(pythonpath=None) -> None:
     try:
         info = json.loads(result.stdout.strip().splitlines()[-1])
     except (IndexError, ValueError):
-        # E.g. Symbolica refuses to start while this process already holds
-        # its per-user lock (symbolica imported here before the check).
         raise RuntimeError(
             "pyamplicol cannot be imported:\n" + result.stdout + result.stderr
         ) from None

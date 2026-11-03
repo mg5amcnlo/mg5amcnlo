@@ -18,9 +18,9 @@ from pyamplicol.models.prepared import (
     write_prepared_model_bundle,
 )
 from pyamplicol.models.prepared_target import (
-    SYMJIT_STORAGE_V3_ABI,
+    SYMJIT_STORAGE_V4_ABI,
     canonical_architecture,
-    symjit_storage_v3_target,
+    symjit_storage_v4_target,
 )
 
 
@@ -84,11 +84,11 @@ def _prepared_builtin_sm(
         optimization_settings=optimization_settings,
         producer={"distribution": "pyamplicol", "version": "test"},
         dependency_abis={
-            "symjit_application": SYMJIT_STORAGE_V3_ABI,
+            "symjit_application": SYMJIT_STORAGE_V4_ABI,
             "symjit_plane_application": "pyamplicol-symjit-plane-application-v2",
         },
         provenance={"compiled_model": "test"},
-        target=symjit_storage_v3_target(machine=machine),
+        target=symjit_storage_v4_target(machine=machine),
         resolver_manifest={
             "abi": "pyamplicol-prepared-kernel-catalog-v1",
             "model_name": "built-in-sm",

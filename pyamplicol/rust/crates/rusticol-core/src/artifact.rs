@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: 0BSD
 
-use crate::pacbin::{PacbinMemberKind, PacbinReader};
+use crate::pacbin::{PacbinFileReader, PacbinMemberKind, PacbinReader};
 use crate::{
     ARTIFACT_MANIFEST_FILE, C_ABI_VERSION, COMPILED_MODEL_SCHEMA_VERSION,
     PROCESS_ARTIFACT_SCHEMA_VERSION, PYTHON_API_VERSION, RUNTIME_PHYSICS_SCHEMA_VERSION,
@@ -40,6 +40,8 @@ const EVALUATOR_PAYLOAD_CONTAINER_KIND: &str = "pyamplicol-evaluator-payload-con
 const EVALUATOR_PAYLOAD_CONTAINER_STORAGE_ABI: &str = "pacbin-v1";
 #[cfg(any(feature = "f64-compiled", feature = "f64-symjit"))]
 const RECURRENCE_BOOTSTRAP_FILENAME: &str = "recurrence-bootstrap.bin";
+/// Holds declared payloads that are not stored as loose files.
+pub const PAYLOAD_CONTAINER_PATH: &str = "payloads.pacbin";
 const SUPPORTED_ARTIFACT_TARGETS: [&str; 3] = [
     "aarch64-apple-darwin",
     "x86_64-apple-darwin",
@@ -209,6 +211,7 @@ pub enum PayloadRole {
     ApiBuildFile,
     SdkMetadata,
     ProcessGroups,
+    PayloadContainer,
 }
 
 #[derive(Clone, Debug, Decode, Deserialize, Eq, PartialEq, Serialize)]
@@ -317,6 +320,7 @@ pub struct VerifiedArtifact {
     manifest: ArtifactManifest,
     payloads: Arc<BTreeMap<String, Payload>>,
     evaluator_payload_container: Option<Arc<PacbinReader>>,
+    payload_container: Option<Arc<PacbinFileReader>>,
     #[cfg(feature = "f64-compiled")]
     native_library_cache: Arc<Mutex<BTreeMap<String, Arc<PinnedNativeLibrary>>>>,
 }
@@ -362,6 +366,11 @@ pub(crate) enum EvaluatorPayloadSource {
     Packed {
         container: Arc<PacbinReader>,
         logical_path: String,
+    },
+    /// A declared payload stored in the artifact's payload container.
+    PackedDeclared {
+        container: Arc<PacbinFileReader>,
+        payload: Payload,
     },
 }
 
@@ -633,6 +642,9 @@ impl EvaluatorPayloadSource {
                 container,
                 logical_path,
             } => container.member_bytes(logical_path).map(Cow::Borrowed),
+            Self::PackedDeclared { container, payload } => {
+                read_packed_payload(container, payload).map(Cow::Owned)
+            }
         }
     }
 
@@ -643,6 +655,9 @@ impl EvaluatorPayloadSource {
                 root.join(&payload.path).display().to_string()
             }
             Self::Packed { logical_path, .. } => format!("evaluators.pacbin:{logical_path}"),
+            Self::PackedDeclared { payload, .. } => {
+                format!("{PAYLOAD_CONTAINER_PATH}:{}", payload.path)
+            }
         }
     }
 }
@@ -654,6 +669,7 @@ pub(crate) struct EvaluatorPayloadStore {
     relative_root: PathBuf,
     container: Option<Arc<PacbinReader>>,
     payloads: Option<Arc<BTreeMap<String, Payload>>>,
+    payload_container: Option<Arc<PacbinFileReader>>,
     #[cfg(feature = "f64-compiled")]
     native_library_cache: Arc<Mutex<BTreeMap<String, Arc<PinnedNativeLibrary>>>>,
 }
@@ -665,6 +681,7 @@ impl EvaluatorPayloadStore {
             relative_root: root.to_path_buf(),
             container: None,
             payloads: None,
+            payload_container: None,
             #[cfg(feature = "f64-compiled")]
             native_library_cache: Arc::new(Mutex::new(BTreeMap::new())),
         }
@@ -697,6 +714,14 @@ impl EvaluatorPayloadStore {
                     "evaluator payload {logical_path:?} has role {:?}, expected evaluator-state",
                     payload.role
                 )));
+            }
+            if let Some(container) = &self.payload_container
+                && container.contains(&logical_path)
+            {
+                return Ok(EvaluatorPayloadSource::PackedDeclared {
+                    container: container.clone(),
+                    payload: payload.clone(),
+                });
             }
             return Ok(EvaluatorPayloadSource::AuthenticatedFile {
                 root: self.artifact_root.clone(),
@@ -914,6 +939,7 @@ impl VerifiedArtifact {
             &decoded.evaluator_payload_container,
             &payloads,
         )?;
+        let payload_container = load_bootstrap_payload_container(&root, &payloads)?;
         let artifact = Self {
             root,
             manifest_path,
@@ -923,6 +949,7 @@ impl VerifiedArtifact {
             // leaves.  Avoid opening and retaining the model-wide evaluator
             // PACBIN for source/intrinsic-only recurrence processes.
             evaluator_payload_container: None,
+            payload_container,
             #[cfg(feature = "f64-compiled")]
             native_library_cache: Arc::new(Mutex::new(BTreeMap::new())),
         };
@@ -1004,6 +1031,7 @@ impl VerifiedArtifact {
         validate_references(&manifest, &payloads)?;
         let evaluator_payload_container =
             load_evaluator_payload_container(&root, &manifest, &payloads)?;
+        let payload_container = load_payload_container(&root, &payloads)?;
         let payloads = Arc::new(payloads);
         Ok(Self {
             root,
@@ -1011,6 +1039,7 @@ impl VerifiedArtifact {
             manifest,
             payloads,
             evaluator_payload_container,
+            payload_container,
             #[cfg(feature = "f64-compiled")]
             native_library_cache: Arc::new(Mutex::new(BTreeMap::new())),
         })
@@ -1050,7 +1079,7 @@ impl VerifiedArtifact {
                 "artifact declares more than one process-groups payload",
             ));
         }
-        let bytes = read_declared_payload(&self.root, payload)?;
+        let bytes = self.read_declared(payload)?;
         if format!("{:x}", Sha256::digest(&bytes)) != payload.sha256 {
             return Err(RusticolError::integrity(format!(
                 "process-groups payload {:?} does not match its declared sha256",
@@ -1068,7 +1097,42 @@ impl VerifiedArtifact {
 
     pub fn read_payload(&self, path: &str) -> RusticolResult<Vec<u8>> {
         let payload = self.payload(path)?;
-        read_declared_payload(&self.root, payload)
+        self.read_declared(payload)
+    }
+
+    fn read_declared(&self, payload: &Payload) -> RusticolResult<Vec<u8>> {
+        match &self.payload_container {
+            Some(container) if container.contains(&payload.path) => {
+                read_packed_payload(container, payload)
+            }
+            _ => read_declared_payload(&self.root, payload),
+        }
+    }
+
+    fn is_packed(&self, path: &str) -> bool {
+        self.payload_container
+            .as_ref()
+            .is_some_and(|container| container.contains(path))
+    }
+
+    /// Open a declared payload that is itself a pacbin container, loose or packed,
+    /// and authenticate it against `expected_sha256`.
+    pub(crate) fn open_payload_pacbin(
+        &self,
+        path: &str,
+        expected_sha256: &[u8; 32],
+    ) -> RusticolResult<PacbinReader> {
+        if self.is_packed(path) {
+            let bytes = self.read_payload(path)?;
+            if <[u8; 32]>::from(Sha256::digest(&bytes)) != *expected_sha256 {
+                return Err(RusticolError::integrity(format!(
+                    "pacbin container {path:?} payload digest mismatch"
+                )));
+            }
+            return PacbinReader::from_bytes(bytes);
+        }
+        let file = self.open_payload_file(path)?;
+        PacbinReader::open_file_with_sha256(file, &self.root.join(path), expected_sha256)
     }
 
     /// Open one declared loose payload and pin the checked file description.
@@ -1078,12 +1142,20 @@ impl VerifiedArtifact {
     /// the bytes between declaration checks and use.
     pub(crate) fn open_payload_file(&self, path: &str) -> RusticolResult<File> {
         let payload = self.payload(path)?;
+        if self.is_packed(path) {
+            return Err(RusticolError::compatibility(format!(
+                "payload {path:?} is stored in {PAYLOAD_CONTAINER_PATH} and cannot be opened as a file"
+            )));
+        }
         open_checked_payload(&self.root, payload)
     }
 
+    /// The location of a declared payload; packed payloads have no file there.
     pub(crate) fn payload_path(&self, path: &str) -> RusticolResult<PathBuf> {
         let payload = self.payload(path)?;
-        drop(open_checked_payload(&self.root, payload)?);
+        if !self.is_packed(path) {
+            drop(open_checked_payload(&self.root, payload)?);
+        }
         Ok(self.root.join(path))
     }
 
@@ -1101,6 +1173,7 @@ impl VerifiedArtifact {
             relative_root: relative_root.to_path_buf(),
             container: self.evaluator_payload_container.clone(),
             payloads: Some(self.payloads.clone()),
+            payload_container: self.payload_container.clone(),
             #[cfg(feature = "f64-compiled")]
             native_library_cache: self.native_library_cache.clone(),
         })
@@ -1524,6 +1597,7 @@ fn payload_role_name(role: PayloadRole) -> &'static str {
         PayloadRole::ApiBuildFile => "api-build-file",
         PayloadRole::SdkMetadata => "sdk-metadata",
         PayloadRole::ProcessGroups => "process-groups",
+        PayloadRole::PayloadContainer => "payload-container",
     }
 }
 
@@ -1764,16 +1838,116 @@ pub(crate) fn open_staged_recurrence_bootstrap_artifact(
         }
     }
     validate_evaluator_payload_container_declaration(&evaluator_payload_container, &payloads)?;
+    let payload_container = load_payload_container(&root, &payloads)?;
     Ok(VerifiedArtifact {
         manifest_path: root.join(ARTIFACT_MANIFEST_FILE),
         root,
         manifest,
         payloads: Arc::new(payloads),
-        // Process-ready lowering reads only loose plan/binding/color payloads.
+        // Process-ready lowering reads only plan/binding/color payloads.
         evaluator_payload_container: None,
+        payload_container,
         #[cfg(feature = "f64-compiled")]
         native_library_cache: Arc::new(Mutex::new(BTreeMap::new())),
     })
+}
+
+/// Open the payload container, checking that every member is a declared payload
+/// with the declared size and digest.
+fn load_payload_container(
+    root: &Path,
+    payloads: &BTreeMap<String, Payload>,
+) -> RusticolResult<Option<Arc<PacbinFileReader>>> {
+    let mut declared = payloads
+        .values()
+        .filter(|payload| payload.role == PayloadRole::PayloadContainer);
+    let Some(payload) = declared.next() else {
+        return Ok(None);
+    };
+    if declared.next().is_some() || payload.path != PAYLOAD_CONTAINER_PATH {
+        return Err(RusticolError::artifact(format!(
+            "an artifact declares at most one payload container, at {PAYLOAD_CONTAINER_PATH:?}"
+        )));
+    }
+    open_payload_container(root, payload, payloads, true).map(Some)
+}
+
+/// The payload container next to a recurrence bootstrap. Its inventory predates
+/// the container, so only the members it declares are checked and used.
+fn load_bootstrap_payload_container(
+    root: &Path,
+    payloads: &BTreeMap<String, Payload>,
+) -> RusticolResult<Option<Arc<PacbinFileReader>>> {
+    let metadata = match fs::symlink_metadata(root.join(PAYLOAD_CONTAINER_PATH)) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(RusticolError::security(format!(
+                "could not inspect {PAYLOAD_CONTAINER_PATH:?}: {error}"
+            )));
+        }
+    };
+    let container = Payload {
+        path: PAYLOAD_CONTAINER_PATH.to_string(),
+        role: PayloadRole::PayloadContainer,
+        media_type: "application/octet-stream".to_string(),
+        size_bytes: metadata.len(),
+        sha256: String::new(),
+        executable: false,
+        target: None,
+        process_id: None,
+    };
+    open_payload_container(root, &container, payloads, false).map(Some)
+}
+
+fn open_payload_container(
+    root: &Path,
+    payload: &Payload,
+    payloads: &BTreeMap<String, Payload>,
+    require_declared: bool,
+) -> RusticolResult<Arc<PacbinFileReader>> {
+    let file = open_checked_payload(root, payload)?;
+    let reader = PacbinFileReader::open_file(file, &root.join(&payload.path))?;
+    if reader.index().file_size() != payload.size_bytes {
+        return Err(RusticolError::integrity(
+            "payload container size disagrees with its declaration",
+        ));
+    }
+    for member in reader.index().members() {
+        let Some(packed) = payloads.get(member.logical_path()) else {
+            if require_declared {
+                return Err(RusticolError::integrity(format!(
+                    "payload container member {:?} is not a declared payload",
+                    member.logical_path()
+                )));
+            }
+            continue;
+        };
+        if member.kind() != PacbinMemberKind::DeclaredPayload
+            || packed.role == PayloadRole::PayloadContainer
+            || packed.executable
+            || member.length() != packed.size_bytes
+            || hex_digest(member.sha256()) != packed.sha256
+        {
+            return Err(RusticolError::integrity(format!(
+                "invalid payload container member {:?}",
+                member.logical_path()
+            )));
+        }
+    }
+    Ok(Arc::new(reader))
+}
+
+fn read_packed_payload(container: &PacbinFileReader, payload: &Payload) -> RusticolResult<Vec<u8>> {
+    validate_payload_declaration(payload)?;
+    let bytes = container.read_member(&payload.path)?;
+    if u64::try_from(bytes.len()).ok() != Some(payload.size_bytes) {
+        return Err(RusticolError::integrity(format!(
+            "packed payload {:?} disagrees with its declared size",
+            payload.path
+        )));
+    }
+    Ok(bytes)
 }
 
 fn load_evaluator_payload_container(

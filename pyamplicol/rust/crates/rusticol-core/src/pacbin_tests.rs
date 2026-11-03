@@ -199,6 +199,36 @@ fn open_keeps_one_immutable_snapshot_after_atomic_source_replacement() {
 }
 
 #[test]
+fn file_reader_authenticates_each_member_it_reads() {
+    static NEXT_PATH: AtomicU64 = AtomicU64::new(0);
+    let path = std::env::temp_dir().join(format!(
+        "rusticol-pacbin-file-reader-{}-{}.pacbin",
+        std::process::id(),
+        NEXT_PATH.fetch_add(1, Ordering::Relaxed)
+    ));
+    let mut bytes = decode_hex(PYTHON_GOLDEN_HEX);
+    fs::write(&path, &bytes).unwrap();
+    let reader = PacbinFileReader::open_file(File::open(&path).unwrap(), &path).unwrap();
+    assert_eq!(reader.index().members().len(), 2);
+    assert!(reader.contains("a/jit.symjit") && !reader.contains("a/missing"));
+    assert_eq!(reader.read_member("a/jit.symjit").unwrap(), b"jit-v1");
+    assert_eq!(reader.read_member("z/exact.bin").unwrap(), b"exact-state");
+
+    let offset = reader.member("a/jit.symjit").unwrap().offset() as usize;
+    bytes[offset] ^= 1;
+    fs::write(&path, &bytes).unwrap();
+    let error = reader.read_member("a/jit.symjit").unwrap_err();
+    assert_eq!(error.kind(), RusticolErrorKind::Integrity);
+    assert!(error.to_string().contains("member digest mismatch"));
+
+    let truncated = &decode_hex(PYTHON_GOLDEN_HEX)[..100];
+    fs::write(&path, truncated).unwrap();
+    let error = PacbinFileReader::open_file(File::open(&path).unwrap(), &path).unwrap_err();
+    assert_eq!(error.kind(), RusticolErrorKind::Integrity);
+    fs::remove_file(path).unwrap();
+}
+
+#[test]
 fn expected_container_digest_authenticates_an_immutable_snapshot() {
     static NEXT_PATH: AtomicU64 = AtomicU64::new(0);
     let path = std::env::temp_dir().join(format!(

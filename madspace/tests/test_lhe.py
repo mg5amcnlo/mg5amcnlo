@@ -491,3 +491,105 @@ def test_particle_momentum_kwargs_match_attributes():
     for name in ("p_x", "p_y", "p_z"):
         with pytest.raises(TypeError):
             ms.LHEParticle(**{name: 1.0})
+
+
+def chain_topology(masses):
+    """t-channel chain topology without propagator information."""
+    n_out = len(masses) - 2
+    vertices = [["i0", "p0", "o0"]]
+    vertices += [[f"p{i - 1}", f"p{i}", f"o{i}"] for i in range(1, n_out - 1)]
+    vertices.append(["i1", f"p{n_out - 2}", f"o{n_out - 1}"])
+    diagram = ms.Diagram(
+        masses[:2], masses[2:], [ms.Propagator() for _ in range(n_out - 1)], vertices
+    )
+    return ms.Topology(diagram)
+
+
+def test_subprocess_without_diagrams():
+    """Without diagrams, events carry the diagram index -1 and get no
+    intermediate particles."""
+    pdg_ids = [21, 21, 21, 21, 21]
+    color_flows = [
+        [[502, 501], [503, 502], [503, 504], [505, 501], [505, 504]],
+        [[501, 502], [502, 503], [504, 503], [501, 505], [504, 505]],
+    ]
+    subproc_args = ms.SubprocArgs(
+        process_id=3,
+        topologies=[chain_topology([0.0] * 5)],
+        permutations=[[]],
+        diagram_indices=[[]],
+        diagram_color_indices=[[]],
+        color_flows=color_flows,
+        pdg_color_types={21: 8},
+        helicities=[[1, 1, -1, -1, 1], [-1, -1, 1, 1, -1]],
+        pdg_ids=[[pdg_ids]],
+    )
+    lhe_completer = ms.LHECompleter([subproc_args], bw_cutoff=BW_CUTOFF)
+    event = build_event(np.ones((5, 4)) * [100.0, 0.0, 0.0, 0.0])
+    lhe_completer.complete_event_data(event, 0, -1, 1, 0, 1, ms.MixMaxRandom(1))
+    assert event.process_id == 3
+    assert [p.pdg_id for p in event.particles] == pdg_ids
+    assert [(p.color, p.anti_color) for p in event.particles] == [
+        tuple(flow) for flow in color_flows[1]
+    ]
+    assert [p.spin for p in event.particles] == [-1, -1, 1, 1, -1]
+    with pytest.raises(RuntimeError, match="Diagram index out of range"):
+        lhe_completer.complete_event_data(event, 0, 0, 0, 0, 0, ms.MixMaxRandom(1))
+
+
+def weighted_flavor_completer(pdg_id_weights):
+    """e+ e- > l+ l- with two flavors of two options each."""
+    options = [
+        [[11, -11, 13, -13], [11, -11, 15, -15]],
+        [[-11, 11, 13, -13], [-11, 11, 15, -15]],
+    ]
+    subproc_args = ms.SubprocArgs(
+        topologies=[chain_topology([0.0] * 4)],
+        permutations=[[]],
+        diagram_indices=[[]],
+        diagram_color_indices=[[]],
+        color_flows=[[[0, 0]] * 4],
+        pdg_color_types={pdg: 1 for pdg in (11, -11, 13, -13, 15, -15)},
+        helicities=[[1, -1, 1, -1]],
+        pdg_ids=options,
+        pdg_id_weights=pdg_id_weights,
+    )
+    return ms.LHECompleter([subproc_args], bw_cutoff=BW_CUTOFF)
+
+
+def drawn_taus(lhe_completer, flavor_index, count, seed):
+    rand_gen = ms.MixMaxRandom(seed)
+    taus = 0
+    for _ in range(count):
+        event = build_event(np.ones((4, 4)) * [100.0, 0.0, 0.0, 0.0])
+        lhe_completer.complete_event_data(event, 0, -1, 0, flavor_index, 0, rand_gen)
+        taus += event.particles[2].pdg_id == 15
+    return taus
+
+
+def test_pdg_id_options_are_drawn_in_proportion_to_their_weights():
+    """Options are written with probability proportional to their weight;
+    equal weights and flavors without weights draw them uniformly."""
+    lhe_completer = weighted_flavor_completer([[1.0, 3.0], []])
+    count = 4000
+    assert drawn_taus(lhe_completer, 0, count, 5) / count == approx(0.75, abs=0.03)
+    assert drawn_taus(lhe_completer, 1, count, 5) / count == approx(0.5, abs=0.03)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        save_path = os.path.join(tmpdir, "lhe_completer.json")
+        lhe_completer.save(save_path)
+        loaded = ms.LHECompleter.load(save_path)
+    assert drawn_taus(loaded, 0, 200, 9) == drawn_taus(lhe_completer, 0, 200, 9)
+
+    # equal weights consume the random numbers like the uniform draw
+    equal = weighted_flavor_completer([[2.0, 2.0], [2.0, 2.0]])
+    uniform = weighted_flavor_completer([])
+    assert drawn_taus(equal, 0, 200, 3) == drawn_taus(uniform, 0, 200, 3)
+
+
+@pytest.mark.parametrize(
+    "pdg_id_weights", [[[1.0, 0.0], []], [[1.0, -1.0], []], [[1.0], []], [[1.0, 1.0]]]
+)
+def test_invalid_pdg_id_weights_raise(pdg_id_weights):
+    with pytest.raises(ValueError):
+        weighted_flavor_completer(pdg_id_weights)

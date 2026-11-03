@@ -18,7 +18,7 @@ pub(super) const RECURRENCE_PROCESS_BINDING_HEADER_SIZE_V4: usize = 344;
 
 const PROCESS_EXECUTOR_FLAG_USES_EXACT_FACTOR: u16 = 1 << 0;
 const PROCESS_EXECUTOR_FLAGS_KNOWN: u16 = PROCESS_EXECUTOR_FLAG_USES_EXACT_FACTOR;
-const PREPARED_JIT_PORTABLE_TARGET: &str = "symjit-storage-v3-portable";
+const PREPARED_JIT_PORTABLE_TARGET: &str = "symjit-storage-v4-portable";
 const PREPARED_JIT_OPTIMIZATION_LEVEL: u32 = 2;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

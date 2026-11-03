@@ -227,12 +227,16 @@ jobs:
           done
           test -d madspace/install/madspace
 
-          # Also checks that Symbolica accepts pyamplicol's library key.
+          # Also checks that Symbolica accepts pyamplicol's library key; only the
+          # wheel download is retried, so a rejected key fails the step.
           for attempt in $(seq 10); do
-            python3 pyamplicol/install.py --bin -y && break
+            if python3 pyamplicol/install.py --bin -y; then status=0; break; else status=$?; fi
+            # The wheel installed, so the license check failed: retrying cannot help.
+            test -d pyamplicol/install/pyamplicol && break
             echo "attempt $attempt: pyamplicol==${{ needs.check_version.outputs.version }} not installable yet, retrying..."
             sleep 15
           done
+          test "$status" -eq 0
           test -d pyamplicol/install/pyamplicol
 
       - name: Sign the tarball with Sigstore

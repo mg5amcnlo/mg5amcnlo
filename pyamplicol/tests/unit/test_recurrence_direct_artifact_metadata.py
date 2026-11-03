@@ -347,7 +347,7 @@ def _executor_pack(runtime_layout_digest: str) -> RecurrenceProcessExecutorPack:
         direct_template_catalog_digest=_digest("e"),
         runtime_layout_digest=runtime_layout_digest,
         backend="jit",
-        target_triple="symjit-storage-v3-portable",
+        target_triple="symjit-storage-v4-portable",
         portable=True,
         cpu_features=(),
         catalog_executor_count=1,
@@ -1084,7 +1084,7 @@ def test_direct_recurrence_inspection_exposes_arena_counters(tmp_path: Path) -> 
     _write_prepared_pack(tmp_path)
     execution = _execution_manifest()
     result = inspection._recurrence_execution_inspection(
-        SimpleNamespace(root=tmp_path),
+        SimpleNamespace(root=tmp_path, payloads=()),
         execution,
     )
 
@@ -1133,7 +1133,7 @@ def test_direct_recurrence_inspection_exposes_contracted_color_summary(
     }
 
     result = inspection._recurrence_execution_inspection(
-        SimpleNamespace(root=tmp_path),
+        SimpleNamespace(root=tmp_path, payloads=()),
         execution,
     )
 
@@ -1160,7 +1160,7 @@ def test_inspection_requires_v2_metadata_without_packet_fallback(
 
     with pytest.raises(ArtifactError, match="regenerate the recurrence artifact"):
         inspection._recurrence_execution_inspection(
-            SimpleNamespace(root=tmp_path),
+            SimpleNamespace(root=tmp_path, payloads=()),
             execution,
         )
 
@@ -1174,7 +1174,7 @@ def test_v2_inspection_tolerates_pending_direct_counter_wiring(
     execution = _execution_manifest(process)
 
     result = inspection._recurrence_execution_inspection(
-        SimpleNamespace(root=tmp_path),
+        SimpleNamespace(root=tmp_path, payloads=()),
         execution,
     )
 

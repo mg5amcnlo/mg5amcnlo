@@ -53,6 +53,8 @@ pub enum PacbinMemberKind {
     RecurrenceColorProjectionCertificate = 8,
     OnTheFlyProcessSeed = 9,
     ColorContraction = 10,
+    /// A payload declared by the artifact manifest, stored in its payload container.
+    DeclaredPayload = 11,
 }
 
 impl PacbinMemberKind {
@@ -67,6 +69,7 @@ impl PacbinMemberKind {
             8 => Ok(Self::RecurrenceColorProjectionCertificate),
             9 => Ok(Self::OnTheFlyProcessSeed),
             10 => Ok(Self::ColorContraction),
+            11 => Ok(Self::DeclaredPayload),
             _ => Err(compatibility(format!(
                 "unknown pacbin member kind: {value}"
             ))),
@@ -590,6 +593,130 @@ impl PacbinReader {
     }
 }
 
+/// A container read member by member from its open file.
+///
+/// Only the frame and index are read when opening, so a large container costs
+/// neither memory nor a full digest. Each member is copied out and checked
+/// against its indexed SHA-256 before use.
+#[derive(Debug)]
+pub struct PacbinFileReader {
+    file: std::sync::Mutex<File>,
+    display_path: PathBuf,
+    index: PacbinIndex,
+}
+
+impl PacbinFileReader {
+    pub(crate) fn open_file(mut file: File, display_path: &Path) -> RusticolResult<Self> {
+        let file_size = file
+            .metadata()
+            .map_err(|error| {
+                RusticolError::artifact(format!(
+                    "could not inspect pacbin container {}: {error}",
+                    display_path.display()
+                ))
+            })?
+            .len();
+        let minimum_size = (HEADER_SIZE + INDEX_HEADER_SIZE + FOOTER_SIZE) as u64;
+        if file_size < minimum_size {
+            return Err(integrity("truncated pacbin container"));
+        }
+        let header = read_file_range(&mut file, display_path, 0, HEADER_SIZE as u64)?;
+        let footer = read_file_range(
+            &mut file,
+            display_path,
+            file_size - FOOTER_SIZE as u64,
+            FOOTER_SIZE as u64,
+        )?;
+        let frame = parse_frame(&header, &footer, file_size)?;
+        let index_bytes = read_file_range(
+            &mut file,
+            display_path,
+            frame.index_offset,
+            frame.index_length,
+        )?;
+        let (members, index_sha256) = parse_index(&index_bytes, &frame)?;
+        // Padding is never handed out, so it is not read back here.
+        validate_canonical_payload_layout(&members, frame.index_offset, |_, _| Ok(()))?;
+        Ok(Self {
+            file: std::sync::Mutex::new(file),
+            display_path: display_path.to_path_buf(),
+            index: PacbinIndex {
+                version: frame.version,
+                index_offset: frame.index_offset,
+                index_sha256,
+                file_size,
+                members,
+            },
+        })
+    }
+
+    pub fn index(&self) -> &PacbinIndex {
+        &self.index
+    }
+
+    pub fn member(&self, logical_path: &str) -> RusticolResult<&PacbinMember> {
+        let normalized = normalize_logical_path(logical_path)?;
+        self.index
+            .members
+            .binary_search_by(|member| member.logical_path.as_bytes().cmp(normalized.as_bytes()))
+            .map(|index| &self.index.members[index])
+            .map_err(|_| {
+                RusticolError::invalid_argument(format!("unknown pacbin member: {normalized}"))
+            })
+    }
+
+    pub fn contains(&self, logical_path: &str) -> bool {
+        self.member(logical_path).is_ok()
+    }
+
+    /// Copy one member out of the container and authenticate the copy.
+    pub fn read_member(&self, logical_path: &str) -> RusticolResult<Vec<u8>> {
+        let member = self.member(logical_path)?;
+        let bytes = {
+            let mut file = self
+                .file
+                .lock()
+                .map_err(|_| RusticolError::artifact("pacbin container file handle is poisoned"))?;
+            read_file_range(&mut file, &self.display_path, member.offset, member.length)?
+        };
+        let digest: [u8; 32] = Sha256::digest(&bytes).into();
+        if digest != member.sha256 {
+            return Err(integrity(format!(
+                "pacbin member digest mismatch: {}",
+                member.logical_path
+            )));
+        }
+        Ok(bytes)
+    }
+}
+
+fn read_file_range(
+    file: &mut File,
+    display_path: &Path,
+    offset: u64,
+    length: u64,
+) -> RusticolResult<Vec<u8>> {
+    let length = usize::try_from(length)
+        .map_err(|_| integrity("pacbin read length exceeds platform bounds"))?;
+    let mut bytes = Vec::new();
+    bytes.try_reserve_exact(length).map_err(|error| {
+        RusticolError::artifact(format!(
+            "could not allocate {length} bytes for pacbin container {}: {error}",
+            display_path.display()
+        ))
+    })?;
+    bytes.resize(length, 0);
+    file.seek(SeekFrom::Start(offset))
+        .and_then(|_| file.read_exact(&mut bytes))
+        .map_err(|error| {
+            RusticolError::artifact(format!(
+                "could not read pacbin container {}: {error}",
+                display_path.display()
+            ))
+        })?;
+    Ok(bytes)
+}
+
 /// Atomically stream and publish one deterministic `pacbin-v1` container.
 ///
 /// Member metadata is retained in memory, while payload bytes are copied and
@@ -1040,8 +1167,48 @@ fn parse_and_validate(bytes: &[u8], verify_payloads: bool) -> RusticolResult<Pac
     }
     let file_size =
         u64::try_from(bytes.len()).map_err(|_| integrity("pacbin file size exceeds u64"))?;
-
     let header = checked_slice(bytes, 0, HEADER_SIZE, "pacbin header")?;
+    let footer = checked_slice(
+        bytes,
+        bytes.len() - FOOTER_SIZE,
+        FOOTER_SIZE,
+        "pacbin footer",
+    )?;
+    let frame = parse_frame(header, footer, file_size)?;
+    let index_bytes = checked_slice(
+        bytes,
+        usize::try_from(frame.index_offset)
+            .map_err(|_| integrity("pacbin index offset exceeds platform bounds"))?,
+        usize::try_from(frame.index_length)
+            .map_err(|_| integrity("pacbin index size exceeds platform bounds"))?,
+        "pacbin index",
+    )?;
+    let (members, actual_index_digest) = parse_index(index_bytes, &frame)?;
+    validate_canonical_payload_layout(&members, frame.index_offset, |offset, length| {
+        validate_zero_region(bytes, offset, length, "pacbin payload padding")
+    })?;
+    if verify_payloads {
+        verify_payload_digests(bytes, &members)?;
+    }
+    Ok(PacbinIndex {
+        version: frame.version,
+        index_offset: frame.index_offset,
+        index_sha256: actual_index_digest,
+        file_size,
+        members,
+    })
+}
+
+/// The fixed header and footer fields of a container of `file_size` bytes.
+struct PacbinFrame {
+    version: u16,
+    index_offset: u64,
+    index_length: u64,
+    member_count: u64,
+    expected_index_digest: [u8; 32],
+}
+
+fn parse_frame(header: &[u8], footer: &[u8], file_size: u64) -> RusticolResult<PacbinFrame> {
     if &header[0..8] != HEADER_MAGIC {
         return Err(integrity("invalid pacbin header magic"));
     }
@@ -1066,17 +1233,13 @@ fn parse_and_validate(bytes: &[u8], verify_payloads: bool) -> RusticolResult<Pac
         return Err(integrity("pacbin index offset is not payload-aligned"));
     }
 
-    let footer_offset = bytes
-        .len()
-        .checked_sub(FOOTER_SIZE)
+    let footer_offset_u64 = file_size
+        .checked_sub(FOOTER_SIZE as u64)
         .ok_or_else(|| integrity("truncated pacbin footer"))?;
-    let footer_offset_u64 =
-        u64::try_from(footer_offset).map_err(|_| integrity("pacbin footer offset exceeds u64"))?;
     if index_offset < HEADER_SIZE as u64 || index_offset >= footer_offset_u64 {
         return Err(integrity("pacbin index offset is out of bounds"));
     }
 
-    let footer = checked_slice(bytes, footer_offset, FOOTER_SIZE, "pacbin footer")?;
     if &footer[0..8] != FOOTER_MAGIC {
         return Err(integrity("invalid pacbin footer magic"));
     }
@@ -1104,17 +1267,23 @@ fn parse_and_validate(bytes: &[u8], verify_payloads: bool) -> RusticolResult<Pac
         .try_into()
         .map_err(|_| integrity("truncated pacbin footer digest"))?;
 
-    let index_offset_usize = usize::try_from(index_offset)
-        .map_err(|_| integrity("pacbin index offset exceeds platform bounds"))?;
-    let available_index_bytes = footer_offset_u64 - index_offset;
-    validate_index_bounds(member_count, available_index_bytes)?;
-    let index_bytes = checked_slice(
-        bytes,
-        index_offset_usize,
-        usize::try_from(available_index_bytes)
-            .map_err(|_| integrity("pacbin index size exceeds platform bounds"))?,
-        "pacbin index",
-    )?;
+    let index_length = footer_offset_u64 - index_offset;
+    validate_index_bounds(member_count, index_length)?;
+    Ok(PacbinFrame {
+        version,
+        index_offset,
+        index_length,
+        member_count,
+        expected_index_digest,
+    })
+}
+
+/// The members of an index region, authenticated against the footer digest.
+fn parse_index(
+    index_bytes: &[u8],
+    frame: &PacbinFrame,
+) -> RusticolResult<(Vec<PacbinMember>, [u8; 32])> {
+    let member_count = frame.member_count;
     let actual_index_digest: [u8; 32] = Sha256::digest(index_bytes).into();
 
     let index_header = checked_slice(index_bytes, 0, INDEX_HEADER_SIZE, "pacbin index header")?;
@@ -1228,21 +1397,11 @@ fn parse_and_validate(bytes: &[u8], verify_payloads: bool) -> RusticolResult<Pac
     if cursor != index_bytes.len() {
         return Err(integrity("pacbin index has trailing or missing bytes"));
     }
-    if actual_index_digest != expected_index_digest {
+    if actual_index_digest != frame.expected_index_digest {
         return Err(integrity("pacbin index digest mismatch"));
     }
 
-    validate_canonical_payload_layout(bytes, &members, index_offset)?;
-    if verify_payloads {
-        verify_payload_digests(bytes, &members)?;
-    }
-    Ok(PacbinIndex {
-        version,
-        index_offset,
-        index_sha256: actual_index_digest,
-        file_size,
-        members,
-    })
+    Ok((members, actual_index_digest))
 }
 
 fn validate_contract(
@@ -1281,9 +1440,9 @@ fn validate_index_bounds(member_count: u64, available_index_bytes: u64) -> Rusti
 }
 
 fn validate_canonical_payload_layout(
-    bytes: &[u8],
     members: &[PacbinMember],
     index_offset: u64,
+    mut validate_padding: impl FnMut(u64, u64) -> RusticolResult<()>,
 ) -> RusticolResult<()> {
     let mut expected_offset = HEADER_SIZE as u64;
     for member in members {
@@ -1323,7 +1482,7 @@ fn validate_canonical_payload_layout(
                 member.logical_path
             )));
         }
-        validate_zero_region(bytes, unaligned_offset, padding, "pacbin payload padding")?;
+        validate_padding(unaligned_offset, padding)?;
         expected_offset = end;
     }
 
@@ -1339,12 +1498,7 @@ fn validate_canonical_payload_layout(
             "pacbin payload region has a non-canonical trailing gap",
         ));
     }
-    validate_zero_region(
-        bytes,
-        expected_offset,
-        trailing_padding,
-        "pacbin payload padding",
-    )?;
+    validate_padding(expected_offset, trailing_padding)?;
     Ok(())
 }
 

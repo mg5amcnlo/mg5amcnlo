@@ -70,6 +70,7 @@ Builders that assemble compute-graph functions for channel weights, energy scale
    cpp/SubchannelWeights
    cpp/Unweighter
    cpp/VegasHistogram
+   cpp/WeightingStepFunction
 
 Phase-space building blocks
 ---------------------------
@@ -85,6 +86,7 @@ Supporting types shared by the mappings: topologies, cuts, observables and densi
    cpp/PdfGrid
    cpp/Propagator
    cpp/Topology
+   cpp/WeightingStep
    cpp/initialize_vegas_grid
 
 Compute graph
@@ -127,6 +129,7 @@ The high-level driver plus the tensor and device layer it runs on: integration, 
    cpp/EventHistogramSpec
    cpp/EventHistograms
    cpp/EventRecord
+   cpp/EventStream
    cpp/FieldLayout
    cpp/GeneratorBatchJob
    cpp/GeneratorConfig
@@ -157,6 +160,10 @@ The high-level driver plus the tensor and device layer it runs on: integration, 
    cpp/Runtime
    cpp/Sizes
    cpp/StatusFile
+   cpp/StepChainResult
+   cpp/StepEvents
+   cpp/StepIntegral
+   cpp/StepSettings
    cpp/SubprocessObservables
    cpp/SubprocessSystArgs
    cpp/SystematicsCalculator
@@ -171,6 +178,8 @@ The high-level driver plus the tensor and device layer it runs on: integration, 
    cpp/UnalignedRef
    cpp/Variation
    cpp/VegasGridOptimizer
+   cpp/WeightingGroup
+   cpp/WeightingPipeline
    cpp/available_backends
    cpp/compute_generation_batch_event_count
    cpp/cpu_device
@@ -186,6 +195,8 @@ The high-level driver plus the tensor and device layer it runs on: integration, 
    cpp/set_simd_mode
    cpp/supported_simd_modes
    cpp/set_lib_path
+   cpp/weighting_groups_from_json
+   cpp/weighting_groups_to_json
 
 Utilities
 ---------

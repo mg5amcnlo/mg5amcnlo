@@ -1525,7 +1525,7 @@ class TestMECmdShell(unittest.TestCase):
         mg.exec_cmd('output mg7 %s' % out_dir)
 
         launcher = importlib.import_module(
-            'madgraph.iolibs.template_files.mg7.launch')
+            'madgraph.mg7.launch')
         tool_cards = ('pythia8_card.dat', 'madspin_card.dat', 'delphes_card.dat',
                       'reweight_card.dat', 'rivet_card.dat',
                       'madanalysis5_parton_card.dat',

@@ -22,14 +22,14 @@ from __future__ import absolute_import
 import types
 import unittest
 
-from madgraph.iolibs.template_files.mg7 import bootstrap as mg7_bootstrap
+from madgraph.mg7 import bootstrap as mg7_bootstrap
 
 # Importing launch without a compiled madspace starts the madspace build, and
 # test_manager imports every unit test module while collecting: check first.
 launch = None
 if mg7_bootstrap.madspace_is_installed():
     try:
-        import madgraph.iolibs.template_files.mg7.launch as launch
+        import madgraph.mg7.launch as launch
     except Exception as error:
         launch = None
         import_error = error

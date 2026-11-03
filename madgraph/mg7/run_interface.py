@@ -279,7 +279,7 @@ class MG7RunCmd(madevent_interface.MadEventCmd):
         tools this class drives (MadSpin, reweight, the auto widths and the
         'update dependent' pass of their card questions) work here too.
         """
-        from madgraph.iolibs.template_files.mg7.launch import load_process_model
+        from madgraph.mg7.model_widths import load_process_model
         return load_process_model(self.me_dir)
 
     def do_reweight(self, line):

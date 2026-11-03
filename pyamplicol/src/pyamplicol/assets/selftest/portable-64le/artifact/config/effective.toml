@@ -12,6 +12,11 @@ flavor_scheme = 5
 coupling_order_policy = "minimal"
 reference_color_order = []
 selected_color_sector_ids = []
+flavor_blind = false
+flavor_blind_strict = false
+consider_charge_conjugation = true
+only_unit_multiplier = false
+analyze_process_groups = "none"
 
 [process.multiparticles]
 
@@ -27,9 +32,10 @@ fft_basis = "trace"
 
 [generation]
 output = "."
-mode = "error"
+mode = "replace"
 workers = 1
 emit_api_bundle = true
+pack_payloads = false
 
 [generation.validation]
 enabled = true
@@ -40,7 +46,7 @@ absolute_tolerance = 1e-300
 post_build_validation = false
 
 [generation.relation_discovery]
-mode = "certified-reuse"
+mode = "off"
 precision_digits = 96
 probe_count = 4
 verification_probe_count = 4
@@ -56,7 +62,7 @@ output_chunk_size = 512
 
 [evaluator.optimization]
 horner_iterations = 10
-cores = 12
+cores = 8
 max_horner_variables = 1000
 max_common_pair_cache_entries = 5000000
 max_common_pair_distance = 1000

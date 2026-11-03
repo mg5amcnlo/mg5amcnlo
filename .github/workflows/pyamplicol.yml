@@ -73,7 +73,7 @@ jobs:
           if [[ -z "$base" || "$base" =~ ^0+$ ]] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
             changed=true
           elif git diff --name-only "$base" HEAD \
-              | grep -qE '^(pyamplicol/|\.github/workflows/pyamplicol|\.github/actions/(pyamplicol|build_pyamplicol|install_pyamplicol)|VERSION$)'; then
+              | grep -qE '^(pyamplicol/|\.github/workflows/pyamplicol|\.github/actions/(pyamplicol|build_pyamplicol|install_pyamplicol)|madspace/include/madspace/umami\.h$|madgraph/mg7/bootstrap\.py$|VERSION$)'; then
             changed=true
           else
             changed=false
@@ -173,7 +173,7 @@ jobs:
           python - <<'EOF'
           import sys
           sys.path.insert(0, ".")
-          from madgraph.iolibs.template_files.mg7 import bootstrap
+          from madgraph.mg7 import bootstrap
           bootstrap.ensure_pyamplicol(interactive=False)
           bootstrap.check_pyamplicol_license()
           assert bootstrap.check_pyamplicol_source_hash()
@@ -223,7 +223,11 @@ jobs:
             pyamplicol/dependencies/release-lock.toml
             pyamplicol/dependencies/contributor-lock.toml
             pyamplicol/dependencies/python-runtime-lock.toml
-      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          # rust-toolchain.toml lists them: installed here, rustup has nothing to
+          # add on the first cargo call, where it hit a cargo-fmt conflict.
+          components: clippy, rustfmt
       - name: Cache Cargo downloads
         uses: actions/cache@v5
         with:
@@ -231,9 +235,9 @@ jobs:
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             ~/.cargo/git/db
-          key: ${{ runner.os }}-cargo-1.97.1-${{ hashFiles('pyamplicol/Cargo.lock', 'pyamplicol/dependencies/contributor-lock.toml') }}
+          key: ${{ runner.os }}-cargo-1.99.1-${{ hashFiles('pyamplicol/Cargo.lock', 'pyamplicol/dependencies/contributor-lock.toml') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-1.97.1-
+            ${{ runner.os }}-cargo-1.99.1-
       - name: Install C++17 and Fortran 2008 toolchains
         run: |
           sudo apt-get update
@@ -438,7 +442,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: dtolnay/rust-toolchain@1.99.1
       - uses: actions/download-artifact@v5
         with:
           name: pyamplicol-prepared-models
@@ -474,7 +478,7 @@ jobs:
     env:
       MACOSX_DEPLOYMENT_TARGET: "11.0"
       PYAMPLICOL_BUILD_MODE: release
-      RUSTUP_TOOLCHAIN: "1.97.1"
+      RUSTUP_TOOLCHAIN: "1.99.1"
     steps:
       - uses: actions/checkout@v5
       - uses: actions/download-artifact@v5
@@ -485,7 +489,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: dtolnay/rust-toolchain@1.99.1
       - name: Install build and deployment tools
         run: python -m pip install "build>=1.2,<2" "maturin==1.15.0" "twine>=6,<7"
       - name: Build and audit from retained sdist
@@ -564,9 +568,9 @@ jobs:
               echo "20a06e644b0d9bd2fbdbfd52d42540bdde820ea7df86e92e533c073da0cdd43c  /tmp/rustup-init" \
                 | sha256sum --check --strict
               chmod +x /tmp/rustup-init
-              /tmp/rustup-init -y --profile minimal --default-toolchain 1.97.1
+              /tmp/rustup-init -y --profile minimal --default-toolchain 1.99.1
               source "$HOME/.cargo/env"
-              export RUSTUP_TOOLCHAIN=1.97.1
+              export RUSTUP_TOOLCHAIN=1.99.1
               PY311=/opt/python/cp311-cp311/bin/python
               PY314=/opt/python/cp314-cp314/bin/python
               "$PY311" -m pip install "build>=1.2,<2" "maturin==1.15.0" "twine>=6,<7"

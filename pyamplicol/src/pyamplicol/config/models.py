@@ -345,6 +345,7 @@ class ProcessConfig:
         metadata=_setting("map_int", dynamic_kind="int"),
     )
     flavor_blind: bool = field(default=False, metadata=_setting("bool"))
+    flavor_blind_strict: bool = field(default=False, metadata=_setting("bool"))
     consider_charge_conjugation: bool = field(default=True, metadata=_setting("bool"))
     only_unit_multiplier: bool = field(default=False, metadata=_setting("bool"))
     analyze_process_groups: ProcessGroupAnalysis = field(
@@ -431,6 +432,7 @@ class ProcessConfig:
         )
         for name in (
             "flavor_blind",
+            "flavor_blind_strict",
             "consider_charge_conjugation",
             "only_unit_multiplier",
         ):
@@ -655,6 +657,8 @@ class GenerationConfig:
     )
     workers: AutoInt = field(default="auto", metadata=_setting("auto_int"))
     emit_api_bundle: bool = field(default=True, metadata=_setting("bool"))
+    # store per-process payloads and schedules in one payloads.pacbin
+    pack_payloads: bool = field(default=False, metadata=_setting("bool"))
     validation: GenerationValidationConfig = field(
         default_factory=GenerationValidationConfig, metadata=_section()
     )
@@ -673,6 +677,8 @@ class GenerationConfig:
         )
         if not isinstance(self.emit_api_bundle, bool):
             raise ConfigurationError("generation.emit_api_bundle must be a boolean")
+        if not isinstance(self.pack_payloads, bool):
+            raise ConfigurationError("generation.pack_payloads must be a boolean")
         if not isinstance(self.validation, GenerationValidationConfig):
             raise ConfigurationError(
                 "generation.validation must be a GenerationValidationConfig"

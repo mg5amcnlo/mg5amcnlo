@@ -8,7 +8,11 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from pyamplicol.api.errors import ArtifactError, CompatibilityError
-from pyamplicol.artifacts.manifest import ArtifactManifest, PayloadRecord
+from pyamplicol.artifacts.manifest import (
+    ArtifactManifest,
+    ArtifactPayloads,
+    PayloadRecord,
+)
 from pyamplicol.artifacts.security import confined_path, normalize_relative_path
 from pyamplicol.generation.evaluator_container import (
     PacbinError,
@@ -35,6 +39,8 @@ class ExactEvaluatorPayloadResolver:
     def __init__(self, manifest: ArtifactManifest) -> None:
         self._root = manifest.root
         self._loose = {record.path: record for record in manifest.payloads}
+        # declared payloads, loose or packed in payloads.pacbin
+        self.payloads = ArtifactPayloads(manifest)
         self._container_path: Path | None = None
         self._members: Mapping[str, PacbinMember] = {}
 
@@ -152,7 +158,7 @@ class ExactEvaluatorPayloadResolver:
         record = self._loose.get(normalized)
         if record is not None:
             try:
-                return confined_path(self._root, normalized).read_bytes()
+                return self.payloads.read_bytes(normalized)
             except OSError as exc:
                 raise CompatibilityError(
                     f"could not read retained Symbolica evaluator state "

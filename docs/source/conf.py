@@ -14,6 +14,17 @@ _local_install = os.environ.get(
 if os.path.isdir(os.path.join(_local_install, "madspace")):
     sys.path.insert(0, _local_install)
 
+# bin/event_stream.py of the gridpacks, for the API reference in event_stream.rst
+sys.path.insert(
+    0,
+    os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..", "..", "madgraph", "iolibs", "template_files", "mg7",
+        )
+    ),
+)
+
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:

@@ -51,6 +51,10 @@ selected_source_helicities = { "1" = -1, "2" = 1 }
 # class and record the others as unverified members in process-groups.json.
 # Default false.
 flavor_blind = false
+# process.flavor_blind_strict: Like flavor_blind, but route only the relations
+# that are symmetries of the allowed model vertices and generate the members
+# that would draw a warning. Implies flavor_blind. Default false.
+flavor_blind_strict = false
 # process.consider_charge_conjugation: Also relate processes by charge
 # conjugation for flavor_blind and numerical grouping. Default true.
 consider_charge_conjugation = true
@@ -102,6 +106,8 @@ mode = "error"
 workers = "auto"
 # generation.emit_api_bundle: Emit Python/Rust/C/C++/Fortran/UMAMI API bundle. Default true.
 emit_api_bundle = true
+# generation.pack_payloads: Store per-process payloads and recurrence schedules in one payloads.pacbin. Default false.
+pack_payloads = false
 [generation.validation]
 # generation.validation.enabled: Run generation validation. Default true.
 enabled = true

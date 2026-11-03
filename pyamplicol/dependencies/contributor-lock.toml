@@ -4,13 +4,13 @@ schema_version = 1
 
 [abis]
 symbolica_serialization = "symbolica-bincode2-v1"
-symjit_application = "symjit-application-storage-v3"
+symjit_application = "symjit-application-storage-v4"
 symjit_plane_application = "pyamplicol-symjit-plane-application-v2"
 
 [symbolica]
 source_url = "https://github.com/symbolica-dev/symbolica.git"
-candidate_version = "3.0.0"
-candidate_revision = "7b31114c7a77571aabacf96a311f27ef0f44d007"
+candidate_version = "3.0.2"
+candidate_revision = "afbf7aa4ae13d330aab95cad0b04ebf5889165fd"
 community_url = "https://github.com/symbolica-dev/symbolica-community.git"
 community_revision = "98740d198fb6667c63c0de7cffd4328b5dca57b0"
 release_status = "merged-main-candidate"

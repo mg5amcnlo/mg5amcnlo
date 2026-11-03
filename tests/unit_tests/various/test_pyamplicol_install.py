@@ -194,5 +194,69 @@ class TestSourceHash(unittest.TestCase):
         self.assertEqual(source_hash.compute_source_hash(root), before)
 
 
+class TestInstalledPyamplicol(unittest.TestCase):
+    """bootstrap finds the installed pyamplicol without importing it."""
+
+    def setUp(self):
+        from madgraph.mg7 import bootstrap
+        self.bootstrap = bootstrap
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp)
+        patcher = mock.patch.object(bootstrap, 'PYAMPLICOL_INSTALL_DIR', self.tmp / 'none')
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def system_package(self, version='7.0.0', source_hash='abc123'):
+        site = self.tmp / 'site'
+        (site / 'pyamplicol').mkdir(parents=True)
+        (site / 'pyamplicol' / '__init__.py').write_text('raise ImportError\n')
+        (site / 'pyamplicol' / '_source_hash.py').write_text(
+            f'SOURCE_HASH = "{source_hash}"\n')
+        info = site / f'pyamplicol-{version}.dist-info'
+        info.mkdir()
+        (info / 'METADATA').write_text(f'Name: pyamplicol\nVersion: {version}\n')
+        patcher = mock.patch.object(sys, 'path', [str(site)] + sys.path)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_system_install_counts_as_installed(self):
+        self.system_package()
+        self.assertTrue(self.bootstrap.pyamplicol_is_installed())
+        self.assertEqual(self.bootstrap.installed_pyamplicol(),
+                         {'version': '7.0.0', 'source_hash': 'abc123'})
+
+    def test_source_directory_is_not_an_install(self):
+        with mock.patch.object(sys, 'path', [str(MG_ROOT)]):
+            self.assertFalse(self.bootstrap.pyamplicol_is_installed())
+
+    def hash_check(self, stdout, returncode=0):
+        result = subprocess.CompletedProcess([], returncode, stdout, 'boom')
+        with mock.patch('subprocess.run', return_value=result):
+            return self.bootstrap.check_pyamplicol_source_hash()
+
+    def test_matching_source_hash(self):
+        self.system_package()
+        self.assertEqual(self.hash_check('abc123\n')['version'], '7.0.0')
+
+    def test_source_hash_mismatch_is_an_error(self):
+        self.system_package()
+        with self.assertRaisesRegex(RuntimeError, 'install pyamplicol'):
+            self.hash_check('def456\n')
+
+    def test_source_hash_failure_is_an_error(self):
+        self.system_package()
+        with self.assertRaisesRegex(RuntimeError, 'boom'):
+            self.hash_check('', returncode=1)
+
+    def test_build_check(self):
+        record = self.tmp / 'record.json'
+        record.write_text(json.dumps({'version': '7.0.0', 'source_hash': 'abc123'}))
+        self.system_package()
+        self.bootstrap.check_pyamplicol_build(record)
+        record.write_text(json.dumps({'version': '6.0.0', 'source_hash': 'old'}))
+        with self.assertRaisesRegex(SystemExit, 'pyamplicol 6.0.0'):
+            self.bootstrap.check_pyamplicol_build(record)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -168,7 +168,8 @@ sets `[run] seed`, and so does editing the run card directly.
 documentation maps the old names onto the new sections.
 
 **Gridpacks** work here too, via the `[gridpack]` section. The "Gridpacks"
-page of the documentation describes them.
+page of the documentation describes them, including `bin/event_stream.py`, a
+Python API that streams events in memory.
 
 %(see_also)s
 

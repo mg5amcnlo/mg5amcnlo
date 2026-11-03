@@ -191,6 +191,10 @@ public:
     UnalignedRef<double> ladder_info() { return &_data[_offsets[2] + 24]; }
     UnalignedRef<double> ladder_lead_q() { return &_data[_offsets[2] + 32]; }
 
+    // weight files with re- and unweighting steps store one record per step
+    UnalignedRef<double> step_ratio() { return &_data[0]; }
+    UnalignedRef<double> step_max_weight() { return &_data[8]; }
+
     void from_lhe_particle(const LHEParticle& particle, bool has_clustering = false) {
         lhe_pdg_id() = particle.pdg_id;
         lhe_status_code() = particle.status_code;
@@ -407,6 +411,13 @@ private:
 inline const DataLayout weight_file_layout = DataLayout(
     EventRecord::layout(EventRecord::f_weight),
     ParticleRecord::layout(ParticleRecord::f_none)
+);
+
+/// Weight file of a channel with re- and unweighting steps: the weight of the
+/// first step and, as "particles", the ratio and the maximum weight of each step.
+inline const DataLayout step_weight_file_layout = DataLayout(
+    EventRecord::layout(EventRecord::f_weight),
+    {{"ratio", FieldLayout::f64, 0}, {"max_weight", FieldLayout::f64, 0}}
 );
 
 class EventBuffer {

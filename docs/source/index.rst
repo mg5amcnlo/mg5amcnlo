@@ -30,6 +30,7 @@ If you need a stable release, use the
    custom_functions
    diagram_filters
    gridpacks
+   event_stream
    madevent_to_mg7
 
 .. toctree::

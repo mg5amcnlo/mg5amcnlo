@@ -7506,6 +7506,31 @@ class RunCardMG7(RunCard):
         self.add_toml_param('custom_functions', 'bias', "",
             comment="custom event bias")
 
+        # ---------------------------- [surrogate] ---------------------
+        # a fast surrogate of the matrix element for the integrand, followed by
+        # a second pass with the full matrix element; "" disables it
+        self.add_toml_param('surrogate', 'function', "",
+            comment="surrogate matrix element, a .so library or a .py file")
+        self.add_toml_param('surrogate', 'mode', "unweight", allowed=["unweight", "reweight"],
+            comment="unweight or reweight the events with the full matrix element")
+        self.add_toml_param('surrogate', 'first_pass_max_overweight_truncation', 0.01,
+            comment="max_overweight_truncation of the unweighting with the surrogate")
+        self.add_toml_param('surrogate', 'first_pass_freeze_max_weight_after', 10000,
+            comment="freeze_max_weight_after of the unweighting with the surrogate")
+        self.add_toml_param('surrogate', 'param_card', "",
+            comment="param card for a .so surrogate; \"\" uses Cards/param_card.dat")
+        # ---------------------------- [amplicol] ----------------------
+        # the leading-colour [amplicol] subprocesses are re- or unweighted to
+        # the colour accuracy in a second pass
+        self.add_toml_param('amplicol', 'color_accuracy', "full", allowed=["full", "lc"],
+            comment="colour accuracy of the [amplicol] events, lc skips the second pass")
+        self.add_toml_param('amplicol', 'mode', "reweight", allowed=["unweight", "reweight"],
+            comment="unweight or reweight the events to the colour accuracy")
+        self.add_toml_param('amplicol', 'first_pass_max_overweight_truncation', 0.01,
+            gridpack=True, comment="max_overweight_truncation of the leading-colour unweighting")
+        self.add_toml_param('amplicol', 'first_pass_freeze_max_weight_after', 10000,
+            gridpack=True, comment="freeze_max_weight_after of the leading-colour unweighting")
+
         # ----------------------------- [madnis] -----------------------
         self.add_toml_param('madnis', 'enable', False, allowed=["auto", True, False], auto=True,
             comment="train MadNIS networks to improve the sampling; auto decides by process")
@@ -8684,9 +8709,11 @@ class RunCardMG7(RunCard):
     # multiplicities, madevent's
     default_mlm_xqcut = 30.0
 
-    def create_default_for_process(self, proc_characteristic, history, proc_def):
+    def create_default_for_process(self, proc_characteristic, history, proc_def,
+                                   amplicol=False):
         """Adjust default values depending on the process, then read the
-        site/user default file (``input/default_run_card_mg7.toml``)."""
+        site/user default file (``input/default_run_card_mg7.toml``).
+        ``amplicol``: the output has [amplicol] processes, which MLM does not support."""
 
         # collect the initial-state (beam) particle ids
         beam_id = set()
@@ -8734,7 +8761,7 @@ class RunCardMG7(RunCard):
         # drjl = 0). The shower then does the jet matching (is_mlm_merged), and
         # auto_ptj_mjj ties the jet cuts to xqcut.
         if beam_id & hadronic and not self['beam']['leptonic'] and \
-                mlm_matching_needed(proc_def):
+                not amplicol and mlm_matching_needed(proc_def):
             self['beam']['dynamical_scale_choice'] = 'mlm'
             self['phasespace']['xqcut'] = self.default_mlm_xqcut
             cuts = self.dynamic_sections['cuts']
@@ -8880,7 +8907,7 @@ class RunCardMG7(RunCard):
 
     # MadGraph gives a leg whose flavours were merged one of these codes; the
     # mg7 runtime resolves them to the same representatives (clean_pids /
-    # _MERGED_PID_REPRESENTATIVE in template_files/mg7/launch.py), so the
+    # _MERGED_PID_REPRESENTATIVE in madgraph/mg7/launch.py), so the
     # observables have to be written in terms of those.
     merged_pid_representative = {81: 1, 82: 11, 83: 12}
 

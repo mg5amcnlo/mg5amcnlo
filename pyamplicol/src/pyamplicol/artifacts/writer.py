@@ -3,11 +3,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import os
 import tempfile
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,6 +17,8 @@ from typing import BinaryIO, Literal
 from .manifest import (
     ARTIFACT_IDENTITY_EXTENSION,
     MANIFEST_NAME,
+    PAYLOAD_CONTAINER_PATH,
+    PAYLOAD_CONTAINER_ROLE,
     PayloadRecord,
     artifact_identity_extension,
     canonical_manifest_bytes,
@@ -31,6 +34,9 @@ from .security import (
 )
 from .transaction import ArtifactTransaction, ArtifactWriteMode
 
+# packable payloads are appended here while staging, then moved into the container
+_PAYLOAD_SPOOL_NAME = ".payloads.spool"
+
 
 class ArtifactBuilder:
     """Build one artifact in a private staging directory."""
@@ -41,13 +47,24 @@ class ArtifactBuilder:
         *,
         mode: ArtifactWriteMode = "error",
         expected_artifact_id: str | None = None,
+        packs: Callable[[str], bool] | None = None,
     ) -> None:
+        """``packs`` selects the payloads stored in payloads.pacbin; they are
+        spooled into one staging file instead of being written as files."""
         if expected_artifact_id is not None and mode != "append":
             raise ValueError("expected_artifact_id is valid only for append mode")
+        if packs is not None and mode == "append":
+            raise ValueError("packed payloads cannot be appended")
         self._transaction = ArtifactTransaction(destination, mode=mode)
         self._expected_artifact_id = expected_artifact_id
         self.root: Path | None = None
         self._payloads: dict[str, PayloadRecord] = {}
+        self._packs = packs
+        self._spool: BinaryIO | None = None
+        # path -> (offset, length) in the spool
+        self._spooled: dict[str, tuple[int, int]] = {}
+        self._sealed = False
+        self._packed: frozenset[str] = frozenset()
 
     def __enter__(self) -> ArtifactBuilder:
         self.root = self._transaction.__enter__()
@@ -114,13 +131,36 @@ class ArtifactBuilder:
         if executable is not None:
             path.chmod(0o755 if executable else 0o644)
         fsync_file(path)
-        record = PayloadRecord(
-            path=path_value,
+        return self._record_payload(
+            path_value,
             role=role,
             media_type=media_type,
             size_bytes=path.stat().st_size,
             sha256=sha256_file(path),
             executable=executable_bit(path),
+            target=target,
+            process_id=process_id,
+        )
+
+    def _record_payload(
+        self,
+        path_value: str,
+        *,
+        role: str,
+        media_type: str,
+        size_bytes: int,
+        sha256: str,
+        executable: bool,
+        target: Mapping[str, object] | None,
+        process_id: str | None,
+    ) -> PayloadRecord:
+        record = PayloadRecord(
+            path=path_value,
+            role=role,
+            media_type=media_type,
+            size_bytes=size_bytes,
+            sha256=sha256,
+            executable=executable,
             target=dict(target) if target is not None else None,
             process_id=process_id,
         )
@@ -172,12 +212,25 @@ class ArtifactBuilder:
         if not callable(read):
             raise TypeError("artifact stream source must provide read()")
         path_value = normalize_relative_path(relative)
+        if self._packs is not None and not executable and self._packs(path_value):
+            return self._spool_stream(
+                path_value,
+                source,
+                role=role,
+                media_type=media_type,
+                target=target,
+                process_id=process_id,
+                chunk_size=chunk_size,
+            )
         path = self.staged_path(path_value, create_parent=True)
         descriptor, temporary_name = tempfile.mkstemp(
             prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
         )
         temporary = Path(temporary_name)
         descriptor_open = True
+        # hashed while written: the staged file is not read back
+        digest = hashlib.sha256()
+        size_bytes = 0
         try:
             with os.fdopen(descriptor, "wb") as stream:
                 descriptor_open = False
@@ -192,6 +245,8 @@ class ArtifactBuilder:
                             "artifact stream source returned more bytes than requested"
                         )
                     view = memoryview(chunk)
+                    digest.update(view)
+                    size_bytes += len(view)
                     written = 0
                     while written < len(view):
                         count = stream.write(view[written:])
@@ -207,10 +262,12 @@ class ArtifactBuilder:
                 os.close(descriptor)
             with suppress(FileNotFoundError):
                 temporary.unlink()
-        return self.register_staged_file(
+        return self._record_payload(
             path_value,
             role=role,
             media_type=media_type,
+            size_bytes=size_bytes,
+            sha256=digest.hexdigest(),
             executable=executable,
             target=target,
             process_id=process_id,
@@ -288,6 +345,9 @@ class ArtifactBuilder:
             if path == path_value or (recursive and path.startswith(prefix))
         )
         for owned_path in owned:
+            if self._spooled.pop(owned_path, None) is not None:
+                self._payloads.pop(owned_path, None)
+                continue
             path = confined_path(self._root(), owned_path, must_exist=False)
             if path.is_symlink() or path.is_dir():
                 raise ValueError(
@@ -311,6 +371,124 @@ class ArtifactBuilder:
                 for directory in (*directories, root):
                     with suppress(OSError):
                         directory.rmdir()
+
+    def _spool_stream(
+        self,
+        path_value: str,
+        source: BinaryIO,
+        *,
+        role: str,
+        media_type: str,
+        target: Mapping[str, object] | None,
+        process_id: str | None,
+        chunk_size: int,
+    ) -> PayloadRecord:
+        if self._sealed:
+            raise RuntimeError(
+                f"payload {path_value!r} arrived after the payload container was sealed"
+            )
+        if path_value == MANIFEST_NAME:
+            raise ValueError(f"{MANIFEST_NAME} is reserved for the artifact manifest")
+        if self._spool is None:
+            self._spool = (self._root() / _PAYLOAD_SPOOL_NAME).open("w+b")
+        spool = self._spool
+        offset = spool.seek(0, os.SEEK_END)
+        digest = hashlib.sha256()
+        while True:
+            chunk = source.read(chunk_size)
+            if not isinstance(chunk, bytes | bytearray | memoryview):
+                raise TypeError("artifact stream source must return bytes")
+            if not chunk:
+                break
+            digest.update(chunk)
+            spool.write(chunk)
+        length = spool.tell() - offset
+        self._spooled[path_value] = (offset, length)
+        return self._record_payload(
+            path_value,
+            role=role,
+            media_type=media_type,
+            size_bytes=length,
+            sha256=digest.hexdigest(),
+            executable=False,
+            target=target,
+            process_id=process_id,
+        )
+
+    def is_spooled(self, relative: str) -> bool:
+        """Whether a staged payload is held in the spool rather than a file."""
+
+        return normalize_relative_path(relative) in self._spooled
+
+    def has_payload(self, relative: str) -> bool:
+        """Whether ``relative`` is a payload staged so far."""
+
+        return normalize_relative_path(relative) in self._payloads
+
+    def read_staged(self, relative: str) -> bytes:
+        """The bytes of a staged payload, wherever it is stored."""
+
+        path_value = normalize_relative_path(relative)
+        spooled = self._spooled.get(path_value)
+        if spooled is not None and self._spool is not None:
+            offset, length = spooled
+            self._spool.flush()
+            data = os.pread(self._spool.fileno(), length, offset)
+            if len(data) != length:
+                raise OSError(f"short read of spooled payload {path_value!r}")
+            return data
+        if self._sealed and path_value in self._packed:
+            from pyamplicol.generation.evaluator_container import PacbinReader
+
+            record = self._payloads[path_value]
+            with PacbinReader.open(
+                self._root() / PAYLOAD_CONTAINER_PATH, verify_payloads=False
+            ) as reader:
+                return reader.read_member(path_value, length=record.size_bytes)
+        return confined_path(self._root(), path_value).read_bytes()
+
+    def seal_payload_container(self) -> PayloadRecord | None:
+        """Move the spooled payloads into payloads.pacbin; later packable
+        payloads are rejected. Their records are kept."""
+
+        if self._sealed:
+            raise RuntimeError("the payload container is already sealed")
+        self._sealed = True
+        self._packed = frozenset(self._spooled)
+        if self._spool is None:
+            return None
+        from pyamplicol.generation.evaluator_container import (
+            PacbinMemberKind,
+            PacbinMemberSource,
+            write_pacbin_atomic,
+        )
+
+        spool = self._spool
+        spool.flush()
+        sources = [
+            PacbinMemberSource(
+                path,
+                PacbinMemberKind.DECLARED_PAYLOAD,
+                _SpoolSlice(spool.fileno(), offset, length),
+            )
+            for path, (offset, length) in self._spooled.items()
+        ]
+        index = write_pacbin_atomic(self.staged_path(PAYLOAD_CONTAINER_PATH), sources)
+        for member in index.members:
+            record = self._payloads[member.logical_path]
+            if member.length != record.size_bytes or member.sha256 != record.sha256:
+                raise ValueError(
+                    f"packed payload {member.logical_path!r} changed while packing"
+                )
+        spool.close()
+        self._spool = None
+        self._spooled = {}
+        (self._root() / _PAYLOAD_SPOOL_NAME).unlink()
+        return self.register_staged_file(
+            PAYLOAD_CONTAINER_PATH,
+            role=PAYLOAD_CONTAINER_ROLE,
+            media_type="application/octet-stream",
+        )
 
     def payload_records(self) -> tuple[PayloadRecord, ...]:
         """Return the immutable, path-ordered staged payload inventory.
@@ -338,8 +516,11 @@ class ArtifactBuilder:
         default_process_id: str | None = None,
         extensions: Mapping[str, object] | None = None,
     ) -> Path:
+        if not self._sealed and self._packs is not None:
+            self.seal_payload_container()
         if not self._payloads:
             raise ValueError("an artifact must contain at least one payload")
+        self._remove_empty_directories()
         manifest_extensions = dict(extensions or {})
         supplied_identity = manifest_extensions.get(ARTIFACT_IDENTITY_EXTENSION)
         expected_identity = artifact_identity_extension()
@@ -378,10 +559,43 @@ class ArtifactBuilder:
         fsync_file(path)
         return path
 
+    def _remove_empty_directories(self) -> None:
+        """Remove the directories left empty by payloads moved into containers."""
+
+        root = self._root()
+        for directory, _, _ in os.walk(root, topdown=False):
+            if Path(directory) != root:
+                with suppress(OSError):
+                    os.rmdir(directory)
+
     def __exit__(self, *exception: object) -> bool:
+        if self._spool is not None:
+            self._spool.close()
+            self._spool = None
         if exception[0] is None and not (self._root() / MANIFEST_NAME).is_file():
             raise RuntimeError("artifact builder exited without finalize()")
         return self._transaction.__exit__(*exception)  # type: ignore[arg-type]
 
 
-__all__ = ["ArtifactBuilder"]
+class _SpoolSlice:
+    """One spooled payload, read with positioned reads from the open spool."""
+
+    def __init__(self, descriptor: int, offset: int, length: int) -> None:
+        self._descriptor = descriptor
+        self._position = offset
+        self._end = offset + length
+
+    def read(self, size: int = -1) -> bytes:
+        remaining = self._end - self._position
+        if size < 0 or size > remaining:
+            size = remaining
+        if size == 0:
+            return b""
+        data = os.pread(self._descriptor, size, self._position)
+        if not data:
+            raise OSError("short read of a spooled payload")
+        self._position += len(data)
+        return data
+
+
+__all__ = ["PAYLOAD_CONTAINER_PATH", "PAYLOAD_CONTAINER_ROLE", "ArtifactBuilder"]

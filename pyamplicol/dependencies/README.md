@@ -3,7 +3,7 @@
 pyAmpliCol defaults to published runtime dependencies and release-mode native
 builds. Historical pinned-source candidate machinery is retained, but its
 upstream pins need a coherent update before use with the current tensor APIs.
-Release mode uses Symbolica **3.0.0** and SymJIT **2.26.4**. Historical candidate
+Release mode uses Symbolica **3.0.2** and SymJIT **2.27.3**. Historical candidate
 mode retains SymJIT **2.26.0**; version numbers alone do not establish Python API
 compatibility. Candidate builds do not
 relabel dependency versions or modify upstream source files.
@@ -39,7 +39,7 @@ The developer dashboard retains its pinned Ratatui 0.4.2 build and FFI checkout
 in both lanes; it is not a core runtime dependency.
 
 Release-equivalent builds use exact published versions. Canonical Cargo
-resolution uses the published Symbolica 3.0.0 and SymJIT 2.26.4 crates without
+resolution uses the published Symbolica 3.0.2 and SymJIT 2.27.3 crates without
 source patches. `release-lock.toml` records those versions, and `Cargo.lock`
 records normal registry resolution and checksums. The
 ordinary locked Cargo build is the dependency check; no local dependency
@@ -74,7 +74,7 @@ is not a working current-source setup route. The retained pin table is:
 
 | Dependency | Upstream source | Revision |
 | --- | --- | --- |
-| Symbolica 3.0.0, including Numerica and Graphica | `symbolica-dev/symbolica`, `main` | `7b31114c7a77571aabacf96a311f27ef0f44d007` |
+| Symbolica 3.0.2, including Numerica and Graphica | `symbolica-dev/symbolica`, `main` | `afbf7aa4ae13d330aab95cad0b04ebf5889165fd` |
 | SymJIT 2.26.0 | `siravan/symjit-crate` | `530304a07d1be6d5abc80291aa5e92cf28ac5546` |
 | GammaLoop, including Spenso/Idenso/Vakint | `alphal00p/gammaloop`, `main` | `312cf6aaf4cd1414f6742ad87ce39922c497a0b6` |
 | symbolica-integrate 2.0.1 | `symbolica-dev/symbolica-integrate`, `main` | `716354a07f2660b38390c95702aa617d1f9472c7` |

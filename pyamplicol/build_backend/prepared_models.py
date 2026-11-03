@@ -238,7 +238,7 @@ def stage_packaged_prepared_models(
                     "portable": True,
                     "word_bits": 64,
                     "endianness": "little",
-                    "target_triple": "symjit-storage-v3-portable",
+                    "target_triple": "symjit-storage-v4-portable",
                     "cpu_features": [],
                 },
                 package_root=package_root,
@@ -332,7 +332,7 @@ def _write_packaged_prepared_model_asset(
         "portable": True,
         "word_bits": 64,
         "endianness": "little",
-        "target_triple": "symjit-storage-v3-portable",
+        "target_triple": "symjit-storage-v4-portable",
         "cpu_features": [],
     }
     if _plain_json(pack.target) != expected_target:
@@ -438,7 +438,10 @@ def _write_packaged_prepared_model_asset(
     }
     for key, expected in expected_pack_dependencies.items():
         if pack.dependency_abis.get(key) != expected:
-            raise RuntimeError(f"prepared kernel-pack dependency {key} is stale")
+            raise RuntimeError(
+                f"prepared kernel-pack dependency {key} is stale: expected "
+                f"{expected!r}, got {pack.dependency_abis.get(key)!r}"
+            )
 
     metadata_name, bundle_name = _asset_names(identifier, architecture)
     metadata: dict[str, object] = {

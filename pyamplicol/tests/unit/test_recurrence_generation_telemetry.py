@@ -84,7 +84,7 @@ def _recurrence_artifact(
             direct_template_catalog_digest="1" * 64,
             runtime_layout_digest="4" * 64,
             backend="jit",
-            target_triple="symjit-storage-v3-portable",
+            target_triple="symjit-storage-v4-portable",
             portable=True,
             cpu_features=(),
             catalog_executor_count=1,

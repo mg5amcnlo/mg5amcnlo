@@ -12,7 +12,6 @@ from pyamplicol.api.errors import ArtifactError, EvaluationError
 from pyamplicol.api.protocols import Momenta
 from pyamplicol.api.results import ResolvedEvaluation
 from pyamplicol.artifacts import load_manifest
-from pyamplicol.artifacts.security import confined_path
 from pyamplicol.runtime._color_topology_exact import (
     apply_exact_color_replay_input_mapping,
     parse_exact_color_topology_replay,
@@ -29,7 +28,6 @@ from pyamplicol.runtime.eager_exact._contracts import (
     _KernelLoader,
     _mapping,
     _PayloadIndex,
-    _read_json,
 )
 from pyamplicol.runtime.eager_exact._execution import _evaluate_point
 from pyamplicol.runtime.eager_exact._plan import _EagerExactPlan
@@ -86,12 +84,11 @@ class EagerExactExecutor:
         payloads.require(
             physics_path, role="runtime-physics", process_id=representative_id
         )
-        execution = _read_json(
-            confined_path(self._artifact, execution_records[0].path),
-            "eager execution metadata",
+        execution = payloads.read_json(
+            execution_records[0].path, "eager execution metadata"
         )
-        representative_physics = _read_json(
-            confined_path(self._artifact, physics_path), "runtime physics metadata"
+        representative_physics = payloads.read_json(
+            physics_path, "runtime physics metadata"
         )
         axes = native_physics_axes(native_runtime, representative_physics)
         physics = axes.public_physics

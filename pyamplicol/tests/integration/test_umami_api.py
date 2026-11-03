@@ -844,16 +844,20 @@ def test_real_generation_exercises_structural_proofs(providers):
             assert len(provider.structural_keys) == 2
             assert provider.structural_keys[0]
             assert provider.structural_keys[0] == provider.structural_keys[1]
+            # Colour singlets of different PDG share no phase-space channel: one
+            # entry, with its member, in each of the two.
+            assert len(provider.data["channels"]) == 2
             entries = [
                 entry
                 for channel in provider.data["channels"]
                 for entry in channel["processes"]
             ]
-            assert len(entries) == 1
+            assert len(entries) == 2
             assert all(
                 entry["runtime"]["process_id"] == "flavour_one" for entry in entries
             )
             members = [member for entry in entries for member in entry["members"]]
+            assert len(members) == 2
             assert members[0]["pdgs"] != members[1]["pdgs"]
 
 

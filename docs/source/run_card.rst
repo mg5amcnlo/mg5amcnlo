@@ -129,7 +129,8 @@ See :doc:`gridpacks` for details.
     - ``fix_max_weight``: no events. Each channel runs until ``freeze_max_weight_after``
       unweighted events are reached. Its maximum weight is then fixed in the gridpack,
       and its integral is used to share the events between the channels. This can be
-      slow for channels with a low unweighting efficiency.
+      slow for channels with a low unweighting efficiency. The gridpack also gets
+      ``bin/event_stream.py`` to stream events in memory from Python.
 
     See :ref:`gridpack-run-mode`.
 
@@ -368,6 +369,52 @@ An empty string disables the function. See :doc:`custom_functions` for details.
 ``<function>_parameters.<name>``
     A parameter of a custom function, for example ``cut_parameters.pt_min = 30.0``. It replaces
     the default value declared by the function. See :ref:`custom-function-parameters`.
+
+.. _run-card-surrogate:
+
+[surrogate]
+-----------
+
+A fast surrogate of the matrix element, for example a neural network. The integrand and
+its optimization use the surrogate. The events are then reweighted or unweighted a second
+time with the full matrix element, which is only evaluated for the events that pass the
+first unweighting. The cross section and the events are those of the full matrix element.
+The surrogate does not return channel weights, so it needs ``sde_strategy =
+"denominators"``. It is not supported for outputs with ``[amplicol]`` subprocesses.
+
+``function`` (``""``)
+    The surrogate. An empty string disables it.
+
+    - A ``.so`` library implementing the UMAMI interface. It gets the momenta,
+      :math:`\alpha_s` and the flavor index of the madmatrix libraries as inputs, and
+      returns the matrix element. It is loaded once per subprocess: ``{subprocess}`` and
+      ``{device}`` in the path are replaced by the subprocess name (e.g. ``P1_gg_ttx``)
+      and the device, like in ``lib/libmadmatrix_{subprocess}_{device}.so``. It has to
+      be built for the device of the run. If it implements ``umami_set_parameter``, it
+      gets the run-time parameters of the madmatrix libraries, such as ``bwcutoff``.
+    - A Python file defining ``custom_surrogate(momenta, pdg_ids, alpha_s)``, which returns
+      :math:`|M|^2` for a batch of events. ``momenta`` has the shape ``(batch, n, 4)``,
+      ``pdg_ids`` the shape ``(batch, n)`` and identifies subprocess and flavor, and
+      ``alpha_s`` the shape ``(batch,)``. ``FRAMEWORK = "torch"`` passes torch tensors,
+      which also run on GPUs, otherwise numpy arrays are passed. See
+      :ref:`custom-function-surrogate`.
+
+``mode`` (``"unweight"``)
+    ``"unweight"`` unweights the events a second time with respect to the ratio of the full
+    matrix element to the surrogate. The events then have unit weights apart from
+    overweights. ``"reweight"`` keeps the ratio in the event weights.
+
+``first_pass_max_overweight_truncation`` (``0.01``), ``first_pass_freeze_max_weight_after`` (``10000``)
+    ``max_overweight_truncation`` and ``freeze_max_weight_after`` of the first
+    unweighting, with the surrogate, in unweight mode. The ones of ``[generation]`` set
+    the second unweighting with the full matrix element, which gives the final events,
+    and the unweighting of the subprocesses without a surrogate. In reweight mode, the
+    events are unweighted once, with the surrogate, as set by ``[generation]``.
+
+``param_card`` (``""``)
+    The param card a ``.so`` surrogate is initialized with. An empty string uses
+    ``Cards/param_card.dat``. A madmatrix library with a different param card, for example,
+    is a surrogate for testing.
 
 .. _run-card-multiparticles:
 

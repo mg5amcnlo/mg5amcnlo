@@ -25,14 +25,14 @@ import types
 import unittest
 from unittest import mock
 
-from madgraph.iolibs.template_files.mg7 import bootstrap as mg7_bootstrap
+from madgraph.mg7 import bootstrap as mg7_bootstrap
 
 # Importing launch without a compiled madspace starts the madspace build, and
 # test_manager imports every unit test module while collecting: check first.
 launch = None
 if mg7_bootstrap.madspace_is_installed():
     try:
-        import madgraph.iolibs.template_files.mg7.launch as launch
+        import madgraph.mg7.launch as launch
     except Exception as error:
         launch = None
         import_error = error
@@ -116,7 +116,8 @@ class TestMadnisOneDimension(unittest.TestCase):
             contexts=[mock.Mock()], devices=[None], pool_sizes=[1],
             status_file=None, run_seed=1,
             build_event_generator=mock.Mock(return_value='generator'))
-        with mock.patch.object(launch, 'ms') as ms:
+        from madgraph.mg7 import madgraph_process
+        with mock.patch.object(madgraph_process, 'ms') as ms:
             ms.MultiMadnisTraining.return_value.active_channels.return_value = [[1]]
             launch.MadgraphProcess.train_madnis(process)
             self.assertEqual(

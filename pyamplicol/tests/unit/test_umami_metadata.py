@@ -13,7 +13,9 @@ import pytest
 from pyamplicol.artifacts.umami import (
     FLAVOR_BLIND_ASSUMPTION,
     UmamiProcessInput,
+    _channel_pattern,
     _identical_orbit,
+    _leg_classes,
     build_umami_metadata,
     umami_bundle_payloads,
 )
@@ -302,6 +304,41 @@ def test_orders_differing_by_equal_mass_final_labels_share_a_channel():
     (data,) = export(process(pdgs=(990, 990, 993, 990), words=words),
                      compiled_model=extended)
     assert len(data["channels"]) == 2
+
+
+def test_orders_differing_by_massless_flavours_share_a_channel():
+    """Gluons and quarks of any charge in the same legs share one channel, as in
+    AmpliCol: one for p p > j j j, not one per flavour pattern."""
+    charged = model()
+    for particle in charged["ir"]["particles"]:
+        if abs(particle["pdg_code"]) == 992:
+            particle["charge"] = 2 / 3 if particle["pdg_code"] > 0 else -2 / 3
+    # the cyclic order 1 2 4 3, the quark lines starting at the quark
+    (data,) = export(
+        process("g", pdgs=(990, 990, 990, 990), words=((1, 2, 4, 3),)),
+        process("q1", pdgs=(990, 990, 991, -991), words=((3, 1, 2, 4),)),
+        process("q2", pdgs=(990, 990, 992, -992), words=((3, 1, 2, 4),)),
+        compiled_model=charged,
+    )
+    assert len(entries(data)) == 3
+    assert len(data["channels"]) == 1
+
+
+def test_massless_singlets_are_not_relabelled_onto_partons():
+    """A lepton and a parton of equal mass are not exchanged by the relabelling
+    onto the channel's first order, which the cuts would see."""
+    masses = [0.0] * 4
+    roles = [8, 8, 1, 8]
+    lepton = _leg_classes((990, 990, 11, 990), roles)
+    parton = _leg_classes((990, 990, 990, 11), roles[:2] + [8, 1])
+    assert lepton == ["coloured", "coloured", 11, "coloured"]
+    order = [0, 1, 2, 3]
+    assert _channel_pattern(order, 2, masses, lepton)[0] != (
+        _channel_pattern(order, 2, masses, parton)[0])
+    quark = _leg_classes((990, 990, 991, -991), [8, 8, 3, -3])
+    gluon = _leg_classes((990, 990, 990, 990), [8] * 4)
+    assert _channel_pattern(order, 2, masses, quark)[0] == (
+        _channel_pattern(order, 2, masses, gluon)[0])
 
 
 def test_permutation_invariant_restricted_helicity_set_is_grouped():
@@ -741,6 +778,7 @@ def test_writer_append_recovers_old_compact_otf_sdk(tmp_path, monkeypatch):
     written = {}
     builder = SimpleNamespace(
         staged_path=lambda path: tmp_path / path,
+        read_staged=lambda path: (tmp_path / path).read_bytes(),
         payload_records=lambda: [],
         add_bytes=lambda path, content, **kwargs: written.setdefault(path, content),
     )
@@ -965,6 +1003,7 @@ def test_writer_exports_only_ungenerated_group_members(tmp_path):
     written = {}
     builder = SimpleNamespace(
         staged_path=lambda path: tmp_path / path,
+        read_staged=lambda path: (tmp_path / path).read_bytes(),
         payload_records=lambda: [],
         add_bytes=lambda path, content, **kwargs: written.setdefault(path, content),
     )

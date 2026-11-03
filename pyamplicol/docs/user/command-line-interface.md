@@ -108,7 +108,9 @@ Useful generation options include:
 - `--name NAME` to name a request;
 - `--multiparticle 'p=d,d~,g'` to define a multiparticle label;
 - `--flavor-scheme N` and `--max-quark-lines N` to constrain expansion;
-- `--flavor-blind` to generate one subprocess per flavour-relabelling class
+- `--flavor-blind` to generate one subprocess per flavour-relabelling class,
+  or `--flavor-blind-strict` to route only the relations that are symmetries
+  of the allowed vertices
   (see [Group equivalent subprocesses](#group-equivalent-subprocesses));
 - `--analyze-process-groups {none,numerical}`, `--only-unit-multiplier`, and
   `--[no-]consider-charge-conjugation` to search the generated subprocesses

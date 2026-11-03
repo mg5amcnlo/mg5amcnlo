@@ -36,7 +36,7 @@ import madgraph
 import madgraph.core.base_objects as base_objects
 import madgraph.interface.madevent_interface as madevent_interface
 import madgraph.interface.master_interface as mgcmd
-from madgraph.iolibs.template_files.mg7 import bootstrap as mg7_bootstrap
+from madgraph.mg7 import bootstrap as mg7_bootstrap
 from madgraph.models.model_reader import Alphas_Runner
 
 pjoin = os.path.join
@@ -445,7 +445,7 @@ class DecayAlphaSTest(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def write_grid(self, mass, alpha_s_mz=0.118):
-        from madgraph.iolibs.template_files.mg7 import launch as mg7_launch
+        from madgraph.mg7 import launch as mg7_launch
         process = object.__new__(mg7_launch.MadgraphProcess)
         process.param_card = mock.Mock()
         process.param_card.get_value = lambda block, code: alpha_s_mz
@@ -544,7 +544,7 @@ class DecayFlavorSplitTest(unittest.TestCase):
     }
 
     def setUp(self):
-        from madgraph.iolibs.template_files.mg7 import launch as mg7_launch
+        from madgraph.mg7 import launch as mg7_launch
         self.launch = mg7_launch
 
     def test_one_subprocess_per_flavour(self):

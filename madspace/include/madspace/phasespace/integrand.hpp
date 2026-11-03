@@ -41,13 +41,24 @@ namespace madspace {
  * - `weight` – `float`, shape `(batch,)` – the event weight.
  * - `momenta` – `float`, shape `(batch, particle_count, 4)` – the momenta.
  * - `color_index`, `helicity_index`, `diagram_index`, `flavor_index` – `int`,
- *   shape `(batch,)` – the sampled discrete quantities.
+ *   shape `(batch,)` – the sampled discrete quantities. Indices the matrix
+ *   element does not return are -1.
  * - `ren_scale`, `alpha_qcd`, `x1`, `x2`, `fact_scale1`, `fact_scale2` –
  *   `float`, shape `(batch,)` – scales and momentum fractions.
  * - `random` – `float`, shape `(batch, mapping.random_dim())` – the underlying
  *   random numbers.
+ * - `matrix_element` – `float`, shape `(batch,)` – the squared matrix element,
+ *   present only if the differential cross sections return it, followed by
+ *   `matrix_element_flavor` – `int` – the flavor index passed to it, and with
+ *   several differential cross sections `matrix_element_index` – `int` – the
+ *   index of the one evaluated.
  * - `bias` – `float`, shape `(batch,)` – the event bias, present only with a
  *   custom bias. `weight` then includes the bias factor.
+ *
+ * Only `matrix_element_out` is required from the matrix element.
+ * `diagram_amp2_out` is needed for diagram-based channel weights, i.e. with
+ * several channels and neither @p prop_chan_weights nor
+ * @p mapping_chan_weights.
  *
  * **References**
  * - [1] T. Heimel, O. Mattelaer, R. Winterhalder, "MadSpace",
@@ -73,7 +84,7 @@ public:
             MatrixElement::random_helicity_in,
             MatrixElement::random_diagram_in,
         };
-    /// The @ref MatrixElement outputs an `Integrand` requests.
+    /// The @ref MatrixElement outputs an `Integrand` can use.
     inline static const std::vector<MatrixElement::MatrixElementOutput>
         matrix_element_outputs = {
             MatrixElement::matrix_element_out,
@@ -84,7 +95,9 @@ public:
         };
 
     /**
-     * @param mapping                          The phase-space mapping.
+     * @param mapping                          The phase-space mapping. Its
+     *                                          discrete choices, if any, are
+     *                                          sampled uniformly.
      * @param diff_xs                           One differential cross section
      *                                          per active flavour.
      * @param adaptive_map                      Optional continuous adaptive
@@ -146,6 +159,12 @@ public:
      *                                          the prefix @ref pdf2_prefix.
      *                                          Not allowed with a @ref CustomPdf,
      *                                          which receives the beam index.
+     * @param mapping_chan_weights              Optional
+     *                                          @ref MappingChannelWeights, in
+     *                                          place of @p prop_chan_weights.
+     *                                          Its sampled diagram is the
+     *                                          diagram index of the event when
+     *                                          the matrix element returns none.
      * @param mlm_history_qcd_power             Power of alpha_s in |M|^2 when it
      *                                          is the same for every diagram,
      *                                          -1 otherwise. With an MLM history
@@ -187,6 +206,7 @@ public:
         std::size_t compressed_channel_weight_count = 50,
         const std::optional<CustomFunction>& custom_bias = std::nullopt,
         const std::optional<PdfGrid>& pdf_grid2 = std::nullopt,
+        const std::optional<MappingChannelWeights>& mapping_chan_weights = std::nullopt,
         int mlm_history_qcd_power = -1
     );
     /// Globals prefix under which the second beam's PDF grid is registered
@@ -235,6 +255,10 @@ public:
     /// The propagator-based channel weights, if any.
     const std::optional<PropagatorChannelWeights>& prop_chan_weights() const {
         return _prop_chan_weights;
+    }
+    /// The mapping-density channel weights, if any.
+    const std::optional<MappingChannelWeights>& mapping_chan_weights() const {
+        return _mapping_chan_weights;
     }
     /// The channel-weight network, if any.
     const std::optional<ChannelWeightNetwork>& chan_weight_net() const {
@@ -321,6 +345,7 @@ private:
     // Empty when the clustering does not depend on the flavours.
     std::vector<me_int_t> _mlm_leg_flavors;
     std::optional<PropagatorChannelWeights> _prop_chan_weights;
+    std::optional<MappingChannelWeights> _mapping_chan_weights;
     std::optional<SubchannelWeights> _subchan_weights;
     std::optional<ChannelWeightNetwork> _chan_weight_net;
     nested_vector2<me_int_t> _first_chan_weight_remap;

@@ -274,6 +274,16 @@ def _add_process_grouping_options(
                 "record the others as its group members (assumed, not verified)"
             ),
         )
+        parser.add_argument(
+            "--flavor-blind-strict",
+            dest="process.flavor_blind_strict",
+            action="store_true",
+            default=argparse.SUPPRESS,
+            help=(
+                "like --flavor-blind, but route only the relations that are "
+                "symmetries of the allowed model vertices and generate the others"
+            ),
+        )
     parser.add_argument(
         "--consider-charge-conjugation",
         dest="process.consider_charge_conjugation",
@@ -361,6 +371,12 @@ def _add_generation_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--emit-api-bundle",
         dest="generation.emit_api_bundle",
+        action=argparse.BooleanOptionalAction,
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--pack-payloads",
+        dest="generation.pack_payloads",
         action=argparse.BooleanOptionalAction,
         default=argparse.SUPPRESS,
     )

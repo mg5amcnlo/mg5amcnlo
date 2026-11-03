@@ -2983,6 +2983,15 @@ class TestRunCardMG7AutoMLM(unittest.TestCase):
         self.assertNotIn('jet-lepton-delta_r', rc.dynamic_sections['cuts'])
         self.assertIn('lepton-delta_r', rc.dynamic_sections['cuts'])
 
+    def test_amplicol_output_is_no_merging(self):
+        rc = bannermod.RunCardMG7()
+        rc.create_default_for_process(
+            self.PC(), '', [[mg7_proc([2, -1], [-11, 12])],
+                            [mg7_proc([2, -1], [-11, 12, 21])]], amplicol=True)
+        self.assertFalse(rc.is_mlm_merged())
+        self.assertEqual(rc['phasespace']['xqcut'], 0.0)
+        self.assertIn('jet-delta_r', rc.dynamic_sections['cuts'])
+
     def test_an_extra_photon_is_no_merging(self):
         rc = self.build([[mg7_proc([2, -1], [-11, 12])],
                          [mg7_proc([2, -1], [-11, 12, 22])]])

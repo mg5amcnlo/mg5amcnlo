@@ -241,6 +241,12 @@ class ProcessExporterMadMatrix(export_cpp.ProcessExporterMG7):
 
     # AV - overload the default version: create CMake directory, do not create lib directory
     def copy_template(self, model):
+        if not getattr(self, 'has_madmatrix', True):
+            # only the cards and the launcher: no src/, backend/ or makefiles
+            self.dirs_to_create = ['bin', 'lib', 'Cards', 'SubProcesses']
+            self.from_template = {key: self.from_template[key] for key in ('.', 'Cards')}
+            self.template_src_make = self.template_Sub_make = None
+            return super().copy_template(model)
         super().copy_template(model)
         # Copy Arithmetics headers for the double-word expansion (FPTYPE=e)
         arithmetics_src = pjoin(self.madmatrix_templates, 'Arithmetics')
@@ -320,6 +326,8 @@ class ProcessExporterMadMatrix(export_cpp.ProcessExporterMG7):
     def convert_model(self, model, wanted_lorentz=[], wanted_couplings=[], **opts):
         # **opts: an option meant for one exporter (npwave, for the dual HELAS
         # libraries of P-wave bound states) is passed by keyword to all of them
+        if not getattr(self, 'has_madmatrix', True):
+            return
         if hasattr(model , 'cudacpp_wanted_ordered_couplings'):
             wanted_couplings = model.cudacpp_wanted_ordered_couplings
             del model.cudacpp_wanted_ordered_couplings

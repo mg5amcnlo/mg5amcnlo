@@ -8,10 +8,10 @@ use crate::{
 };
 use serde_json::json;
 
-const TEST_SYMJIT_APPLICATION_ABI: &str = "symjit-application-storage-v3";
+const TEST_SYMJIT_APPLICATION_ABI: &str = "symjit-application-storage-v4";
 const TEST_SYMJIT_PLANE_APPLICATION_ABI: &str = "pyamplicol-symjit-plane-application-v2";
 const TEST_PREPARED_JIT_PORTABLE_OPTIMIZATION_LEVEL: u64 = 2;
-const TEST_PREPARED_JIT_PORTABLE_TARGET: &str = "symjit-storage-v3-portable";
+const TEST_PREPARED_JIT_PORTABLE_TARGET: &str = "symjit-storage-v4-portable";
 
 #[test]
 fn eager_color_topology_replay_preserves_amplitude_major_batches() {
@@ -573,7 +573,7 @@ fn prepared_jit_pack_rejects_nonportable_target_before_loading_payloads() {
         "aarch64"
     };
     pack.target.portable = false;
-    pack.target.target_triple = format!("symjit-storage-v3-{other}");
+    pack.target.target_triple = format!("symjit-storage-v4-{other}");
 
     let error = pack
         .validate()

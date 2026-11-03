@@ -44,7 +44,7 @@ not attempt to parse or rewrite Rust source.
 ## Dependency Modes
 
 Release mode reads `dependencies/release-lock.toml` and accepts exact published
-package/crate versions, including Symbolica 3.0.0 and SymJIT 2.26.4. Canonical
+package/crate versions, including Symbolica 3.0.2 and SymJIT 2.27.3. Canonical
 `Cargo.lock` records standard crates.io resolution and checksums without source
 patches. Git, path, editable, floating, and candidate dependencies are forbidden.
 

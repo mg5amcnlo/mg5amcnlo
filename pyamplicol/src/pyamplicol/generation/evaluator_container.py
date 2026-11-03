@@ -66,6 +66,8 @@ class PacbinMemberKind(IntEnum):
     RECURRENCE_COLOR_PROJECTION_CERTIFICATE = 8
     ON_THE_FLY_PROCESS_SEED = 9
     COLOR_CONTRACTION = 10
+    # a payload declared by the artifact manifest, stored in its payload container
+    DECLARED_PAYLOAD = 11
 
 
 @dataclass(frozen=True, slots=True)

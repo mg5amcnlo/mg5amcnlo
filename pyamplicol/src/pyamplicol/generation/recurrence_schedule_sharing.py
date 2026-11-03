@@ -650,21 +650,52 @@ def recurrence_schedule_semantic_digest(
     return _canonical_digest(payload)
 
 
-def build_recurrence_process_executor_pack(
-    *,
-    direct_catalog: object,
-    kernel_pack: object,
-    required_executor_ids: Sequence[int],
-    runtime_layout_digest: str,
-) -> RecurrenceProcessExecutorPack:
-    """Project one validated model catalog to its exact fixed-plan executor set."""
+@dataclass(frozen=True, slots=True)
+class _ExecutorCatalog:
+    """The validated model-wide part of every process executor pack."""
 
+    templates: Mapping[int, Mapping[str, object]]
+    kernels: Mapping[int, Mapping[str, object]]
+    backend: str
+    target_triple: str
+    portable: bool
+    cpu_features: tuple[str, ...]
+    compiled_model_digest: str
+    recurrence_template_catalog_digest: str
+    prepared_kernel_pack_digest: str
+    direct_template_catalog_digest: str
+
+
+# by object identity; the entries keep their keys alive so ids are not reused
+_EXECUTOR_CATALOGS: dict[tuple[int, int], tuple[object, object, _ExecutorCatalog]] = {}
+_EXECUTOR_CATALOGS_LOCK = Lock()
+_EXECUTOR_CATALOGS_LIMIT = 4
+
+
+def _executor_catalog(direct_catalog: object, kernel_pack: object) -> _ExecutorCatalog:
+    key = (id(direct_catalog), id(kernel_pack))
+    with _EXECUTOR_CATALOGS_LOCK:
+        entry = _EXECUTOR_CATALOGS.get(key)
+        if entry is None:
+            entry = (
+                direct_catalog,
+                kernel_pack,
+                _build_executor_catalog(direct_catalog, kernel_pack),
+            )
+            if len(_EXECUTOR_CATALOGS) >= _EXECUTOR_CATALOGS_LIMIT:
+                _EXECUTOR_CATALOGS.pop(next(iter(_EXECUTOR_CATALOGS)))
+            _EXECUTOR_CATALOGS[key] = entry
+    return entry[2]
+
+
+def _build_executor_catalog(
+    direct_catalog: object, kernel_pack: object
+) -> _ExecutorCatalog:
     direct_mapping = _object_mapping(direct_catalog, "direct-template catalog")
     pack_mapping = _object_mapping(kernel_pack, "prepared-kernel pack")
     raw_templates = _object_sequence(
         direct_mapping.get("templates"), "direct-template catalog templates"
     )
-    catalog_count = len(raw_templates)
     templates: dict[int, Mapping[str, object]] = {}
     for expected_id, raw_template in enumerate(raw_templates):
         template = _require_mapping(raw_template, "direct-template descriptor")
@@ -676,19 +707,6 @@ def build_recurrence_process_executor_pack(
                 "direct-template executor IDs must be dense, ordered, and unique"
             )
         templates[executor_id] = template
-
-    selected_ids = tuple(
-        _wire_u32(value, "required direct-executor ID")
-        for value in required_executor_ids
-    )
-    if selected_ids != tuple(sorted(set(selected_ids))):
-        raise RecurrenceScheduleSharingError(
-            "required direct-executor IDs must be sorted and unique"
-        )
-    if any(executor_id not in templates for executor_id in selected_ids):
-        raise RecurrenceScheduleSharingError(
-            "required direct-executor ID is absent from its complete catalog"
-        )
 
     raw_kernels = _object_sequence(
         pack_mapping.get("kernels"), "prepared-kernel pack kernels"
@@ -731,16 +749,13 @@ def build_recurrence_process_executor_pack(
         raise RecurrenceScheduleSharingError(
             "target CPU features must be sorted and unique"
         )
-
-    descriptors = tuple(
-        _encode_process_executor_descriptor(
-            templates[executor_id],
-            backend=backend,
-            kernels=kernels,
-        )
-        for executor_id in selected_ids
-    )
-    return RecurrenceProcessExecutorPack(
+    return _ExecutorCatalog(
+        templates=templates,
+        kernels=kernels,
+        backend=backend,
+        target_triple=target_triple,
+        portable=portable,
+        cpu_features=cpu_features,
         compiled_model_digest=_wire_sha256(
             direct_mapping.get("compiled_model_digest"), "compiled-model digest"
         ),
@@ -755,14 +770,54 @@ def build_recurrence_process_executor_pack(
         direct_template_catalog_digest=_wire_sha256(
             direct_mapping.get("catalog_digest"), "direct-template catalog digest"
         ),
+    )
+
+
+def build_recurrence_process_executor_pack(
+    *,
+    direct_catalog: object,
+    kernel_pack: object,
+    required_executor_ids: Sequence[int],
+    runtime_layout_digest: str,
+) -> RecurrenceProcessExecutorPack:
+    """Project one validated model catalog to its exact fixed-plan executor set."""
+
+    catalog = _executor_catalog(direct_catalog, kernel_pack)
+    templates = catalog.templates
+    selected_ids = tuple(
+        _wire_u32(value, "required direct-executor ID")
+        for value in required_executor_ids
+    )
+    if selected_ids != tuple(sorted(set(selected_ids))):
+        raise RecurrenceScheduleSharingError(
+            "required direct-executor IDs must be sorted and unique"
+        )
+    if any(executor_id not in templates for executor_id in selected_ids):
+        raise RecurrenceScheduleSharingError(
+            "required direct-executor ID is absent from its complete catalog"
+        )
+
+    descriptors = tuple(
+        _encode_process_executor_descriptor(
+            templates[executor_id],
+            backend=catalog.backend,
+            kernels=catalog.kernels,
+        )
+        for executor_id in selected_ids
+    )
+    return RecurrenceProcessExecutorPack(
+        compiled_model_digest=catalog.compiled_model_digest,
+        recurrence_template_catalog_digest=catalog.recurrence_template_catalog_digest,
+        prepared_kernel_pack_digest=catalog.prepared_kernel_pack_digest,
+        direct_template_catalog_digest=catalog.direct_template_catalog_digest,
         runtime_layout_digest=_wire_sha256(
             runtime_layout_digest, "runtime-layout digest"
         ),
-        backend=backend,
-        target_triple=target_triple,
-        portable=portable,
-        cpu_features=cpu_features,
-        catalog_executor_count=catalog_count,
+        backend=catalog.backend,
+        target_triple=catalog.target_triple,
+        portable=catalog.portable,
+        cpu_features=catalog.cpu_features,
+        catalog_executor_count=len(templates),
         executor_ids=selected_ids,
         descriptor_payloads=descriptors,
     )

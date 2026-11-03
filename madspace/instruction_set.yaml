@@ -3129,6 +3129,20 @@ collect_channel_weights:
       desc: "weight per channel"
   desc: "Sums squared amplitudes into per-channel weights. Building block of @ref PropagatorChannelWeights."
 
+density_channel_weights:
+  inputs:
+    - name: densities
+      type: [float, n]
+      desc: "sampling density of each channel at the event, from its inverse mapping"
+    - name: mask
+      type: [float, n]
+      desc: "1 for the channels that integrate the flavor of the event, else 0"
+  outputs:
+    - name: channel_weights
+      type: [float, n]
+      desc: "weight per channel"
+  desc: "Normalised channel weights proportional to the masked channel densities, uniform over the masked channels if none is positive. Building block of @ref MappingChannelWeights."
+
 interpolate_pdf:
   inputs:
     - name: x

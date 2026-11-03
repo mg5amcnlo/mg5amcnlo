@@ -62,9 +62,9 @@ CARD = "change helicity False\nlaunch --rwgt_name=mt175\nset MT 175\n"
 REWEIGHT = textwrap.dedent("""
     import os, sys
     sys.path.insert(0, {root!r})
-    from madgraph.iolibs.template_files.mg7 import bootstrap
+    from madgraph.mg7 import bootstrap
     bootstrap.ensure_madspace(interactive=False)
-    from madgraph.iolibs.template_files.mg7 import launch
+    from madgraph.mg7 import launch
     class Process:
         run_path = os.path.join("Events", {run!r})
         events_path = os.path.join(run_path, "events.lhe.gz")
@@ -168,7 +168,7 @@ class ReweightBackendsAgreeTest(unittest.TestCase):
         lhe = self.run_checked([sys.executable, '-c', textwrap.dedent(f"""
             import sys
             sys.path.insert(0, {str(MG_ROOT)!r})
-            from madgraph.iolibs.template_files.mg7 import npy_to_lhe
+            from madgraph.mg7 import npy_to_lhe
             print(npy_to_lhe.convert({run!r}, compress=False))
         """)], cwd=proc).stdout.split()[-1]
         converted = self.weights(lhe)
@@ -242,7 +242,7 @@ class ReweightBackendsAgreeTest(unittest.TestCase):
             self.run_checked([sys.executable, '-c', textwrap.dedent(f"""
                 import sys
                 sys.path.insert(0, {str(MG_ROOT)!r})
-                from madgraph.iolibs.template_files.mg7 import bootstrap
+                from madgraph.mg7 import bootstrap
                 bootstrap.ensure_madspace(interactive=False)
                 from madgraph.iolibs.template_files.mg7 import madtrex
                 madtrex.run_parameter_reweighting({again!r}, events_path={events_path!r},
@@ -291,7 +291,7 @@ class ReweightBackendsAgreeTest(unittest.TestCase):
                 import logging, sys
                 sys.path.insert(0, {str(MG_ROOT)!r})
                 logging.basicConfig(level=logging.WARNING)
-                from madgraph.iolibs.template_files.mg7 import bootstrap
+                from madgraph.mg7 import bootstrap
                 bootstrap.ensure_madspace(interactive=False)
                 from madgraph.iolibs.template_files.mg7 import madtrex
                 madtrex.run_parameter_reweighting({card!r}, events_path={events!r},
@@ -335,7 +335,7 @@ class ReweightBackendsAgreeTest(unittest.TestCase):
         self.run_checked([sys.executable, '-c', textwrap.dedent(f"""
             import sys
             sys.path.insert(0, {str(MG_ROOT)!r})
-            from madgraph.iolibs.template_files.mg7 import bootstrap
+            from madgraph.mg7 import bootstrap
             bootstrap.ensure_madspace(interactive=False)
             from madgraph.iolibs.template_files.mg7 import madtrex
             madtrex.run_parameter_reweighting({card!r}, events_path={events_path!r},

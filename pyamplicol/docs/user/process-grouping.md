@@ -272,6 +272,20 @@ one fixed way, so it can warn about a relation that holds. In the same run,
 `d <-> s` alone moves the allowed `W` vertex `[d w+ u]`, although also
 exchanging `u <-> c` would restore it.
 
+### Strict flavour-blind generation
+
+`--flavor-blind-strict` (`process.flavor_blind_strict = true`, which implies
+`flavor_blind`) routes only the relations that pass the check above. Within a
+flavour class, each member tries every flavour pairing, conjugated ones last,
+against each representative kept so far, and joins the first one without a
+warning. A member that matches none is generated and becomes a representative
+of its own, which later members may join. No member of the written map has a
+warning. For `p p > j j` with explicit electroweak orders, `u u~ > g g` is then
+generated next to `d d~ > g g`, while `s c > s c` still joins `d u > d u`.
+
+The check is local and conservative, so strict generation may generate a
+member whose relation holds; it never routes a member the check rejects.
+
 ### When to use it
 
 Equal matrix elements within a class are **your responsibility**. The flag is

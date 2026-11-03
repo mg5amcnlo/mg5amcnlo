@@ -11,7 +11,7 @@ from typing import cast
 
 from pyamplicol.api.errors import ArtifactError, CompatibilityError, EvaluationError
 from pyamplicol.artifacts.manifest import ArtifactManifest
-from pyamplicol.artifacts.security import confined_path, normalize_relative_path
+from pyamplicol.artifacts.security import normalize_relative_path
 from pyamplicol.generation.eager_tables import (
     EAGER_KERNEL_ABI,
     EAGER_OUTPUT_FACTOR_NONE,
@@ -48,7 +48,6 @@ from pyamplicol.runtime.eager_exact._contracts import (
     _load_table,
     _mapping,
     _PayloadIndex,
-    _read_json,
     _sequence,
     _validate_execution_header,
 )
@@ -409,9 +408,7 @@ class _EagerExactPlan:
         pack_path = normalize_relative_path(pack_path)
         payload_root_name = normalize_relative_path(payload_root_name)
         payloads.require(pack_path, role="evaluator-manifest", process_id=None)
-        pack_payload = _read_json(
-            confined_path(artifact_root, pack_path), "eager kernel pack"
-        )
+        pack_payload = payloads.read_json(pack_path, "eager kernel pack")
         raw_backend = pack_payload.get("backend")
         if raw_backend not in _SUPPORTED_PREPARED_BACKENDS:
             raise CompatibilityError(
@@ -1109,9 +1106,7 @@ def _load_exact_kernel_pack(
     pack_path = normalize_relative_path(pack_path)
     payload_root_name = normalize_relative_path(payload_root_name)
     payloads.require(pack_path, role="evaluator-manifest", process_id=None)
-    pack_payload = _read_json(
-        confined_path(artifact_root, pack_path), "eager kernel pack"
-    )
+    pack_payload = payloads.read_json(pack_path, "eager kernel pack")
     raw_backend = pack_payload.get("backend")
     if raw_backend not in _SUPPORTED_PREPARED_BACKENDS:
         raise CompatibilityError(f"unsupported prepared eager backend {raw_backend!r}")

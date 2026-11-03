@@ -1031,7 +1031,7 @@ class TestRecyclingMakeArguments(unittest.TestCase):
 
     def setUp(self):
         try:
-            import madgraph.iolibs.template_files.mg7.launch as launch
+            import madgraph.mg7.launch as launch
         except Exception as error:      # needs the mg7 runtime (madspace)
             self.skipTest('mg7 launch not importable: %s' % error)
         import madgraph.various.banner as banner_mod

@@ -212,7 +212,7 @@ def _release_bundle(
             "portable": True,
             "word_bits": 64,
             "endianness": "little",
-            "target_triple": "symjit-storage-v3-portable",
+            "target_triple": "symjit-storage-v4-portable",
             "cpu_features": [],
         },
     )
@@ -366,8 +366,8 @@ def test_release_source_ready_asset_uses_only_release_lock_identity(
     assert metadata["build_contract"] == {"mode": "release"}
     assert "native_build_inputs_sha256" not in metadata["producer"]
     assert metadata["producer"]["package_version"] == RELEASE_VERSION
-    assert metadata["dependencies"]["symbolica_version"] == "3.0.0"
-    assert metadata["dependencies"]["symjit_version"] == "2.26.4"
+    assert metadata["dependencies"]["symbolica_version"] == "3.0.2"
+    assert metadata["dependencies"]["symjit_version"] == "2.27.3"
     assert bundle_path.read_bytes() == source_bundle.read_bytes()
 
 
@@ -697,7 +697,7 @@ def test_wheel_staging_rejects_architecture_target_drift(tmp_path: Path) -> None
         / "built-in-sm-jit-o2-x86_64.metadata.json"
     )
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-    metadata["target"]["target_triple"] = "symjit-storage-v3-aarch64"
+    metadata["target"]["target_triple"] = "symjit-storage-v4-aarch64"
     metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
 
     with pytest.raises(RuntimeError, match="target does not match"):

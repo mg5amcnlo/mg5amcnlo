@@ -30,7 +30,7 @@ from pyamplicol._internal.versions import (
 from pyamplicol.api.errors import ArtifactError
 from pyamplicol.generation.process_grouping import GroupMember, ProcessGroupMap
 
-from .manifest import MANIFEST_NAME, ArtifactManifest, load_manifest
+from .manifest import MANIFEST_NAME, ArtifactManifest, ArtifactPayloads, load_manifest
 from .process_groups import initial_process_groups, read_process_groups
 from .security import confined_path, normalize_relative_path
 
@@ -321,12 +321,30 @@ def _string(value: object, context: str) -> str:
     return value
 
 
-def _json_mapping(path: Path, context: str) -> Mapping[str, object]:
+# the payload reader of the last inspected manifest, which it keeps alive
+_PAYLOAD_READER: list[tuple[ArtifactManifest, ArtifactPayloads]] = []
+
+
+def _payloads(manifest: ArtifactManifest) -> ArtifactPayloads:
+    if not _PAYLOAD_READER or _PAYLOAD_READER[0][0] is not manifest:
+        _PAYLOAD_READER[:] = [(manifest, ArtifactPayloads(manifest))]
+    return _PAYLOAD_READER[0][1]
+
+
+def _read_payload(manifest: ArtifactManifest, path: Path) -> bytes:
+    """Read a payload at ``path`` below the root, loose or packed."""
+
+    return _payloads(manifest).read_bytes(path.relative_to(manifest.root).as_posix())
+
+
+def _json_mapping(
+    manifest: ArtifactManifest, path: Path, context: str
+) -> Mapping[str, object]:
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
+        value = json.loads(_read_payload(manifest, path))
     except OSError as exc:
         raise ArtifactError(f"cannot read {context}: {exc}") from exc
-    except json.JSONDecodeError as exc:
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ArtifactError(f"invalid {context}: {exc}") from exc
     return _mapping(value, context)
 
@@ -342,6 +360,8 @@ def _artifact_path(
         raise
     except (TypeError, ValueError) as exc:
         raise ArtifactError(f"{context} is not a valid artifact path") from exc
+    if _payloads(manifest).is_packed(normalized):
+        return manifest.root / normalized
     return confined_path(manifest.root, normalized)
 
 
@@ -355,7 +375,9 @@ def _execution_paths(manifest: ArtifactManifest) -> Mapping[str, Path]:
         evaluator_relative,
         "runtime.evaluator_manifest_path",
     )
-    evaluator_set = _json_mapping(evaluator_path, "runtime evaluator manifest")
+    evaluator_set = _json_mapping(
+        manifest, evaluator_path, "runtime evaluator manifest"
+    )
     records = _sequence(
         evaluator_set.get("processes"),
         "runtime evaluator manifest.processes",
@@ -504,7 +526,7 @@ def _table_rows(
         f"{context}.path",
     )
     try:
-        payload = path.read_bytes()
+        payload = _read_payload(manifest, path)
     except OSError as exc:
         raise ArtifactError(f"cannot read {context} payload: {exc}") from exc
     expected_size = count * row_size
@@ -905,7 +927,7 @@ def _eager_execution_inspection(
         ),
         "eager execution.kernel_pack.manifest_path",
     )
-    pack = _json_mapping(pack_path, "prepared eager kernel pack")
+    pack = _json_mapping(manifest, pack_path, "prepared eager kernel pack")
     kernels = _sequence(pack.get("kernels"), "prepared eager kernel pack.kernels")
     kernel_ids = {
         _integer(
@@ -1000,7 +1022,7 @@ def _eager_v3_execution_inspection(
         ),
         "eager execution.kernel_pack.manifest_path",
     )
-    pack = _json_mapping(pack_path, "prepared eager kernel pack")
+    pack = _json_mapping(manifest, pack_path, "prepared eager kernel pack")
     kernels = _sequence(pack.get("kernels"), "prepared eager kernel pack.kernels")
     invocation_count = _integer(
         summary.get("invocation_count"),
@@ -1202,7 +1224,7 @@ def _recurrence_execution_inspection(
         ),
         "recurrence execution.kernel_pack.manifest_path",
     )
-    pack = _json_mapping(pack_path, "prepared recurrence kernel pack")
+    pack = _json_mapping(manifest, pack_path, "prepared recurrence kernel pack")
     kernels = _sequence(
         pack.get("kernels"),
         "prepared recurrence kernel pack.kernels",
@@ -1949,7 +1971,9 @@ def _execution_inspection(
             selected_color_capability == ON_THE_FLY_CONTRACTED_COLOR_RUNTIME_CAPABILITY
         )
         expected_color_accuracies = {"nlc", "full"} if contracted_color else {"lc"}
-        execution = _json_mapping(execution_path, "process execution manifest")
+        execution = _json_mapping(
+            manifest, execution_path, "process execution manifest"
+        )
         expected_root_fields = {
             "schema_version",
             "kind",
@@ -2268,7 +2292,9 @@ def _execution_inspection(
                 "recurrence direct-arena execution is missing required "
                 f"capabilities: {missing}"
             )
-        execution = _json_mapping(execution_path, "process execution manifest")
+        execution = _json_mapping(
+            manifest, execution_path, "process execution manifest"
+        )
         kind = _string(execution.get("kind"), "process execution manifest.kind")
         if kind != _RECURRENCE_RUNTIME_KIND:
             raise ArtifactError(
@@ -2284,7 +2310,7 @@ def _execution_inspection(
             execution_mode="compiled",
             native_profile_phases=_COMPILED_PROFILE_PHASES,
         )
-    execution = _json_mapping(execution_path, "process execution manifest")
+    execution = _json_mapping(manifest, execution_path, "process execution manifest")
     kind = _string(execution.get("kind"), "process execution manifest.kind")
     if kind == _EAGER_RUNTIME_KIND:
         return _eager_execution_inspection(manifest, execution, execution_path)
@@ -2365,14 +2391,13 @@ def _physics_inspection(
     execution: _ExecutionInspection,
 ) -> _PhysicsInspection:
     relative = str(process["physics_path"])
-    path = manifest.root / relative
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(_payloads(manifest).read_bytes(relative))
     except OSError as exc:
         raise ArtifactError(
             f"cannot read runtime physics metadata {relative}: {exc}"
         ) from exc
-    except json.JSONDecodeError as exc:
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ArtifactError(
             f"invalid runtime physics metadata {relative}: {exc}"
         ) from exc
