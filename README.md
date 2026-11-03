@@ -1,8 +1,6 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/source/_static/logo-wide-dark.png">
-    <img src="docs/source/_static/logo-wide-light.png" width="450" alt="MadGraph7">
-  </picture>
+  <img src="docs/source/_static/logo-wide-light.png#gh-light-mode-only" width="450" alt="MadGraph7">
+  <img src="docs/source/_static/logo-wide-dark.png#gh-dark-mode-only" width="450" alt="MadGraph7">
 </p>
 
 MadGraph7 is the next major release of the MadGraph event generator. Its new features
