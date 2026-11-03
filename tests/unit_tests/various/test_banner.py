@@ -713,14 +713,46 @@ class TestRunCardNLOMeFrame(unittest.TestCase):
     decided: whether a leg radiates depends on it (see
     TestRunCardNLOMeFramePartonicCM)."""
 
-    def _card(self, me_frame):
+    def _card(self, me_frame, ninitial=2):
         run_card = bannermod.RunCardNLO()
         run_card.set('me_frame', me_frame, user=True)
         # the process is known, and its frame does not matter
         charac = bannermod.ProcCharacteristic()
-        charac['ninitial'] = 2
+        charac['ninitial'] = ninitial
         run_card.set_me_frame_process(charac)
         return run_card
+
+    def test_a_decay_may_use_its_decaying_particle(self):
+        # FKS never splits it: [1] is the whole initial state of a decay, and
+        # leg 2 is a final-state particle there, not a second beam
+        for me_frame in ([1], [1, 3], [1, 2]):
+            self._card(me_frame, ninitial=1).check_validity()
+
+    def test_the_process_is_read_from_the_directory(self):
+        # a bare 'treatcards run' writes the include files without the run
+        # interface: write_include_file reads <dir>/SubProcesses itself
+        tmp = tempfile.mkdtemp()
+        try:
+            os.mkdir(os.path.join(tmp, 'SubProcesses'))
+            source = os.path.join(tmp, 'Source')
+            run_card = bannermod.RunCardNLO()
+            run_card.set('me_frame', [1, 3], user=True)
+            self.assertFalse(run_card.load_me_frame_process(source))
+            self.assertEqual(run_card['me_frame_ninitial'], 0)
+            # p p > w+{0} j [QCD]: the beams radiate
+            charac = bannermod.ProcCharacteristic()
+            charac['ninitial'] = 2
+            charac['me_frame_cm_legs'] = [3, 4]
+            charac['me_frame_unsafe_legs'] = [1, 2, 4]
+            charac['me_frame_default_legs'] = [3]
+            charac.write(os.path.join(tmp, 'SubProcesses',
+                                      'proc_characteristics'))
+            self.assertTrue(run_card.load_me_frame_process(source))
+            self.assertEqual(run_card['me_frame_unsafe_legs'], [1, 2, 4])
+            with self.assertRaisesRegex(bannermod.InvalidRunCard, 'radiate'):
+                run_card.check_validity()
+        finally:
+            shutil.rmtree(tmp)
 
     def test_without_the_process_nothing_is_decided(self):
         # a card read outside a launch: [1] is the decaying particle of a
@@ -942,6 +974,34 @@ class TestDefaultMeFrameLO(unittest.TestCase):
                                                  [(-11, [-1]), (11, [])])))
         # output --density: the matrix element is not Lorentz invariant
         self.assertEqual(self.default(w_j, density=True), [3])
+
+    def test_polarised_particle_inside_a_decay_chain(self):
+        # u u~ > t t~, t > w+{0} b, w+ > e+ ve: the polarised W is neither a
+        # leg of the core process nor of get_legs_with_decays (it decays
+        # further), so the scan has to walk the decay chains themselves
+        proc = self.proc([(2, []), (-2, [])], [(6, []), (-6, [])],
+                         [self.proc([(6, [])], [(24, [0]), (5, [])],
+                                    [self.decay(24, [-11, 12])])])
+        self.assertEqual(self.default(proc), [3, 4, 5, 6])
+
+    def test_the_processes_are_only_read(self):
+        # the helper must not fill the legs_with_decays cache (nor copy the
+        # legs to do so): read the raw dict entry, not Process.get, which
+        # computes it on the fly
+        chain = self.decay(24, [-11, 12])
+        proc = self.proc([(2, []), (-2, [])], [(24, [0]), (23, []), (21, [])],
+                         [chain, self.decay(23, [-11, 11])])
+        self.assertEqual(self.default(proc), [3, 4, 5, 6])
+        for p in (proc, chain):
+            self.assertFalse(dict.get(p, 'legs_with_decays'))
+
+    def test_only_processes_whose_frame_matters_count(self):
+        # an unpolarised u u~ > z z next to the polarised u d~ > w+{0} g does
+        # not add leg 4 (the gluon of the latter) to the default
+        polarised = self.proc([(2, []), (-1, [])], [(24, [0]), (21, [])])
+        unpolarised = self.proc([(2, []), (-2, [])], [(23, []), (23, [])])
+        self.assertEqual(bannermod.default_me_frame_for_process(
+            [[polarised], [unpolarised]]), [3])
 
     def charac(self, ninitial=2):
         charac = bannermod.ProcCharacteristic()

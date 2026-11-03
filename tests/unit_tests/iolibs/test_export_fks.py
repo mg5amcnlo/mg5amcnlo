@@ -692,6 +692,35 @@ class TestFKSOutput(unittest.TestCase):
             # the Born alone (launch LO) has nothing to be infrared safe for
             run_card.set_me_frame_process(charac, real_emission=False)
             run_card.check_validity()
+
+            # A bare 'treatcards run', as the reweighting and the FKS
+            # standalone check compile their Source: no run_card is loaded
+            # in that shell. It used to die on self.run_card; now the include
+            # file resolves me_frame against the process found on disk.
+            me_dir = os.path.join(path, 'W')
+            def treatcards():
+                with open(os.path.join(me_dir, 'treat.cmd'), 'w') as cmd:
+                    cmd.write('treatcards run\n')
+                return subprocess.run(
+                    [sys.executable, os.path.join('bin', 'aMCatNLO'),
+                     'treat.cmd'], cwd=me_dir, stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT, universal_newlines=True).stdout
+            def frame_id():
+                with open(os.path.join(me_dir, 'Source', 'run_card.inc')) as inc:
+                    return [l.split('=')[1].strip() for l in inc
+                            if 'FRAME_ID' in l.upper()]
+            out = treatcards()
+            self.assertNotIn('Error', out)
+            self.assertEqual(frame_id(), ['8'])
+            # a beam that radiates is refused on that path too
+            card_path = os.path.join(me_dir, 'Cards', 'run_card.dat')
+            with open(card_path) as card:
+                text = card.read()
+            text = re.sub(r'^(\s*)3(\s*=\s*me_frame)', r'\g<1>1, 3\2', text,
+                          count=1, flags=re.M)
+            with open(card_path, 'w') as card:
+                card.write(text)
+            self.assertIn('radiate', treatcards())
         finally:
             shutil.rmtree(path, ignore_errors=True)
 

@@ -4558,56 +4558,71 @@ def get_model_flavour_scheme(proc_def):
     return None
 
 
-def default_me_frame_for_process(proc_def, density=False):
-    """The default me_frame of an LO run_card (madevent, mg7) for these
-    processes, the same rule as at NLO (fks_common.me_frame_characteristics).
+def default_me_frame_for_process(proc_def, density=False, radiates=None):
+    """The default me_frame of the run_card for these processes: madevent,
+    mg7 and, through fks_common.me_frame_characteristics, aMC@NLO, so that
+    LO and NLO agree and a K-factor compares like with like.
 
-    None when the frame does not matter: no massive particle is polarised and
-    no spin-density matrix is asked for (output --density), so the matrix
-    element is Lorentz invariant and the card keeps its own default.
-    Otherwise:
-      - a collision with a coloured initial-state parton (p p): the rest
-        frame of the massive final-state particles of the core process, i.e.
-        the external legs coming from them (the particle itself, or all its
+    None when the frame does not matter: no massive particle is polarised
+    (in the core process or in any of its decay chains) and no spin-density
+    matrix is asked for (output --density). The matrix element is then
+    Lorentz invariant and the card keeps its own default. Otherwise, over
+    the processes whose matrix element is not Lorentz invariant:
+      - a collision whose initial state radiates (p p): the rest frame of
+        the massive final-state particles of the core process, i.e. the
+        external legs coming from them (the particle itself, or all its
         decay products: Process.get_massive_final_legs_with_decays). E.g.
         [3, 4] for p p > w+{0} w-, [3] for p p > w+{0} j, [3, 4, 5, 6] for
         p p > w+{0} z j, w+ > l+ vl, z > l+ l-. The partonic c.m. would have
-        no infrared-safe NLO counterpart once there is a jet, and the LO and
-        NLO defaults have to agree for a K-factor to mean anything.
+        no infrared-safe NLO counterpart once there is a jet.
       - otherwise (e+ e-, decays, or no massive final-state particle): 'cm',
         the partonic c.m. (or the rest frame of the decaying particle).
+
+    radiates(particle): whether an initial-state particle radiates. By
+    default a coloured one; aMC@NLO passes the splittings it generated.
+
+    The processes are only read: neither their legs nor their decay chains
+    are copied, and get_legs_with_decays (which caches on the process) is
+    not called. Plain dicts are accepted for the legs, as the unit tests
+    hand them in.
     """
-    processes = []
-    todo = list(proc_def) if proc_def else []
-    while todo:
-        item = todo.pop(0)
-        if isinstance(item, (list, tuple)):
-            todo = list(item) + todo
-        else:
-            processes.append(item)
+    if radiates is None:
+        radiates = lambda particle: particle.get('color') != 1
 
-    def massive(proc, leg):
-        particle = proc.get('model').get_particle(leg.get('id'))
-        return particle.get('mass').lower() != 'zero'
+    def flatten(items):
+        for item in items or []:
+            if isinstance(item, (list, tuple)):
+                for sub in flatten(item):
+                    yield sub
+            else:
+                yield item
 
-    def all_legs(proc):
-        # the core legs carry the polarisation of a particle decayed later
+    def particles(proc, leg):
+        ids = leg.get('ids') if 'ids' in leg else [leg.get('id')]
+        return [proc.get('model').get_particle(i) for i in ids]
+
+    def legs_and_decays(proc):
         legs = list(proc.get('legs'))
-        if hasattr(proc, 'get_legs_with_decays'):
-            legs += list(proc.get_legs_with_decays())
+        for chain in proc.get('decay_chains') or []:
+            legs += legs_and_decays(chain)
         return legs
 
-    if not density and not any(
-            leg.get('polarization') and massive(proc, leg)
-            for proc in processes for leg in all_legs(proc)):
+    def not_lorentz_invariant(proc):
+        return density or any(
+            leg.get('polarization') and
+            any(p.get('mass').lower() != 'zero' for p in particles(proc, leg))
+            for leg in legs_and_decays(proc))
+
+    processes = [proc for proc in flatten(proc_def)
+                 if not_lorentz_invariant(proc)]
+    if not processes:
         return None
 
     legs = set()
     for proc in processes:
         initial = [leg for leg in proc.get('legs') if not leg.get('state')]
-        if len(initial) == 2 and any(
-                proc.get('model').get_particle(leg.get('id')).get('color') != 1
-                for leg in initial):
+        if len(initial) == 2 and any(radiates(p) for leg in initial
+                                     for p in particles(proc, leg)):
             legs.update(proc.get_massive_final_legs_with_decays())
     return sorted(legs) if legs else 'cm'
 
@@ -5519,32 +5534,14 @@ class RunCardLO(RunCard):
         #    if is_multijet:
         #        self['sde_strategy'] = 2
             
-        # if polarization is used, set the choice of the frame in the run_card
-        # But only if polarization is used for massive particles
-        for plist in proc_def:
-            for proc in plist:
-                for l in proc.get('legs') + proc.get('legs_with_decays'):
-                    if l.get('polarization'):
-                        model = proc.get('model')
-                        particle = model.get_particle(l.get('id'))
-                        if particle.get('mass').lower() != 'zero':
-                            self.display_block.append('frame')
-                            break
-                else:
-                    continue
-                break
-            else:
-                continue
-            break
-
-        # ... and its default, when the matrix element is not Lorentz
-        # invariant: the massive final state for p p, [1,2] otherwise
-        # (default_me_frame_for_process)
+        # A polarised massive particle (or a density matrix) makes the matrix
+        # element not Lorentz invariant: show the choice of the frame in the
+        # run_card, with its default -- the massive final state for p p,
+        # [1,2] otherwise (default_me_frame_for_process)
         frame = default_me_frame_for_process(
                     proc_def, density=proc_characteristic.get('density_matrix'))
         if frame is not None:
-            if 'frame' not in self.display_block:
-                self.display_block.append('frame')
+            self.display_block.append('frame')
             if frame != 'cm' and 'me_frame' not in self.user_set:
                 self['me_frame'] = frame
 
@@ -6298,47 +6295,15 @@ class RunCardNLO(RunCard):
 
         super(RunCardNLO, self).check_validity()
 
-        # me_frame built out of radiating initial-state legs is not infrared
-        # safe at NLO: the real emission and the reduced Born carry different
-        # momentum fractions, by a finite amount even in the singular limit,
-        # so the frame jumps across that limit and the subtraction stops
-        # cancelling. Selecting exactly the initial state is the partonic
-        # c.m.. Whether a leg radiates depends on the process, which is only
-        # known at launch (set_me_frame_process). Then, for a polarised
-        # process, get_me_frame_legs refuses only the beams that radiate, and
-        # allows the decaying particle of a 1 -> n process and a beam not
-        # charged under the perturbation; for one whose frame does not
-        # matter, any other use of an initial-state leg is refused here.
-        # Without the process (a card read or edited outside a launch)
-        # nothing can be decided yet: RunCard.read would turn a refusal into
-        # a warning that the launch then contradicts.
-        if 'me_frame' in self.user_set and self['me_frame_ninitial'] and \
-                not self['me_frame_cm_legs']:
-            initial = [n for n in self['me_frame'] if n in (1, 2)]
-            # Exactly the initial state is the partonic c.m. (see
-            # get_me_frame_legs); anything else that names an initial-state
-            # leg is the mistake this guard is for. Testing only for a *mix* let a
-            # bare me_frame=[1] through: for a massless beam that dies later
-            # in get_me_frame_boost with an opaque 'not timelike' stop, and
-            # for a massive one (a DIS-like e- b{+} > e- b [QCD]) m2 > 0, so
-            # the boost silently succeeds and builds exactly the frame this
-            # message says is refused.
-            if initial and len(initial) < 2:
-                raise InvalidRunCard(
-                    'me_frame %s selects part of the initial state. Use '
-                    'either both beams, which name the partonic c.m. and '
-                    'are skipped, or final-state particles only: a frame '
-                    'built from a single beam is not infrared safe at NLO.'
-                    % self['me_frame'])
-            if initial and len(self['me_frame']) > len(initial):
-                raise InvalidRunCard(
-                    'me_frame %s mixes initial-state legs with final-state '
-                    'ones. A frame defined using the initial state is not '
-                    'infrared safe at NLO: the real emission and the reduced '
-                    'Born have different momentum fractions even in the '
-                    'collinear limit, so the frame is discontinuous there. '
-                    'Define the frame from final-state particles only.'
-                    % self['me_frame'])
+        # Whether a leg of me_frame radiates depends on the process, known
+        # only when a run is compiled (set_me_frame_process, or the process
+        # directory in write_include_file). For a polarised process
+        # get_me_frame_legs then decides; for one whose frame does not matter
+        # the conservative rule applies. Without the process (a card read or
+        # edited outside a launch) nothing is decided here: RunCard.read
+        # would turn a refusal into a warning that the launch contradicts.
+        if self['me_frame_ninitial'] and not self['me_frame_cm_legs']:
+            self.check_me_frame_initial_legs()
 
         # needs the process: raises if the frame contains a jet
         self.get_me_frame_legs()
@@ -6559,6 +6524,70 @@ class RunCardNLO(RunCard):
         except Exception:
             pass
 
+    def check_me_frame_initial_legs(self):
+        """The rule for initial-state legs in me_frame when it is not known
+        which of them radiate: a process whose frame does not matter, or no
+        process information at all.
+
+        A frame built from radiating initial-state legs is not infrared safe
+        at NLO: the real emission and the reduced Born carry different
+        momentum fractions, by a finite amount even in the singular limit,
+        so the frame jumps across that limit and the subtraction stops
+        cancelling. Exactly the initial state is the partonic c.m.; anything
+        else that names a beam is refused. Testing only for a *mix* let a
+        bare me_frame=[1] through: for a massless beam that dies later in
+        get_me_frame_boost with an opaque 'not timelike' stop, and for a
+        massive one (a DIS-like e- b{+} > e- b [QCD]) m2 > 0, so the boost
+        silently succeeds and builds exactly the frame this refuses.
+
+        The decaying particle of a 1 -> n process is never split by FKS, so
+        a decay (me_frame_ninitial = 1) may use it freely."""
+        if 'me_frame' not in self.user_set or self['me_frame_ninitial'] == 1:
+            return
+        initial = [n for n in self['me_frame'] if n in (1, 2)]
+        if initial and len(initial) < 2:
+            raise InvalidRunCard(
+                'me_frame %s selects part of the initial state. Use '
+                'either both beams, which name the partonic c.m., or '
+                'final-state particles only: a frame built from a single '
+                'beam is not infrared safe at NLO.' % self['me_frame'])
+        if initial and len(self['me_frame']) > len(initial):
+            raise InvalidRunCard(
+                'me_frame %s mixes initial-state legs with final-state '
+                'ones. A frame defined using the initial state is not '
+                'infrared safe at NLO: the real emission and the reduced '
+                'Born have different momentum fractions even in the '
+                'collinear limit, so the frame is discontinuous there. '
+                'Define the frame from final-state particles only.'
+                % self['me_frame'])
+
+    def load_me_frame_process(self, output_dir):
+        """set_me_frame_process from the proc_characteristics of the process
+        directory whose Source is output_dir, if there is one. Returns
+        whether it found it."""
+        path = pjoin(os.path.dirname(os.path.normpath(output_dir)),
+                     'SubProcesses', 'proc_characteristics')
+        if not os.path.isfile(path):
+            return False
+        self.set_me_frame_process(ProcCharacteristic(path))
+        return True
+
+    def write_include_file(self, output_dir, output_file=None):
+        """As RunCard.write_include_file, with me_frame resolved against the
+        process (get_me_frame_legs). The run interface hands the process over
+        when it compiles a run (set_me_frame_process). A bare 'treatcards
+        run' does not -- the reweighting compiles its rw_me Source that way,
+        and so does the FKS standalone check -- so it is read from the
+        process directory the include files are written for, with real
+        emission assumed. With no process at all the conservative rule
+        applies (check_me_frame_initial_legs)."""
+        if output_dir and not self['me_frame_ninitial']:
+            self.load_me_frame_process(output_dir)
+        if not self['me_frame_ninitial']:
+            self.check_me_frame_initial_legs()
+        return super(RunCardNLO, self).write_include_file(output_dir,
+                                                          output_file)
+
     def set_me_frame_process(self, proc_characteristics, real_emission=True):
         """Copy in what the process says about me_frame, from its
         proc_characteristics (fks_common.me_frame_characteristics). A run
@@ -6597,9 +6626,12 @@ class RunCardNLO(RunCard):
         p p > z{0} j [QCD] when only fks_b changes
         (docs/nlo_polarisation_boost_plan.md, B13).
 
-        Raises InvalidRunCard when the frame contains a massless coloured
-        final-state parton: a collinear splitting moves it by a finite
-        amount, so the frame is not infrared safe.
+        Raises InvalidRunCard when the frame contains a leg that an infrared
+        limit moves by a finite amount (me_frame_unsafe_legs): a massless
+        final-state leg that radiates (a jet), or a beam that radiates. The
+        decaying particle of a 1 -> n process and a beam not charged under
+        the perturbation are allowed. Also refused: a single beam of a
+        collision, which has no rest frame when it is massless.
         """
         me_frame = list(self['me_frame']) if 'me_frame' in self.user_set else []
         cm_legs = list(self['me_frame_cm_legs'])
@@ -6642,8 +6674,9 @@ class RunCardNLO(RunCard):
                 'radiation the c.m. of the real emission moves by a finite '
                 'boost in the collinear limit, and the frame that is the '
                 'partonic c.m. of the Born, the rest frame of its final state '
-                '%s, contains the massless coloured parton(s) %s, which a '
-                'collinear splitting changes by a finite amount. Evaluating '
+                '%s, contains the massless leg(s) %s that radiate (a jet, for '
+                '[QCD]), which a collinear splitting changes by a finite '
+                'amount. Evaluating '
                 'in the frame the FKS momenta come in instead makes the '
                 'result depend on the subtraction partition (by about 10%% '
                 'for p p > w+{0} j [QCD]). Set me_frame to colourless or '
@@ -6651,10 +6684,11 @@ class RunCardNLO(RunCard):
                 'frame of the massive final state (for a single boson, its '
                 'Collins-Soper frame).' % (legs, unsafe, hint))
         raise InvalidRunCard(
-            'me_frame = %s contains the massless coloured parton(s) %s. A '
-            'collinear splitting changes such a leg by a finite amount, so '
-            'the frame is not infrared safe at NLO. Define it from '
-            'colourless or massive final-state particles only%s.'
+            'me_frame = %s contains the massless leg(s) %s that radiate (a '
+            'jet, for [QCD]). A collinear splitting changes such a leg by a '
+            'finite amount, so the frame is not infrared safe at NLO. Define '
+            'it from massive final-state particles, or massless ones that '
+            'do not radiate%s.'
             % (me_frame, unsafe, hint))
 
     def update_system_parameter_for_include(self):
@@ -6791,30 +6825,20 @@ class RunCardNLO(RunCard):
         if model['running_elements']:
             self.display_block.append('RUNNING')
 
-        # if polarization is used, expose the choice of the frame in the run_card.
-        # Only needed for massive particles: for massless ones the helicity is
-        # boost invariant along the momentum, so the frame does not matter.
-        for proc in proc_def:
-            for l in proc.get('legs'):
-                if l.get('polarization'):
-                    particle = proc.get('model').get_particle(l.get('id'))
-                    if particle.get('mass').lower() != 'zero':
-                        self.display_block.append('frame')
-                        break
-            else:
-                continue
-            break
-
-        # ... and its default: with an initial-state QCD splitting the rest
-        # frame of the massive final-state particles, since the partonic c.m.
-        # is not infrared safe at NLO (fks_common.me_frame_characteristics);
-        # [1, 2] otherwise (e+ e-, decays)
+        # A polarised massive particle (or a density matrix) makes the matrix
+        # element not Lorentz invariant: show the choice of the frame in the
+        # run_card, with its default -- the massive final state when the
+        # initial state radiates, [1, 2] otherwise. The output worked both
+        # out (fks_common.me_frame_characteristics): a non-empty
+        # me_frame_cm_legs is exactly "the frame matters". For a massless
+        # polarised particle the helicity is boost invariant along the
+        # momentum, so the frame does not matter.
+        if proc_characteristic.get('me_frame_cm_legs') or \
+                proc_characteristic.get('density_matrix'):
+            self.display_block.append('frame')
         default_legs = proc_characteristic.get('me_frame_default_legs')
         if default_legs and 'me_frame' not in self.user_set:
             self['me_frame'] = list(default_legs)
-        if (default_legs or proc_characteristic.get('density_matrix')) and \
-                'frame' not in self.display_block:
-            self.display_block.append('frame')
 
         # 4-flavour scheme: a massive b is not a parton of the proton, so the
         # default PDF has to be the nf_4 set rather than the 5-flavour one.

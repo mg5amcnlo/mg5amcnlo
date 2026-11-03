@@ -1600,10 +1600,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         # me_frame needs the process: what [1,2] means, and which legs may not
         # enter a frame once real emission is computed (see
         # RunCardNLO.get_me_frame_legs, which raises for a frame that is not
-        # infrared safe). Only when a run is being compiled: a bare
-        # 'treatcards run' (the reweighting compiles its rw_me Source that
-        # way) has no run_card loaded yet, and the parent reads the card as
-        # written -- whose default me_frame already names explicit legs.
+        # infrared safe). A run being compiled hands it over here, with the
+        # mode. A bare 'treatcards run' (the reweighting compiles its rw_me
+        # Source that way) has no run_card loaded: the parent reads the card,
+        # and RunCardNLO.write_include_file finds the process on disk.
         if isinstance(getattr(self, 'run_card', None), banner_mod.RunCardNLO):
             proc_charac = getattr(self, 'proc_characteristics', None) or \
                           self.get_characteristics()

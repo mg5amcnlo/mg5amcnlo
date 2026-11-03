@@ -24,6 +24,7 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
 import madgraph.various.misc as misc
+import madgraph.various.banner as banner_mod
 from operator import itemgetter
 import copy
 import logging
@@ -928,10 +929,23 @@ def me_frame_characteristics(processes, density=False,
     proton), the Born final state is used for all: it is the partonic c.m.
     of every Born too.
     """
+    # what splits is what FKS generated splittings for (the run's
+    # splitting_types), not perturbation_couplings: with the mixed expansion
+    # e+ e- > t t~ [QCD] carries ['QCD', 'QED'] there
+    def splits(p):
+        """the particle radiates or splits under the perturbation"""
+        return ('QCD' in splitting_types and p.get('color') != 1) or \
+               ('QED' in splitting_types and (p.get('charge') != 0 or
+                                              p.get('pdg_code') == 22))
+
+    # the run_card default: one rule for LO and NLO, so that they agree
+    default_legs = banner_mod.default_me_frame_for_process(
+                        processes, density=density, radiates=splits)
+    default_legs = default_legs if isinstance(default_legs, list) else []
+
     cm_legs = set()
     cm_legs_isr = set()
     unsafe_legs = set()
-    default_legs = set()
     for proc in processes:
         model = proc.get('model')
         legs = proc.get('legs')
@@ -950,17 +964,6 @@ def me_frame_characteristics(processes, density=False,
         final = [n for n, leg in enumerate(legs, 1) if leg.get('state')]
         # [LOonly=...]: no real emission, so nothing to be infrared safe for
         has_real = proc.get('NLO_mode') != 'LOonly'
-        # what splits is what FKS generated splittings for (the run's
-        # splitting_types), not perturbation_couplings: with the mixed
-        # expansion e+ e- > t t~ [QCD] carries ['QCD', 'QED'] there
-        orders = splitting_types
-
-        def splits(p):
-            """the particle radiates or splits under the perturbation"""
-            return ('QCD' in orders and p.get('color') != 1) or \
-                   ('QED' in orders and (p.get('charge') != 0 or
-                                         p.get('pdg_code') == 22))
-
         initial_radiates = any(splits(p) for n in initial
                                for p in particles[n - 1])
 
@@ -968,11 +971,6 @@ def me_frame_characteristics(processes, density=False,
             cm_legs_isr.update(final)
         else:
             cm_legs.update(initial)
-
-        if len(initial) == 2 and initial_radiates:
-            default_legs.update(
-                n for n in final if all(p.get('mass').lower() != 'zero'
-                                        for p in particles[n - 1]))
 
         if has_real:
             unsafe_legs.update(
@@ -984,7 +982,7 @@ def me_frame_characteristics(processes, density=False,
                                    if any(splits(p) for p in particles[n - 1]))
 
     return (sorted(cm_legs_isr or cm_legs), sorted(unsafe_legs),
-            sorted(default_legs))
+            default_legs)
 
 
 def sort_proc(process,pert = 'QCD'):
