@@ -749,6 +749,15 @@ class TestRunCardNLOMeFrame(unittest.TestCase):
                                       'proc_characteristics'))
             self.assertTrue(run_card.load_me_frame_process(source))
             self.assertEqual(run_card['me_frame_unsafe_legs'], [1, 2, 4])
+            # also relative to Source itself (treatcards --output_dir=.)
+            os.mkdir(source)
+            cwd = os.getcwd()
+            try:
+                os.chdir(source)
+                self.assertTrue(bannermod.RunCardNLO().load_me_frame_process(
+                    os.curdir))
+            finally:
+                os.chdir(cwd)
             with self.assertRaisesRegex(bannermod.InvalidRunCard, 'radiate'):
                 run_card.check_validity()
         finally:
@@ -994,6 +1003,27 @@ class TestDefaultMeFrameLO(unittest.TestCase):
         self.assertEqual(self.default(proc), [3, 4, 5, 6])
         for p in (proc, chain):
             self.assertFalse(dict.get(p, 'legs_with_decays'))
+
+    def test_a_leg_massless_in_another_process_is_dropped(self):
+        # me_frame is one list for every subprocess, so a leg number stays
+        # only if it is massive wherever it exists:
+        # p p > z{0} j with p p > z{0} z: not the jet of the first
+        zj = self.proc([(2, []), (-2, [])], [(23, [0]), (21, [])])
+        zz = self.proc([(2, []), (-2, [])], [(23, [0]), (23, [])])
+        self.assertEqual(bannermod.default_me_frame_for_process(
+            [[zj], [zz]]), [3])
+        # 'define v = z a', p p > v{T} j: the photon process would get a
+        # single massless particle as its frame. NLO counts the label as
+        # massive only if all its particles are; LO agrees.
+        za = self.proc([(2, []), (-2, [])], [(23, [1, -1]), (21, [])])
+        aa = self.proc([(2, []), (-2, [])], [(22, [1, -1]), (21, [])])
+        self.assertEqual(bannermod.default_me_frame_for_process(
+            [[za], [aa]]), 'cm')
+        # merged multiplicities are fine: leg 4 does not exist for p p > w+
+        w = self.proc([(2, []), (-1, [])], [(24, [0])])
+        wj = self.proc([(2, []), (-1, [])], [(24, [0]), (21, [])])
+        self.assertEqual(bannermod.default_me_frame_for_process(
+            [[w], [wj]]), [3])
 
     def test_only_processes_whose_frame_matters_count(self):
         # an unpolarised u u~ > z z next to the polarised u d~ > w+{0} g does

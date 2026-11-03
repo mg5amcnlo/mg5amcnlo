@@ -291,6 +291,22 @@ Candidates:
   multiplicities of a merged sample share one frame.
 - **Otherwise (`e+ e-`, decays): `[1,2]`, the partonic c.m.**
 
+`me_frame` is one list for every subprocess of an output, so a leg number is
+only part of the default if it is massive in every process that has it.
+- With `p p > z{0} j` and `p p > z{0} z` in one output, the default is `[3]`,
+  not `[3,4]`, which would put the jet of the first in its frame.
+- For `define v = z a; p p > v{T} j`, leg 3 is massless in the photon process.
+  It is left out, and the default is `[1,2]`, at LO as at NLO. At LO, keeping
+  leg 3 would have given the photon process a single massless particle as its
+  frame, which has no rest frame. At NLO no single frame is infrared safe for
+  both subprocesses, so `[1,2]` is refused at launch and the user has to
+  choose.
+- Merged multiplicities are not affected: `p p > w+{0}` has no leg 4, so with
+  `p p > w+{0} j` the default stays `[3]`.
+
+The rule is the same at LO and NLO: a multiparticle label at NLO counts as
+massive only if all its particles are.
+
 What `[1,2]` means is resolved when the run is launched
 (`RunCardNLO.get_me_frame_legs`, from `proc_characteristics`). That covers the
 default of `e+ e-` and decays, and anyone who sets it by hand:

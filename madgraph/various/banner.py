@@ -4577,6 +4577,9 @@ def default_me_frame_for_process(proc_def, density=False, radiates=None):
         no infrared-safe NLO counterpart once there is a jet.
       - otherwise (e+ e-, decays, or no massive final-state particle): 'cm',
         the partonic c.m. (or the rest frame of the decaying particle).
+    A leg number is only kept if it is massive in every process of the
+    output that has it (see below), so with p p > z{0} j and p p > z{0} z
+    together the default is [3].
 
     radiates(particle): whether an initial-state particle radiates. By
     default a coloured one; aMC@NLO passes the splittings it generated.
@@ -4613,17 +4616,34 @@ def default_me_frame_for_process(proc_def, density=False, radiates=None):
             any(p.get('mass').lower() != 'zero' for p in particles(proc, leg))
             for leg in legs_and_decays(proc))
 
-    processes = [proc for proc in flatten(proc_def)
-                 if not_lorentz_invariant(proc)]
-    if not processes:
+    processes = list(flatten(proc_def))
+    relevant = [proc for proc in processes if not_lorentz_invariant(proc)]
+    if not relevant:
         return None
 
     legs = set()
-    for proc in processes:
+    for proc in relevant:
         initial = [leg for leg in proc.get('legs') if not leg.get('state')]
         if len(initial) == 2 and any(radiates(p) for leg in initial
                                      for p in particles(proc, leg)):
             legs.update(proc.get_massive_final_legs_with_decays())
+
+    # me_frame is one list for the whole output, applied to every
+    # subprocess: a leg number stays only if it is massive in every process
+    # that has it. Otherwise it would put a jet in the frame of another
+    # process (not infrared safe at NLO), or leave a single massless
+    # particle with no rest frame -- e.g. the photon of 'define v = z a',
+    # p p > v{T} j. This is also what a multiparticle label means at NLO,
+    # where it counts as massive only if all its particles are, so LO and NLO
+    # agree.
+    for proc in processes:
+        if not legs:
+            break
+        ninitial = len([leg for leg in proc.get('legs')
+                        if not leg.get('state')])
+        final = range(ninitial + 1,
+                      ninitial + proc.count_final_legs_with_decays() + 1)
+        legs -= set(final) - set(proc.get_massive_final_legs_with_decays())
     return sorted(legs) if legs else 'cm'
 
 
@@ -6565,7 +6585,7 @@ class RunCardNLO(RunCard):
         """set_me_frame_process from the proc_characteristics of the process
         directory whose Source is output_dir, if there is one. Returns
         whether it found it."""
-        path = pjoin(os.path.dirname(os.path.normpath(output_dir)),
+        path = pjoin(os.path.dirname(os.path.abspath(output_dir)),
                      'SubProcesses', 'proc_characteristics')
         if not os.path.isfile(path):
             return False

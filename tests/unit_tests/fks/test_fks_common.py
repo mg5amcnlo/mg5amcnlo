@@ -3753,6 +3753,18 @@ class TestMeFrameCharacteristics(unittest.TestCase):
                                                             ([-24], [])])),
                              ([3, 4], [1, 2], [3, 4]))
 
+    def test_a_leg_massless_somewhere_is_not_in_the_default(self):
+        p = (self.partons, [])
+        # 'define v = z a', p p > v{T} j [QCD]: the label is not massive
+        # for every particle, so no default (the same at LO)
+        self.assertEqual(self.charac(self.proc([p, p], [([23, 22], [1, -1]),
+                                                        (self.partons, [])])),
+                         ([3, 4], [1, 2, 4], []))
+        # p p > z{0} j [QCD] with p p > z{0} z [QCD]: not the jet
+        zj = self.proc([p, p], [([23], [0]), (self.partons, [])])
+        zz = self.proc([p, p], [([23], [0]), ([23], [])])
+        self.assertEqual(self.charac(zj, zz)[2], [3])
+
     def test_no_initial_state_radiation(self):
         # e+ e- > t{-1} t~ [QCD]: a massive coloured final state is safe
         self.assertEqual(self.charac(self.proc([([-11], []), ([11], [])],
