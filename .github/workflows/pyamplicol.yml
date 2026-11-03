@@ -224,6 +224,10 @@ jobs:
             pyamplicol/dependencies/contributor-lock.toml
             pyamplicol/dependencies/python-runtime-lock.toml
       - uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          # rust-toolchain.toml lists them: installed here, rustup has nothing to
+          # add on the first cargo call, where it hit a cargo-fmt conflict.
+          components: clippy, rustfmt
       - name: Cache Cargo downloads
         uses: actions/cache@v5
         with:
