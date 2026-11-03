@@ -6,7 +6,7 @@ holder of the CECI ssh key (/var/lib/ceci/.ssh/id_ceci), through one sudoers rul
     github-runner, ghrunner2 ALL=(ceci) NOPASSWD: /usr/local/sbin/ceci-gate
 The CI jobs never see the key. Before touching a cluster, the gate asks GitHub whether the
 workflow run it is called for
-  - belongs to MadGraphTeam/MadGraph7 (not a fork) and is in progress,
+  - belongs to MadGraphTeam/MadGraph7 (not a fork) and is not over,
   - comes from the expected workflow file (gpu_lemaitre4_hip.yml, gpu_manneback_cuda.yml,
     gpu_cluster_modules.yml),
   - was started, or re-run, by a GitHub login listed in /etc/ceci-gate/allowed_actors, OR
@@ -27,7 +27,8 @@ Every decision is logged in /var/lib/ceci/gate/gate.log. Setup: .github/gpu_ci/R
         prints `ALLOCATION_ENDED JOBID STATE...`; read-only on the cluster (squeue, sacct)
     ceci-gate cancel-runner CLUSTER RUN_ID RUN_ATTEMPT
         scancels the Slurm job of the runner started for that run attempt, from start_runner
-        when it was cancelled, timed out or failed before the runner was online
+        when it was cancelled, timed out or failed before the runner was online, or from the
+        watchdog before it force-cancels the run
 start-runner also scancels first the runner jobs left in the queue by run attempts that are
 over: with --dependency=singleton, they would hold back the new one for as long as they wait.
 
@@ -145,7 +146,9 @@ def check_run(run_id, attempt, workflow, events, job_names):
           "run %s is not a run of %s" % (run_id, REPO))
     check(wf.get("path") == workflow, "run %s is from %s, not %s" % (run_id, wf.get("path"), workflow))
     check(wf.get("event") in events, "run %s was triggered by %s, not %s" % (run_id, wf.get("event"), "/".join(events)))
-    check(wf.get("status") == "in_progress", "run %s is %s, not in progress" % (run_id, wf.get("status")))
+    # not "in_progress" only: a run some of whose jobs wait for a runner is "queued" (e.g. when the
+    # cluster runner died, as the watchdog finds it). That the run is live is the job check below.
+    check(wf.get("status") != "completed", "run %s is completed" % run_id)
     actor = ((wf.get("triggering_actor") or wf.get("actor") or {}).get("login") or "?")
     branch = wf.get("head_branch") or "?"
     who = "started by %s on branch %s" % (actor, branch)
@@ -288,9 +291,15 @@ def cmd_start_runner(a):
     print("ceci-gate: run %s attempt %s %s, allowed: starting the runner %s on %s"
           % (a.run_id, a.attempt, who, c["label"], a.cluster))
 
-    if execute(["scp", "-q", "-o", "BatchMode=yes", share("runner_batch.sh"), share("job_started_hook.sh"),
-            "%s:mg7-gpu-ci/runner-%s/" % (a.cluster, c["label"])]) != 0:
-        refuse("no runner in ~/mg7-gpu-ci/runner-%s on %s: install it with .github/gpu_ci/install_runner.sh"
+    # the ssh connections to the clusters drop now and then: try again before giving up
+    for wait in (0, 20, 60):
+        time.sleep(wait)
+        if execute(["scp", "-q", "-o", "BatchMode=yes", share("runner_batch.sh"), share("job_started_hook.sh"),
+                    "%s:mg7-gpu-ci/runner-%s/" % (a.cluster, c["label"])]) == 0:
+            break
+    else:
+        refuse("cannot copy the runner scripts to ~/mg7-gpu-ci/runner-%s on %s (scp failed 3 times, see "
+               "above): connection problem, or no runner installed there (.github/gpu_ci/install_runner.sh)"
                % (c["label"], a.cluster))
     cancel_leftovers(a.cluster, c["label"])
     return remote(a.cluster, "remote_start_runner.sh", [
@@ -327,9 +336,11 @@ def cmd_watch_runner(a):
 
 def cmd_cancel_runner(a):
     c = CLUSTERS[a.cluster]
-    # no lock(): cancelling twice is harmless. Only from start_runner, before its runner is online:
-    # once it is, stop_runner (if: always()) must reach it to end the allocation.
-    who = check_run(a.run_id, a.attempt, c["workflow"], ("push", "workflow_dispatch"), ("start_runner",))
+    # no lock(): cancelling twice is harmless. From start_runner, before its runner is online (once
+    # it is, stop_runner (if: always()) must reach it to end the allocation), or from the watchdog,
+    # which force-cancels the run right after: the runner job would otherwise outlive the run.
+    who = check_run(a.run_id, a.attempt, c["workflow"], ("push", "workflow_dispatch"),
+                    ("start_runner", "watchdog"))
     log("ACCEPTED cancel-runner %s run=%s attempt=%s %s" % (a.cluster, a.run_id, a.attempt, who))
     return remote(a.cluster, "remote_cancel_runner.sh", [c["label"], run_tag(a.run_id, a.attempt)])
 

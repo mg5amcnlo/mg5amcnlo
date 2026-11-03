@@ -24,9 +24,11 @@ RUNNER_PID=$!
 while kill -0 "$RUNNER_PID" 2> /dev/null; do
     sleep 15
     if [ -e "$CI_STOP_FILE" ]; then
-        # give the runner the time to report the end of the stop_runner job
-        for _ in $(seq 30); do
-            tail -n 1 "$LOG" | grep -q 'completed with result' && break
+        # give the runner the time to report the end of the stop_runner job: it uploads the
+        # logs first, which can take a minute. Stopped before, the job stays in progress on
+        # GitHub, and the watchdog takes the end of the allocation for an early one
+        for _ in $(seq 300); do
+            grep -q -F ' stop_runner completed with result' "$LOG" && break
             sleep 1
         done
         echo "Stop requested by the workflow"

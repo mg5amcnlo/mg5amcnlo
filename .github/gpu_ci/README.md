@@ -27,7 +27,7 @@ allocation per workflow run, and every CI job of that run executes in it:
 | `interference` | cluster | squared split orders on the GPU backend of madmatrix (`interference_gpu.sh`, `interference_checks.py`): standalone `u u~ > u u~` constraints, the helicity choice of an interference matrix element through umami, with `check_sa.exe` (exact and summed), and `p p > u u~ QCD^2==2` with mg7 against its CPU reference. Input `interference`, on by default and on push |
 | `madmatrix` | cluster | the GPU backend of madmatrix against its scalar CPU backend (`madmatrix_gpu.sh`, `madmatrix_checks.py`), with the `check_sa.exe` of each backend fed the same events from files: MSSM `p p > go go` event by event (running flavour couplings), a subprocess with no good helicity (`b b~ > ta+ ta- / z a`, ymtau = 0), and a non-blocking stream handed to umami (`g g > t t~ g`, `--nonblocking-stream`) |
 | `stop_runner` | cluster | clean up, then create the stop file: `runner_batch.sh` stops the runner and the allocation ends |
-| `watchdog` | vmadgraph | from the start of the runner to the end of the allocation: if the allocation ends before `stop_runner` completed, cancel the run (`ceci-gate watch-runner`, `remote_watch_runner.sh`) |
+| `watchdog` | vmadgraph | from the start of the runner to the end of the allocation: if the allocation ends before `stop_runner` completed, scancel the runner job if still there (`ceci-gate cancel-runner`) and cancel the run (`ceci-gate watch-runner`, `remote_watch_runner.sh`) |
 
 To add a CI job, give it `needs: [start_runner, ...]`,
 `if: needs.start_runner.outputs.attempt == github.run_attempt` (see *Re-runs* below) and
@@ -47,8 +47,9 @@ Other safeguards:
   runner is online, the last step of `start_runner` scancels the runner job
   (`ceci-gate cancel-runner`): otherwise it could stay queued for hours when the partition is
   full, and through `--dependency=singleton` hold back every later run of the cluster. Before
-  it submits, `ceci-gate start-runner` also scancels the runner jobs still queued for run
-  attempts that are over on GitHub (completed or deleted), in case that step could not run.
+  it submits, `ceci-gate start-runner` also scancels the runner jobs still queued or running
+  for run attempts that are over on GitHub (completed or deleted), in case that step, or the
+  watchdog, could not: e.g. the job of attempt 1 of a run, at the start of attempt 2.
   Jobs with another name are never touched. Once the runner is online, a cancelled run still
   runs `stop_runner` (`if: always()`), which ends the allocation; a runner that gets no job
   stops by itself after 10 minutes.
@@ -59,10 +60,17 @@ Other safeguards:
   hold every later run of the cluster for as long. The `watchdog` job prevents that from the
   vmadgraph runner, which outlives the allocation: `ceci-gate watch-runner` keeps one ssh
   connection to the login node, where `remote_watch_runner.sh` polls `squeue` every 20 s for
-  the runner job of the run (Slurm comment `mg7-run-<run id>-<attempt>`) and returns when it
-  has ended, with its final state from `sacct`. If `stop_runner` has not completed by then on
-  GitHub, the watchdog force-cancels the run (a plain cancel would still queue `stop_runner`,
-  whose `if:` holds `always()`). The run then only says "The run was canceled forcefully by
+  the runner job of the run (found by its Slurm comment `mg7-run-<run id>-<attempt>`, then
+  followed by its job id) and returns when it has ended, with its final state from `sacct`.
+  `squeue` sometimes leaves out a running job (seen on manneback, exit status 0): a job
+  missing from `squeue` has only ended once `sacct` gives a final state (or, without `sacct`,
+  once its time limit is over by 10 minutes, `PAST_TIME_LIMIT`), and the watchdog never
+  cancels on a state of a live job (`RUNNING`, `PENDING`, `COMPLETING`...). If `stop_runner`
+  has not completed by then on GitHub, the watchdog scancels the runner job in case it is
+  still there (`ceci-gate cancel-runner`), then force-cancels the run (a plain cancel would
+  still queue `stop_runner`, whose `if:` holds `always()`). At the normal end, `runner_batch.sh`
+  keeps the runner up until it has reported `stop_runner` to GitHub (up to 5 minutes: it
+  uploads the logs first), so that the watchdog finds it completed. The run then only says "The run was canceled forcefully by
   @github-actions[bot]": the force-cancel drops the annotations and summaries of the run, so
   the Slurm state (e.g. `TIMEOUT`) is in the log of the watchdog, step "wait for the end of
   the allocation".
@@ -95,7 +103,7 @@ repository, and 3 organisation owners can change any repository setting. Hence:
   user `ceci` (`/var/lib/ceci/.ssh/id_ceci`). The runner users may run one program as `ceci`,
   `/usr/local/sbin/ceci-gate` ([vm_gate/ceci-gate](vm_gate/ceci-gate)), and nothing else.
   Before it touches a cluster, the gate asks the GitHub API whether the run it is called for
-  is in progress, comes from `gpu_lemaitre4_hip.yml`, `gpu_manneback_cuda.yml` or
+  is not over, comes from `gpu_lemaitre4_hip.yml`, `gpu_manneback_cuda.yml` or
   `gpu_cluster_modules.yml` of this repository (not a fork), was started or re-run by a login
   listed in `/etc/ceci-gate/allowed_actors` on the VM **or** is on a branch listed in
   `/etc/ceci-gate/allowed_branches` (e.g. `main`, so that every commit landing there is tested,
@@ -184,6 +192,12 @@ change rulesets.
 * **`stop_runner` or `watchdog` fails with "re-runs some jobs only, without start_runner",
   and the cluster jobs are skipped.** The run was re-run with "Re-run failed jobs", or one of
   its jobs alone, which cannot start a runner: re-run it with "Re-run all jobs".
+* **`watchdog` fails with "watch-runner returned while the runner job is still alive".**
+  The VM has a `remote_watch_runner.sh` older than this check, which gave up on a job that
+  `squeue` left out once: install it again (step 1). The run was not cancelled.
+* **`start_runner` fails with "cannot copy the runner scripts".** `scp` to the cluster failed
+  3 times: usually the connection (look for `lost connection` above it), else the runner is
+  not installed (step 2).
 * **`watchdog` fails with "cannot watch the allocation of the runner through ceci-gate".**
   The gate on the VM predates `watch-runner`, or `remote_watch_runner.sh` is missing from
   `/usr/local/share/ceci-gate`: install both again (step 1). Its log on the VM is
