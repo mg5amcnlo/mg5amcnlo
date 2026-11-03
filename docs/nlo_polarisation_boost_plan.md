@@ -210,6 +210,176 @@ non-transverse `boostwdir2(chybst,…)` to spectators
 (`genps_fks.f:2324-2339`). Confirm `shybst -> 0` in the collinear limit before
 assuming FSR inherits the same property.
 
+**Equivariance is not enough: the frame must not depend on the FKS sector
+(B13, 2026-11-01).** The tilde frame makes each sector consistent with its own
+counterterms, but it is not the same frame in every sector: for a final-state
+emission it is the real's own c.m., for an initial-state one the c.m. of that
+sector's underlying Born, a boost along z away. The same real event therefore
+had its single-leg spin axis tilted by 5 degrees on average (up to 70) from
+one sector to the next in `p p > w+{0} j`, and changing only the FKS
+partition (`fks_b` 1.5 -> 3.0 in `fks_powers.inc`, which leaves any
+well-defined NLO observable alone) moved the polarised NLO cross-section by
++2.25 +- 0.30% (`w+{0}`) and -0.9 +- 0.3% (`w+{L}`), against -0.14 +- 0.44%
+unpolarised. The real's own c.m. is no fix: it is not infrared safe (test_ME
+fails the initial-state collinear tests at 73-94%).
+
+The fix is a frame that does not depend on which boost along z the momenta
+come in: boost along the beam to zero rapidity of the selected system, then
+transversely to its rest frame (`get_me_frame_boosts`,
+`Template/Common/Source/impose_frame_rest.f`). For a single leg this is the
+Collins-Soper frame. It depends only on the momentum of the selected system,
+so it is infrared safe, the same in every sector (partition shift -0.35 +-
+0.22%), and the same from the partonic c.m. (madevent), the lab (madspace,
+MadSpin, the reweighting) and the FKS frames -- so LO, NLO and the decay and
+reweighting tools now share one definition. It changes the single-leg
+polarisation fractions: for `p p > w+ j` at 13 TeV (anti-kT 0.4, pT(j) > 30
+GeV), f0 goes from 0.212 to 0.250 at LO and from 0.223 to 0.258 at NLO.
+Decays keep the single boost from the parent's rest frame: no beam, no
+initial-state sector.
+
+**The partonic c.m. (`[1,2]`, the default) -- resolved 2026-11-01.** It had
+the same dependence and no fix of this kind, since the c.m. of the real is
+exactly what is not infrared safe. `me_frame = [1,2]` was skipped, i.e. the
+real was evaluated in whatever tilde frame its sector supplied. Measured,
+`fks_b` 1.5 -> 3.0 only, 5 seeds each (15 for WW), `req_acc_FO` 0.005, 13
+TeV, nn23nlo, anti-kT 0.4, pT(j) > 30 GeV:
+
+| process, `me_frame = [1,2]` | `fks_b` 1.5 | `fks_b` 3.0 | shift |
+|---|---|---|---|
+| `p p > w+{0} j [QCD]` | 2588.6(6.0) pb | 2835.5(8.3) pb | **+9.5(4)%** |
+| `p p > z{0} j [QCD]` | 1521.6(2.6) pb | 1694.0(6.1) pb | **+11.3(4)%** |
+| `p p > w+{0} w- [QCD]` | 17.712(16) pb | 17.716(14) pb | +0.02(12)% |
+| `e+ e- > t{L} t~ [QCD]`, 1 TeV | 0.10865(19) pb | 0.10867(25) pb | +0.02(29)% |
+
+The lepton collider has no initial-state sector, so every real comes in its
+own c.m. and nothing moves, as expected. The diboson does not move visibly
+either, which does not make its frame a definition: the real is still
+evaluated in a frame that depends on its sector. For a single boson at rest in the
+Born it is worse than a partition dependence: `p p > z{T} [QCD]` with `[1,2]`
+fails `test_ME` on 100% of the soft and collinear points, since the real's
+spin axis is the direction of a momentum that goes to zero from any
+direction.
+
+Candidates:
+
+- **The lab frame.** Infrared safe and the same in every sector (the real's
+  lab momenta are physical, and they tend to the Born's), and already mg7's
+  default `[]`. But madevent's LO default is the partonic c.m., so LO/NLO
+  consistency would change the LO polarised default too (madevent, MadSpin,
+  the reweighting): every LO polarised number in the default frame since
+  arXiv:1912.01725. Lab helicities also change under a boost along z, so they
+  depend on the beam energies, and analyses of diboson polarisation use the
+  diboson rest frame, of single bosons the Collins-Soper or helicity frame.
+- **Refuse `[1,2]` whenever there is initial-state QCD radiation.** LO is
+  unchanged, but every polarised `p p` run with the default card stops,
+  including dibosons and single bosons, where an exact continuation exists.
+- **Keep it, with a warning.** The result stays a function of an internal
+  parameter at the 10% level, and Drell-Yan does not even pass `test_ME`.
+
+**Decision.** LO does not change.
+
+**The default `me_frame` of the NLO run_card depends on the process**
+(`fks_common.me_frame_characteristics`, written into the card by
+`RunCardNLO.create_default_for_process`):
+
+- **With initial-state QCD radiation (`p p`): the rest frame of the massive
+  final-state particles.** For example `[3,4]` for `p p > w+{0} w- [QCD]` (the
+  diboson rest frame of the literature), `[3]` for `p p > w+{0} j [QCD]` (the
+  Collins-Soper frame of the W), and `[3,4]` for `p p > t{+} t~ j [QCD]`. It
+  depends only on the physical momenta of those particles, so it is infrared
+  safe and the same in every sector. It is the same for `[LOonly=QCD]`, so the
+  multiplicities of a merged sample share one frame.
+- **Otherwise (`e+ e-`, decays): `[1,2]`, the partonic c.m.**
+
+`me_frame` is one list for every subprocess of an output, so a leg number is
+only part of the default if it is massive in every process that has it.
+- With `p p > z{0} j` and `p p > z{0} z` in one output, the default is `[3]`,
+  not `[3,4]`, which would put the jet of the first in its frame.
+- For `define v = z a; p p > v{T} j`, leg 3 is massless in the photon process.
+  It is left out, and the default is `[1,2]`, at LO as at NLO. At LO, keeping
+  leg 3 would have given the photon process a single massless particle as its
+  frame, which has no rest frame. At NLO no single frame is infrared safe for
+  both subprocesses, so `[1,2]` is refused at launch and the user has to
+  choose.
+- Merged multiplicities are not affected: `p p > w+{0}` has no leg 4, so with
+  `p p > w+{0} j` the default stays `[3]`.
+
+The rule is the same at LO and NLO: a multiparticle label at NLO counts as
+massive only if all its particles are.
+
+What `[1,2]` means is resolved when the run is launched
+(`RunCardNLO.get_me_frame_legs`, from `proc_characteristics`). That covers the
+default of `e+ e-` and decays, and anyone who sets it by hand:
+
+- No initial-state QCD splitting (`e+ e-`): unchanged. The tilde frame is the
+  partonic c.m. in every sector.
+- A decay: the decaying particle, `[1]`. `frame_id` 6 used to select it
+  *and* leg 2, the first decay product, so the frame depended on the order
+  the final state was written in. At NLO, at matched seeds,
+  `t > b w+{0} QED=1 [QCD]` came out 0.04% below `t > w+{0} b QED=1 [QCD]`.
+  The two are now bit-identical.
+- Initial-state QCD radiation, no massless coloured parton in the Born final
+  state: **the rest frame of the Born final state**.
+  - For the Born, the virtual and every counter-event this is exactly the
+    partonic c.m.; they stay skipped, bit for bit.
+  - For the real it depends only on its physical momenta, so it is infrared
+    safe and the same in every sector.
+  - When the whole final state is massive (dibosons), this is also the default.
+  - `p p > w+{0} w- [QCD]` (15 seeds): 18.484(15) pb at `fks_b` 1.5 and
+    18.472(19) pb at 3.0, a -0.06(13)% shift.
+  - That is **+4.35(13)% above the old `[1,2]` value**. This is a change of
+    definition of the real emission; the Born is identical.
+  - `p p > z{T} [QCD]` now passes `test_ME`, 49012(199) pb.
+- Initial-state QCD radiation and a jet in the Born final state, with `[1,2]`
+  set by hand (`p p > w+{0} j`): **refused** at launch. No frame equal to the
+  partonic c.m. of the Born is infrared safe: it would have to contain the
+  jet, which a final-state collinear splitting changes by a finite amount.
+  The message points to the default, e.g. `[3]`.
+
+**Which legs may enter a frame at NLO.** These are the legs whose momentum
+no infrared limit changes (`me_frame_unsafe_legs` lists the others):
+
+- Colourless or massive final-state particles.
+- The decaying particle of a `1 -> n` process, even a coloured one. FKS never
+  splits it (`fks_base.find_reals`), and its momentum is the total momentum
+  in every configuration. `me_frame = [1]` used to be refused for a decay as
+  "part of the initial state".
+- A beam that is not charged under the perturbation, e.g. `e+ e-` with
+  `[QCD]`. `[1,3]` on `e+ e- > t{L} t~ [QCD]` used to be refused for mixing
+  initial and final legs.
+
+Refused are a beam that radiates (the partons of `p p`) and a massless
+coloured final-state parton. Without process information (a card edited
+outside a launch) the old blanket rule still applies. In the same way, any
+`me_frame` containing a massless coloured final-state parton is refused. `[3,4]` on `p p > w+{0} j` used to pass and
+built the rest frame of the W and `j_fks`. Runs of the Born alone (`launch
+LO`, `aMC@LO`) refuse nothing.
+
+**LO follows (same rule, 2026-11-01).** madevent and mg7 use the same
+default (`banner.default_me_frame_for_process`), so LO and NLO defaults agree
+and a K-factor compares like with like:
+
+- A collision with a coloured initial parton gets the rest frame of the
+  massive final-state particles of the core process.
+  - At LO a decayed particle is represented by all of its decay products.
+    For example, `p p > w+{0} z, w+ > e+ ve, z > e+ e-` gets `[3,4,5,6]`
+    (`Process.get_massive_final_legs_with_decays`).
+- e+ e- gets `[1,2]`.
+- A decay gets `[1,2]` in madevent and `[1]` in mg7, which are the two
+  spellings of the rest frame of the decaying particle.
+
+**Only when the frame matters.** This default is applied only when a massive
+particle is polarised, or when a spin-density matrix is asked for
+(`output ... --density`, recorded as `density_matrix` in
+`proc_characteristics`). Everything else keeps its old default: `[1,2]`
+(hidden) in madevent and at NLO, and `[]` (no boost) in mg7. There the
+matrix element is Lorentz invariant and nothing is boosted. For a process
+whose final state is all massive (dibosons, `t t~`), the new default is the
+partonic c.m. at the Born level, so LO results do not change. For one with a
+jet, a photon or a lepton, they do. For example, polarised `p p > w+{0} j`
+now uses the Collins-Soper frame of the W instead of its helicity in the
+partonic c.m. The size of that LO change was not measured here.
+
 ## 3. Milestones
 
 ### M0 — Plumbing, no physics — **DONE**
@@ -1706,6 +1876,13 @@ marker. Run via `./tests/test_manager.py`, not pytest.
   spinors themselves (the component now comes from `pT^2`, no cancellation),
   in every backend, so the guard is gone; the split-order soft test that
   failed 0.43 without it passes at 0.02. See M2 step 2.
+- **B13 — RESOLVED.** The FKS tilde frame differs between sectors by a
+  boost along z, so a frame reached by a single boost from it depended on
+  the FKS partition. Single-leg frames now go along the beam first
+  (Collins-Soper). The old default `[1,2]` (+9.5% on `p p > w+{0} j`,
+  +11.3% on `p p > z{0} j` under a change of `fks_b`) is replaced, for `p p`,
+  by the rest frame of the massive final state; `[1,2]` set by hand is the
+  rest frame of the Born final state, refused when that has a jet. See D3.
 - **B12 — RESOLVED here, and it has a twin that must land with it.**
   `ProcessDefinition.__iter__` dropped `polarization` when expanding
   multiparticles, so any polarised MadLoop-standalone process written with

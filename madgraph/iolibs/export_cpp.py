@@ -2766,6 +2766,9 @@ class ProcessExporterCPP(VirtualExporter):
         
         #place holder to pass information to the run_interface
         self.proc_characteristic = banner_mod.ProcCharacteristic()    
+        output_options = self.opt.get('output_options')
+        self.proc_characteristic['density_matrix'] = \
+            isinstance(output_options, dict) and 'density' in output_options
 
     def copy_template(self, model):
         """Prepare export_dir as standalone_cpp directory, including:

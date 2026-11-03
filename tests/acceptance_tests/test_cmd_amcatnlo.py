@@ -917,7 +917,10 @@ class MECmdShell(IOTests.IOTestManager):
         totals = re.findall(r'([-\d.eE+]+)\s+\+-', res.split('Total ABS')[-1])
         self.assertEqual(len(totals), 2, 'cannot read the totals from res_1.txt')
         xsec_abs, xsec = float(totals[0]), float(totals[1])
-        self.assertAlmostEqual(xsec, 2.19e3, delta=1.0e2)
+        # 2.19e3 while the Z rest frame was reached by a single boost from
+        # the FKS frame, which depended on the FKS sector; reached along the
+        # beam first (Collins-Soper, get_me_frame_boosts) it is 2.50e3
+        self.assertAlmostEqual(xsec, 2.50e3, delta=1.0e2)
         self.assertLess(xsec_abs / xsec, 2.15,
                         'the MC counterterm does not cancel locally enough; '
                         'its azimuthal phase is probably not in the me_frame')

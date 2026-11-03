@@ -1929,34 +1929,23 @@ C     -----------------------------------------
 
       DOUBLE PRECISION P1(0:3,NEXTERNAL)
       DOUBLE PRECISION P2(0:3,NEXTERNAL)
-      DOUBLE PRECISION PBOOST(0:3)
+      DOUBLE PRECISION QZ(0:3), QT(0:3), PTMP(0:3)
       integer frame_id
 
       integer ids(nexternal)
-      integer i,j
-      Pboost(0)= 0d0
-      Pboost(1)= 0d0
-      Pboost(2)= 0d0
-      Pboost(3)= 0d0
+      integer i
 
 c     uncompress
       call mapid(frame_id, ids)
-c     find the boost momenta --sum of particles--
-      do i=1,nexternal
-       if (ids(i).eq.1)then
-c             write (999,*) (Pboost(j), j=0,3)
-            do j=0,3
-                   Pboost(j) = Pboost(j) + P1(j,i)
-            enddo
-         endif
-      enddo
-      do j=1,3
-          Pboost(j) = -1 * Pboost(j)
-      enddo
-       
-c              write (999,*) (Pboost(j), j=0,3)
+c     The events come in the lab frame. A single boost from there to the
+c     selected particles would not reach the frame madevent, madspace and
+c     aMC@NLO use (Wigner rotation); a boost along z then a transverse one
+c     does, from any frame along the beam. See get_me_frame_boosts in
+c     Template/Common/Source/impose_frame_rest.f.
+      call get_me_frame_boosts(ids, nexternal, nincoming, p1, qz, qt)
       do i=1, nexternal
-         call boostx(p1(0,i), pboost, p2(0,i))
+         call boostx(p1(0,i), qz, ptmp)
+         call boostx(ptmp, qt, p2(0,i))
       enddo
 
 c     A single selected particle has to end up *exactly* at rest, not at
@@ -2008,34 +1997,20 @@ C     -----------------------------------------
 
       DOUBLE PRECISION P1(0:3,*)
       DOUBLE PRECISION P2(0:3,*)
-      DOUBLE PRECISION PBOOST(0:3)
+      DOUBLE PRECISION QZ(0:3), QT(0:3), PTMP(0:3)
       integer frame_id, nexternal_prod
 
       integer ids(nexternal_prod)
-      integer i,j
-      Pboost(0)= 0d0
-      Pboost(1)= 0d0
-      Pboost(2)= 0d0
-      Pboost(3)= 0d0
+      integer i
 
 c     uncompress
       call mapid_prod(frame_id, ids,nexternal_prod)
-c     find the boost momenta --sum of particles--
-      do i=1,nexternal_prod
-       if (ids(i).eq.1)then
-c             write (999,*) (Pboost(j), j=0,3)
-            do j=0,3
-                   Pboost(j) = Pboost(j) + P1(j,i)
-            enddo
-         endif
-      enddo
-      do j=1,3
-          Pboost(j) = -1 * Pboost(j)
-      enddo
-
-c              write (999,*) (Pboost(j), j=0,3)
+c     same frame as boost_to_frame above
+      call get_me_frame_boosts(ids, nexternal_prod, nincoming, p1,
+     &     qz, qt)
       do i=1, nexternal_prod
-         call boostx(p1(0,i), pboost, p2(0,i))
+         call boostx(p1(0,i), qz, ptmp)
+         call boostx(ptmp, qt, p2(0,i))
       enddo
 
 c     A single selected particle has to end up *exactly* at rest, not at

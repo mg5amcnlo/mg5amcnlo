@@ -1827,16 +1827,15 @@ C     -----------------------------------------
 
       DOUBLE PRECISION P1(0:3,NEXTERNAL)
       DOUBLE PRECISION P2(0:3,NEXTERNAL)
-      DOUBLE PRECISION PBOOST(0:3)
+      DOUBLE PRECISION QZ(0:3), QT(0:3), PTMP(0:3)
       integer frame_id
 
       integer ids(nexternal)
-      integer i,j
+      integer i
       logical trivial_boost
 
 c     uncompress
       call mapid(frame_id, ids)
-      pboost(:) = 0d0
       p2(:,:) = 0d0
 c     avoid trivial boost (check only for  0 0 1 1 1... so sum of the
 c     final state. 1 1 0 0 0 .... should not go within this function   
@@ -1860,19 +1859,16 @@ c     final state. 1 1 0 0 0 .... should not go within this function
             return
         endif
 
-c     find the boost momenta --sum of particles--
-      do i=1,nexternal
-       if (ids(i).eq.1)then
-            do j=0,3
-	           Pboost(j) = Pboost(j) + P1(j,i)
-            enddo
-         endif
-      enddo
-      do j=1,3
-          Pboost(j) = -1 * Pboost(j)
-      enddo
+c     rest frame of the selected particles, reached by a boost along z and
+c     then a transverse one. A single boost along their momentum would
+c     depend on the frame the momenta come in -- partonic c.m. here, lab
+c     in madspace and MadSpin, the Born c.m. of the FKS sector at NLO --
+c     and so would the spin axis of a single particle at rest. See
+c     get_me_frame_boosts in Template/Common/Source/impose_frame_rest.f.
+      call get_me_frame_boosts(ids, nexternal, nincoming, p1, qz, qt)
       do i=1, nexternal
-         call boostx(p1(0,i), pboost, p2(0,i))
+         call boostx(p1(0,i), qz, ptmp)
+         call boostx(ptmp, qt, p2(0,i))
       enddo
 
 c     A single selected particle must come out *exactly* at rest, not at

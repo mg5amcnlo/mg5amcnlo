@@ -36,8 +36,9 @@ generated in, which was read from the wrong place: ``frame_id`` is only computed
 when the include files are written, so a run_card read back from an LHE banner
 always said 6 (the partonic c.m.), and an mg7 banner has none, while there
 ``me_frame = []`` means no boost at all. And the frame has to be reached the way
-the generation reached it, through the partonic c.m.: a single boost straight
-from the lab leaves a Wigner rotation behind.
+the generation reached it, along the beam to zero rapidity of the selected legs
+and then transversely: a single boost straight from the lab (or from the
+partonic c.m.) leaves a Wigner rotation behind.
 """
 
 from __future__ import absolute_import
@@ -304,15 +305,22 @@ WZ_LAYOUTS = [['u', 'dx', 'W', 'Z'], ['dx', 'u', 'Z', 'W'],
 
 def _madevent_frame(lab, legs):
     """What madevent hands the matrix element: the momenta in the partonic
-    CM (genps.f), then boost_to_frame on the legs selected, a single one set
-    exactly at rest -- written out independently of the code under test."""
+    CM (genps.f), then boost_to_frame on the legs selected -- along z to
+    their zero rapidity, then transversely to their rest frame -- a single
+    one set exactly at rest. Written out independently of the code under
+    test."""
     pcm = lhe_parser.FourMomentum(lab[0]) + lhe_parser.FourMomentum(lab[1])
     cm = [lhe_parser.FourMomentum(p).zboost(pcm) for p in lab]
     pboost = lhe_parser.FourMomentum()
     for n in legs:
         pboost += cm[n - 1]
-    neg = lhe_parser.FourMomentum(pboost.E, -pboost.px, -pboost.py, -pboost.pz)
-    out = [p.boost(neg) for p in cm]
+    rapidity = 0.5 * math.log((pboost.E + pboost.pz) / (pboost.E - pboost.pz))
+    ch, sh = math.cosh(rapidity), math.sinh(rapidity)
+    along_z = [lhe_parser.FourMomentum(p.E * ch - p.pz * sh, p.px, p.py,
+                                       p.pz * ch - p.E * sh) for p in cm]
+    mt = math.sqrt(pboost.E ** 2 - pboost.pz ** 2)
+    neg = lhe_parser.FourMomentum(mt, -pboost.px, -pboost.py, 0.)
+    out = [p.boost(neg) for p in along_z]
     out = [(p.E, p.px, p.py, p.pz) for p in out]
     if len(legs) == 1:
         out[legs[0] - 1] = (out[legs[0] - 1][0], 0., 0., 0.)
@@ -337,22 +345,28 @@ class TestMeFrameConvention(unittest.TestCase):
             for x, y in zip(a, b):
                 self.assertAlmostEqual(x, y, places=places)
 
-    def test_the_frame_goes_through_the_partonic_cm(self):
-        """madevent boosts to the frame from the partonic CM. Straight from
-        the lab is another frame -- a Wigner rotation, 2.8 degrees here -- and
-        turns the quantisation axis of a leg at rest with it."""
+    def test_the_frame_is_reached_along_the_beam(self):
+        """madevent boosts to the frame along the beam first, so the frame is
+        the same from the lab the events come in. A single boost straight from
+        the lab, or from the partonic CM, is another frame -- a Wigner
+        rotation -- and turns the quantisation axis of a leg at rest with
+        it."""
         for me_frame in ([3], [4], [3, 4]):
             lab = _wz_event(WZ_LAYOUTS[0]).get_momenta(WZ_ORDER)
             ref = _madevent_frame(lab, me_frame)
             for layout in WZ_LAYOUTS:
                 self.assertMomentaEqual(self._boosted(me_frame, layout), ref)
-        # the test can tell: from the lab, the beam is not where madevent has it
+        # the test can tell: with a single boost, the beam is not where
+        # madevent has it, whether from the lab or from the partonic CM
         lab = _wz_event(WZ_LAYOUTS[0]).get_momenta(WZ_ORDER)
-        direct = _BaseStub([3]).boost_momenta_to_rest_frame(
-                                lab, lhe_parser.FourMomentum(lab[2]), 2)
         ref = _madevent_frame(lab, [3])
-        self.assertGreater(max(abs(x - y) for a, b in zip(direct, ref)
-                               for x, y in zip(a, b)), 10.)
+        pcm = lhe_parser.FourMomentum(lab[0]) + lhe_parser.FourMomentum(lab[1])
+        cm = [lhe_parser.FourMomentum(p).zboost(pcm).get_tuple() for p in lab]
+        for start in (lab, cm):
+            direct = _BaseStub([3]).boost_momenta_to_rest_frame(
+                                    start, lhe_parser.FourMomentum(start[2]), 2)
+            self.assertGreater(max(abs(x - y) for a, b in zip(direct, ref)
+                                   for x, y in zip(a, b)), 1.)
 
     def test_a_single_leg_is_exactly_at_rest(self):
         for leg in (3, 4):
