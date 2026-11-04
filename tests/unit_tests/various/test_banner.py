@@ -2561,6 +2561,15 @@ class TestRunCardMG7(unittest.TestCase):
         self.assertEqual(card['ickkw'], 0)
         self.assertEqual(card['xqcut'], 0.0)
 
+    def test_mlm_shower_start(self):
+        """Hidden [beam] switch for where the MLM shower of the non-jet
+        particles starts: the hardest scale of the event by default, the
+        collider energy as madevent."""
+        card = bannermod.RunCardMG7()
+        self.assertEqual(card['beam']['mlm_shower_start'], 'hardest_scale')
+        card.set('beam.mlm_shower_start', 'collider_energy')
+        self.assertEqual(card['beam']['mlm_shower_start'], 'collider_energy')
+
     def test_set_maxjetflavor_sets_the_mlm_jet_flavours(self):
         rc = bannermod.RunCardMG7()
         rc.set_lo_param('maxjetflavor', '5')

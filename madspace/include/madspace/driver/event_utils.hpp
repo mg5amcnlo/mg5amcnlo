@@ -59,7 +59,8 @@ void copy_channel_event(
 
 /// Build `lhe_event` from event `event_index` of a combined buffer and
 /// complete it with `lhe_completer`. `extra_event_flags` and
-/// `extra_particle_flags` are the extra layout flags of the buffer's channels.
+/// `extra_particle_flags` are the extra layout flags of the buffer's channels;
+/// `config` supplies the MLM shower-scale settings.
 void fill_lhe_event(
     LHECompleter& lhe_completer,
     LHEEvent& lhe_event,
@@ -67,7 +68,8 @@ void fill_lhe_event(
     std::size_t event_index,
     MixMaxRandom& rand_gen,
     int extra_event_flags,
-    int extra_particle_flags
+    int extra_particle_flags,
+    const GeneratorConfig& config
 );
 
 /// Write the particles of `lhe_event` to event `event_index` of a buffer with

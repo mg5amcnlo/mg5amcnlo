@@ -710,6 +710,14 @@ class MadgraphProcess:
         if beam_args["dynamical_scale_choice"] == "mlm":
             self.mlm_clustering = True
             self.scale_kwargs = {}
+            if not self.is_decay and beam_args["mlm_shower_start"] == "hardest_scale":
+                # the non-jet particles' pt_clust at the hardest scale of the
+                # event instead of e_cm (the cm_energy of the MLMClustering),
+                # as gridpack_setup.configure_mlm_shower_start does
+                cfg = self.event_generator_config
+                cfg.mlm_hardest_shower_scale = True
+                cfg.mlm_collider_energy = self.e_cm
+                cfg.mlm_max_jet_flavor = int(beam_args["max_jet_flavor"])
         elif beam_args["dynamical_scale_choice"] in dynamical_scales:
             self.mlm_clustering = False
             self.scale_kwargs = dict(

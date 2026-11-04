@@ -7266,6 +7266,23 @@ class RunCardMG7(RunCard):
             allowed=['production', 'emission'],
             comment="MLM clustering scale of each outgoing jet: production or emission",
             hidden=True)
+        # Where the MLM shower starts for what is not a light jet. The
+        # clustering gives a leg it books no scale onto the collider energy as
+        # pt_clust, and Pythia8 (Beams:setProductionScalesFromLHEF) starts the
+        # initial-state shower from the largest pt_clust and each particle's
+        # final-state shower from its own: from the kinematic limit.
+        #   "hardest_scale":   leptons, photons and heavy quarks get the hardest
+        #                      scale of the event, max(mu_F, light-jet pt_clust),
+        #                      so the shower starts there (with
+        #                      SpaceShower:pTmaxMatch = 1, also for a sample
+        #                      without light partons). Light partons of the core
+        #                      process keep the collider energy: it is Pythia8's
+        #                      do-not-match flag.
+        #   "collider_energy": the collider energy for all of them, as madevent.
+        self.add_toml_param('beam', 'mlm_shower_start', "hardest_scale",
+            allowed=['hardest_scale', 'collider_energy'],
+            comment="MLM shower start for non-jet particles: hardest_scale or collider_energy",
+            hidden=True)
         # How mu_R and mu_F are read off the clustering history:
         #   "clustering_mean": geometric mean of every clustering scale, with a
         #                      single factorisation scale.
