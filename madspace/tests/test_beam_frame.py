@@ -4,10 +4,10 @@ import math
 
 import numpy as np
 import pytest
+from madspace_testing import to_numpy
 from pytest import approx
 
 import madspace as ms
-from madspace_testing import to_numpy
 
 N = 2000
 

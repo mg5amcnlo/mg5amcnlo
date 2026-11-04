@@ -76,7 +76,8 @@ void backward_batch_foreach(
         }
         if (discard_grad) {
             // Unused gradient (literal or integer input): use batch-sized scratch, as a
-            // batch-size-one broadcast output would force a single-threaded scalar kernel.
+            // batch-size-one broadcast output would force a single-threaded scalar
+            // kernel.
             auto& input = locals[input_index];
             if (!input_grad || input_grad.size(0) != batch_size) {
                 Sizes shape = input.shape();

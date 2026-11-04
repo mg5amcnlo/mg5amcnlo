@@ -466,7 +466,8 @@ KERNELSPEC Pair<FVal<T>, FVal<T>> s23_etmin_clamp(
     auto smax_ok = active & (e_eff > 0.) & (disc > 0.) & (smax_b > smn);
     auto smx_new = where(smax_ok, min(smx, smax_b), smx);
     // smin: a massless peeled particle needs ET -> minimum s-channel mass. Masslessness
-    // is judged relative to the energy scale, as m2_2 read off momenta is only ~1e-16 E^2.
+    // is judged relative to the energy scale, as m2_2 read off momenta is only ~1e-16
+    // E^2.
     auto smin_b = 2. * etmin_2 * (pim1_0 - pim1_1 * cos(drcut));
     auto massless_2 = m2_2 < 1e-10 * piir_0 * piir_0;
     auto smin_ok = active & massless_2 & (smin_b > smn) & (smin_b < smx_new);
@@ -820,10 +821,11 @@ KERNELSPEC void kernel_two_to_three_particle_scattering(
     auto s12 = lsquare<T>(p_12);
     auto t2 = lsquare<T>(p_c);
 
-    // On the s23 range, cos(phi) = 2 u - 1 with u = (s23 - s23_min) / (s23_max - s23_min)
-    // and -G4 = lambda(s12, ma^2, t2) / 16 * (s23 - s23_min) * (s23_max - s23). Both are
-    // evaluated through u and 1 - u (inputs) and a range from momenta (s23_min_max),
-    // as forming G4 from the invariants cancels catastrophically for a soft particle.
+    // On the s23 range, cos(phi) = 2 u - 1 with u = (s23 - s23_min) / (s23_max -
+    // s23_min) and -G4 = lambda(s12, ma^2, t2) / 16 * (s23 - s23_min) * (s23_max -
+    // s23). Both are evaluated through u and 1 - u (inputs) and a range from momenta
+    // (s23_min_max), as forming G4 from the invariants cancels catastrophically for a
+    // soft particle.
     auto s23_range =
         s23_min_max<T>(load_mom<T>(pa), load_mom<T>(p3), p_12, s12, t1_abs, m1, m2);
     auto s23_width = s23_range.second - s23_range.first;

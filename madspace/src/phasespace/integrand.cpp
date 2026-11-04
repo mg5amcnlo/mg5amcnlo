@@ -1077,8 +1077,8 @@ ValueVec Integrand::mlm_weights(
     weights.push_back(scales.at("xqcut_weight"));
 
     // alpha_s reweighting as in madevent's reweight.f: each clustering vertex is
-    // evaluated at its own scale, so the weight carries prod_i alphas(pt_i) / alphas(mu_R).
-    // A scale of 0 marks a vertex that is not reweighted (ratio one).
+    // evaluated at its own scale, so the weight carries prod_i alphas(pt_i) /
+    // alphas(mu_R). A scale of 0 marks a vertex that is not reweighted (ratio one).
     if (_energy_scale->mlm_alphas_reweighting() && _running_coupling) {
         auto vertex_scales = scales.at("alphas_scales");
         std::size_t vertex_count = vertex_scales.type.shape.at(0);

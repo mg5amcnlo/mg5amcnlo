@@ -102,7 +102,8 @@ t_inv_min_max(FVal<T> s, FVal<T> ma_2, FVal<T> mb_2, FVal<T> m1_2, FVal<T> m2_2)
     auto t_min_tmp = -max(y2, y1);
     auto t_max_tmp = -min(y1, y2);
     auto t_min = max(t_min_tmp, 0.);
-    // an empty range gets a width of at least 1e-14 |t_min|, since EPS can be below one ulp of t
+    // an empty range gets a width of at least 1e-14 |t_min|, since EPS can be below one
+    // ulp of t
     auto t_max = where(
         t_max_tmp > t_min, t_max_tmp, t_min + max(FVal<T>(EPS), 1e-14 * fabs(t_min))
     );
@@ -798,8 +799,8 @@ KERNELSPEC Pair<FVal<T>, FVal<T>> t_cut_bounds_etmin(
 }
 
 // Clamp the kinematic |t| range against the ETmin cut interval. Returns the
-// bounds on the absolute (positive) t invariant. The ETmin bound only improves sampling; the
-// real cut is applied on the final momenta.
+// bounds on the absolute (positive) t invariant. The ETmin bound only improves
+// sampling; the real cut is applied on the final momenta.
 template <typename T>
 KERNELSPEC void kernel_t_inv_min_max_cut(
     FIn<T, 1> pa,
@@ -1295,8 +1296,9 @@ kernel_momenta_to_x1x2(FIn<T, 2> p_ext, FSIn<T, 0> e_cm, FOut<T, 0> x1, FOut<T, 
 // frame. Same as get_me_frame_boosts in
 // Template/Common/Source/impose_frame_rest.f.
 template <typename T>
-KERNELSPEC void
-kernel_boost_to_zero_rapidity(FIn<T, 2> p_ext, ISIn<T, 1> frame_mask, FOut<T, 2> p_out) {
+KERNELSPEC void kernel_boost_to_zero_rapidity(
+    FIn<T, 2> p_ext, ISIn<T, 1> frame_mask, FOut<T, 2> p_out
+) {
     FourMom<T> p_long{0., 0., 0., 0.};
     std::size_t selected_count = 0;
     for (std::size_t i = 0; i < p_ext.size(); ++i) {
@@ -1339,7 +1341,8 @@ kernel_boost_to_frame(FIn<T, 2> p_ext, ISIn<T, 1> frame_mask, FOut<T, 2> p_out) 
         selected_index = i;
     }
     if (selected_count == 0) {
-        // no frame is defined: pass the momenta through (boosting by a null vector gives garbage)
+        // no frame is defined: pass the momenta through (boosting by a null vector
+        // gives garbage)
         for (std::size_t i = 0; i < p_ext.size(); ++i) {
             store_mom<T>(p_out[i], load_mom<T>(p_ext[i]));
         }

@@ -36,9 +36,9 @@ constexpr int LINE_GOODJET = 1;
 constexpr int MEASURE_FXFX = 0;
 constexpr int MEASURE_MADEVENT = 1;
 // How alpha_s is evaluated for a merged event.
-constexpr int ALPHAS_NONE = 0;          // one coupling at mu_R
-constexpr int ALPHAS_PER_VERTEX = 1;    // alphas(pt_i) at each vertex, as madevent
-constexpr int ALPHAS_GEOMETRIC = 2;     // alphas at the geometric mean of the pt_i
+constexpr int ALPHAS_NONE = 0;       // one coupling at mu_R
+constexpr int ALPHAS_PER_VERTEX = 1; // alphas(pt_i) at each vertex, as madevent
+constexpr int ALPHAS_GEOMETRIC = 2;  // alphas at the geometric mean of the pt_i
 // trace_data bits above the 2-bit trace mode: the flavour of the mother.
 constexpr int TRACE_IS_JET_IN = 1 << 2;
 constexpr int TRACE_IS_COLORED_IN = 1 << 3;
@@ -121,14 +121,12 @@ KERNELSPEC FVal<T> dj_clus(
         return 0.0;
     }
     auto deta = asinh(p1[3] / sqrt(pt1_sq)) - asinh(p2[3] / sqrt(pt2_sq));
-    auto dphi =
-        atan2(p1[1] * p2[2] - p1[2] * p2[1], p1[1] * p2[1] + p1[2] * p2[2]);
+    auto dphi = atan2(p1[1] * p2[2] - p1[2] * p2[1], p1[1] * p2[1] + p1[2] * p2[2]);
     auto sinh_half = sinh(0.5 * deta);
     auto sin_half = sin(0.5 * dphi);
     auto m_max_sq = max(mass1 * mass1, mass2 * mass2);
     auto result = m_max_sq +
-        min(pt1_sq, pt2_sq) * 4.0 *
-            (sinh_half * sinh_half + sin_half * sin_half) /
+        min(pt1_sq, pt2_sq) * 4.0 * (sinh_half * sinh_half + sin_half * sin_half) /
             (jet_radius * jet_radius);
     // The Fortran zeroes negative and NaN results; max() alone would pass a NaN.
     if (!(result > 0.0)) {
@@ -190,7 +188,9 @@ KERNELSPEC FVal<T> compute_scale(
         // DJ of Template/LO/Source/kin_functions.f, used by madevent's LO
         // cluster.f for every final-state pair. The branches below are the NLO
         // cluster_scale's, which score q* > q W and g* > g h differently.
-        return sqrt(dj_clus<T>(momentum1, momentum2, mass1, mass2, hadronic, jet_radius));
+        return sqrt(
+            dj_clus<T>(momentum1, momentum2, mass1, mass2, hadronic, jet_radius)
+        );
     }
     if (!massive_in && massive_out1 && !massive_out2) {
         return sqrt(fabs(ldot<T>(momentum2, momentum_sum))) / 2.0;
@@ -393,9 +393,8 @@ KERNELSPEC int mlm_clustering_walk(
     int leg_flavor[N_EXT_MAX];
     for (int i = 0; i < n_part; ++i) {
         int entry = flavor_index * n_part + i;
-        leg_flavor[i] = flavor_index >= 0 && entry < leg_flavors.size()
-            ? leg_flavors[entry]
-            : 0;
+        leg_flavor[i] =
+            flavor_index >= 0 && entry < leg_flavors.size() ? leg_flavors[entry] : 0;
     }
 
     int win_next_state = -1, win_data = 0, win_trace = TRACE_FIRST;
@@ -466,7 +465,12 @@ KERNELSPEC int mlm_clustering_walk(
             leg_flavor[particle1] != leg_flavor[particle2];
         if (forbidden) {
             if (candidate_wins<T>(
-                    scale, data, resonant, alt_next_state, alt_scale, alt_data,
+                    scale,
+                    data,
+                    resonant,
+                    alt_next_state,
+                    alt_scale,
+                    alt_data,
                     alt_resonant
                 )) {
                 alt_next_state = next_state;
@@ -477,7 +481,12 @@ KERNELSPEC int mlm_clustering_walk(
             }
         } else {
             if (candidate_wins<T>(
-                    scale, data, resonant, win_next_state, win_scale, win_data,
+                    scale,
+                    data,
+                    resonant,
+                    win_next_state,
+                    win_scale,
+                    win_data,
                     win_resonant
                 )) {
                 win_next_state = next_state;
@@ -517,10 +526,9 @@ KERNELSPEC int mlm_clustering_walk(
                 int other_beam = 1 - p1_win;
                 FourMom<T> sum_prev, sum_red;
                 for (int k = 0; k < 4; ++k) {
-                    sum_prev[k] =
-                        momenta_tmp[p1_win][k] + momenta_tmp[other_beam][k];
-                    sum_red[k] = momenta_tmp[p1_win][k] -
-                        momenta_tmp[p2_win][k] + momenta_tmp[other_beam][k];
+                    sum_prev[k] = momenta_tmp[p1_win][k] + momenta_tmp[other_beam][k];
+                    sum_red[k] = momenta_tmp[p1_win][k] - momenta_tmp[p2_win][k] +
+                        momenta_tmp[other_beam][k];
                 }
                 FVal<T> s_prev = lsquare<T>(sum_prev);
                 FVal<T> s_red = lsquare<T>(sum_red);
@@ -685,10 +693,10 @@ KERNELSPEC int mlm_clustering_walk(
             } else if (b1 < 0) {
                 second_harder = false;
             } else {
-                FVal<T> pt_a = momenta[a1][1] * momenta[a1][1] +
-                    momenta[a1][2] * momenta[a1][2];
-                FVal<T> pt_b = momenta[b1][1] * momenta[b1][1] +
-                    momenta[b1][2] * momenta[b1][2];
+                FVal<T> pt_a =
+                    momenta[a1][1] * momenta[a1][1] + momenta[a1][2] * momenta[a1][2];
+                FVal<T> pt_b =
+                    momenta[b1][1] * momenta[b1][1] + momenta[b1][2] * momenta[b1][2];
                 second_harder = pt_b > pt_a;
             }
             if (trace == TRACE_HARDER) {
@@ -799,10 +807,12 @@ KERNELSPEC int mlm_clustering_walk(
         // final-state last clustering, current frame after an initial-state one.
         FVal<T> extra_scale = leftover < 0
             ? FVal<T>(0.0)
-            : sqrt(djb_clus<T>(
-                  last_is_initial ? momenta_tmp[leftover] : momenta_lab[leftover],
-                  hadronic
-              ));
+            : sqrt(
+                  djb_clus<T>(
+                      last_is_initial ? momenta_tmp[leftover] : momenta_lab[leftover],
+                      hadronic
+                  )
+              );
         // Follow each beam's parton line through the clustering, exactly as
         // setclscales does in Template/LO/SubProcesses/reweight.f.
         //
@@ -825,8 +835,9 @@ KERNELSPEC int mlm_clustering_walk(
         // outgoing leg) and is only ever cleared. LINE_FLAVOR does not use it.
         bool goodjet[N_EXT_MAX];
         for (int i = 0; i < n_part; ++i) {
-            goodjet[i] = i < 2 ? ((beam_flags >> (2 * i)) & 1) != 0
-                               : ((jet_leg_mask >> i) & 1) != 0;
+            goodjet[i] = i < 2
+                ? ((beam_flags >> (2 * i)) & 1) != 0
+                : ((jet_leg_mask >> i) & 1) != 0;
         }
         bool use_goodjet = parton_line_scheme == LINE_GOODJET;
 
@@ -859,44 +870,45 @@ KERNELSPEC int mlm_clustering_walk(
         // emitted_leg is ipart(1, ida(3-i)), the first external leg of the
         // emitted line, or -1 where there is none; is_jet_in and is_colored_in
         // are the mother's flavour.
-        auto walk_line = [&](int j,
-                             int i,
-                             bool is_emitted_jet,
-                             bool emitted_is_octet,
-                             int emitted_leg,
-                             bool is_jet_in,
-                             bool is_colored_in) {
-            if (partonline[j]) {
-                if (jfirst[j] < 0) {
-                    jfirst[j] = i;
+        auto walk_line =
+            [&](int j,
+                int i,
+                bool is_emitted_jet,
+                bool emitted_is_octet,
+                int emitted_leg,
+                bool is_jet_in,
+                bool is_colored_in) {
+                if (partonline[j]) {
+                    if (jfirst[j] < 0) {
+                        jfirst[j] = i;
+                    }
+                    jlast[j] = i;
+                    partonline[j] = is_emitted_jet && is_jet_in;
+                } else {
+                    if (jfirst[j] < 0) {
+                        jfirst[j] = i;
+                    }
+                    // the beam line has stopped being a parton line, so whatever
+                    // it becomes is not a good jet either
+                    goodjet[j] = false;
                 }
-                jlast[j] = i;
-                partonline[j] = is_emitted_jet && is_jet_in;
-            } else {
-                if (jfirst[j] < 0) {
-                    jfirst[j] = i;
+                if (!is_emitted_jet || !line_is_jet[j] || !is_jet_in) {
+                    ++jcode;
+                    increasecode = true;
+                } else if (increasecode) {
+                    ++jcode;
+                    increasecode = false;
                 }
-                // the beam line has stopped being a parton line, so whatever
-                // it becomes is not a good jet either
-                goodjet[j] = false;
-            }
-            if (!is_emitted_jet || !line_is_jet[j] || !is_jet_in) {
-                ++jcode;
-                increasecode = true;
-            } else if (increasecode) {
-                ++jcode;
-                increasecode = false;
-            }
-            if (is_emitted_jet && emitted_leg >= 2) {
-                iqjets[emitted_leg] =
-                    (partonline[j] || emitted_is_octet) ? 1 : jcode;
-            }
-            line_is_jet[j] = is_jet_in;
-            if (qcdline[j]) {
-                jcentral[j] = i;
-                qcdline[j] = is_colored_in;
-            }
-        };
+                if (is_emitted_jet && emitted_leg >= 2) {
+                    iqjets[emitted_leg] =
+                        (partonline[j] || emitted_is_octet) ? 1 : jcode;
+                }
+                line_is_jet[j] = is_jet_in;
+                if (qcdline[j]) {
+                    jcentral[j] = i;
+                    qcdline[j] = is_colored_in;
+                }
+            };
 
         int steps = cluster_max + (leftover >= 0 ? 1 : 0);
         // goodjet of the two daughters as each step meets them, before the
@@ -930,14 +942,14 @@ KERNELSPEC int mlm_clustering_walk(
                     // vertices with all or no lines coloured are left alone.
                     if (!is_qcd_vertex && mother_leg1 >= 2) {
                         bool leg1_octet =
-                            ((jet_leg_mask >> (mother_leg1 + LEG_OCTET_SHIFT)) & 1) != 0;
+                            ((jet_leg_mask >> (mother_leg1 + LEG_OCTET_SHIFT)) & 1) !=
+                            0;
                         if (!leg1_octet) {
                             if ((trace & TRACE_ALL_COLORLESS) != 0) {
                                 // a W W Z or h h h vertex: nothing to demote
                             } else if (mother_leg2 < 0) {
                                 iqjets[mother_leg1] = 0;
-                            } else if (iqjets[mother_leg1] > 0 &&
-                                       mother_leg2 >= 2 &&
+                            } else if (iqjets[mother_leg1] > 0 && mother_leg2 >= 2 &&
                                        iqjets[mother_leg2] > 0) {
                                 // both halves of an octet's line are tagged,
                                 // so one of them can go
@@ -949,7 +961,8 @@ KERNELSPEC int mlm_clustering_walk(
                     }
                     if (mother_leg2 >= 2 && !is_octet_in) {
                         bool leg2_octet =
-                            ((jet_leg_mask >> (mother_leg2 + LEG_OCTET_SHIFT)) & 1) != 0;
+                            ((jet_leg_mask >> (mother_leg2 + LEG_OCTET_SHIFT)) & 1) !=
+                            0;
                         if (!leg2_octet) {
                             iqjets[mother_leg2] = 0;
                         }
@@ -959,20 +972,17 @@ KERNELSPEC int mlm_clustering_walk(
                 }
                 // a jet vertex: every daughter that is still a bare external
                 // jet was emitted here
-                if (is_jet1 && particle1 >= 2 &&
-                    (step_bare[i] & (1 << particle1))) {
+                if (is_jet1 && particle1 >= 2 && (step_bare[i] & (1 << particle1))) {
                     iqjets[particle1] = 1;
                 }
-                if (is_jet2 && particle2 >= 2 &&
-                    (step_bare[i] & (1 << particle2))) {
+                if (is_jet2 && particle2 >= 2 && (step_bare[i] & (1 << particle2))) {
                     iqjets[particle2] = 1;
                 }
-                goodjet[particle1] = is_jet_in && goodjet[particle1] &&
-                    goodjet[particle2];
+                goodjet[particle1] =
+                    is_jet_in && goodjet[particle1] && goodjet[particle2];
                 continue;
             }
-            bool emitted = use_goodjet ? goodjet[particle2]
-                                       : ((data >> 29) & 1) != 0;
+            bool emitted = use_goodjet ? goodjet[particle2] : ((data >> 29) & 1) != 0;
             walk_line(
                 particle1,
                 i,
@@ -987,8 +997,7 @@ KERNELSPEC int mlm_clustering_walk(
             // The 2 -> 1 root lies on both beam lines and is walked once per beam
             // (as in reweight.f); the emitted object is the leftover and the
             // mother is the other beam's line.
-            bool leftover_jet =
-                use_goodjet ? goodjet[leftover] : slot_is_jet[leftover];
+            bool leftover_jet = use_goodjet ? goodjet[leftover] : slot_is_jet[leftover];
             for (int j = 0; j < 2; ++j) {
                 // reweight.f reads ipdgcl(imo) with imo = idacl(n,3-i).
                 walk_line(
@@ -1052,8 +1061,7 @@ KERNELSPEC int mlm_clustering_walk(
             }
             // At the root mt2ij is the second beam's mT (zero), so only mt2last
             // overrides it.
-            FVal<T> mt = jcentral[j] == cluster_max ? root_mt
-                                                    : cluster_mt[jcentral[j]];
+            FVal<T> mt = jcentral[j] == cluster_max ? root_mt : cluster_mt[jcentral[j]];
             if (mt > 0.0) {
                 pt_step[jcentral[j]] = mt;
             }
@@ -1115,7 +1123,12 @@ KERNELSPEC int mlm_clustering_walk(
                 for (int k = 0; k < 2; ++k) {
                     bool good = step_daughter_goodjet[i][k];
                     for (int m = 0; m < 2; ++m) {
-                        book(step_daughter_legs[i][2 * k + m], jet_vertex, good, pt_step[i]);
+                        book(
+                            step_daughter_legs[i][2 * k + m],
+                            jet_vertex,
+                            good,
+                            pt_step[i]
+                        );
                     }
                 }
             }
@@ -1232,8 +1245,7 @@ KERNELSPEC int mlm_clustering_walk(
             FVal<T> x_frac[2] = {1.0, 1.0};
             FVal<T> pt_pdf[2] = {0.0, 0.0};
             for (int j = 0; j < 2; ++j) {
-                line_class[j] =
-                    ((beam_flags >> (8 * (j + 1))) & TRACE_FLAVOR_MASK) - 1;
+                line_class[j] = ((beam_flags >> (8 * (j + 1))) & TRACE_FLAVOR_MASK) - 1;
             }
             for (int i = 0; i < steps; ++i) {
                 for (int j = 0; j < 2; ++j) {
@@ -1254,8 +1266,8 @@ KERNELSPEC int mlm_clustering_walk(
                     if (z > 0.0 && z < 1.0) {
                         x_frac[j] *= z;
                     }
-                    FVal<T> q_now = i == jlast[j] ? q_central[j]
-                                                  : min(pt_step[i], q_central[j]);
+                    FVal<T> q_now =
+                        i == jlast[j] ? q_central[j] : min(pt_step[i], q_central[j]);
                     if (!(pt_pdf[j] > 0.0)) {
                         // the first clustering on the line only records where
                         // the density it already has was evaluated
@@ -1334,8 +1346,7 @@ KERNELSPEC int mlm_clustering_walk(
             }
         }
     }
-    FVal<T> mean_scale =
-        reweighted > 0 ? exp(log_sum / reweighted) : ren_scale_val;
+    FVal<T> mean_scale = reweighted > 0 ? exp(log_sum / reweighted) : ren_scale_val;
     // A vertex that is not reweighted gets 0 rather than mu_R, so that
     // systematics can tell it from a reweighted vertex sitting at mu_R.
     for (int i = 0; i < cluster_max; ++i) {

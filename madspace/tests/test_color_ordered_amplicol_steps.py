@@ -46,7 +46,7 @@ def test_sub_of_zero_literal():
     fb.output(1, fb.sub(x, ms.Value(0.0)))
     runtime = ms.FunctionRuntime(fb.function(), default_context())
     values = torch.tensor([1.0, -2.0, 3.5])
-    minus_x, x_minus_0 = [torch.from_dlpack(t) for t in runtime.call([values])]
+    minus_x, x_minus_0 = (torch.from_dlpack(t) for t in runtime.call([values]))
     torch.testing.assert_close(minus_x, -values)
     torch.testing.assert_close(x_minus_0, values)
 

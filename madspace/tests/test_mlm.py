@@ -150,8 +150,7 @@ def pdf_outputs(clustering, momenta):
     out = clustering(momenta)
     first = len(out) - len(PDF_OUTPUTS)
     return {
-        name: np.asarray(value)
-        for name, value in zip(PDF_OUTPUTS, list(out)[first:])
+        name: np.asarray(value) for name, value in zip(PDF_OUTPUTS, list(out)[first:])
     }
 
 
@@ -204,9 +203,7 @@ def test_flavor_information_selects_which_legs_are_jets(process):
     _, diagrams, pdg_ids = process
     momenta = sample_momenta(diagrams)
     *_, out_no_pdg, _ = run(make_clustering(diagrams), momenta)
-    *_, out_pdg, _ = run(
-        make_clustering(diagrams, external_pdg_ids=pdg_ids), momenta
-    )
+    *_, out_pdg, _ = run(make_clustering(diagrams, external_pdg_ids=pdg_ids), momenta)
     # the tops are not jets, so with flavor information they never get one
     assert np.all(out_pdg[:, 0] == CM_ENERGY)
     assert np.all(out_pdg[:, 1] == CM_ENERGY)
@@ -243,13 +240,9 @@ def test_the_fallback_value_follows_the_collider_energy(process):
     changing it moves only the unassigned legs."""
     _, diagrams, pdg_ids = process
     momenta = sample_momenta(diagrams)
-    *_, out, _ = run(
-        make_clustering(diagrams, external_pdg_ids=pdg_ids), momenta
-    )
+    *_, out, _ = run(make_clustering(diagrams, external_pdg_ids=pdg_ids), momenta)
     *_, out_half, _ = run(
-        make_clustering(
-            diagrams, external_pdg_ids=pdg_ids, cm_energy=CM_ENERGY / 2
-        ),
+        make_clustering(diagrams, external_pdg_ids=pdg_ids, cm_energy=CM_ENERGY / 2),
         momenta,
     )
     assigned = out != CM_ENERGY
@@ -293,9 +286,11 @@ def test_factorization_scale_does_not_exceed_renormalization_scale(process):
     momenta = sample_momenta(diagrams)
     ren, fac1, fac2, _, _ = run(
         make_clustering(
-            diagrams, external_pdg_ids=pdg_ids,
+            diagrams,
+            external_pdg_ids=pdg_ids,
             clustering_mean_pdf_ladder=False,
-        ), momenta
+        ),
+        momenta,
     )
     assert np.array_equal(fac1, fac2)
     assert np.all(fac1 <= ren * (1.0 + 1e-12))
@@ -306,9 +301,7 @@ def test_diagram_index_is_in_range(process):
     constructor, since it is passed straight to the matrix element."""
     _, diagrams, pdg_ids = process
     momenta = sample_momenta(diagrams)
-    *_, diagram = run(
-        make_clustering(diagrams, external_pdg_ids=pdg_ids), momenta
-    )
+    *_, diagram = run(make_clustering(diagrams, external_pdg_ids=pdg_ids), momenta)
     total = sum(len(d["permutations"]) for d in diagrams)
     assert diagram.min() >= 0
     assert diagram.max() < total
@@ -348,7 +341,8 @@ def test_longitudinal_boosts_barely_change_the_scales(process):
     """
     _, diagrams, pdg_ids = process
     clustering = make_clustering(
-        diagrams, external_pdg_ids=pdg_ids,
+        diagrams,
+        external_pdg_ids=pdg_ids,
         clustering_mean_pdf_ladder=False,
     )
     momenta = sample_momenta(diagrams)
@@ -378,7 +372,8 @@ def test_scales_are_azimuthally_invariant(process):
     """Rotating the event around the beam axis must not change any scale."""
     _, diagrams, pdg_ids = process
     clustering = make_clustering(
-        diagrams, external_pdg_ids=pdg_ids,
+        diagrams,
+        external_pdg_ids=pdg_ids,
         clustering_mean_pdf_ladder=False,
     )
     momenta = sample_momenta(diagrams)
@@ -407,7 +402,13 @@ BEAM_LINE_SCHEMES = {
 
 # What the beam-line walk hands the pdf reweighting (built from transverse
 # masses and invariants).
-LADDER_OUTPUTS = ["pdf_scale1", "pdf_scale2", "pdf_rw_x", "pdf_rw_q_num", "pdf_rw_q_den"]
+LADDER_OUTPUTS = [
+    "pdf_scale1",
+    "pdf_scale2",
+    "pdf_rw_x",
+    "pdf_rw_q_num",
+    "pdf_rw_q_den",
+]
 
 
 def rotate_about_beam(momenta, angle):
@@ -573,9 +574,11 @@ def test_renormalization_scale_is_a_geometric_mean(process):
     momenta = sample_momenta(diagrams)
     ren, fac, _, out, _ = run(
         make_clustering(
-            diagrams, external_pdg_ids=pdg_ids,
+            diagrams,
+            external_pdg_ids=pdg_ids,
             clustering_mean_pdf_ladder=False,
-        ), momenta
+        ),
+        momenta,
     )
     assert np.all(ren >= fac * (1.0 - 1e-12))
     # mu_F is the smallest QCD clustering scale, so every jet scale - each of
@@ -629,9 +632,7 @@ Z_TO_BB_PDGS = [2, -2, 5, -5, 21, 21]
 def test_resonant_propagators_get_a_breit_wigner_index():
     """Only a propagator with a width can be resonant, and only in a final-state
     clustering: a t-channel line is spacelike and never goes on shell."""
-    with_width = make_clustering(
-        z_to_bb_diagram(W_Z), external_pdg_ids=Z_TO_BB_PDGS
-    )
+    with_width = make_clustering(z_to_bb_diagram(W_Z), external_pdg_ids=Z_TO_BB_PDGS)
     without = make_clustering(z_to_bb_diagram(0.0), external_pdg_ids=Z_TO_BB_PDGS)
 
     assert list(with_width.bw_masses) == [pytest.approx(M_Z)]
@@ -657,11 +658,14 @@ def test_resonant_clustering_uses_the_invariant_mass():
     resonance branch off entirely."""
     momenta = sample_momenta(z_to_bb_diagram(W_Z))
     resonant = make_clustering(
-        z_to_bb_diagram(W_Z), external_pdg_ids=Z_TO_BB_PDGS, bw_cutoff=15.0,
+        z_to_bb_diagram(W_Z),
+        external_pdg_ids=Z_TO_BB_PDGS,
+        bw_cutoff=15.0,
         clustering_mean_pdf_ladder=False,
     )
     non_resonant = make_clustering(
-        z_to_bb_diagram(0.0), external_pdg_ids=Z_TO_BB_PDGS,
+        z_to_bb_diagram(0.0),
+        external_pdg_ids=Z_TO_BB_PDGS,
         clustering_mean_pdf_ladder=False,
     )
 
@@ -683,9 +687,7 @@ def test_breit_wigner_cutoff_widens_the_resonance_window():
     closed = make_clustering(
         z_to_bb_diagram(W_Z), external_pdg_ids=Z_TO_BB_PDGS, bw_cutoff=0.0
     )
-    zero_width = make_clustering(
-        z_to_bb_diagram(0.0), external_pdg_ids=Z_TO_BB_PDGS
-    )
+    zero_width = make_clustering(z_to_bb_diagram(0.0), external_pdg_ids=Z_TO_BB_PDGS)
     wide = make_clustering(
         z_to_bb_diagram(W_Z), external_pdg_ids=Z_TO_BB_PDGS, bw_cutoff=15.0
     )
@@ -748,8 +750,10 @@ def collinear_pair_event(hadronic):
     or 2 and 3 (g g > g g g), with the third one recoiling and the beams along
     z: momentum is conserved. For such a pair cosh(deta) - cos(dphi), or
     1 - cos_theta, is of order 1e-10."""
+
     def pt_eta_phi(pt, eta, phi):
         return massless(pt * np.cos(phi), pt * np.sin(phi), pt * np.sinh(eta))
+
     a = pt_eta_phi(300.0, 2.5, 0.7)
     b = pt_eta_phi(250.0, 2.5 + 8e-6, 0.7 + 6e-6)
     if hadronic:
@@ -781,16 +785,21 @@ def test_a_nearly_collinear_pair_keeps_its_clustering_scale(hadronic):
         pdg_ids = [-11, 11, 1, -1, 21]
         vertices = [["o0", "o2", "p0"], ["p0", "o1", "p1"], ["i0", "p1", "i1"]]
         legs = (2, 4)
-    diagrams = [{
-        "incoming_masses": [0.0, 0.0],
-        "outgoing_masses": [0.0, 0.0, 0.0],
-        "propagators": [[0.0, 0.0], [0.0, 0.0]],
-        "vertices": vertices,
-        "permutations": [[0, 1, 2, 3, 4]],
-    }]
+    diagrams = [
+        {
+            "incoming_masses": [0.0, 0.0],
+            "outgoing_masses": [0.0, 0.0, 0.0],
+            "propagators": [[0.0, 0.0], [0.0, 0.0]],
+            "vertices": vertices,
+            "permutations": [[0, 1, 2, 3, 4]],
+        }
+    ]
     clustering = make_clustering(
-        diagrams, external_pdg_ids=pdg_ids, jet_radius=jet_radius,
-        hadronic=hadronic, clustering_mean_pdf_ladder=False,
+        diagrams,
+        external_pdg_ids=pdg_ids,
+        jet_radius=jet_radius,
+        hadronic=hadronic,
+        clustering_mean_pdf_ladder=False,
         jet_scale_scheme=ms.MLMClustering.JetScaleScheme.emission,
     )
     event = collinear_pair_event(hadronic)
@@ -852,7 +861,8 @@ def test_single_clustering_scale_matches_the_measures():
     ]
     pdg_ids = [21, 21, 21, 21]
     clustering = make_clustering(
-        diagrams, external_pdg_ids=pdg_ids,
+        diagrams,
+        external_pdg_ids=pdg_ids,
         clustering_mean_pdf_ladder=False,
     )
     momenta = sample_momenta(diagrams, batch_size=128, seed=99)
@@ -911,7 +921,9 @@ def test_kt_measure_matches_the_fortran():
     ]
     pdg_ids = [21, 21, 21, 21, 21]
     clustering = make_clustering(
-        diagrams, external_pdg_ids=pdg_ids, jet_radius=jet_radius,
+        diagrams,
+        external_pdg_ids=pdg_ids,
+        jet_radius=jet_radius,
         clustering_mean_pdf_ladder=False,
     )
     momenta = sample_momenta(diagrams, batch_size=128, seed=99)
@@ -928,9 +940,7 @@ def test_kt_measure_matches_the_fortran():
 
     masses = [0.0] * 5
     for event, scale in zip(momenta, fac):
-        candidates = first_step_candidates(
-            clustering, 5, event, jet_radius, masses
-        )
+        candidates = first_step_candidates(clustering, 5, event, jet_radius, masses)
         # two clustering steps here (n_ext - 3), and mu_F is the smallest QCD
         # clustering scale of the whole history, so it is at most the smallest
         # measure available in the first step
@@ -984,9 +994,9 @@ def decode_transitions(machine, offset):
     `offset`."""
     transitions = []
     while True:
-        assert offset + STATE_ITEM_SIZE <= len(machine), (
-            "transition list runs past the machine"
-        )
+        assert offset + STATE_ITEM_SIZE <= len(
+            machine
+        ), "transition list runs past the machine"
         data, next_offset, trace = machine[offset : offset + STATE_ITEM_SIZE]
         transitions.append((data, next_offset, trace))
         if field(data, BIT_IS_LAST):
@@ -1306,9 +1316,7 @@ def test_production_scheme_is_never_softer_than_emission(process):
     _, diagrams, pdg_ids = process
     momenta = sample_momenta(diagrams, batch_size=1000, seed=2468)
     *_, emission, _ = run(
-        make_clustering(
-            diagrams, external_pdg_ids=pdg_ids, jet_scale_scheme=EMISSION
-        ),
+        make_clustering(diagrams, external_pdg_ids=pdg_ids, jet_scale_scheme=EMISSION),
         momenta,
     )
     *_, production, _ = run(
@@ -1350,9 +1358,7 @@ def test_the_two_schemes_disagree_on_continuing_lines():
     pdg_ids = [21] * 6
     momenta = sample_momenta(diagrams, batch_size=1000, seed=2468)
     *_, emission, _ = run(
-        make_clustering(
-            diagrams, external_pdg_ids=pdg_ids, jet_scale_scheme=EMISSION
-        ),
+        make_clustering(diagrams, external_pdg_ids=pdg_ids, jet_scale_scheme=EMISSION),
         momenta,
     )
     *_, production, _ = run(
@@ -1376,9 +1382,7 @@ def test_the_schemes_coincide_when_no_line_continues(process):
     _, diagrams, pdg_ids = process
     momenta = sample_momenta(diagrams, batch_size=500, seed=2468)
     *_, emission, _ = run(
-        make_clustering(
-            diagrams, external_pdg_ids=pdg_ids, jet_scale_scheme=EMISSION
-        ),
+        make_clustering(diagrams, external_pdg_ids=pdg_ids, jet_scale_scheme=EMISSION),
         momenta,
     )
     *_, production, _ = run(
@@ -1397,9 +1401,7 @@ def test_the_schemes_agree_for_a_single_clustering():
     pdg_ids = [21] * 5
     momenta = sample_momenta(diagrams, batch_size=256, seed=1357)
     *_, emission, _ = run(
-        make_clustering(
-            diagrams, external_pdg_ids=pdg_ids, jet_scale_scheme=EMISSION
-        ),
+        make_clustering(diagrams, external_pdg_ids=pdg_ids, jet_scale_scheme=EMISSION),
         momenta,
     )
     *_, production, _ = run(
@@ -1417,9 +1419,7 @@ def test_the_scheme_does_not_change_the_scales(process):
     _, diagrams, pdg_ids = process
     momenta = sample_momenta(diagrams, batch_size=1000, seed=2468)
     ren_e, fac_e, _, _, _ = run(
-        make_clustering(
-            diagrams, external_pdg_ids=pdg_ids, jet_scale_scheme=EMISSION
-        ),
+        make_clustering(diagrams, external_pdg_ids=pdg_ids, jet_scale_scheme=EMISSION),
         momenta,
     )
     ren_p, fac_p, _, _, _ = run(
@@ -1435,9 +1435,7 @@ def test_the_scheme_does_not_change_the_scales(process):
 def test_production_is_the_default():
     """The default matches madevent, which is the validated reference."""
     diagrams = three_gluon_diagram([21, 21])
-    assert (
-        ms.MLMClustering.JetScaleScheme.__members__["production"] == PRODUCTION
-    )
+    assert ms.MLMClustering.JetScaleScheme.__members__["production"] == PRODUCTION
     default = make_clustering(diagrams, external_pdg_ids=[21] * 5)
     explicit = make_clustering(
         diagrams, external_pdg_ids=[21] * 5, jet_scale_scheme=PRODUCTION
@@ -1463,9 +1461,7 @@ def test_xqcut_is_off_by_default(process):
     feature on is the only thing that can change an existing result."""
     _, diagrams, pdg_ids = process
     momenta = sample_momenta(diagrams)
-    weights = run_all(
-        make_clustering(diagrams, external_pdg_ids=pdg_ids), momenta
-    )[5]
+    weights = run_all(make_clustering(diagrams, external_pdg_ids=pdg_ids), momenta)[5]
     assert np.all(weights == 1.0)
 
 
@@ -1619,8 +1615,10 @@ def t_channel_clustering(**kwargs):
                 ms.Diagram(
                     d["incoming_masses"],
                     d["outgoing_masses"],
-                    [ms.Propagator(mass=m, width=w, pdg_id=i)
-                     for m, w, i in d["propagators"]],
+                    [
+                        ms.Propagator(mass=m, width=w, pdg_id=i)
+                        for m, w, i in d["propagators"]
+                    ],
                     d["vertices"],
                 )
             )
@@ -1655,7 +1653,8 @@ def test_alphas_scales_are_clustering_scales_or_zero(process):
     assert np.mean(scales == 0.0) < 0.5
     # without alpha_s reweighting none is
     clustering = make_clustering(
-        diagrams, external_pdg_ids=pdg_ids,
+        diagrams,
+        external_pdg_ids=pdg_ids,
         alphas_scheme=ms.MLMClustering.AlphasScheme.none,
     )
     scales, weight = alphas_outputs(clustering, momenta)
@@ -1682,7 +1681,8 @@ def test_clustering_mean_pdf_ladder_takes_only_the_densities_from_madevent(
     vertex scales and the xqcut veto stay clustering_mean's."""
     scheme = ms.MLMClustering.ScaleScheme
     mean = t_channel_clustering(
-        scale_scheme=scheme.clustering_mean, xqcut=20.0,
+        scale_scheme=scheme.clustering_mean,
+        xqcut=20.0,
         clustering_mean_pdf_ladder=False,
     )
     madevent = t_channel_clustering(scale_scheme=scheme.madevent, xqcut=20.0)
@@ -1715,7 +1715,9 @@ def test_clustering_mean_pdf_ladder_takes_only_the_densities_from_madevent(
 
     # and the switch is inert without pdf_reweighting
     off = t_channel_clustering(
-        scale_scheme=scheme.clustering_mean, xqcut=20.0, pdf_reweighting=False,
+        scale_scheme=scheme.clustering_mean,
+        xqcut=20.0,
+        pdf_reweighting=False,
     )
     _, fact1_o, fact2_o, _, _ = run(off, t_channel_momenta)
     _, fact1_m, fact2_m, _, _ = run(mean, t_channel_momenta)
@@ -1743,8 +1745,11 @@ def test_the_ladder_leaves_every_other_clustering_mean_output_alone(
 
     def clustering(**kwargs):
         return make_clustering(
-            diagrams, external_pdg_ids=pdg_ids, xqcut=20.0,
-            clustering_history=history, jet_scale_scheme=jet_scale_scheme,
+            diagrams,
+            external_pdg_ids=pdg_ids,
+            xqcut=20.0,
+            clustering_history=history,
+            jet_scale_scheme=jet_scale_scheme,
             **kwargs,
         )
 
@@ -1894,8 +1899,13 @@ def write_flat_pdf_grid(path, value):
 
 
 def t_channel_integrand_outputs(
-    tmp_path, pdf_value, batch_size=4000, pdf_reweighting=True, partial_weights=False,
-    min_scale=0.0, **clustering_kwargs,
+    tmp_path,
+    pdf_value,
+    batch_size=4000,
+    pdf_reweighting=True,
+    partial_weights=False,
+    min_scale=0.0,
+    **clustering_kwargs,
 ):
     """Every output of the t-channel process run through a whole Integrand
     under MLM (pdf reweighting by default), with the built-in flat test matrix
@@ -1970,11 +1980,16 @@ def t_channel_integrand_weights(tmp_path, pdf_value, batch_size=4000, **kwargs):
 # the events, so that case runs with the 2 GeV floor of beam.min_scale, which
 # drops them as a run does (without it their weight is 0 * NaN).
 LADDER_SCHEMES = [
-    pytest.param({"scale_scheme": ms.MLMClustering.ScaleScheme.madevent},
-                 id="madevent"),
-    pytest.param({"scale_scheme": ms.MLMClustering.ScaleScheme.clustering_mean,
-                  "min_scale": 2.0},
-                 id="clustering_mean_pdf_ladder"),
+    pytest.param(
+        {"scale_scheme": ms.MLMClustering.ScaleScheme.madevent}, id="madevent"
+    ),
+    pytest.param(
+        {
+            "scale_scheme": ms.MLMClustering.ScaleScheme.clustering_mean,
+            "min_scale": 2.0,
+        },
+        id="clustering_mean_pdf_ladder",
+    ),
 ]
 
 
@@ -2004,23 +2019,27 @@ def test_no_pdf_product_for_the_systematics_under_pdf_reweighting(tmp_path):
     clustering ladder, so even the central member would not give a ratio of 1.
     The integrand leaves it out there, and the systematics take the nominal
     densities at the factorisation scale themselves."""
+
     def output_count(**kwargs):
         return len(t_channel_integrand_outputs(tmp_path, 1.0, 16, **kwargs))
 
     # the product is there without pdf reweighting ...
-    assert (output_count(pdf_reweighting=False, partial_weights=True)
-            == output_count(pdf_reweighting=False) + 1)
+    assert (
+        output_count(pdf_reweighting=False, partial_weights=True)
+        == output_count(pdf_reweighting=False) + 1
+    )
     # ... and left out with it
-    assert (output_count(pdf_reweighting=True, partial_weights=True)
-            == output_count(pdf_reweighting=True))
+    assert output_count(pdf_reweighting=True, partial_weights=True) == output_count(
+        pdf_reweighting=True
+    )
     # the same under clustering_mean: left out with the ladder, which is on by
     # default, and there without it
     mean = {"scale_scheme": ms.MLMClustering.ScaleScheme.clustering_mean}
-    assert (output_count(partial_weights=True, **mean)
-            == output_count(**mean))
+    assert output_count(partial_weights=True, **mean) == output_count(**mean)
     no_ladder = dict(mean, clustering_mean_pdf_ladder=False)
-    assert (output_count(partial_weights=True, **no_ladder)
-            == output_count(**no_ladder) + 1)
+    assert (
+        output_count(partial_weights=True, **no_ladder) == output_count(**no_ladder) + 1
+    )
 
 
 # --------------------------------------------------------------------------
@@ -2071,8 +2090,10 @@ def w_plus_jet_clustering(xqcut):
                 ms.Diagram(
                     d["incoming_masses"],
                     d["outgoing_masses"],
-                    [ms.Propagator(mass=m, width=w, pdg_id=i)
-                     for m, w, i in d["propagators"]],
+                    [
+                        ms.Propagator(mass=m, width=w, pdg_id=i)
+                        for m, w, i in d["propagators"]
+                    ],
                     d["vertices"],
                 )
             )
@@ -2105,9 +2126,11 @@ def test_a_jet_above_the_merging_cut_is_never_vetoed():
     above = mt > xqcut * (1.0 + 1e-9)
 
     assert above.sum() > 200, "too few jets above the cut to prove anything"
-    assert np.all(weight[above] == 1.0), (
-        "%d of %d events with the jet above the merging cut were vetoed"
-        % (int((weight[above] != 1.0).sum()), int(above.sum()))
+    assert np.all(
+        weight[above] == 1.0
+    ), "%d of %d events with the jet above the merging cut were vetoed" % (
+        int((weight[above] != 1.0).sum()),
+        int(above.sum()),
     )
 
 
@@ -2126,9 +2149,11 @@ def test_a_jet_emitted_at_the_w_vertex_is_not_a_merging_jet():
     momenta = sample_momenta(diagrams, batch_size=4000)
     for xqcut in (60.0, 500.0):
         weight = run_all(w_plus_jet_clustering(xqcut), momenta)[5]
-        assert np.all(weight == 1.0), (
-            "xqcut = %g vetoed %d events whose jet is not a QCD emission"
-            % (xqcut, int((weight != 1.0).sum()))
+        assert np.all(
+            weight == 1.0
+        ), "xqcut = %g vetoed %d events whose jet is not a QCD emission" % (
+            xqcut,
+            int((weight != 1.0).sum()),
         )
 
 
@@ -2166,8 +2191,10 @@ def s_channel_ttbar_clustering(propagator):
                 ms.Diagram(
                     d["incoming_masses"],
                     d["outgoing_masses"],
-                    [ms.Propagator(mass=m, width=w, pdg_id=i)
-                     for m, w, i in d["propagators"]],
+                    [
+                        ms.Propagator(mass=m, width=w, pdg_id=i)
+                        for m, w, i in d["propagators"]
+                    ],
                     d["vertices"],
                 )
             )
@@ -2192,9 +2219,7 @@ def test_an_s_channel_qcd_root_uses_the_mean_transverse_mass_of_the_pair():
     momenta = sample_momenta(s_channel_ttbar_diagram(gluon), batch_size=500)
     ren, fac1, fac2, _, _ = run(s_channel_ttbar_clustering(gluon), momenta)
 
-    expected = np.sqrt(
-        transverse_mass(momenta[:, 2]) * transverse_mass(momenta[:, 3])
-    )
+    expected = np.sqrt(transverse_mass(momenta[:, 2]) * transverse_mass(momenta[:, 3]))
     shat_mt = transverse_mass(momenta[:, 2] + momenta[:, 3])
     assert ren == pytest.approx(expected, rel=1e-9)
     assert fac1 == pytest.approx(expected, rel=1e-9)
@@ -2252,8 +2277,10 @@ def gg_ttbar_g_chain_clustering():
                 ms.Diagram(
                     d["incoming_masses"],
                     d["outgoing_masses"],
-                    [ms.Propagator(mass=m, width=w, pdg_id=i)
-                     for m, w, i in d["propagators"]],
+                    [
+                        ms.Propagator(mass=m, width=w, pdg_id=i)
+                        for m, w, i in d["propagators"]
+                    ],
                     d["vertices"],
                 )
             )
@@ -2313,9 +2340,10 @@ def test_a_jet_emitted_before_the_tops_does_not_set_the_renormalisation_scale():
     # the root is measured in the frame the boost after the jet left behind,
     # where t and t~ balance, so the equality holds up to rounding
     same = np.abs(ren / fac1 - 1.0) < 1e-6
-    assert np.mean(same[jet_into_beam]) > 0.5, (
-        "mu_R == mu_F on only %.1f%% of jet-into-beam points"
-        % (100 * np.mean(same[jet_into_beam]))
+    assert (
+        np.mean(same[jet_into_beam]) > 0.5
+    ), "mu_R == mu_F on only %.1f%% of jet-into-beam points" % (
+        100 * np.mean(same[jet_into_beam])
     )
 
 
@@ -2362,8 +2390,10 @@ def w_plus_jet_two_diagram_clustering(**kwargs):
                 ms.Diagram(
                     d["incoming_masses"],
                     d["outgoing_masses"],
-                    [ms.Propagator(mass=m, width=w, pdg_id=i)
-                     for m, w, i in d["propagators"]],
+                    [
+                        ms.Propagator(mass=m, width=w, pdg_id=i)
+                        for m, w, i in d["propagators"]
+                    ],
                     d["vertices"],
                 )
             )
@@ -2464,7 +2494,9 @@ def test_every_diagram_gets_a_state_machine_after_the_union_one(process):
 def test_the_history_setting_leaves_the_union_walk_alone(process):
     _, diagrams, pdg_ids = process
     momenta = sample_momenta(diagrams)
-    reference = run_all(history_clustering(diagrams, pdg_ids, HISTORY.all_diagrams), momenta)
+    reference = run_all(
+        history_clustering(diagrams, pdg_ids, HISTORY.all_diagrams), momenta
+    )
     for history in (HISTORY.diagram, HISTORY.madevent):
         other = run_all(history_clustering(diagrams, pdg_ids, history), momenta)
         for a, b in zip(reference, other):
@@ -2510,12 +2542,26 @@ def test_the_madevent_history_is_either_the_union_or_the_diagram(process):
     count = sum(len(d["permutations"]) for d in diagrams)
     picked = np.random.default_rng(4).integers(0, count, len(momenta))
     union = run_all(history_clustering(diagrams, pdg_ids, HISTORY.madevent), momenta)
-    diagram = along(history_clustering(diagrams, pdg_ids, HISTORY.diagram), momenta, picked)
-    madevent = along(history_clustering(diagrams, pdg_ids, HISTORY.madevent), momenta, picked)
-    is_union = np.all([np.isclose(a, b).reshape(len(momenta), -1).all(axis=1)
-                       for a, b in zip(union, madevent)], axis=0)
-    is_diagram = np.all([np.isclose(a, b).reshape(len(momenta), -1).all(axis=1)
-                         for a, b in zip(diagram[:6], madevent[:6])], axis=0)
+    diagram = along(
+        history_clustering(diagrams, pdg_ids, HISTORY.diagram), momenta, picked
+    )
+    madevent = along(
+        history_clustering(diagrams, pdg_ids, HISTORY.madevent), momenta, picked
+    )
+    is_union = np.all(
+        [
+            np.isclose(a, b).reshape(len(momenta), -1).all(axis=1)
+            for a, b in zip(union, madevent)
+        ],
+        axis=0,
+    )
+    is_diagram = np.all(
+        [
+            np.isclose(a, b).reshape(len(momenta), -1).all(axis=1)
+            for a, b in zip(diagram[:6], madevent[:6])
+        ],
+        axis=0,
+    )
     assert np.all(is_union | is_diagram)
     # both outcomes occur for a process with this many diagrams
     assert 0 < np.mean(is_union) < 1
@@ -2577,8 +2623,10 @@ def vbf_like_fsr_clustering(**kwargs):
                 ms.Diagram(
                     d["incoming_masses"],
                     d["outgoing_masses"],
-                    [ms.Propagator(mass=m, width=w, pdg_id=i)
-                     for m, w, i in d["propagators"]],
+                    [
+                        ms.Propagator(mass=m, width=w, pdg_id=i)
+                        for m, w, i in d["propagators"]
+                    ],
                     d["vertices"],
                 )
             )
@@ -2729,7 +2777,10 @@ def two_to_one_momenta(batch_size=BATCH_SIZE, seed=SEED):
 
 @pytest.mark.parametrize(
     "scale_scheme",
-    [ms.MLMClustering.ScaleScheme.clustering_mean, ms.MLMClustering.ScaleScheme.madevent],
+    [
+        ms.MLMClustering.ScaleScheme.clustering_mean,
+        ms.MLMClustering.ScaleScheme.madevent,
+    ],
 )
 @pytest.mark.parametrize(
     "history",

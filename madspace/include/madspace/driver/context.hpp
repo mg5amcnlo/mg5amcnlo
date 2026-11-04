@@ -182,9 +182,13 @@ public:
     DevicePtr device() const noexcept { return _device; }
 
     /// Whether the library provides the optional `umami_set_parameter`.
-    bool supports_set_parameter() const noexcept { return bool(_functions.set_parameter); }
+    bool supports_set_parameter() const noexcept {
+        return bool(_functions.set_parameter);
+    }
     /// Whether the library provides the optional `umami_get_parameter`.
-    bool supports_get_parameter() const noexcept { return bool(_functions.get_parameter); }
+    bool supports_get_parameter() const noexcept {
+        return bool(_functions.get_parameter);
+    }
 
     /// Set a physics parameter (real and imaginary part) of this thread's process
     /// instance. Throws if the library does not implement it or rejects `name`.

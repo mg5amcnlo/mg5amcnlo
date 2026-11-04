@@ -16,8 +16,8 @@ namespace madspace {
  * matching particles; selections are combined into tuples whose momenta can be
  * summed, and one @ref ObservableOption is evaluated per tuple [1]. Several PDG
  * types may be combined, for example all jet flavours. The available
- * observables are single-momentum functions (`e`, `px`, `py`, `pz`, `mass`, `pt`, `p_mag`,
- * `phi`, `theta`, `y`, `y_abs`, `eta`, `eta_abs`), pair functions
+ * observables are single-momentum functions (`e`, `px`, `py`, `pz`, `mass`, `pt`,
+ * `p_mag`, `phi`, `theta`, `y`, `y_abs`, `eta`, `eta_abs`), pair functions
  * (`delta_eta`, `delta_phi`, `delta_r`, `pair_mass`, `sfos_pair_mass`), and
  * the event-level `sqrt_s`. `sfos_pair_mass` is `pair_mass` restricted to
  * same-flavour opposite-sign pairs, i.e. pairs whose PDG ids are `id` and

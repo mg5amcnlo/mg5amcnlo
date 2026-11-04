@@ -280,7 +280,9 @@ std::tuple<std::size_t, std::size_t> write_event_header(
         }
     } else {
         wide = (header_size - prefix_len > 0xFFFF);
-        if (wide) prefix_len = 12;
+        if (wide) {
+            prefix_len = 12;
+        }
     }
 
     file_stream << (wide ? "\x93NUMPY\x02\x00"s : "\x93NUMPY\x01\x00"s);
@@ -335,8 +337,7 @@ void madspace::save_tensor(const std::string& file, Tensor tensor) {
 
 Tensor madspace::load_tensor(TarReader& tar, const std::string& name) {
     std::vector<char> data = tar.read(name);
-    if (data.size() < npy_preamble_size ||
-        data.size() < preamble_size(data.data())) {
+    if (data.size() < npy_preamble_size || data.size() < preamble_size(data.data())) {
         throw std::runtime_error(std::format("Invalid npy file '{}'", name));
     }
     std::size_t preamble_length = preamble_size(data.data());

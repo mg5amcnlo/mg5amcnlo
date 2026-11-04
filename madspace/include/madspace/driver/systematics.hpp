@@ -125,9 +125,7 @@ struct Variation {
     /// the nominal scales and PDF member).
     bool is_emission() const { return pdf_index == -1 && !is_scale() && alps != 1.; }
     /// Whether this is the nominal point (nominal scale and PDF member).
-    bool is_nominal() const {
-        return pdf_index == -1 && !is_scale() && !is_emission();
-    }
+    bool is_nominal() const { return pdf_index == -1 && !is_scale() && !is_emission(); }
 };
 
 /// The variations belonging to one PDF set, for computing an uncertainty band.

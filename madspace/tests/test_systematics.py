@@ -477,7 +477,10 @@ def test_mlm_vertices_follow_the_emission_scale(grids, ref):
     calc = ms.SystematicsCalculator(config, args, grid, alpha_s)
     variations = calc.variations
     assert [(v.mur, v.alps) for v in variations] == [
-        (0.5, 1.0), (2.0, 1.0), (1.0, 0.5), (1.0, 2.0)
+        (0.5, 1.0),
+        (2.0, 1.0),
+        (1.0, 0.5),
+        (1.0, 2.0),
     ]
     assert [v.is_emission for v in variations] == [False, False, True, True]
     assert calc.emission_variation_indices == [2, 3]
@@ -509,8 +512,9 @@ def test_mlm_vertices_follow_the_emission_scale(grids, ref):
     for w0, mu, row in zip(
         events["event_weight"], events["ren_scale"], calc.weights(**events)
     ):
-        assert row[0] == approx(w0 * (ref.alphas(0.5 * mu) / ref.alphas(mu)) ** n,
-                                rel=1e-12)
+        assert row[0] == approx(
+            w0 * (ref.alphas(0.5 * mu) / ref.alphas(mu)) ** n, rel=1e-12
+        )
         assert row[2] == approx(w0, rel=1e-15)
 
 
@@ -529,15 +533,21 @@ def test_mlm_pdf_ladder_follows_alpsfact_and_muf(grids, ref):
     grid, alpha_s = grids
     low = 2.0
     config = make_config(
-        mur=[1.0], muf=[0.5, 1.0, 2.0], alps=[0.5, 1.0, 2.0],
-        pdf_ladder=True, ladder_min_scale=low,
+        mur=[1.0],
+        muf=[0.5, 1.0, 2.0],
+        alps=[0.5, 1.0, 2.0],
+        pdf_ladder=True,
+        ladder_min_scale=low,
     )
     # no alpha_s: the weights move through the PDFs alone
     args = [ms.SubprocessSystArgs(qcd_power=0, beam_pdgs=[[2, 2]])]
     calc = ms.SystematicsCalculator(config, args, grid, alpha_s)
     variations = calc.variations
     assert [(v.muf, v.alps) for v in variations] == [
-        (0.5, 1.0), (2.0, 1.0), (1.0, 0.5), (1.0, 2.0)
+        (0.5, 1.0),
+        (2.0, 1.0),
+        (1.0, 0.5),
+        (1.0, 2.0),
     ]
 
     events = make_events(ref, n=20)
@@ -563,8 +573,11 @@ def test_mlm_pdf_ladder_follows_alpsfact_and_muf(grids, ref):
         x1, x2, mu = events["x1"][i], events["x2"][i], events["ren_scale"][i]
         clamp = lambda q: max(q, low)
         # beam 1: entries (2, x1, q1), (21, x1, q2), (2, x1 z1, mu)
-        entries = [(2, x1, lead[i][0]), (21, x1, ladder[i][1][2]),
-                   (2, ladder[i][2][0], ladder[i][2][2])]
+        entries = [
+            (2, x1, lead[i][0]),
+            (21, x1, ladder[i][1][2]),
+            (2, ladder[i][2][0], ladder[i][2][2]),
+        ]
         top = k * entries[-1][2]
         w = ref.pdf(entries[-1][0], entries[-1][1], clamp(top))
         for (pdg, x, q), (_, x_next, _) in zip(entries, entries[1:]):
@@ -581,8 +594,13 @@ def test_mlm_pdf_ladder_follows_alpsfact_and_muf(grids, ref):
                 if var.alps != 1.0:
                     assert w == approx(w0, rel=1e-15)
                     continue
-                expected = (ref.pdf(2, x1, var.muf * mu) * ref.pdf(2, x2, var.muf * mu)
-                            / events["partial_weight_product"][i])
+                expected = (
+                    ref.pdf(2, x1, var.muf * mu)
+                    * ref.pdf(2, x2, var.muf * mu)
+                    / events["partial_weight_product"][i]
+                )
             else:
-                expected = ladder_weight(i, var.muf, var.alps) / ladder_weight(i, 1.0, 1.0)
+                expected = ladder_weight(i, var.muf, var.alps) / ladder_weight(
+                    i, 1.0, 1.0
+                )
             assert w == approx(w0 * expected, rel=1e-12)

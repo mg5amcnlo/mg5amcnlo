@@ -323,9 +323,8 @@ namespace {
 
 // catching exceptions is extremely expensive so we cache whether to use the new or
 // old version of the dlpack protocol
-py::object call_dlpack(
-    py::object& dlpack_func, py::dict& stream_arg, bool* dlpack_version_cache
-) {
+py::object
+call_dlpack(py::object& dlpack_func, py::dict& stream_arg, bool* dlpack_version_cache) {
     py::object capsule_obj;
     if (dlpack_version_cache == nullptr || !*dlpack_version_cache) {
         try {

@@ -126,9 +126,7 @@ public:
             }
         }
     }
-    ~ThreadResource() {
-        reset();
-    }
+    ~ThreadResource() { reset(); }
     ThreadResource(ThreadResource&& other) noexcept :
         _pool(std::move(other._pool)),
         _resources(std::move(other._resources)),

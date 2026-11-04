@@ -63,9 +63,8 @@ EnergyScale::EnergyScale(
 // Outside it the density can be NaN, which a later veto weight cannot remove
 // (NaN * 0 = NaN). An MLM clustering also vetoes events outside the range
 // through scale_weight, as madevent's setclscales does for mu_F < 2 GeV.
-NamedVector<Value> EnergyScale::apply_scale_range(
-    FunctionBuilder& fb, NamedVector<Value> scales
-) const {
+NamedVector<Value>
+EnergyScale::apply_scale_range(FunctionBuilder& fb, NamedVector<Value> scales) const {
     if (_min_scale <= 0. && _max_scale <= 0.) {
         return scales;
     }
@@ -131,11 +130,14 @@ NamedVector<Value> EnergyScale::build_function_impl(
     }
     if (_ren_scale_fixed && _fact_scale_fixed) {
         auto batch_size = fb.batch_size({momenta});
-        return apply_scale_range(fb, {
-            {"ren_scale", fb.full({_ren_scale, batch_size})},
-            {"fact_scale1", fb.full({_fact_scale1, batch_size})},
-            {"fact_scale2", fb.full({_fact_scale2, batch_size})},
-        });
+        return apply_scale_range(
+            fb,
+            {
+                {"ren_scale", fb.full({_ren_scale, batch_size})},
+                {"fact_scale1", fb.full({_fact_scale1, batch_size})},
+                {"fact_scale2", fb.full({_fact_scale2, batch_size})},
+            }
+        );
     }
     auto batch_size = fb.batch_size({momenta});
     Value ren_scale, fact_scale1, fact_scale2;
@@ -173,11 +175,13 @@ NamedVector<Value> EnergyScale::build_function_impl(
         fact_scale1 = fb.mul(fact_scale1, _scale_factor);
         fact_scale2 = fb.mul(fact_scale2, _scale_factor);
     }
-    return apply_scale_range(fb, {
-        {"ren_scale", _ren_scale_fixed ? fb.full({_ren_scale, batch_size}) : ren_scale},
-        {"fact_scale1",
-         _fact_scale_fixed ? fb.full({_fact_scale1, batch_size}) : fact_scale1},
-        {"fact_scale2",
-         _fact_scale_fixed ? fb.full({_fact_scale2, batch_size}) : fact_scale2}
-    });
+    return apply_scale_range(
+        fb,
+        {{"ren_scale",
+          _ren_scale_fixed ? fb.full({_ren_scale, batch_size}) : ren_scale},
+         {"fact_scale1",
+          _fact_scale_fixed ? fb.full({_fact_scale1, batch_size}) : fact_scale1},
+         {"fact_scale2",
+          _fact_scale_fixed ? fb.full({_fact_scale2, batch_size}) : fact_scale2}}
+    );
 }

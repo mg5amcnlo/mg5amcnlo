@@ -29,7 +29,9 @@ struct LoadedBackend {
             // shared_ptr calls the deleter even for a null pointer, and
             // dlclose(nullptr) would crash when dlopen fails.
             [](void* lib) {
-                if (lib) dlclose(lib);
+                if (lib) {
+                    dlclose(lib);
+                }
             }
         );
         if (!shared_lib) {

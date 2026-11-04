@@ -150,16 +150,13 @@ public:
      * @param max_scale   As in the full constructor.
      */
     EnergyScale(
-        const MLMClustering& clustering,
-        double min_scale = 0.,
-        double max_scale = 0.
+        const MLMClustering& clustering, double min_scale = 0., double max_scale = 0.
     );
 
     /// Whether the scales come from an MLM clustering of the event.
     bool is_mlm() const { return _clustering.has_value(); }
     bool mlm_alphas_reweighting() const {
-        return _clustering &&
-               _clustering->alphas_scheme() != AlphasScheme::none;
+        return _clustering && _clustering->alphas_scheme() != AlphasScheme::none;
     }
     // Whether the consumer has pdf ratios to apply. The kernel walks the
     // clustering ladder under ScaleScheme::madevent, and under clustering_mean
@@ -168,8 +165,8 @@ public:
     // come out as exactly one.
     bool mlm_pdf_reweighting() const {
         return _clustering && _clustering->pdf_reweighting() &&
-               (_clustering->scale_scheme() == ScaleScheme::madevent ||
-                _clustering->clustering_mean_pdf_ladder());
+            (_clustering->scale_scheme() == ScaleScheme::madevent ||
+             _clustering->clustering_mean_pdf_ladder());
     }
     const std::vector<int>& mlm_pdf_absolute_pdgs() const {
         return _clustering.value().pdf_absolute_pdgs();
@@ -178,7 +175,7 @@ public:
     // which moves the clustering after a first matrix element evaluation.
     bool mlm_history_per_diagram() const {
         return _clustering &&
-               _clustering->clustering_history() != ClusteringHistory::all_diagrams;
+            _clustering->clustering_history() != ClusteringHistory::all_diagrams;
     }
     const std::vector<me_int_t>& mlm_diagram_start_states() const {
         return _clustering.value().diagram_start_states();
@@ -209,9 +206,7 @@ public:
     double min_scale() const { return _min_scale; }
     double max_scale() const { return _max_scale; }
 
-    bool has_scale_range() const {
-        return _min_scale > 0. || _max_scale > 0.;
-    }
+    bool has_scale_range() const { return _min_scale > 0. || _max_scale > 0.; }
     // Whether the scales come with a scale_weight output vetoing an event
     // outside the range. Only the MLM clustering has one: madevent drops a
     // merged event whose factorisation scale falls under 2 GeV, but for any
@@ -220,9 +215,8 @@ public:
     bool has_scale_veto() const { return is_mlm() && has_scale_range(); }
 
 private:
-    NamedVector<Value> apply_scale_range(
-        FunctionBuilder& fb, NamedVector<Value> scales
-    ) const;
+    NamedVector<Value>
+    apply_scale_range(FunctionBuilder& fb, NamedVector<Value> scales) const;
 
     NamedVector<Value> build_function_impl(
         FunctionBuilder& fb, const NamedVector<Value>& args
