@@ -54,7 +54,7 @@ public:
         /// Batches between two channel-dropping checks.
         std::size_t channel_dropping_interval = 100;
         /// Channels are dropped, smallest integral first, while their
-        /// cumulative integral fraction stays below this (scaled by
+        /// cumulative integral fraction stays at most this (scaled by
         /// `min(1000 / batch, 1)`).
         double channel_dropping_threshold = 0.01;
         /// Generator batch size on a CPU device.
@@ -71,7 +71,7 @@ public:
         /// Training-batch events added to the total per active channel.
         std::size_t batch_size_per_channel = 128;
         /// Fraction of the training batch drawn uniformly across channels
-        /// rather than proportionally to their integral.
+        /// rather than proportionally to their standard deviation.
         double uniform_channel_ratio = 0.1;
         /// Adam learning-rate schedule.
         AdamOptimizer::LRSchedule lr_schedule = AdamOptimizer::none;

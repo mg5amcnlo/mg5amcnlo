@@ -552,7 +552,7 @@ void backward_op_matmul_to_float64(
 }
 
 // matmul followed by the activation Act, with the outputs linear (before the
-// activation) and y. Everything runs in a single job, as in op_matmul_to_float64.
+// activation) and the activated output. Everything runs in a single job, as in op_matmul_to_float64.
 template <typename Act, typename F, typename D>
 void op_matmul_activation(
     const CpuRuntime::Instruction& instruction, TensorVec& locals, const D& device
@@ -936,7 +936,6 @@ void batch_reduce_sum_mean_backward_impl(
     if (!input_grad) {
         input_grad =
             Tensor(DataType::dt_float64, input.shape(), device, AllocHint::local_grad);
-        // input_grad.zero(device);
     }
     device.sync_barrier();
 

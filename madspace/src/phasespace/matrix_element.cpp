@@ -294,21 +294,12 @@ NamedVector<Value> MatrixElement::build_function_impl(
         } else if (input == channel_in && _channel >= 0) {
             matrix_args.push_back(fb.full({_channel, fb.batch_size(args.values())}));
         } else if (input == momenta_in && !_frame_mask.empty()) {
-            // Evaluate the matrix element in the frame the run card asked for
-            // (me_frame). Only the matrix element sees the boosted momenta:
-            // everything else -- cuts, scales, momentum fractions, the event
-            // that gets written out -- keeps using the momenta as generated.
-            //
-            // The single boost along the momentum of the selected particles
-            // would depend on the frame it starts from: two boosts along
-            // different directions do not compose into the boost between the
-            // end frames, and the Wigner rotation left over turns the spin
-            // axis of a single selected particle, held at rest. So a collision
-            // first boosts along the beam, to zero rapidity of the selection,
-            // and only then into its rest frame: that frame is the same from
-            // the lab madspace generates in, from the partonic CM madevent
-            // hands its matrix element, and from the frames aMC@NLO uses. A
-            // decay starts from the rest frame of the decaying particle.
+            // Only the matrix element sees the me_frame-boosted momenta; cuts,
+            // scales and the written event use the generated ones.
+            // A collision first boosts along the beam to zero rapidity of the
+            // selection, then into its rest frame, so the result does not depend
+            // on the starting frame (no Wigner rotation). A decay starts from
+            // the rest frame of the decaying particle.
             Value momenta = args.at(arg_index);
             if (_along_beam) {
                 momenta = fb.boost_to_zero_rapidity(momenta, _frame_mask);

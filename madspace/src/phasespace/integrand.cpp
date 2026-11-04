@@ -45,15 +45,6 @@ int me_output_index(
     return search == outputs.end() ? -1 : static_cast<int>(search - outputs.begin());
 }
 
-// Whether the event carries the product of its beam densities for the
-// systematics to divide the PDF variations by. Not under MLM pdf reweighting:
-// there the densities are taken low on the clustering ladder (pdf_scale) and
-// walked back up to the factorisation scale by the ladder ratios, so the
-// variations, which are evaluated at (k times) the factorisation scale, would
-// be divided by densities at another scale, and even the central member would
-// differ from one. Without it the systematics take the nominal densities at
-// the factorisation scale themselves, and a variation becomes the ratio of
-// the leading densities there, the ladder ratios left at their nominal value.
 // Whether the event carries the scales of its MLM alpha_s vertices, for the
 // systematics to vary them; the condition under which mlm_weights applies them.
 // A 2 -> 1 process has no vertex.
@@ -374,11 +365,9 @@ Integrand::Integrand(
                 "MLM pdf reweighting needs the same PDF grid for both beams"
             );
         }
-        // Everything the reweighting can ask for: the gluon, whatever the
-        // beams can be, and the flavours the clustering pinned down along
-        // the way. The kernel names these by class, not by pdg, because
-        // one clustering serves every flavour channel; the table turns
-        // (class, sampled option) into an index into this one density.
+        // Covers the gluon, the beam flavours and those pinned by the clustering.
+        // The kernel names them by class; the table maps (class, option) to an
+        // index into this density.
         auto& absolute = energy_scale->mlm_pdf_absolute_pdgs();
         std::vector<int> rw_pids{21};
         auto index_of = [&](int pid) {
@@ -529,9 +518,8 @@ Integrand::Integrand(
             );
         }
     }
-    // evaluate_pdfs, which takes the densities again once the history is
-    // picked per diagram, knows nothing of the event's orientation, so it
-    // cannot pick a mirrored event's density from the other beam.
+    // evaluate_pdfs knows nothing of the event's orientation, so it cannot
+    // pick a mirrored event's density from the other beam.
     if (_has_mirror && (_pdfs_swapped.at(0) || _pdfs_swapped.at(1)) && energy_scale &&
         energy_scale->mlm_history_per_diagram()) {
         throw std::invalid_argument(
@@ -1483,10 +1471,9 @@ NamedVector<Value> Integrand::build_common_part(
         alpha_qcd_acc =
             _running_coupling.value().build_function(fb, {ren_scale_acc}).at(0);
         if (_mlm_history_qcd_power >= 0) {
-            // |M|^2 ~ alpha_s^n and the cross section is linear in each beam
-            // density, so rescale the first evaluation by
-            // (alpha_s' / alpha_s)^n f1' f2' / (f1 f2). The colour, helicity
-            // and diagram weights stay valid (ratios of terms of the same power).
+            // |M|^2 ~ alpha_s^n: rescale the first evaluation by
+            // (alpha_s' / alpha_s)^n f1' f2' / (f1 f2); colour, helicity and
+            // diagram weights stay valid (ratios of terms of the same power).
             auto batch_size_acc = fb.batch_size({momenta_acc});
             auto ones = fb.full({1., batch_size_acc});
             Value factor = ones;

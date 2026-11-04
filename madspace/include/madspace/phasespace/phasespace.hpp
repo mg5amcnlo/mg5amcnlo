@@ -243,15 +243,14 @@ private:
         const NamedVector<Value>& inputs,
         const NamedVector<Value>& conditions
     ) const override;
-    // partonic centre-of-mass frame <-> lab frame (partonic boost, mirror,
-    // beam_rapidity boost)
     // x1, x2 scaled so that log(x1 / x2) / 2 is the rapidity of the partonic
-    // system in the lab frame, which is what the rapidity windows of the
-    // decays and the t-channel need (a mirrored event has the opposite sign of
-    // the beam rapidity relative to the frame the mapping works in)
+    // system in the lab frame, as the rapidity windows of the decays and the
+    // t-channel need (a mirrored event flips the sign of the beam rapidity)
     std::pair<Value, Value> lab_fractions(
         FunctionBuilder& fb, Value x1, Value x2, const NamedVector<Value>& conditions
     ) const;
+    // partonic centre-of-mass frame <-> lab frame (partonic boost, mirror,
+    // beam_rapidity boost)
     Value to_lab(
         FunctionBuilder& fb,
         Value momenta,

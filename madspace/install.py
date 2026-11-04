@@ -830,7 +830,7 @@ def main(argv: list[str] | None = None) -> None:
             from_source = True
 
     # PyPI installation, pinned to this checkout's madspace version so the
-    # wheel matches the bundled source (see SOURCE_HASH check in mg7/launch.py).
+    # wheel matches the bundled source (see SOURCE_HASH check in madgraph/mg7/common.py).
     if not from_source:
         pip_cmd = [
             sys.executable,

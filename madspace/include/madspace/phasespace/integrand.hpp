@@ -42,10 +42,13 @@ namespace madspace {
  * - `momenta` – `float`, shape `(batch, particle_count, 4)` – the momenta.
  * - `color_index`, `helicity_index`, `diagram_index`, `flavor_index` – `int`,
  *   shape `(batch,)` – the sampled discrete quantities. Indices the matrix
- *   element does not return are -1.
+ *   element does not return are -1. `subprocess_index` (`int`) follows when
+ *   @p flavor_diff_xs_indices is given.
  * - `ren_scale`, `alpha_qcd`, `x1`, `x2`, `fact_scale1`, `fact_scale2` –
  *   `float`, shape `(batch,)` – scales and momentum fractions (`x1`, `x2` and
- *   the factorisation scales only for beams with a PDF).
+ *   the factorisation scales only for beams with a PDF). Depending on the
+ *   energy scale and @p partial_weights, `partial_weight_product`,
+ *   `cluster_scales`, `alphas_scales` and the `ladder_*` arrays follow.
  * - `random` – `float`, shape `(batch, mapping.random_dim())` – the underlying
  *   random numbers.
  * - `matrix_element` – `float`, shape `(batch,)` – the squared matrix element,
@@ -99,8 +102,9 @@ public:
      * @param mapping                          The phase-space mapping. Its
      *                                          discrete choices, if any, are
      *                                          sampled uniformly.
-     * @param diff_xs                           One differential cross section
-     *                                          per active flavour.
+     * @param diff_xs                           The differential cross sections;
+     *                                          @p flavor_diff_xs_indices picks
+     *                                          one per flavour when several.
      * @param adaptive_map                      Optional continuous adaptive
      *                                          sampler (@ref VegasMapping or
      *                                          @ref Flow).
@@ -250,7 +254,7 @@ public:
     }
     /// The phase-space mapping.
     const PhaseSpaceMapping& mapping() const { return _mapping; }
-    /// The per-flavour differential cross sections.
+    /// The differential cross sections.
     const std::vector<DifferentialCrossSection>& diff_xs() const { return _diff_xs; }
     /// The continuous adaptive sampler.
     const AdaptiveMapping& adaptive_map() const { return _adaptive_map; }
@@ -442,8 +446,9 @@ private:
 /**
  * Concatenates two @ref IntegrandChannelPart outputs along the batch.
  *
- * The `indices_acc` of the second one are offset by the batch size of the
- * first, so the result can be fed to @ref IntegrandCommonPart.
+ * Unless `drop_cuts_and_rescale` is set, the `indices_acc` of the second one
+ * are offset by the batch size of the first, so the result can be fed to
+ * @ref IntegrandCommonPart.
  *
  * **Arguments**
  * - two sets of channel-part outputs, with the keys prefixed `arg1_` and

@@ -823,10 +823,8 @@ Mapping::Result PhaseSpaceMapping::build_forward_impl(
         auto p_ext_lab = to_lab(fb, p_ext_stack, x1, x2, conditions);
         dets.push_back(_cuts.build_function(fb, {p_ext_lab}).at(0));
         auto ps_weight = fb.cut_unphysical(fb.product(dets), p_ext_lab, x1, x2);
-        // Without sampled momentum fractions (leptonic, a decay) x1 = x2 = 1
-        // stay constants above. They are returned with the batch dimension of
-        // their type like every output, so that the outputs of channels can
-        // be concatenated (MultiChannelMapping).
+        // Constant x1 = x2 = 1 (leptonic, decay) are expanded to the batch so
+        // that the outputs of channels can be concatenated (MultiChannelMapping).
         auto as_batch = [&](Value x) {
             return std::holds_alternative<std::monostate>(x.literal_value)
                 ? x

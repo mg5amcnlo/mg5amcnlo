@@ -19,7 +19,9 @@ namespace madspace {
  * **Arguments** (a subset, selected by @p inputs)
  * - `momenta` – `float`, shape `(batch, particle_count, 4)`.
  * - `alpha_s` – `float`, shape `(batch,)`.
- * - `flavor`, `helicity`, `diagram`, `channel` – `int`, shape `(batch,)`.
+ * - `flavor`, `helicity`, `diagram`, `channel` – `int`, shape `(batch,)`
+ *   (`channel` is omitted for a fixed @p channel). Further inputs are named as
+ *   in MatrixElementInput.
  * - `random_color`, `random_helicity`, `random_diagram` – `float`, shape
  *   `(batch,)` (omitted when @p sample_random_inputs draws them internally).
  *
@@ -29,6 +31,8 @@ namespace madspace {
  *   squared amplitudes.
  * - `color_index`, `helicity_index`, `diagram_index` – `int`, shape `(batch,)` –
  *   the sampled color, helicity and diagram.
+ * - the custom outputs `cut`, `ren_scale`, `fact_scale1`, `fact_scale2`, `pdf`,
+ *   `bias`, `matrix_element_ratio` – `float`, shape `(batch,)`.
  *
  * **References**
  * - [1] S. Hageböck et al., "Data-parallel leading-order event generation in
@@ -90,14 +94,9 @@ public:
      *                               the matrix element is evaluated in (the run
      *                               card's me_frame). Empty means no boost.
      * @param incoming_count         How many of the external particles are
-     *                               incoming. The frame is reached the way
-     *                               madevent reaches it, starting from the rest
-     *                               frame of the incoming system (the partonic
-     *                               centre of mass of a collision, the decaying
-     *                               particle's rest frame of a decay): boosts do
-     *                               not commute, so going there straight from
-     *                               the lab frame would leave a Wigner rotation
-     *                               behind and rotate the polarisation axes.
+     *                               incoming. The me_frame boost starts from
+     *                               the rest frame of the incoming system, as in
+     *                               madevent, to avoid a Wigner rotation.
      * @param channel                If non-negative, `channel_in` is passed this
      *                               fixed value instead of being an input.
      */
@@ -157,8 +156,8 @@ public:
     bool sample_random_inputs() const { return _sample_random_inputs; }
     /// The fixed channel passed as `channel_in`, or -1 if it is an input.
     me_int_t channel() const { return _channel; }
-    /// The inputs that must be supplied by the caller (excludes the ones drawn
-    /// internally when @p sample_random_inputs is set and a fixed channel).
+    /// The inputs that must be supplied by the caller (excludes the `random_*`
+    /// ones when they are drawn internally, and `channel_in` for a fixed channel).
     std::vector<MatrixElementInput> external_inputs() const;
     /// Per-particle 0/1 selector built from me_frame, empty if no boost is
     /// applied.

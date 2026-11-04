@@ -685,7 +685,7 @@ public:
     Tensor reshape(const Sizes& shape) const;
     /// Splits dimension `axis` into two, the first of size `factor`.
     Tensor factor_dim(std::size_t axis, std::size_t factor);
-    /// Splits along the batch dimension and reshapes each piece.
+    /// Splits a 1-dimensional contiguous tensor into pieces of `shapes`.
     std::vector<Tensor> split_and_reshape(const std::vector<Sizes>& shapes) const;
 
     template <typename D>

@@ -128,8 +128,8 @@ void EventGenerator::run_generate(GenerateMode mode) {
     reset_start_time();
     print_gen_init();
 
-    // Seed a target so the first round has a truncation budget; set_target_count()
-    // tightens the maximum weight once the real target arrives.
+    // The target gives the first round a truncation budget; fix_max_weights uses the
+    // freeze count as target.
     for (auto& channel : _channels) {
         if (channel->status().count_opt == 0 || mode == GenerateMode::fix_max_weights) {
             channel->set_target_count(
@@ -624,7 +624,7 @@ std::size_t EventGenerator::start_pipeline_jobs() {
     return _pipeline->start_jobs(_result_queue, flush, _context_job_counts);
 }
 
-// Batches no longer have to be full: the steps don't depend on the batching.
+// Partial batches are fine: the steps don't depend on the batching.
 void EventGenerator::drain_pipeline() {
     if (!_pipeline) {
         return;

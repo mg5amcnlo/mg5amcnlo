@@ -23,8 +23,7 @@ namespace madspace {
  * `batch` is the leading batch dimension.
  *
  * **Arguments**
- * - the arguments of @p matrix_element (except `alpha_s` unless it is
- *   cached), plus
+ * - the arguments of @p matrix_element except `alpha_s`, plus
  * - `x1`, `x2` – `float`, shape `(batch,)` – parton momentum fractions (when
  *   @p input_momentum_fraction is true).
  * - `pdf_id` – `int`, shape `(batch,)` – selected flavour combination.

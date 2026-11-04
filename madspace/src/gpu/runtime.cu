@@ -1922,8 +1922,8 @@ GpuRuntime::GpuRuntime(const Function& function_arg, ContextPtr context) :
     // check_error(cudaMemPoolSetAttribute(pool, cudaMemPoolAttrReleaseThreshold,
     // &thresh));
 
-    // MADSPACE_NO_FUSION disables the lowering of precision conversions, to compare
-    // the fused and the unfused instructions
+    // MADSPACE_NO_FUSION skips fuse_instructions (fusing conversions and activations
+    // into matmuls), to compare the fused and unfused instructions
     Function function = sort_breadth_first(
         std::getenv("MADSPACE_NO_FUSION")
             ? function_arg

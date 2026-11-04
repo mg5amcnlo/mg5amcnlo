@@ -230,8 +230,8 @@ def test_structural_ops_backward_repeated_input(op, precision):
     """An input passed several times to one structural op gets every gradient.
 
     On the CPU each gradient add is a separate thread pool job, so adds into the
-    same gradient tensor used to race and lose updates now and then. The batch is
-    large and the input repeated many times so that racing adds overlap.
+    same gradient tensor could race and lose updates. The batch is large and the
+    input repeated many times so that racing adds overlap.
     """
     ms_dtype, torch_dtype, _ = DTYPES[precision]
     repeats = 16

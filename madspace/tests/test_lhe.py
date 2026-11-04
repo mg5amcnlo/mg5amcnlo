@@ -48,8 +48,9 @@ def subproc_meta():
 def build_topology_and_args(meta, bw_cutoff=BW_CUTOFF):
     """Rebuild the ms.Topology/ms.SubprocArgs for the single channel/diagram
     described in PROC_tt_decay's subprocesses.json, mirroring what
-    MadgraphSubprocess.build_multi_channel_data/build_lhe_completer do in the
-    madevent.py template, without needing a full MadgraphProcess/run_card setup.
+    MadgraphSubprocess.build_multi_channel_data and
+    MadgraphProcess.build_lhe_completer (madgraph/mg7) do, without needing a
+    full MadgraphProcess/run_card setup.
     """
     channel = meta["channels"][0]
     propagators = []

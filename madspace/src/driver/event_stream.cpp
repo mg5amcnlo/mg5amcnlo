@@ -528,7 +528,7 @@ std::vector<GeneratorStatus> EventStream::channel_status() const {
 
 std::vector<double> EventStream::channel_probabilities() const {
     std::unique_lock lock(_mutex);
-    // const: compute from scratch instead of updating the cache
+    // refreshes the cached probabilities, which are mutable state
     auto& self = const_cast<EventStream&>(*this);
     if (self._probabilities_dirty) {
         self.update_probabilities();

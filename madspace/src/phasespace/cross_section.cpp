@@ -173,11 +173,8 @@ NamedVector<Value> DifferentialCrossSection::build_function_impl(
     std::size_t me_index = search - _matrix_element.outputs().begin();
     Value raw_matrix_element = me_result.at(me_index);
     if (_decay) {
-        // Differential decay rate: dGamma = |M|^2 dPhi_n / (2 M), in GeV. The
-        // flux is a compile-time constant here (M is fixed by the decaying
-        // particle), so this is a single multiply and needs no dedicated
-        // instruction. Deliberately no GeV^-2 -> pb conversion: a width is not
-        // a cross section.
+        // dGamma = |M|^2 dPhi_n / (2 M), in GeV; no GeV^-2 -> pb conversion
+        // since a width is not a cross section.
         me_result.at(me_index) = fb.mul(me_result.at(me_index), 1. / (2. * _e_cm));
     } else {
         me_result.at(me_index) = fb.diff_cross_section(

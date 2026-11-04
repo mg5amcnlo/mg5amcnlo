@@ -82,10 +82,10 @@ public:
     /**
      * @param contexts          One context per device to run on.
      * @param integrand         The channel's compiled integrand.
-     * @param event_file        Path of the weighted event file; empty for no
-     *                          file (events are only kept in memory).
-     * @param weight_file       Path of the max-weight tracking file; empty
-     *                          for no file.
+     * @param event_file        Path of the event file; empty for no file.
+     * @param weight_file       Path of the file with the per-event weights, which
+     *                          @ref unweight_file unweights in place; empty for
+     *                          no file.
      * @param config            Generator configuration.
      * @param subprocess_index  Index of the owning subprocess.
      * @param name              Human-readable channel name.
@@ -118,10 +118,10 @@ public:
     std::size_t count_requested_opt() const { return _count_requested_opt; }
     /// The filled observable histograms, if any were requested.
     const std::vector<Histogram>& histograms() const { return _histograms; }
-    /// The weighted event file. Throws if the channel was created without one.
+    /// The event file. Throws if the channel was created without one.
     EventFile& event_file();
-    /// The max-weight tracking file. Throws if the channel was created without
-    /// one.
+    /// The file with the per-event weights. Throws if the channel was created
+    /// without one.
     EventFile& weight_file();
     /// Number of particles per event.
     std::size_t particle_count() const { return _particle_count; }

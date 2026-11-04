@@ -426,22 +426,15 @@ KERNELSPEC void boost_beam(
     FVal<T> sign,
     FOut<T, 2> p_out
 ) {
-    // Boost along z with rapidity y = log(x1 / x2) / 2. The first two momenta
-    // are the incoming ones.
+    // Boost along z with rapidity y = log(x1 / x2) / 2 (sign < 0: the inverse). The
+    // first two momenta are the incoming ones.
     //
-    // Written as E cosh y + p_z sinh y, a momentum moving against the boost
-    // comes out of the cancellation of terms of order e^{|y|} E and loses up
-    // to a factor e^{2|y|} of relative precision; light-like momenta ended up
-    // off shell by up to a few 1e-5 of their energy in the lab frame. The boost
-    // is done in light-cone components instead, q_+ = E + p_z -> e^{+y} q_+,
-    // q_- = E - p_z -> e^{-y} q_-, with the smaller of q_+, q_- taken from the
-    // mass shell, q_+ q_- = m^2 + p_T^2, and the known mass of the particle (a
-    // negative entry means unknown, and the mass is read off the momentum).
-    // Both components then keep their relative precision whatever the
-    // direction of the momentum and of the boost, also out of the lab frame.
-    // Only momenta on their mass shell to rounding are projected; one that is
-    // not (a degenerate point, or partonic momenta that carry larger errors
-    // from elsewhere) keeps the linear boost.
+    // The linear form E cosh y + p_z sinh y loses up to e^{2|y|} of relative precision
+    // for momenta moving against the boost. So q_+ = E + p_z -> e^{+y} q_+ and
+    // q_- = E - p_z -> e^{-y} q_- are boosted instead, the smaller of q_+, q_- taken
+    // from the mass shell q_+ q_- = m^2 + p_T^2 (a negative entry in masses means the
+    // mass is read off the momentum). Momenta not on their mass shell to rounding
+    // (e.g. degenerate points) keep the linear boost.
     auto exp_rap = sqrt(x1 / x2);
     auto exp_rap_inv = sqrt(x2 / x1);
     auto e_plus = where(sign > 0., exp_rap, exp_rap_inv);
@@ -491,18 +484,11 @@ KERNELSPEC void boost_beam(
         }
     }
 
-    // The projection onto the mass shell moves a momentum by its mass-shell
-    // error times e^{|y|}. So that momentum stays conserved as by the linear
-    // boost, these shifts are handed to the outgoing momentum with the largest
-    // energy: it is set to the boosted total of the outgoing momenta minus all
-    // others. It carries at least 1/n of the energy, so this costs it no
-    // relative precision. The total is boosted in light-cone components too,
-    // each summed directly where that is precise, as in the partonic frame,
-    // and from the light-cone components of the momenta where the direct sum
-    // cancels, as out of the lab frame. (The linear boost of the total lost
-    // e^{2|y|} of relative precision there, 5e-9 of sqrt(s_hat) in the
-    // hardest momentum for |y| ~ 7, and so did the round trip of
-    // PhaseSpaceMapping.)
+    // The projection onto the mass shell moves a momentum by its mass-shell error
+    // times e^{|y|}. To keep momentum conserved, the outgoing momentum with the largest
+    // energy is set to the boosted total of the outgoing momenta minus all others. The
+    // total is boosted in light-cone components, using the direct sums where precise
+    // and the sums of the projected components where they cancel.
     if (q.size() > 3) {
         auto energy = 0.5 * (sum_plus_direct + sum_minus_direct);
         auto total_plus =
@@ -549,7 +535,7 @@ KERNELSPEC Pair<FourMom<T>, FVal<T>> p1com_from_tabs_cs(
     FVal<T> mb_2
 ) {
     // this function is based on the gentcms subroutine in MG5 (genps.f)
-    // Note: expects t_abs (positive t-ivariant)
+    // Note: expects t_abs (positive t invariant)
     auto m_tot = sqrt(s_tot);
 
     auto ed = (m1 - m2) * (m1 + m2) / m_tot;

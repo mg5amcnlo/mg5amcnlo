@@ -144,9 +144,9 @@ public:
     /// that do not contribute to any output are dropped.
     Function function();
 
-    /// Sum of @p values, element by element.
+    /// Sum of @p values (0 for an empty list).
     Value sum(const ValueVec& values);
-    /// Product of @p values, element by element.
+    /// Product of @p values (1 for an empty list).
     Value product(const ValueVec& values);
 
 #include "function_builder_mixin.inc"

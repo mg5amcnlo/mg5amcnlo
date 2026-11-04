@@ -75,8 +75,9 @@ public:
      * @param layers                  Number of @ref MLP layers.
      * @param activation              @ref MLP activation.
      * @param prefix                  Prefix for the trainable global names.
-     * @param include_preprocessing   If true, apply @ref MomentumPreprocessing
-     *                                to the input first.
+     * @param include_preprocessing   Currently unused: the function takes the
+     *                                features computed by the caller with
+     *                                @ref MomentumPreprocessing.
      * @param precision               Float type of the @ref MLP.
      */
     ChannelWeightNetwork(
