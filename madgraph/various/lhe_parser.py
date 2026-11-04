@@ -2798,6 +2798,8 @@ class Event(list):
             new.reweight_order = list(self.reweight_order)
         new.matched_scale_data = None if self.matched_scale_data is None \
                                  else list(self.matched_scale_data)
+        if getattr(self, 'scales_attributes', None) is not None:
+            new.scales_attributes = dict(self.scales_attributes)
         new.syscalc_data = dict(self.syscalc_data)
         new.density = list(self.density)
         fields = self._copy_particle_fields
@@ -3018,7 +3020,9 @@ class Event(list):
         initial-state partons give the PDF pdg codes and, together with the beam
         energies ``ebeam = (ebeam1, ebeam2)``, the Bjorken-x (x_i = E_i/ebeam_i,
         exact for the collinear massless initial state of an LHE event); the
-        renormalisation and factorisation scales are the event scale (SCALUP).
+        factorisation scale is the event scale (SCALUP, the larger mu_F) and
+        the renormalisation scale the ``mur`` of the <scales> tag (SCALUP if
+        there is none, see :meth:`get_ren_scale`).
         With a single alpha_s power there is no clustering, so there is a single
         PDF reweight entry per beam and no separate alpha_s reweight scale --
         matching what MadEvent writes for an unmatched LO event (verified
@@ -3037,7 +3041,7 @@ class Event(list):
             ebeam = (0., 0.)
         scale = float(self.scale)
         loweight = {'n_qcd': int(nqcd),
-                    'ren_scale': scale,
+                    'ren_scale': self.get_ren_scale(),
                     'asrwt': [],
                     'tot_fact': 1.0}
         for beam, (part, eb) in enumerate(zip(initial, ebeam), start=1):
@@ -3115,6 +3119,34 @@ class Event(list):
         return self.loweight
     
             
+    scales_attribute_pattern = re.compile(r'(\w+)\s*=\s*["\']([^"\']*)["\']')
+
+    def get_scales_attributes(self):
+        """The scales of the LHEF3 <scales> tag other than the per-particle
+        pt_clust_i, as floats by name: mur, muf, muf1 and muf2 in the mg7
+        output; empty for an event without them (madevent writes pt_clust_i
+        only). Kept when parse_matching_scale takes the tag apart."""
+
+        if getattr(self, 'scales_attributes', None) is None:
+            self.scales_attributes = {}
+            match = re.search(r'<scales\s([^>]*)>', self.tag)
+            if match:
+                for name, value in self.scales_attribute_pattern.findall(match.group(1)):
+                    if name.startswith('pt_clust_'):
+                        continue
+                    try:
+                        self.scales_attributes[name] = float(value)
+                    except ValueError:
+                        pass
+        return self.scales_attributes
+
+    def get_ren_scale(self):
+        """The renormalisation scale of the event: the mur of its <scales>
+        tag (mg7 writes it), otherwise SCALUP. SCALUP is the factorisation
+        scale (madevent and mg7 alike), the closest a file without mur has."""
+
+        return self.get_scales_attributes().get('mur', float(self.scale))
+
     def parse_matching_scale(self):
         """Parse the line containing the starting scale for the shower"""
         
@@ -3122,7 +3154,8 @@ class Event(list):
             return self.matched_scale_data
             
         self.matched_scale_data = []
-        
+        # the tag is taken apart below: read the other scales first
+        self.get_scales_attributes()
 
         pattern  = re.compile(r"<scales\s|</scales>")
         data = re.split(pattern,self.tag)
@@ -4641,7 +4674,10 @@ class Event(list):
                                    for i,v in enumerate(self.matched_scale_data)
                                               if v!=-1])
             if tmp_scale:
-                tag_str = "<scales %s></scales>%s" % (tmp_scale, self.tag)
+                # the event's other scales (mg7's mur/muf...) go back in first
+                other = ''.join(' %s="%s"' % item
+                                for item in self.get_scales_attributes().items())
+                tag_str = "<scales%s %s></scales>%s" % (other, tmp_scale, self.tag)
             
         if self.syscalc_data:
             keys= ['rscale', 'asrwt', ('pdfrwt', 'beam', '1'), ('pdfrwt', 'beam', '2'),

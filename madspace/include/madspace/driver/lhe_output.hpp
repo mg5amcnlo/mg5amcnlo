@@ -141,7 +141,8 @@ struct LHEEvent {
     int process_id;
     /// Event weight.
     double weight;
-    /// Event scale, in GeV.
+    /// Event scale (SCALUP), in GeV: the larger factorisation scale, as
+    /// madevent writes it.
     double scale;
     /// QED coupling at the event scale.
     double alpha_qed;
@@ -153,10 +154,8 @@ struct LHEEvent {
     /// (`pt_clust_<i>` attributes of `<scales>`).
     bool has_cluster_scales;
     /// The renormalisation and factorisation scales, written as the standard
-    /// LHEF3 `<scales>` attributes. SCALUP carries only one number, and the two
-    /// codes do not agree on which: unwgt.f writes sqrt(max(q2fact)) there,
-    /// i.e. mu_F, while this writer puts mu_R. Emitting both explicitly means a
-    /// comparison does not have to guess.
+    /// LHEF3 `<scales>` attributes. SCALUP carries only one number, the larger
+    /// mu_F (as unwgt.f writes sqrt(max(q2fact))); mu_R is only here.
     double mu_r;
     double mu_f1;
     double mu_f2;

@@ -5,6 +5,14 @@ ANNOUNCEMENT:
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
 0.3.0 (XX/XX/XX):
+   OM: mg7: the event scale (SCALUP) of the LHE output is now the factorisation scale, the
+       larger of the two beams', as madevent writes it; it was the renormalisation scale.
+       mu_R stays in the <scales> tag (mur) and in AQCDUP. The two differ for MLM samples in
+       the default clustering_mean mode (mu_R, the mean of the clustering scales, is about
+       half of mu_F for the jet samples) and for unequal fixed scales. Pythia8 MLM showers
+       do not change: with Beams:setProductionScalesFromLHEF (set for MLM) Pythia8 replaces
+       SCALUP by the largest pt_clust_i. Reweighting and MadSpin, which pass mu_R to the
+       running model parameters, read it from the <scales> tag.
    OM: bin/madgraph, bin/madevent, bin/aMCatNLO and bin/generate_events (madevent, aMC@NLO
        and mg7 outputs) no longer read their commands, or the answers to the questions of
        a command given on the command line, from a pipe or a redirected file (e.g.

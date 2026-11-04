@@ -1,5 +1,6 @@
 #include "madspace/driver/event_utils.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <format>
 #include <stdexcept>
@@ -140,11 +141,10 @@ void madspace::fill_lhe_event(
     EventRecord event_in = buffer.event(event_index);
     lhe_event.weight = event_in.weight();
     lhe_event.process_id = 0;
-    lhe_event.scale = event_in.ren_scale();
     lhe_event.alpha_qed = 0; // TODO: populate this
     lhe_event.alpha_qcd = event_in.alpha_qcd();
-    // Both scales, as LHEF3 <scales> attributes: SCALUP holds only one number
-    // and the codes do not agree on which, so write them out explicitly.
+    // Both scales, as LHEF3 <scales> attributes: SCALUP holds only one number,
+    // so write them out explicitly.
     lhe_event.mu_r = event_in.ren_scale();
     lhe_event.mu_f1 = (extra_event_flags & EventRecord::f_beam1)
         ? double(event_in.fact_scale1())
@@ -153,6 +153,11 @@ void madspace::fill_lhe_event(
         ? double(event_in.fact_scale2())
         : lhe_event.mu_f1;
     lhe_event.has_scales = true;
+    // SCALUP is the scale the PDFs were evaluated at (Les Houches accord), the
+    // larger mu_F as madevent's unwgt.f writes it. A shower that reads SCALUP
+    // starts from it; mu_R is only in <scales> and alpha_qcd. Without a PDF
+    // both mu_F fall back to mu_R.
+    lhe_event.scale = std::max(lhe_event.mu_f1, lhe_event.mu_f2);
     lhe_event.particles.clear();
     for (std::size_t i = 0; i < buffer.particle_count(); ++i) {
         auto particle_in = buffer.particle(event_index, i);

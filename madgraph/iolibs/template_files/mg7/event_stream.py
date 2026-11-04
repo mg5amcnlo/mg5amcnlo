@@ -68,7 +68,8 @@ class EventBatch:
     #: Event weight (XWGTUP), +-1 or larger in magnitude for overweight events, times
     #: the matrix-element ratio of a reweighting step. Not normalized.
     weight: Any
-    #: Renormalization scale in GeV (SCALUP).
+    #: Factorization scale in GeV, the larger of the two beams' (SCALUP); the
+    #: renormalization scale for an event without PDFs.
     scale: Any
     #: QED coupling (AQEDUP).
     alpha_qed: Any

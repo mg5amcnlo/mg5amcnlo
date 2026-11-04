@@ -1720,6 +1720,65 @@ class TestEventCopyAndText(unittest.TestCase):
         self.assertEqual(text, re.sub('[\n]+', '\n', text))
 
 
+class TestScalesTag(unittest.TestCase):
+    """mg7 writes mu_F (the larger of the two) in SCALUP, as madevent does, and
+    mu_R only in the <scales> tag; the readers that need mu_R take it there."""
+
+    # an mg7 u g > e+ ve d event: mu_R (clustering mean) well below mu_F
+    _mg7_event = """<event>
+   5    0 +2.3421443006e+04 8.3416627160e+01 0.0000000000e+00 1.5638382064e-01
+   2   -1    0    0  501    0 +0.0000000000000000e+00 +0.0000000000000000e+00 +1.2002398582516337e+02 1.2002398582516337e+02 0.0000000000000000e+00 0.0000e+00 -1.0000e+00
+  21   -1    0    0  502  501 +0.0000000000000000e+00 +0.0000000000000000e+00 -3.7302148427403245e+01 3.7302148427403245e+01 0.0000000000000000e+00 0.0000e+00 +1.0000e+00
+ -11    1    1    2    0    0 +2.6155916425271900e+01 +3.0045313322745052e+01 +5.6216419087919785e+01 6.8908963254637476e+01 0.0000000000000000e+00 0.0000e+00 +1.0000e+00
+  12    1    1    2    0    0 -1.6146637357052245e+01 -2.5895913418811963e+01 +1.0390916604373389e+01 3.2236436357002011e+01 0.0000000000000000e+00 0.0000e+00 -1.0000e+00
+   1    1    1    2  502    0 -1.0009279068219655e+01 -4.1493999039330892e+00 +1.6114501705465095e+01 1.9393186713685908e+01 0.0000000000000000e+00 0.0000e+00 -1.0000e+00
+<scales mur="31.4828" muf="83.4166" muf1="83.4166" muf2="83.4166" pt_clust_3="13000.00000" pt_clust_4="13000.00000" pt_clust_5="12.00713"></scales>
+</event>"""
+
+    _mg7_attributes = {'mur': 31.4828, 'muf': 83.4166, 'muf1': 83.4166,
+                       'muf2': 83.4166}
+
+    def test_mg7_event(self):
+        event = lhe_parser.Event(self._mg7_event)
+        self.assertAlmostEqual(event.scale, 83.416627160)
+        self.assertEqual(event.get_scales_attributes(), self._mg7_attributes)
+        self.assertEqual(event.get_ren_scale(), 31.4828)
+
+    def test_scales_survive_the_matching_scale_parsing(self):
+        """parse_matching_scale takes the <scales> tag apart (MadSpin does, to
+        add the decay products): mu_R is still there, and written back."""
+        event = lhe_parser.Event(self._mg7_event)
+        self.assertEqual(event.parse_matching_scale(), [-1, -1, 13000., 13000., 12.00713])
+        self.assertNotIn('<scales', event.tag)
+        self.assertEqual(event.get_ren_scale(), 31.4828)
+        text = str(event)
+        self.assertIn('<scales mur="31.4828" muf="83.4166" muf1="83.4166" '
+                      'muf2="83.4166" pt_clust_3="13000.0"', text)
+        for other in (lhe_parser.Event(text), event.copy()):
+            self.assertEqual(other.get_scales_attributes(), self._mg7_attributes)
+            self.assertEqual(other.get_ren_scale(), 31.4828)
+
+    def test_madevent_event(self):
+        """madevent writes pt_clust_i only: mu_R falls back to SCALUP, and the
+        rewritten tag is what it always was."""
+        text = re.sub(r'mur="[^"]*" muf="[^"]*" muf1="[^"]*" muf2="[^"]*" ', '',
+                      self._mg7_event)
+        event = lhe_parser.Event(text)
+        self.assertEqual(event.get_scales_attributes(), {})
+        self.assertAlmostEqual(event.get_ren_scale(), 83.416627160)
+        event.parse_matching_scale()
+        self.assertIn('<scales pt_clust_3="13000.0" pt_clust_4="13000.0" '
+                      'pt_clust_5="12.00713"></scales>', str(event))
+
+    def test_reconstruct_lo_weight_takes_mur_from_the_scales(self):
+        """mu_R from <scales>, mu_F (SCALUP) for the PDFs."""
+        event = lhe_parser.Event(self._mg7_event)
+        rec = event.parse_lo_weight(nqcd=1, ebeam=(6500., 6500.))
+        self.assertEqual(rec['ren_scale'], 31.4828)
+        self.assertAlmostEqual(rec['pdf_q1'][0], 83.416627160)
+        self.assertAlmostEqual(rec['pdf_q2'][0], 83.416627160)
+
+
 class TestBasicEventCompatibility(unittest.TestCase):
     """Compatibility tests for NLO_PARTIALWEIGHT.BasicEvent in reweight paths."""
 

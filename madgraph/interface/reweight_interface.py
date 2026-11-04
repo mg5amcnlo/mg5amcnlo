@@ -2037,8 +2037,12 @@ class ReweightInterface(extended_cmd.Cmd):
             if not self.use_eventid:
                 pid = -1
             
-            if not scale2: 
-                if hasattr(event, 'scale'):
+            if not scale2:
+                # mu_R: the mur of the <scales> tag when the event has one
+                # (mg7), else SCALUP, which holds mu_F
+                if hasattr(event, 'get_ren_scale'):
+                    scale2 = event.get_ren_scale()**2
+                elif hasattr(event, 'scale'):
                     scale2 = event.scale**2
                 else:
                     scale2 = 0
@@ -3817,17 +3821,21 @@ class DensityInterface(ReweightInterface):
                     prefix = prefix_cor[k]
 
         get_density = lambda *args: module.py_get_density(pdg, *args)
+        # mu_R: the mur of the <scales> tag when the event has one (mg7), else
+        # SCALUP, which holds mu_F
+        ren_scale2 = (event.get_ren_scale() if hasattr(event, 'get_ren_scale')
+                      else event.scale)**2
         for i in range(len(all_p)):
             pinv = self.invert_momenta(all_p[i])
             # npdg = len(all_p[i]) #number of particles in the event
-            # the argument event.scale**2 is a dummy argument for LO processes, else it is taken as the value given in the LHE file
+            # the argument mu_R**2 is a dummy argument for LO processes, else it is taken as the value given in the LHE file
             production_matrix = get_density(-1, pinv, pos_corrected, #self.number_changing_helicities,
-                                            self.allowed_helicities, event.aqcd, event.scale**2)
+                                            self.allowed_helicities, event.aqcd, ren_scale2)
 
             if self.symmetrise_initial_state:
                 pinv_bis = self.invert_momenta(all_p_bis[i])
                 production_matrix_bis = get_density(-1, pinv_bis, pos_corrected, #self.number_changing_helicities,
-                                            self.allowed_helicities, event.aqcd, event.scale**2)
+                                            self.allowed_helicities, event.aqcd, ren_scale2)
                 
             if self.symmetrise_initial_state:
                 rho_instance = dens.DensityMatrixObservables(production_matrix + production_matrix_bis, self.number_combinations * (self.number_combinations + 1) / 2)
