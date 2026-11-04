@@ -214,7 +214,7 @@ class EventStream:
         config.max_cut_repetitions = pick(
             max_cut_repetitions, gen_args["max_cut_repetitions"]
         )
-        configure_mlm_shower_start(config, run_card["beam"])
+        configure_mlm_shower_start(config, madspace_data)
 
         self.seed = resolve_seed(pick(seed, run_args.get("seed", -1)))
         load_context_data(

@@ -78,20 +78,17 @@ SOURCE_HASH_MESSAGE = (
 )
 
 
-def configure_mlm_shower_start(config, beam_args: dict) -> None:
-    """MLM merging: give the outgoing particles that are not light jets the
-    hardest scale of the event as pt_clust, rather than the collider energy,
-    so that Pythia8 starts their shower and the initial-state one there
-    (beam.mlm_shower_start = "hardest_scale", the default). The launcher does
-    the same in MadgraphProcess.init_beam."""
-    if (beam_args.get("dynamical_scale_choice") != "mlm"
-            or beam_args.get("mlm_shower_start", "hardest_scale") != "hardest_scale"):
+def configure_mlm_shower_start(config, madspace_data: dict) -> None:
+    """The MLM shower start of the run that made the gridpack (data.json,
+    written by MadgraphProcess.save_gridpack): the non-jet particles' pt_clust
+    at the hardest scale of the event rather than the collider energy. A
+    gridpack without the entry keeps the collider energy."""
+    settings = madspace_data.get("mlm_shower_start") or {}
+    if not settings.get("hardest_scale"):
         return
     config.mlm_hardest_shower_scale = True
-    # the cm_energy the MLMClustering is given, its pt_clust for a leg
-    # without a clustering scale
-    config.mlm_collider_energy = 2.0 * (float(beam_args["ebeam1"]) * float(beam_args["ebeam2"])) ** 0.5
-    config.mlm_max_jet_flavor = int(beam_args["max_jet_flavor"])
+    config.mlm_collider_energy = float(settings["collider_energy"])
+    config.mlm_max_jet_flavor = int(settings["max_jet_flavor"])
 
 
 def resolve_seed(seed: int) -> int:

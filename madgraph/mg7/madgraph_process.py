@@ -2363,6 +2363,12 @@ class MadgraphProcess:
             "custom_functions": gridpack_custom_paths,
             "me_parameters": me_parameters(self.run_card),
             "source_hash": ms.SOURCE_HASH,
+            # where the MLM shower of the non-jet particles starts (set in init_beam)
+            "mlm_shower_start": {
+                "hardest_scale": self.event_generator_config.mlm_hardest_shower_scale,
+                "collider_energy": self.event_generator_config.mlm_collider_energy,
+                "max_jet_flavor": self.event_generator_config.mlm_max_jet_flavor,
+            },
         }
         with open(os.path.join(data_path, "data.json"), "w") as f:
             json.dump(data, f)
