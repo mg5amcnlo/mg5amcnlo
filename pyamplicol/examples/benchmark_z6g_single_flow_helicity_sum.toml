@@ -1,0 +1,78 @@
+# SPDX-License-Identifier: 0BSD
+# Exercise the reusable compiled JIT O3 single-flow, helicity-sum workload.
+#
+# From a copied examples directory, generate and profile with:
+#   pyamplicol generate --card benchmark_z6g_single_flow_helicity_sum.toml
+#   pyamplicol profile --card benchmark_z6g_single_flow_helicity_sum.toml
+
+schema_version = 1
+action = "generate"
+
+[model]
+source = "built-in-sm"
+cache = true
+
+[process]
+entries = [
+  { expression = "u u~ > Z g g g g g g", name = "uubar_Z_6g" },
+]
+# No generation-time flow selection is used: the artifact retains every
+# physical LC flow and can select any flow globally or per point at runtime.
+
+[color]
+accuracy = "lc"
+# The default topology-replay layout is optimized for selecting one physical
+# flow at runtime while summing the retained helicities.
+
+[generation]
+output = "artifacts/uubar_z6g_single_flow_helicity_sum"
+mode = "error"
+workers = 1
+emit_api_bundle = true
+
+[generation.validation]
+enabled = true
+samples = 10
+seed = 12345
+relative_tolerance = 1e-12
+absolute_tolerance = 1e-300
+post_build_validation = false
+
+[evaluator]
+backend = "jit"
+execution_mode = "compiled"
+batch_size = 64
+output_chunk_size = 512
+
+[evaluator.optimization]
+horner_iterations = 10
+cores = 1
+max_horner_variables = 1000
+max_common_pair_cache_entries = 5000000
+max_common_pair_distance = 1000
+collect_factors = "auto"
+
+[evaluator.jit]
+optimization_level = 3
+compress = false
+
+[evaluation]
+artifact = "artifacts/uubar_z6g_single_flow_helicity_sum"
+process = "u u~ > Z g g g g g g"
+precision = 16
+
+[benchmark]
+target_runtime = 20.0
+batch_size = 64
+precision = 16
+warmup_runs = 2
+minimum_samples = 5
+# One-based ordinal 1 resolves to the first physical flow exposed by the
+# artifact. Stable flow IDs such as "flow:..." are accepted as well.
+color_flow_ids = ["1"]
+
+[output]
+format = "human"
+color = "auto"
+progress = "auto"
+log_level = "info"

@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: 0BSD
+# Packaged scalar HEFT generation for g g > H g g at full colour.
+# Uses the wheel-owned prepared JIT O2 kernel bundle and recurrence schedule.
+# Explicit HIG=1 certifies a single insertion for adaptive adjoint DDM FFT.
+
+schema_version = 1
+action = "generate"
+
+[model]
+source = "built-in-sm-heft"
+
+[process]
+entries = [{ expression = "g g > H g g", name = "gg_hgg" }]
+coupling_order_policy = "explicit"
+max_coupling_orders = { HIG = 1 }
+
+[color]
+accuracy = "full"
+contraction = "symmetric-group-fft"
+fft_basis = "adjoint"
+
+[generation]
+output = "artifacts/builtin_sm_heft"
+mode = "error"
+emit_api_bundle = true
+
+[evaluator]
+execution_mode = "recurrence"
+backend = "jit"
+
+[output]
+progress = "auto"
+log_level = "info"

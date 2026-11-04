@@ -1,0 +1,14 @@
+* text=auto
+*.json text eol=lf
+*.md text eol=lf
+*.py text eol=lf
+*.rs text eol=lf
+*.toml text eol=lf
+*.f90 text eol=lf
+*.h text eol=lf
+*.hpp text eol=lf
+*.pdf binary
+*.a binary
+*.bin binary
+dependencies/patches/** whitespace=-trailing-space,-space-before-tab
+licenses/rust/** -text whitespace=-trailing-space

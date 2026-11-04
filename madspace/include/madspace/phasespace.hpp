@@ -31,3 +31,4 @@
 #include "phasespace/two_particle.hpp"
 #include "phasespace/unweighter.hpp"
 #include "phasespace/vegas.hpp"
+#include "phasespace/weighting_step.hpp"

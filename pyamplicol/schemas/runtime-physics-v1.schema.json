@@ -1,0 +1,456 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pyamplicol.org/schemas/runtime-physics-v1.schema.json",
+  "title": "pyAmpliCol runtime physics metadata v1",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/resolved_physics"
+    },
+    {
+      "$ref": "#/$defs/on_the_fly_public_metadata"
+    }
+  ],
+  "$defs": {
+    "resolved_physics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "process_id",
+        "process",
+        "color_accuracy",
+        "coverage",
+        "external_particles",
+        "helicities",
+        "color_components",
+        "reduction",
+        "model_parameters",
+        "selectors"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "pyamplicol-resolved-physics"
+        },
+        "process_id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "process": {
+          "type": "string",
+          "minLength": 1
+        },
+        "color_accuracy": {
+          "enum": [
+            "lc",
+            "nlc",
+            "full"
+          ]
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        },
+        "external_particles": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "$ref": "#/$defs/external_particle"
+          }
+        },
+        "helicities": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/helicity"
+          }
+        },
+        "color_components": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/color_flow"
+              },
+              {
+                "$ref": "#/$defs/contracted_color"
+              }
+            ]
+          }
+        },
+        "reduction": {
+          "$ref": "#/$defs/reduction"
+        },
+        "model_parameters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/model_parameter"
+          }
+        },
+        "selectors": {
+          "$ref": "#/$defs/selectors"
+        },
+        "extensions": {
+          "type": "object",
+          "default": {}
+        }
+      }
+    },
+    "on_the_fly_public_metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "process_id",
+        "process",
+        "color_accuracy",
+        "external_particles",
+        "model_parameters"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "pyamplicol-on-the-fly-public-metadata"
+        },
+        "process_id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "process": {
+          "type": "string",
+          "minLength": 1
+        },
+        "color_accuracy": {
+          "const": "lc"
+        },
+        "external_particles": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "$ref": "#/$defs/external_particle"
+          }
+        },
+        "model_parameters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/model_parameter"
+          }
+        }
+      }
+    },
+    "public_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:+,~-]*$"
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "helicities",
+        "color",
+        "color_kind",
+        "structural_zero_helicity_count"
+      ],
+      "properties": {
+        "helicities": {
+          "enum": [
+            "complete",
+            "selected"
+          ]
+        },
+        "color": {
+          "enum": [
+            "complete",
+            "selected",
+            "contracted"
+          ]
+        },
+        "color_kind": {
+          "enum": [
+            "physical-lc-flows",
+            "contracted-color"
+          ]
+        },
+        "structural_zero_helicity_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "external_particle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "index",
+        "label",
+        "particle",
+        "pdg",
+        "role",
+        "momentum_slot",
+        "momentum_components"
+      ],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "label": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "particle": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pdg": {
+          "type": "integer"
+        },
+        "role": {
+          "enum": [
+            "initial",
+            "final"
+          ]
+        },
+        "momentum_slot": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "momentum_components": {
+          "const": [
+            "E",
+            "px",
+            "py",
+            "pz"
+          ]
+        }
+      }
+    },
+    "helicity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "index",
+        "values",
+        "computed",
+        "structural_zero",
+        "representative_id",
+        "coefficient"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "values": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "integer"
+          }
+        },
+        "computed": {
+          "type": "boolean"
+        },
+        "structural_zero": {
+          "type": "boolean"
+        },
+        "representative_id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "coefficient": {
+          "type": "number"
+        }
+      }
+    },
+    "color_flow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id",
+        "index",
+        "word",
+        "computed",
+        "representative_id",
+        "coefficient"
+      ],
+      "properties": {
+        "kind": {
+          "const": "lc-flow"
+        },
+        "id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "word": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "computed": {
+          "type": "boolean"
+        },
+        "representative_id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "coefficient": {
+          "type": "number"
+        }
+      }
+    },
+    "contracted_color": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id",
+        "index",
+        "description"
+      ],
+      "properties": {
+        "kind": {
+          "const": "contracted-color"
+        },
+        "id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "index": {
+          "const": 0
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "reduction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "groups"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "lc-diagonal",
+            "contracted-color"
+          ]
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/reduction_group"
+          }
+        }
+      }
+    },
+    "reduction_group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "representative_helicity_id",
+        "representative_color_id",
+        "physical_helicity_ids",
+        "physical_color_ids"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "representative_helicity_id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "representative_color_id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "physical_helicity_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/public_id"
+          }
+        },
+        "physical_color_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/public_id"
+          }
+        }
+      }
+    },
+    "model_parameter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "kind",
+        "default_real",
+        "default_imaginary",
+        "mutable"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "normalization",
+            "mass",
+            "width",
+            "coupling",
+            "external",
+            "derived"
+          ]
+        },
+        "default_real": {
+          "type": "number"
+        },
+        "default_imaginary": {
+          "type": "number"
+        },
+        "mutable": {
+          "type": "boolean"
+        }
+      }
+    },
+    "selectors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "helicity",
+        "color_flow",
+        "contracted_color"
+      ],
+      "properties": {
+        "helicity": {
+          "type": "boolean"
+        },
+        "color_flow": {
+          "type": "boolean"
+        },
+        "contracted_color": {
+          "const": false
+        }
+      }
+    }
+  }
+}

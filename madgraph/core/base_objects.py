@@ -4674,7 +4674,65 @@ class Process(PhysicsObject):
         self['legs_with_decays'] = LegList(legs)
 
         return self['legs_with_decays']
-    
+
+    def get_massive_final_legs_with_decays(self):
+        """Numbers, as in get_legs_with_decays, of the external legs that come
+        from a massive final-state particle of the core process: the particle
+        itself, or all of its decay products. Their momenta add up to those of
+        the massive particles the core process produces, which is what an
+        me_frame naming 'the massive final state' means once they decay. A
+        multiparticle label (a ProcessDefinition) counts as massive if all
+        its particles are.
+
+        Read only: it counts the decay products rather than calling
+        get_legs_with_decays, which copies the legs and caches them on the
+        process."""
+
+        model = self.get('model')
+        numbers = []
+        position = 0
+        chains = list(self.get('decay_chains'))
+        for leg in self.get('legs'):
+            nlegs = 1
+            if leg.get('state'):
+                chain = self._pop_decay_chain(chains, leg)
+                if chain:
+                    nlegs = chain.count_final_legs_with_decays()
+                ids = leg.get('ids') if 'ids' in leg else [leg.get('id')]
+                if all(model.get_particle(i).get('mass').lower() != 'zero'
+                       for i in ids):
+                    numbers.extend(range(position + 1, position + nlegs + 1))
+            position += nlegs
+        return numbers
+
+    def count_final_legs_with_decays(self):
+        """The number of external final-state legs this process ends up as
+        once its decay chains are substituted in, i.e. the number of
+        final-state entries of get_legs_with_decays, without building them."""
+
+        chains = list(self.get('decay_chains'))
+        count = 0
+        for leg in self.get('legs'):
+            if not leg.get('state'):
+                continue
+            chain = self._pop_decay_chain(chains, leg)
+            count += chain.count_final_legs_with_decays() if chain else 1
+        return count
+
+    @staticmethod
+    def _pop_decay_chain(chains, leg):
+        """Remove from chains, and return, the first decay chain of this
+        final-state leg: the matching get_legs_with_decays uses (first chain
+        whose decaying particle has the id of the leg, in leg order)."""
+
+        if 'id' not in leg:
+            return None
+        for chain in chains:
+            if chain.get('legs')[0].get('id') == leg.get('id'):
+                chains.remove(chain)
+                return chain
+        return None
+
     def get_tag(self):
         """return the tag for standalone call"""
         

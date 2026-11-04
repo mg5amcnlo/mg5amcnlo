@@ -60,6 +60,9 @@ check_boost() {
         "$HEP/boost/lib/libboost_system.*" "$HEP/boost/lib/libboost_system-mt.*" \
         "$HEP/boost/lib64/libboost_system.*" "$HEP/boost/lib64/libboost_system-mt.*"
     need_file "$HEP/boost/include/boost/version.hpp"
+    # HEPToolInstaller.install_emela uses the first boost/boost* entry, the
+    # source tree, as eMELA's include path
+    need_glob "boost source headers" "$HEP/boost/boost_[0-9]*/boost/version.hpp"
 }
 
 check_pythia8() {

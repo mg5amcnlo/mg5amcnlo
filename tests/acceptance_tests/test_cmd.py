@@ -13,6 +13,8 @@
 #
 ################################################################################
 from __future__ import absolute_import
+import array
+import random
 import subprocess
 import unittest
 import os
@@ -1572,8 +1574,8 @@ class TestCmdShell2(unittest.TestCase,
           alternate, leaving partial pages, gives the |M|^2 of single-event
           calls, event by event.
 
-        The helicities are chosen once per loaded library, so each first call
-        runs in its own process.
+        The helicities are chosen once per instance (umami_initialize), so each
+        first call runs in its own process, with an instance of its own.
         """
         self._check_umami_first_call([('scalar', 'd', 1e-12),
                                       ('simd_128', 'd', 1e-12),
@@ -1683,7 +1685,7 @@ class TestCmdShell2(unittest.TestCase,
                 evaluate(first, [k % 2 if k != 'forward' else 1 for k in first])
                 flavors = [0, 1, 1, 0, 1, 0, 0]
                 print(json.dumps({
-                    'good': lib.madmatrix_good_helicity_count(),
+                    'good': lib.madmatrix_good_helicity_count(handle),
                     'batch': evaluate(range(7), flavors),
                     'single': [evaluate([k], [f])[0] for k, f in enumerate(flavors)]}))
                 '''))
@@ -2193,6 +2195,117 @@ class TestCmdShell2(unittest.TestCase,
             self.assertLessEqual(abs(vector - scalar), 1e-5 * scalar,
                                  'the scalar and vectorised backends disagree '
                                  'in %s: %s vs %s' % (d, scalar, vector))
+
+    def test_madmatrix_hel_recycling_vs_plain(self):
+        """--hel_recycling must not change |M|^2, event by event.
+
+        The recycled build makes every helicity row of a page at once and reads
+        the rows back in the helicity loop; with one helicity per event
+        (UMAMI_IN_HELICITY_INDEX, check_sa --hel-index: what MadTrex and a
+        sampled-helicity run pass) each SIMD lane can have its own, and the
+        recycled build has to take the plain per-lane code instead. Both are
+        compared here to the plain output on the same points, at the scalar
+        and a SIMD backend: the helicity sum, and one random helicity per event.
+
+        g g > t t~ g is small enough to build in seconds and still has helicity
+        rows that share wavefunctions, amplitudes that vanish at some rows and,
+        at simd_128, two events per lane in mixed precision. FPTYPE=d keeps the
+        two builds within rounding of each other (1e-12); the warm-up must have
+        produced the recycled build (HelRecycling.inc), or the test would compare
+        plain with plain.
+        """
+        self._hel_recycling_vs_plain('g g > t t~ g')
+
+    def test_madmatrix_fd_hel_recycling_vs_plain(self):
+        """--hel_recycling in the FD gauge must not change |M|^2 either.
+
+        What FD changes for the recycler is the amplitude split (P1N): the
+        current a P1N leaves on a vector leg has five components, the fifth
+        the Goldstone, and a scalar keeps its value in that fifth component.
+        Dotting four components for a vector or component 0 for a scalar
+        silently drops part of every amplitude of a group (|M|^2 off by up to
+        2.2 relative here). t t~ > w+ w- z splits all three kinds at the
+        default threshold: vector legs of the merged vector/Goldstone vertices
+        (VVV1_VSV2_..., VVVV5_VVSS1_...), the Higgs of the top Yukawa (FFS4)
+        and fermion legs; the test checks that each kind is there.
+        """
+        import glob
+        self.do('set gauge FD')
+        try:
+            recycled = self._hel_recycling_vs_plain('t t~ > w+ w- z')
+        finally:
+            self.do('set gauge unitary')
+        calls = ''.join(open(path).read() for path in
+                        glob.glob(pjoin(recycled, 'HelRecycling*.inc')))
+        for kind in ('hr_p1n_fold<W_ACCESS, 5, false>',
+                     'hr_p1n_fold<W_ACCESS, 1, false, 4>',
+                     'hr_p1n_fold<W_ACCESS, 4, true>'):
+            self.assertIn(kind, calls, 'no %s group in the recycled build' % kind)
+
+    def _hel_recycling_vs_plain(self, process):
+        """plain and --hel_recycling standalone outputs of `process`, |M|^2
+        compared event by event (see test_madmatrix_hel_recycling_vs_plain);
+        returns the recycled subprocess directory"""
+        devnull = open(os.devnull, 'w')
+        root = self.out_dir + '_hr'
+        dirs = {'plain': root + '_plain', 'recycled': root + '_recycled'}
+        for path in dirs.values():
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+        self.do('import model sm')
+        self.do('generate %s' % process)
+        self.do('output standalone %s -f' % dirs['plain'])
+        self.do('output standalone %s -f --hel_recycling=True' % dirs['recycled'])
+        proc = {}
+        for name, path in dirs.items():
+            proc_root = pjoin(path, 'SubProcesses')
+            found = sorted(d for d in os.listdir(proc_root)
+                           if d.startswith('P') and os.path.isdir(pjoin(proc_root, d)))
+            self.assertEqual(len(found), 1, 'one subprocess expected in %s' % path)
+            proc[name] = pjoin(proc_root, found[0])
+        self.assertTrue(os.path.exists(pjoin(proc['recycled'], 'HelRecycling.inc')),
+                        'the --hel_recycling warm-up did not produce the recycled build')
+        ncomb = int(re.search(r'constexpr int ncomb = (\d+)',
+                              open(pjoin(proc['plain'], 'ProcessData.h')).read()).group(1))
+        nevt = 512
+        random.seed(11)
+        helicities = array.array('i', [random.randrange(0, ncomb) for _ in range(nevt)])
+        hel_file = pjoin(root + '_hel.bin')
+        with open(hel_file, 'wb') as fsock:
+            helicities.tofile(fsock)
+
+        def dump(proc_dir, backend, tag, extra=()):
+            exe = pjoin(proc_dir, 'check_sa.exe')
+            if os.path.exists(exe):
+                os.remove(exe)
+            subprocess.call(['make', 'BACKEND=%s' % backend, 'FPTYPE=d', 'USEBUILDDIR=1'],
+                            stdout=devnull, stderr=devnull, cwd=proc_dir)
+            if not os.path.exists(exe):
+                return None  # backend not available on this host
+            out = pjoin(proc_dir, 'me_%s_%s.bin' % (backend, tag))
+            subprocess.call(['./check_sa.exe', 'perf'] + list(extra) +
+                            ['--dump-me', out, '16', '32', '1'],
+                            stdout=devnull, stderr=subprocess.STDOUT, cwd=proc_dir)
+            self.assertTrue(os.path.exists(out), 'no |M|^2 dump in %s' % proc_dir)
+            return array.array('d', open(out, 'rb').read())
+
+        compared = 0
+        for backend in ('scalar', 'simd_128'):
+            for tag, extra in (('sum', ()), ('hel', ('--hel-index', hel_file))):
+                plain = dump(proc['plain'], backend, tag, extra)
+                recycled = dump(proc['recycled'], backend, tag, extra)
+                if plain is None or recycled is None:
+                    continue
+                self.assertEqual(len(plain), nevt)
+                self.assertEqual(len(recycled), nevt)
+                self.assertTrue(any(plain), 'all-zero |M|^2 (%s, %s)' % (backend, tag))
+                for i, (a, b) in enumerate(zip(plain, recycled)):
+                    self.assertLessEqual(abs(a - b), 1e-12 * abs(a),
+                                         '%s %s event %d: plain %r, recycled %r'
+                                         % (backend, tag, i, a, b))
+                compared += 1
+        self.assertGreaterEqual(compared, 2, 'the scalar backend did not build')
+        return proc['recycled']
 
     def test_standalone_cpp_perf_alpha_s_from_param_card(self):
         """check_sa.exe 'perf' mode must use the alpha_s of the param card,

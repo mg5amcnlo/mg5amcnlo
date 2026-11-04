@@ -42,7 +42,7 @@ import madgraph.interface.master_interface as mgcmd
 import madgraph.models.check_param_card as check_param_card
 import madgraph.models.import_ufo as import_ufo
 import madgraph.models.model_reader as model_reader
-from madgraph.iolibs.template_files.mg7 import bootstrap as mg7_bootstrap
+from madgraph.mg7 import bootstrap as mg7_bootstrap
 
 pjoin = os.path.join
 
@@ -858,7 +858,8 @@ class LauncherTest(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def test_one_compute_widths_per_set_of_options(self):
-        from madgraph.iolibs.template_files.mg7 import launch as mg7_launch
+        from madgraph.mg7 import launch as mg7_launch
+        from madgraph.mg7 import model_widths
         card = pjoin(self.tmp, 'param_card.dat')
         with open(card, 'w') as stream:
             stream.write('\n'.join([
@@ -871,7 +872,7 @@ class LauncherTest(unittest.TestCase):
                 scripts.append(stream.read())
             return mock.Mock(returncode=0)
 
-        with mock.patch.object(mg7_launch, 'read_stored_model', lambda: 'sm'), \
+        with mock.patch.object(model_widths, 'read_stored_model', lambda: 'sm'), \
              mock.patch('subprocess.run', run):
             mg7_launch.compute_auto_widths(card)
         self.assertEqual(len(scripts), 1)
@@ -884,7 +885,7 @@ class LauncherTest(unittest.TestCase):
             'compute_widths 24 --path=CARD '])
 
     def test_no_auto_no_run(self):
-        from madgraph.iolibs.template_files.mg7 import launch as mg7_launch
+        from madgraph.mg7 import launch as mg7_launch
         card = pjoin(self.tmp, 'param_card.dat')
         with open(card, 'w') as stream:
             stream.write('DECAY  6 1.5\n')
@@ -894,7 +895,7 @@ class LauncherTest(unittest.TestCase):
 
     def compile_args(self, subprocesses, extra=()):
         """The arguments of the make that builds ``subprocesses`` directories."""
-        from madgraph.iolibs.template_files.mg7 import launch as mg7_launch
+        from madgraph.mg7 import launch as mg7_launch
         process = object.__new__(mg7_launch.MadgraphProcess)
         process.run_card = {'run': {'device': ['cpu'], 'cpu_mode': 'simd_128',
                                     'precision': 'color32', 'cpu_thread_pool_size': 2}}
@@ -918,7 +919,7 @@ class LauncherTest(unittest.TestCase):
     def test_only_what_is_to_build_counts(self):
         """Six directories, but the libraries of three of them exist: below the
         threshold."""
-        from madgraph.iolibs.template_files.mg7 import launch as mg7_launch
+        from madgraph.mg7 import launch as mg7_launch
         for i in range(3):
             open(pjoin(self.tmp, 'libmadmatrix_P%d_x_simd_128.so' % i), 'w').close()
         process = object.__new__(mg7_launch.MadgraphProcess)

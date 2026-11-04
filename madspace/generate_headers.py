@@ -25,6 +25,7 @@ def main():
     commands = {}
     for sec in data:
         commands.update({key: value for key, value in sec.items() if key != "title"})
+    commands = expand_precisions(commands)
     for i, cmd in enumerate(commands.values()):
         cmd["opcode"] = i
     sections = [
@@ -43,6 +44,51 @@ def main():
     runtime_mixin(commands, "gpu", out_dir)
     runtime_backward_mixin(commands, "gpu", out_dir)
     kernel_checks(commands, out_dir)
+
+
+# C++ element type and kernel policy suffix for each float precision
+PRECISIONS = {"float32": ("float", "32"), "float64": ("double", "")}
+
+
+def expand_precisions(commands):
+    """Split each instruction with a `precision` list into one instruction per
+    precision, named `<name>_<precision>`. In these, `float` in a type means the
+    instruction's precision. The expanded entries keep the original name in
+    `base_name` and the kernel policy suffix in `types_suffix`."""
+    expanded = {}
+    for name, cmd in commands.items():
+        precisions = cmd.get("precision")
+        if precisions is None:
+            cmd["base_name"] = name
+            cmd["types_suffix"] = ""
+            cmd["dispatch"] = None
+            expanded[name] = cmd
+            continue
+        for precision in precisions:
+            ctype, suffix = PRECISIONS[precision]
+            sub_cmd = dict(cmd)
+            for key in ("inputs", "outputs"):
+                if sub_cmd[key] == "any":
+                    raise ValueError(f"{name}: precision needs explicit {key}")
+                sub_cmd[key] = [
+                    {
+                        **arg,
+                        "type": (
+                            [precision, *arg["type"][1:]]
+                            if arg.get("type", [None])[0] == "float"
+                            else arg.get("type")
+                        ),
+                    }
+                    for arg in cmd[key]
+                ]
+            sub_cmd["base_name"] = name
+            sub_cmd["types_suffix"] = suffix
+            sub_cmd["ctype"] = ctype
+            sub_cmd["doc_cmd"] = cmd
+            # the builder method is generated once, for the first precision
+            sub_cmd["dispatch"] = precisions if precision == precisions[0] else []
+            expanded[f"{name}_{precision}"] = sub_cmd
+    return expanded
 
 
 def write_autogen(f):
@@ -118,14 +164,23 @@ def function_builder_mixin(commands, out_dir):
         write_autogen(f)
         first = True
         for name, cmd in commands.items():
+            if cmd["dispatch"] == []:
+                continue
             if first:
                 first = False
             else:
                 f.write("\n")
-            f.write(doc_comment(name, cmd))
+            base_name = cmd["base_name"]
+            f.write(doc_comment(base_name, cmd.get("doc_cmd", cmd)))
             if cmd["inputs"] == "any":
                 parameters = "ValueVec args"
                 instruction_call = f'instruction("{name}", args)'
+            elif cmd["dispatch"]:
+                parameters = ", ".join(f"Value {arg['name']}" for arg in cmd["inputs"])
+                arguments = ", ".join(arg["name"] for arg in cmd["inputs"])
+                instruction_call = (
+                    f'precision_instruction("{base_name}", {{{arguments}}})'
+                )
             else:
                 parameters = ", ".join(f"Value {arg['name']}" for arg in cmd["inputs"])
                 arguments = ", ".join(arg["name"] for arg in cmd["inputs"])
@@ -152,7 +207,7 @@ def function_builder_mixin(commands, out_dir):
                         f"    return {{{return_array}}};"
                     )
 
-            f.write(f"{return_type} {name}({parameters}) {{\n{func_body}\n}}\n")
+            f.write(f"{return_type} {base_name}({parameters}) {{\n{func_body}\n}}\n")
 
 
 def instruction_set_python(commands, out_dir):
@@ -170,6 +225,9 @@ def instruction_set_python(commands, out_dir):
         )
 
         for name, cmd in commands.items():
+            if cmd["dispatch"] == []:
+                continue
+            name = cmd["base_name"]
             f.write(f'    fb.def("{name}", &FunctionBuilder::{name}')
             if cmd["inputs"] == "any":
                 f.write(', py::arg("args")')
@@ -181,12 +239,16 @@ def instruction_set_python(commands, out_dir):
         f.write("}\n}\n")
 
 
+# yaml shorthands for the default element types
+DTYPE_NAMES = {"float": "float64", "int": "int32"}
+
+
 def format_type(data):
     type = data["type"]
     if type[0] == "size":
-        return f'{{DataType::dt_int, true, {{"{type[1]}"}}, true}}'
+        return f'{{DataType::dt_int32, true, {{"{type[1]}"}}, true}}'
 
-    dtype = f"DataType::dt_{type[0]}"
+    dtype = f"DataType::dt_{DTYPE_NAMES.get(type[0], type[0])}"
     single = len(type) > 1 and type[1] == "single"
     single_str = "true" if single else "false"
     shape = ", ".join(
@@ -249,28 +311,45 @@ def instruction_set_mixin(commands, out_dir):
         f_op.write("\n")
 
 
+def custom_op_func(prefix, cmd):
+    """The C++ function of a custom op. custom_op can name an implementation shared
+    by several instructions instead of True, with the leading template arguments
+    custom_op_args."""
+    custom_op = cmd["custom_op"]
+    name = custom_op if isinstance(custom_op, str) else cmd["base_name"]
+    template_args = list(cmd.get("custom_op_args", []))
+    if "ctype" in cmd:
+        template_args.append(cmd["ctype"])
+    func = f"{prefix}{name}"
+    return f"{func}<{', '.join(template_args)}>" if template_args else func
+
+
 def runtime_mixin(commands, device, out_dir):
     with open(out_dir / device / "runtime_mixin.inc", "w") as f:
         write_autogen(f)
 
         for name, cmd in commands.items():
             opcode = cmd["opcode"]
+            base_name = cmd["base_name"]
+            suffix = cmd["types_suffix"]
             if cmd.get("custom_op", False):
-                func = f"op_{name}"
+                func = custom_op_func("op_", cmd)
             else:
                 n_inputs = len(cmd["inputs"])
                 n_outputs = len(cmd["outputs"])
                 dims = cmd.get("dims", 1)
                 vectorized = cmd.get("vectorized", True)
 
+                kernel_name = f"kernel_{base_name}"
                 if device == "cpu":
-                    if vectorized:
-                        kernel = f"kernel_{name}<CpuTypes>, kernel_{name}<SimdTypes>"
-                    else:
-                        kernel = f"kernel_{name}<CpuTypes>, kernel_{name}<CpuTypes>"
+                    simd = "Simd" if vectorized else "Cpu"
+                    kernel = (
+                        f"{kernel_name}<CpuTypes{suffix}>, "
+                        f"{kernel_name}<{simd}Types{suffix}>"
+                    )
                     device_arg = ", DeviceType"
                 elif device == "gpu":
-                    kernel = f"kernel_{name}<GpuTypes>"
+                    kernel = f"{kernel_name}<GpuTypes{suffix}>"
                     device_arg = ""
                 foreach_func = (
                     f"tensor_foreach_dynamic<{kernel}, {n_inputs}, {n_outputs}{device_arg}>"
@@ -293,10 +372,13 @@ def runtime_backward_mixin(commands, device, out_dir):
             if not cmd.get("differentiable", False):
                 continue
             opcode = cmd["opcode"]
+            base_name = cmd["base_name"]
+            suffix = cmd["types_suffix"]
             if cmd.get("custom_op", False):
+                func = custom_op_func("backward_op_", cmd)
                 f.write(
                     f"case {opcode}:\n"
-                    f"    backward_op_{name}(instr, locals, local_grads, device);\n"
+                    f"    {func}(instr, locals, local_grads, device);\n"
                     f"    break;\n"
                 )
             else:
@@ -318,20 +400,16 @@ def runtime_backward_mixin(commands, device, out_dir):
                 out_stored_str = ",".join(str(i) for i in out_stored)
                 vectorized = cmd.get("vectorized", True)
 
+                kernel_name = f"backward_kernel_{base_name}"
                 if device == "cpu":
-                    if vectorized:
-                        kernel = (
-                            f"backward_kernel_{name}<CpuTypes>, "
-                            f"backward_kernel_{name}<SimdTypes>"
-                        )
-                    else:
-                        kernel = (
-                            f"backward_kernel_{name}<CpuTypes>, "
-                            f"backward_kernel_{name}<CpuTypes>"
-                        )
+                    simd = "Simd" if vectorized else "Cpu"
+                    kernel = (
+                        f"{kernel_name}<CpuTypes{suffix}>, "
+                        f"{kernel_name}<{simd}Types{suffix}>"
+                    )
                     device_arg = ", DeviceType"
                 elif device == "gpu":
-                    kernel = f"backward_kernel_{name}<GpuTypes>"
+                    kernel = f"{kernel_name}<GpuTypes{suffix}>"
                     device_arg = ""
 
                 dims = cmd.get("dims", 1)
@@ -354,8 +432,10 @@ def runtime_backward_mixin(commands, device, out_dir):
 
 
 def is_single_input(arg):
-    return isinstance(arg.get("type"), list) and len(arg["type"]) > 1 and (
-        arg["type"][1] == "single"
+    return (
+        isinstance(arg.get("type"), list)
+        and len(arg["type"]) > 1
+        and (arg["type"][1] == "single")
     )
 
 
@@ -369,7 +449,8 @@ def kernel_checks(commands, out_dir):
         def check(kernel, index, single, what):
             f.write(
                 f"static_assert(\n"
-                f"    single_params<decltype(&{kernel}<SimdTypes>)>::value[{index}] == "
+                f"    single_params<decltype(&{kernel}<SimdTypes{suffix}>)>"
+                f"::value[{index}] == "
                 f"{'true' if single else 'false'},\n"
                 f'    "{kernel}: parameter {index} ({what}) must '
                 f'{"" if single else "not "}be single"\n'
@@ -379,6 +460,8 @@ def kernel_checks(commands, out_dir):
         for name, cmd in commands.items():
             if cmd.get("custom_op", False) or not cmd.get("vectorized", True):
                 continue
+            suffix = cmd["types_suffix"]
+            name = cmd["base_name"]
             inputs = cmd["inputs"]
             if is_single_input(inputs[0]):
                 raise ValueError(

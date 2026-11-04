@@ -706,14 +706,70 @@ class TestProcCardWrappedLines(unittest.TestCase):
 import re
 import shutil
 class TestRunCardNLOMeFrame(unittest.TestCase):
-    """me_frame is only meaningful for the whole initial state or for
-    final-state particles; a partial initial state must be refused at parse
-    time rather than reaching the generated Fortran."""
+    """For a process whose frame does not matter (unpolarised), me_frame is
+    only meaningful for the whole initial state or for final-state particles;
+    a partial initial state must be refused when the run is set up rather
+    than reaching the generated Fortran. Without the process nothing is
+    decided: whether a leg radiates depends on it (see
+    TestRunCardNLOMeFramePartonicCM)."""
 
-    def _card(self, me_frame):
+    def _card(self, me_frame, ninitial=2):
         run_card = bannermod.RunCardNLO()
         run_card.set('me_frame', me_frame, user=True)
+        # the process is known, and its frame does not matter
+        charac = bannermod.ProcCharacteristic()
+        charac['ninitial'] = ninitial
+        run_card.set_me_frame_process(charac)
         return run_card
+
+    def test_a_decay_may_use_its_decaying_particle(self):
+        # FKS never splits it: [1] is the whole initial state of a decay, and
+        # leg 2 is a final-state particle there, not a second beam
+        for me_frame in ([1], [1, 3], [1, 2]):
+            self._card(me_frame, ninitial=1).check_validity()
+
+    def test_the_process_is_read_from_the_directory(self):
+        # a bare 'treatcards run' writes the include files without the run
+        # interface: write_include_file reads <dir>/SubProcesses itself
+        tmp = tempfile.mkdtemp()
+        try:
+            os.mkdir(os.path.join(tmp, 'SubProcesses'))
+            source = os.path.join(tmp, 'Source')
+            run_card = bannermod.RunCardNLO()
+            run_card.set('me_frame', [1, 3], user=True)
+            self.assertFalse(run_card.load_me_frame_process(source))
+            self.assertEqual(run_card['me_frame_ninitial'], 0)
+            # p p > w+{0} j [QCD]: the beams radiate
+            charac = bannermod.ProcCharacteristic()
+            charac['ninitial'] = 2
+            charac['me_frame_cm_legs'] = [3, 4]
+            charac['me_frame_unsafe_legs'] = [1, 2, 4]
+            charac['me_frame_default_legs'] = [3]
+            charac.write(os.path.join(tmp, 'SubProcesses',
+                                      'proc_characteristics'))
+            self.assertTrue(run_card.load_me_frame_process(source))
+            self.assertEqual(run_card['me_frame_unsafe_legs'], [1, 2, 4])
+            # also relative to Source itself (treatcards --output_dir=.)
+            os.mkdir(source)
+            cwd = os.getcwd()
+            try:
+                os.chdir(source)
+                self.assertTrue(bannermod.RunCardNLO().load_me_frame_process(
+                    os.curdir))
+            finally:
+                os.chdir(cwd)
+            with self.assertRaisesRegex(bannermod.InvalidRunCard, 'radiate'):
+                run_card.check_validity()
+        finally:
+            shutil.rmtree(tmp)
+
+    def test_without_the_process_nothing_is_decided(self):
+        # a card read outside a launch: [1] is the decaying particle of a
+        # 1 -> n process, [1, 3] a valid frame in e+ e- > t t~ [QCD]
+        for me_frame in ([1], [1, 3]):
+            run_card = bannermod.RunCardNLO()
+            run_card.set('me_frame', me_frame, user=True)
+            run_card.check_validity()
 
     def test_a_single_beam_is_refused(self):
         # The regression: this used to pass check_validity because only a
@@ -735,6 +791,286 @@ class TestRunCardNLOMeFrame(unittest.TestCase):
         for me_frame in ([1, 3], [1, 2, 3]):
             with self.assertRaises(bannermod.InvalidRunCard):
                 self._card(me_frame).check_validity()
+
+
+class TestRunCardNLOMeFramePartonicCM(unittest.TestCase):
+    """What me_frame = [1, 2] means at NLO depends on the process
+    (RunCardNLO.get_me_frame_legs). With initial-state QCD radiation the
+    frame the FKS momenta come in depends on the FKS sector, so leaving the
+    real emission there made the polarised NLO result depend on the
+    subtraction partition: +9.5(4)% on p p > w+{0} j [QCD], +11.3(4)% on
+    p p > z{0} j [QCD], when only fks_b changed. It must become the rest
+    frame of the Born final state, or be refused when that contains a jet.
+    The default of such a process is not [1, 2] but the rest frame of its
+    massive final-state particles."""
+
+    def _card(self, me_frame, cm_legs, unsafe_legs, real_emission=True,
+              default_legs=(), ninitial=2):
+        run_card = bannermod.RunCardNLO()
+        if me_frame is not None:
+            run_card.set('me_frame', me_frame, user=True)
+        charac = bannermod.ProcCharacteristic()
+        charac['ninitial'] = ninitial
+        charac['me_frame_cm_legs'] = cm_legs
+        charac['me_frame_unsafe_legs'] = unsafe_legs
+        charac['me_frame_default_legs'] = list(default_legs)
+        run_card.set_me_frame_process(charac, real_emission=real_emission)
+        return run_card
+
+    def _frame_id(self, run_card):
+        run_card.check_validity()
+        run_card.update_system_parameter_for_include()
+        return run_card['frame_id']
+
+    def test_initial_state_radiation_uses_the_born_final_state(self):
+        # p p > w+{0} w- [QCD]: the W W rest frame, frame_id 2**3 + 2**4.
+        # Not set, set to [1, 2] or left empty all mean the partonic c.m.
+        for me_frame in ([1, 2], [2, 1], [], None):
+            self.assertEqual(self._frame_id(self._card(me_frame, [3, 4], [])),
+                             24, me_frame)
+        # an explicit final-state frame is kept
+        self.assertEqual(self._frame_id(self._card([3], [3, 4], [])), 8)
+
+    def test_default_is_the_massive_final_state(self):
+        # p p > w+{0} j [QCD]: an unset or empty me_frame is the W alone
+        # (Collins-Soper), not the partonic c.m., so it is not refused
+        for me_frame in ([], None):
+            self.assertEqual(self._frame_id(self._card(
+                me_frame, [3, 4], [4], default_legs=[3])), 8, me_frame)
+        # [1, 2] asked for explicitly still is, pointing at the default
+        with self.assertRaisesRegex(bannermod.InvalidRunCard,
+                                    r'me_frame = \[3\]'):
+            self._card([1, 2], [3, 4], [4], default_legs=[3]).check_validity()
+        # e+ e- > t{L} t~ [QCD]: no default of its own, the partonic c.m.
+        self.assertEqual(self._frame_id(self._card(None, [1, 2], [])), 6)
+
+    def test_partonic_cm_with_a_jet_is_refused(self):
+        # p p > w+{0} j [QCD]: leg 4 is a jet, so [1, 2] has no infrared-safe
+        # NLO version, at launch time or when the include file is written
+        card = self._card([1, 2], [3, 4], [4])
+        with self.assertRaises(bannermod.InvalidRunCard):
+            card.check_validity()
+        # ... and the message offers the colourless part of it
+        with self.assertRaisesRegex(bannermod.InvalidRunCard,
+                                    r'me_frame = \[3\]'):
+            card.update_system_parameter_for_include()
+        # the boson alone (Collins-Soper frame) is fine
+        self.assertEqual(self._frame_id(self._card([3], [3, 4], [4])), 8)
+
+    def test_a_jet_in_an_explicit_frame_is_refused(self):
+        # the whole final state of p p > w+{0} j, spelled out
+        with self.assertRaises(bannermod.InvalidRunCard):
+            self._card([3, 4], [3, 4], [4]).check_validity()
+        # p p > w+{0} w- j: the jet is leg 5
+        with self.assertRaises(bannermod.InvalidRunCard):
+            self._card([3, 5], [3, 4, 5], [5]).check_validity()
+        self.assertEqual(self._frame_id(self._card([3, 4], [3, 4, 5], [5])),
+                         24)
+
+    def test_no_real_emission_no_refusal(self):
+        # a run of the Born alone (launch LO): no infrared limit
+        card = self._card([1, 2], [3, 4], [4], real_emission=False)
+        self.assertEqual(self._frame_id(card), 24)
+
+    def test_without_initial_state_radiation_the_cm_is_kept(self):
+        # e+ e- > t{L} t~ [QCD]: unchanged, skipped in the fortran
+        self.assertEqual(self._frame_id(self._card([1, 2], [1, 2], [])), 6)
+
+    def test_decay_is_the_rest_frame_of_the_decaying_particle(self):
+        # t > w+{0} b [QCD]: frame_id 6 used to select the top AND leg 2,
+        # the first decay product, and boost to the rest frame of the pair
+        self.assertEqual(self._frame_id(self._card([1, 2], [1], [3],
+                                                   ninitial=1)), 2)
+        # the decaying particle may be named: FKS never splits it, so it has
+        # the same momentum in every configuration, coloured or not. This
+        # used to be refused as 'part of the initial state'.
+        self.assertEqual(self._frame_id(self._card([1], [1], [3],
+                                                   ninitial=1)), 2)
+        # ... also without ninitial: [1] as the c.m. legs is a decay
+        self.assertEqual(self._frame_id(self._card([1], [1], [3],
+                                                   ninitial=0)), 2)
+        # with a decay product, unless it is a jet
+        self.assertEqual(self._frame_id(self._card([1, 2], [1], [3],
+                                                   ninitial=1)), 2)
+        with self.assertRaises(bannermod.InvalidRunCard):
+            self._card([1, 3], [1], [3], ninitial=1).check_validity()
+
+    def test_a_beam_may_enter_only_if_it_does_not_radiate(self):
+        # p p > t{+} t~ [QCD]: the partons radiate
+        with self.assertRaisesRegex(bannermod.InvalidRunCard, 'radiate'):
+            self._card([1, 3], [3, 4], [1, 2],
+                       default_legs=[3, 4]).check_validity()
+        # e+ e- > t{L} t~ [QCD]: the beams do not, so e+ and the top is a
+        # frame like any other (frame_id 2**1 + 2**3)
+        self.assertEqual(self._frame_id(self._card([1, 3], [1, 2], [])), 10)
+        # but a single massless beam has no rest frame
+        with self.assertRaises(bannermod.InvalidRunCard):
+            self._card([1], [1, 2], []).check_validity()
+
+    def test_without_process_information_me_frame_is_literal(self):
+        # unpolarised processes, or a card read outside a launch
+        self.assertEqual(self._frame_id(self._card([1, 2], [], [])), 6)
+        self.assertEqual(self._frame_id(self._card([3, 4], [], [])), 24)
+        self.assertEqual(self._frame_id(self._card(None, [], [])), 0)
+
+
+class TestDefaultMeFrameLO(unittest.TestCase):
+    """The LO (madevent, mg7) default me_frame follows the NLO one: for a
+    polarised or density-matrix process, the rest frame of the massive
+    final-state particles in p p, the partonic c.m. in e+ e- and for a
+    decay. Anything else keeps the card's own default."""
+
+    model = None
+
+    @classmethod
+    def setUpClass(cls):
+        import madgraph.models.import_ufo as import_ufo
+        cls.model = import_ufo.import_model('sm')
+
+    def proc(self, initial, final, decays=()):
+        """legs are (id, polarisation) pairs; decays are processes"""
+        import madgraph.core.base_objects as base_objects
+        legs = [base_objects.Leg({'id': i, 'state': False, 'polarization': p})
+                for i, p in initial]
+        legs += [base_objects.Leg({'id': i, 'state': True, 'polarization': p})
+                 for i, p in final]
+        return base_objects.Process({
+            'legs': base_objects.LegList(legs), 'model': self.model,
+            'decay_chains': base_objects.ProcessList(list(decays))})
+
+    def decay(self, mother, daughters, decays=()):
+        return self.proc([(mother, [])], [(d, []) for d in daughters], decays)
+
+    def default(self, proc, density=False):
+        return bannermod.default_me_frame_for_process([[proc]],
+                                                      density=density)
+
+    def test_massive_final_state_of_a_collision(self):
+        # u d~ > w+{0} g: the W alone, its Collins-Soper frame
+        self.assertEqual(self.default(self.proc([(2, []), (-1, [])],
+                                                [(24, [0]), (21, [])])), [3])
+        # u u~ > w+{0} w-: the W W rest frame, the partonic c.m. at LO
+        self.assertEqual(self.default(self.proc([(2, []), (-2, [])],
+                                                [(24, [0]), (-24, [])])),
+                         [3, 4])
+
+    def test_decay_products_stand_for_the_decayed_particle(self):
+        # u u~ > w+{0} z g, w+ > e+ ve, z > e+ e-: the W Z rest frame
+        proc = self.proc([(2, []), (-2, [])], [(24, [0]), (23, []), (21, [])],
+                         [self.decay(24, [-11, 12]), self.decay(23, [-11, 11])])
+        self.assertEqual(self.default(proc), [3, 4, 5, 6])
+        ids = [leg.get('id') for leg in proc.get_legs_with_decays()]
+        self.assertEqual(ids, [2, -2, -11, 12, -11, 11, 21])
+        # u u~ > t{-1} t~, t > w+ b, w+ > e+ ve: nested, the t t~ rest frame
+        proc = self.proc([(2, []), (-2, [])], [(6, [-1]), (-6, [])],
+                         [self.decay(6, [24, 5], [self.decay(24, [-11, 12])])])
+        self.assertEqual(self.default(proc), [3, 4, 5, 6])
+        self.assertEqual([leg.get('id') for leg in proc.get_legs_with_decays()],
+                         [2, -2, -11, 12, 5, -6])
+
+    def test_partonic_cm_without_initial_state_colour(self):
+        # e+ e- > w+{0} w-, and a decay
+        self.assertEqual(self.default(self.proc([(-11, []), (11, [])],
+                                                [(24, [0]), (-24, [])])), 'cm')
+        self.assertEqual(self.default(self.proc([(6, [])],
+                                                [(24, [0]), (5, [])])), 'cm')
+
+    def test_only_for_polarisation_or_density(self):
+        w_j = self.proc([(2, []), (-1, [])], [(24, []), (21, [])])
+        self.assertIsNone(self.default(w_j))
+        # a polarised massless particle: helicity is boost invariant
+        self.assertIsNone(self.default(self.proc([(2, []), (-2, [])],
+                                                 [(-11, [-1]), (11, [])])))
+        # output --density: the matrix element is not Lorentz invariant
+        self.assertEqual(self.default(w_j, density=True), [3])
+
+    def test_polarised_particle_inside_a_decay_chain(self):
+        # u u~ > t t~, t > w+{0} b, w+ > e+ ve: the polarised W is neither a
+        # leg of the core process nor of get_legs_with_decays (it decays
+        # further), so the scan has to walk the decay chains themselves
+        proc = self.proc([(2, []), (-2, [])], [(6, []), (-6, [])],
+                         [self.proc([(6, [])], [(24, [0]), (5, [])],
+                                    [self.decay(24, [-11, 12])])])
+        self.assertEqual(self.default(proc), [3, 4, 5, 6])
+
+    def test_the_processes_are_only_read(self):
+        # the helper must not fill the legs_with_decays cache (nor copy the
+        # legs to do so): read the raw dict entry, not Process.get, which
+        # computes it on the fly
+        chain = self.decay(24, [-11, 12])
+        proc = self.proc([(2, []), (-2, [])], [(24, [0]), (23, []), (21, [])],
+                         [chain, self.decay(23, [-11, 11])])
+        self.assertEqual(self.default(proc), [3, 4, 5, 6])
+        for p in (proc, chain):
+            self.assertFalse(dict.get(p, 'legs_with_decays'))
+
+    def test_a_leg_massless_in_another_process_is_dropped(self):
+        # me_frame is one list for every subprocess, so a leg number stays
+        # only if it is massive wherever it exists:
+        # p p > z{0} j with p p > z{0} z: not the jet of the first
+        zj = self.proc([(2, []), (-2, [])], [(23, [0]), (21, [])])
+        zz = self.proc([(2, []), (-2, [])], [(23, [0]), (23, [])])
+        self.assertEqual(bannermod.default_me_frame_for_process(
+            [[zj], [zz]]), [3])
+        # 'define v = z a', p p > v{T} j: the photon process would get a
+        # single massless particle as its frame. NLO counts the label as
+        # massive only if all its particles are; LO agrees.
+        za = self.proc([(2, []), (-2, [])], [(23, [1, -1]), (21, [])])
+        aa = self.proc([(2, []), (-2, [])], [(22, [1, -1]), (21, [])])
+        self.assertEqual(bannermod.default_me_frame_for_process(
+            [[za], [aa]]), 'cm')
+        # merged multiplicities are fine: leg 4 does not exist for p p > w+
+        w = self.proc([(2, []), (-1, [])], [(24, [0])])
+        wj = self.proc([(2, []), (-1, [])], [(24, [0]), (21, [])])
+        self.assertEqual(bannermod.default_me_frame_for_process(
+            [[w], [wj]]), [3])
+
+    def test_only_processes_whose_frame_matters_count(self):
+        # an unpolarised u u~ > z z next to the polarised u d~ > w+{0} g does
+        # not add leg 4 (the gluon of the latter) to the default
+        polarised = self.proc([(2, []), (-1, [])], [(24, [0]), (21, [])])
+        unpolarised = self.proc([(2, []), (-2, [])], [(23, []), (23, [])])
+        self.assertEqual(bannermod.default_me_frame_for_process(
+            [[polarised], [unpolarised]]), [3])
+
+    def charac(self, ninitial=2):
+        charac = bannermod.ProcCharacteristic()
+        charac['ninitial'] = ninitial
+        return charac
+
+    def test_madevent_card(self):
+        card = bannermod.RunCardLO()
+        card.create_default_for_process(self.charac(), '', [[self.proc(
+            [(2, []), (-1, [])], [(24, [0]), (21, [])])]])
+        self.assertEqual(card['me_frame'], [3])
+        self.assertIn('frame', card.display_block)
+        # e+ e-: unchanged
+        card = bannermod.RunCardLO()
+        card.create_default_for_process(self.charac(), '', [[self.proc(
+            [(-11, []), (11, [])], [(24, [0]), (-24, [])])]])
+        self.assertEqual(card['me_frame'], [1, 2])
+        # unpolarised: unchanged, and no frame block
+        card = bannermod.RunCardLO()
+        card.create_default_for_process(self.charac(), '', [[self.proc(
+            [(2, []), (-1, [])], [(24, []), (21, [])])]])
+        self.assertEqual(card['me_frame'], [1, 2])
+        self.assertNotIn('frame', card.display_block)
+
+    def test_mg7_card(self):
+        def card(proc, ninitial=2):
+            run_card = bannermod.RunCardMG7()
+            run_card.create_default_for_process(self.charac(ninitial), '',
+                                                [[proc]])
+            return run_card['run']['me_frame']
+        self.assertEqual(card(self.proc([(2, []), (-1, [])],
+                                        [(24, [0]), (21, [])])), [3])
+        self.assertEqual(card(self.proc([(-11, []), (11, [])],
+                                        [(24, [0]), (-24, [])])), [1, 2])
+        self.assertEqual(card(self.proc([(6, [])], [(24, [0]), (5, [])]),
+                              ninitial=1), [1])
+        # unpolarised: mg7's own default, no boost
+        self.assertEqual(card(self.proc([(2, []), (-1, [])],
+                                        [(24, []), (21, [])])), [])
 
 
 class TestRunCard(unittest.TestCase):
@@ -1728,6 +2064,68 @@ class TestRunCardMG7(unittest.TestCase):
         self.assertTrue(rc.is_cut_name('cuts.jet-pt.max'))
         self.assertFalse(rc.is_cut_name('generation.events'))
 
+    def test_set_cut_rejects_an_unknown_bound(self):
+        """a typo in the bound used to create a cut named 'jet-pt.mni'"""
+        rc = bannermod.RunCardMG7()
+        before = dict(rc['cuts'])
+        self.assertRaises(bannermod.InvalidRunCard, rc.set_cut, 'jet-pt.mni', 20)
+        self.assertRaises(bannermod.InvalidRunCard, rc.set_cut, 'cuts.jet-pt.minimum', 20)
+        self.assertEqual(dict(rc['cuts']), before)
+        rc.set_cut('jet-pt', 25)      # no bound: the minimum
+        self.assertEqual(rc['cuts']['jet-pt']['min'], 25.0)
+
+    def test_custom_parameter_keeps_its_case(self):
+        """a custom function reads its parameters by their exact name"""
+        rc = bannermod.RunCardMG7()
+        rc.read_data({'custom_functions': {'cut_parameters': {'ptMin': 10}}})
+        rc.set('custom_functions.cut_parameters.ptMin', 30, user=True)
+        rc.set('Custom_Functions.CUT_parameters.etaMax', '2.5', user=True)
+        self.assertEqual(rc.custom_parameters('cut'), {'ptMin': 30.0, 'etaMax': 2.5})
+
+    def test_energy_units_only_for_energies(self):
+        """only the entries declared energy=True (and the [cuts] on an energy
+        observable) take a value with a unit; any other number refuses one"""
+        lo = bannermod.RunCardLO()
+        lo.set('ptj', '1 TeV', user=True)
+        self.assertEqual(lo['ptj'], 1000.)
+        lo['pt_min_pdg'] = {6: '500 GeV'}
+        self.assertEqual(lo['pt_min_pdg'], {6: 500.})
+        for name, value in (('etaj', '2 TeV'), ('nevents', '1 TeV'), ('drjj', '1 MeV')):
+            self.assertRaises(bannermod.InvalidCardEdition, lo.set, name, value, user=True)
+        self.assertRaises(bannermod.InvalidCardEdition, lo.__setitem__,
+                          'eta_min_pdg', {6: '1 TeV'})
+        lo.set('run_tag', '13TeV', user=True)   # a string keeps its unit
+        self.assertEqual(lo['run_tag'], '13TeV')
+        nlo = bannermod.RunCardNLO()
+        nlo.set('mur_ref_fixed', '0.1 TeV', user=True)
+        self.assertEqual(nlo['mur_ref_fixed'], 100.)
+        self.assertRaises(bannermod.InvalidCardEdition, nlo.set, 'jetradius', '1 GeV')
+
+        rc = bannermod.RunCardMG7()
+        rc.set('beam.min_scale', '1 TeV', user=True)
+        self.assertEqual(rc['beam.min_scale'], 1000.)
+        self.assertRaises(bannermod.InvalidCardEdition, rc.set, 'beam.jet_radius', '1 GeV')
+        self.assertRaises(bannermod.InvalidCardEdition, rc.set, 'events', '1 TeV')
+        before = dict(rc['cuts'])
+        for name, value in (('jet-eta_abs.max', '4 TeV'), ('jet-lepton-delta_r.min', '1 MeV')):
+            self.assertRaises(bannermod.InvalidRunCard, rc.set_cut, name, value)
+        for name, value in (('etaj', '2 TeV'), ('drjj', '1 MeV')):
+            self.assertRaises(bannermod.InvalidRunCard, rc.set_lo_cut, name, value)
+        self.assertRaises(bannermod.InvalidRunCard, rc.set_lo_param,
+                          'eta_max_pdg', '{6: 2 TeV}')
+        self.assertEqual(dict(rc['cuts']), before)
+        self.assertEqual(rc.set_cut('sqrt_s.min', '2*mz', {'mz': 91.188})[2], 182.376)
+        self.assertEqual(rc.set_lo_cut('ptj', '1 TeV')[2], 1000.)
+
+    def test_set_ambiguous_key_honours_raiseerror(self):
+        """a bare key present in several sections is an error when asked for"""
+        rc = bannermod.RunCardMG7()
+        rc.set('enable', True, user=True)          # warning only
+        self.assertRaises(bannermod.InvalidCardEdition, rc.set, 'enable', True,
+                          user=True, raiseerror=True)
+        self.assertRaises(bannermod.InvalidCardEdition, rc.set, 'pdf', 'NNPDF',
+                          user=True, raiseerror=True)
+
     def test_set_lo_cut(self):
         """madevent cut names land in [cuts] as from_LO maps them, the "no
         cut" sentinels removing the bound; [histograms] is left alone"""
@@ -1805,7 +2203,10 @@ class TestRunCardMG7(unittest.TestCase):
         self.assertEqual(rc['phasespace.sde_strategy'], 'denominators')
         rc.set_lo_param('sde_strategy', '1')
         self.assertEqual(rc['phasespace.sde_strategy'], 'diagrams')
-        self.assertEqual(len(rc.set_lo_param('sde_strategy', '3')[1]), 1)
+        self.assertRaises(bannermod.InvalidCmd, rc.set_lo_param, 'sde_strategy', '3')
+        self.assertRaises(bannermod.InvalidCmd, rc.set_lo_param,
+                          'dynamical_scale_choice', '99')
+        self.assertEqual(rc['beam.dynamical_scale_choice'], 'partonic_energy')
         self.assertIsNone(rc.set_lo_param('sde_strategy', 'denominators'))
         rc.set_lo_param('maxjetflavor', '5')
         self.assertEqual(sorted(rc['multiparticles']['jet']),
@@ -2378,6 +2779,7 @@ class TestRunCardMG7(unittest.TestCase):
         self.assertEqual(rc['beam']['e_cm'], 13000.0)
         self.assertIs(rc['vegas']['enable'], True)
         self.assertEqual(rc['madnis']['enable'], 'auto')
+        self.assertEqual(rc['madnis']['nn_float_precision'], 'float32')
         self.assertEqual(rc['phasespace']['mode'], 'multichannel')
         # the "enable" key colliding between [vegas] and [madnis] is stored
         # independently, so editing one does not affect the other
@@ -2406,17 +2808,20 @@ class TestRunCardMG7(unittest.TestCase):
         self.assertEqual(data['multiparticles']['photon'], [22])
         self.assertEqual(data['cuts']['sqrt_s'], {'min': 0.0})
         self.assertEqual(data['madnis']['adam_eps'], 1e-8)
+        self.assertEqual(data['madnis']['nn_float_precision'], 'float32')
 
     def test_round_trip(self):
         """write() then read() preserves every value"""
         rc = bannermod.RunCardMG7()
         rc['generation']['events'] = 250
         rc['phasespace']['mode'] = 'flat'
+        rc['madnis']['nn_float_precision'] = 'float64'
         out = io.StringIO()
         rc.write(out, template=self.template)
         rc2 = bannermod.RunCardMG7(out.getvalue())
         self.assertEqual(rc2['generation']['events'], 250)
         self.assertEqual(rc2['phasespace']['mode'], 'flat')
+        self.assertEqual(rc2['madnis']['nn_float_precision'], 'float64')
         self.assertEqual(rc2['multiparticles']['lepton'], rc['multiparticles']['lepton'])
         self.assertEqual(rc2['cuts']['jet-delta_r'], {'min': 0.4})
 
@@ -2577,6 +2982,15 @@ class TestRunCardMG7AutoMLM(unittest.TestCase):
         self.assertNotIn('jet-delta_r', rc.dynamic_sections['cuts'])
         self.assertNotIn('jet-lepton-delta_r', rc.dynamic_sections['cuts'])
         self.assertIn('lepton-delta_r', rc.dynamic_sections['cuts'])
+
+    def test_amplicol_output_is_no_merging(self):
+        rc = bannermod.RunCardMG7()
+        rc.create_default_for_process(
+            self.PC(), '', [[mg7_proc([2, -1], [-11, 12])],
+                            [mg7_proc([2, -1], [-11, 12, 21])]], amplicol=True)
+        self.assertFalse(rc.is_mlm_merged())
+        self.assertEqual(rc['phasespace']['xqcut'], 0.0)
+        self.assertIn('jet-delta_r', rc.dynamic_sections['cuts'])
 
     def test_an_extra_photon_is_no_merging(self):
         rc = self.build([[mg7_proc([2, -1], [-11, 12])],

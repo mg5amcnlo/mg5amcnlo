@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: 0BSD
+# Built-in Standard Model generation with prepared eager-DAG JIT O2 kernels.
+# Uses the wheel's automatically selected x86_64 or aarch64 prepared pack.
+
+schema_version = 1
+action = "generate"
+
+[model]
+source = "built-in-sm"
+
+[process]
+entries = [{ expression = "d d~ > z g g", name = "eager_zgg" }]
+
+[color]
+accuracy = "lc"
+
+[generation]
+output = "artifacts/builtin_sm_eager"
+mode = "error"
+emit_api_bundle = true
+
+[evaluator]
+execution_mode = "eager"
+backend = "jit"
+batch_size = 128
+
+[evaluator.jit]
+optimization_level = 2
+compress = false
+
+[evaluator.eager]
+point_tile_size = 1024
+workspace_mib = 256
+
+[output]
+progress = "auto"
+log_level = "info"

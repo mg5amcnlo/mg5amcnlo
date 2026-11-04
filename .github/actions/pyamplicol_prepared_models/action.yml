@@ -1,0 +1,39 @@
+name: pyAmpliCol prepared models
+description: >
+  Put the prepared-model packs into the pyamplicol source tree. They are not
+  tracked in Git: the archive of the matching (else latest) MadGraph release is
+  downloaded and validated against this source tree; when it is stale, the packs
+  are regenerated on this runner (bootstrap wheel + produce, about ten minutes).
+  Either way the archive ends up at pyamplicol/.artifacts/prepared-models/ for
+  jobs that publish or reuse it. Needs Python 3.11+ and, for a regeneration,
+  the pinned Rust toolchain and maturin.
+
+outputs:
+  regenerated:
+    description: "'true' when the released packs were stale and rebuilt here."
+    value: ${{ steps.packs.outputs.regenerated }}
+
+runs:
+  using: composite
+  steps:
+    - name: Fetch or regenerate the prepared models
+      id: packs
+      shell: bash
+      working-directory: pyamplicol
+      run: |
+        set -euo pipefail
+        archive_dir=.artifacts/prepared-models
+        tool=tools/release/prepared_models_archive.py
+        check='import sys; from pathlib import Path; sys.path.insert(0, "build_backend"); from prepared_models import stage_packaged_prepared_models as s; s(Path("."), "release")'
+        if python "$tool" fetch --version "$(sed -n 's/^version *= *//p' ../VERSION)" \
+              --output "$archive_dir" && python -I -c "$check"; then
+          echo "regenerated=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "::notice::The released prepared models are stale for this source tree; regenerating them."
+          rustup toolchain install "$(sed -n 's/^channel *= *"\(.*\)"/\1/p' rust-toolchain.toml)" --profile minimal
+          python -m pip install "maturin==1.15.0" "packaging==26.3"
+          PYAMPLICOL_BUILD_MODE=release python "$tool" regenerate --work .artifacts/prepared-models-work
+          rm -rf "$archive_dir"
+          python "$tool" pack --output "$archive_dir"
+          echo "regenerated=true" >> "$GITHUB_OUTPUT"
+        fi

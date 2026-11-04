@@ -111,8 +111,9 @@ Mapping::Result DiscreteSampler::build_transform(
     std::size_t condition_index = 0;
     for (auto [input, prob_name, option_count, has_prior] :
          zip(inputs, _prob_names, _option_counts, _dim_has_prior)) {
-        auto probs =
-            fb.global(prob_name, DataType::dt_float, {static_cast<int>(option_count)});
+        auto probs = fb.global(
+            prob_name, DataType::dt_float64, {static_cast<int>(option_count)}
+        );
         if (has_prior) {
             probs = fb.mul(probs, conditions.at(condition_index));
             ++condition_index;
@@ -139,8 +140,9 @@ void madspace::initialize_uniform_probs(
     ContextPtr context, const std::string& name, std::size_t option_count
 ) {
     bool is_cpu = context->device() == cpu_device();
-    auto prob_global = context->define_global(name, DataType::dt_float, {option_count});
-    auto prob = is_cpu ? prob_global : Tensor(DataType::dt_float, {1, option_count});
+    auto prob_global =
+        context->define_global(name, DataType::dt_float64, {option_count});
+    auto prob = is_cpu ? prob_global : Tensor(DataType::dt_float64, {1, option_count});
     auto prob_view = prob.view<double, 2>()[0];
     auto prob_value = 1. / option_count;
     for (std::size_t i = 0; i < prob_view.size(); ++i) {

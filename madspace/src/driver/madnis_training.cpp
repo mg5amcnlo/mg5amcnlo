@@ -5,6 +5,13 @@
 
 using namespace madspace;
 
+namespace {
+
+// maximum number of subprocess rows shown in the pretty training box
+constexpr std::size_t max_pretty_subproc_rows = 10;
+
+} // namespace
+
 MadnisTraining::MadnisTraining(
     ContextPtr generator_context,
     ContextPtr optimizer_context,
@@ -506,7 +513,12 @@ void MadnisTraining::start_single_job(
     // buffer content depend on thread scheduling
     bool store_buffer = _batch_index >= _config.buffer_skip_batches;
     _generator_context->thread_pool().submit(
-        [this, channel_index, global_channel_index, batch_size, job_id, store_buffer,
+        [this,
+         channel_index,
+         global_channel_index,
+         batch_size,
+         job_id,
+         store_buffer,
          &job]() {
             auto& channel = _channels.at(channel_index);
             if (_seed) {
@@ -1022,8 +1034,10 @@ void MultiMadnisTraining::print_progress_init() {
     }
 
     if (_training_args.size() > 1) {
-        _pretty_box_lower =
-            PrettyBox("Subprocesses", _training_args.size() + 1, {12, 12, 12, 0});
+        std::size_t row_count =
+            std::min(_training_args.size(), max_pretty_subproc_rows);
+        _pretty_subproc_rows.assign(_training_args.size(), std::vector<std::string>(4));
+        _pretty_box_lower = PrettyBox("Subprocesses", row_count + 1, {12, 12, 12, 0});
         _pretty_box_lower.set_row(0, {"Subprocess", "Loss", "Channels", "Batch"});
         _pretty_box_upper =
             PrettyBox("MadNIS training", 2, {18, 0}, _pretty_box_lower.line_count());
@@ -1147,13 +1161,21 @@ void MultiMadnisTraining::print_progress_update(
             _pretty_box_upper.set_column(
                 1, {std::format("{:<15} {}", subproc_str, progress_bar_all), time_str}
             );
-            _pretty_box_lower.set_row(
-                subproc_index + 1,
-                {std::format("{}", subproc_index),
-                 std::format("{:>.4f}", loss),
-                 std::format("{}", chan_count),
-                 std::format("{:<15} {}", batch_str, progress_bar)}
-            );
+            _pretty_subproc_rows.at(subproc_index) = {
+                std::format("{}", subproc_index),
+                std::format("{:>.4f}", loss),
+                std::format("{}", chan_count),
+                std::format("{:<15} {}", batch_str, progress_bar)
+            };
+            // scroll so that the last rows up to the current subprocess are shown
+            std::size_t row_count = std::min(subproc_count, max_pretty_subproc_rows);
+            std::size_t first_row =
+                subproc_index + 1 > row_count ? subproc_index + 1 - row_count : 0;
+            for (std::size_t row = 0; row < row_count; ++row) {
+                _pretty_box_lower.set_row(
+                    row + 1, _pretty_subproc_rows.at(first_row + row)
+                );
+            }
             _pretty_box_upper.print_update();
             _pretty_box_lower.print_update();
         }

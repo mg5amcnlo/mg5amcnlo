@@ -86,11 +86,14 @@ BatchSize BatchSize::add(const BatchSize& other, int factor) const {
 
 std::ostream& madspace::operator<<(std::ostream& out, const DataType& dtype) {
     switch (dtype) {
-    case DataType::dt_float:
-        out << "float";
+    case DataType::dt_float32:
+        out << "float32";
         break;
-    case DataType::dt_int:
-        out << "int";
+    case DataType::dt_float64:
+        out << "float64";
+        break;
+    case DataType::dt_int32:
+        out << "int32";
         break;
     case DataType::batch_sizes:
         out << "batch_sizes";
@@ -237,11 +240,14 @@ void madspace::to_json(json& j, const Value& value) {
 
 void madspace::to_json(json& j, const DataType& dtype) {
     switch (dtype) {
-    case DataType::dt_int:
-        j = "int";
+    case DataType::dt_int32:
+        j = "int32";
         break;
-    case DataType::dt_float:
-        j = "float";
+    case DataType::dt_float32:
+        j = "float32";
+        break;
+    case DataType::dt_float64:
+        j = "float64";
         break;
     case DataType::batch_sizes:
         j = "batch_sizes";
@@ -280,14 +286,14 @@ void madspace::from_json(const json& j, Value& value) {
     auto shape = j.at("shape").get<std::vector<int>>();
     auto j_data = j.at("data");
     switch (dtype) {
-    case DataType::dt_int:
+    case DataType::dt_int32:
         if (shape.size() == 0) {
             value = j_data.get<me_int_t>();
         } else {
             value = Value(j_data.get<std::vector<me_int_t>>(), shape);
         }
         break;
-    case DataType::dt_float:
+    case DataType::dt_float64:
         if (shape.size() == 0) {
             value = unescape_special_values(j_data);
         } else {
@@ -298,6 +304,7 @@ void madspace::from_json(const json& j, Value& value) {
             value = Value(tensor, shape);
         }
         break;
+    case DataType::dt_float32:
     case DataType::batch_sizes:
         throw std::invalid_argument("invalid data type");
     }
@@ -305,10 +312,12 @@ void madspace::from_json(const json& j, Value& value) {
 
 void madspace::from_json(const json& j, DataType& dtype) {
     auto str = j.get<std::string>();
-    if (str == "int") {
-        dtype = DataType::dt_int;
-    } else if (str == "float") {
-        dtype = DataType::dt_float;
+    if (str == "int32") {
+        dtype = DataType::dt_int32;
+    } else if (str == "float32") {
+        dtype = DataType::dt_float32;
+    } else if (str == "float64") {
+        dtype = DataType::dt_float64;
     } else if (str == "batch_sizes") {
         dtype = DataType::batch_sizes;
     } else {

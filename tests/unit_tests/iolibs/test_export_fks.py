@@ -652,6 +652,117 @@ class TestFKSOutput(unittest.TestCase):
                 self.assertEqual(old_l, new_l)
 
 
+    def test_polarised_default_frame_is_the_massive_final_state(self):
+        """The partonic c.m., me_frame = [1, 2], has no infrared-safe meaning
+        for p p > w+{0} j at NLO: with initial-state QCD radiation the frame
+        the FKS momenta come in depends on the sector (+9.5(4)% when only
+        fks_b changed), and the only frame equal to the partonic c.m. of the
+        Born contains the jet. So the output must write the rest frame of the
+        massive final state, [3], as the run_card default, and the run_card
+        must still refuse [1, 2] when asked for explicitly."""
+        import madgraph.various.banner as banner_mod
+        path = tempfile.mkdtemp('', 'TMPWPolTest', None)
+        interface = MGCmd.MasterCmd()
+        try:
+            interface.exec_cmd('generate p p > w+{0} j [real=QCD]',
+                               errorhandling=False, printcmd=False,
+                               precmd=True, postcmd=True)
+            interface.exec_cmd('output %s' % os.path.join(path, 'W'),
+                               errorhandling=False, printcmd=False,
+                               precmd=True, postcmd=True)
+
+            charac = banner_mod.ProcCharacteristic(os.path.join(
+                path, 'W', 'SubProcesses', 'proc_characteristics'))
+            self.assertEqual(charac['me_frame_cm_legs'], [3, 4])
+            self.assertEqual(charac['me_frame_unsafe_legs'], [1, 2, 4])
+            self.assertEqual(charac['me_frame_default_legs'], [3])
+
+            # the card as written: the W rest frame, accepted at launch
+            run_card = banner_mod.RunCardNLO(os.path.join(
+                path, 'W', 'Cards', 'run_card.dat'))
+            self.assertEqual(run_card['me_frame'], [3])
+            run_card.set_me_frame_process(charac)
+            run_card.check_validity()
+            run_card.update_system_parameter_for_include()
+            self.assertEqual(run_card['frame_id'], 8)
+            # [1, 2] by hand: refused with real emission
+            run_card.set('me_frame', [1, 2], user=True)
+            self.assertRaises(banner_mod.InvalidRunCard,
+                              run_card.check_validity)
+            # the Born alone (launch LO) has nothing to be infrared safe for
+            run_card.set_me_frame_process(charac, real_emission=False)
+            run_card.check_validity()
+
+            # A bare 'treatcards run', as the reweighting and the FKS
+            # standalone check compile their Source: no run_card is loaded
+            # in that shell. It used to die on self.run_card; now the include
+            # file resolves me_frame against the process found on disk.
+            me_dir = os.path.join(path, 'W')
+            def treatcards():
+                with open(os.path.join(me_dir, 'treat.cmd'), 'w') as cmd:
+                    cmd.write('treatcards run\n')
+                return subprocess.run(
+                    [sys.executable, os.path.join('bin', 'aMCatNLO'),
+                     'treat.cmd'], cwd=me_dir, stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT, universal_newlines=True).stdout
+            def frame_id():
+                with open(os.path.join(me_dir, 'Source', 'run_card.inc')) as inc:
+                    return [l.split('=')[1].strip() for l in inc
+                            if 'FRAME_ID' in l.upper()]
+            out = treatcards()
+            self.assertNotIn('Error', out)
+            self.assertEqual(frame_id(), ['8'])
+            # a beam that radiates is refused on that path too
+            card_path = os.path.join(me_dir, 'Cards', 'run_card.dat')
+            with open(card_path) as card:
+                text = card.read()
+            text = re.sub(r'^(\s*)3(\s*=\s*me_frame)', r'\g<1>1, 3\2', text,
+                          count=1, flags=re.M)
+            with open(card_path, 'w') as card:
+                card.write(text)
+            self.assertIn('radiate', treatcards())
+        finally:
+            shutil.rmtree(path, ignore_errors=True)
+
+
+    def test_low_mem_gen_with_respawning_pool(self):
+        """the low-memory NLO generation reuses a maxtasksperchild=1 pool for
+        several map_async calls. Between two calls its workers have exited and
+        are replaced by the pool's handler thread, so len(pool._pool) can be
+        zero, and without an explicit chunksize CPython divides by it
+        (intermittent ZeroDivisionError). Simulate that state for every
+        map_async call: the generation must not depend on it.
+        """
+        import multiprocessing.pool
+        from unittest import mock
+
+        map_async = multiprocessing.pool.Pool._map_async
+        def map_async_while_respawning(pool, *args, **opts):
+            workers, pool._pool = pool._pool, []
+            try:
+                return map_async(pool, *args, **opts)
+            finally:
+                pool._pool = workers
+
+        path = tempfile.mkdtemp('', 'TMPWTest', None)
+
+        def run_cmd(cmd):
+            interface.exec_cmd(cmd, errorhandling=False, printcmd=False,
+                               precmd=True, postcmd=True)
+
+        interface = MGCmd.MasterCmd()
+        try:
+            run_cmd('set low_mem_multicore_nlo_generation True')
+            run_cmd('generate p p > w+ [QCD]')
+            with mock.patch.object(multiprocessing.pool.Pool, '_map_async',
+                                   map_async_while_respawning):
+                run_cmd('output %s' % os.path.join(path, 'W-newway'))
+            self.assertTrue(glob.glob(os.path.join(path, 'W-newway',
+                                                   'SubProcesses', 'P0*', 'V0*')))
+        finally:
+            run_cmd('set low_mem_multicore_nlo_generation False')
+            shutil.rmtree(path)
+
     @test_manager.bypass_for_py3
     def test_w_nlo_gen_gosam(self):
         """check that the new generation mode works when gosam is set 

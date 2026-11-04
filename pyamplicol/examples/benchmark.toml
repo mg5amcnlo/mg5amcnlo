@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: 0BSD
+# Short benchmark of the optimized summed runtime path.
+
+schema_version = 1
+action = "benchmark"
+
+[evaluation]
+artifact = "artifacts/pp_zjj"
+process = "d d~ > g z g"
+momenta = "data/pp_zjj_momenta.json"
+
+[benchmark]
+target_runtime = 1.0
+batch_size = 128
+precision = 16
+warmup_runs = 2
+minimum_samples = 5
+helicity_ids = []
+# Topology-replay is optimized for one selected flow with the helicity sum.
+color_flow_ids = ["1"]
+
+[output]
+format = "human"
+color = "auto"
+progress = "log"

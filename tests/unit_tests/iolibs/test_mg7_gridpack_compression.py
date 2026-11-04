@@ -22,10 +22,14 @@ def _gridpack_module():
     madspace = types.ModuleType("madspace")
     loader = types.ModuleType("custom_function_loader")
     loader.load_custom_function = lambda *args, **kwargs: None
+    # bin/gridpack_setup.py, whose names gridpack.py imports
+    setup = types.ModuleType("gridpack_setup")
+    setup.__getattr__ = lambda name: None
     spec = importlib.util.spec_from_file_location("mg7_gridpack_compression", _TEMPLATE)
     module = importlib.util.module_from_spec(spec)
     with mock.patch.dict(sys.modules, {"madspace": madspace,
-                                       "custom_function_loader": loader}):
+                                       "custom_function_loader": loader,
+                                       "gridpack_setup": setup}):
         spec.loader.exec_module(module)
     return module
 

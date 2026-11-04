@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: 0BSD
+# Pure-gluon full-color generation in the two-anchor adjoint DDM FFT basis.
+# Primary FFT example for certified Yang-Mills trees; adjoint is explicit below.
+# Five gluons retain 3! ordered amplitudes instead of the trace basis's 4!.
+# This smaller basis does not guarantee a runtime speedup at every multiplicity.
+
+schema_version = 1
+action = "generate"
+
+[model]
+source = "built-in-sm"
+
+[process]
+entries = [{ expression = "g g > g g g", name = "gg_ggg_adjoint_fft" }]
+
+[color]
+accuracy = "full"
+contraction = "symmetric-group-fft"
+fft_basis = "adjoint"
+
+[generation]
+output = "artifacts/builtin_sm_adjoint_fft"
+mode = "error"
+emit_api_bundle = true
+
+[evaluator]
+# Both recurrence and on-the-fly support trace and adjoint FFT contraction.
+execution_mode = "recurrence"
+
+[output]
+progress = "log"

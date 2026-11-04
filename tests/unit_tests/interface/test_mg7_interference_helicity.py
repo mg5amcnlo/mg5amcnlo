@@ -46,7 +46,7 @@ class TestInterferenceHelicity(unittest.TestCase):
 
     def setUp(self):
         try:
-            import madgraph.iolibs.template_files.mg7.launch as launch
+            import madgraph.mg7.launch as launch
         except ImportError as error:  # the mg7 runtime (madspace) is not there
             self.skipTest('mg7 launch not importable: %s' % error)
         self.launch = launch

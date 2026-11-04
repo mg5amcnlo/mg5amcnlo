@@ -5,6 +5,7 @@
 #include "madspace/driver/tensor.hpp"
 
 #include <algorithm>
+#include <type_traits>
 
 namespace madspace {
 namespace gpu {
@@ -19,9 +20,9 @@ public:
     using SizeType = std::conditional_t<packed, std::size_t[_dim], std::size_t*>;
     static const int dim = _dim;
 
-    GpuTensorView(const TensorView<T, _dim>& view)
+    GpuTensorView(const TensorView<T, _dim>& view, bool atomic = false)
         requires(packed)
-        : _data(view.data()) {
+        : _data(view.data()), _atomic(atomic) {
         if constexpr (_dim > 0) {
             std::copy(view.shape(), view.shape() + _dim, std::begin(this->_shape));
             std::copy(view.stride(), view.stride() + _dim, std::begin(this->_stride));
@@ -32,15 +33,20 @@ public:
 
     __host__ __device__ GpuTensorView(const GpuTensorView<T, _dim, true>& view)
         requires(!packed)
-        : _data(view._data), _stride(&view._stride), _shape(&view._shape) {}
+        :
+        _data(view._data),
+        _stride(&view._stride),
+        _shape(&view._shape),
+        _atomic(view._atomic) {}
 
     GpuTensorView<T, _dim, packed>& operator=(GpuTensorView<T, _dim, packed>& value)
         requires(packed)
     = default;
 
-    __device__ GpuTensorView(T* data, std::size_t* stride, std::size_t* shape)
+    __device__
+    GpuTensorView(T* data, std::size_t* stride, std::size_t* shape, bool atomic = false)
         requires(!packed)
-        : _data(data), _stride(stride), _shape(shape) {}
+        : _data(data), _stride(stride), _shape(shape), _atomic(atomic) {}
 
     __device__ GpuTensorView(T& value)
         requires(!packed)
@@ -52,13 +58,13 @@ public:
     __device__ const GpuTensorView<T, _dim - 1> operator[](std::size_t index) const
         requires(_dim != 0)
     {
-        return {&_data[index * _stride[0]], &_stride[1], &_shape[1]};
+        return {&_data[index * _stride[0]], &_stride[1], &_shape[1], _atomic};
     }
 
     __device__ GpuTensorView<T, _dim - 1> operator[](std::size_t index)
         requires(_dim != 0)
     {
-        return {&_data[index * _stride[0]], &_stride[1], &_shape[1]};
+        return {&_data[index * _stride[0]], &_stride[1], &_shape[1], _atomic};
     }
 
     template <typename... I>
@@ -68,7 +74,7 @@ public:
         T* ptr = _data;
         int i = 0;
         ((ptr = &ptr[index * _stride[i++]]), ...);
-        return {ptr, &_stride[sizeof...(I)], &_shape[sizeof...(I)]};
+        return {ptr, &_stride[sizeof...(I)], &_shape[sizeof...(I)], _atomic};
     }
 
     template <typename... I>
@@ -78,7 +84,7 @@ public:
         T* ptr = _data;
         int i = 0;
         ((ptr = &ptr[index * _stride[i++]]), ...);
-        return {ptr, &_stride[sizeof...(I)], &_shape[sizeof...(I)]};
+        return {ptr, &_stride[sizeof...(I)], &_shape[sizeof...(I)], _atomic};
     }
 
     __device__ operator T() const
@@ -94,9 +100,17 @@ public:
         return value;
     }
 
+    // atomic only if the launch found a zero stride (broadcast gradient), where many
+    // threads accumulate into the same element
     __device__ T operator+=(T value)
         requires(_dim == 0)
     {
+        if constexpr (std::is_floating_point_v<T>) {
+            if (_atomic) {
+                atomicAdd(_data, value);
+                return value;
+            }
+        }
         *_data += value;
         return value;
     }
@@ -123,6 +137,7 @@ private:
     T* _data;
     SizeType _stride;
     SizeType _shape;
+    bool _atomic = false;
 };
 
 template <typename T>
@@ -151,14 +166,23 @@ template <typename F, int dims>
 struct get_views;
 template <typename... TParam, int dims>
 struct get_views<void (*)(TParam...), dims> {
+    std::size_t batch_size;
+
     template <typename... TArg>
     auto operator()(TArg&&... args) {
         return std::make_tuple([&]() {
             if constexpr (ScalarType<TArg>) {
                 return GpuScalarView(args);
             } else {
+                auto view =
+                    args->template view<typename TParam::DType, TParam::dim + dims>();
+                // a zero stride in a dimension spread over threads aliases elements
+                bool atomic = false;
+                for (int i = 0; i < dims; ++i) {
+                    atomic |= view.stride()[i] == 0 && (i > 0 || batch_size > 1);
+                }
                 return GpuTensorView<typename TParam::DType, TParam::dim + dims, true>(
-                    args->template view<typename TParam::DType, TParam::dim + dims>()
+                    view, atomic
                 );
             }
         }()...);
@@ -258,7 +282,7 @@ void tensor_foreach(
     }
     // get views to the tensors with the correct types based on the signature of func
     auto views = std::apply(
-        get_views<decltype(func), dims>(),
+        get_views<decltype(func), dims>{batch_size},
         std::tuple_cat(inputs, outputs, std::make_tuple(scalar_args...))
     );
     auto& first_view = std::get<0>(views);

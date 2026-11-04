@@ -32,6 +32,9 @@ struct DerivedSeed {
         madnis_unweight,
         madnis_sample_buffer,
         global_init,
+        // per-event random numbers of the re- and unweighting steps; at most
+        // 16 types fit into the seed
+        weighting_step_random,
     };
 
     std::array<std::uint32_t, 4> seed_parts;

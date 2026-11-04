@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: 0BSD
+# Built-in Standard Model generation with the full color contraction.
+# Resolved runtime output has one contracted color entry per helicity.
+
+schema_version = 1
+action = "generate"
+
+[model]
+source = "built-in-sm"
+
+[process]
+entries = [{ expression = "u u~ > g g", name = "uubar_gg_full" }]
+
+[color]
+accuracy = "full"
+
+[generation]
+output = "artifacts/builtin_sm_full"
+mode = "error"
+emit_api_bundle = true
+
+[evaluator]
+backend = "cpp"
+# The C++ example intentionally selects process-local compiled execution;
+# the default recurrence mode uses the packaged portable JIT O2 kernel pack.
+execution_mode = "compiled"
+
+[evaluator.cpp]
+optimization = "O3"
+native_arch = false
+
+[output]
+progress = "log"

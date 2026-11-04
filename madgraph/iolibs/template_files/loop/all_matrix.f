@@ -62,7 +62,74 @@ CF2PY intent(in) :: value
       implicit none
       call coup()
       call printout()
-      return 
+      return
+      end
+
+C     setup of the running of the model parameters (running.py), as in
+C     the tree-level f2py_splitter.py: the run_card the events were
+C     generated with, set by the reweighting
+      subroutine f77_set_fixed_extra_scale(new_value)
+      implicit none
+      logical new_value
+      logical fixed_extra_scale
+      integer maxjetflavor
+      double precision mue_over_ref, mue_ref_fixed
+      common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+      fixed_extra_scale = new_value
+      return
+      end
+
+      subroutine f77_set_mue_over_ref(new_value)
+      implicit none
+      double precision new_value
+      logical fixed_extra_scale
+      integer maxjetflavor
+      double precision mue_over_ref, mue_ref_fixed
+      common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+      mue_over_ref = new_value
+      return
+      end
+
+      subroutine f77_set_mue_ref_fixed(new_value)
+      implicit none
+      double precision new_value
+      logical fixed_extra_scale
+      integer maxjetflavor
+      double precision mue_over_ref, mue_ref_fixed
+      common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+      mue_ref_fixed = new_value
+      return
+      end
+
+      subroutine f77_set_maxjetflavor(new_value)
+      implicit none
+      integer new_value
+      logical fixed_extra_scale
+      integer maxjetflavor
+      double precision mue_over_ref, mue_ref_fixed
+      common/model_setup_running/maxjetflavor,fixed_extra_scale,mue_over_ref,mue_ref_fixed
+      maxjetflavor = new_value
+      return
+      end
+
+      subroutine f77_set_asmz(new_value)
+      implicit none
+      double precision new_value
+      integer nloop
+      double precision asmz
+      common/a_block/asmz,nloop
+      asmz = new_value
+      return
+      end
+
+      subroutine f77_set_nloop(new_value)
+      implicit none
+      integer new_value
+      integer nloop
+      double precision asmz
+      common/a_block/asmz,nloop
+      nloop = new_value
+      return
       end
  
  

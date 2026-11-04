@@ -40,7 +40,8 @@ MatrixElement::MatrixElement(
     std::size_t diagram_count,
     bool sample_random_inputs,
     const std::vector<me_int_t>& me_frame,
-    std::size_t incoming_count
+    std::size_t incoming_count,
+    me_int_t channel
 ) :
     FunctionGenerator(
         "MatrixElement",
@@ -81,7 +82,9 @@ MatrixElement::MatrixElement(
                     arg_types.push_back("diagram", batch_int);
                     break;
                 case channel_in:
-                    arg_types.push_back("channel", batch_int);
+                    if (channel < 0) {
+                        arg_types.push_back("channel", batch_int);
+                    }
                     break;
                 case particle_count_in:
                     arg_types.push_back("particle_count", batch_int);
@@ -149,6 +152,9 @@ MatrixElement::MatrixElement(
                 case bias_out:
                     ret_types.push_back("bias", batch_float);
                     break;
+                case matrix_element_ratio_out:
+                    ret_types.push_back("matrix_element_ratio", batch_float);
+                    break;
                 default:
                     throw std::invalid_argument("unknown output type");
                 }
@@ -162,6 +168,7 @@ MatrixElement::MatrixElement(
     _particle_count(particle_count),
     _diagram_count(diagram_count),
     _sample_random_inputs(sample_random_inputs),
+    _channel(channel),
     _frame_mask(
         me_frame.empty() ? std::vector<me_int_t>()
                          : particle_mask(particle_count, me_frame, "me_frame")
@@ -182,12 +189,31 @@ MatrixElement::MatrixElement(
             incoming.push_back(static_cast<me_int_t>(i));
         }
         auto mask = particle_mask(particle_count, incoming, "incoming_count");
-        // the frame is the reference frame itself: one boost suffices
-        if (mask == _frame_mask) {
+        // asking for the rest frame of the incoming system is the reference
+        // frame itself: one boost gets there. A collision does not go through
+        // it at all, see _along_beam.
+        if (mask == _frame_mask || incoming_count == 2) {
             mask.clear();
         }
         return mask;
-    }()) {}
+    }()),
+    _along_beam([&] {
+        if (_frame_mask.empty() || incoming_count != 2) {
+            return false;
+        }
+        std::vector<me_int_t> incoming{1, 2};
+        return particle_mask(particle_count, incoming, "incoming_count") != _frame_mask;
+    }()) {
+    auto has_output = [&](MatrixElementOutput output) {
+        return std::find(outputs.begin(), outputs.end(), output) != outputs.end();
+    };
+    if (has_output(matrix_element_out) && has_output(matrix_element_ratio_out)) {
+        throw std::invalid_argument(
+            "a matrix element returns either matrix_element or matrix_element_ratio, "
+            "not both"
+        );
+    }
+}
 
 NamedVector<Value> MatrixElement::build_function_impl(
     FunctionBuilder& fb, const NamedVector<Value>& args
@@ -265,12 +291,28 @@ NamedVector<Value> MatrixElement::build_function_impl(
              input == random_diagram_in)) {
             matrix_args.push_back(random.at(random_index));
             ++random_index;
+        } else if (input == channel_in && _channel >= 0) {
+            matrix_args.push_back(fb.full({_channel, fb.batch_size(args.values())}));
         } else if (input == momenta_in && !_frame_mask.empty()) {
-            // Only the matrix element sees the me_frame boosted momenta. Go via
-            // the incoming rest frame, as madevent does, since successive boosts
-            // along different directions leave a Wigner rotation.
+            // Evaluate the matrix element in the frame the run card asked for
+            // (me_frame). Only the matrix element sees the boosted momenta:
+            // everything else -- cuts, scales, momentum fractions, the event
+            // that gets written out -- keeps using the momenta as generated.
+            //
+            // The single boost along the momentum of the selected particles
+            // would depend on the frame it starts from: two boosts along
+            // different directions do not compose into the boost between the
+            // end frames, and the Wigner rotation left over turns the spin
+            // axis of a single selected particle, held at rest. So a collision
+            // first boosts along the beam, to zero rapidity of the selection,
+            // and only then into its rest frame: that frame is the same from
+            // the lab madspace generates in, from the partonic CM madevent
+            // hands its matrix element, and from the frames aMC@NLO uses. A
+            // decay starts from the rest frame of the decaying particle.
             Value momenta = args.at(arg_index);
-            if (!_reference_mask.empty()) {
+            if (_along_beam) {
+                momenta = fb.boost_to_zero_rapidity(momenta, _frame_mask);
+            } else if (!_reference_mask.empty()) {
                 momenta = fb.boost_to_frame(momenta, _reference_mask);
             }
             matrix_args.push_back(fb.boost_to_frame(momenta, _frame_mask));
@@ -319,6 +361,9 @@ NamedVector<Value> MatrixElement::build_function_impl(
         case bias_out:
             output_key = UMAMI_OUT_BIAS;
             break;
+        case matrix_element_ratio_out:
+            output_key = UMAMI_OUT_MATRIX_ELEMENT_RATIO;
+            break;
         }
         matrix_args.push_back(static_cast<me_int_t>(output_key));
         matrix_args.push_back(size_arg);
@@ -329,6 +374,9 @@ NamedVector<Value> MatrixElement::build_function_impl(
 std::vector<MatrixElement::MatrixElementInput> MatrixElement::external_inputs() const {
     std::vector<MatrixElement::MatrixElementInput> ret;
     for (auto input : _inputs) {
+        if (input == channel_in && _channel >= 0) {
+            continue;
+        }
         if (!_sample_random_inputs ||
             (input != random_color_in && input != random_helicity_in &&
              input != random_diagram_in)) {

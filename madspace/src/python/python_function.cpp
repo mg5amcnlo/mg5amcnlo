@@ -63,7 +63,7 @@ Tensor tensor_view(
         throw std::invalid_argument(std::format("unknown device {}", device_name));
     }
     std::size_t item_size =
-        dtype == DataType::dt_float ? sizeof(double) : sizeof(me_int_t);
+        dtype == DataType::dt_float64 ? sizeof(double) : sizeof(me_int_t);
     void* data = reinterpret_cast<void*>(address + offset * item_size);
     return Tensor(dtype, Sizes(shape), Sizes(stride), device, data, [] {});
 }

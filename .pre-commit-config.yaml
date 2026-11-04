@@ -1,7 +1,7 @@
 ci:
   autoupdate_commit_msg: "chore: [pre-commit.ci] pre-commit autoupdate"
   autoupdate_schedule: "monthly"
-  autoupdate_branch: "dev"
+  autoupdate_branch: "main"
 
 repos:
   # --- Generic hygiene --------------------------------------------------------
@@ -46,3 +46,14 @@ repos:
       - id: clang-format
         types_or: [c++, c, cuda]
         files: ^madspace/
+  # --- pyamplicol: the same lint scope as its CI (pyamplicol.yml) -------------
+  # Run from pyamplicol/, so its own packages are first-party for isort.
+  - repo: local
+    hooks:
+      - id: pyamplicol-ruff
+        name: ruff (pyamplicol)
+        language: python
+        additional_dependencies: ["ruff==0.17.1"]
+        entry: bash -c 'cd pyamplicol && ruff check "${@#pyamplicol/}"' --
+        types: [python]
+        files: ^pyamplicol/(build_backend|tools/release|tools/ci|tests/release)/

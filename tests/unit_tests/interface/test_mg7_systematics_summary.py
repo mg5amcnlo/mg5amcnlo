@@ -26,7 +26,7 @@ from __future__ import absolute_import
 import inspect
 import unittest
 
-import madgraph.iolibs.template_files.mg7.systematics_summary as systematics_summary
+import madgraph.mg7.systematics_summary as systematics_summary
 
 
 class _Summary(object):
@@ -142,7 +142,7 @@ class TestOneImplementation(unittest.TestCase):
     """Neither caller may grow its own copy back."""
 
     def sources(self):
-        import madgraph.iolibs.template_files.mg7.launch as launch
+        import madgraph.mg7.launch as launch
 
         return {
             'the Systematics box':

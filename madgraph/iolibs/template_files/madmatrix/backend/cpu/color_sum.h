@@ -22,15 +22,6 @@ namespace madmatrix
 {
   //--------------------------------------------------------------------------
 
-  // No-op on cpu/simd: the normalized color matrix is already a compile-time
-  // constexpr there (see color_sum.cc); only gpu needs a runtime push to device memory.
-  inline void createNormalizedColorMatrix() {}
-
-  //--------------------------------------------------------------------------
-
-
-  //--------------------------------------------------------------------------
-
   void
   color_sum_cpu( fptype* allMEs,              // output: allMEs[nevt], add |M|^2 for one specific helicity
                  const cxtype_amp_sv* allJamp_sv, // input: jamp_sv[njampso] (float/double) or jamp_sv[2*njampso] (mixed) for one specific helicity

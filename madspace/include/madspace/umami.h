@@ -30,7 +30,7 @@ extern "C" {
  * Minor version number of the UMAMI interface. Between minor versions, new keys for
  * errors, devices, metadata, inputs and outputs can be added.
  */
-#define UMAMI_MINOR_VERSION 1
+#define UMAMI_MINOR_VERSION 2
 
 typedef enum {
     /** operation was executed successfully */
@@ -140,10 +140,13 @@ typedef enum {
     UMAMI_OUT_PDF,
     /** value of a custom event bias, type: `double`, shape: `()` */
     UMAMI_OUT_BIAS,
+    /** ratio of the matrix element to a reference matrix element defined by the
+     * caller, type: `double`, shape: `()` */
+    UMAMI_OUT_MATRIX_ELEMENT_RATIO,
 } UmamiOutputKey;
 
 /** Number of values in `UmamiOutputKey` */
-#define UMAMI_OUTPUT_KEY_COUNT (UMAMI_OUT_BIAS + 1)
+#define UMAMI_OUTPUT_KEY_COUNT (UMAMI_OUT_MATRIX_ELEMENT_RATIO + 1)
 
 /** Implementation-defined pointer to a matrix element instance */
 typedef void* UmamiHandle;

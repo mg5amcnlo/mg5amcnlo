@@ -70,6 +70,7 @@ ends:
     longer, especially for channels with a low unweighting efficiency, but the gridpack
     runs do not have to estimate the maximum weights first. This helps if each run only
     generates a few events.
+    The gridpack also gets ``bin/event_stream.py``, see :ref:`gridpack-event-stream`.
 
 ``regular``
     The events of the run are generated as usual, then the gridpack is stored.
@@ -95,6 +96,15 @@ instead.
 Make sure every job uses a different seed. The default seed ``-1`` draws a fresh random
 seed for each call, which is fine for independent jobs. The seed that was used is recorded
 in the output.
+
+.. _gridpack-event-stream:
+
+Streaming events from Python
+----------------------------
+
+A gridpack created with ``run_mode = "fix_max_weight"`` also contains
+``bin/event_stream.py``. Its ``EventStream`` class generates events in memory and returns
+them to a Python program, without writing any files. See :doc:`event_stream`.
 
 Run card settings
 -----------------
@@ -147,6 +157,9 @@ gridpack is created.
     * -
       - ``cut_efficiency_threshold``, ``max_cut_repetitions``
       - Card only.
+    * - ``[amplicol]``
+      - ``first_pass_max_overweight_truncation``, ``first_pass_freeze_max_weight_after``
+      - ``--first_pass_max_overweight_truncation``, ``--first_pass_freeze_max_weight_after``
     * - ``[gridpack]``
       - ``output_dir``, ``temp_output_dir``
       - ``--output_dir``, ``--temp_output_dir``
@@ -159,6 +172,14 @@ An option on the command line overrides the card. The settings have the same mea
 the main run card, see :doc:`run_card`. ``./bin/generate_events --help`` lists all options.
 Relative ``output_dir`` and ``temp_output_dir`` paths in the card refer to the gridpack
 directory. Both are reset to ``""`` when the gridpack is created.
+
+With ``[amplicol]`` processes unweighted to full colour, ``max_overweight_truncation`` and
+``freeze_max_weight_after`` set the second pass, which gives the events, and the
+``first_pass_`` options the leading-colour unweighting of these processes, as in the main
+run. The other processes are unweighted once, as set by ``[generation]``. The colour
+accuracy and the mode are fixed when the gridpack is created. The pyamplicol artifacts
+the libraries read are copied to ``SubProcesses/``, and ``include_source = true`` is not
+supported for these processes.
 
 The card names the ``cpu_mode`` that the gridpack was built with, which can differ from the
 ``"auto"`` of the original run card. The matrix element libraries carry this name. If you

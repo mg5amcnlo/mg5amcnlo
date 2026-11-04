@@ -67,6 +67,12 @@ jobs:
       - uses: ./.github/actions/checkout_mg5
       - uses: ./.github/actions/install_madspace
       - uses: ./.github/actions/restore-pip-cache
+      # MG7CmdTest and the reweighting tests skip themselves without madspace,
+      # which would let a broken launcher through as a green job: fail instead
+      - name: check that madspace is installed
+        run: |
+            cd $GITHUB_WORKSPACE
+            python -c "from madgraph.mg7 import bootstrap; assert bootstrap.madspace_is_installed(), 'madspace is not installed: the launcher tests would be skipped'"
       - name: run the test_mg7_launch unit tests
         run: |
             cd $GITHUB_WORKSPACE
@@ -99,6 +105,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
       - uses: ./.github/actions/install_madspace
+      # full cache: test_auto_width (TestAutoWidthNLO) runs aMC@NLO, which
+      # needs fastjet and the loop libraries; with only lhapdf + pythia8 the
+      # NLO width silently falls back to LO (k-factor 1.0)
       - uses: ./.github/actions/restore_heptools
       - uses: ./.github/actions/restore-pip-cache
 
@@ -246,7 +255,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
       - uses: ./.github/actions/install_madspace
-      - uses: ./.github/actions/restore_heptools
+      - uses: ./.github/actions/restore_heptools_core
       - uses: ./.github/actions/restore-pip-cache
 
       # ---- acceptancetest_mg7_fd_gauge ----
@@ -258,6 +267,17 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_madmatrix_fd_vs_fortran test_madmatrix_fd_simd_lanes -pA -t0 -l INFO
+
+      # ---- acceptancetest_mg7_hel_recycling ----
+      # --hel_recycling: the recycled madmatrix build gives the |M|^2 of the
+      # plain one, event by event, summed over the helicities and with one
+      # helicity per event (check_sa --hel-index), at the scalar and a SIMD backend;
+      # in the unitary gauge (g g > t t~ g) and in FD (t t~ > w+ w- z)
+      - name: "acceptancetest_mg7_hel_recycling: madmatrix --hel_recycling vs plain"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_madmatrix_hel_recycling_vs_plain test_madmatrix_fd_hel_recycling_vs_plain -pA -t0 -l INFO
 
       # ---- acceptancetest_mg7_madspin_mixed_flavor ----
       # mg7 + MadSpin density-summary check driven through the madevent-style
@@ -467,7 +487,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
       - uses: ./.github/actions/install_madspace
-      - uses: ./.github/actions/restore_heptools
+      - uses: ./.github/actions/restore_heptools_core
       - uses: ./.github/actions/restore-pip-cache
       - uses: ./.github/actions/restore_ufomodel
       - name: test one of the test test_leshouche_sextet_diquarks_mg7
@@ -487,7 +507,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
-      - uses: ./.github/actions/restore_heptools
+      - uses: ./.github/actions/restore_heptools_core
       - uses: ./.github/actions/restore-pip-cache
 
       # ---- acceptancetest_mg7_merged_flavor_mirroring ----
@@ -537,7 +557,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
-      - uses: ./.github/actions/restore_heptools
+      - uses: ./.github/actions/restore_heptools_core
       - uses: ./.github/actions/restore-pip-cache
       - name: test one of the test test_madmatrix_mssm_gogo
         run: |
@@ -556,7 +576,7 @@ jobs:
       - uses: ./.github/actions/checkout_mg5
       - uses: ./.github/actions/install_madspace
       - uses: ./.github/actions/restore-pip-cache
-      - uses: ./.github/actions/restore_heptools
+      - uses: ./.github/actions/restore_heptools_core
       - name: test one of the test test_systematics_mg7
         run: |
             cd $GITHUB_WORKSPACE
@@ -578,12 +598,32 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
       - uses: ./.github/actions/install_madspace
-      - uses: ./.github/actions/restore_heptools
+      - uses: ./.github/actions/restore_heptools_core
       - uses: ./.github/actions/restore-pip-cache
-      - name: install madtrex
+      # Like madspace, the madtrex/install prefix is cached content-addressed:
+      # on the madtrex sources and on the madspace sources it is built against
+      # (not madspace/install, restored above). Saved right after the build, so
+      # that a failing test below does not throw the build away.
+      - name: madtrex cache key
+        run: |
+            echo "MADTREX_KEY=madtrex-${{ runner.os }}-py$(python3 -c 'import sys;print(f"{sys.version_info.major}{sys.version_info.minor}")')-${{ hashFiles('madtrex/**', 'madspace/**', '!madspace/install/**') }}" >> $GITHUB_ENV
+      - name: Restore madtrex install
+        id: cache-madtrex
+        uses: actions/cache/restore@v5
+        with:
+          path: madtrex/install
+          key: ${{ env.MADTREX_KEY }}
+      - name: install madtrex (only on cache miss)
+        if: steps.cache-madtrex.outputs.cache-hit != 'true'
         run: |
             cd $GITHUB_WORKSPACE
             python3 madtrex/install.py --yes -j 4
+      - name: Save madtrex install
+        if: steps.cache-madtrex.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: madtrex/install
+          key: ${{ env.MADTREX_KEY }}
       - name: test_madtrex_standalone
         if: ${{ !cancelled() }}
         run: |
@@ -612,7 +652,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/checkout_mg5
       - uses: ./.github/actions/install_madspace
-      - uses: ./.github/actions/restore_heptools
+      - uses: ./.github/actions/restore_heptools_core
       - uses: ./.github/actions/restore-pip-cache
       - uses: ./.github/actions/install_lhapdf_pdfset
       - uses: ./.github/actions/restore_all

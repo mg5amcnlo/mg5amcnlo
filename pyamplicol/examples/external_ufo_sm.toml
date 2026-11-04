@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: 0BSD
+# Trusted external UFO model named "sm".
+# `pyamplicol examples copy` materializes models/ufo/sm beside this card.
+
+schema_version = 1
+action = "generate"
+
+[model]
+source = "models/ufo/sm"
+restriction = "default"
+simplify = true
+cache = true
+
+[process]
+entries = [{ expression = "u u~ > Z g", name = "ufo_sm_uubar_Zg" }]
+
+[color]
+accuracy = "lc"
+
+[generation]
+output = "artifacts/external_ufo_sm"
+emit_api_bundle = true
+
+[evaluator]
+backend = "jit"
+execution_mode = "compiled"

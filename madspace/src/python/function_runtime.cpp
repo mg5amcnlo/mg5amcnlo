@@ -260,10 +260,13 @@ py::object madspace_py::tensor_to_dlpack(
     } else {
         DLDataType dtype;
         switch (tensor.dtype()) {
-        case DataType::dt_float:
+        case DataType::dt_float32:
+            dtype = {kDLFloat, 32, 1};
+            break;
+        case DataType::dt_float64:
             dtype = {kDLFloat, 64, 1};
             break;
-        case DataType::dt_int:
+        case DataType::dt_int32:
             dtype = {kDLInt, 32, 1};
             break;
         default:
@@ -316,6 +319,48 @@ py::object madspace_py::tensor_to_dlpack(
     });
 }
 
+namespace {
+
+// catching exceptions is extremely expensive so we cache whether to use the new or
+// old version of the dlpack protocol
+py::object call_dlpack(
+    py::object& dlpack_func, py::dict& stream_arg, bool* dlpack_version_cache
+) {
+    py::object capsule_obj;
+    if (dlpack_version_cache == nullptr || !*dlpack_version_cache) {
+        try {
+            capsule_obj = dlpack_func(
+                "max_version"_a =
+                    std::make_tuple(DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION),
+                **stream_arg
+            );
+        } catch (py::error_already_set& e) {
+            if (e.matches(PyExc_TypeError)) {
+                capsule_obj = dlpack_func(**stream_arg);
+                if (dlpack_version_cache != nullptr) {
+                    *dlpack_version_cache = true;
+                }
+            } else {
+                throw;
+            }
+        }
+    } else {
+        try {
+            capsule_obj = dlpack_func(**stream_arg);
+        } catch (py::error_already_set& e) {
+            capsule_obj = dlpack_func(
+                "max_version"_a =
+                    std::make_tuple(DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION),
+                **stream_arg
+            );
+            *dlpack_version_cache = false;
+        }
+    }
+    return capsule_obj;
+}
+
+} // namespace
+
 Tensor madspace_py::dlpack_to_tensor(
     py::object tensor,
     std::optional<Type> expected_type,
@@ -349,36 +394,19 @@ Tensor madspace_py::dlpack_to_tensor(
         }
     }
 
-    // catching exceptions is extremely expensive so we cache whether to use the new or
-    // old version of the dlpack protocol
-    if (dlpack_version_cache == nullptr || !*dlpack_version_cache) {
-        try {
-            capsule_obj = dlpack_func(
-                "max_version"_a =
-                    std::make_tuple(DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION),
-                **stream_arg
-            );
-        } catch (py::error_already_set& e) {
-            if (e.matches(PyExc_TypeError)) {
-                capsule_obj = dlpack_func(**stream_arg);
-                if (dlpack_version_cache != nullptr) {
-                    *dlpack_version_cache = true;
-                }
-            } else {
-                throw;
-            }
+    try {
+        capsule_obj = call_dlpack(dlpack_func, stream_arg, dlpack_version_cache);
+    } catch (py::error_already_set& e) {
+        // numpy < 2.1 only has the unversioned protocol, which cannot flag a tensor
+        // read-only and so refuses to export a read-only array (np.broadcast_to, a
+        // frombuffer of bytes, ...). The tensor is only read, so export a copy.
+        if (!py::hasattr(tensor, "flags") ||
+            tensor.attr("flags").attr("writeable").cast<bool>()) {
+            throw;
         }
-    } else {
-        try {
-            capsule_obj = dlpack_func(**stream_arg);
-        } catch (py::error_already_set& e) {
-            capsule_obj = dlpack_func(
-                "max_version"_a =
-                    std::make_tuple(DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION),
-                **stream_arg
-            );
-            *dlpack_version_cache = false;
-        }
+        tensor = tensor.attr("copy")();
+        dlpack_func = tensor.attr("__dlpack__");
+        capsule_obj = call_dlpack(dlpack_func, stream_arg, dlpack_version_cache);
     }
     PyObject* capsule = capsule_obj.ptr();
     if (!capsule) {
@@ -410,18 +438,20 @@ Tensor madspace_py::dlpack_to_tensor(
     bool is_batch_sizes =
         expected_type ? expected_type->dtype == DataType::batch_sizes : false;
     DataType dtype;
-    if (dl_tensor->dtype.code == kDLFloat && dl_tensor->dtype.bits == 64 &&
+    if (dl_tensor->dtype.code == kDLFloat &&
+        (dl_tensor->dtype.bits == 32 || dl_tensor->dtype.bits == 64) &&
         dl_tensor->dtype.lanes == 1) {
-        dtype = DataType::dt_float;
-        if (expected_type && expected_type->dtype != DataType::dt_float) {
+        dtype =
+            dl_tensor->dtype.bits == 32 ? DataType::dt_float32 : DataType::dt_float64;
+        if (expected_type && expected_type->dtype != dtype) {
             throw std::invalid_argument(
                 std::format("Argument {}: got unexpected dtype", arg_index + 1)
             );
         }
     } else if (dl_tensor->dtype.code == kDLInt && dl_tensor->dtype.bits == 32 &&
                dl_tensor->dtype.lanes == 1) {
-        dtype = DataType::dt_int;
-        if (expected_type && expected_type->dtype != DataType::dt_int &&
+        dtype = DataType::dt_int32;
+        if (expected_type && expected_type->dtype != DataType::dt_int32 &&
             !is_batch_sizes) {
             throw std::invalid_argument(
                 std::format("Argument {}: got unexpected dtype", arg_index + 1)
@@ -439,7 +469,7 @@ Tensor madspace_py::dlpack_to_tensor(
     } else {
         throw std::invalid_argument(
             std::format(
-                "Argument {}: input dtype must be 64-bit float or 32-bit int",
+                "Argument {}: input dtype must be 32/64-bit float or 32-bit int",
                 arg_index + 1
             )
         );
@@ -532,7 +562,7 @@ Tensor madspace_py::dlpack_to_tensor(
                 std::format(
                     "Argument {}: wrong input dimension. Expected {}, got {}",
                     arg_index + 1,
-                    expected_type->shape.size() + 1,
+                    expected_type->shape.size() + is_batch,
                     dl_tensor->ndim
                 )
             );
@@ -558,7 +588,7 @@ Tensor madspace_py::dlpack_to_tensor(
         }
         if (expected_type) {
             for (int j = is_batch; j < dl_tensor->ndim; ++j) {
-                if (shape.at(j) != expected_type->shape.at(j - is_batch)) {
+                if (dl_tensor->shape[j] != expected_type->shape.at(j - is_batch)) {
                     throw std::invalid_argument(
                         std::format(
                             "Argument {}, dimension {}: shape mismatch. Expected {}, "
@@ -566,7 +596,7 @@ Tensor madspace_py::dlpack_to_tensor(
                             arg_index + 1,
                             j,
                             expected_type->shape.at(j - is_batch),
-                            shape.at(j)
+                            dl_tensor->shape[j]
                         )
                     );
                 }

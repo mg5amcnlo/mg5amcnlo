@@ -11,12 +11,13 @@ namespace madspace {
 /**
  * Fully connected neural network as a compute-graph function.
  *
- * A stack of @p layers dense layers: the first `layers - 1` have width
- * @p hidden_dim and @p activation, the last one is linear. Used as the
- * subnetwork of the @ref Flow, @ref DiscreteFlow and @ref ChannelWeightNetwork
- * [1]. The weights and biases are compute-graph globals named with @p prefix.
- * Call `initialize_globals(context)` once before use; the output layer starts
- * at zero.
+ * A stack of @p layers dense layers of width @p hidden_dim with @p activation
+ * between them and a linear output layer. Used as the subnetwork of the
+ * @ref Flow and @ref DiscreteFlow adaptive samplers [1]. The weights and biases
+ * are compute-graph globals named with @p prefix. Call
+ * `initialize_globals(context)` once before use. With a single-precision
+ * @p precision, the weights and the network evaluation are in float32, while the
+ * input and output stay in float64.
  *
  * `batch` is the leading batch dimension.
  *
@@ -41,18 +42,23 @@ public:
      * @param layers      Number of dense layers, including the output layer.
      * @param activation  Activation between the hidden layers.
      * @param prefix      Prefix for the trainable global names.
+     * @param precision   Float type of the weights and the evaluation,
+     *                    `dt_float32` or `dt_float64`.
      */
     MLP(std::size_t input_dim,
         std::size_t output_dim,
         std::size_t hidden_dim = 32,
         std::size_t layers = 3,
         Activation activation = leaky_relu,
-        const std::string& prefix = "");
+        const std::string& prefix = "",
+        DataType precision = DataType::dt_float64);
 
     /// Input width.
     std::size_t input_dim() const { return _input_dim; }
     /// Output width.
     std::size_t output_dim() const { return _output_dim; }
+    /// Float type of the weights and the evaluation.
+    DataType precision() const { return _precision; }
     /**
      * Register the network's trainable parameters on @p context.
      * @param context  Context receiving the globals.
@@ -80,6 +86,7 @@ private:
     std::size_t _layers;
     Activation _activation;
     std::string _prefix;
+    DataType _precision;
 };
 
 } // namespace madspace

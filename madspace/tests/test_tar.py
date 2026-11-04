@@ -19,7 +19,7 @@ def make_context(tmp_path):
         "d.scalar": rng.normal(size=(1, 1)),
     }
     for name, value in values.items():
-        dtype = ms.DataType.int if value.dtype == np.int32 else ms.DataType.float
+        dtype = ms.DataType.int32 if value.dtype == np.int32 else ms.DataType.float64
         glob = ctx.define_global(name, dtype, list(value.shape[1:]))
         glob.torch().copy_(torch.from_numpy(value))
     return ctx, values

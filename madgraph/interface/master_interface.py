@@ -178,6 +178,10 @@ class Switcher(object):
         space_before = re.compile(r"(?P<carac>\S)(?P<tag>[\\[\\]/\,\\$\\>|])(?P<carac2>\S)")
         line2 = space_before.sub(r'\g<carac> \g<tag> \g<carac2>', line)       
         
+        # a matrix-element backend bracket like [amplicol] is a tree process
+        if MGcmd.split_backend_line(re.split(r'\s\-\-', line, 1)[0])[1]:
+            return ('tree', None, [])
+
         # Use regular expressions to extract the loop mode (if present) and its
         # option, specified in the line with format [ option = loop_orders ] or
         # [ loop_orders ] which implicitly select the 'all' option.

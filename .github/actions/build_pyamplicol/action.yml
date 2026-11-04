@@ -1,0 +1,38 @@
+name: Build pyamplicol
+description: >
+  Build the pyamplicol install prefix once per commit with pyamplicol/install.py
+  and cache it (content-addressed on the pyamplicol package sources). Test jobs
+  restore the result with the install_pyamplicol action (they must `needs:` the
+  job that runs this action). Assumes the repository is already checked out.
+
+runs:
+  using: composite
+  steps:
+    # Must match the key computed by the install_pyamplicol action exactly.
+    - name: pyamplicol cache key
+      run: echo "PAC_PY=$(python3 -c 'import sys;print(f"{sys.version_info.major}{sys.version_info.minor}")')" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Cache pyamplicol install
+      id: cache-pyamplicol
+      uses: actions/cache@v5
+      with:
+        path: pyamplicol/install
+        key: pyamplicol-${{ runner.os }}-py${{ env.PAC_PY }}-${{ hashFiles('pyamplicol/src/**', 'pyamplicol/rust/**', 'pyamplicol/build_backend/**', 'pyamplicol/Cargo.*', 'pyamplicol/pyproject.toml', 'pyamplicol/rust-toolchain.toml', 'pyamplicol/dependencies/*.toml') }}
+
+    # ~1.5 GB: one entry per dependency set, pyamplicol's crates rebuild on top.
+    - name: Cache Cargo build tree
+      if: steps.cache-pyamplicol.outputs.cache-hit != 'true'
+      uses: actions/cache@v5
+      with:
+        path: pyamplicol/build/cache
+        key: pyamplicol-cargo-${{ runner.os }}-${{ hashFiles('pyamplicol/Cargo.lock', 'pyamplicol/rust-toolchain.toml') }}
+
+    - name: Prepared models
+      if: steps.cache-pyamplicol.outputs.cache-hit != 'true'
+      uses: ./.github/actions/pyamplicol_prepared_models
+
+    - name: Build and install pyamplicol (only on cache miss)
+      if: steps.cache-pyamplicol.outputs.cache-hit != 'true'
+      run: python3 pyamplicol/install.py --source --yes
+      shell: bash

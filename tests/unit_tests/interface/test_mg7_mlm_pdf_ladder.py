@@ -31,7 +31,7 @@ class TestMLMPdfLadder(unittest.TestCase):
 
     def setUp(self):
         try:
-            import madgraph.iolibs.template_files.mg7.launch as launch
+            import madgraph.mg7.launch as launch
         except Exception as error:  # madspace not built or importable here
             self.skipTest('mg7 launch not importable: %s' % error)
         self.launch = launch

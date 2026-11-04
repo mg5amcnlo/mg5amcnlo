@@ -1,0 +1,1131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pyamplicol.org/schemas/reference-physics-v2.schema.json",
+  "title": "pyAmpliCol test reference physics fixture v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "fixture_schema_version",
+    "kind",
+    "fixture_id",
+    "provenance",
+    "dependencies",
+    "models",
+    "processes",
+    "points",
+    "cases",
+    "evidence_sets"
+  ],
+  "properties": {
+    "fixture_schema_version": {
+      "const": 2
+    },
+    "kind": {
+      "const": "pyamplicol-reference-physics"
+    },
+    "fixture_id": {
+      "$ref": "#/$defs/public_id"
+    },
+    "provenance": {
+      "$ref": "#/$defs/fixture_provenance"
+    },
+    "dependencies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/dependency"
+      }
+    },
+    "models": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/model"
+      }
+    },
+    "processes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/process"
+      }
+    },
+    "points": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/point"
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/case"
+      }
+    },
+    "evidence_sets": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/public_id"
+      }
+    }
+  },
+  "$defs": {
+    "public_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:+,~-]*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "git_revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "decimal": {
+      "type": "string",
+      "pattern": "^(?:0|-?(?:(?:[1-9][0-9]*)(?:\\.[0-9]*[1-9])?|0\\.[0-9]*[1-9]))$"
+    },
+    "nonnegative_decimal": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]*[1-9])?$"
+    },
+    "positive_decimal": {
+      "type": "string",
+      "pattern": "^(?:(?:[1-9][0-9]*)(?:\\.[0-9]*[1-9])?|0\\.[0-9]*[1-9])$"
+    },
+    "complex_decimal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "real",
+        "imag"
+      ],
+      "properties": {
+        "real": {
+          "$ref": "#/$defs/decimal"
+        },
+        "imag": {
+          "$ref": "#/$defs/decimal"
+        }
+      }
+    },
+    "fixture_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_repository",
+        "source_revision",
+        "source_tree_sha256",
+        "captured_at",
+        "capture_command",
+        "working_tree_clean",
+        "memory_watchdog_gb"
+      ],
+      "properties": {
+        "source_repository": {
+          "type": "string",
+          "format": "uri"
+        },
+        "source_revision": {
+          "$ref": "#/$defs/git_revision"
+        },
+        "source_tree_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "captured_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "capture_command": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "working_tree_clean": {
+          "type": "boolean"
+        },
+        "memory_watchdog_gb": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "version",
+        "revision",
+        "content_sha256",
+        "serialization_abi",
+        "license"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "content_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "patch_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "serialization_abi": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "license": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "source_kind",
+        "content_sha256",
+        "compiled_model_sha256",
+        "compiled_schema_version",
+        "restriction",
+        "dependency_ids",
+        "parameter_defaults"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_kind": {
+          "enum": [
+            "built-in-sm",
+            "built-in-sm-heft",
+            "ufo",
+            "ufo-json",
+            "compiled-model"
+          ]
+        },
+        "content_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "compiled_model_sha256": {
+          "$ref": "#/$defs/sha256",
+          "description": "Canonical hash of the compiled model contract excluding conversion and phase timing diagnostics."
+        },
+        "compiled_schema_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "restriction": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dependency_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/public_id"
+          }
+        },
+        "parameter_defaults": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/complex_decimal"
+          }
+        }
+      }
+    },
+    "process": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "expression",
+        "external_pdgs",
+        "external_labels",
+        "external_leg_ids",
+        "external_spins",
+        "external_colors",
+        "external_masses",
+        "external_helicity_domains",
+        "initial_state_count",
+        "alias_of",
+        "final_state_permutation"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "expression": {
+          "type": "string",
+          "minLength": 1
+        },
+        "external_pdgs": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "integer"
+          }
+        },
+        "external_labels": {
+          "type": "array",
+          "minItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "external_leg_ids": {
+          "type": "array",
+          "minItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/public_id"
+          }
+        },
+        "external_spins": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "external_colors": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "enum": [
+              -3,
+              1,
+              3,
+              8
+            ]
+          }
+        },
+        "external_masses": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "$ref": "#/$defs/nonnegative_decimal"
+          }
+        },
+        "external_helicity_domains": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        "initial_state_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "alias_of": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/public_id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "final_state_permutation": {
+          "oneOf": [
+            {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "alias_of": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "alias_of"
+            ]
+          },
+          "then": {
+            "properties": {
+              "final_state_permutation": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "final_state_permutation": {
+                "type": "array",
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "point_algorithm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "rng",
+        "seed"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rng": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "seed": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "process_id",
+        "class",
+        "algorithm",
+        "sqrt_s",
+        "momenta",
+        "masses",
+        "arithmetic_precision_bits",
+        "round_trip_decimal_digits",
+        "certified_decimal_digits",
+        "stress_metric"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "process_id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "class": {
+          "enum": [
+            "canonical",
+            "generic",
+            "stress"
+          ]
+        },
+        "algorithm": {
+          "$ref": "#/$defs/point_algorithm"
+        },
+        "sqrt_s": {
+          "$ref": "#/$defs/decimal"
+        },
+        "momenta": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/$defs/decimal"
+            }
+          }
+        },
+        "masses": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "$ref": "#/$defs/nonnegative_decimal"
+          }
+        },
+        "arithmetic_precision_bits": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "round_trip_decimal_digits": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "certified_decimal_digits": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stress_metric": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/stress_metric"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "class": {
+                "const": "stress"
+              }
+            },
+            "required": [
+              "class"
+            ]
+          },
+          "then": {
+            "properties": {
+              "stress_metric": {
+                "$ref": "#/$defs/stress_metric"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "stress_metric": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "stress_metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "value"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "minimum-final-energy-fraction",
+            "minimum-final-transverse-momentum-squared-fraction",
+            "relative-excess-energy"
+          ]
+        },
+        "value": {
+          "$ref": "#/$defs/positive_decimal"
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "helicities",
+        "color",
+        "color_kind",
+        "helicity_count",
+        "color_component_count",
+        "structural_zero_helicity_count"
+      ],
+      "properties": {
+        "helicities": {
+          "enum": [
+            "complete",
+            "selected"
+          ]
+        },
+        "color": {
+          "enum": [
+            "complete",
+            "selected",
+            "contracted"
+          ]
+        },
+        "color_kind": {
+          "enum": [
+            "physical-lc-flows",
+            "contracted-color"
+          ]
+        },
+        "helicity_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "color_component_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "structural_zero_helicity_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "selectors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "helicity",
+        "color_flow",
+        "omitted_helicity",
+        "omitted_color"
+      ],
+      "properties": {
+        "helicity": {
+          "type": "boolean"
+        },
+        "color_flow": {
+          "type": "boolean"
+        },
+        "omitted_helicity": {
+          "const": "all-components"
+        },
+        "omitted_color": {
+          "enum": [
+            "all-components",
+            "contracted-component"
+          ]
+        }
+      }
+    },
+    "normalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "average_factor",
+        "color_factor",
+        "identical_factor",
+        "global_coupling_factor",
+        "quark_line_partner_factor",
+        "couplings_in_stage_evaluators"
+      ],
+      "properties": {
+        "average_factor": {
+          "$ref": "#/$defs/decimal"
+        },
+        "color_factor": {
+          "$ref": "#/$defs/decimal"
+        },
+        "identical_factor": {
+          "$ref": "#/$defs/decimal"
+        },
+        "global_coupling_factor": {
+          "$ref": "#/$defs/decimal"
+        },
+        "quark_line_partner_factor": {
+          "$ref": "#/$defs/decimal"
+        },
+        "couplings_in_stage_evaluators": {
+          "type": "boolean"
+        }
+      }
+    },
+    "topology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "currents",
+        "interactions",
+        "roots",
+        "reduction_groups"
+      ],
+      "properties": {
+        "currents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "interactions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "roots": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "reduction_groups": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "helicity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "index",
+        "values",
+        "computed",
+        "structural_zero",
+        "representative_id",
+        "coefficient"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "values": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "integer"
+          }
+        },
+        "computed": {
+          "type": "boolean"
+        },
+        "structural_zero": {
+          "type": "boolean"
+        },
+        "representative_id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "coefficient": {
+          "$ref": "#/$defs/decimal"
+        }
+      }
+    },
+    "lc_color_flow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id",
+        "index",
+        "word",
+        "computed",
+        "representative_id",
+        "coefficient"
+      ],
+      "properties": {
+        "kind": {
+          "const": "lc-flow"
+        },
+        "id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "word": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "computed": {
+          "type": "boolean"
+        },
+        "representative_id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "coefficient": {
+          "$ref": "#/$defs/decimal"
+        }
+      }
+    },
+    "contracted_color": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id",
+        "index",
+        "description"
+      ],
+      "properties": {
+        "kind": {
+          "const": "contracted-color"
+        },
+        "id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "index": {
+          "const": 0
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "axes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "helicities",
+        "colors"
+      ],
+      "properties": {
+        "helicities": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/helicity"
+          }
+        },
+        "colors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/lc_color_flow"
+              },
+              {
+                "$ref": "#/$defs/contracted_color"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "reduction_group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "representative_helicity_id",
+        "representative_color_id",
+        "physical_helicity_ids",
+        "physical_color_ids"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "representative_helicity_id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "representative_color_id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "physical_helicity_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/public_id"
+          }
+        },
+        "physical_color_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/public_id"
+          }
+        }
+      }
+    },
+    "reduction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "cell_semantics",
+        "groups",
+        "plan_sha256"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "lc-diagonal",
+            "contracted-color"
+          ]
+        },
+        "cell_semantics": {
+          "enum": [
+            "sum-all-contributing-groups",
+            "fully-contracted-color"
+          ]
+        },
+        "groups": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/reduction_group"
+          }
+        },
+        "plan_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "point_id",
+        "arithmetic_precision_bits",
+        "round_trip_decimal_digits",
+        "certified_decimal_digits",
+        "values",
+        "total",
+        "evidence_refs"
+      ],
+      "properties": {
+        "point_id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "arithmetic_precision_bits": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "round_trip_decimal_digits": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "certified_decimal_digits": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "values": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/decimal"
+            }
+          }
+        },
+        "total": {
+          "$ref": "#/$defs/decimal"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/public_id"
+          }
+        }
+      }
+    },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "case_kind",
+        "model_id",
+        "process_id",
+        "color_accuracy",
+        "point_policy",
+        "point_ids",
+        "coverage",
+        "selectors",
+        "normalization",
+        "topology",
+        "artifact_physics_sha256",
+        "artifact_execution_sha256",
+        "physics_case_sha256",
+        "axes",
+        "reduction",
+        "observations"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "case_kind": {
+          "enum": [
+            "substantive",
+            "diagnostic"
+          ]
+        },
+        "model_id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "process_id": {
+          "$ref": "#/$defs/public_id"
+        },
+        "color_accuracy": {
+          "enum": [
+            "lc",
+            "nlc",
+            "full"
+          ]
+        },
+        "point_policy": {
+          "enum": [
+            "standard",
+            "degenerate-2to1"
+          ]
+        },
+        "point_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/public_id"
+          }
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        },
+        "selectors": {
+          "$ref": "#/$defs/selectors"
+        },
+        "normalization": {
+          "$ref": "#/$defs/normalization"
+        },
+        "topology": {
+          "$ref": "#/$defs/topology"
+        },
+        "artifact_physics_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "artifact_execution_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "physics_case_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "axes": {
+          "$ref": "#/$defs/axes"
+        },
+        "reduction": {
+          "$ref": "#/$defs/reduction"
+        },
+        "observations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/observation"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "case_kind": {
+                "const": "substantive"
+              }
+            },
+            "required": [
+              "case_kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "coverage": {
+                "properties": {
+                  "helicities": {
+                    "const": "complete"
+                  },
+                  "color": {
+                    "enum": [
+                      "complete",
+                      "contracted"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

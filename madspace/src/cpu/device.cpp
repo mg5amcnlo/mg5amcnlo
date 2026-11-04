@@ -8,54 +8,73 @@ using namespace madspace::kernels;
 
 namespace {
 
+// calls func with the scalar and SIMD kernel policies of a float dtype
+template <typename Func>
+void dispatch_float(DataType dtype, const char* op, Func&& func) {
+    switch (dtype) {
+    case DataType::dt_float64:
+        func.template operator()<CpuTypes, SimdTypes>();
+        break;
+    case DataType::dt_float32:
+        func.template operator()<CpuTypes32, SimdTypes32>();
+        break;
+    default:
+        throw std::runtime_error(std::string("invalid dtype in ") + op);
+    }
+}
+
 template <typename D>
 void tensor_copy_impl(const Tensor& source, Tensor& target, const D& device) {
-    if (source.dtype() == DataType::dt_float && target.dtype() == DataType::dt_float) {
-        tensor_foreach_dynamic_single<
-            kernel_copy<CpuTypes>,
-            kernel_copy<SimdTypes>,
-            1,
-            1>({&source}, {&target}, target.size(0), device);
-    } else if (source.dtype() == DataType::dt_int &&
-               target.dtype() == DataType::dt_int) {
+    if (source.dtype() != target.dtype()) {
+        throw std::runtime_error("invalid dtype in copy");
+    }
+    if (source.dtype() == DataType::dt_int32) {
         tensor_foreach_dynamic_single<
             kernel_copy_int<CpuTypes>,
             kernel_copy_int<SimdTypes>,
             1,
             1>({&source}, {&target}, target.size(0), device);
-    } else {
-        throw std::runtime_error("invalid dtype in copy");
+        return;
     }
+    dispatch_float(source.dtype(), "copy", [&]<typename C, typename S>() {
+        tensor_foreach_dynamic_single<kernel_copy<C>, kernel_copy<S>, 1, 1>(
+            {&source}, {&target}, target.size(0), device
+        );
+    });
 }
 
 template <typename D>
 void tensor_zero_impl(Tensor& tensor, const D& device) {
-    if (tensor.dtype() == DataType::dt_float) {
-        tensor_foreach_dynamic_single<
-            kernel_zero<CpuTypes>,
-            kernel_zero<SimdTypes>,
-            1,
-            1>({&tensor}, {&tensor}, tensor.size(0), device);
-    } else if (tensor.dtype() == DataType::dt_int) {
+    if (tensor.dtype() == DataType::dt_int32) {
         tensor_foreach_dynamic_single<
             kernel_zero_int<CpuTypes>,
             kernel_zero_int<SimdTypes>,
             1,
             1>({&tensor}, {&tensor}, tensor.size(0), device);
-    } else {
-        throw std::runtime_error("invalid dtype in zero");
+        return;
     }
+    dispatch_float(tensor.dtype(), "zero", [&]<typename C, typename S>() {
+        tensor_foreach_dynamic_single<kernel_zero<C>, kernel_zero<S>, 1, 1>(
+            {&tensor}, {&tensor}, tensor.size(0), device
+        );
+    });
 }
 
 template <typename D>
 void tensor_add_impl(const Tensor& source, Tensor& target, const D& device) {
+    if (source.dtype() != target.dtype()) {
+        throw std::runtime_error("invalid dtype in add");
+    }
     // a broadcast target (e.g. the gradient of a literal or global) accumulates
     // the whole source batch
-    tensor_foreach_dynamic_single<
-        kernel_add_inplace<CpuTypes>,
-        kernel_add_inplace<SimdTypes>,
-        1,
-        1>({&source}, {&target}, std::max(source.size(0), target.size(0)), device);
+    std::size_t batch_size = std::max(source.size(0), target.size(0));
+    dispatch_float(source.dtype(), "add", [&]<typename C, typename S>() {
+        tensor_foreach_dynamic_single<
+            kernel_add_inplace<C>,
+            kernel_add_inplace<S>,
+            1,
+            1>({&source}, {&target}, batch_size, device);
+    });
 }
 
 } // namespace
@@ -82,22 +101,21 @@ void CpuDevice::adam_step(
     double bias_corr2_sqrt,
     double weight_decay
 ) const {
-    tensor_foreach_dynamic<
-        kernel_adam_step<CpuTypes>,
-        kernel_adam_step<SimdTypes>,
-        1,
-        3>(
-        {&gradient},
-        {&parameter, &exp_avg, &exp_avg_sq},
-        gradient.size(0),
-        *this,
-        step_size,
-        beta1,
-        beta2,
-        eps,
-        bias_corr2_sqrt,
-        weight_decay
-    );
+    dispatch_float(parameter.dtype(), "adam_step", [&]<typename C, typename S>() {
+        using F = typename C::FVal;
+        tensor_foreach_dynamic<kernel_adam_step<C>, kernel_adam_step<S>, 1, 3>(
+            {&gradient},
+            {&parameter, &exp_avg, &exp_avg_sq},
+            gradient.size(0),
+            *this,
+            static_cast<F>(step_size),
+            static_cast<F>(beta1),
+            static_cast<F>(beta2),
+            static_cast<F>(eps),
+            static_cast<F>(bias_corr2_sqrt),
+            static_cast<F>(weight_decay)
+        );
+    });
 }
 
 void AsyncCpuDevice::tensor_copy(const Tensor& source, Tensor& target) const {

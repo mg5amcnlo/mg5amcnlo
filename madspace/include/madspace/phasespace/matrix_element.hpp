@@ -69,7 +69,10 @@ public:
         fact_scale1_out,    ///< Custom factorization scale, first incoming.
         fact_scale2_out,    ///< Custom factorization scale, second incoming.
         pdf_out,            ///< Custom parton density x f(x, Q).
-        bias_out            ///< Custom event bias.
+        bias_out,           ///< Custom event bias.
+        /// Ratio of the matrix element to a reference matrix element, for a
+        /// @ref WeightingStep.
+        matrix_element_ratio_out
     };
 
     /**
@@ -87,10 +90,16 @@ public:
      *                               the matrix element is evaluated in (the run
      *                               card's me_frame). Empty means no boost.
      * @param incoming_count         How many of the external particles are
-     *                               incoming. The me_frame boost starts from the
-     *                               rest frame of the incoming system, as in
-     *                               madevent, to avoid a Wigner rotation of the
-     *                               polarisation axes.
+     *                               incoming. The frame is reached the way
+     *                               madevent reaches it, starting from the rest
+     *                               frame of the incoming system (the partonic
+     *                               centre of mass of a collision, the decaying
+     *                               particle's rest frame of a decay): boosts do
+     *                               not commute, so going there straight from
+     *                               the lab frame would leave a Wigner rotation
+     *                               behind and rotate the polarisation axes.
+     * @param channel                If non-negative, `channel_in` is passed this
+     *                               fixed value instead of being an input.
      */
     MatrixElement(
         std::size_t matrix_element_index,
@@ -100,7 +109,8 @@ public:
         std::size_t diagram_count = 1,
         bool sample_random_inputs = false,
         const std::vector<me_int_t>& me_frame = {},
-        std::size_t incoming_count = 2
+        std::size_t incoming_count = 2,
+        me_int_t channel = -1
     );
     /**
      * Take @p matrix_element_index, @p particle_count and @p diagram_count from
@@ -109,6 +119,9 @@ public:
      * @param inputs                Quantities to pass in.
      * @param outputs               Quantities to return.
      * @param sample_random_inputs  See the other constructor.
+     * @param me_frame              See the other constructor.
+     * @param incoming_count        See the other constructor.
+     * @param channel               See the other constructor.
      */
     MatrixElement(
         const MatrixElementApi& matrix_element_api,
@@ -116,7 +129,8 @@ public:
         const std::vector<MatrixElementOutput>& outputs = {matrix_element_out},
         bool sample_random_inputs = false,
         const std::vector<me_int_t>& me_frame = {},
-        std::size_t incoming_count = 2
+        std::size_t incoming_count = 2,
+        me_int_t channel = -1
     ) :
         MatrixElement(
             matrix_element_api.index(),
@@ -126,7 +140,8 @@ public:
             matrix_element_api.diagram_count(),
             sample_random_inputs,
             me_frame,
-            incoming_count
+            incoming_count,
+            channel
         ) {};
     /// Index of the matrix element in the plugin.
     std::size_t matrix_element_index() const { return _matrix_element_index; }
@@ -138,16 +153,27 @@ public:
     const std::vector<MatrixElementInput>& inputs() const { return _inputs; }
     /// The configured output quantities.
     const std::vector<MatrixElementOutput>& outputs() const { return _outputs; }
+    /// Whether the `random_*` inputs are drawn internally.
+    bool sample_random_inputs() const { return _sample_random_inputs; }
+    /// The fixed channel passed as `channel_in`, or -1 if it is an input.
+    me_int_t channel() const { return _channel; }
     /// The inputs that must be supplied by the caller (excludes the ones drawn
-    /// internally when @p sample_random_inputs is set).
+    /// internally when @p sample_random_inputs is set and a fixed channel).
     std::vector<MatrixElementInput> external_inputs() const;
     /// Per-particle 0/1 selector built from me_frame, empty if no boost is
     /// applied.
     const std::vector<me_int_t>& frame_mask() const { return _frame_mask; }
-    /// Per-particle 0/1 selector of the incoming particles, whose rest frame
-    /// the me_frame boost starts from; empty when no boost is applied or when
-    /// it is already the frame me_frame asks for.
+    /// Per-particle 0/1 selector of the incoming particle of a decay, whose
+    /// rest frame the me_frame boost starts from; empty when no boost is
+    /// applied, when it is already the frame me_frame asks for, and for a
+    /// collision, whose me_frame is reached along the beam instead
+    /// (along_beam()).
     const std::vector<me_int_t>& reference_mask() const { return _reference_mask; }
+    /// Whether the me_frame boost starts with a boost along the beam axis to
+    /// zero rapidity of the selected particles, which makes the frame the
+    /// same from any frame along the beam (two incoming particles, and a
+    /// frame other than their own rest frame).
+    bool along_beam() const { return _along_beam; }
 
 private:
     NamedVector<Value> build_function_impl(
@@ -160,8 +186,10 @@ private:
     std::vector<MatrixElementInput> _inputs;
     std::vector<MatrixElementOutput> _outputs;
     bool _sample_random_inputs;
+    me_int_t _channel;
     std::vector<me_int_t> _frame_mask;
     std::vector<me_int_t> _reference_mask;
+    bool _along_beam;
 };
 
 } // namespace madspace

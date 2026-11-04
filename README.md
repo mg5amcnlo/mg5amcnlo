@@ -1,8 +1,6 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/source/_static/logo-wide-dark.png">
-    <img src="docs/source/_static/logo-wide-light.png" width="450" alt="MadGraph7">
-  </picture>
+  <img src="docs/source/_static/logo-wide-light.png#gh-light-mode-only" width="450" alt="MadGraph7">
+  <img src="docs/source/_static/logo-wide-dark.png#gh-dark-mode-only" width="450" alt="MadGraph7">
 </p>
 
 MadGraph7 is the next major release of the MadGraph event generator. Its new features
@@ -37,6 +35,10 @@ cd MG7_v0_2_0
 Python 3.12 or higher and a C++ compiler are required. The `madspace` library is
 installed automatically the first time you launch a run. To build it yourself instead,
 run `install madspace` from the MadGraph7 prompt.
+
+The `pyamplicol` package, the matrix-element generator of the `[amplicol]` backend, is
+installed in the same way with `install pyamplicol`. It lives in `pyamplicol/` and keeps
+its own license (0BSD, see `pyamplicol/LICENSE` and `pyamplicol/THIRD_PARTY_NOTICES.md`).
 
 ## First steps
 

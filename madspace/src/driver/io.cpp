@@ -16,10 +16,13 @@ namespace {
 
 std::string dtype_to_str(DataType dtype) {
     switch (dtype) {
-    case DataType::dt_float:
+    case DataType::dt_float32:
+        return "<f4";
+        break;
+    case DataType::dt_float64:
         return "<f8";
         break;
-    case DataType::dt_int:
+    case DataType::dt_int32:
         return "<i4";
         break;
     default:
@@ -28,10 +31,12 @@ std::string dtype_to_str(DataType dtype) {
 }
 
 DataType str_to_dtype(std::string dtype) {
-    if (dtype == "<f8") {
-        return DataType::dt_float;
+    if (dtype == "<f4") {
+        return DataType::dt_float32;
+    } else if (dtype == "<f8") {
+        return DataType::dt_float64;
     } else if (dtype == "<i4") {
-        return DataType::dt_int;
+        return DataType::dt_int32;
     } else {
         throw std::invalid_argument("Unsupported data type");
     }

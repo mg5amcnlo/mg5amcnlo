@@ -33,17 +33,45 @@ runs:
           ${{ env.OLD_CACHE_KEY }}-
           ${{ env.OLD_CACHE_KEY }}
 
+    # A failed download is only a warning of actions/cache ("Egress is over the
+    # account limit", "The operation was aborted": the 1.1 GB cache stops part
+    # way) and leaves nothing restored. The sub-caches below are no fallback
+    # then: warm_cache.yml deletes them after a successful run. So try once more
+    # after a pause before going on.
+    - name: wait before retrying the restore
+      if: steps.heptools-cache.outputs.cache-matched-key == ''
+      run: |
+        echo "::warning::the heptools cache was not restored, retrying in 60 s"
+        rm -rf ~/.cache/HEPtools
+        sleep 60
+      shell: bash
+    - name: restore full cache (retry)
+      id: heptools-cache-retry
+      if: steps.heptools-cache.outputs.cache-matched-key == ''
+      uses: actions/cache/restore@v5
+      with:
+        path: ~/.cache/HEPtools
+        key: ${{ env.CACHE_KEY }}-${{ github.run_id }}
+        restore-keys: |
+          ${{ env.CACHE_KEY }}-
+          ${{ env.OLD_CACHE_KEY }}-
+          ${{ env.OLD_CACHE_KEY }}
+
     # NB: cache-hit is true only on an *exact* key match, which now essentially
     # never happens here; cache-matched-key is non-empty whenever something was
     # actually restored (exact match or restore-keys). That is the condition
     # that means "we have a combined cache to look at".
+    - name: combined cache restored
+      id: restored
+      run: echo "key=${{ steps.heptools-cache.outputs.cache-matched-key || steps.heptools-cache-retry.outputs.cache-matched-key }}" >> $GITHUB_OUTPUT
+      shell: bash
 
     # Same content check the warm_cache jobs run before saving, in "report"
     # mode: here an incomplete combined cache is not fatal, we just fall back
     # to the (still present) sub-caches below.
     - name: validate cache content
       id: validate-cache
-      if: steps.heptools-cache.outputs.cache-matched-key != ''
+      if: steps.restored.outputs.key != ''
       uses: ./.github/actions/check_heptools
       with:
         tools: lhapdf boost pythia8 emela contur looptools
@@ -53,19 +81,30 @@ runs:
     # try to use their cache if previous cache failed or content is incomplete
     - uses: ./.github/actions/restore_heptools_lhapdf
       with:
-        setup_only: ${{ steps.heptools-cache.outputs.cache-matched-key != '' && steps.validate-cache.outputs.valid == 'true' }}
+        setup_only: ${{ steps.restored.outputs.key != '' && steps.validate-cache.outputs.valid == 'true' }}
     - uses: ./.github/actions/restore_heptools_boost
       with:
-        setup_only: ${{ steps.heptools-cache.outputs.cache-matched-key != '' && steps.validate-cache.outputs.valid == 'true' }}
+        setup_only: ${{ steps.restored.outputs.key != '' && steps.validate-cache.outputs.valid == 'true' }}
     - uses: ./.github/actions/restore_heptools_pythia8
       with:
-        setup_only: ${{ steps.heptools-cache.outputs.cache-matched-key != '' && steps.validate-cache.outputs.valid == 'true' }}
+        setup_only: ${{ steps.restored.outputs.key != '' && steps.validate-cache.outputs.valid == 'true' }}
     - uses: ./.github/actions/restore_heptools_emela
       with:
-        setup_only: ${{ steps.heptools-cache.outputs.cache-matched-key != '' && steps.validate-cache.outputs.valid == 'true' }}
+        setup_only: ${{ steps.restored.outputs.key != '' && steps.validate-cache.outputs.valid == 'true' }}
     - uses: ./.github/actions/restore_heptools_contur
       with:
-        setup_only: ${{ steps.heptools-cache.outputs.cache-matched-key != '' && steps.validate-cache.outputs.valid == 'true' }}
+        setup_only: ${{ steps.restored.outputs.key != '' && steps.validate-cache.outputs.valid == 'true' }}
     - uses: ./.github/actions/restore_heptools_looptools
       with:
-        setup_only: ${{ steps.heptools-cache.outputs.cache-matched-key != '' && steps.validate-cache.outputs.valid == 'true' }}
+        setup_only: ${{ steps.restored.outputs.key != '' && steps.validate-cache.outputs.valid == 'true' }}
+
+    # Every consumer gets the lhapdf configuration written above. Without
+    # lhapdf there (neither cache could be restored), stop here with the reason
+    # instead of letting the tests fail on a missing lhapdf-config.
+    - name: check that lhapdf was restored
+      run: |
+        if [ ! -x ~/.cache/HEPtools/bin/lhapdf-config ]; then
+          echo "::error::the HEPtools cache could not be restored (see the warnings of the restore steps, e.g. 'Egress is over the account limit'), so lhapdf is missing: re-run the job"
+          exit 1
+        fi
+      shell: bash

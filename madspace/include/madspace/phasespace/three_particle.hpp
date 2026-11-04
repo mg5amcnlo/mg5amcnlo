@@ -179,7 +179,7 @@ public:
      *                          the momentum transfer @f$(p_2 - k)^2 \le 0@f$
      *                          instead of @f$(p_2 + p_3)^2@f$; its absolute
      *                          value is sampled. With @p has_cut it is bounded
-     *                          by @f$|(p_2 - k)^2| \ge \texttt{etmin\_2}^2@f$,
+     *                          by @f$|(p_2 - k)^2| \ge \texttt{etmin\_2}^2 - m_2^2@f$,
      *                          the `drcut` and `s23_min_cut` conditions are
      *                          not used. Requires @p p12_condition. AmpliCol
      *                          builds a side of two particles this way, with
@@ -225,11 +225,12 @@ private:
     split_conditions(FunctionBuilder& fb, const NamedVector<Value>& conditions) const;
     // Sampled and kinematic range of the second invariant: s23 itself, or
     // |(p2 - k)^2| for an incoming recoil. Arguments: the kinematic range of
-    // s23 and the conditions.
+    // s23, the squared mass of p2 and the conditions.
     std::array<Value, 4> sampling_ranges(
         FunctionBuilder& fb,
         Value s23_min,
         Value s23_max,
+        Value m2_squared,
         const NamedVector<Value>& conditions
     ) const;
     Invariant _t_invariant;

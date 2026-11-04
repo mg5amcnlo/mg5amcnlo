@@ -85,9 +85,9 @@ std::vector<double> PdfSet::eval_pdf(
     // plain C++ loop over host memory; moved onto the context's own device
     // afterward if that isn't the CPU (matching how Tensor::cpu() moves the
     // other way for reading results back below).
-    madspace::Tensor x_tensor(madspace::DataType::dt_float, madspace::Sizes{count});
-    madspace::Tensor q_tensor(madspace::DataType::dt_float, madspace::Sizes{count});
-    madspace::Tensor idx_tensor(madspace::DataType::dt_int, madspace::Sizes{count});
+    madspace::Tensor x_tensor(madspace::DataType::dt_float64, madspace::Sizes{count});
+    madspace::Tensor q_tensor(madspace::DataType::dt_float64, madspace::Sizes{count});
+    madspace::Tensor idx_tensor(madspace::DataType::dt_int32, madspace::Sizes{count});
     auto x_view = x_tensor.view<double, 1>();
     auto q_view = q_tensor.view<double, 1>();
     auto idx_view = idx_tensor.view<madspace::me_int_t, 1>();
@@ -132,7 +132,7 @@ std::vector<double> PdfSet::eval_alpha_s(const std::vector<double>& q) const {
     if (count == 0) {
         return {};
     }
-    madspace::Tensor q_tensor(madspace::DataType::dt_float, madspace::Sizes{count});
+    madspace::Tensor q_tensor(madspace::DataType::dt_float64, madspace::Sizes{count});
     auto q_view = q_tensor.view<double, 1>();
     for (std::size_t i = 0; i < count; ++i) {
         q_view[i] = q[i];

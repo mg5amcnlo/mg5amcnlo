@@ -75,6 +75,7 @@ docs/build/
 # per-class API pages written by docs/generate_api_pages.py
 docs/source/madspace/cpp/
 docs/source/madspace/python/
+docs/source/pyamplicol/
 tests/input_files/IOTestsComparison_BackUp/
 tests/input_files/IOTestsComparison/**/*.BackUp
 

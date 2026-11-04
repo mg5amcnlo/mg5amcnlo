@@ -1,0 +1,37 @@
+{
+  "kind": "pyamplicol-process-groups",
+  "schema_version": 1,
+  "analyses": [],
+  "groups": [
+    {
+      "representative": {
+        "process_id": "d_dbar_to_z",
+        "process": "d d~ > z"
+      },
+      "members": [
+        {
+          "process_id": "d_dbar_to_z",
+          "process": "d d~ > z",
+          "pdgs": [
+            1,
+            -1,
+            23
+          ],
+          "initial_count": 2,
+          "factor": {
+            "numerator": 1,
+            "denominator": 1
+          },
+          "permutation": [
+            0,
+            1,
+            2
+          ],
+          "conjugated": false,
+          "basis": "identity",
+          "generated": true
+        }
+      ]
+    }
+  ]
+}

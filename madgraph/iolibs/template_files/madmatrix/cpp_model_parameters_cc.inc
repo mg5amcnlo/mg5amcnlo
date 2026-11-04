@@ -23,17 +23,7 @@ using namespace madmatrix;
 
 #ifndef MGONGPU_HARDCODE_PARAM
 
-// Initialize static instance
-Parameters* Parameters::instance = 0;
-
-// Function to get static instance - only one instance per program
-Parameters*
-Parameters::getInstance()
-{
-  if( instance == 0 )
-    instance = new Parameters();
-  return instance;
-}
+thread_local const Parameters* Parameters::current = nullptr;
 
 void
 Parameters::setIndependentParameters( SLHAReader& slha )

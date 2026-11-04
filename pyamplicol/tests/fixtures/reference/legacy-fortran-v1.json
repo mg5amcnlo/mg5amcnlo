@@ -1,0 +1,221 @@
+{
+  "cases": {
+    "builtin_sm_ddbar_z_full": {
+      "color_accuracy": "full",
+      "fortran_process_entry": {
+        "color_order": [
+          2,
+          1,
+          3
+        ],
+        "exact_external_order": true,
+        "group": 1,
+        "integral": 1,
+        "matching_row_count": 1,
+        "process_pdgs": [
+          1,
+          -1,
+          23
+        ],
+        "source_to_row_permutation": [
+          0,
+          1,
+          2
+        ]
+      },
+      "fortran_topology": {
+        "amplitudes": 1,
+        "color_orders": 1,
+        "currents": 4,
+        "vertices": 1
+      },
+      "max_resolved_relative_difference": 0.0,
+      "process": "d d~ > z",
+      "total": 142.1065337287299
+    },
+    "builtin_sm_ddbar_z_lc": {
+      "color_accuracy": "lc",
+      "fortran_process_entry": {
+        "color_order": [
+          2,
+          1,
+          3
+        ],
+        "exact_external_order": true,
+        "group": 1,
+        "integral": 1,
+        "matching_row_count": 1,
+        "process_pdgs": [
+          1,
+          -1,
+          23
+        ],
+        "source_to_row_permutation": [
+          0,
+          1,
+          2
+        ]
+      },
+      "fortran_topology": {
+        "amplitudes": 1,
+        "color_orders": 1,
+        "currents": 4,
+        "vertices": 1
+      },
+      "max_resolved_relative_difference": 2.1284067746028536e-16,
+      "process": "d d~ > z",
+      "total": 142.1065337287299
+    },
+    "builtin_sm_ddbar_z_nlc": {
+      "color_accuracy": "nlc",
+      "fortran_process_entry": {
+        "color_order": [
+          2,
+          1,
+          3
+        ],
+        "exact_external_order": true,
+        "group": 1,
+        "integral": 1,
+        "matching_row_count": 1,
+        "process_pdgs": [
+          1,
+          -1,
+          23
+        ],
+        "source_to_row_permutation": [
+          0,
+          1,
+          2
+        ]
+      },
+      "fortran_topology": {
+        "amplitudes": 1,
+        "color_orders": 1,
+        "currents": 4,
+        "vertices": 1
+      },
+      "max_resolved_relative_difference": 0.0,
+      "process": "d d~ > z",
+      "total": 142.1065337287299
+    },
+    "builtin_sm_ddbar_zg_full": {
+      "color_accuracy": "full",
+      "fortran_process_entry": {
+        "color_order": [
+          2,
+          3,
+          1,
+          4
+        ],
+        "exact_external_order": false,
+        "group": 1,
+        "integral": 1,
+        "matching_row_count": 1,
+        "process_pdgs": [
+          1,
+          -1,
+          21,
+          23
+        ],
+        "source_to_row_permutation": [
+          0,
+          1,
+          3,
+          2
+        ]
+      },
+      "fortran_topology": {
+        "amplitudes": 1,
+        "color_orders": 1,
+        "currents": 7,
+        "vertices": 4
+      },
+      "max_resolved_relative_difference": 8.809602410999885e-14,
+      "process": "d d~ > z g",
+      "total": 0.36154106787336965
+    },
+    "builtin_sm_ddbar_zg_lc": {
+      "color_accuracy": "lc",
+      "fortran_process_entry": {
+        "color_order": [
+          2,
+          3,
+          1,
+          4
+        ],
+        "exact_external_order": false,
+        "group": 1,
+        "integral": 1,
+        "matching_row_count": 1,
+        "process_pdgs": [
+          1,
+          -1,
+          21,
+          23
+        ],
+        "source_to_row_permutation": [
+          0,
+          1,
+          3,
+          2
+        ]
+      },
+      "fortran_topology": {
+        "amplitudes": 1,
+        "color_orders": 1,
+        "currents": 7,
+        "vertices": 4
+      },
+      "max_resolved_relative_difference": 8.826279974905955e-14,
+      "process": "d d~ > z g",
+      "total": 0.4067337013575408
+    },
+    "builtin_sm_ddbar_zg_nlc": {
+      "color_accuracy": "nlc",
+      "fortran_process_entry": {
+        "color_order": [
+          2,
+          3,
+          1,
+          4
+        ],
+        "exact_external_order": false,
+        "group": 1,
+        "integral": 1,
+        "matching_row_count": 1,
+        "process_pdgs": [
+          1,
+          -1,
+          21,
+          23
+        ],
+        "source_to_row_permutation": [
+          0,
+          1,
+          3,
+          2
+        ]
+      },
+      "fortran_topology": {
+        "amplitudes": 1,
+        "color_orders": 1,
+        "currents": 7,
+        "vertices": 4
+      },
+      "max_resolved_relative_difference": 8.809602410999885e-14,
+      "process": "d d~ > z g",
+      "total": 0.36154106787336965
+    }
+  },
+  "fixture": "physics-v1.json",
+  "fixture_sha256": "43173e8e527676fe9b26467e9f0b6b0d26cd323ecebcac69f56ce64a8b1a85ac",
+  "oracle": "legacy-fortran-amplicol-color-probe",
+  "patches": [],
+  "revision": "f3fdca35631c9405d28337a79cdab84994d8e414",
+  "schema_version": 1,
+  "tolerances": {
+    "absolute": 1e-15,
+    "relative": 1e-08
+  }
+}

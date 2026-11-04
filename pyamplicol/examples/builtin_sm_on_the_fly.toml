@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: 0BSD
+# Built-in Standard Model LC generation with compact on-the-fly execution.
+# Uses the wheel-owned prepared JIT O2 kernel pack at native f64 precision.
+
+schema_version = 1
+action = "generate"
+
+[model]
+source = "built-in-sm"
+
+[process]
+entries = [{ expression = "d d~ > z g g", name = "on_the_fly_zgg" }]
+
+[color]
+accuracy = "lc"
+
+[generation]
+output = "artifacts/builtin_sm_on_the_fly"
+mode = "error"
+emit_api_bundle = false
+
+[evaluator]
+execution_mode = "on-the-fly"
+backend = "jit"
+batch_size = 128
+
+[evaluator.optimization]
+# Query-construction request; numerical evaluation is not promised four threads.
+cores = 4
+
+[evaluator.jit]
+optimization_level = 2
+compress = false
+
+[output]
+progress = "auto"
+log_level = "info"

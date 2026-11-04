@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: 0BSD
+# Serialized spin-2 scalar-gravity model named "scalar_gravity".
+# `pyamplicol examples copy` materializes this model beside the card.
+
+schema_version = 1
+action = "generate"
+
+[model]
+source = "models/json/scalar_gravity/scalar_gravity.json"
+simplify = true
+
+[process]
+entries = [
+  { expression = "scalar_0 scalar_0 > graviton graviton", name = "scalar_gravity_2to2" },
+  { expression = "scalar_0 scalar_0 > 3*graviton", name = "scalar_gravity_2to3" },
+]
+
+[color]
+accuracy = "lc"
+
+[generation]
+output = "artifacts/external_json_scalar_gravity"
+emit_api_bundle = true
+
+[evaluator]
+backend = "jit"
+execution_mode = "compiled"

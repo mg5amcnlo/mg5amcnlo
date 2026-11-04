@@ -352,6 +352,7 @@ private:
     std::chrono::time_point<std::chrono::steady_clock> _last_print_time;
     PrettyBox _pretty_box_upper;
     PrettyBox _pretty_box_lower;
+    nested_vector2<std::string> _pretty_subproc_rows;
     std::shared_ptr<StatusFile> _status_file;
     nlohmann::json _trainings_status;
 };

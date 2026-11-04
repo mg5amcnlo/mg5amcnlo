@@ -1,0 +1,40 @@
+{
+  "available": true,
+  "error": null,
+  "kind": "pyamplicol-rusticol-validation-momenta",
+  "points": [
+    [
+      {
+        "momentum": [
+          "45.594000000000001",
+          "0",
+          "0",
+          "45.594000000000001"
+        ],
+        "pdg": 1
+      },
+      {
+        "momentum": [
+          "45.594000000000001",
+          "0",
+          "0",
+          "-45.594000000000001"
+        ],
+        "pdg": -1
+      },
+      {
+        "momentum": [
+          "91.188000000000002",
+          "0",
+          "0",
+          "0"
+        ],
+        "pdg": 23
+      }
+    ]
+  ],
+  "process": "d d~ > z",
+  "process_id": "d_dbar_to_z",
+  "schema_version": 1,
+  "seed": 12345
+}

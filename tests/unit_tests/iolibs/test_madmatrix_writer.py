@@ -14,6 +14,8 @@
 
 from __future__ import absolute_import
 
+import re
+
 import tests.unit_tests as unittest
 
 
@@ -177,3 +179,107 @@ class TestExternalWavefunctionCalls(unittest.TestCase):
         for ipar, call in enumerate(calls):
             self.assertIn('hel_sv[%d]' % ipar, call)
             self.assertNotIn('cHel[', call)
+            
+class TestPropagatorDenominators(unittest.TestCase):
+    """The propagator factor 'denom' of an off-shell routine.
+
+    A standard propagator calls madmatrix::denom, which computes only
+    P^2 - Re(m^2) in denominator precision (double for FPTYPE=v) and divides
+    at vertex precision; the coupling goes in with it. A routine assembled
+    from several Lorentz structures has one coupling per term, in the
+    numerator, so madmatrix::denom gets none. In the complex mass scheme the
+    mass is complex and carries the width. A custom denominator (axial gauge)
+    is still divided in denominator precision, on the momenta-only TMPs.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import madgraph.models.import_ufo as import_ufo
+        cls.model = import_ufo.import_model('sm', options={'apply_flavor_grouping': False})
+
+    def routines(self, request, complex_mass=False, gauge=True):
+        """{routine name: C++ definition} of the ALOHA routines of *request*
+        (the compute_subset format: Lorentz names, tags, off-shell leg) as
+        madmatrix writes them; *gauge* is aloha.unitary_gauge (2 is axial)."""
+        import aloha
+        import aloha.create_aloha as create_aloha
+        from madmatrix import model_handling
+        saved = (aloha.complex_mass, aloha.unitary_gauge, aloha.loop_mode)
+        aloha.complex_mass, aloha.unitary_gauge = complex_mass, gauge
+        try:
+            # explicit_combine as in write_aloha_routines outside of the FD gauge
+            aloha_model = create_aloha.AbstractALOHAModel.from_model(
+                self.model, explicit_combine=True)
+            aloha_model.add_Lorentz_object(self.model.get('lorentz'))
+            aloha_model.compute_subset(list(request))
+            text = '\n'.join(
+                routine.write(output_dir=None, mode='no_include',
+                              language=model_handling.MadMatrixALOHAWriter)[1]
+                for routine in dict(aloha_model).values())
+        finally:
+            aloha.complex_mass, aloha.unitary_gauge, aloha.loop_mode = saved
+        # a definition runs from its name, at the start of a line, to the next one
+        parts = re.split(r'\n  ([A-Za-z0-9_]+)\(', text)
+        return dict(zip(parts[1::2], parts[2::2]))
+
+    def test_standard_propagator(self):
+        """The coupling, the mass and the width go to madmatrix::denom, and the
+        wavefunction is denom times the numerator: no cId, nothing declared in
+        denominator precision and cast down afterwards."""
+        routines = self.routines([(('FFV2',), [], 3),         # Z
+                                  (('FFV1',), ['P0'], 3)])    # photon
+        for name in ('FFV2_3', 'FFV1P0_3'):
+            body = routines[name]
+            self.assertIn('const cxtype_amp_sv denom = '
+                          'madmatrix::denom( Ccoeff, COUP, dP3, M3, W3 );', body, name)
+            self.assertIn('wV3[0] = denom * ', body, name)
+            for old in ('cxtype_denom_sv denom', 'cId',
+                        'static_cast<cxtype_amp_sv>(denom)'):
+                self.assertNotIn(old, body, name)
+
+    def test_assembled_routine(self):
+        """The Z coupling to fermions is assembled from FFV2 and FFV4: the two
+        couplings multiply their own terms, and madmatrix::denom only gets the
+        momentum, the mass and the width."""
+        routines = self.routines([(('FFV2', 'FFV4'), [], 3),
+                                  (('FFV2', 'FFV4'), [], 1)])
+        body = routines['FFV2_4_3']
+        self.assertIn('const cxtype_amp_sv denom = madmatrix::denom( dP3, M3, W3 );', body)
+        self.assertIn('Ccoeff1 * static_cast<cxtype_amp_sv>( COUP1 )', body)
+        self.assertIn('Ccoeff2 * static_cast<cxtype_amp_sv>( COUP2 )', body)
+        self.assertIn('const cxtype_amp_sv denom = madmatrix::denom( dP1, M1, W1 );',
+                      routines['FFV2_4_1'])
+        # the two structures alone keep their coupling in the propagator
+        self.assertIn('madmatrix::denom( Ccoeff, COUP, dP3, M3, W3 )', routines['FFV2_3'])
+
+    def test_complex_mass_scheme(self):
+        """The mass is a cxtype that carries the width: madmatrix::denom gets it
+        and no width, with the coupling or without it."""
+        routines = self.routines([(('FFV2',), [], 3), (('FFV2', 'FFV4'), [], 3)],
+                                 complex_mass=True)
+        body = routines['FFV2_3']
+        self.assertIn('const cxtype & M3', body)
+        self.assertIn('const cxtype_amp_sv denom = '
+                      'madmatrix::denom( Ccoeff, COUP, dP3, M3 );', body)
+        self.assertIn('const cxtype_amp_sv denom = madmatrix::denom( dP3, M3 );',
+                      routines['FFV2_4_3'])
+        for name in ('FFV2_3', 'FFV2_4_3'):
+            self.assertNotIn('W3', routines[name], name)
+
+    def test_axial_gauge_custom_denominator(self):
+        """In axial gauge a massless vector has the custom denominator
+        (P.PBar) P^2: it does not go through madmatrix::denom, and it is
+        divided in denominator precision, on TMPs built from the double
+        momenta."""
+        routines = self.routines([(('VVV1',), ['P0'], 1), (('FFV1',), ['P0'], 3)],
+                                 gauge=2)
+        for name in ('VVV1P0_1', 'FFV1P0_3'):
+            body = routines[name]
+            self.assertNotIn('madmatrix::denom', body, name)
+            found = re.search(
+                r'const cxtype_amp_sv denom = static_cast<cxtype_amp_sv>\( '
+                r'static_cast<fptype_denom>\(Ccoeff\) \* static_cast<cxtype_denom_sv>\(COUP\)'
+                r' / \( \((dTMP\d+) \* (dTMP\d+)\) \) \);', body)
+            self.assertTrue(found, name)
+            for tmp in found.groups():
+                self.assertIn('const fptype_denom_sv %s = ' % tmp, body, name)

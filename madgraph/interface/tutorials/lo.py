@@ -45,11 +45,11 @@ def _mg7_bootstrap():
 
     Everything the tutorial wants to know about madspace goes through it, so
     the tutorial cannot disagree with the launcher about where madspace is or
-    whether it is there (see iolibs/template_files/mg7/bootstrap.py).
+    whether it is there (see madgraph/mg7/bootstrap.py).
     """
 
     try:
-        from madgraph.iolibs.template_files.mg7 import bootstrap
+        from madgraph.mg7 import bootstrap
     except Exception:
         return None
     return bootstrap
@@ -233,7 +233,7 @@ def _systematics_rows(info):
     if not info:
         return illustrative
     try:
-        from madgraph.iolibs.template_files.mg7 import systematics_summary
+        from madgraph.mg7 import systematics_summary
     except Exception:
         return illustrative
 

@@ -749,12 +749,12 @@ own and set the path to its library in the MadGraph7 option '%(p)s'.""" % {'p': 
                 logger.info("Wrote files for %d OPP calls" % \
                             (calls))
 
-        # Replace the amplitudes with the actual amplitudes from the
-        # matrix elements, which allows proper diagram drawing also of
-        # decay chain processes
-        self._curr_amps = diagram_generation.AmplitudeList(\
-               [me.get('base_amplitude') for me in \
-                matrix_elements])
+        # Keep self._curr_amps as generated: the 'base_amplitude' of a
+        # LoopHelasMatrixElement is rebuilt from its helas diagrams, without
+        # the loop tags and structure repository, so it cannot regenerate the
+        # matrix element of a later output (e.g. after 'set loop_color_flows').
+        # The tree-level replacement only serves decay chains, which loop
+        # processes do not support.
 
     def ML5finalize(self, nojpeg, online = False):
         """Copy necessary sources and output the ps representation of 

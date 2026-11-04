@@ -56,6 +56,9 @@ parser.add_option("","--web", action="store_true", default=False, dest='web', \
                  help='force to be in secure mode')
 parser.add_option("","--debug", action="store_true", default=False, dest='debug', \
                  help='force to launch debug mode')
+parser.add_option("","--allow-stdin", action="store_true", default=False, dest='allow_stdin',
+                  help='read the commands, or the answers to the questions, piped or redirected '
+                       'into stdin, as an interactive session: invalid "set" commands then only warn')
 parser_error = ''
 done = False
 for i in range(len(sys.argv)-1):
@@ -76,6 +79,53 @@ if not done:
 
 if len(args) == 0:
     args = ''
+
+def stdin_is_redirected():
+    """True when stdin is a pipe, a socket or a file, i.e. neither a terminal
+    nor a character device such as /dev/null (batch jobs)."""
+    import stat
+    try:
+        return not stat.S_ISCHR(os.fstat(sys.stdin.fileno()).st_mode)
+    except (OSError, ValueError, AttributeError):
+        return False
+
+def stdin_has_input():
+    """True when something is waiting on stdin. A forced (-f) run never reads
+    stdin, so a closed or idle pipe (CI runners, agents) is harmless there,
+    but piped answers would be silently dropped."""
+    import select
+    try:
+        if not select.select([sys.stdin], [], [], 0)[0]:
+            return False
+        return bool(os.read(sys.stdin.fileno(), 1))
+    except (OSError, ValueError, AttributeError):
+        return False
+
+def is_forced(args):
+    """True when the arguments ask for a forced run: -f, alone or among
+    combined short options (-fp), or --force."""
+    for arg in args:
+        if arg == '--force':
+            return True
+        # "-n myrun" may come as a single argument
+        option = (arg.split() or [''])[0]
+        if option.startswith('-') and not option.startswith('--') and 'f' in option[1:]:
+            return True
+    return False
+
+# Unless they come from a file, the commands, and the answers to the questions
+# of a command given on the command line, are read from stdin as in an
+# interactive session, where a command that cannot be applied (e.g. an invalid
+# "set") is only a warning: refuse that mode unless asked for, before the -O
+# re-execution below. treatcards is run by Source/makefile, which inherits the
+# stdin of the run that compiles.
+if not options.web and not options.allow_stdin and stdin_is_redirected() and \
+        not (args and (os.path.isfile(args[0]) or args[0] == 'treatcards')) and \
+        not (args and is_forced(args[1:]) and not stdin_has_input()):
+    sys.exit("Reading the commands or the answers to the questions from stdin is not "
+             "supported: write them to a file and run '%s PATH' instead, so that an "
+             "invalid command stops the run.\nUse --allow-stdin to read stdin as an "
+             "interactive session (invalid commands then only warn)." % sys.argv[0])
 
 import subprocess
 

@@ -2,7 +2,10 @@
 
 Same definition as madevent's boost_to_frame (Template/LO/SubProcesses/genps.f):
 the momenta of the particles listed in me_frame are summed up and every external
-momentum is boosted into the rest frame of that sum.
+momentum is boosted into the rest frame of that sum. For a collision that rest
+frame is reached by a boost along the beam, to zero rapidity of the sum
+(boost_to_zero_rapidity), and then a transverse one (boost_to_frame), so that
+it does not depend on the frame along the beam the momenta come in.
 """
 
 import math
@@ -71,12 +74,17 @@ def boost_momenta(momenta, frame):
     return out
 
 
-def run_boost(momenta, frame_mask):
+def run_boost(momenta, frame_mask, along_beam=False):
+    """boost_to_frame, after boost_to_zero_rapidity with the same mask if
+    along_beam -- the two steps MatrixElement applies for a collision"""
     fb = ms.FunctionBuilder(
         ms.NamedTypes([("p", ms.batch_four_vec_array(N_PARTICLES))]),
         ms.NamedTypes([("p_frame", ms.batch_four_vec_array(N_PARTICLES))]),
     )
-    fb.output(0, fb.boost_to_frame(fb.input(0), ms.Value(frame_mask)))
+    p = fb.input(0)
+    if along_beam:
+        p = fb.boost_to_zero_rapidity(p, ms.Value(frame_mask))
+    fb.output(0, fb.boost_to_frame(p, ms.Value(frame_mask)))
     runtime = ms.FunctionRuntime(fb.function())
     return torch.from_dlpack(runtime.call([momenta])[0])
 
@@ -148,21 +156,60 @@ def boost_z(momenta, rapidity):
 
 
 def test_frame_does_not_depend_on_the_frame_the_momenta_arrive_in(momenta):
-    """The two-step boost madspace applies -- first into the rest frame of the
-    incoming system, then into the me_frame one -- has to give the same
-    momenta whatever longitudinal boost the input carries. A single boost
-    straight to the target would not: boosts along different directions do not
-    compose into the boost between the end frames, and the leftover Wigner
-    rotation would rotate the polarisation axes."""
-    incoming = [1, 1, 0, 0, 0]
+    """The two-step boost madspace applies to a collision -- first along the
+    beam to zero rapidity of the selection, then into its rest frame -- has to
+    give the same momenta whatever longitudinal boost the input carries: lab,
+    partonic CM, or the frames aMC@NLO evaluates its real emission in. A single
+    boost straight to the target does not: boosts along different directions do
+    not compose into the boost between the end frames, and the leftover Wigner
+    rotation turns the spin axis of a single particle held at rest."""
     for frame in ([0, 0, 1, 0, 0], [0, 0, 1, 1, 0]):
-        reference = run_boost(run_boost(momenta, incoming), frame)
+        reference = run_boost(momenta, frame, along_beam=True)
+        scale = reference[:, :, 0].abs().amax(dim=1)[:, None, None]
         for rapidity in (-1.3, 0.7):
-            shifted = run_boost(run_boost(boost_z(momenta, rapidity), incoming), frame)
-            scale = reference[:, :, 0].abs().amax(dim=1)[:, None, None]
+            shifted = run_boost(boost_z(momenta, rapidity), frame, along_beam=True)
             torch.testing.assert_close(
                 shifted / scale, reference / scale, rtol=0, atol=1e-10
             )
+    # the single boost does depend on it
+    frame = [0, 0, 1, 0, 0]
+    single = run_boost(momenta, frame)
+    shifted = run_boost(boost_z(momenta, 0.7), frame)
+    assert ((shifted - single).abs() / scale).amax() > 1e-2
+
+
+def test_single_particle_frame_is_collins_soper(momenta):
+    """For a single particle the frame reached along the beam is the
+    Collins-Soper frame: its z axis bisects beam 1 and minus beam 2."""
+    result = run_boost(momenta, [0, 0, 1, 0, 0], along_beam=True)
+    assert torch.all(result[:, 2, 1:] == 0.0)
+    n1 = result[:, 0, 1:] / result[:, 0, 1:].norm(dim=1, keepdim=True)
+    n2 = -result[:, 1, 1:] / result[:, 1, 1:].norm(dim=1, keepdim=True)
+    bisector = n1 + n2
+    torch.testing.assert_close(
+        bisector[:, :2], torch.zeros_like(bisector[:, :2]), rtol=0, atol=1e-12
+    )
+    assert torch.all(bisector[:, 2] > 0)
+
+
+def test_zero_rapidity_boost_is_along_the_beam(momenta):
+    """boost_to_zero_rapidity leaves transverse momenta alone and brings the
+    selection to zero longitudinal momentum."""
+    p = momenta.clone()
+    fb = ms.FunctionBuilder(
+        ms.NamedTypes([("p", ms.batch_four_vec_array(N_PARTICLES))]),
+        ms.NamedTypes([("p_frame", ms.batch_four_vec_array(N_PARTICLES))]),
+    )
+    fb.output(0, fb.boost_to_zero_rapidity(fb.input(0), ms.Value([0, 0, 1, 1, 0])))
+    result = torch.from_dlpack(ms.FunctionRuntime(fb.function()).call([p])[0])
+    torch.testing.assert_close(result[:, :, 1:3], p[:, :, 1:3], rtol=0, atol=0)
+    scale = result[:, :, 0].abs().amax(dim=1)
+    torch.testing.assert_close(
+        result[:, 2:4, 3].sum(dim=1) / scale,
+        torch.zeros_like(scale),
+        rtol=0,
+        atol=1e-12,
+    )
 
 
 def test_boost_with_an_empty_frame_is_the_identity():
@@ -229,10 +276,18 @@ def test_matrix_element_emits_the_boost():
     assert matrix_element_graph([]).count("boost_to_frame") == 0
     # the rest frame of the incoming system is one boost away from the lab
     assert matrix_element_graph([1, 2]).count("boost_to_frame") == 1
+    assert matrix_element_graph([1, 2]).count("boost_to_zero_rapidity") == 0
     assert matrix_element_graph([1], incoming_count=1).count("boost_to_frame") == 1
-    # anything else is reached through it, never straight from the lab
-    assert matrix_element_graph([3]).count("boost_to_frame") == 2
-    assert matrix_element_graph([3, 4]).count("boost_to_frame") == 2
+    # any other frame of a collision is reached along the beam first, never
+    # straight from the lab
+    for frame in ([3], [3, 4]):
+        graph = matrix_element_graph(frame)
+        assert graph.count("boost_to_zero_rapidity") == 1
+        assert graph.count("boost_to_frame") == 1
+    # and a decay through the rest frame of the decaying particle
+    graph = matrix_element_graph([2], incoming_count=1)
+    assert graph.count("boost_to_zero_rapidity") == 0
+    assert graph.count("boost_to_frame") == 2
 
 
 def test_matrix_element_frame_mask():
@@ -248,10 +303,11 @@ def test_matrix_element_frame_mask():
 
 
 def test_matrix_element_reference_frame():
-    """Any other frame is reached from the rest frame of the incoming system."""
+    """A decay reaches any other frame from the rest frame of the decaying
+    particle; a collision has no reference frame, it goes along the beam."""
     me = matrix_element(me_frame=[3])
     assert list(me.frame_mask()) == [0, 0, 1, 0]
-    assert list(me.reference_mask()) == [1, 1, 0, 0]
+    assert list(me.reference_mask()) == []
 
     decay = matrix_element(me_frame=[2], incoming_count=1)
     assert list(decay.frame_mask()) == [0, 1, 0, 0]

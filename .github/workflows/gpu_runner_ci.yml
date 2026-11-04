@@ -3,7 +3,8 @@
 # Called by gpu_manneback_cuda.yml and gpu_lemaitre4_hip.yml; see .github/gpu_ci/README.md.
 #
 #   start_runner    vmadgraph       ask ceci-gate, on the vmadgraph VM, to sbatch the runner
-#                                   on the GPU partition; wait until it is online
+#                                   on the GPU partition; wait until it is online. If cancelled
+#                                   (or timed out, or failed) before that, scancel the runner job
 #   build_madspace  cluster runner  madspace with the CUDA/HIP backend (cached on the cluster)
 #   pp_ttx          cluster runner  p p > t t~ with mg7 on the GPU
 #   pp_jj           cluster runner  p p > j j with mg7 on the GPU (cuts on several jets)
@@ -26,7 +27,7 @@
 # The runner runs under a personal cluster account, hence:
 #   - the ssh key is not on GitHub: only the Unix user `ceci` of the vmadgraph VM holds it,
 #     and the CI reaches the cluster through /usr/local/sbin/ceci-gate (.github/gpu_ci/vm_gate),
-#     which checks with the GitHub API that the run is in progress, comes from
+#     which checks with the GitHub API that the run is not over, comes from
 #     gpu_lemaitre4_hip.yml or gpu_manneback_cuda.yml, and was started by a GitHub login or
 #     is on a branch listed on the VM (/etc/ceci-gate/allowed_actors, allowed_branches);
 #   - the runner refuses every job that is not part of the workflow run that started it
@@ -123,10 +124,18 @@ jobs:
       # ceci-gate starts the runner `runner_label` of the cluster (fixed in ceci-gate), with the
       # cluster scripts installed on the VM, not the ones of this checkout
       - name: start the runner in a Slurm job and wait until it is online
+        id: start
         run: |
           sudo -n -u ceci /usr/local/sbin/ceci-gate start-runner "$CLUSTER" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" \
             --partition="$PARTITION" --gres="$GRES" --cpus="$CPUS" --mem="$MEM" --time="$TIME_LIMIT" \
             --extra="$EXTRA_SBATCH"
+      # The run was cancelled, or this job timed out or failed, before the runner was online:
+      # stop_runner will not run, and the runner job could stay queued for hours (the partition
+      # is full), holding back every later run of the cluster (--dependency=singleton). Once the
+      # runner is online, stop_runner ends the allocation instead, even in a cancelled run.
+      - name: cancel the runner job
+        if: always() && steps.start.outcome != 'success'
+        run: sudo -n -u ceci /usr/local/sbin/ceci-gate cancel-runner "$CLUSTER" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"
 
   build_madspace:
     needs: start_runner
@@ -523,6 +532,14 @@ jobs:
             echo "::error::cannot watch the allocation of the runner through ceci-gate (is it up to date on the VM? .github/gpu_ci/README.md). If the allocation ends early, cancel this run by hand."
             exit 1
           fi
+          # ENDED is "JOBID STATE ...": a state of a job still alive is no end (an older
+          # remote_watch_runner.sh on the VM gave up on a job that squeue left out once)
+          STATE=${ENDED#* }
+          case ${STATE%% *} in
+            PENDING|CONFIGURING|RUNNING|SUSPENDED|COMPLETING|REQUEUED|RESIZING|SIGNALING|STAGE_OUT)
+              echo "::error::ceci-gate watch-runner returned while the runner job is still alive ($ENDED): not cancelling the run. Install remote_watch_runner.sh on the VM again (.github/gpu_ci/README.md); if the allocation ends early, cancel this run by hand."
+              exit 1 ;;
+          esac
           # the normal end: stop_runner completed, then runner_batch.sh stopped the runner
           for _ in $(seq 12); do
             STOP=$(printf 'Authorization: Bearer %s\n' "$GH_TOKEN" | # not on the command line
@@ -542,8 +559,12 @@ jobs:
       - name: cancel the run
         if: failure() && steps.watch.outputs.early == 'true'
         shell: bash
-        # force-cancel: a plain cancel would still queue stop_runner (if: always()) for the dead runner
+        # force-cancel: a plain cancel would still queue stop_runner (if: always()) for the dead runner.
+        # Before, while the run is not over (ceci-gate checks it), scancel the runner job in case
+        # it is still there: it would hold the runner, and the next runner job behind it
         run: |
+          sudo -n -u ceci /usr/local/sbin/ceci-gate cancel-runner "$CLUSTER" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" ||
+            echo "::warning::could not scancel the runner job; the next start_runner cancels it"
           printf 'Authorization: Bearer %s\n' "$GH_TOKEN" |
             curl -sS --fail --max-time 60 -X POST -H @- -H 'Accept: application/vnd.github+json' \
               "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/force-cancel"

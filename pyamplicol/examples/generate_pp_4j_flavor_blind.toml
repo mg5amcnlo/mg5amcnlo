@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: 0BSD
+# Flavour-blind built-in SM p p > j j j j at QED = 0 and leading color.
+# Generates 23 class representatives and records the other 463 of the 486
+# five-flavour subprocesses as callable members in process-groups.json.
+
+schema_version = 1
+action = "generate"
+
+[model]
+source = "built-in-sm"
+
+[process]
+entries = [{ expression = "p p > j j j j" }]
+# Omitted flavor_scheme keeps the default five massless quark flavours; the
+# model's default p and j multiparticles contain all of them and the gluon.
+# One representative per flavour-relabelling class is generated. Equal matrix
+# elements within a class are assumed, not verified; they hold for pure-QCD
+# jets with massless quarks, so this request produces no relabelling warning.
+flavor_blind = true
+# Also relate classes by charge conjugation (the default): 23 instead of 33
+# representatives.
+consider_charge_conjugation = true
+
+[process.max_coupling_orders]
+# Pure QCD: no photon, Z, or W exchange between the quark lines.
+QED = 0
+
+[color]
+accuracy = "lc"
+
+[generation]
+output = "artifacts/pp_4j_flavor_blind"
+mode = "error"
+emit_api_bundle = true
+
+[evaluator]
+# Omitted execution_mode uses recurrence over the wheel-owned prepared
+# JIT O2 kernels of the built-in model.
+backend = "jit"
+batch_size = 128
+
+[output]
+progress = "auto"
+log_level = "info"

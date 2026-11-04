@@ -94,6 +94,22 @@
 
   //--------------------------------------------------------------------------
 
+  // Compute the output wavefunction vc[6] from the input momenta[npar*4*nevt],
+  // in the axial gauge of the momentum of particle iref (see the definition)
+  template<class M_ACCESS, class W_ACCESS>
+  __host__ __device__ INLINE void
+  vxxxxxr( const fptype_momenta momenta[], // input: momenta
+           const fptype_amp vmass,     // input: vector boson mass
+           const fptype_amp_sv nhel, // input: -1, 0 (only if vmass!=0) or +1 (helicity of vector boson, per SIMD lane/GPU thread)
+           const int nsv,          // input: +1 (final) or -1 (initial)
+           const int flv,          // input: flavor index
+           ALOHAOBJ & vc,          // output: wavefunctions
+           const int ipar,         // input: particle# out of npar
+           const int iref          // input: particle# of the gauge reference momentum
+           ) ALWAYS_INLINE;
+
+  //--------------------------------------------------------------------------
+
   // Compute the output wavefunction sc[3] from the input momenta[npar*4*nevt]
   template<class M_ACCESS, class W_ACCESS>
   __host__ __device__ INLINE void
@@ -599,6 +615,75 @@
       w[2] = cxternary( mask, vcA_4, vcB_4 );
 #endif
     }
+    mgDebug( 1, __FUNCTION__ );
+    return;
+  }
+
+  //--------------------------------------------------------------------------
+
+  // Compute the output wavefunction vc[6] from the input momenta[npar*4*nevt],
+  // in the axial gauge of the momentum r of particle iref, i.e. with r.eps = 0.
+  // This is vxxxxx followed by the residual gauge transformation
+  //   eps'^mu = eps^mu - (r.eps)/(r.p) p^mu
+  // which, for a massless p, keeps eps'.p = 0, eps'.eps' = 0 and eps'.eps'* = -1
+  // and so returns the same helicity state up to a phase that cancels in |M|^2.
+  // With r the (lightlike) momentum of another external particle, eps.r = 0 and,
+  // for legs sharing r, eps_i.eps_j = 0 for same-helicity pairs: whole currents
+  // and amplitudes vanish for given helicities (arXiv:2312.07447).
+  // r is ignored for a massive vector and wherever r.p = 0, in particular when
+  // iref is ipar itself (see vxxxxxr in aloha_functions.f)
+  template<class M_ACCESS, class W_ACCESS>
+  __host__ __device__ void
+  vxxxxxr( const fptype_momenta momenta[], // input: momenta
+           const fptype_amp vmass,     // input: vector boson mass
+           const fptype_amp_sv nhel, // input: -1, 0 (only if vmass!=0) or +1 (helicity of vector boson, per SIMD lane/GPU thread)
+           const int nsv,          // input: +1 (final) or -1 (initial)
+           const int flv,          // input: flavour
+           ALOHAOBJ & vc,          // output: wavefunctions
+           const int ipar,         // input: particle# out of npar
+           const int iref )        // input: particle# of the gauge reference momentum
+  {
+    vxxxxx<M_ACCESS, W_ACCESS>( momenta, vmass, nhel, nsv, flv, vc, ipar );
+    // the shift is for the transverse helicities, the only ones of a massless vector
+    if( vmass != 0. || iref == ipar ) return;
+    mgDebug( 0, __FUNCTION__ );
+    const fptype_momenta_sv rm0 = M_ACCESS::kernelAccessIp4IparConst( momenta, 0, iref );
+    const fptype_momenta_sv rm1 = M_ACCESS::kernelAccessIp4IparConst( momenta, 1, iref );
+    const fptype_momenta_sv rm2 = M_ACCESS::kernelAccessIp4IparConst( momenta, 2, iref );
+    const fptype_momenta_sv rm3 = M_ACCESS::kernelAccessIp4IparConst( momenta, 3, iref );
+    // vc.pvec is nsv * p: the sign cancels between r.p and the shift along p.
+    // r.p of two lightlike momenta cancels between its terms when they are close
+    // to collinear, as p^2 does: it is made in the precision of the momenta (FP64
+    // in FPTYPE=v, as the propagator denominators), the shift in that of the amplitudes
+    const fptype_momenta_sv rdotp_mom = rm0 * vc.pvec[0] - rm1 * vc.pvec[1] - rm2 * vc.pvec[2] - rm3 * vc.pvec[3];
+    const fptype_amp_sv rdotp = fpamp_of_mom( rdotp_mom );
+    const fptype_amp_sv r0 = fpamp_of_mom( rm0 );
+    const fptype_amp_sv r1 = fpamp_of_mom( rm1 );
+    const fptype_amp_sv r2 = fpamp_of_mom( rm2 );
+    const fptype_amp_sv r3 = fpamp_of_mom( rm3 );
+    const fptype_amp_sv p0 = fpamp_of_mom( vc.pvec[0] );
+    const fptype_amp_sv p1 = fpamp_of_mom( vc.pvec[1] );
+    const fptype_amp_sv p2 = fpamp_of_mom( vc.pvec[2] );
+    const fptype_amp_sv p3 = fpamp_of_mom( vc.pvec[3] );
+    cxtype_amp_sv* w = W_ACCESS::kernelAccess( vc.w );
+    const cxtype_amp_sv rdote = w[0] * r0 - w[1] * r1 - w[2] * r2 - w[3] * r3;
+#ifndef MGONGPU_CPPSIMD
+    if( rdotp == 0. )
+    {
+      mgDebug( 1, __FUNCTION__ );
+      return;
+    }
+    const cxtype_amp_sv cfac = rdote / rdotp;
+#else
+    // as in vxxxxx: no division by zero in the lanes where r.p = 0 (#701), which keep eps
+    volatile fptype_amp_v rpDENOM = fpternary( rdotp != 0, rdotp, 1. );
+    const fptype_amp_v rpINV = fptype_amp( 1 ) / rpDENOM;
+    const cxtype_amp_v cfac = cxternary( rdotp != 0, rdote * rpINV, cxzero_sv() );
+#endif
+    w[0] = w[0] - cfac * p0;
+    w[1] = w[1] - cfac * p1;
+    w[2] = w[2] - cfac * p2;
+    w[3] = w[3] - cfac * p3;
     mgDebug( 1, __FUNCTION__ );
     return;
   }

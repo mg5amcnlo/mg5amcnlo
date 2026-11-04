@@ -290,6 +290,27 @@ matrix products. If your function relies on it, set ``OMP_NUM_THREADS=1``.
 The Python API behind these functions is ``madspace.PythonFunction``. It can also be used
 directly with madspace.
 
+.. _custom-function-surrogate:
+
+Python surrogates
+-----------------
+
+A Python surrogate of the matrix element (see :ref:`run-card-surrogate`) uses the same
+mechanism. Its file defines ``FRAMEWORK`` and ``custom_surrogate(momenta, pdg_ids,
+alpha_s)``, which returns :math:`|M|^2` as a float64 array of shape ``(batch,)``. It takes
+no parameters. ``momenta`` and ``pdg_ids`` have the shapes and types given above, with the
+momenta that the full matrix element gets, and ``alpha_s`` is a float64 array of shape
+``(batch,)``. The function is called for all subprocesses, which ``pdg_ids`` identifies:
+
+.. code-block:: python
+
+    import numpy as np
+
+    FRAMEWORK = "numpy"
+
+    def custom_surrogate(momenta, pdg_ids, alpha_s):
+        return np.ones(len(momenta))
+
 Examples
 --------
 

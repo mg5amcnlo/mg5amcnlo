@@ -1,0 +1,26 @@
+{
+  "kind": "pyamplicol-runtime-execution-set",
+  "processes": [
+    {
+      "manifest_path": "d_dbar_to_z/execution.json",
+      "process_id": "d_dbar_to_z",
+      "required_runtime_capabilities": [
+        "compiled-plane-arena-v1",
+        "rusticol.compiled.color-topology-lanes.v1",
+        "rusticol.compiled.helicity-dual-lane.v1",
+        "rusticol.compiled.helicity-selector-union.v1",
+        "rusticol.compiled.runtime-selectors.v1",
+        "symjit.application.complex-f64.v1"
+      ]
+    }
+  ],
+  "required_runtime_capabilities": [
+    "compiled-plane-arena-v1",
+    "rusticol.compiled.color-topology-lanes.v1",
+    "rusticol.compiled.helicity-dual-lane.v1",
+    "rusticol.compiled.helicity-selector-union.v1",
+    "rusticol.compiled.runtime-selectors.v1",
+    "symjit.application.complex-f64.v1"
+  ],
+  "schema_version": 3
+}

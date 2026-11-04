@@ -76,6 +76,7 @@ void madspace::to_json(nlohmann::json& j, const GeneratorStatus& status) {
         {"iters_without_improvement", status.iters_without_improvement},
         {"optimized", status.optimized},
         {"done", status.done},
+        {"count_invalid_step_values", status.count_invalid_step_values},
     };
 }
 
@@ -87,4 +88,28 @@ void madspace::to_json(nlohmann::json& j, const Histogram& hist) {
         {"bin_values", hist.bin_values},
         {"bin_errors", hist.bin_errors},
     };
+}
+
+StepChainResult madspace::evaluate_step_chain(
+    double weight0,
+    double max_weight0,
+    const double* ratios,
+    const double* max_weights,
+    const std::vector<StepSettings>& steps
+) {
+    double abs_weight0 = std::abs(weight0);
+    double acceptance = std::min(1., abs_weight0 / max_weight0);
+    double overweight = std::max(1., abs_weight0 / max_weight0);
+    double pending = std::copysign(1., weight0);
+    for (std::size_t i = 0; auto& step : steps) {
+        pending *= ratios[i];
+        if (step.unweight) {
+            double unweight_value = overweight * std::abs(pending);
+            acceptance *= std::min(1., unweight_value / max_weights[i]);
+            overweight = std::max(1., unweight_value / max_weights[i]);
+            pending = std::copysign(1., pending);
+        }
+        ++i;
+    }
+    return {acceptance, overweight * pending};
 }

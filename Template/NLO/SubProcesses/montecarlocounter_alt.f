@@ -1329,7 +1329,7 @@ c the same method
       double complex ximag
       parameter (ximag=(0.d0,1.d0))
 
-      double precision pboost(0:3)
+      double precision pboost(0:3,2)
       logical me_boosted
 
       double precision xi_i_fks_ev,y_ij_fks_ev,t

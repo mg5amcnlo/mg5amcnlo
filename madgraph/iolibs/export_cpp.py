@@ -2766,6 +2766,9 @@ class ProcessExporterCPP(VirtualExporter):
         
         #place holder to pass information to the run_interface
         self.proc_characteristic = banner_mod.ProcCharacteristic()    
+        output_options = self.opt.get('output_options')
+        self.proc_characteristic['density_matrix'] = \
+            isinstance(output_options, dict) and 'density' in output_options
 
     def copy_template(self, model):
         """Prepare export_dir as standalone_cpp directory, including:
@@ -3323,7 +3326,7 @@ def mg7_launcher_source(interpreter, mg5_dir):
           "    os.execv(_INTERPRETER, [_INTERPRETER,\n"
           "                            os.path.abspath(__file__)] + sys.argv[1:])\n"
         + "sys.path.append(%r)\n" % mg5_dir
-        + "from madgraph.iolibs.template_files.mg7.launch import main\n"
+        + "from madgraph.mg7.launch import main\n"
           "if __name__ == '__main__':\n"
           "    os.chdir(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))\n"
           "    try:\n"
@@ -3446,7 +3449,7 @@ class ProcessExporterMG7(ProcessExporterCPP):
                     "#! /usr/bin/env python3\n"
                     "import sys, os\n"
                     f"sys.path.append('{MG5DIR}')\n"
-                    "from madgraph.iolibs.template_files.mg7.npy_to_lhe import main\n"
+                    "from madgraph.mg7.npy_to_lhe import main\n"
                     "if __name__ == '__main__':\n"
                     "    main(me_dir=os.path.dirname(os.path.dirname(os.path.realpath(__file__))))\n"
                 )
@@ -3458,7 +3461,7 @@ class ProcessExporterMG7(ProcessExporterCPP):
                     "#! /usr/bin/env python3\n"
                     "import sys, os\n"
                     f"sys.path.append('{MG5DIR}')\n"
-                    "from madgraph.iolibs.template_files.mg7.init_custom_func import main\n"
+                    "from madgraph.mg7.init_custom_func import main\n"
                     "if __name__ == '__main__':\n"
                     "    sys.exit(main(me_dir=os.path.dirname(os.path.dirname(os.path.realpath(__file__)))))\n"
                 )
@@ -3585,6 +3588,7 @@ class ProcessExporterMG7(ProcessExporterCPP):
         return merged_subproc_info
 
     def finalize(self, matrix_elements=None, history='', *args, **kwargs):
+        self.export_amplicol()
         file_name = os.path.normpath(os.path.join(
             self.dir_path, "SubProcesses", "subprocesses.json"
         ))
@@ -3631,8 +3635,46 @@ class ProcessExporterMG7(ProcessExporterCPP):
 
     def pass_information_from_cmd(self, cmd):
         """Capture the process definitions from the command interface; needed to
-        generate the MadAnalysis5 default cards at output time."""
+        generate the MadAnalysis5 default cards at output time, and the
+        [amplicol] processes."""
         self.proc_defs = getattr(cmd, '_curr_proc_defs', None)
+        self.amplicol_defs = getattr(cmd, '_curr_amplicol_defs', None) or []
+        # without MG diagrams there is no madmatrix code to write or build
+        self.has_madmatrix = bool(cmd._curr_amps) or not self.amplicol_defs
+        self.amplicol_model = cmd._curr_model
+        self.amplicol_multiparticles = dict(getattr(cmd, '_multiparticles', {}))
+        # how pyamplicol is installed if it is missing
+        self.amplicol_install = {
+            'interactive': bool(getattr(cmd, 'use_rawinput', False)),
+            'jobs': getattr(cmd, 'options', {}).get('nb_core'),
+        }
+
+    def amplicol_processes(self):
+        """MG processes standing for the [amplicol] processes (built once: for
+        p p it is the product of all initial-state flavours)."""
+        if not getattr(self, 'amplicol_defs', None):
+            return []
+        cached = getattr(self, '_amplicol_processes', None)
+        if cached is None or cached[0] is not self.amplicol_defs:
+            import madgraph.iolibs.export_amplicol as export_amplicol
+            cached = (self.amplicol_defs, export_amplicol.representative_processes(
+                self.amplicol_defs, self.amplicol_model))
+            self._amplicol_processes = cached
+        return cached[1]
+
+    def export_amplicol(self):
+        """The [amplicol] processes, as subprocesses after the madmatrix ones."""
+        if not getattr(self, 'amplicol_defs', None):
+            return
+        import madgraph.iolibs.export_amplicol as export_amplicol
+        for entry in export_amplicol.export_amplicol_processes(
+                self.dir_path, self.amplicol_defs, self.amplicol_model,
+                self.amplicol_multiparticles,
+                **getattr(self, 'amplicol_install', {})):
+            # never merged with another subprocess
+            self.merged_subprocesses[('amplicol', len(self.process_info))].append(
+                (len(self.process_info), []))
+            self.process_info.append(entry)
 
     def create_ma5_default_cards(self, matrix_elements, history):
         """Call MadAnalysis5 to write process-tailored default analysis cards
@@ -3722,10 +3764,15 @@ class ProcessExporterMG7(ProcessExporterCPP):
                              for me in matrix_elements['matrix_elements']]
         except (KeyError, TypeError):
             processes = None
+        amplicol_procs = self.amplicol_processes()
+        amplicol = bool(amplicol_procs)
+        if amplicol:
+            processes = (processes or []) + [amplicol_procs]
 
         if processes:
             run_card.create_default_for_process(self.proc_characteristic,
-                                                history, processes)
+                                                history, processes,
+                                                amplicol=amplicol)
             # persist the model so the runtime can reload it: to compute the
             # widths set to 'auto' in the param_card (and recompute them at
             # each scan point) and to reset the parameters the model derives
@@ -3758,8 +3805,13 @@ class ProcessExporterMG7(ProcessExporterCPP):
         else:
             me_list = []
 
-        procs = []
-        qcd_orders = set()
+        procs = list(self.amplicol_processes())
+        amplicol_nexternal = max((len(p.get('legs')) for p in procs), default=0)
+        qcd_orders = set(entry['qcd_power'] for entry in self.process_info
+                         if entry.get('backend') == 'amplicol')
+        if procs:
+            pc['nexternal'] = max(pc['nexternal'], amplicol_nexternal)
+            pc['ninitial'] = 2
         for me in me_list:
             if not me.get('processes'):
                 continue

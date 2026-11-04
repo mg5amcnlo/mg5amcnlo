@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: 0BSD
+
+[package]
+name = "rusticol-capi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+build = "build.rs"
+
+[lib]
+name = "rusticol_capi"
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+rusticol-core = { path = "../rusticol-core", default-features = false, features = ["f64-compiled", "f64-symjit"] }
+serde_json.workspace = true

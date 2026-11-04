@@ -406,7 +406,7 @@ Tensor Context::cached_tensor(std::size_t size) {
         }
     }
     std::size_t word_count = (size + 7) / 8;
-    Tensor new_tensor(DataType::dt_float, {word_count}, device());
+    Tensor new_tensor(DataType::dt_float64, {word_count}, device());
     tensors.insert(tensors.begin() + size_pos, new_tensor);
     return new_tensor;
 }

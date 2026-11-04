@@ -8,102 +8,219 @@ namespace kernels {
 
 // Kernels
 
+// The activations are instantiated in float32 and float64. Literals are cast to
+// FVal<T> so that float32 code does not get promoted to double.
+//
+// Each activation is a struct with the value functions forward(x) and
+// backward(x, y, g), the latter the input gradient for the input x, the output y
+// and the output gradient g. The element-wise kernels and the matmuls with a fused
+// activation share them, so that both round alike.
+
+struct ReluActivation {
+    template <typename T>
+    static KERNELSPEC FVal<T> forward(FVal<T> x) {
+        using F = FVal<T>;
+        return where(x < F(0.), F(0.), x);
+    }
+    template <typename T>
+    static KERNELSPEC FVal<T> backward(FVal<T> x, FVal<T> y, FVal<T> g) {
+        using F = FVal<T>;
+        return where(x < F(0.), F(0.), g);
+    }
+};
+
+struct LeakyReluActivation {
+    template <typename T>
+    static KERNELSPEC FVal<T> forward(FVal<T> x) {
+        using F = FVal<T>;
+        return where(x < F(0.), x * F(0.01), x);
+    }
+    template <typename T>
+    static KERNELSPEC FVal<T> backward(FVal<T> x, FVal<T> y, FVal<T> g) {
+        using F = FVal<T>;
+        return where(x < F(0.), g * F(0.01), g);
+    }
+};
+
+struct EluActivation {
+    template <typename T>
+    static KERNELSPEC FVal<T> forward(FVal<T> x) {
+        using F = FVal<T>;
+        return where(x < F(0.), expm1(x), x);
+    }
+    template <typename T>
+    static KERNELSPEC FVal<T> backward(FVal<T> x, FVal<T> y, FVal<T> g) {
+        using F = FVal<T>;
+        return where(x < F(0.), g * exp(x), g);
+    }
+};
+
+struct GeluActivation {
+    template <typename T>
+    static KERNELSPEC FVal<T> forward(FVal<T> x) {
+        using F = FVal<T>;
+        return F(0.5) * x * (F(1.) + erf(F(SQRT_HALF) * x));
+    }
+    template <typename T>
+    static KERNELSPEC FVal<T> backward(FVal<T> x, FVal<T> y, FVal<T> g) {
+        using F = FVal<T>;
+        F cdf = F(0.5) * (F(1.) + erf(F(SQRT_HALF) * x));
+        F pdf = F(0.5 * SQRT_HALF * TWO_DIV_SQRT_PI) * exp(F(-0.5) * x * x);
+        return g * (cdf + x * pdf);
+    }
+};
+
+// the backward pass uses the output
+struct SigmoidActivation {
+    template <typename T>
+    static KERNELSPEC FVal<T> forward(FVal<T> x) {
+        using F = FVal<T>;
+        return F(1.) / (F(1.) + exp(-x));
+    }
+    template <typename T>
+    static KERNELSPEC FVal<T> backward(FVal<T> x, FVal<T> y, FVal<T> g) {
+        using F = FVal<T>;
+        return g * y * (F(1.) - y);
+    }
+};
+
+struct SoftplusActivation {
+    template <typename T>
+    static KERNELSPEC FVal<T> forward(FVal<T> x) {
+        using F = FVal<T>;
+        return where(x < F(20.), log1p(exp(x)), x);
+    }
+    template <typename T>
+    static KERNELSPEC FVal<T> backward(FVal<T> x, FVal<T> y, FVal<T> g) {
+        using F = FVal<T>;
+        F z = exp(x);
+        return where(x < F(20.), g * z / (F(1.) + z), g);
+    }
+};
+
 template <typename T>
 KERNELSPEC void kernel_relu(FIn<T, 0> input, FOut<T, 0> output) {
-    FVal<T> x(input);
-    output = where(x < 0., 0., x);
+    output = ReluActivation::forward<T>(FVal<T>(input));
 }
 
 template <typename T>
 KERNELSPEC void
 backward_kernel_relu(FIn<T, 0> input, FIn<T, 0> output_grad, FOut<T, 0> input_grad) {
-    FVal<T> x(input), g(output_grad);
-    input_grad = where(x < 0., 0., g);
+    FVal<T> x(input);
+    input_grad += ReluActivation::backward<T>(x, x, FVal<T>(output_grad));
 }
 
 template <typename T>
 KERNELSPEC void kernel_leaky_relu(FIn<T, 0> input, FOut<T, 0> output) {
-    FVal<T> x(input);
-    output = where(x < 0., x * 0.01, x);
+    output = LeakyReluActivation::forward<T>(FVal<T>(input));
 }
 
 template <typename T>
 KERNELSPEC void backward_kernel_leaky_relu(
     FIn<T, 0> input, FIn<T, 0> output_grad, FOut<T, 0> input_grad
 ) {
-    FVal<T> x(input), g(output_grad);
-    input_grad = where(x < 0., g * 0.01, g);
+    FVal<T> x(input);
+    input_grad += LeakyReluActivation::backward<T>(x, x, FVal<T>(output_grad));
 }
 
 template <typename T>
 KERNELSPEC void kernel_elu(FIn<T, 0> input, FOut<T, 0> output) {
-    FVal<T> x(input);
-    output = where(x < 0., expm1(x), x);
+    output = EluActivation::forward<T>(FVal<T>(input));
 }
 
 template <typename T>
 KERNELSPEC void
 backward_kernel_elu(FIn<T, 0> input, FIn<T, 0> output_grad, FOut<T, 0> input_grad) {
-    FVal<T> x(input), g(output_grad);
-    input_grad = where(x < 0., g * exp(x), g);
+    FVal<T> x(input);
+    input_grad += EluActivation::backward<T>(x, x, FVal<T>(output_grad));
 }
 
 template <typename T>
 KERNELSPEC void kernel_gelu(FIn<T, 0> input, FOut<T, 0> output) {
-    output = 0.5 * input * (1. + erf(SQRT_HALF * input));
+    output = GeluActivation::forward<T>(FVal<T>(input));
 }
 
 template <typename T>
 KERNELSPEC void
 backward_kernel_gelu(FIn<T, 0> input, FIn<T, 0> output_grad, FOut<T, 0> input_grad) {
-    FVal<T> x(input), g(output_grad);
-    auto cdf = 0.5 * (1. + erf(SQRT_HALF * x));
-    auto pdf = 0.5 * SQRT_HALF * TWO_DIV_SQRT_PI * exp(-0.5 * x * x);
-    input_grad = g * (cdf + x * pdf);
+    FVal<T> x(input);
+    input_grad += GeluActivation::backward<T>(x, x, FVal<T>(output_grad));
 }
 
 template <typename T>
 KERNELSPEC void kernel_sigmoid(FIn<T, 0> input, FOut<T, 0> output) {
-    FVal<T> x = input;
-    output = 1. / (1. + exp(-x));
+    output = SigmoidActivation::forward<T>(FVal<T>(input));
 }
 
 template <typename T>
 KERNELSPEC void backward_kernel_sigmoid(
     FIn<T, 0> output, FIn<T, 0> output_grad, FOut<T, 0> input_grad
 ) {
-    FVal<T> y(output), g(output_grad);
-    input_grad = g * y * (1. - y);
+    FVal<T> y(output);
+    input_grad += SigmoidActivation::backward<T>(y, y, FVal<T>(output_grad));
 }
 
 template <typename T>
 KERNELSPEC void kernel_softplus(FIn<T, 0> input, FOut<T, 0> output) {
-    FVal<T> x(input);
-    output = where(x < 20., log1p(exp(x)), x);
+    output = SoftplusActivation::forward<T>(FVal<T>(input));
 }
 
 template <typename T>
 KERNELSPEC void backward_kernel_softplus(
     FIn<T, 0> input, FIn<T, 0> output_grad, FOut<T, 0> input_grad
 ) {
-    FVal<T> x(input), g(output_grad);
-    auto z = exp(x);
-    input_grad = where(x < 20., g * z / (1. + z), g);
+    FVal<T> x(input);
+    input_grad += SoftplusActivation::backward<T>(x, x, FVal<T>(output_grad));
 }
 
 template <typename T>
 KERNELSPEC void kernel_scaled_tanh(FIn<T, 0> input, FOut<T, 0> output) {
-    FVal<T> x(input);
-    output = 4. * tanh(x / 4.);
+    using F = FVal<T>;
+    F x(input);
+    output = F(4.) * tanh(x / F(4.));
 }
 
 template <typename T>
 KERNELSPEC void backward_kernel_scaled_tanh(
     FIn<T, 0> output, FIn<T, 0> output_grad, FOut<T, 0> input_grad
 ) {
-    FVal<T> g(output_grad);
-    FVal<T> y_scaled = output / 4.;
-    input_grad = g * (1. - y_scaled) * (1. + y_scaled);
+    using F = FVal<T>;
+    F g(output_grad), y(output);
+    F y_scaled = y / F(4.);
+    input_grad += g * (F(1.) - y_scaled) * (F(1.) + y_scaled);
+}
+
+// Precision conversions. T is the policy of either precision; T::F32 and T::F64
+// select the two sides.
+
+template <typename T>
+KERNELSPEC void
+kernel_convert_float32(FIn<typename T::F64, 0> input, FOut<typename T::F32, 0> output) {
+    output = FVal<typename T::F32>(FVal<typename T::F64>(input));
+}
+
+template <typename T>
+KERNELSPEC void backward_kernel_convert_float32(
+    FIn<typename T::F64, 0> input,
+    FIn<typename T::F32, 0> output_grad,
+    FOut<typename T::F64, 0> input_grad
+) {
+    input_grad += FVal<typename T::F64>(FVal<typename T::F32>(output_grad));
+}
+
+template <typename T>
+KERNELSPEC void
+kernel_convert_float64(FIn<typename T::F32, 0> input, FOut<typename T::F64, 0> output) {
+    output = FVal<typename T::F64>(FVal<typename T::F32>(input));
+}
+
+template <typename T>
+KERNELSPEC void backward_kernel_convert_float64(
+    FIn<typename T::F32, 0> input,
+    FIn<typename T::F64, 0> output_grad,
+    FOut<typename T::F32, 0> input_grad
+) {
+    input_grad += FVal<typename T::F32>(FVal<typename T::F64>(output_grad));
 }
 
 template <typename T>
@@ -203,9 +320,13 @@ KERNELSPEC void backward_kernel_rqs_find_bin(
 }
 
 template <typename T>
-KERNELSPEC void kernel_rqs_forward(
-    FIn<T, 0> input, FIn<T, 1> condition, FOut<T, 0> output, FOut<T, 0> det
-) {
+struct RqsValues {
+    FVal<T> output;
+    FVal<T> det;
+};
+
+template <typename T>
+KERNELSPEC RqsValues<T> rqs_forward_values(FIn<T, 0> input, FIn<T, 1> condition) {
     FVal<T> width(condition[0]), height(condition[1]);
     FVal<T> cumwidth(condition[2]), cumheight(condition[3]);
     FVal<T> derivative_unorm(condition[4]), derivative_plus_one_unorm(condition[5]);
@@ -240,20 +361,46 @@ KERNELSPEC void kernel_rqs_forward(
     auto denominator =
         delta + (derivative + derivative_plus_one - two_delta) * theta_one_minus_theta;
     auto out = cumheight + numerator / denominator;
-    output = where(clamp, input, out);
+    FVal<T> output_value = where(clamp, input, out);
 
     auto derivative_numerator = delta * delta *
         (derivative_plus_one * theta_theta + two_delta * theta_one_minus_theta +
          derivative * one_minus_theta * one_minus_theta);
-    det = where(clamp, 1., derivative_numerator / (denominator * denominator));
+    FVal<T> det_value =
+        where(clamp, 1., derivative_numerator / (denominator * denominator));
+    return {output_value, det_value};
 }
 
 template <typename T>
-KERNELSPEC void backward_kernel_rqs_forward(
+KERNELSPEC void kernel_rqs_forward(
+    FIn<T, 0> input, FIn<T, 1> condition, FOut<T, 0> output, FOut<T, 0> det
+) {
+    auto result = rqs_forward_values<T>(input, condition);
+    output = result.output;
+    det = result.det;
+}
+
+// the same, with the output also written in single precision
+template <typename T>
+KERNELSPEC void kernel_rqs_forward_with_float32(
     FIn<T, 0> input,
     FIn<T, 1> condition,
-    FIn<T, 0> output_grad,
-    FIn<T, 0> det_grad,
+    FOut<T, 0> output,
+    FOut<T, 0> det,
+    FOut<typename T::F32, 0> output32
+) {
+    auto result = rqs_forward_values<T>(input, condition);
+    output = result.output;
+    det = result.det;
+    output32 = FVal<typename T::F32>(result.output);
+}
+
+template <typename T>
+KERNELSPEC void backward_rqs_forward_impl(
+    FIn<T, 0> input,
+    FIn<T, 1> condition,
+    FVal<T> output_grad,
+    FVal<T> det_grad,
     FOut<T, 0> input_grad,
     FOut<T, 1> condition_grad
 ) {
@@ -386,9 +533,47 @@ KERNELSPEC void backward_kernel_rqs_forward(
 }
 
 template <typename T>
-KERNELSPEC void kernel_rqs_inverse(
-    FIn<T, 0> input, FIn<T, 1> condition, FOut<T, 0> output, FOut<T, 0> det
+KERNELSPEC void backward_kernel_rqs_forward(
+    FIn<T, 0> input,
+    FIn<T, 1> condition,
+    FIn<T, 0> output_grad,
+    FIn<T, 0> det_grad,
+    FOut<T, 0> input_grad,
+    FOut<T, 1> condition_grad
 ) {
+    backward_rqs_forward_impl<T>(
+        input,
+        condition,
+        FVal<T>(output_grad),
+        FVal<T>(det_grad),
+        input_grad,
+        condition_grad
+    );
+}
+
+// the gradient of the single-precision copy of the output adds to the output gradient
+template <typename T>
+KERNELSPEC void backward_kernel_rqs_forward_with_float32(
+    FIn<T, 0> input,
+    FIn<T, 1> condition,
+    FIn<T, 0> output_grad,
+    FIn<T, 0> det_grad,
+    FIn<typename T::F32, 0> output32_grad,
+    FOut<T, 0> input_grad,
+    FOut<T, 1> condition_grad
+) {
+    backward_rqs_forward_impl<T>(
+        input,
+        condition,
+        FVal<T>(output_grad) + FVal<T>(FVal<typename T::F32>(output32_grad)),
+        FVal<T>(det_grad),
+        input_grad,
+        condition_grad
+    );
+}
+
+template <typename T>
+KERNELSPEC RqsValues<T> rqs_inverse_values(FIn<T, 0> input, FIn<T, 1> condition) {
     FVal<T> height(condition[0]), width(condition[1]);
     FVal<T> cumheight(condition[2]), cumwidth(condition[3]);
     FVal<T> derivative_unorm(condition[4]), derivative_plus_one_unorm(condition[5]);
@@ -422,7 +607,7 @@ KERNELSPEC void kernel_rqs_inverse(
     auto discriminant = b * b + 4. * a * c;
     auto theta = 2. * c / (b + sqrt(discriminant));
     auto out = cumwidth + theta * width;
-    output = where(clamp, input, out);
+    FVal<T> output_value = where(clamp, input, out);
 
     auto one_minus_theta = 1. - theta;
     auto theta_one_minus_theta = theta * one_minus_theta;
@@ -430,15 +615,41 @@ KERNELSPEC void kernel_rqs_inverse(
     auto derivative_numerator = delta * delta *
         (derivative_plus_one * theta * theta + two_delta * theta_one_minus_theta +
          derivative * one_minus_theta * one_minus_theta);
-    det = where(clamp, 1., denominator * denominator / derivative_numerator);
+    FVal<T> det_value =
+        where(clamp, 1., denominator * denominator / derivative_numerator);
+    return {output_value, det_value};
 }
 
 template <typename T>
-KERNELSPEC void backward_kernel_rqs_inverse(
+KERNELSPEC void kernel_rqs_inverse(
+    FIn<T, 0> input, FIn<T, 1> condition, FOut<T, 0> output, FOut<T, 0> det
+) {
+    auto result = rqs_inverse_values<T>(input, condition);
+    output = result.output;
+    det = result.det;
+}
+
+// the same, with the output also written in single precision
+template <typename T>
+KERNELSPEC void kernel_rqs_inverse_with_float32(
     FIn<T, 0> input,
     FIn<T, 1> condition,
-    FIn<T, 0> output_grad,
-    FIn<T, 0> det_grad,
+    FOut<T, 0> output,
+    FOut<T, 0> det,
+    FOut<typename T::F32, 0> output32
+) {
+    auto result = rqs_inverse_values<T>(input, condition);
+    output = result.output;
+    det = result.det;
+    output32 = FVal<typename T::F32>(result.output);
+}
+
+template <typename T>
+KERNELSPEC void backward_rqs_inverse_impl(
+    FIn<T, 0> input,
+    FIn<T, 1> condition,
+    FVal<T> output_grad,
+    FVal<T> det_grad,
     FOut<T, 0> input_grad,
     FOut<T, 1> condition_grad
 ) {
@@ -598,6 +809,46 @@ KERNELSPEC void backward_kernel_rqs_inverse(
     condition_grad[3] = where(clamp, 0., grad_cumwidth);
     condition_grad[4] = where(clamp, 0., grad_derivative_unorm);
     condition_grad[5] = where(clamp, 0., grad_derivative_plus_one_unorm);
+}
+
+template <typename T>
+KERNELSPEC void backward_kernel_rqs_inverse(
+    FIn<T, 0> input,
+    FIn<T, 1> condition,
+    FIn<T, 0> output_grad,
+    FIn<T, 0> det_grad,
+    FOut<T, 0> input_grad,
+    FOut<T, 1> condition_grad
+) {
+    backward_rqs_inverse_impl<T>(
+        input,
+        condition,
+        FVal<T>(output_grad),
+        FVal<T>(det_grad),
+        input_grad,
+        condition_grad
+    );
+}
+
+// the gradient of the single-precision copy of the output adds to the output gradient
+template <typename T>
+KERNELSPEC void backward_kernel_rqs_inverse_with_float32(
+    FIn<T, 0> input,
+    FIn<T, 1> condition,
+    FIn<T, 0> output_grad,
+    FIn<T, 0> det_grad,
+    FIn<typename T::F32, 0> output32_grad,
+    FOut<T, 0> input_grad,
+    FOut<T, 1> condition_grad
+) {
+    backward_rqs_inverse_impl<T>(
+        input,
+        condition,
+        FVal<T>(output_grad) + FVal<T>(FVal<typename T::F32>(output32_grad)),
+        FVal<T>(det_grad),
+        input_grad,
+        condition_grad
+    );
 }
 
 template <typename T>

@@ -1,0 +1,304 @@
+{
+  "schema": "pyamplicol-on-the-fly-query-parity-fixture-v1",
+  "provenance": {
+    "architecture_base_commit": "f986acf61e6807b74453b5ad7e7793b73082ee30",
+    "selected_generic_dag_oracle_commit": "2312b1137c7e2f3d6bdf9064a902592c16bac58c",
+    "ownership_oracle_commit": "cf8de3820152be262bafc6f93e5af9a6f423b271",
+    "scaling_oracle_commit": "dc171ac357c2817465f20baf3ff0efa91086b53a",
+    "numerical_authority": "retained authenticated recurrence runtime plus selected-GenericDAG p32 interpreter",
+    "digest_contract": "sha256 of the sorted canonical-JSON selected-GenericDAG semantic row multiset"
+  },
+  "massless_2_to_3_point": {
+    "sha256": "3be3d02aa9d9932332e461a7dfd874cd97e0305f7a148119dc5a5acc760aa84b",
+    "momenta": [
+      [500.0, 0.0, 0.0, 500.0],
+      [500.0, 0.0, 0.0, -500.0],
+      [333.3333333333333, 333.3333333333333, 0.0, 0.0],
+      [333.3333333333333, -166.66666666666666, 288.67513459481285, 0.0],
+      [333.3333333333333, -166.66666666666666, -288.67513459481285, 0.0]
+    ]
+  },
+  "selected_queries": [
+    {
+      "name": "scalar_contact",
+      "process": "h h > h h",
+      "coupling_limits": {"QCD": 0, "QED": 2},
+      "flow_rank": "0",
+      "flow_id": "flow:singlet",
+      "helicity_rank": "0",
+      "helicity_id": "h:+0,+0,+0,+0",
+      "current_count": 11,
+      "contribution_count": 12,
+      "closure_count": 1,
+      "contribution_multiset_sha256": "871b91602e6883c887a89a979578d41ee05f9d7ff06c643eb57084bffbc84213",
+      "closure_multiset_sha256": "b440504ec358c7c49df1c0b782dc716d0d4af40d7a7394beaeb850f5634c81a4"
+    },
+    {
+      "name": "pure_gluon_n5",
+      "process": "g g > g g g",
+      "coupling_limits": {"QCD": 3, "QED": 0},
+      "flow_rank": "0",
+      "flow_id": "flow:1,2,3,4,5",
+      "helicity_rank": "0",
+      "helicity_id": "h:-1,-1,-1,-1,-1",
+      "current_count": 16,
+      "contribution_count": 25,
+      "closure_count": 1,
+      "contribution_multiset_sha256": "34926d54a299c6610de4c76384b6f8c4b7cbc8f076063d5a484f5a6822168102",
+      "closure_multiset_sha256": "345db39a6f134b4870c5207573630e299d61208ecd2ac9c9aef766a2044b06a3",
+      "selected_generic_dag_p32": "0.00004178069796309911254363311176",
+      "retained_recurrence_p32": "0.000041780697963098513001361030334541",
+      "retained_recurrence_f64_bits": "0x3f05e7b5d9d0f228",
+      "maximum_relative_residual": "2e-13"
+    },
+    {
+      "name": "one_open_line_n5",
+      "process": "u u~ > g g g",
+      "coupling_limits": {"QCD": 3, "QED": 0},
+      "flow_rank": "0",
+      "flow_id": "flow:2,3,4,5,1",
+      "helicity_rank": "9",
+      "helicity_id": "h:-1,+1,-1,-1,+1",
+      "current_count": 13,
+      "contribution_count": 14,
+      "closure_count": 1,
+      "contribution_multiset_sha256": "55fda24e1598a7125fdbda55b1e826f41ddcc0d991c25f844bc18159fcdbf5f5",
+      "closure_multiset_sha256": "2d29f0645b17d6bd55bfb2d0e44bbb503b2190f3bfb02e93f45fb2e1aa8e4024",
+      "selected_generic_dag_p32": "0.000001222663314878072887698934878",
+      "retained_recurrence_p32": "0.0000012226633148780577574738566420466",
+      "retained_recurrence_f64_bits": "0x3eb4834c88148d10",
+      "maximum_relative_residual": "2e-13"
+    },
+    {
+      "name": "three_distinct_open_lines_n6",
+      "process": "d d~ > u u~ s s~",
+      "coupling_limits": {"QCD": 4, "QED": 0},
+      "flow_rank": "0",
+      "flow_id": "flow:2,1,3,4,5,6",
+      "helicity_rank": "21",
+      "helicity_id": "h:-1,+1,-1,+1,-1,+1",
+      "current_count": 18,
+      "contribution_count": 16,
+      "closure_count": 2,
+      "contribution_multiset_sha256": "effc6a982369541b23bd804b3f293b914b26e3fa6e7396675452249a43f6162b",
+      "closure_multiset_sha256": "415aab2f7875fab2760cd1b959696c708dd69ea864a88de1f660dcedee2957e0",
+      "owner_multiset_sha256": "1b8a2d2fbdbd3b10303f0d7684c85db815fd91bc47c1dfa8ffb8ef18169234a5"
+    },
+    {
+      "name": "three_identical_open_lines_n6",
+      "process": "d d~ > u u~ u u~",
+      "coupling_limits": {"QCD": 4, "QED": 0},
+      "flow_rank": "0",
+      "flow_id": "flow:2,1,3,4,5,6",
+      "helicity_rank": "19",
+      "helicity_id": "h:-1,+1,-1,-1,+1,+1",
+      "current_count": 15,
+      "contribution_count": 11,
+      "closure_count": 2,
+      "contribution_multiset_sha256": "ea86aa72b8d08672672cfccecb8ddcb7fa7057338a344378a91eec47837c7cab",
+      "closure_multiset_sha256": "02bb77b2b2fd5884ab9e5db033e02c5bc8a38b7d30964094cad4993bb839b13a",
+      "owner_multiset_sha256": "e6cc180248ad8a3f39196a726aba76018b1ffb3dc01bb18e55b9d9eefcad58ab"
+    },
+    {
+      "name": "three_identical_open_lines_exchange_n6",
+      "process": "d d~ > u u~ u u~",
+      "coupling_limits": {
+        "QCD": 4,
+        "QED": 0
+      },
+      "flow_rank": "2",
+      "flow_id": "flow:2,4,3,1,5,6",
+      "helicity_rank": "19",
+      "helicity_id": "h:-1,+1,-1,-1,+1,+1",
+      "current_count": 13,
+      "contribution_count": 10,
+      "closure_count": 1,
+      "contribution_multiset_sha256": "30082ef8c2d305d1ddc2370b28ff041e2d7cf22b2ab7419d41f667f3b4762c63",
+      "closure_multiset_sha256": "3be9bd544b4aa157bc08c597bb2f9fbcd43e0e3c649d75921bcdc01b38071ebe",
+      "owner_multiset_sha256": "6ccdfc73ac4efdf43f0c6d7556b6fe7e882be02567bc328b3f1d0d30865f0fb5",
+      "negative_evaluation_factor_count": 1,
+      "negative_evaluation_factor_multiset_sha256": "427fbcf7b8fc983357aa0106fef6f01f98493ba24354f4dde20403d6df928739"
+    }
+  ],
+  "reduction_contracts": [
+    {
+      "process": "h h > h h",
+      "color_factor": 1,
+      "average_factor": 4,
+      "identical_factor": 2,
+      "qcd_coupling_power": 0,
+      "electroweak_coupling_power": 4,
+      "global_coupling_factor": "0.0012942082163584319"
+    },
+    {
+      "process": "g g > g g g",
+      "color_factor": 243,
+      "average_factor": 256,
+      "identical_factor": 6,
+      "qcd_coupling_power": 3,
+      "electroweak_coupling_power": 0,
+      "global_coupling_factor": "3.260435506341527"
+    },
+    {
+      "process": "u u~ > g g g",
+      "color_factor": 81,
+      "average_factor": 36,
+      "identical_factor": 6,
+      "qcd_coupling_power": 3,
+      "electroweak_coupling_power": 0,
+      "global_coupling_factor": "3.260435506341527"
+    },
+    {
+      "process": "d d~ > u u~ s s~",
+      "color_factor": 27,
+      "average_factor": 36,
+      "identical_factor": 1,
+      "qcd_coupling_power": 4,
+      "electroweak_coupling_power": 0,
+      "global_coupling_factor": "4.834677230554605"
+    },
+    {
+      "process": "d d~ > u u~ u u~",
+      "color_factor": 27,
+      "average_factor": 36,
+      "identical_factor": 4,
+      "qcd_coupling_power": 4,
+      "electroweak_coupling_power": 0,
+      "global_coupling_factor": "4.834677230554605"
+    }
+  ],
+  "small_domain_exhaustive_oracles": [
+    {
+      "process": "g g > g g",
+      "query_count": 96,
+      "structural_zero_count": 0,
+      "maximum_current_count": 9,
+      "maximum_contribution_count": 8,
+      "maximum_closure_count": 1,
+      "aggregate_sha256": "6281e91a1ddf5913bd4e8658d56b6cbb8bbb668dab4d5d727786bbab53034376"
+    },
+    {
+      "process": "u u~ > g g",
+      "query_count": 32,
+      "structural_zero_count": 16,
+      "maximum_current_count": 7,
+      "maximum_contribution_count": 4,
+      "maximum_closure_count": 1,
+      "aggregate_sha256": "c2f1c25205461cb52409e51e42ef31597bbc354ef432955245b7ed4386d297b1"
+    },
+    {
+      "process": "d d~ > u u~ s s~",
+      "query_count": 384,
+      "structural_zero_count": 336,
+      "maximum_current_count": 18,
+      "maximum_contribution_count": 16,
+      "maximum_closure_count": 2,
+      "aggregate_sha256": "93ff051e1380d329572f459e48b3d13ac691d32da0532fcb8c65651d57c978a9"
+    },
+    {
+      "process": "d d~ > u u~ u u~",
+      "query_count": 384,
+      "structural_zero_count": 312,
+      "maximum_current_count": 20,
+      "maximum_contribution_count": 22,
+      "maximum_closure_count": 2,
+      "aggregate_sha256": "80ae8c05d44d0922f03b43e74c9fa065fe1380b4160ef40619365fd16cd0a258"
+    }
+  ],
+  "structural_scale_queries": [
+    {
+      "name": "pure_gluon_n7_first",
+      "process": "g g > g g g g g",
+      "flow_cardinality": "720",
+      "helicity_cardinality": "128",
+      "flow_rank": "0",
+      "helicity_rank": "0",
+      "current_count": 36,
+      "contribution_count": 105,
+      "closure_count": 1,
+      "peak_query_rows": 141,
+      "contribution_multiset_sha256": "db65f1f25b63d9748295aaa4f756a49ea46c60aad64fcba18cb306193637185b",
+      "closure_multiset_sha256": "f4ef144f5450601956c0fcc51afce5f698918bb6746251d12e830834eb7eda11"
+    },
+    {
+      "name": "pure_gluon_n8_first",
+      "process": "g g > g g g g g g",
+      "flow_cardinality": "5040",
+      "helicity_cardinality": "256",
+      "flow_rank": "0",
+      "helicity_rank": "0",
+      "current_count": 49,
+      "contribution_count": 176,
+      "closure_count": 1,
+      "peak_query_rows": 225,
+      "contribution_multiset_sha256": "79c27773475fa4543c10df44e3371f7abbd2a27f340196e4275a403fc13aba4a",
+      "closure_multiset_sha256": "e68bb34e7da958e3e45e9194c6691eef4a36d399a11d77da8c303411f5f54c85"
+    },
+    {
+      "name": "pure_gluon_n10_first",
+      "process": "g g > g g g g g g g g",
+      "flow_cardinality": "362880",
+      "helicity_cardinality": "1024",
+      "flow_rank": "0",
+      "helicity_rank": "0",
+      "current_count": 81,
+      "contribution_count": 400,
+      "closure_count": 1,
+      "peak_query_rows": 481,
+      "contribution_multiset_sha256": "d5fb390f78bb4050a03383b0198273ff56f10810d513cb28aa20153d4ff0d356",
+      "closure_multiset_sha256": "8a26d3b1e89796fe640a064d4d62aa6653149ed121b0ef380001dc6526197f18"
+    },
+    {
+      "name": "one_open_line_n7_first_nonzero",
+      "process": "u u~ > g g g g g",
+      "flow_cardinality": "120",
+      "helicity_cardinality": "128",
+      "flow_rank": "0",
+      "helicity_rank": "33",
+      "current_count": 31,
+      "contribution_count": 71,
+      "closure_count": 1,
+      "peak_query_rows": 102,
+      "contribution_multiset_sha256": "49644bb28ced5658e80a2a5262d8ce404d4b0fd3ccac4aaf8fef2c870b4036f6",
+      "closure_multiset_sha256": "4665272ed07d193d107400aaf17812f7c6ed861017468360b5d5d12b49c23d7a"
+    },
+    {
+      "name": "one_open_line_n8_first_nonzero",
+      "process": "u u~ > g g g g g g",
+      "flow_cardinality": "720",
+      "helicity_cardinality": "256",
+      "flow_rank": "0",
+      "helicity_rank": "65",
+      "current_count": 43,
+      "contribution_count": 126,
+      "closure_count": 1,
+      "peak_query_rows": 169,
+      "contribution_multiset_sha256": "b51c1dc874e9fea6feaffdfe941c0aef9b982e53dc337726776201481986b8c0",
+      "closure_multiset_sha256": "8b996826605c4f10387d838e0256bb03455f13fa65d0fc97966bdd0dbb5b5dc3"
+    },
+    {
+      "name": "one_open_line_n10_first_nonzero",
+      "process": "u u~ > g g g g g g g g",
+      "flow_cardinality": "40320",
+      "helicity_cardinality": "1024",
+      "flow_rank": "0",
+      "helicity_rank": "257",
+      "current_count": 73,
+      "contribution_count": 309,
+      "closure_count": 1,
+      "peak_query_rows": 382,
+      "contribution_multiset_sha256": "adf783e0ddfabbbd3e59befd84a938c5f79dff7aff8d68fb615338909d525202",
+      "closure_multiset_sha256": "ff80c07b33dd9675d2c6d5606e52a23db367403cc04da387e8fcf3ea6ffc47ad"
+    }
+  ],
+  "forbidden_global_boundaries": [
+    "build_color_plan",
+    "Generator._prepare_process_construction",
+    "project_recurrence_process_v1",
+    "build_recurrence_builder_input_v1",
+    "build_recurrence_physics",
+    "build_replay_targets",
+    "finish_program",
+    "DirectRecurrencePlan"
+  ]
+}
