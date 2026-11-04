@@ -785,7 +785,8 @@ void ChannelEventGenerator::clear_events() {
 }
 
 void ChannelEventGenerator::update_max_weight(Tensor weights, bool unweight) {
-    // not the written events, they are committed in a thread dependent order
+    // _freeze_count rather than the written events, which arrive in thread-dependent
+    // order.
     if (_max_weight_fixed || _freeze_count > _config.freeze_max_weight_after) {
         return;
     }

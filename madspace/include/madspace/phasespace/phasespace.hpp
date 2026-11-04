@@ -30,8 +30,9 @@ namespace madspace {
  * @f]
  *
  * The time-like invariants are sampled with @ref Invariant, the s-channel
- * decays with @ref TwoBodyDecay / @ref ThreeBodyDecay, and the PDF convolution
- * with @ref Luminosity. @ref TChannelMode selects the t-channel strategy. The
+ * decays with @ref TwoBodyDecay / @ref ThreeBodyDecay (@ref FastRamboMapping
+ * for more children), and the PDF convolution with the @ref Luminosity
+ * parametrization. @ref TChannelMode selects the t-channel strategy. The
  * second constructor takes a flat list of external masses instead of a
  * @ref Topology and is used for the topology-free @ref TChannelMode::rambo and
  * @ref TChannelMode::chili modes.

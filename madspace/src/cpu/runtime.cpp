@@ -552,7 +552,8 @@ void backward_op_matmul_to_float64(
 }
 
 // matmul followed by the activation Act, with the outputs linear (before the
-// activation) and the activated output. Everything runs in a single job, as in op_matmul_to_float64.
+// activation) and the activated output. Everything runs in a single job, as in
+// op_matmul_to_float64.
 template <typename Act, typename F, typename D>
 void op_matmul_activation(
     const CpuRuntime::Instruction& instruction, TensorVec& locals, const D& device

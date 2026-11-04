@@ -632,7 +632,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--bin",
         action="store_true",
         default=False,
-        help="Install pre-compiled package (default when interactive).",
+        help="Install pre-compiled package (the interactive default in a release "
+        "tarball whose wheel matches this platform).",
     )
     mode.add_argument(
         "--source",

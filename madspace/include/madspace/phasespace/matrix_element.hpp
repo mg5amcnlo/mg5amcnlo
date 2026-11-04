@@ -94,9 +94,10 @@ public:
      *                               the matrix element is evaluated in (the run
      *                               card's me_frame). Empty means no boost.
      * @param incoming_count         How many of the external particles are
-     *                               incoming. The me_frame boost starts from
-     *                               the rest frame of the incoming system, as in
-     *                               madevent, to avoid a Wigner rotation.
+     *                               incoming (the first ones). With me_frame
+     *                               it fixes the frame the boost starts from,
+     *                               see reference_mask() and along_beam(), to
+     *                               avoid a Wigner rotation as in madevent.
      * @param channel                If non-negative, `channel_in` is passed this
      *                               fixed value instead of being an input.
      */

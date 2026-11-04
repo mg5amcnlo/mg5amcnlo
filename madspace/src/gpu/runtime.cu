@@ -74,8 +74,7 @@ void op_matrix_element(
         );
         output_ptrs[i] = output.data();
         if (me_index == 0xBADCAFE) {
-            // flat dummy matrix element for testing purposes
-            // implemented at LUMI hackathon where the coffee was indeed terrible
+            // flat dummy matrix element for testing
             switch (output_keys[i]) {
             case UMAMI_OUT_MATRIX_ELEMENT:
             case UMAMI_OUT_MATRIX_ELEMENT_RATIO:

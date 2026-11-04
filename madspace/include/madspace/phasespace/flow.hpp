@@ -44,7 +44,7 @@ namespace madspace {
 class Flow : public Mapping {
 public:
     /**
-     * @param input_dim         Number of dimensions to transform.
+     * @param input_dim         Number of dimensions to transform (at least 2).
      * @param condition_dim     Width of the conditioning input; `0` for an
      *                          unconditional flow.
      * @param prefix            Prefix for the trainable global names.

@@ -407,7 +407,7 @@ void LHECompleter::find_resonant_propagators(
         return;
     }
 
-    // Pass 2: a decay needs its color only if it or a decay below it is resonant.
+    // Pass 2: a decay needs its color only if it or a decay above it is resonant.
     std::vector<bool> needed(topo.decays().size(), false);
     for (auto& decay : topo.decays()) {
         if (decay.child_indices.size() == 0) {

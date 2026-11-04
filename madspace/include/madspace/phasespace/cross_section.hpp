@@ -10,9 +10,9 @@ namespace madspace {
  * The fully differential cross section @f$f(x)@f$.
  *
  * Assembles the integrand of the phase-space integral: a @ref MatrixElement
- * evaluation multiplied by the flux factor, the @ref PartonDensity values for
- * the two beams, and @f$\alpha_s@f$ from a @ref RunningCoupling, all at the
- * @ref EnergyScale of the event [1]. The `Cached*` variants of the PDF and
+ * evaluation, with @f$\alpha_s@f$ from a @ref RunningCoupling, multiplied by
+ * the flux factor and the @ref PartonDensity values for the two beams, all at
+ * the @ref EnergyScale of the event [1]. The `Cached*` variants of the PDF and
  * scale arguments reuse values already computed elsewhere in the graph.
  *
  * With @p decay the generator instead describes the decay of a single incoming

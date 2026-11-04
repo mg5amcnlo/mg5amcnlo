@@ -135,8 +135,9 @@ public:
      *                                          needed for the @ref MadnisLoss
      *                                          instead of a finished event.
      * @param drop_cuts_and_rescale             If true, return only the events
-     *                                          that pass the cuts, and rescale
-     *                                          adaptive_prob by the acceptance.
+     *                                          that pass the cuts, and divide
+     *                                          adaptive_prob by the acceptance
+     *                                          fraction.
      * @param partial_weights                   If true, emit the product of the
      *                                          beam densities (partial_weight_product)
      *                                          for the systematics.
@@ -276,7 +277,8 @@ public:
     const std::optional<ChannelWeightNetwork>& chan_weight_net() const {
         return _chan_weight_net;
     }
-    /// Number of random numbers per event, including those for discrete choices.
+    /// Number of random numbers per event, including those for the permutation,
+    /// flavour and beam-orientation choices (not the mapping's own discrete ones).
     const std::size_t random_dim() const { return _random_dim; }
     /// The dimensions of the latent inputs and, per input, whether it is a
     /// float (true) or an integer index (false).

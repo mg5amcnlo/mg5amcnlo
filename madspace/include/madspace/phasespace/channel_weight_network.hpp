@@ -6,11 +6,12 @@
 namespace madspace {
 
 /**
- * Turns event momenta into invariant features for @ref ChannelWeightNetwork.
+ * Turns event momenta into input features for @ref ChannelWeightNetwork.
  *
- * Computes @f$(p_\mathrm{T}, \eta, \phi)@f$ for each final-state particle with the
- * momentum fractions, a representation the channel-weight network can consume
- * directly [1].
+ * Returns @f$x_1, x_2@f$ followed, for each final-state particle, by
+ * @f$\log p_\mathrm{T}@f$, @f$\phi@f$ and @f$\eta@f$ (regularized at
+ * @f$p_\mathrm{T} \to 0@f$), a representation the channel-weight network can
+ * consume directly [1].
  *
  * `batch` is the leading batch dimension.
  *
@@ -53,7 +54,7 @@ private:
  *
  * **Arguments**
  * - `input` – `float`, shape `(batch, MomentumPreprocessing::output_dim())` –
- *   the invariant features.
+ *   the preprocessed features.
  * - `prior` – `float`, shape `(batch, c)` – the prior per-channel weights.
  *
  * **Returns**

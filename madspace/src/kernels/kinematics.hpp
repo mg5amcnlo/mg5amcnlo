@@ -102,7 +102,7 @@ t_inv_min_max(FVal<T> s, FVal<T> ma_2, FVal<T> mb_2, FVal<T> m1_2, FVal<T> m2_2)
     auto t_min_tmp = -max(y2, y1);
     auto t_max_tmp = -min(y1, y2);
     auto t_min = max(t_min_tmp, 0.);
-    // an empty range gets a width of a few ulps, since an absolute EPS can be below one ulp of t
+    // an empty range gets a width of at least 1e-14 |t_min|, since EPS can be below one ulp of t
     auto t_max = where(
         t_max_tmp > t_min, t_max_tmp, t_min + max(FVal<T>(EPS), 1e-14 * fabs(t_min))
     );

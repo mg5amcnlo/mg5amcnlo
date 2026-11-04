@@ -85,12 +85,12 @@ public:
     static constexpr int f_lhe_particle = 2;
     static constexpr int f_clustering = 4;
     // MLM alpha_s reweighting: the scale of the clustering vertex stored on
-    // outgoing particle 2 + i is vertex i's. Only kept in the combined buffer
-    // the systematics read, never written to an event file.
+    // outgoing particle 2 + i is vertex i's. Only the systematics read it; it
+    // is not written to the final event file.
     static constexpr int f_alphas_scales = 8;
     // MLM pdf reweighting ladder: step s (each one that can carry a pdf
     // ratio) on particle s, each beam's leading density on particle 0 and 1.
-    // Like f_alphas_scales only in the combined buffer, for the systematics.
+    // Like f_alphas_scales, only for the systematics.
     static constexpr int f_pdf_ladder = 16;
 
     static std::vector<FieldLayout> layout(int fields) {
@@ -407,8 +407,9 @@ inline const DataLayout weight_file_layout = DataLayout(
     ParticleRecord::layout(ParticleRecord::f_none)
 );
 
-/// Weight file of a channel with re- and unweighting steps: the weight of the
-/// first step and, as "particles", the ratio and the maximum weight of each step.
+/// Weight file of a channel with re- and unweighting steps: the event weight
+/// and, as "particles", the ratio and maximum weight of the generation stage
+/// (particle 0) and of each step.
 inline const DataLayout step_weight_file_layout = DataLayout(
     EventRecord::layout(EventRecord::f_weight),
     {{"ratio", FieldLayout::f64, 0}, {"max_weight", FieldLayout::f64, 0}}

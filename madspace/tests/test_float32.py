@@ -168,7 +168,7 @@ def test_flow_float32_subnets(tmp_path, gen):
         )
         ctx.get_global(name.replace("f64", "f32")).torch()[:] = weights.float()
 
-    # outputs and gradients with respect to the input and the float32 weights
+    # outputs and gradients with respect to the input and the first weight
     r = _rand((N, 4), dtype=torch.float64, generator=gen)
     outputs, grads = {}, {}
     for dtype, flow in flows.items():

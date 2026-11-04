@@ -1,6 +1,6 @@
 """A side of two massive particles in ColorOrderedMapping with a cut elsewhere.
 
-g g > t t~ g in the color order t g g g t~ (0 2 4 1 3 in particle numbers): the
+g g > t t~ g in the color order t g g g t~ (2 0 4 1 3 in particle numbers): the
 gluon is alone on one side, the top pair is the other, built by the 2->3 step
 off the opposite beam. Any cut turns on the transverse-energy floors of that
 step, which are m_T >= m for a top without a pt cut. The floor on the momentum

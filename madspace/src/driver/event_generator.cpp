@@ -598,7 +598,7 @@ std::size_t EventGenerator::start_jobs() {
             bool fully_dispatched = atomic_dispatch || ready_job.batch_event_count == 0;
             if (fully_dispatched) {
                 if (!ready_job.is_vegas_batch) {
-                    // only used by generate()
+                    // only used by run_generate()
                     _channel_batch_dispatch_done.at(ready_job.channel_index) = true;
                 }
                 _ready_jobs.erase(_ready_jobs.begin() + _ready_job_rr_cursor);

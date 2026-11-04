@@ -97,7 +97,8 @@ def test_resonant_chain_inverts_the_plain_events():
 @pytest.mark.parametrize("flavor", [0, 1])
 def test_weights_are_the_normalised_masked_densities(flavor):
     masks = [[1.0, 1.0], [0.0, 1.0]]
-    # diagrams 0 and 1 of flavor 0 on channels 0 and 1, diagram 2 of flavor 1
+    # diagram 0 on channel 0, diagrams 1 and 2 on channel 1; flavor 0 has
+    # diagrams 0 and 1, flavor 1 has diagram 2
     weights = ms.MappingChannelWeights(
         [RESONANT, PLAIN], masks, [0, 1, 1], [[1.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
     )

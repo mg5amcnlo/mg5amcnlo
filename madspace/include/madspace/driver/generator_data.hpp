@@ -92,7 +92,7 @@ struct GeneratorConfig {
     std::size_t gpu_batch_size = 64000;
     /// Progress-reporting verbosity.
     Verbosity verbosity = Verbosity::silent;
-    /// If true, periodically write live progress data to disk.
+    /// Not read by the C++ generator.
     bool write_live_data = false;
     /// Thread count used to combine per-channel event files; `-1` for the
     /// hardware concurrency.
@@ -131,7 +131,7 @@ struct StepChainResult {
     /// Probability that the event is accepted by all steps.
     double acceptance;
     /// Signed weight of the event after all steps, in units of the product of
-    /// the maximum weights of the unweighting steps.
+    /// the maximum weights of the first unweighting and the unweighting steps.
     double weight;
 };
 

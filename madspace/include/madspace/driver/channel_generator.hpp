@@ -139,8 +139,8 @@ public:
     bool has_abs_integral_prior() const { return _abs_integral_prior.has_value(); }
     /// Set the signed integral known from an earlier run, with its standard error.
     void set_integral_prior(double mean, double error);
-    /// Whether this run has too few samples for an integral estimate of its own, so
-    /// that @ref EventGenerator uses the priors instead.
+    /// Whether an absolute-integral prior is set and this run has too few samples
+    /// (fewer than two, or no usable error) for an estimate of its own.
     bool uses_integral_prior(bool final_step = true) const;
     /// The prior of the signed integral as (mean, standard error), or of the
     /// absolute one if no signed prior was set.
@@ -185,7 +185,7 @@ public:
     /// Types of the unweighted events, the integrand outputs before `random`.
     const NamedVector<Type>& event_types() const { return _event_types; }
     /// Whether the matrix element of the integrand returns the color, helicity
-    /// and diagram index.
+    /// and diagram index, in this order.
     const std::array<bool, 3>& provided_indices() const { return _provided_indices; }
 
     /// Integral of the final weights: after the last re- or unweighting step,
@@ -300,7 +300,7 @@ public:
         EventBuffer& weight_buffer
     ) const;
     /// Signed weight of event `index` of a buffer read from @ref weight_file,
-    /// in units of the maximum weights, 0 for a rejected event.
+    /// in units of the maximum weights, 0 for an event rejected by a step.
     double unweighted_weight(EventBuffer& weight_buffer, std::size_t index) const;
 
     /// Unweight @ref weight_file in place with the current maximum weight: weights

@@ -83,8 +83,9 @@ public:
     /// that still needs it, until all are optimized. No events are kept.
     void optimize();
     /// Like @ref generate, but every channel with a nonzero cross section runs
-    /// until it has `freeze_max_weight_after` unweighted events, regardless of
-    /// its share of the cross section, so that its maximum weight is final
+    /// until it has `freeze_max_weight_after` unweighted events (the largest value
+    /// of its steps, if higher), regardless of its share of the cross section, so
+    /// that its maximum weight is final
     /// (see @ref ChannelEventGenerator::max_weight). The events are not meant
     /// to be combined.
     void fix_max_weights();

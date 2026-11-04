@@ -2,10 +2,11 @@
 
 Same definition as madevent's boost_to_frame (Template/LO/SubProcesses/genps.f):
 the momenta of the particles listed in me_frame are summed up and every external
-momentum is boosted into the rest frame of that sum. For a collision that rest
-frame is reached by a boost along the beam, to zero rapidity of the sum
-(boost_to_zero_rapidity), and then a transverse one (boost_to_frame), so that
-it does not depend on the frame along the beam the momenta come in.
+momentum is boosted into the rest frame of that sum. For a collision, except for
+the incoming system itself, that rest frame is reached by a boost along the beam,
+to zero rapidity of the sum (boost_to_zero_rapidity), and then a transverse one
+(boost_to_frame), so that it does not depend on the frame along the beam the
+momenta come in.
 """
 
 import math

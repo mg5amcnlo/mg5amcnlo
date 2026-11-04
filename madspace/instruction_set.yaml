@@ -3141,7 +3141,7 @@ density_channel_weights:
     - name: channel_weights
       type: [float, n]
       desc: "weight per channel"
-  desc: "Normalised channel weights proportional to the masked channel densities, uniform over the masked channels if none is positive. Building block of @ref MappingChannelWeights."
+  desc: "Normalised channel weights proportional to the masked channel densities, uniform over the masked channels if no masked density is a finite positive number. Building block of @ref MappingChannelWeights."
 
 interpolate_pdf:
   inputs:
