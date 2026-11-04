@@ -167,8 +167,8 @@ void LHEEvent::format_to(std::string& buffer) const {
     }
     if (lo_info && lo_info->qcd_power >= 0 && lo_info->has_beam1 &&
         lo_info->has_beam2) {
-        // as madevent's unwgt.f writes it: the alpha_s power left at mu_R and
-        // the vertex scales, then per beam n, the n pdgs, x and scales
+        // madevent's unwgt.f layout: alpha_s power at mu_R, vertex scales, then
+        // per beam the n pdgs, x values and scales
         int n_vertices = static_cast<int>(lo_info->asrwt.size());
         std::format_to(
             insert_iter,
@@ -325,16 +325,14 @@ void LHECompleter::init_propagator_data(
     resonant_prop_indices.clear();
     resonant_prop_indices.resize(decay_count, -1);
 
-    // permutation maps external leg -> topology slot; invert it here, since
-    // using it directly mismatches whenever it isn't self-inverse.
+    // permutation maps external leg -> topology slot, so invert it
     std::vector<std::size_t> inv_permutation(permutation.size());
     for (std::size_t leg = 0; leg < permutation.size(); ++leg) {
         inv_permutation.at(permutation.at(leg)) = leg;
     }
 
-    // The permutation runs over all external legs, incoming first, so the
-    // outgoing ones start at the incoming count -- 2 for a collision, 1 for a
-    // decay. Getting this wrong silently reads another particle's color flow.
+    // the permutation runs over all external legs, so outgoing ones start after
+    // the incoming ones
     for (auto [index, mass, perm_index] :
          zip(topo.outgoing_indices(),
              topo.outgoing_masses(),
@@ -363,12 +361,8 @@ void LHECompleter::find_resonant_propagators(
     std::vector<std::tuple<int, int>>& prop_colors,
     std::vector<int>& resonant_prop_indices
 ) {
-    // For each decay, the propagators hanging below it with no propagator in
-    // between. A decay that never becomes a propagator is not written to the
-    // LHE, so what sits under it belongs to the nearest ancestor that is: its
-    // mask passes straight through. Without this a resonance separated from
-    // its parent resonance by a plain internal line keeps mother (1,2) -- the
-    // W of a q q~ > Z > l l(-> l W) diagram, say.
+    // For each decay, the mask of propagators below it with none in between. A
+    // decay that is not a propagator passes its children's mask on to its parent.
     std::vector<int> subtree_prop_masks(topo.decays().size(), 0);
 
     // Pass 1: resonance status from mass/width alone, no color involved.
@@ -409,13 +403,11 @@ void LHECompleter::find_resonant_propagators(
     }
 
     if (_propagators.size() == prop_offset) {
-        // Nothing resonant: no color is needed, and skipping it sidesteps
-        // color flows that never get validated for non-resonant parts.
+        // nothing resonant, so no color is needed
         return;
     }
 
-    // Pass 2: a decay needs its color computed only if it (or something
-    // further down its own decay chain) is resonant.
+    // Pass 2: a decay needs its color only if it or a decay above it is resonant.
     std::vector<bool> needed(topo.decays().size(), false);
     for (auto& decay : topo.decays()) {
         if (decay.child_indices.size() == 0) {
@@ -437,8 +429,7 @@ void LHECompleter::find_resonant_propagators(
             continue;
         }
 
-        // Prefer this diagram's own pdg (merge_same_topologies can share a
-        // topology across diagrams with different particles per slot).
+        // prefer this diagram's own pdg, as topologies can be shared between diagrams
         int propagator_pdg = decay.pdg_id;
         if (decay.flat_propagator_index != Topology::no_propagator &&
             decay.flat_propagator_index < propagator_pdgs.size()) {
@@ -633,11 +624,7 @@ void LHECompleter::complete_event_data(
 
     event.process_id = subproc_data.process_id;
 
-    // Number of leading entries in the event record that are initial state:
-    // 2 for a collision, 1 for a decay. Everything that indexes past the
-    // initial state -- where resonances get inserted, what the outgoing
-    // particles' mothers are, how far the momentum masks are shifted -- is
-    // offset by this rather than by a hard-coded 2.
+    // number of initial-state entries: 2 for a collision, 1 for a decay
     const std::size_t n_in = subproc_data.incoming_count;
 
     std::size_t color_offset =
@@ -673,8 +660,7 @@ void LHECompleter::complete_event_data(
         } else {
             particle.status_code = 1;
             particle.mother1 = 1;
-            // A decay has a single mother, which LHE spells as
-            // mother1 == mother2 rather than a (1, 2) range.
+            // a decay has a single mother: mother1 == mother2
             particle.mother2 = static_cast<int>(n_in);
         }
         particle.mass = _masses.at(mass_offset + particle_index);
@@ -683,9 +669,7 @@ void LHECompleter::complete_event_data(
         ++particle_index;
     }
 
-    // The flavor tables list the incoming legs in leg order, and a mirrored
-    // event has them the other way round on the beams. LHE wants particle 1 to
-    // come from beam 1, moving along +z.
+    // LHE wants particle 1 to come from beam 1, moving along +z
     if (n_in == 2 && event.particles.at(0).pz < 0.) {
         std::swap(event.particles.at(0), event.particles.at(1));
     }
@@ -724,11 +708,7 @@ void LHECompleter::complete_event_data(
             momentum_mask >>= 1;
         }
         double m2 = e * e - px * px - py * py - pz * pz;
-        // Once bw_cutoff exceeds mass/width the window reaches below zero,
-        // where there is no invariant mass left to exclude. Squaring a
-        // negative m_min would instead turn it into a large positive floor and
-        // reject nearly everything, so a wider window would write *fewer*
-        // resonances than a narrow one.
+        // clamp m_min at zero so that a negative lower edge is not squared
         double m_min = std::max(0., propagator.mass - _bw_cutoff * propagator.width);
         double m_max = propagator.mass + _bw_cutoff * propagator.width;
         if (m2 > m_min * m_min && m2 < m_max * m_max) {
@@ -755,12 +735,8 @@ void LHECompleter::complete_event_data(
     event.particles.insert(
         event.particles.begin() + n_in, new_particles.rbegin(), new_particles.rend()
     );
-    // Where each propagator ended up among the ones this event actually wrote,
-    // which is the order they were just inserted in: outermost first. Only the
-    // propagators inside resonant_prop_mask have a row, and child_prop_mask
-    // names them by prop_index, so the two orders have to be related
-    // explicitly -- counting set mask bits instead lands on the wrong row as
-    // soon as a propagator in between is resonant without being a child.
+    // Row of each written resonance (outermost first), indexed by prop_index, as
+    // child_prop_mask refers to propagators by prop_index.
     std::vector<int> res_index_of_prop(prop_count, -1);
     for (std::size_t prop_index = prop_count, next_res_index = 0; prop_index-- > 0;) {
         if (resonant_prop_mask & (1 << prop_index)) {
@@ -777,8 +753,7 @@ void LHECompleter::complete_event_data(
          )) {
         --prop_index;
         if (resonant_prop_mask & (1 << prop_index)) {
-            // Descend through the propagators this event left off shell: they
-            // have no row of their own, so their children attach here.
+            // descend through propagators not written for this event
             int pending_prop_mask = propagator.child_prop_mask;
             while (pending_prop_mask != 0) {
                 int child_prop_index = 0;
@@ -912,8 +887,7 @@ void madspace::from_json(
         .flavor_count = j.at(7).get<std::size_t>(),
         .diagram_count = j.at(8).get<std::size_t>(),
         .helicity_count = j.at(9).get<std::size_t>(),
-        // Gridpacks written before decays were supported carry no entry here
-        // and are always collisions.
+        // older files have no entry here and are collisions
         .incoming_count = j.size() > 10 ? j.at(10).get<std::size_t>() : 2,
     };
 }

@@ -286,7 +286,7 @@ Mapping::Result TPropagatorMapping::build_inverse_impl(
         }
     }
 
-    // ETmin per particle (see forward); Only built when cuts are active.
+    // ETmin per particle, as in the forward map; only used with cuts
     auto etmin_particle = [&](std::size_t j) {
         return fb.sqrt(fb.add(fb.square(m_out.at(j)), Value(pt2(j))));
     };
@@ -298,7 +298,7 @@ Mapping::Result TPropagatorMapping::build_inverse_impl(
         }
     }
 
-    // sample t-invariants and build momenta of t-channel part of the diagram
+    // recover the t-invariant random numbers from the t-channel momenta
     Value k_rest = fb.add(inputs.at(0), inputs.at(1));
     Value p1_rest = inputs.at(0), p2_rest = inputs.at(1);
     bool first = true;

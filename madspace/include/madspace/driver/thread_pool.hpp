@@ -50,8 +50,6 @@ private:
     std::vector<std::size_t> _done_buffer;
     std::size_t _busy_threads = 0;
     // The first exception thrown by a job, rethrown by wait()/wait_multiple().
-    // Without it an exception escaping a job would leave std::thread with no
-    // handler, i.e. terminate the process.
     std::exception_ptr _exception;
     std::size_t _listener_id = 0;
     std::unordered_map<std::size_t, std::function<void(std::size_t)>> _listeners;
@@ -128,9 +126,7 @@ public:
             }
         }
     }
-    ~ThreadResource() {
-        reset();
-    }
+    ~ThreadResource() { reset(); }
     ThreadResource(ThreadResource&& other) noexcept :
         _pool(std::move(other._pool)),
         _resources(std::move(other._resources)),

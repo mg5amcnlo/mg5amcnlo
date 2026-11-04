@@ -11,8 +11,9 @@ namespace madspace {
 /**
  * Fully connected neural network as a compute-graph function.
  *
- * A stack of @p layers dense layers of width @p hidden_dim with @p activation
- * between them and a linear output layer. Used as the subnetwork of the
+ * A stack of @p layers dense layers, the last one the linear output layer and
+ * the others of width @p hidden_dim, with @p activation after each hidden layer. Used
+ * as the subnetwork of the
  * @ref Flow and @ref DiscreteFlow adaptive samplers [1]. The weights and biases
  * are compute-graph globals named with @p prefix. Call
  * `initialize_globals(context)` once before use. With a single-precision
@@ -39,7 +40,7 @@ public:
      * @param input_dim   Input width.
      * @param output_dim  Output width.
      * @param hidden_dim  Hidden-layer width.
-     * @param layers      Number of layers.
+     * @param layers      Number of dense layers, including the output layer.
      * @param activation  Activation between the hidden layers.
      * @param prefix      Prefix for the trainable global names.
      * @param precision   Float type of the weights and the evaluation,

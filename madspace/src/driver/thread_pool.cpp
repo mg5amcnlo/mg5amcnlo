@@ -36,8 +36,6 @@ void ThreadPool::set_thread_count(int new_count) {
 }
 
 void ThreadPool::submit(JobFunc job) {
-    // Spin until there is space in the queue. The queue should be sufficiently large
-    // such that this never happens.
     std::unique_lock<std::mutex> lock(_mutex);
     _job_queue.push_back(job);
     if (!_done_queue.empty()) {
@@ -150,10 +148,8 @@ void ThreadPool::thread_loop(std::size_t index) {
         try {
             result = job();
         } catch (...) {
-            // A job must never let an exception escape: it would unwind out of
-            // the thread function and terminate the process. Hand the first one
-            // to whoever is waiting, and drop the jobs still queued -- the
-            // waiter is about to unwind and they capture its locals.
+            // Keep the first exception for the waiter and drop the queued jobs,
+            // which capture the waiter's locals.
             lock.lock();
             if (!_exception) {
                 _exception = std::current_exception();

@@ -96,7 +96,7 @@ public:
     BatchSize operator-(const BatchSize& other) const { return add(other, -1); }
     bool operator==(const BatchSize& other) const { return value == other.value; }
     bool operator!=(const BatchSize& other) const { return value != other.value; }
-    /// Human-readable representation such as `"batch_size + 1"`.
+    /// Human-readable representation such as `"batch_size+1"`.
     std::string to_string() const;
 
     friend std::ostream& operator<<(std::ostream& out, const BatchSize& batch_size);
@@ -211,16 +211,17 @@ using LiteralValue = std::variant<me_int_t, double, TensorValue, std::monostate>
  * or a reference to a graph local.
  *
  * @ref FunctionBuilder methods take and return `Value`s. A value with
- * `local_index >= 0` refers to the output of an earlier instruction. Otherwise
+ * `local_index >= 0` refers to a local of the function being built (an input,
+ * global, registered literal or instruction output). Otherwise
  * @p literal_value holds an inline scalar or dense tensor constant. Scalars and
- * nested `std::vector`s convert to a `Value` implicitly.
+ * `std::vector`s (also nested ones) convert to a `Value` implicitly.
  */
 struct Value {
     /// Type of the value.
     Type type;
-    /// Inline constant, or `std::monostate` for a graph local.
+    /// Inline constant, or `std::monostate` for a graph local without constant value.
     LiteralValue literal_value;
-    /// Index of the referenced graph local, or -1 for a literal.
+    /// Index of the referenced graph local, or -1 if not yet registered as one.
     int local_index = -1;
 
     /// Empty value (no literal, no local); tests as `false`.

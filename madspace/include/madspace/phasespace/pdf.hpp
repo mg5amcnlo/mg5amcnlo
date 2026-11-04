@@ -25,17 +25,19 @@ struct PdfGrid {
     std::vector<double> logq2;
     /// PDG ids of the flavours in the grid.
     std::vector<int> pids;
-    /// Grid values, indexed by flavour then by `(x, q)` knot.
+    /// Grid values, indexed by `(q, x)` grid point (`q_index * x.size() + x_index`),
+    /// then by flavour.
     std::vector<std::vector<double>> values;
-    /// Knot counts of the sub-grid regions.
+    /// Number of `q` intervals in each sub-grid region.
     std::vector<std::size_t> region_sizes;
 
     /// Load an LHAPDF-format grid.
     /// @param file  Path to the grid file.
     PdfGrid(const std::string& file);
-    /// Total number of `(x, q)` grid points.
+    /// Number of `(x, q)` grid points, including padding, as stored in the
+    /// coefficient tensor.
     std::size_t grid_point_count() const;
-    /// Number of scale knots.
+    /// Number of scale knots, counting the knots shared by two regions once.
     std::size_t q_count() const;
     /// Fill @p tensor with the interpolation coefficients.
     void initialize_coefficients(Tensor tensor) const;
@@ -59,15 +61,15 @@ struct PdfGrid {
  * Interpolates a @ref PdfGrid at the sampled @f$(x, q)@f$, returning
  * @f$x f(x, q)@f$ for the requested flavours; the numerical output agrees with
  * LHAPDF to double precision [1] (Sec. 3.2.3 of [2]). With a @ref CustomPdf,
- * the user-supplied library is called once per requested flavour instead.
+ * the user-supplied library is called for each requested flavour instead.
  *
  * `batch` is the leading batch dimension.
  *
  * **Arguments**
  * - `x` – `float`, shape `(batch,)` – momentum fraction.
  * - `q` – `float`, shape `(batch,)` – factorization scale.
- * - `flavor_index` – `int`, shape `(batch,)` – which flavour to return.
- *   Present only when @p dynamic_pid is true.
+ * - `flavor_index` – `int`, shape `(batch,)` – index into @p pids selecting
+ *   the flavour to return. Present only when @p dynamic_pid is true.
  *
  * **Returns**
  * - `pdf` – `float`, shape `(batch,)` when @p dynamic_pid is true, otherwise
@@ -84,8 +86,8 @@ public:
     /**
      * @param grid         The parton-density grid to interpolate.
      * @param pids          PDG ids of the flavours to return.
-     * @param dynamic_pid   If true, a single flavour selected per event by the
-     *                      `flavor_index` argument is returned.
+     * @param dynamic_pid   If true, the single flavour of @p pids selected per
+     *                      event by `flavor_index` is returned.
      * @param prefix        Prefix for the grid global names.
      */
     PartonDensity(
@@ -98,8 +100,8 @@ public:
      * @param custom_pdf    The user-supplied parton density.
      * @param pids          PDG ids of the flavours to return.
      * @param beam_index    Index of the beam (0 or 1), passed to the library.
-     * @param dynamic_pid   If true, a single flavour selected per event by the
-     *                      `flavor_index` argument is returned.
+     * @param dynamic_pid   If true, the single flavour of @p pids selected per
+     *                      event by `flavor_index` is returned.
      */
     PartonDensity(
         const CustomPdf& custom_pdf,
@@ -137,13 +139,13 @@ struct AlphaSGrid {
     std::vector<double> logq2;
     /// `alpha_s` values at the knots.
     std::vector<double> values;
-    /// Knot counts of the sub-grid regions.
+    /// Number of `q` intervals in each sub-grid region.
     std::vector<std::size_t> region_sizes;
 
     /// Load an LHAPDF-format `alpha_s` grid.
     /// @param file  Path to the grid file.
     AlphaSGrid(const std::string& file);
-    /// Number of scale knots.
+    /// Number of scale knots, counting the knots shared by two regions once.
     std::size_t q_count() const;
     /// Fill @p tensor with the interpolation coefficients.
     void initialize_coefficients(Tensor tensor) const;

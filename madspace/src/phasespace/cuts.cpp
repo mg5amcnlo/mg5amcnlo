@@ -68,12 +68,10 @@ Cuts::build_function_impl(FunctionBuilder& fb, const NamedVector<Value>& args) c
 
 namespace {
 
-// The accessors below hand bounds to the phase-space mappings, which apply each
-// one as a hard floor on a fixed particle or pair. That is only right for a
-// bound every selected object has to satisfy: an ordered selection ("the
-// leading jet") names a rank rather than a particle, and with CutMode::any a
-// single object passing is enough, so neither says anything about a given
-// particle unless the selection holds exactly one. Such cuts stay filters.
+// The accessors hand bounds to the mappings as hard floors on a fixed particle
+// or pair, which is only valid if every selected object must satisfy the bound.
+// Ordered selections (a rank, not a particle) and CutMode::any cuts over
+// several objects stay filters.
 bool binds_each_object(const Cuts::CutItem& item, std::size_t object_count) {
     return !item.observable.ordered() &&
         (item.mode == Cuts::CutMode::all || object_count == 1);
@@ -149,12 +147,10 @@ namespace {
 
 using PairList = std::vector<std::pair<std::size_t, std::size_t>>;
 
-// The pairs, in the observable's own (full, beams included) indexing, whose
-// invariant mass an observable measures: the genuine pair observables, and
-// "mass" of summed momenta when that sum is a pair. With one group
-// ("lepton-sum-mass") the sum is a pair only when the group holds exactly two
-// particles; with two groups ("jet-jet-sum-mass") it is one pair per
-// combination the groups can form. Empty for anything else.
+// The pairs (indices including the beams) whose invariant mass an observable
+// measures: the pair observables, and "mass" of summed momenta when the sum is
+// a pair (one group of exactly two particles, or one pair per element of two
+// groups). Empty for anything else.
 PairList mass_pairs(const Observable& o) {
     PairList pairs;
     const auto& idx = o.indices();
@@ -227,9 +223,8 @@ std::vector<std::vector<double>> Cuts::m_inv_min() const {
 }
 
 std::vector<Cuts::PairMassAny> Cuts::pair_mass_any_min() const {
-    // The CutMode::any pair mass cuts that m_inv_min leaves out: one pair
-    // passing is enough, so the cut bounds no pair in particular, but it does
-    // bound any set of particles holding all of its pairs.
+    // The CutMode::any pair mass cuts that m_inv_min leaves out: they bound no
+    // pair in particular, but any set of particles holding all of their pairs.
     std::size_t n = arg_types().at(0).shape.at(0) - 2;
     std::vector<PairMassAny> out;
     for (auto& item : _cut_data) {

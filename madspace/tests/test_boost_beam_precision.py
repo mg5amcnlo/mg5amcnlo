@@ -5,9 +5,9 @@ and boosts them into the lab with boost_beam; its inverse boosts them back with
 boost_beam_inverse. A momentum moving against the boost loses e^{2|y|} of
 relative precision in the linear boost E cosh y + p_z sinh y, so boost_beam
 works in light-cone components with the smaller one from the mass shell. That
-has to hold in both directions: the partonic momenta recovered from the lab
-were off by up to 5e-9 of sqrt(s_hat) for partonic rapidities |y| ~ 7 (13 TeV,
-x ~ 1e-6), and the random numbers of the round trip by as much.
+has to hold in both directions: the partonic momenta recovered from the lab and
+the random numbers of the round trip must stay precise for partonic rapidities
+|y| ~ 7 (13 TeV, x ~ 1e-6).
 """
 
 import numpy as np
@@ -76,16 +76,14 @@ def test_partonic_frame_from_the_lab(masses, y_far):
     assert error[ok].max() < 1e-14
 
     # and with it the random numbers at large rapidities, to the conditioning
-    # of RAMBO itself (below 1e-10 on two million events; it was 4e-9 for
-    # |y| > 6)
+    # of RAMBO itself
     r_inv, det_inv = map(to_numpy, mapping.map_inverse(lab[:3], []))
     far = ok & (np.abs(rapidity) > y_far)
     assert far.sum() > 100
     assert np.abs(r_inv - r)[far].max() < 1e-9
     assert np.abs(det * det_inv - 1)[far].max() < 1e-9
 
-    # the lab momenta conserve momentum as the partonic ones do (RAMBO, up to
-    # 1e-11 of sqrt(s_hat) near the edge of phase space), the violation
+    # the lab momenta conserve momentum as the partonic ones do, the violation
     # stretched by at most e^{|y|} by the boost, and stay on their mass shell
     scale = p[..., 0].max(1)
     violation = np.abs(p[:, 2:].sum(1) - p[:, :2].sum(1)).max(1)

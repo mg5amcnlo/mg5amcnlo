@@ -17,10 +17,8 @@ const std::array<std::string, 9> progress_symbols{
     " ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"
 };
 
-// Fallback for format_with_error() once the relative error is O(1) or larger (or
-// value/error are non-finite/non-positive): the "1.234(56)" digit-of-error notation is
-// meaningless there, so print "value ± error" instead, with the error rendered to two
-// significant digits (or the value alone if the error itself isn't meaningful).
+// Fallback for format_with_error() if the relative error is O(1) or larger or an
+// argument is not finite or positive: "value ± error", or the value alone.
 std::string format_value_pm_error(double value, double error) {
     if (!std::isfinite(error) || error <= 0.) {
         if (!std::isfinite(value) || value == 0.) {

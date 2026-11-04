@@ -17,9 +17,8 @@ jet pair:
   * W_CHANNEL: two t-channel quark lines meet in an s-channel W- that decays to
     the jet pair, so the cut is exactly a floor on the W- (100% efficiency).
   * Z_CHANNEL: a Z decays to a jet and an off-shell quark that decays to the
-    other jet and a W+. The jet pair is two of the Z's three leaves. Before the
-    floor reached such nodes only 0.04% of this channel passed the cut and the
-    madspace survey gave up on it ("not enough points passing cuts").
+    other jet and a W+. The jet pair is two of the Z's three leaves. Without
+    the floor on such nodes only 0.04% of this channel passes the cut.
 
 The cut-region volume, integrated with each channel, must match the flat
 RAMBO mapping that knows nothing about the cut: the floor follows from the
@@ -154,8 +153,8 @@ def test_z_channel_propagator_gets_the_floor():
 
 def test_z_channel_efficiency():
     """The jet pair is not a propagator of its own here, so the floor on the Z
-    cannot make every point pass, but it has to lift the channel out of the
-    0.04% it had when only exact-pair propagators were bounded."""
+    cannot make every point pass, but it has to lift the pass rate well above
+    the ~0.04% of the unbounded channel."""
     p_free, _ = sample(PSM(topology(Z_CHANNEL), CM_ENERGY), SEED)
     p_cut, det = sample(
         PSM(topology(Z_CHANNEL), CM_ENERGY, cuts=pair_mass_cuts()), SEED
@@ -299,7 +298,7 @@ def test_floor_must_hold_for_every_permutation():
     mapping = PSM(x_topology(), PERM_ENERGY, cuts=x_cuts(), permutations=PERMUTATIONS)
     n = 20_000
     p, det = sample(mapping, SEED, n, [torch.zeros(n, dtype=torch.int32)])
-    # X = event (1, 2) for the identity: below the cut, but sampled
+    # X gets no floor, so points with m(X) below the cut are still sampled
     assert invariant_mass(p, 3, 4).min() < 0.5 * PERM_CUT
 
 
@@ -439,7 +438,7 @@ def test_sfos_pairs_are_particle_antiparticle():
     # e- e+ and mu- mu+ only, not e- mu+ nor the like-sign pairs
     assert values.shape[1] == 2
     expected = torch.stack([invariant_mass(p, 2, 3), invariant_mass(p, 4, 5)], dim=1)
-    # a nearly collinear pair loses digits in m^2 = E^2 - |p|^2, hence abs
+    # a nearly collinear pair loses digits in m^2 = E^2 - |p|^2, hence the atol
     torch.testing.assert_close(
         values.sort(dim=1).values, expected.sort(dim=1).values, rtol=1e-9, atol=1e-6
     )
@@ -495,7 +494,7 @@ def test_sfos_cannot_be_ordered():
 # and an off-shell lepton, which emits a photon decaying to the last pair (the
 # 4-lepton output's channel 2). With every lepton pair above 50 GeV no single
 # pair bounds the Z beyond 50 GeV, so the root's Breit-Wigner kept sampling
-# near m_Z and 0.03% of the points passed. All six pairs together put the four
+# near m_Z and only ~0.03% of the points passed. All six pairs together put the four
 # leptons above sqrt(6) * 50 GeV, the three under the off-shell lepton above
 # sqrt(3) * 50 GeV.
 

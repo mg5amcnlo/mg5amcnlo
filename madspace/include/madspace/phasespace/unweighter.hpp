@@ -42,12 +42,10 @@ private:
  * The maximum weight is the @p quantile quantile of |w| over the batch (so a
  * fraction 1 - @p quantile of the events is over-weight). An event is kept
  * with probability min(1, |w| / w_max) and gets the weight
- * sign(w) * max(|w|, w_max): the sign of a negative weight (an interference)
- * is kept, and the quantile is over |w| like the acceptance, so that a mostly
- * negative batch is still unweighted. The `adaptive_prob` of a kept event, the
- * density it was sampled with, is multiplied by its acceptance probability and
- * by N / N_kept, so that training on the buffered events stays unbiased
- * (Sec. 3.4.1 of [1]).
+ * sign(w) * max(|w|, w_max), so the sign of a negative weight is kept. The
+ * `adaptive_prob` of a kept event, the density it was sampled with, is
+ * multiplied by its acceptance probability and by N / N_kept, so that training
+ * on the buffered events stays unbiased (Sec. 3.4.1 of [1]).
  *
  * `batch` is the leading batch dimension.
  *

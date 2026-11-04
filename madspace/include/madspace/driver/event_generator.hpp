@@ -83,8 +83,9 @@ public:
     /// that still needs it, until all are optimized. No events are kept.
     void optimize();
     /// Like @ref generate, but every channel with a nonzero cross section runs
-    /// until it has `freeze_max_weight_after` unweighted events, regardless of
-    /// its share of the cross section, so that its maximum weight is final
+    /// until it has `freeze_max_weight_after` unweighted events (the largest value
+    /// of its steps, if higher), regardless of its share of the cross section, so
+    /// that its maximum weight is final
     /// (see @ref ChannelEventGenerator::max_weight). The events are not meant
     /// to be combined.
     void fix_max_weights();
@@ -96,8 +97,8 @@ public:
      * @param systematics  Optional; adds the scale/PDF variation weights to
      *                     the written events (`.npy` columns `rwgt_<id>`).
      * @param histograms   Optional; filled with the written events and all
-     *                     their weights (recorded in `info.json`'s
-     *                     `"event_histograms"`).
+     *                     their weights (recorded under `"event_histograms"`
+     *                     in the status file).
      */
     void combine_to_compact_npy(
         const std::string& file_name,
@@ -164,32 +165,25 @@ private:
     // True while a channel has a steady-state batch dispatched but not yet fully
     // committed; keeps next_batch_event_count() from double-counting in-flight work.
     std::vector<bool> _channel_batch_pending;
-    // True once a channel's current generation ReadyJob has had its full event count
-    // dispatched (batch_event_count reached zero). Needed alongside
-    // channel_job_count == 0 before finish_channel_job() clears _channel_batch_pending
-    // -- dispatch now happens incrementally, so channel_job_count can transiently hit
-    // zero mid-batch, between one sub-job's commit and the next one being dispatched.
+    // True once all events of a channel's current generation ReadyJob are dispatched.
+    // finish_channel_job() needs this besides channel_job_count == 0, since the count
+    // can hit zero between one sub-job's commit and the next one's dispatch.
     std::vector<bool> _channel_batch_dispatch_done;
-    // Round-robin position into _ready_jobs for generation-batch dispatch, persisted
-    // across start_jobs() calls so multiple channels' batches interleave (one device
-    // batch at a time) instead of one channel's batch draining before the next is
-    // touched.
+    // Round-robin position into _ready_jobs, kept across start_jobs() calls so that
+    // channels' batches interleave.
     std::size_t _ready_job_rr_cursor = 0;
-    // Per-channel commit ordering, analogous to _ready_gen/_commit_cursor but ordered
-    // per channel instead of globally. _channel_gen_order holds a channel's dispatched
-    // job ids in dispatch order and _channel_ready_gen the ones that have completed;
-    // the front of the order deque is the next commit due. An explicit deque rather
-    // than a "next id" counter because a channel's job ids are not contiguous: dispatch
-    // round-robins between channels, so consecutive ids belong to different channels.
+    // Per-channel commit ordering. _channel_gen_order holds a channel's dispatched job
+    // ids in dispatch order and _channel_ready_gen the completed ones; the front of the
+    // deque is the next commit due. A deque is needed since a channel's ids are not
+    // contiguous.
     std::vector<std::deque<std::size_t>> _channel_gen_order;
     std::vector<std::set<std::size_t>> _channel_ready_gen;
-    // Same, for a job's unweight-stage completion (tracked separately since it's a
-    // distinct completion event). Order is appended at generate-commit time, which is
-    // also when the unweight stage is queued.
+    // Same for the unweight stage; the order is appended when the generate stage
+    // commits, which is when the unweight stage is queued.
     std::vector<std::deque<std::size_t>> _channel_unweight_order;
     std::vector<std::set<std::size_t>> _channel_unweight_ready;
-    // generate() only: per-context queue of job ids awaiting unweight-stage
-    // dispatch, drained with priority by start_jobs().
+    // Per-context queue of job ids awaiting unweight-stage dispatch, drained with
+    // priority by start_jobs().
     std::vector<std::vector<std::size_t>> _context_unweight_queue;
     ResultQueue _result_queue;
     std::unique_ptr<WeightingPipeline> _pipeline;
@@ -197,9 +191,8 @@ private:
     // Base seed for reproducible event generation.
     std::uint64_t _seed;
 
-    // unweight_all() may run more than once per generate() (a channel's target can
-    // grow after it looked done, un-finishing it and triggering another round).
-    // Salted by this counter so repeated calls don't replay the same stream.
+    // unweight_all() may run more than once per generate(); this counter salts its
+    // seeds so repeated calls don't replay the same stream.
     std::size_t _unweight_call_index = 0;
 
     // What a run of the generate loop does; see run_generate().
@@ -214,7 +207,7 @@ private:
     bool _survey_job = false;
     std::size_t _survey_pass = 0;
 
-    // Generate completions are committed in ascending job id, with
+    // survey() only: generate completions are committed in ascending job id, with
     // _commit_cursor as the next id due.
     std::set<std::size_t> _ready_gen;
     std::size_t _commit_cursor = 0;

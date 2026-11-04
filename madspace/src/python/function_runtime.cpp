@@ -323,9 +323,8 @@ namespace {
 
 // catching exceptions is extremely expensive so we cache whether to use the new or
 // old version of the dlpack protocol
-py::object call_dlpack(
-    py::object& dlpack_func, py::dict& stream_arg, bool* dlpack_version_cache
-) {
+py::object
+call_dlpack(py::object& dlpack_func, py::dict& stream_arg, bool* dlpack_version_cache) {
     py::object capsule_obj;
     if (dlpack_version_cache == nullptr || !*dlpack_version_cache) {
         try {
@@ -651,7 +650,7 @@ std::vector<Tensor> FunctionRuntime::call(std::vector<py::object> args) {
     ProducerStream producer_stream(args);
     auto [inputs, runtime] =
         check_and_convert_args(args, *this, &_dlpack_version_cache);
-    // a Python matrix element called from a worker thread needs the GIL
+    // release the GIL so that Python matrix elements on worker threads can take it
     py::gil_scoped_release release;
     return runtime->run(inputs);
 }

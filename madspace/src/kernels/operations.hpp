@@ -75,10 +75,9 @@ void backward_batch_foreach(
             discard_grad = instruction.discard_input_grad[i];
         }
         if (discard_grad) {
-            // The gradient of this input is never used (literal or integer). A
-            // batch-size-one gradient would be a broadcast output, which forces the
-            // scalar kernel on a single thread, so write it to batch-sized scratch
-            // memory instead.
+            // Unused gradient (literal or integer input): use batch-sized scratch, as a
+            // batch-size-one broadcast output would force a single-threaded scalar
+            // kernel.
             auto& input = locals[input_index];
             if (!input_grad || input_grad.size(0) != batch_size) {
                 Sizes shape = input.shape();
@@ -96,7 +95,6 @@ void backward_batch_foreach(
                 device,
                 instruction.input_grad_alloc_hints[i]
             );
-            // input_grad.zero(device);
         }
         input_grads[i] = &input_grad;
     }
@@ -198,7 +196,6 @@ void backward_op_stack(
                 device,
                 instruction.input_grad_alloc_hints[i]
             );
-            // input_grad.zero(device);
         }
         ++i;
     }
@@ -252,7 +249,6 @@ void backward_op_unstack(
             device,
             instruction.input_grad_alloc_hints[0]
         );
-        // input_grad.zero(device);
     }
     device.sync_barrier();
     auto unstacked_grads = input_grad.unstack(1);
@@ -285,7 +281,6 @@ void backward_op_pop(
             device,
             instruction.input_grad_alloc_hints[0]
         );
-        // input_grad.zero(device);
     }
     device.sync_barrier();
     std::size_t last_index = input_grad.size(1) - 1;
@@ -341,7 +336,6 @@ void backward_op_batch_cat(
                 device,
                 instruction.input_grad_alloc_hints[i]
             );
-            // input_grad.zero(device);
         }
         ++i;
     }
@@ -381,7 +375,6 @@ void backward_op_batch_split(
             device,
             instruction.input_grad_alloc_hints[0]
         );
-        // input_grad.zero(device);
     }
     device.sync_barrier();
     auto split_grads = input_grad.split(0, sizes);
@@ -436,7 +429,6 @@ void backward_op_cat(
                 device,
                 instruction.input_grad_alloc_hints[i]
             );
-            // input_grad.zero(device);
         }
         ++i;
     }
@@ -554,7 +546,6 @@ void backward_op_rqs_reshape(
             device,
             instruction.input_grad_alloc_hints[0]
         );
-        // input_grad.zero(device);
     }
     device.sync_barrier();
     auto input_grad_reshaped = input_grad.factor_dim(1, n_dims);

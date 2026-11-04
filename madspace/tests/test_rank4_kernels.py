@@ -1,7 +1,7 @@
 """An elementwise kernel on a rank-4 tensor, batch x 2 x 3 x 4.
 
-The GPU kernel launcher used to compute only the first slice of the last dimension
-of such a tensor, leaving the other elements of the output unset.
+Guards against a GPU kernel launcher that computes only the first slice of the
+last dimension, leaving the other output elements unset.
 """
 
 import torch

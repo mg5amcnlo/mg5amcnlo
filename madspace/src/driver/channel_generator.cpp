@@ -65,8 +65,8 @@ DerivedSeed::SeedType unweight_seed_type(bool is_survey, std::size_t survey_pass
         : DerivedSeed::second_survey_unweight;
 }
 
-// Role folded into job_index so integrand_channel and integrand_common get
-// independent streams despite sharing seed_type/channel_index.
+// Folded into job_index so integrand_channel and integrand_common get independent
+// streams.
 enum RngRole { rng_role_channel = 0, rng_role_common = 1, rng_role_count = 2 };
 
 DerivedSeed generate_phase_seed(
@@ -445,9 +445,8 @@ void ChannelEventGenerator::integrate(const GeneratorBatchJob& job) {
         if (w_view[i] != 0) {
             ++sample_count_after_cuts;
         }
-        // With a bias b the weights are w b: the absolute integral, which drives
-        // the adaptation, unweighting and channel allocation, keeps the bias,
-        // while the reported cross section divides it out.
+        // With a bias b the weights are w b: the absolute integral keeps the bias,
+        // the reported cross section divides it out.
         double weight = w_view[i];
         if (_field_indices.bias != -1 && weight != 0.) {
             weight /= job.biases.view<double, 1>()[i];
@@ -468,8 +467,7 @@ void ChannelEventGenerator::integrate(const GeneratorBatchJob& job) {
             auto hist2_view = job.hists.at(2 * i + 1).view<double, 2>()[0];
             auto& chan_hist = _histograms.at(i);
             for (std::size_t j = 0; j < hist_view.size(); ++j) {
-                // note: we don't assign the actuals means and errors here. There are
-                // still some normalization steps necessary that are performed later
+                // raw sums; normalized in EventGenerator::histograms()
                 chan_hist.bin_values.at(j) += hist_view[j];
                 chan_hist.bin_errors.at(j) += hist2_view[j];
             }
@@ -536,9 +534,8 @@ double ChannelEventGenerator::channel_weight_sum(std::size_t event_count) {
     return weight_sum;
 }
 
-// Assigns job's base seed on the scheduling thread, from its logical identity
-// only (channel, kind, sequence) -- never from context_index -- so it doesn't
-// depend on worker/context assignment.
+// The job's seed depends only on channel, kind and sequence, not on the context
+// it runs on.
 void ChannelEventGenerator::start_job(
     GeneratorBatchJob& job,
     ResultQueue& result_queue,
@@ -550,8 +547,7 @@ void ChannelEventGenerator::start_job(
     job.rng_is_survey = is_survey;
     job.rng_survey_pass = survey_pass;
     job.rng_job_index = is_survey ? _survey_rng_seq++ : _generate_rng_seq++;
-    // Through result_queue, so a job that throws still posts its result and the
-    // exception reaches the waiting thread instead of leaving it blocked forever.
+    // Submitted via result_queue so that an exception reaches the waiting thread.
     result_queue.submit(
         _contexts.at(job.context_index)->thread_pool(),
         job.job_id,
@@ -573,10 +569,8 @@ void ChannelEventGenerator::start_job(
                 ? _config.cpu_batch_size
                 : _config.gpu_batch_size;
             std::size_t batch_size = max_batch_size;
-            // Only VEGAS batches shrink to fit -- they need next_vegas_batch_size()'s
-            // exact geometric progression for correct grid-adaptation statistics.
-            // Generation batches always submit full device-sized jobs; a little
-            // overshoot there is expected and cheaper than a partial job.
+            // Only VEGAS batches shrink to fit, to keep their batch sizes exact.
+            // Generation jobs are always full device batches.
             if (job.is_vegas_batch && job.batch_event_count > 0 &&
                 batch_size > job.batch_event_count) {
                 batch_size = job.batch_event_count;
@@ -587,8 +581,7 @@ void ChannelEventGenerator::start_job(
             std::size_t total_count = 0, repetitions = 0;
             TensorVec all_ps_points;
             while (true) {
-                // Successive calls draw further from integrand_channel's own
-                // persistent stream (set once above) -- no per-call re-seeding.
+                // successive calls continue the stream seeded above
                 auto ps_points =
                     runtimes.integrand_channel->run({Tensor({batch_size})});
                 std::size_t acc_count =
@@ -650,8 +643,7 @@ void ChannelEventGenerator::start_job(
             if (_field_indices.bias != -1) {
                 job.biases = job.events.at(_field_indices.bias).cpu();
             }
-            // observable_histograms/vegas_histogram/discrete_histogram don't consume
-            // random numbers, so they're never seeded.
+            // the histogram runtimes use no random numbers and are never seeded
             if (runtimes.observable_histograms) {
                 auto hists = runtimes.observable_histograms->run(
                     {job.events.at(_field_indices.weight),
@@ -793,7 +785,8 @@ void ChannelEventGenerator::clear_events() {
 }
 
 void ChannelEventGenerator::update_max_weight(Tensor weights, bool unweight) {
-    // not the written events, they are committed in a thread dependent order
+    // _freeze_count rather than the written events, which arrive in thread-dependent
+    // order.
     if (_max_weight_fixed || _freeze_count > _config.freeze_max_weight_after) {
         return;
     }
@@ -824,11 +817,8 @@ void ChannelEventGenerator::update_max_weight(Tensor weights, bool unweight) {
 void ChannelEventGenerator::set_target_count(std::size_t target_count) {
     std::size_t old_target = _status.count_target;
     _status.count_target = target_count;
-    // The truncation budget scales with count_target, and _max_weight only
-    // rises. A cap chosen under a larger target than the channel ends up with
-    // (e.g. generate()'s round-one seed) would otherwise never be corrected: a
-    // channel that has met its smaller target is not revisited. Tighten the cap
-    // now; unweight_all() re-unweights the whole file against it at the end.
+    // The truncation budget scales with count_target and _max_weight only rises, so
+    // tighten the cap for a smaller target here; unweight_all() re-unweights later.
     if (target_count < old_target && _max_weight != 0 && !_max_weight_fixed &&
         _freeze_count <= _config.freeze_max_weight_after) {
         apply_truncation_budget();

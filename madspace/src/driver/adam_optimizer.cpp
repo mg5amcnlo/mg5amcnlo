@@ -110,7 +110,6 @@ TensorVec AdamOptimizer::step(const TensorVec& inputs) {
     if (_grad_clipper) {
         auto clip_result = _grad_clipper->run({global_grads.at(0), _threshold_tensor});
         global_grads = {clip_result.at(0)};
-        // double norm = clip_result.at(1).cpu().view<double, 1>()[0];
     }
 
     device->adam_step(

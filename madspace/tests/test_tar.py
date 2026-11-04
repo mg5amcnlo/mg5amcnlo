@@ -89,7 +89,7 @@ def test_read_tar_from_other_tool(tmp_path):
     with tarfile.open(first) as tar:
         tar.extractall(src, filter="data")
 
-    # an archive written by Python's tarfile (GNU format) and by system tar
+    # archives written by Python's tarfile in GNU and ustar formats
     for fmt, name in [
         (tarfile.GNU_FORMAT, "gnu.tar"),
         (tarfile.USTAR_FORMAT, "ustar.tar"),

@@ -47,9 +47,7 @@ ObservableValues::ObservableValues(const std::vector<Observable>& observables) :
         [&]() {
             NamedVector<Type> ret_types;
             for (std::size_t i = 0; i < observables.size(); ++i) {
-                // same type as the observable itself (event-level observables can
-                // return a vector per event; like the histogram op, the first
-                // component is histogrammed)
+                // event-level observables can return a vector per event
                 ret_types.push_back(
                     std::format("value{}", i), observables.at(i).return_types().at(0)
                 );

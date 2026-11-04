@@ -4,7 +4,7 @@ samples none (leptonic, a decay).
 There x1 = x2 = 1, but like every output of a mapping they have the batch
 dimension their type declares. Channels of a MultiChannelMapping (and of a
 MultiChannelFunction) are concatenated output by output, which needs it:
-leptonic and decay channels used to fail with "Argument must have batch
+leptonic and decay channels would otherwise fail with "Argument must have batch
 dimension".
 """
 

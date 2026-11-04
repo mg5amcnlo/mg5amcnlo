@@ -129,7 +129,8 @@ KERNELSPEC void kernel_flat_window_breit_wigner_invariant(
     auto in_flat = t < w1 + w2;
     auto _s = where(in_lo, s_bw_lo, where(in_flat, s_flat, s_bw_hi));
     auto d = _s - m2;
-    auto f = where(in_lo, 1. / (d * d + gm * gm), where(in_flat, c, 1. / (d * d + gm * gm)));
+    auto f =
+        where(in_lo, 1. / (d * d + gm * gm), where(in_flat, c, 1. / (d * d + gm * gm)));
     s = _s;
     gs = w_tot / f;
 }
@@ -155,7 +156,9 @@ KERNELSPEC void kernel_flat_window_breit_wigner_invariant_inverse(
     auto in_lo = s < a;
     auto in_flat = s < b;
     auto cdf = where(
-        in_lo, (y - y_min) / gm, where(in_flat, w1 + c * (s - a), w1 + w2 + (y - y_b) / gm)
+        in_lo,
+        (y - y_min) / gm,
+        where(in_flat, w1 + c * (s - a), w1 + w2 + (y - y_b) / gm)
     );
     auto f = where(in_lo, bw, where(in_flat, c, bw));
     r = cdf / w_tot;

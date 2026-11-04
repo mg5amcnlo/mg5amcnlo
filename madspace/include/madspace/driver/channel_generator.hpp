@@ -60,8 +60,8 @@ struct StepIntegral {
  */
 class ChannelEventGenerator {
 public:
-    /// Reconstruct a generator previously written with @ref save, reopening
-    /// `event_file` and `weight_file`.
+    /// Reconstruct a generator previously written with @ref save. Creates new,
+    /// empty `event_file` and `weight_file`.
     static ChannelEventGenerator load(
         const std::string& channel_file,
         const std::vector<ContextPtr>& contexts,
@@ -82,10 +82,10 @@ public:
     /**
      * @param contexts          One context per device to run on.
      * @param integrand         The channel's compiled integrand.
-     * @param event_file        Path of the weighted event file; empty for no
-     *                          file (events are only kept in memory).
-     * @param weight_file       Path of the max-weight tracking file; empty
-     *                          for no file.
+     * @param event_file        Path of the event file; empty for no file.
+     * @param weight_file       Path of the file with the per-event weights, which
+     *                          @ref unweight_file unweights in place; empty for
+     *                          no file.
      * @param config            Generator configuration.
      * @param subprocess_index  Index of the owning subprocess.
      * @param name              Human-readable channel name.
@@ -118,10 +118,10 @@ public:
     std::size_t count_requested_opt() const { return _count_requested_opt; }
     /// The filled observable histograms, if any were requested.
     const std::vector<Histogram>& histograms() const { return _histograms; }
-    /// The weighted event file. Throws if the channel was created without one.
+    /// The event file. Throws if the channel was created without one.
     EventFile& event_file();
-    /// The max-weight tracking file. Throws if the channel was created without
-    /// one.
+    /// The file with the per-event weights. Throws if the channel was created
+    /// without one.
     EventFile& weight_file();
     /// Number of particles per event.
     std::size_t particle_count() const { return _particle_count; }
@@ -139,8 +139,8 @@ public:
     bool has_abs_integral_prior() const { return _abs_integral_prior.has_value(); }
     /// Set the signed integral known from an earlier run, with its standard error.
     void set_integral_prior(double mean, double error);
-    /// Whether this run has too few samples for an integral estimate of its own, so
-    /// that @ref EventGenerator uses the priors instead.
+    /// Whether an absolute-integral prior is set and this run has too few samples
+    /// (fewer than two, or no usable error) for an estimate of its own.
     bool uses_integral_prior(bool final_step = true) const;
     /// The prior of the signed integral as (mean, standard error), or of the
     /// absolute one if no signed prior was set.
@@ -185,7 +185,7 @@ public:
     /// Types of the unweighted events, the integrand outputs before `random`.
     const NamedVector<Type>& event_types() const { return _event_types; }
     /// Whether the matrix element of the integrand returns the color, helicity
-    /// and diagram index.
+    /// and diagram index, in this order.
     const std::array<bool, 3>& provided_indices() const { return _provided_indices; }
 
     /// Integral of the final weights: after the last re- or unweighting step,
@@ -300,19 +300,20 @@ public:
         EventBuffer& weight_buffer
     ) const;
     /// Signed weight of event `index` of a buffer read from @ref weight_file,
-    /// in units of the maximum weights, 0 for a rejected event.
+    /// in units of the maximum weights, 0 for an event rejected by a step.
     double unweighted_weight(EventBuffer& weight_buffer, std::size_t index) const;
 
-    /// Run a final unweighting pass over @ref weight_file into @ref
-    /// event_file, using `rand_gen`.
+    /// Unweight @ref weight_file in place with the current maximum weight: weights
+    /// of rejected events are set to zero. Uses `rand_gen`.
     void unweight_file(MixMaxRandom& rand_gen);
-    /// Integrate `job`'s events, accumulating @ref cross_section.
+    /// Accumulate `job`'s weights into @ref cross_section, the status and the
+    /// optimizer and histogram data.
     void integrate(const GeneratorBatchJob& job);
-    /// Accumulate `job`'s events into the VEGAS grid and channel-weight
-    /// optimizers.
+    /// Update the VEGAS grid and channel-weight optimizers from the data
+    /// accumulated by @ref integrate, and update the optimization status.
     void optimize_vegas(const GeneratorBatchJob& job);
-    /// Sum of this channel's weight over `event_count` freshly sampled events,
-    /// used for multi-channel weight optimization.
+    /// Sum of |weight| / max_weight over the first `event_count` nonzero weights
+    /// of @ref weight_file.
     double channel_weight_sum(std::size_t event_count);
     /// Dispatch `job` (a survey or generation batch) onto the thread pool,
     /// seeded from `seed`.
@@ -333,7 +334,8 @@ public:
     void start_unweight_job(GeneratorBatchJob& job, ResultQueue& result_queue);
     /// Size of the next VEGAS/channel-weight optimization batch.
     std::size_t next_vegas_batch_size();
-    /// Discard the accumulated event and weight files.
+    /// Discard the accumulated events and weights, and reset the integral, the
+    /// event counts and (unless fixed) the maximum weight.
     void clear_events();
     /// Update @ref max_weight from a batch of `weights`, which are unweighted
     /// later if `unweight` is true.
@@ -352,10 +354,10 @@ public:
     /// Serialize this generator's state to `file_name`; see @ref load.
     void save(const std::string& file_name) const;
     /// The JSON text that @ref save writes; see @ref load_json. With
-    /// `include_estimates`, the current maximum weight and the integral of the
-    /// absolute weights are stored as well. @ref load_json then keeps the
-    /// maximum weight fixed and uses the integral as a prior, see
-    /// @ref abs_integral_estimate.
+    /// `include_estimates`, the current maximum weight and, if there are at least
+    /// two samples, the integrals (signed and absolute) are stored as well.
+    /// @ref load_json then keeps the maximum weight fixed and uses the
+    /// integrals as priors, see @ref abs_integral_estimate.
     std::string to_json(bool include_estimates = false) const;
 
 private:
@@ -449,11 +451,8 @@ private:
     // never reset. Separate for survey/generate so neither depends on the other.
     std::size_t _survey_rng_seq = 0;
     std::size_t _generate_rng_seq = 0;
-    // Progress of unweight_file()'s final pass over _weight_file: _unweighted_count
-    // is the index up to which it's been scanned under the *current* _max_weight,
-    // and _unweighted_accept_count the number of those accepted. Both reset to 0
-    // whenever _max_weight changes (forcing a full rescan), since a changed
-    // max_weight invalidates every prior accept/reject decision.
+    // Progress of unweight_file(): the number of weights scanned and accepted under
+    // the current _max_weight. Reset to 0 whenever _max_weight changes.
     std::size_t _unweighted_count = 0;
     std::size_t _unweighted_accept_count = 0;
     std::size_t _iters_without_improvement = 0;

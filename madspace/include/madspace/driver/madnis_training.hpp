@@ -46,13 +46,16 @@ public:
         double learning_rate = 1e-3;
         /// Number of training batches.
         std::size_t batches = 1000;
-        /// Batches between two status-history entries.
+        /// Batches between two status-history entries; also the length of
+        /// the window averaged by @ref average_loss.
         std::size_t log_interval = 100;
         /// Number of integration-history entries kept per channel.
         std::size_t integration_history_length = 1000;
         /// Batches between two channel-dropping checks.
         std::size_t channel_dropping_interval = 100;
-        /// Minimum integral fraction below which a channel is dropped.
+        /// Channels are dropped, smallest integral first, while their
+        /// cumulative integral fraction stays at most this (scaled by
+        /// `min(1000 / batch, 1)`).
         double channel_dropping_threshold = 0.01;
         /// Generator batch size on a CPU device.
         std::size_t cpu_generator_batch_size = 1000;
@@ -62,12 +65,13 @@ public:
         std::size_t gpu_generator_batch_granularity = 1000;
         /// Multiple of the training batch size kept buffered per channel.
         std::size_t generator_target_size_factor = 32;
-        /// Constant added to every channel's requested batch size.
+        /// Constant added to the total training batch size, which is split
+        /// over the active channels.
         std::size_t batch_size_offset = 512;
-        /// Minimum training-batch events requested per active channel.
+        /// Training-batch events added to the total per active channel.
         std::size_t batch_size_per_channel = 128;
         /// Fraction of the training batch drawn uniformly across channels
-        /// rather than proportionally to their integral.
+        /// rather than proportionally to their standard deviation.
         double uniform_channel_ratio = 0.1;
         /// Adam learning-rate schedule.
         AdamOptimizer::LRSchedule lr_schedule = AdamOptimizer::none;
@@ -77,9 +81,9 @@ public:
         double adam_beta2 = 0.999;
         /// Adam numerical-stability constant.
         double adam_eps = 1e-8;
-        /// Adam L2 weight-decay coefficient.
+        /// Adam decoupled weight-decay coefficient.
         double adam_weight_decay = 0.0;
-        /// Maximum gradient norm; `0` disables clipping.
+        /// Maximum gradient norm per sqrt(parameter count); `0` disables clipping.
         double grad_clip_threshold = 0.0;
         /// Maximum number of samples kept in the replay buffer per channel;
         /// `0` disables buffering.
@@ -93,10 +97,10 @@ public:
         std::size_t buffer_skip_batches = 1000;
         /// Quantile used to estimate the max weight for buffer unweighting.
         double buffer_unweighting_quantile = 0.99;
-        /// Fraction of training spent with the channel-weight network frozen,
-        /// before it starts training too.
+        /// Fraction of training at the end during which the channel-weight
+        /// network is frozen.
         double fixed_cwnet_fraction = 0.33;
-        /// Softclip threshold applied to the channel weights; `0` disables it.
+        /// Soft-clipping threshold on the loss contribution; `0` disables it.
         double softclip_threshold = 0.0;
         /// Number of channel weights kept per event when compressing the
         /// multi-channel weight loss.
@@ -304,13 +308,9 @@ public:
      * @param verbosity          Progress-reporting verbosity.
      * @param status_file        Optional status file progress is
      *                           periodically written to.
-     * @param seed                Top-level run seed (reusing the run card's
-     *                            own seed, also used by
-     *                            `build_event_generator()`); each
-     *                            subprocess's `MadnisTraining` gets a
-     *                            `channel_index_offset` slice of this seed's
-     *                            stream so their derived seeds don't
-     *                            collide.
+     * @param seed               Top-level run seed; each subprocess's
+     *                           `MadnisTraining` gets a `channel_index_offset`
+     *                           slice so their derived seeds don't collide.
      */
     MultiMadnisTraining(
         ContextPtr generator_context,

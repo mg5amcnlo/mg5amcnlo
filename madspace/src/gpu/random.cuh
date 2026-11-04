@@ -15,8 +15,8 @@
 namespace madspace {
 namespace gpu {
 
-// One MIXMAX substream per DerivedSeed stream index; the bank covers all of them so
-// every RNG-consuming instruction draws from its own non-overlapping substream.
+// Number of MIXMAX engines in the bank; engine i is the substream selected by index i
+// in the low SEED_STREAM_BITS of the seed.
 constexpr std::size_t RNG_ENGINE_COUNT = 1 << 12;
 
 // The low SEED_STREAM_BITS of the effective 128-bit seed are the per-engine stream

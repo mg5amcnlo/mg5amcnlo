@@ -257,8 +257,7 @@ public:
             _index_map[key] = index + old_size;
         }
     }
-    /// A copy reordered to match `index_map` (same keys, same key-to-position
-    /// mapping as this instance's, just reassigned).
+    /// A copy with the same keys whose values are ordered by `index_map`.
     NamedVector<T>
     sort_like(const std::unordered_map<std::string, std::size_t>& index_map) const {
         if (index_map.size() != size()) {

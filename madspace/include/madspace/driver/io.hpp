@@ -20,15 +20,9 @@ Tensor load_tensor(TarReader& tar, const std::string& name);
 /// Append `tensor` as an npy file called `name` to the tar archive `tar`.
 void save_tensor(TarWriter& tar, const std::string& name, Tensor tensor);
 
-// Peeks a .npy event file's own field descriptor (its header's "descr"
-// entry) without needing to already know its layout -- returns the field
-// names in declaration order (particle-level fields duplicated per particle
-// slot with a "partN_" prefix, matching full_descr()'s own naming). Used
-// where a file's actual layout has caller-optional fields the reader needs
-// to auto-detect before committing to a DataLayout to open it with (eg
-// LHE event records, which may or may not carry
-// x1/fact_scale1/x2/fact_scale2/partial_weight_product depending on whether
-// [generation] systematics was enabled when the file was written).
+/// Field names, in order, from the "descr" entry of the header of the npy event
+/// file `file`. Particle fields are repeated per particle with a "partN_"
+/// prefix. Allows detecting optional fields before choosing a @ref DataLayout.
 std::vector<std::string> peek_npy_field_names(const std::string& file);
 
 struct FieldLayout {
@@ -91,12 +85,12 @@ public:
     static constexpr int f_lhe_particle = 2;
     static constexpr int f_clustering = 4;
     // MLM alpha_s reweighting: the scale of the clustering vertex stored on
-    // outgoing particle 2 + i is vertex i's. Only kept in the combined buffer
-    // the systematics read, never written to an event file.
+    // outgoing particle 2 + i is vertex i's. Only the systematics read it; it
+    // is not written to the final event file.
     static constexpr int f_alphas_scales = 8;
     // MLM pdf reweighting ladder: step s (each one that can carry a pdf
     // ratio) on particle s, each beam's leading density on particle 0 and 1.
-    // Like f_alphas_scales only in the combined buffer, for the systematics.
+    // Like f_alphas_scales, only for the systematics.
     static constexpr int f_pdf_ladder = 16;
 
     static std::vector<FieldLayout> layout(int fields) {
@@ -233,8 +227,8 @@ public:
     static constexpr int f_bias = 256;
     static constexpr int f_matrix_element = 512;
 
-    // `syst_weight_count` columns of systematic variation weights are appended
-    // when f_syst_weights is set; `syst_weight_ids` names them (rwgt_<id>).
+    // With f_syst_weights, one column rwgt_<id> is added per entry of
+    // `syst_weight_ids`.
     static std::vector<FieldLayout>
     layout(int fields, const std::vector<int>& syst_weight_ids = {}) {
         std::vector<FieldLayout> ret;
@@ -413,8 +407,9 @@ inline const DataLayout weight_file_layout = DataLayout(
     ParticleRecord::layout(ParticleRecord::f_none)
 );
 
-/// Weight file of a channel with re- and unweighting steps: the weight of the
-/// first step and, as "particles", the ratio and the maximum weight of each step.
+/// Weight file of a channel with re- and unweighting steps: the event weight
+/// and, as "particles", the ratio and maximum weight of the generation stage
+/// (particle 0) and of each step.
 inline const DataLayout step_weight_file_layout = DataLayout(
     EventRecord::layout(EventRecord::f_weight),
     {{"ratio", FieldLayout::f64, 0}, {"max_weight", FieldLayout::f64, 0}}
@@ -515,10 +510,7 @@ public:
     void clear();
     std::size_t particle_count() const { return _particle_count; }
     std::size_t event_count() const { return _event_count; }
-    // The DataLayout this file was actually constructed with -- lets a
-    // reader that only has an already-open EventFile& (not the layout that
-    // was used to open it) build a matching EventBuffer, rather than having
-    // to independently know/recompute the same layout itself.
+    // The DataLayout this file was opened with, for building a matching EventBuffer.
     const DataLayout& layout() const { return _layout; }
     ~EventFile();
 

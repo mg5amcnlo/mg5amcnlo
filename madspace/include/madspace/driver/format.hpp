@@ -8,13 +8,16 @@ namespace madspace {
 
 /// CPU time consumed by the current process, in microseconds.
 std::size_t cpu_time_microsec();
-/// Human-readable `wall_time_sec` and `cpu_time_sec`, e.g. `"1h 2m (85% CPU)"`.
+/// Human-readable `wall_time_sec` and `cpu_time_sec`, formatted as
+/// `"HH:MM:SS.cc wall, HH:MM:SS.cc cpu"`.
 std::string format_run_time(double wall_time_sec, double cpu_time_sec);
-/// `value` with an SI magnitude suffix (`k`, `M`, ...), three significant digits.
+/// `value`, rounded to an integer, with an SI magnitude suffix (`k`, `M`, ...)
+/// and three significant digits.
 std::string format_si_prefix(double value);
-/// `value` with its uncertainty `error`, e.g. `"1.23(4)"`.
+/// `value` with its uncertainty `error`, e.g. `"1.234(45)"`. If `error` is not
+/// smaller than `value`, the form `"value ± error"` is used.
 std::string format_with_error(double value, double error);
-/// ASCII progress bar of `width` characters, `progress` in `[0, 1]`.
+/// Progress bar of `width` Unicode block characters, `progress` in `[0, 1]`.
 std::string format_progress(double progress, int width);
 
 /**
@@ -33,8 +36,9 @@ public:
      * @param title         Text shown in the top border.
      * @param rows          Number of content rows.
      * @param column_sizes  Width of each column, in characters.
-     * @param offset        Extra blank lines printed above the box.
-     * @param box_width     Total box width, in characters.
+     * @param offset        Extra lines between the end of the box and the cursor
+     *                      when it is redrawn.
+     * @param box_width     Minimum box width; the last column is widened to it.
      */
     PrettyBox(
         const std::string& title,

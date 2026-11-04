@@ -41,7 +41,7 @@ namespace madspace {
  * - `s_hat` – `float`, shape `(batch,)` – partonic invariant
  *   @f$\hat s = x_1 x_2 s_\mathrm{lab}@f$.
  *
- * In addition every mapping returns a `weight` (`float`, shape `(batch,)`), the
+ * In addition every mapping returns a `det` (`float`, shape `(batch,)`), the
  * Jacobian of the transformation.
  *
  * **References**

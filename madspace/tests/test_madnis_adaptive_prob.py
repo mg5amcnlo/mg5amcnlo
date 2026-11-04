@@ -2,13 +2,12 @@
 density the event was sampled with, q, for both settings of
 ``drop_cuts_and_rescale``.
 
-The MadNIS loss and the replay-buffer unweighter take it as q. It is the product of
-the Jacobians of the adaptive mappings, 1/q, inverted: with
-``drop_cuts_and_rescale`` the inversion came with the rescaling by N / N_acc, but
-without it the Jacobian was returned as it is, so that training with
-``drop_zero_integrands = false`` used 1/q instead of q. Checked against the
-density from IntegrandProbability at the same points, with a randomized flow so
-that q is not constant.
+The MadNIS loss and the replay-buffer unweighter take it as q. The product of the
+Jacobians of the adaptive mappings is 1/q, so it has to be inverted for both
+settings (with ``drop_cuts_and_rescale`` also rescaled by N / N_acc); returning
+the Jacobian itself would make training with ``drop_zero_integrands = false``
+use 1/q. Checked against the density from IntegrandProbability at the same
+points, with a randomized flow so that q is not constant.
 """
 
 import pytest

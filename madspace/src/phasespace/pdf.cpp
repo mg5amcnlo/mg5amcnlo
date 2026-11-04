@@ -475,7 +475,6 @@ AlphaSGrid::AlphaSGrid(const std::string& file) {
         throw std::runtime_error(std::format("could not open file '{}'", file));
     }
     for (std::string line; std::getline(grid_file, line);) {
-        // skip comments and remove leading and trailing spaces
         line = trim(line);
 
         // minimalistic parser to read yaml-like data

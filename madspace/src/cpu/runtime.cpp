@@ -132,11 +132,8 @@ using namespace madspace::kernels;
 
 namespace {
 
-// External tensors (e.g. row-major numpy arrays, or expanded gradients from
-// torch) can have a batch stride other than one. The vectorized kernels only
-// handle batch stride one and leave everything else to the scalar kernels, which
-// round slightly differently, so copy them once to make the results independent
-// of the memory layout of the arguments.
+// Copy tensors with batch stride other than one (e.g. external numpy or torch
+// data), so that the results do not depend on the vectorized/scalar kernel choice.
 TensorVec batch_contiguous(const TensorVec& tensors) {
     TensorVec ret;
     ret.reserve(tensors.size());
@@ -164,9 +161,8 @@ void op_matrix_element(
     std::vector<UmamiInputKey> input_keys(input_count);
     std::vector<UmamiOutputKey> output_keys(output_count);
     std::vector<void*> input_ptrs(input_count), output_ptrs(output_count);
-    // Only prepare the inputs if the matrix element is actually called: making an
-    // input contiguous can start an asynchronous copy, whose target would be freed
-    // while the copy is still running if we returned early below.
+    // Prepare the inputs only if the matrix element is called: an asynchronous copy
+    // must not be abandoned by the early return below.
     bool call_matrix_element = me_index != 0xBADCAFE && batch_size > 0;
     for (std::size_t i = 0; i < input_count && call_matrix_element; ++i) {
         input_keys[i] = static_cast<UmamiInputKey>(
@@ -191,8 +187,7 @@ void op_matrix_element(
         output = Tensor(instruction.output_dtypes[i], shape, device);
         output_ptrs[i] = output.data();
         if (me_index == 0xBADCAFE) {
-            // flat dummy matrix element for testing purposes
-            // implemented at LUMI hackathon where the coffee was indeed terrible
+            // flat dummy matrix element for testing
             switch (output_keys[i]) {
             case UMAMI_OUT_MATRIX_ELEMENT:
             case UMAMI_OUT_MATRIX_ELEMENT_RATIO:
@@ -557,7 +552,8 @@ void backward_op_matmul_to_float64(
 }
 
 // matmul followed by the activation Act, with the outputs linear (before the
-// activation) and y. Everything runs in a single job, as in op_matmul_to_float64.
+// activation) and the activated output. Everything runs in a single job, as in
+// op_matmul_to_float64.
 template <typename Act, typename F, typename D>
 void op_matmul_activation(
     const CpuRuntime::Instruction& instruction, TensorVec& locals, const D& device
@@ -941,7 +937,6 @@ void batch_reduce_sum_mean_backward_impl(
     if (!input_grad) {
         input_grad =
             Tensor(DataType::dt_float64, input.shape(), device, AllocHint::local_grad);
-        // input_grad.zero(device);
     }
     device.sync_barrier();
 
@@ -1779,7 +1774,6 @@ std::pair<TensorVec, TensorVec> CpuRuntime::run_backward_single(
     Tensor all_global_grads(
         _grad_global_dtype, {_grad_global_total_size}, AllocHint::global_grad
     );
-    // all_global_grads.zero();
     TensorVec global_grads = all_global_grads.split_and_reshape(_grad_global_shapes);
     for (auto [index, grad] : zip(_grad_global_indices, global_grads)) {
         if (local_grads[index]) {
@@ -1803,7 +1797,6 @@ std::pair<TensorVec, TensorVec> CpuRuntime::run_backward_single(
                     device,
                     AllocHint::local_grad
                 );
-                // grad.zero(device);
             }
         }
         using DeviceType = CpuDevice;
@@ -1970,7 +1963,6 @@ std::pair<TensorVec, TensorVec> CpuRuntime::run_backward_concurrent(
     Tensor all_global_grads(
         _grad_global_dtype, {_grad_global_total_size}, AllocHint::global_grad
     );
-    // all_global_grads.zero();
     TensorVec global_grads = all_global_grads.split_and_reshape(_grad_global_shapes);
     for (auto [index, grad] : zip(_grad_global_indices, global_grads)) {
         if (local_grads[index]) {
@@ -2014,7 +2006,6 @@ std::pair<TensorVec, TensorVec> CpuRuntime::run_backward_concurrent(
                                 device,
                                 AllocHint::local_grad
                             );
-                            // grad.zero(device);
                         }
                     }
 

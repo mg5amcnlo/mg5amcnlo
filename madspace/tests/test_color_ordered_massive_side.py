@@ -1,13 +1,12 @@
 """A side of two massive particles in ColorOrderedMapping with a cut elsewhere.
 
-g g > t t~ g in the color order t g g g t~ (0 2 4 1 3 in particle numbers): the
+g g > t t~ g in the color order t g g g t~ (2 0 4 1 3 in particle numbers): the
 gluon is alone on one side, the top pair is the other, built by the 2->3 step
 off the opposite beam. Any cut turns on the transverse-energy floors of that
 step, which are m_T >= m for a top without a pt cut. The floor on the momentum
-transfer to the beam was etmin^2 = m_T^2, right only for massless particles:
-the bound is m_T^2 - m^2 = pt^2. It removed the tops with |t| < m_t^2, about 6%
-of the volume and 20% of it at small top pt, and the AmpliCol channels of
-g g > t t~ g came out 25% low.
+transfer to the beam must be m_T^2 - m^2 = pt^2, not etmin^2 = m_T^2 (right only
+for massless particles), which would remove the tops with |t| < m_t^2 and bias
+the AmpliCol channels of g g > t t~ g low.
 """
 
 import math

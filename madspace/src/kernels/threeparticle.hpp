@@ -171,9 +171,8 @@ three_body_decay_inverse(FourMom<T> p1, FourMom<T> p2, FourMom<T> p3) {
     return {r_e1, r_e2, r_phi, r_cos_theta, r_beta, m0, m1, m2, m3, 1. / det};
 }
 
-// Width given to an empty s23 range, relative to s23: an absolute EPS is below
-// one ulp for s23 > ~1e4 and left max == min, and a few ulps still make the
-// differences of powers in the 1/s^nu sampling vanish.
+// Width given to an empty s23 range, relative to s23, since an absolute EPS can be
+// below one ulp of s23.
 template <typename T>
 KERNELSPEC FVal<T> s23_min_width(FVal<T> s) {
     return max(FVal<T>(EPS), 1e-10 * fabs(s));
@@ -194,11 +193,8 @@ KERNELSPEC Pair<FVal<T>, FVal<T>> s23_min_max(
     // (the frame of rotate_two_ref),
     //   s23 = m0^2 + m1^2 - 2 [(sqrt(s12) + E3) E1 - p3_z p1_z]
     //         + 2 p3_x p1_t cos(phi),
-    // a range of width 4 p3_x p1_t about the phi-independent part. Every factor
-    // of the width is read off momenta, so it keeps its relative precision when
-    // a particle is soft. The Byckling-Kajantie form of the same range, through
-    // 3x3 Gram determinants, cancels down to the square of the width and loses
-    // it all below a softness of about 1e-8.
+    // so the range has width 4 p3_x p1_t. Every factor of the width is read off
+    // momenta, which keeps its relative precision when a particle is soft.
     FourMom<T> p_tot;
     for (int i = 0; i < 4; ++i) {
         p_tot[i] = p_12[i] + p3[i];
@@ -469,11 +465,9 @@ KERNELSPEC Pair<FVal<T>, FVal<T>> s23_etmin_clamp(
     auto smax_b = m2_2 + m3_2 + 2. * e_eff * pim1_0 + 2. * sqrt(max(disc, 0.)) * pim1_1;
     auto smax_ok = active & (e_eff > 0.) & (disc > 0.) & (smax_b > smn);
     auto smx_new = where(smax_ok, min(smx, smax_b), smx);
-    // smin: a massless peeled particle needs ET -> minimum s-channel mass.
-    // Massless is judged relative to the energy scale: the inverse reads m2_2
-    // off momenta, where a massless particle comes out at +-1e-16 E^2 or so,
-    // and an absolute test (m2_2 < EPS) turned this bound off there and
-    // changed the sampled range between forward and inverse.
+    // smin: a massless peeled particle needs ET -> minimum s-channel mass. Masslessness
+    // is judged relative to the energy scale, as m2_2 read off momenta is only ~1e-16
+    // E^2.
     auto smin_b = 2. * etmin_2 * (pim1_0 - pim1_1 * cos(drcut));
     auto massless_2 = m2_2 < 1e-10 * piir_0 * piir_0;
     auto smin_ok = active & massless_2 & (smin_b > smn) & (smin_b < smx_new);
@@ -482,9 +476,9 @@ KERNELSPEC Pair<FVal<T>, FVal<T>> s23_etmin_clamp(
     return {smn_new, smx_new};
 }
 
-// Clamp the s23 invariant-mass range against the cut-derived lower bound.
-// s23_min_cut is the minimum invariant mass^2 of the (2,3) system implied by
-// the pt / m_inv_min / dR cuts (gen23's invm_min).
+// Clamp the s23 range against the lower bound s23_min_cut (minimum mass^2 of the
+// (2,3) system implied by the pt / m_inv_min / dR cuts, gen23's invm_min) and
+// the ETmin refinement of s23_etmin_clamp.
 template <typename T>
 KERNELSPEC void kernel_s23_min_max_cut(
     FIn<T, 1> pa,
@@ -599,26 +593,19 @@ KERNELSPEC void kernel_s23_value_and_min_max_cut(
 
 // Arcsine map of the s23 sampling variable.
 //
-// At fixed s12, t1 and t2 the invariant s23 is linear in cos(phi) on its
-// physical range [s_phys_min, s_phys_max], and the 2->3 measure is flat in phi:
-//   ds23 / (8 sqrt(-G4)) = dphi / (2 sqrt(lambda)).
-// Sampling s23 (or any smooth function of it) with a density that stays finite
-// at the edges of the physical range therefore leaves an integrable
-// 1/|sin(phi)| in the weight, with a log-divergent variance. With
-//   u = (s23 - s_phys_min) / (s_phys_max - s_phys_min) = sin^2(phi / 2),
-// the map below is flat in theta = phi / 2 on the part [theta_a, theta_b] of
-// [0, pi/2] that the sampling range [s_min, s_max] covers, and returns the
-// position x in [0, 1] of the point in that range:
+// At fixed s12, t1 and t2, s23 is linear in cos(phi) on its physical range
+// [s_phys_min, s_phys_max] and the 2->3 measure is flat in phi. A sampling density
+// that stays finite at the edges of that range thus leaves an integrable
+// 1/|sin(phi)| in the weight with a log-divergent variance. With
+//   u = (s23 - s_phys_min) / (s_phys_max - s_phys_min) = cos^2(phi / 2),
+// the map is flat in theta = (pi - phi) / 2 on the part [theta_a, theta_b] of [0, pi/2]
+// covered by the sampling range [s_min, s_max], and gives the position x in [0, 1]:
 //   x = (sin^2 theta - sin^2 theta_a) / (sin^2 theta_b - sin^2 theta_a),
 //   theta = theta_a + (theta_b - theta_a) r.
-// x is then handed to the s23 importance sampling in place of r (see
-// kernel_s23_arcsine_sample, which does both in one step). Its Jacobian
-// dx/dr vanishes like |sin(phi)| at a physical edge, so the product with the
-// 2->3 Jacobian stays bounded; at an edge set by a cut instead (theta_a > 0 or
-// theta_b < pi/2) it stays finite and nothing is cancelled. Differences of
-// sin^2 are written as sin(B - A) sin(B + A), so that x keeps its relative
-// precision where it is small, also when the sampled range is a narrow part of
-// the kinematic one.
+// dx/dr vanishes like |sin(phi)| at a physical edge, which cancels the 1/|sin(phi)|
+// (not at an edge set by a cut). Differences of sin^2 are written as
+// sin(B - A) sin(B + A) to keep relative precision. This function returns
+// theta_a and theta_b; kernel_s23_arcsine_sample applies the map.
 template <typename T>
 KERNELSPEC Pair<FVal<T>, FVal<T>> s23_arcsine_angles(
     FVal<T> s_min, FVal<T> s_max, FVal<T> s_phys_min, FVal<T> s_phys_max
@@ -655,21 +642,14 @@ KERNELSPEC void kernel_s23_position(
     u_c = min(max((hi - s23_val) / width_safe, 0.), 1.);
 }
 
-// Arcsine map in phi composed with the s23 importance sampling of @ref
-// Invariant (flat for power 0, logarithmic for power 1, 1/(s - m^2)^power
-// otherwise, with the same regularisation m^2 -> m^2 - 1e-2), in one step:
-// r -> theta -> x, 1 - x -> s23 - s_min, s_max - s23 -> u, 1 - u. Every
-// quantity is carried as a pair of distances to both ends of its range, with
-// the power maps written through expm1 and log1p, so that u and 1 - u keep
-// their relative precision down to the edges of the kinematic range. Going
-// through s23 itself loses that: s23 - s_min is only known to ~1e-16 s. The
-// forward/inverse round trip then only recovers r_s23 to ~1e-8 near the
-// edges, which is where the arcsine map puts its points.
+// Power-law s23 importance sampling (flat for power 0, logarithmic for power 1,
+// 1/(s - m^2)^power otherwise, with m^2 -> m^2 - 1e-2) from x and 1 - x. Returns
+// s23 - s_min, s_max - s23 and d s23 / d x. Both distances are computed through
+// expm1 and log1p so that they keep relative precision at the range edges.
 template <typename T>
 KERNELSPEC Triplet<FVal<T>, FVal<T>, FVal<T>> s23_power_offsets(
     FVal<T> x, FVal<T> x_c, FVal<T> s_min, FVal<T> s_max, FVal<T> power, FVal<T> mass
 ) {
-    // returns s23 - s_min, s_max - s23 and d s23 / d x
     auto m2 = mass * mass - 1e-2;
     auto qa = max(s_min - m2, EPS2);
     auto qb = max(s_max - m2, EPS2);
@@ -699,6 +679,10 @@ KERNELSPEC Triplet<FVal<T>, FVal<T>, FVal<T>> s23_power_offsets(
     return {max(lo, 0.), max(hi, 0.), det};
 }
 
+// Arcsine map in phi (see s23_arcsine_angles) composed with the s23 importance
+// sampling (s23_power_offsets) in one step, r -> x -> s23. It returns u and 1 - u
+// of s23 in its physical range, from separate distances to both ends, since going
+// through s23 itself would lose relative precision near the edges.
 template <typename T>
 KERNELSPEC void kernel_s23_arcsine_sample(
     FIn<T, 0> r,
@@ -825,9 +809,8 @@ KERNELSPEC void kernel_two_to_three_particle_scattering(
     FOut<T, 1> p2,
     FOut<T, 0> det
 ) {
-    // p_12 = p1 + p2 comes in directly rather than as pa + pb - p3: in a long
-    // chain it is a soft system next to the beams, and that difference would
-    // leave it with an absolute error of order the beam energy.
+    // p_12 is an input rather than pa + pb - p3, which would carry an absolute error
+    // of order the beam energy when p_12 is soft.
     auto p_12 = load_mom<T>(p12);
     FourMom<T> p_c;
     for (int i = 0; i < 4; ++i) {
@@ -838,25 +821,17 @@ KERNELSPEC void kernel_two_to_three_particle_scattering(
     auto s12 = lsquare<T>(p_12);
     auto t2 = lsquare<T>(p_c);
 
-    // s23 is linear in cos(phi) across its kinematic range, and the 4x4 Gram
-    // determinant of Byckling-Kajantie factorises on that range:
-    //   cos(phi) = 2 u - 1,  u = (s23 - s23_min) / (s23_max - s23_min),
-    //   -G4 = lambda(s12, ma^2, t2) / 16 * (s23 - s23_min) * (s23_max - s23).
-    // Both are evaluated through u and 1 - u, which come in as inputs (see
-    // kernel_s23_position and kernel_s23_arcsine_sample). Forming G4 (or the equivalent
-    // cos(phi) expression) from the invariants instead cancels terms of order s^4 down
-    // to a result that can be many orders of magnitude smaller whenever the
-    // s23 range is narrow (a soft particle), and returned Jacobians of up to
-    // 1e20 times the typical weight. The range itself comes from momenta for
-    // the same reason, see s23_min_max.
+    // On the s23 range, cos(phi) = 2 u - 1 with u = (s23 - s23_min) / (s23_max -
+    // s23_min) and -G4 = lambda(s12, ma^2, t2) / 16 * (s23 - s23_min) * (s23_max -
+    // s23). Both are evaluated through u and 1 - u (inputs) and a range from momenta
+    // (s23_min_max), as forming G4 from the invariants cancels catastrophically for a
+    // soft particle.
     auto s23_range =
         s23_min_max<T>(load_mom<T>(pa), load_mom<T>(p3), p_12, s12, t1_abs, m1, m2);
     auto s23_width = s23_range.second - s23_range.first;
     FVal<T> u_val(u), u_c_val(u_c);
-    // cos(phi) = u - (1 - u), |sin(phi)| = 2 sqrt(u (1 - u)), both at full
-    // relative precision near phi = 0, pi. u and 1 - u come from separate
-    // differences; dividing by their sum keeps cos^2 + sin^2 = 1 to rounding,
-    // so that the rotation does not change |p1|.
+    // cos(phi) = u - (1 - u), |sin(phi)| = 2 sqrt(u (1 - u)); dividing by u + (1 - u)
+    // keeps cos^2 + sin^2 = 1 to rounding so that the rotation preserves |p1|.
     auto u_sum = u_val + u_c_val;
     auto u_sum_safe = where(u_sum > 0., u_sum, FVal<T>(1.));
     auto cos_phi = (u_val - u_c_val) / u_sum_safe;
@@ -865,7 +840,7 @@ KERNELSPEC void kernel_two_to_three_particle_scattering(
     // 8 sqrt(-G4) = sqrt(lambda) * (s23_max - s23_min) * |sin(phi)|
     auto sqrt_neg_gram4_x8 =
         sqrt(max(kaellen<T>(s12, ma_2, t2), 0.)) * s23_width * sin_phi_abs;
-    // The edges of the range (sin(phi) = 0) are a set of measure zero.
+    // zero weight at the edges of the range (sin(phi) = 0)
     auto det_2to3 = where(sqrt_neg_gram4_x8 > 0., 1. / sqrt_neg_gram4_x8, FVal<T>(0.));
 
     auto scatter_out =
@@ -873,10 +848,7 @@ KERNELSPEC void kernel_two_to_three_particle_scattering(
     auto p1_com = scatter_out.first;
     auto p3_p12 = boost<T>(load_mom<T>(p3), p_12, -1.);
     auto p1_rot = rotate_two_ref<T>(p1_com, pa_com, p3_p12);
-    // p1 and p2 back to back in the p_12 rest frame, the softer one boosted on
-    // its mass shell and the other p_12 minus it (see boost_two_body). Always
-    // forming p2 = p_12 - p1 left a soft p2 off shell by up to a few 1e-5 of
-    // its energy.
+    // p1 and p2 back to back in the p_12 rest frame, boosted as in boost_two_body
     auto m12_rest = sqrt(max(s12, EPS2));
     auto e2_com = 0.5 * (m12_rest - (m1 - m2) * (m1 + m2) / m12_rest);
     FourMom<T> p2_rot{max(e2_com, 0.), -p1_rot[1], -p1_rot[2], -p1_rot[3]};
@@ -901,9 +873,8 @@ KERNELSPEC void kernel_two_to_three_particle_scattering_inverse(
     FOut<T, 0> u_c,
     FOut<T, 0> det
 ) {
-    // p_12 = p1 + p2 comes in directly rather than as pa + pb - p3: in a long
-    // chain it is a soft system next to the beams, and that difference would
-    // leave it with an absolute error of order the beam energy.
+    // p_12 is an input rather than pa + pb - p3, which would carry an absolute error
+    // of order the beam energy when p_12 is soft.
     auto p_12 = load_mom<T>(p12);
     FourMom<T> p_c;
     for (int i = 0; i < 4; ++i) {

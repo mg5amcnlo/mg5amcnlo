@@ -137,8 +137,7 @@ TwoToThreeParticleScattering::TwoToThreeParticleScattering(
     _p12_condition(p12_condition),
     _incoming_recoil(incoming_recoil),
     _cut_aware_branch(cut_aware_branch && has_cut) {
-    // The block peels a particle off a t-channel chain, where no s-channel
-    // resonance is expected; the arcsine sampling covers power laws only.
+    // The arcsine sampling covers power laws only.
     if (arcsine_s23 && s_width != 0.) {
         throw std::invalid_argument(
             "TwoToThreeParticleScattering: arcsine_s23 does not support a "
@@ -161,10 +160,8 @@ Value negated(FunctionBuilder& fb, Value x) { return fb.sub(fb.sub(x, x), x); }
 std::array<Value, 3> TwoToThreeParticleScattering::split_conditions(
     FunctionBuilder& fb, const NamedVector<Value>& conditions
 ) const {
-    // The kernels take the outgoing system p_12 = p1 + p2 itself. By default it
-    // is formed from the incoming momenta as pa + pb - p3; a caller that already
-    // holds p_12 more precisely (ColorOrderedMapping, where it can be a soft
-    // system next to the beams) passes it as the second condition instead.
+    // The kernels take p_12 = p1 + p2: pa + pb - p3 by default, or the second
+    // condition itself with p12_condition.
     auto p_a = conditions.at(0), p_3 = conditions.at(2);
     if (_p12_condition) {
         auto p_12 = conditions.at(1);

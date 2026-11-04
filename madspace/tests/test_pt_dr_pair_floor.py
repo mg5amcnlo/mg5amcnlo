@@ -212,8 +212,8 @@ def test_no_pair_floor_for_massive_legs():
 
 
 def test_no_pair_floor_beyond_pi():
-    """For R > pi the minimum is no longer at d_phi = R, so the formula is not
-    used; the pair is then unbounded by these cuts in the sampler."""
+    """For R > pi the minimum is not at d_phi = R, so the formula does not
+    apply; the sampler gets no pair floor from these cuts."""
     r = 3.5
     p_ext, _, _, _ = sample(mapping(cuts(dr_gluon=r)))
     m_gg = invariant_mass(p_ext, *GLUONS)

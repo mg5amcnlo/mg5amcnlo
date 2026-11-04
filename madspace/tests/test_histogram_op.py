@@ -1,10 +1,8 @@
 """The histogram instruction: n_bins interior bins plus an underflow and an overflow bin.
 
 Its outputs hold n_bins + 2 values, in that order: underflow, the interior bins, overflow.
-The GPU runtime reduces the events to these n_bins + 2 keys (and used to do so into a
-scratch buffer of n_bins, summing the squared weights of the wrong events in each bin);
-the GPU CI runs these tests on a GPU via MADSPACE_TEST_DEVICE, where the large histogram
-is compared with the CPU runtime.
+The GPU runtime reduces the events to these n_bins + 2 keys. With MADSPACE_TEST_DEVICE
+set to a GPU, the large histogram is compared with the CPU runtime.
 """
 
 import torch

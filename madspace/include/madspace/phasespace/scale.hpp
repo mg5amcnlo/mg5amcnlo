@@ -14,20 +14,19 @@ namespace madspace {
  * (Sec. 3.2.6 of [1], matching the choices in [2]):
  *
  * @f[
- *   \mu = \sum_i m_i, \qquad
  *   \mu = E_\mathrm{T} = \sum_i \frac{E_i\,p_{\mathrm{T},i}}{|\vec p_i|},
- * @f]
- * @f[
+ *   \qquad
  *   \mu = H_\mathrm{T} = \sum_i \sqrt{m_i^2 + p_{\mathrm{T},i}^2},
  * @f]
  *
- * with @ref DynamicalScaleType selecting @f$E_\mathrm{T}@f$
- * (`transverse_energy`), @f$H_\mathrm{T}@f$ (`transverse_mass`),
+ * with sums over the outgoing particles, and @ref DynamicalScaleType selecting
+ * @f$E_\mathrm{T}@f$ (`transverse_energy`), @f$H_\mathrm{T}@f$ (`transverse_mass`),
  * @f$H_\mathrm{T}/2@f$ (`half_transverse_mass`) or @f$\sqrt{\hat s}@f$
  * (`partonic_energy`). The dynamical scale is multiplied by `scale_factor`,
  * e.g. @f$H_\mathrm{T}/4@f$ is `half_transverse_mass` with `scale_factor = 0.5`.
  * A @ref CustomFunction of type CustomFunction::scale replaces the dynamical
- * choice, like `user_dynamical_scale` in MadGraph5.
+ * choice (also multiplied by `scale_factor`), like `user_dynamical_scale` in
+ * MadGraph5.
  *
  * `batch` is the leading batch dimension.
  *
@@ -117,8 +116,8 @@ public:
      * @param ren_scale            Fixed renormalization-scale value.
      * @param fact_scale1          Fixed factorization scale for the first beam.
      * @param fact_scale2          Fixed factorization scale for the second beam.
-     * @param scale_factor         Factor on the dynamical scale; fixed scales are
-     *                             left alone.
+     * @param scale_factor         Factor on the dynamical or custom scale; fixed
+     *                             scales are left alone.
      * @param custom_scale         Optional user-supplied function that replaces
      *                             the dynamical scale choice.
      * @param min_scale            Floor on mu_R and mu_F. The scales are clamped
@@ -151,16 +150,13 @@ public:
      * @param max_scale   As in the full constructor.
      */
     EnergyScale(
-        const MLMClustering& clustering,
-        double min_scale = 0.,
-        double max_scale = 0.
+        const MLMClustering& clustering, double min_scale = 0., double max_scale = 0.
     );
 
     /// Whether the scales come from an MLM clustering of the event.
     bool is_mlm() const { return _clustering.has_value(); }
     bool mlm_alphas_reweighting() const {
-        return _clustering &&
-               _clustering->alphas_scheme() != AlphasScheme::none;
+        return _clustering && _clustering->alphas_scheme() != AlphasScheme::none;
     }
     // Whether the consumer has pdf ratios to apply. The kernel walks the
     // clustering ladder under ScaleScheme::madevent, and under clustering_mean
@@ -169,8 +165,8 @@ public:
     // come out as exactly one.
     bool mlm_pdf_reweighting() const {
         return _clustering && _clustering->pdf_reweighting() &&
-               (_clustering->scale_scheme() == ScaleScheme::madevent ||
-                _clustering->clustering_mean_pdf_ladder());
+            (_clustering->scale_scheme() == ScaleScheme::madevent ||
+             _clustering->clustering_mean_pdf_ladder());
     }
     const std::vector<int>& mlm_pdf_absolute_pdgs() const {
         return _clustering.value().pdf_absolute_pdgs();
@@ -179,7 +175,7 @@ public:
     // which moves the clustering after a first matrix element evaluation.
     bool mlm_history_per_diagram() const {
         return _clustering &&
-               _clustering->clustering_history() != ClusteringHistory::all_diagrams;
+            _clustering->clustering_history() != ClusteringHistory::all_diagrams;
     }
     const std::vector<me_int_t>& mlm_diagram_start_states() const {
         return _clustering.value().diagram_start_states();
@@ -210,9 +206,7 @@ public:
     double min_scale() const { return _min_scale; }
     double max_scale() const { return _max_scale; }
 
-    bool has_scale_range() const {
-        return _min_scale > 0. || _max_scale > 0.;
-    }
+    bool has_scale_range() const { return _min_scale > 0. || _max_scale > 0.; }
     // Whether the scales come with a scale_weight output vetoing an event
     // outside the range. Only the MLM clustering has one: madevent drops a
     // merged event whose factorisation scale falls under 2 GeV, but for any
@@ -221,9 +215,8 @@ public:
     bool has_scale_veto() const { return is_mlm() && has_scale_range(); }
 
 private:
-    NamedVector<Value> apply_scale_range(
-        FunctionBuilder& fb, NamedVector<Value> scales
-    ) const;
+    NamedVector<Value>
+    apply_scale_range(FunctionBuilder& fb, NamedVector<Value> scales) const;
 
     NamedVector<Value> build_function_impl(
         FunctionBuilder& fb, const NamedVector<Value>& args

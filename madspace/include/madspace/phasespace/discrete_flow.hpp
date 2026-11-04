@@ -10,25 +10,26 @@ namespace madspace {
  *
  * Like @ref DiscreteSampler, but the categorical distribution for each discrete
  * dimension is predicted by an @ref MLP subnetwork from the earlier choices and
- * an optional conditioning input [1]. The subnetwork weights are compute-graph
- * globals named after @p prefix; call `initialize_globals(context)` once before
- * use.
+ * an optional conditioning input [1]. Without conditioning input, the first
+ * dimension has a learned categorical distribution instead. The subnetwork
+ * weights are compute-graph globals named after @p prefix; call
+ * `initialize_globals(context)` once before use.
  *
  * `batch` is the leading batch dimension. `d` indexes the discrete dimensions.
  *
  * **Inputs**
- * - `random_d` – `float`, shape `(batch,)` – one uniform number per dimension.
+ * - `random_{d}` – `float`, shape `(batch,)` – one uniform number per dimension.
  *
  * **Conditions**
  * - `condition` – `float`, shape `(batch, condition_dim)` – conditioning input.
  *   Present only when @p condition_dim is nonzero.
- * - `prior_d` – `float`, shape `(batch, option_counts[d])` – prior category
+ * - `prior_{d}` – `float`, shape `(batch, option_counts[d])` – prior category
  *   weights. Present only for the dimensions in @p dims_with_prior.
  *
  * **Outputs**
- * - `index_d` – `int`, shape `(batch,)` – the chosen category per dimension.
+ * - `index_{d}` – `int`, shape `(batch,)` – the chosen category per dimension.
  *
- * In addition every mapping returns a `weight` (`float`, shape `(batch,)`), the
+ * In addition every mapping returns a `det` (`float`, shape `(batch,)`), the
  * Jacobian of the transformation.
  *
  * **References**
@@ -40,7 +41,7 @@ public:
     /**
      * @param option_counts     Number of categories for each discrete dimension.
      * @param prefix            Prefix for the trainable global names.
-     * @param dims_with_prior   Dimensions conditioned on a `prior_d` input.
+     * @param dims_with_prior   Dimensions conditioned on a `prior_{d}` input.
      * @param condition_dim     Width of the conditioning input; `0` for none.
      * @param subnet_hidden_dim Hidden width of the @ref MLP subnetworks.
      * @param subnet_layers     Number of layers in the subnetworks.

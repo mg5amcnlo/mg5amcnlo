@@ -30,7 +30,7 @@ namespace madspace {
  * A `Mapping` records one such @f$G@f$ as a pair of compute-graph builders.
  * `build_forward` maps the **inputs** (the unit-hypercube numbers) to the
  * **outputs** (momenta and invariants). `build_inverse` maps the outputs back
- * to the inputs. Both also return a `weight`, the Jacobian @f$1/g@f$ of the
+ * to the inputs. Both also return a `det`, the Jacobian @f$1/g@f$ of the
  * transformation. **Conditions** are external quantities the mapping needs but
  * does not transform, such as masses, the collision energy or cut boundaries.
  * They are the same for the forward and inverse direction.

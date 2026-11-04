@@ -66,8 +66,7 @@ EventGenerator::EventGenerator(
     _seed(seed),
     _status_file(status_file) {}
 
-// Commits a job's generate stage in per-channel dispatch order. Doesn't write
-// events itself -- if job.unweight, that's deferred to commit_unweight_job().
+// Commits a job's generate stage. Events are written by commit_unweight_job().
 void EventGenerator::commit_generate_job(GeneratorBatchJob& job) {
     auto& channel = _channels.at(job.channel_index);
     auto& channel_job_count = _channel_job_counts.at(job.channel_index);
@@ -80,7 +79,6 @@ void EventGenerator::commit_generate_job(GeneratorBatchJob& job) {
     --channel_job_count;
     --_context_job_counts.at(job.context_index);
     if (job.unweight) {
-        // Snapshot max_weight here, at this job's fixed commit position.
         channel->prepare_unweight_job(job);
         _context_unweight_queue.at(job.context_index).push_back(job.job_id);
         _channel_unweight_order.at(job.channel_index).push_back(job.job_id);
@@ -130,10 +128,8 @@ void EventGenerator::run_generate(GenerateMode mode) {
     reset_start_time();
     print_gen_init();
 
-    // update_max_weight() scales its truncation budget with count_target, but
-    // set_target_count() only runs once a round has committed. Seed a generous target
-    // so round one truncates at all; _max_weight only rises, and set_target_count()
-    // tightens it when the real (smaller) target arrives.
+    // The target gives the first round a truncation budget; fix_max_weights uses the
+    // freeze count as target.
     for (auto& channel : _channels) {
         if (channel->status().count_opt == 0 || mode == GenerateMode::fix_max_weights) {
             channel->set_target_count(
@@ -195,7 +191,7 @@ void EventGenerator::run_generate(GenerateMode mode) {
         std::size_t unweight_dispatched = start_jobs();
         std::size_t round_in_flight = (_job_id - job_id_before) + unweight_dispatched;
 
-        // Wait for the round to fully commit before resyncing cross-channel fractions.
+        // Wait for the round to commit before updating the channel fractions.
         while (round_in_flight > 0) {
             std::size_t job_id = wait_for_result(round_in_flight);
             if (WeightingPipeline::owns_job(job_id)) {
@@ -344,8 +340,7 @@ void EventGenerator::survey(std::size_t survey_pass) {
             }
             auto& job = _running_jobs.at(job_id);
             if (job.unweighted_events.size() == 0) {
-                // Generate-stage completion, globally ordered via
-                // _ready_gen/_commit_cursor.
+                // generate-stage completion, committed in global job id order
                 _ready_gen.insert(job_id);
                 while (_ready_gen.erase(_commit_cursor) > 0) {
                     auto& gen_job = _running_jobs.at(_commit_cursor);
@@ -360,11 +355,9 @@ void EventGenerator::survey(std::size_t survey_pass) {
                     channel->update_max_weight(gen_job.weights, gen_job.unweight);
                     --channel_job_count;
                     --_context_job_counts.at(gen_job.context_index);
-                    // Global order is ascending job id and so is the per-channel one,
-                    // so this job is necessarily at the front of its channel's deque.
+                    // the global order implies this job is at the front of its deque
                     _channel_gen_order.at(gen_job.channel_index).pop_front();
                     if (gen_job.unweight) {
-                        // Snapshot max_weight at this fixed commit position.
                         channel->prepare_unweight_job(gen_job);
                         _context_unweight_queue.at(gen_job.context_index)
                             .push_back(gen_job.job_id);
@@ -381,7 +374,7 @@ void EventGenerator::survey(std::size_t survey_pass) {
                     ++_commit_cursor;
                 }
             } else {
-                // Unweight-stage completion, ordered per channel only.
+                // unweight-stage completion, committed in per-channel order
                 auto& ready = _channel_unweight_ready.at(job.channel_index);
                 auto& order = _channel_unweight_order.at(job.channel_index);
                 ready.insert(job_id);
@@ -465,13 +458,9 @@ void EventGenerator::warn_invalid_step_values() {
     }
 }
 
-// Every job counted in *in_flight* posts exactly one result (see
-// ResultQueue::submit), so this can't block on a job that died. If a job threw, or
-// the abort check does while waiting, the other jobs still in flight write into
-// _running_jobs: wait them out and drop the bookkeeping of the aborted run before
-// rethrowing, so the exception unwinds with no job left behind. The running jobs
-// stop at their next cancellation check, and an abort requested while they do
-// takes precedence over the job's own error.
+// Every job counted in in_flight posts exactly one result (see ResultQueue::submit).
+// If a job or the abort check throws, the remaining jobs are waited out and the
+// bookkeeping is reset before rethrowing; an abort takes precedence over a job error.
 std::size_t EventGenerator::wait_for_result(std::size_t& in_flight) {
     std::exception_ptr exception;
     try {
@@ -533,8 +522,8 @@ std::size_t EventGenerator::next_batch_event_count(std::size_t channel_index) co
     return compute_generation_batch_event_count(
         status.count_target,
         status.count_unweighted,
-        // Not count_opt: start_jobs() splits batches by nominal size, and a job
-        // repeating batches to pass cuts yields more raw points than that.
+        // not count_opt: jobs that repeat batches to pass cuts yield more raw points
+        // than their nominal size
         channel->count_requested_opt(),
         abs_cross_section.count(),
         abs_cross_section.rel_error(),
@@ -567,10 +556,7 @@ std::size_t EventGenerator::start_jobs() {
         );
 
         // Round-robin through _ready_jobs, one device batch per generation entry per
-        // visit, so multiple channels' batches interleave instead of one channel's
-        // batch draining before the next is even touched -- see _ready_job_rr_cursor.
-        // A VEGAS batch is still dispatched atomically in a single visit: VEGAS needs
-        // next_vegas_batch_size()'s exact progression.
+        // visit; a VEGAS batch is dispatched in full in a single visit.
         while (job_count < target_count && !_ready_jobs.empty()) {
             if (_ready_job_rr_cursor >= _ready_jobs.size()) {
                 _ready_job_rr_cursor = 0;
@@ -596,8 +582,7 @@ std::size_t EventGenerator::start_jobs() {
                 auto& job =
                     std::get<0>(_running_jobs.emplace(_job_id, std::move(new_job)))
                         ->second;
-                // Records this channel's commit order; drained by survey()/generate()
-                // -- see _channel_gen_order.
+                // commit order, see _channel_gen_order
                 _channel_gen_order.at(job.channel_index).push_back(_job_id);
                 _channels.at(job.channel_index)
                     ->start_job(job, _result_queue, _seed, _survey_job, _survey_pass);
@@ -613,12 +598,11 @@ std::size_t EventGenerator::start_jobs() {
             bool fully_dispatched = atomic_dispatch || ready_job.batch_event_count == 0;
             if (fully_dispatched) {
                 if (!ready_job.is_vegas_batch) {
-                    // Only meaningful for generate(); harmlessly unused by the other
-                    // callers of start_jobs().
+                    // only used by run_generate()
                     _channel_batch_dispatch_done.at(ready_job.channel_index) = true;
                 }
                 _ready_jobs.erase(_ready_jobs.begin() + _ready_job_rr_cursor);
-                // The next entry has shifted into this index -- don't advance past it.
+                // the next entry shifted into this index
             } else {
                 ++_ready_job_rr_cursor;
             }
@@ -640,7 +624,7 @@ std::size_t EventGenerator::start_pipeline_jobs() {
     return _pipeline->start_jobs(_result_queue, flush, _context_job_counts);
 }
 
-// Batches no longer have to be full: the steps don't depend on the batching.
+// Partial batches are fine: the steps don't depend on the batching.
 void EventGenerator::drain_pipeline() {
     if (!_pipeline) {
         return;
@@ -891,8 +875,8 @@ void EventGenerator::combine_to_lhe(
     std::size_t event_count = 0;
     std::size_t last_update_count = 0;
     bool done = false;
-    // Batches are seeded by submission order and written in that same order
-    // (buffered in ready_slots until their turn), independent of completion timing.
+    // Batches are seeded and written in submission order (held in ready_slots until
+    // their turn), independent of completion timing.
     std::size_t next_batch_seq = 0;
     std::size_t write_cursor = 0;
     std::vector<std::size_t> slot_batch_seq(buffers.size());
@@ -1167,7 +1151,6 @@ std::unordered_set<std::string> EventGenerator::used_globals() const {
 std::vector<GeneratorStatus> EventGenerator::channel_status() const {
     std::vector<GeneratorStatus> status;
     for (auto& channel : _channels) {
-        // double target_count = channel.integral_fraction * _config.target_count;
         status.push_back(channel->status());
     }
     return status;
@@ -1213,8 +1196,7 @@ EventGenerator::init_combine() {
     for (auto& channel : _channels) {
         particle_count =
             std::max(particle_count, channel->event_file().particle_count());
-        // Exact apportioned target (see update_integral_fractions()), so counts
-        // sum to exactly _config.target_count.
+        // apportioned target, see update_integral_fractions()
         std::size_t count = channel->status().count_target;
         count_sum += count;
         channel->event_file().seek(0);

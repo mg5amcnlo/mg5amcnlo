@@ -12,17 +12,18 @@ namespace madspace {
  *
  * Combines the per-channel integrand and sampling-probability values into the
  * variance-based loss used to train the @ref Flow and @ref ChannelWeightNetwork
- * [1]. A dedicated study of `madspace` with MadNIS is left to a future
- * publication, so this class is described from the code only.
+ * [1].
  *
  * `batch` is the leading batch dimension. `c` indexes the channels.
  *
  * **Arguments**
  * - `chan<c>_integrand` – `float`, shape `(batch,)` – integrand values.
  * - `chan<c>_sample_prob` – `float`, shape `(batch,)` – sampling probabilities.
- * - `chan<c>_cwnet_inputs`, `chan<c>_channel_weight_values` /
- *   `chan<c>_channel_weight_indices` – present only with a
- *   @ref ChannelWeightNetwork.
+ * - With a @ref ChannelWeightNetwork also `chan<c>_cwnet_inputs`,
+ *   `chan<c>_channel_weights` (or the compressed pair
+ *   `chan<c>_channel_weight_values` / `chan<c>_channel_weight_indices`) and
+ *   `chan<c>_channel_indices`.
+ * - `chan<c>_<name>` – the arguments of the c-th function of @p functions.
  *
  * **Returns**
  * - `loss` – `float`, scalar – the training loss.
@@ -36,7 +37,9 @@ namespace madspace {
 class MadnisLoss : public FunctionGenerator {
 public:
     /**
-     * @param functions                      The per-channel integrands.
+     * @param functions                      The per-channel integrands; the
+     *                                       first return value of each is the
+     *                                       flow probability.
      * @param cwnet                          Optional channel-weight network to
      *                                       train jointly.
      * @param softclip_threshold             Soft-clipping threshold on the

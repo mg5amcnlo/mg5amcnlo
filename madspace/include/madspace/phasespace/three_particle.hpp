@@ -40,7 +40,7 @@ namespace madspace {
  * - `momentum1`, `momentum2`, `momentum3` – `float`, shape `(batch, 4)` – the
  *   daughter momenta.
  *
- * In addition every mapping returns a `weight` (`float`, shape `(batch,)`), the
+ * In addition every mapping returns a `det` (`float`, shape `(batch,)`), the
  * Jacobian of the transformation.
  *
  * **References**
@@ -135,7 +135,7 @@ private:
  * - `momentum1`, `momentum2` – `float`, shape `(batch, 4)` – the two resolved
  *   momenta.
  *
- * In addition every mapping returns a `weight` (`float`, shape `(batch,)`), the
+ * In addition every mapping returns a `det` (`float`, shape `(batch,)`), the
  * Jacobian of the transformation.
  *
  * **References**

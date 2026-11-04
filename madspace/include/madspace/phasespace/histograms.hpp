@@ -22,8 +22,8 @@ namespace madspace {
  * - `momenta` – `float`, shape `(batch, n, 4)` – the event momenta.
  *
  * **Returns**
- * - `values_i` – `float`, shape `(bin_count + 2,)` – summed weight per bin.
- * - `square_values_i` – `float`, shape `(bin_count + 2,)` – summed squared
+ * - `values{i}` – `float`, shape `(bin_count + 2,)` – summed weight per bin.
+ * - `square_values{i}` – `float`, shape `(bin_count + 2,)` – summed squared
  *   weight per bin.
  *
  * **References**
@@ -70,7 +70,7 @@ private:
  * - `momenta` – `float`, shape `(batch, n, 4)` – the event momenta.
  *
  * **Returns**
- * - `value_i` – `float`, shape `(batch,)` – the value of observable `i`. An
+ * - `value{i}` – `float`, shape `(batch,)` – the value of observable `i`. An
  *   event-level observable returning a vector keeps its own shape.
  *
  * **References**

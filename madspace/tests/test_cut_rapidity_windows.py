@@ -191,8 +191,7 @@ def test_dy_every_generated_point_passes():
 
 def test_dy_windows_are_reached():
     """The bounds sampled are the cuts themselves, not something stricter."""
-    # every sampled point, not only those with a weight: the weight already
-    # contains the cut mask
+    # all sampled points, as the weight already contains the cut mask
     _, p_ext, x1, x2, _ = sample(
         ms.PhaseSpaceMapping(s_channel_two_body(), CM_ENERGY, cuts=dy_cuts())
     )
@@ -290,7 +289,7 @@ def test_composite_rapidity_windows():
     c = eegg_cuts()
     topology = s_channel_four_body()
     _, p_ext, x1, x2, det = sample(ms.PhaseSpaceMapping(topology, CM_ENERGY, cuts=c))
-    # every sampled point: the weight already contains the cut mask
+    # all sampled points, as the weight already contains the cut mask
     keep = finite(p_ext)
     eta_max = max(ETA_LEPTON, ETA_JET)
     assert torch.abs(beam_rapidity(x1, x2)[keep]).max() <= eta_max + 1e-9
@@ -334,7 +333,7 @@ def test_no_rapidity_window_with_an_uncut_particle():
 
 
 def test_no_cuts_no_change():
-    """Without cuts the mapping is the one it always was."""
+    """Empty cuts give the same mapping as no cuts."""
     topology = s_channel_two_body()
     a = sample(ms.PhaseSpaceMapping(topology, CM_ENERGY))
     b = sample(ms.PhaseSpaceMapping(topology, CM_ENERGY, cuts=ms.Cuts(4)))
@@ -441,9 +440,9 @@ def photon_cuts(pids, eta=ETA_PHOTON):
 
 
 def test_t_channel_every_generated_point_passes():
-    """u u~ > a a through the t channel: with the pt cut (already used for |t|)
-    and now the photons' eta cuts in |t| and in Y, every sampled point
-    passes, while without the cuts handed over many do not."""
+    """u u~ > a a through the t channel: with the pt cut and the photons' eta
+    cuts bounding |t| and Y, every sampled point passes, while without the
+    cuts handed over many do not."""
     c = ms.Cuts(photon_cuts(AA_PIDS))
     topology = t_channel_two_body()
     _, p_free, _, _, _ = sample(ms.PhaseSpaceMapping(topology, CM_ENERGY))

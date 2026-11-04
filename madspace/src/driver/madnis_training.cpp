@@ -1127,8 +1127,8 @@ void MultiMadnisTraining::print_progress_update(
             );
             _pretty_box_upper.print_update();
         } else {
-            // Weight each subprocess's contribution to the global progress bar by its
-            // own batch count, since subprocesses no longer share a single batch count.
+            // weight each subprocess's share of the global progress bar by its batch
+            // count
             std::size_t total_batches = 0;
             std::size_t batches_before = 0;
             for (std::size_t i = 0; i < subproc_count; ++i) {

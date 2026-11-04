@@ -76,8 +76,9 @@ constexpr int flavor_class_first_absolute = 3;
 // already been mapped through by the time it gets here.
 constexpr int merged_quark_representative = 1;
 
-// Color representation of a line, as the signed color of the model (1 for a
-// singlet, +-3 for a (anti)triplet, 8 for an octet, +-6 for a sextet). The
+// Color representation of a line, as the absolute value of the signed color of
+// the model (1 for a singlet, 3 for a (anti)triplet, 8 for an octet, 6 for a
+// sextet). The
 // merged-flavor placeholders that survive in propagator pdg ids stand for the
 // particles clean_pids() maps them to in launch.py: 81 is a quark, 82 an
 // electron and 83 a neutrino.
@@ -112,10 +113,10 @@ bool is_octet_pdg(int pdg_id, const std::unordered_map<int, int>& pdg_color_type
 // color representations (its leading pdg-equality tests give the same answer
 // as the color ones for every case they cover).
 enum TraceMode {
-    trace_first = 0,   // the line continues into daughter 1
-    trace_second = 1,  // ... into daughter 2
-    trace_harder = 2,  // ... into whichever daughter is harder (decided per event)
-    trace_both = 3,    // the mother stands for both daughters' lines
+    trace_first = 0,  // the line continues into daughter 1
+    trace_second = 1, // ... into daughter 2
+    trace_harder = 2, // ... into whichever daughter is harder (decided per event)
+    trace_both = 3,   // the mother stands for both daughters' lines
 };
 
 TraceMode trace_mode_for(int color_in, int color_1, int color_2) {
@@ -193,7 +194,10 @@ bool is_flavored_fermion_pdg(int pdg_id) {
 // on it, so that the two bare external legs it joins must share their flavour.
 // madevent's cluster.f checks the same per graph, see flavor_filter there.
 bool joins_same_flavor(
-    const CompileContext& ctx, int mask, int mask_1, int mask_2,
+    const CompileContext& ctx,
+    int mask,
+    int mask_1,
+    int mask_2,
     const std::vector<int>& diags
 ) {
     if (!ctx.have_pdg_ids || std::popcount(static_cast<unsigned int>(mask_1)) != 1 ||
@@ -369,8 +373,7 @@ StateItem make_state_item(
         // the two children then: a splitting of two colored lines is QCD unless
         // the parent says otherwise, which is also the only test available for
         // t-channel lines whose flavor changes along the chain.
-        is_qcd = color_1 != 1 && color_2 != 1 &&
-            (meta_in.pdg_id == 0 || color_in != 1);
+        is_qcd = color_1 != 1 && color_2 != 1 && (meta_in.pdg_id == 0 || color_in != 1);
         // Only final state particles get a clustering scale in the LHE output,
         // so a beam leg is never a jet here.
         is_jet1 = !is_initial && is_jet_pdg(meta_1.pdg_id, ctx.max_jet_flavor);
@@ -394,17 +397,15 @@ StateItem make_state_item(
         .is_jet1 = is_jet1,
         .is_jet2 = is_jet2,
         .trace_mode = trace_mode,
-        .is_jet_in = !ctx.have_pdg_ids ||
-            is_jet_pdg(meta_in.pdg_id, ctx.max_jet_flavor),
+        .is_jet_in =
+            !ctx.have_pdg_ids || is_jet_pdg(meta_in.pdg_id, ctx.max_jet_flavor),
         .is_colored_in = !ctx.have_pdg_ids || color_in != 1,
-        .is_octet_in = !ctx.have_pdg_ids ||
-            is_octet_pdg(meta_in.pdg_id, ctx.pdg_color_types),
-        .mother_is_daughter1 =
-            meta_in.pdg_id != 0 && meta_in.pdg_id == meta_1.pdg_id,
-        .mother_is_daughter2 =
-            meta_in.pdg_id != 0 && meta_in.pdg_id == meta_2.pdg_id,
-        .all_colorless = ctx.have_pdg_ids && color_in == 1 && color_1 == 1 &&
-            color_2 == 1,
+        .is_octet_in =
+            !ctx.have_pdg_ids || is_octet_pdg(meta_in.pdg_id, ctx.pdg_color_types),
+        .mother_is_daughter1 = meta_in.pdg_id != 0 && meta_in.pdg_id == meta_1.pdg_id,
+        .mother_is_daughter2 = meta_in.pdg_id != 0 && meta_in.pdg_id == meta_2.pdg_id,
+        .all_colorless =
+            ctx.have_pdg_ids && color_in == 1 && color_1 == 1 && color_2 == 1,
         .flavor_class_in =
             flavor_class(ctx, meta_in.pdg_id, is_initial ? particle1 : -1),
         .same_flavor = same_flavor,
@@ -516,8 +517,7 @@ void find_clusterings(
                     append_terminal_items(states.at(index), new_diags);
                 } else {
                     find_clusterings(
-                        ctx, new_masks, new_diags, states, state_map,
-                        dead_states, index
+                        ctx, new_masks, new_diags, states, state_map, dead_states, index
                     );
                 }
                 // The expansion may have found nothing: every clustering left
@@ -531,7 +531,9 @@ void find_clusterings(
             }
 
             states.at(prev_index)
-                .push_back(make_state_item(ctx, index, mask, mask_i, mask_j, new_diags));
+                .push_back(
+                    make_state_item(ctx, index, mask, mask_i, mask_j, new_diags)
+                );
         }
     }
 }
@@ -588,8 +590,7 @@ std::vector<int> append_state_layout(
                 machine.push_back(first_indices.at(item.next_state));
                 machine.push_back(
                     static_cast<int>(item.trace_mode) + (item.is_jet_in << 2) +
-                    (item.is_colored_in << 3) +
-                    ((item.flavor_class_in + 1) << 4) +
+                    (item.is_colored_in << 3) + ((item.flavor_class_in + 1) << 4) +
                     (item.is_octet_in << 12) + (item.mother_is_daughter1 << 13) +
                     (item.mother_is_daughter2 << 14) + (item.all_colorless << 15) +
                     (item.same_flavor << 16)
@@ -647,8 +648,7 @@ MLMClustering::MLMClustering(
          // plus one per beam for the 2 -> 1 root, which lies on both.
          {"pdf_rw_flavor",
           batch_int_array(topologies.at(0).outgoing_masses().size() + 1)},
-         {"pdf_rw_x",
-          batch_float_array(topologies.at(0).outgoing_masses().size() + 1)},
+         {"pdf_rw_x", batch_float_array(topologies.at(0).outgoing_masses().size() + 1)},
          {"pdf_rw_q_num",
           batch_float_array(topologies.at(0).outgoing_masses().size() + 1)},
          {"pdf_rw_q_den",
@@ -679,17 +679,21 @@ MLMClustering::MLMClustering(
     _hadronic(hadronic) {
     std::size_t n_ext = topologies.at(0).outgoing_masses().size() + 2;
     if (n_ext > n_ext_max) {
-        throw std::invalid_argument(std::format(
-            "MLM clustering supports at most {} external particles, got {}",
-            n_ext_max,
-            n_ext
-        ));
+        throw std::invalid_argument(
+            std::format(
+                "MLM clustering supports at most {} external particles, got {}",
+                n_ext_max,
+                n_ext
+            )
+        );
     }
     bool have_pdg_ids = external_pdg_ids.size() > 0;
     if (have_pdg_ids && external_pdg_ids.size() != n_ext) {
-        throw std::invalid_argument(std::format(
-            "expected {} external pdg ids, got {}", n_ext, external_pdg_ids.size()
-        ));
+        throw std::invalid_argument(
+            std::format(
+                "expected {} external pdg ids, got {}", n_ext, external_pdg_ids.size()
+            )
+        );
     }
 
     // madevent seeds its walk with the flavour of each beam: qcdline from
@@ -708,8 +712,9 @@ MLMClustering::MLMClustering(
         // never starts. A beam that is a parton is by construction either the
         // gluon or its own class, so this needs no lookup.
         int beam_class = !have_pdg_ids || !is_parton_pdg(pdg) ? flavor_class_none
-            : std::abs(pdg) == 21                             ? flavor_class_gluon
-                                                              : flavor_class_beam1 + beam;
+            : std::abs(pdg) == 21
+            ? flavor_class_gluon
+            : flavor_class_beam1 + beam;
         _beam_flags |= (beam_class + 1) << (8 * (beam + 1));
     }
 
@@ -773,13 +778,16 @@ MLMClustering::MLMClustering(
                     // The kernel keeps a single external mass per leg, so a
                     // permutation that moves a mass between legs would silently
                     // give the wrong clustering measure.
-                    throw std::invalid_argument(std::format(
-                        "MLM clustering needs the mass of external leg {} to be the "
-                        "same for every diagram and permutation, got {} and {}",
-                        leg,
-                        stored,
-                        mass
-                    ));
+                    throw std::invalid_argument(
+                        std::format(
+                            "MLM clustering needs the mass of external leg {} to be "
+                            "the "
+                            "same for every diagram and permutation, got {} and {}",
+                            leg,
+                            stored,
+                            mass
+                        )
+                    );
                 }
                 set_mask_meta(
                     mask_meta,
@@ -816,18 +824,9 @@ MLMClustering::MLMClustering(
                 continue;
             }
 
-            // for the t-channel part, one of the initial state particles has to be
-            // involved in the clustering. find_t_vertices collects the t-channel
-            // propagators on the way back from beam 1 (index 0 of the incoming
-            // legs), so t_propagator_masses/pdg_ids start at the propagator next
-            // to that beam. The k-th mask accumulated from beam 1 (mask 1) is
-            // therefore propagator k, and the k-th from beam 2 (mask 2), walking
-            // the children in reverse, is propagator t_count - 1 - k. Getting
-            // this backwards swaps the flavour and mass of the two ends of every
-            // chain with two or more t-channel propagators: in g g > t t~ g the
-            // gluon line left after the beam emits the jet was read as the top,
-            // so the beam's parton line stopped at the jet and mu_R picked up
-            // the jet's own scale.
+            // t-channel lines: find_t_vertices collects the propagators from beam 1
+            // on, so the k-th mask accumulated from beam 1 (mask 1) is propagator
+            // k, and the k-th from beam 2 (mask 2) is propagator t_count - 1 - k.
             auto& t_masses = topo.t_propagator_masses();
             auto& t_pdg_ids = topo.t_propagator_pdg_ids();
             std::size_t t_count = t_masses.size();
@@ -891,8 +890,9 @@ MLMClustering::MLMClustering(
         .pdg_color_types = pdg_color_types,
         .have_pdg_ids = have_pdg_ids,
         .max_jet_flavor = max_jet_flavor,
-        .beam_pdg = {have_pdg_ids ? external_pdg_ids.at(0) : 21,
-                     have_pdg_ids ? external_pdg_ids.at(1) : 21},
+        .beam_pdg =
+            {have_pdg_ids ? external_pdg_ids.at(0) : 21,
+             have_pdg_ids ? external_pdg_ids.at(1) : 21},
         .absolute_pdgs = _pdf_absolute_pdgs,
         .line_pdgs = line_pdgs,
         .has_same_flavor = _has_same_flavor,
@@ -956,8 +956,9 @@ MLMClustering::MLMClustering(
         .pdg_color_types = pdg_color_types,
         .have_pdg_ids = have_pdg_ids,
         .max_jet_flavor = max_jet_flavor,
-        .beam_pdg = {have_pdg_ids ? external_pdg_ids.at(0) : 21,
-                     have_pdg_ids ? external_pdg_ids.at(1) : 21},
+        .beam_pdg =
+            {have_pdg_ids ? external_pdg_ids.at(0) : 21,
+             have_pdg_ids ? external_pdg_ids.at(1) : 21},
         .absolute_pdgs = _pdf_absolute_pdgs,
         .line_pdgs = line_pdgs,
         .has_same_flavor = _has_same_flavor,
@@ -1011,8 +1012,7 @@ MLMClustering::MLMClustering(
 NamedVector<Value> MLMClustering::build_function_impl(
     FunctionBuilder& fb, const NamedVector<Value>& args
 ) const {
-    auto start_state =
-        fb.full({static_cast<me_int_t>(0), fb.batch_size({args.at(0)})});
+    auto start_state = fb.full({static_cast<me_int_t>(0), fb.batch_size({args.at(0)})});
     return build_kernel(fb, args.at(0), start_state, 0, Value(), {});
 }
 
