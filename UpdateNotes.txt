@@ -16,6 +16,11 @@ ANNOUNCEMENT:
     HS+LM+LS: P-Wave Support for Quarkonium/Leptonium (2607.26739)
 
     Bug Fixes:
+        OM: MadLoop: disable helicity filtering for all 2>1 and 1>2 processes.
+            A filter learned in the c.m. frame can discard nonzero helicities in
+            another frame, giving an incorrect virtual contribution in standalone,
+            OLP or boosted reweighting calls. The aMC@NLO virtual is evaluated in
+            the Born c.m. frame and is unaffected.
         OM: Bug fix custom files for cuts/scale/... were broken for NLO computation
             since 3.6.0
         OM: Bug fix (since 3.6.0) for rapidity cut in asymmetric collision 

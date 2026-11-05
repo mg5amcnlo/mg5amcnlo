@@ -756,6 +756,113 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_1.html' % self.path))
 
     
+    @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
+    def test_real_helicity_sum_survives_a_boost(self):
+        """Compare a generated real-emission sum with every helicity evaluated
+        explicitly after learning the zero mask in the real c.m. frame.
+
+        In u d~ > w+ g g, two longitudinal-W helicities accidentally agree
+        in that frame, but differ after the longitudinal boost used by an
+        initial-state FKS sector. The branch removes equal-helicity reuse
+        during export; this checks that rewrite on the physical process
+        from PR #478, together with the generated model-state capture.
+        """
+        # Keep loop-reduction dependencies local and unbuilt: this driver only
+        # needs the tree amplitudes, the model and BornSupport.
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+        for command in ('set automatic_html_opening False --no_save',
+                        'set output_dependencies internal --no_save',
+                        'import model sm',
+                        'generate u d~ > w+ g [real=QCD]',
+                        'output %s -f -nojpeg' % self.path):
+            interface.exec_cmd(command, errorhandling=False, printcmd=False,
+                               precmd=True, postcmd=True)
+        proc_dir = pjoin(self.path, 'SubProcesses', 'P0_udx_wpg')
+        mfile = [f for f in sorted(os.listdir(proc_dir))
+                 if re.match(r'matrix_\d+\.f$', f) and
+                 'Process: u d~ > w+ g g ' in open(pjoin(proc_dir, f)).read()]
+        self.assertEqual(len(mfile), 1, 'no matrix file for u d~ > w+ g g')
+        mfile = mfile[0]
+        pfx = mfile[len('matrix_'):-len('.f')]
+        body = open(pjoin(proc_dir, mfile)).read()
+        body = body.split('SUBROUTINE SMATRIX%s_SPLITORDERS' % pfx)[1]
+        body = body.split('\n      END\n')[0]
+
+        driver = open(pjoin(_pickle_path, 'fks_real_helicity_frame_driver.f')).read()
+        for key, value in (
+                ('__NCOMB__', re.search(r'NCOMB=(\d+)', body).group(1)),
+                ('__NSQAMPSO__', re.search(r'NSQAMPSO=(\d+)', body).group(1)),
+                ('__IDEN__', re.search(r'DATA IDEN/(\d+)/', body).group(1)),
+                ('__NHEL__', '\n'.join(l for l in body.split('\n')
+                                       if 'DATA (NHEL(I,' in l)),
+                ('__PFX__', pfx)):
+            driver = driver.replace(key, value)
+        open(pjoin(proc_dir, 'real_tie_frame.f'), 'w').write(driver)
+
+        # The generated helicity loop captures the model through BornSupport.
+        build = subprocess.run(['make', '../lib/libdhelas.a', '../lib/libmodel.a',
+                                'born_support'],
+                               cwd=pjoin(self.path, 'Source'),
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        self.assertEqual(build.returncode, 0, build.stdout.decode())
+        build = subprocess.run(
+            ['gfortran', '-O', '-ffixed-line-length-none', '-I.', '-I../../lib',
+             'real_tie_frame.f', mfile, 'born_support.f', '../../Source/timing.f',
+             '-o', 'real_tie_frame', '-L../../lib', '-lmc_born_support',
+             '-ldhelas', '-lmodel', '-Wl,-rpath,' + pjoin(self.path, 'lib')],
+            cwd=proc_dir, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        self.assertEqual(build.returncode, 0,
+                         'could not build the driver:\n%s' % build.stdout.decode())
+
+        # A generic event in its partonic c.m. frame (sqrt(s) = 400 GeV, the
+        # g g system of mass 150 GeV), with the W on its mass shell.
+        card = open(pjoin(self.path, 'Cards', 'param_card.dat')).read()
+        mass_block = re.split(r'(?im)^\s*block\s+mass\b', card)[1]
+        mw = float(re.search(r'(?m)^\s*24\s+(\S+)', mass_block).group(1))
+
+        def boost(p, b):
+            b2 = sum(x * x for x in b)
+            gamma = 1. / math.sqrt(1. - b2)
+            bp = sum(b[i] * p[i + 1] for i in range(3))
+            f = (gamma - 1.) * bp / b2 + gamma * p[0]
+            return [gamma * (p[0] + bp)] + [p[i + 1] + f * b[i] for i in range(3)]
+
+        def direction(theta, phi):
+            return [math.sin(theta) * math.cos(phi),
+                    math.sin(theta) * math.sin(phi), math.cos(theta)]
+
+        sqrts, mgg = 400., 150.
+        e_w = (sqrts**2 + mw**2 - mgg**2) / (2. * sqrts)
+        p_w = math.sqrt(e_w**2 - mw**2)
+        d_w = direction(0.7, 0.3)
+        w = [e_w] + [p_w * x for x in d_w]
+        q = [sqrts - e_w] + [-p_w * x for x in d_w]
+        d_g = direction(1.9, 2.1)
+        to_cm = [x / q[0] for x in q[1:]]
+        g1 = boost([mgg / 2.] + [mgg / 2. * x for x in d_g], to_cm)
+        g2 = boost([mgg / 2.] + [-mgg / 2. * x for x in d_g], to_cm)
+        cm = [[sqrts / 2., 0., 0., sqrts / 2.], [sqrts / 2., 0., 0., -sqrts / 2.],
+              w, g1, g2]
+        boosted = [boost(p, [0., 0., 0.4]) for p in cm]
+
+        momenta = '\n'.join(' '.join('%.17e' % x for p in event for x in p)
+                            for event in (cm, boosted)) + '\n'
+        run = subprocess.run([pjoin(proc_dir, 'real_tie_frame')],
+                             input=momenta.encode(),
+                             cwd=pjoin(self.path, 'Cards'),
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        out = run.stdout.decode()
+        self.assertEqual(run.returncode, 0, out)
+        result = [l.split() for l in out.split('\n') if l.startswith('RESULT')]
+        self.assertEqual(len(result), 1, out)
+        smatrix, helsum = float(result[0][1]), float(result[0][2])
+        self.assertGreater(helsum, 0., out)
+        self.assertLess(abs(smatrix / helsum - 1.), 1e-10,
+                        'the real emission after a first point in the c.m. '
+                        'frame is %.16e, its helicity sum %.16e'
+                        % (smatrix, helsum))
+
     def test_amcatnlo_from_file(self):
         """ """
         
