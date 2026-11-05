@@ -2171,7 +2171,14 @@ class Event(list):
             abspz += abs(particle.pz)
             # check mass
             fourmass = FourMomentum(particle).mass
-            if particle.mass:
+            if particle.mass < 0:
+                # spacelike particle (e.g. a bound atomic electron): the mass
+                # column carries -sqrt(-p^2)
+                spacelike = math.sqrt(max(-FourMomentum(particle).mass_sqr, 0))
+                if abs(-particle.mass - spacelike) > 1e-6 * max(abs(particle.E), -particle.mass):
+                    raise Exception("Do not have correct (spacelike) mass lhe: %s momentum: %s" %
+                                    (particle.mass, -spacelike))
+            elif particle.mass and particle.E**2 > particle.mass**2:
                 expected = (particle.E - math.sqrt(particle.E**2 -particle.mass**2))/particle.E
                 if expected > 1e-8:
                     mass_threshold = particle.E**2 - (particle.E-threshold)**2
