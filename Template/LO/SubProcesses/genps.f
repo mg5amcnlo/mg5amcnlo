@@ -203,6 +203,21 @@ c      COMMON/TO_PDF/LHAID,PDLABEL,EPA_LABEL, pdsublabel
 
 
       double precision x1_ee, x2_ee
+c
+c     bound atomic electron (eatom): leg iatom, see EAtom/eatom_ps.f90
+c
+      include 'eatom.inc'
+      double precision eat_s,eat_js,eat_pb,eat_jp,eat_phi
+      double precision eat_plab(0:3,2),eat_pcm(0:3,2),eat_beta(3)
+      double precision eat_tmp(0:3)
+      integer eat_jdim
+      logical eat_ok
+      double precision eat_slo,eat_shi
+      common/to_eatom_ps/eat_slo,eat_shi
+      double precision eat_pi
+      parameter (eat_pi=3.14159265358979323846d0)
+      double precision EATOM_PS_FLUXJ
+      external EATOM_PS_FLUXJ
       
 c     External function
       double precision SumDot
@@ -234,6 +249,8 @@ c         write(*,'(a,12i4)') 'Summing configs',(isym(i),i=1,isym(0))
          if (ndim .lt. 0) ndim = 0   !For 2->1 processes  tjs 5/24/2010
          if (abs(lpp(1)) .ge. 1) ndim=ndim+1
          if (abs(lpp(2)) .ge. 1) ndim=ndim+1
+c        eatom: s, |p_B| and phi_B after the 3*nfinal-4 tree variables
+         if (iatom.gt.0) ndim=3*nfinal-1
 c         if (pdlabel.eq.'dressed') ndim = ndim+1
          do i=1,nexternal
             m(i)=pmass(i)
@@ -249,7 +266,51 @@ c
       xbk(1)   = 1d0
       xbk(2)   = 1d0
       sjac = 1d0
-      if (abs(lpp(1)) .ge. 1 .and. abs(lpp(2)) .ge. 1) then
+      if (iatom.gt.0) then
+c
+c        Bound atomic electron in leg iatom (impulse approximation). All
+c        momenta are in the rest frame of the atom: the beam moves along
+c        the z axis and p_B = (m_e, vec p_B). Integration variables
+c        s=(p1+p_B)^2, |p_B| and phi_B (see EAtom/eatom_ps.f90).
+c
+         if (nfinal.ge.2) then
+            eat_jdim = 3*nfinal-3
+            if (swidth(eat_jdim).gt.0d0) then
+c              s-hat resonance of this channel: Breit-Wigner in s/stot
+               call sample_get_x(sjac,x(eat_jdim),eat_jdim,mincfig,
+     &              eat_slo/stot,eat_shi/stot)
+               eat_s = x(eat_jdim)*stot
+               sjac = sjac*stot
+            else
+c              electron luminosity (eatom_ps_mode=1) or flat
+               call sample_get_x(sjac,x(eat_jdim),eat_jdim,mincfig,
+     &              0d0,1d0)
+               call EATOM_PS_S(x(eat_jdim),eat_s,eat_js)
+               sjac = sjac*eat_js
+            endif
+            eat_jdim = eat_jdim+1
+         else
+c           2 -> 1: s fixed by the delta function
+            eat_s = pmass(3)**2
+            eat_jdim = 1
+         endif
+         call sample_get_x(sjac,x(eat_jdim),eat_jdim,mincfig,0d0,1d0)
+         call EATOM_PS_PB(eat_s,x(eat_jdim),eat_pb,eat_jp)
+         call sample_get_x(sjac,x(eat_jdim+1),eat_jdim+1,mincfig,
+     &        0d0,1d0)
+         eat_phi = 2d0*eat_pi*x(eat_jdim+1)
+         sjac = sjac*eat_jp*2d0*eat_pi
+         eat_ok = eat_jp.gt.0d0.and.sjac.gt.0d0
+         if (eat_ok) call EATOM_PS_KIN(eat_s,eat_pb,eat_phi,eat_plab,
+     &        eat_pcm,eat_beta,eat_ok)
+         if (.not.eat_ok) then
+            p1(0,1)=-99
+            return
+         endif
+         cm_rap=0d0
+         set_cm_rap=.true.
+         s(-nbranch) = eat_s
+      elseif (abs(lpp(1)) .ge. 1 .and. abs(lpp(2)) .ge. 1) then
          if (abs(lpp(1)).eq.9.or.abs(lpp(2)).eq.9)then
             call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
             call sample_get_x(sjac,x(ndim-1),ndim-1,mincfig,0d0,1d0)
@@ -400,7 +461,13 @@ c      write(*,*) "shat=",sqrt(s(-nbranch))
 c
 c     First Generate Momentum for initial state particles
 c
-      if (lpp(1).eq.9.or.lpp(2).eq.9)then
+      if (iatom.gt.0) then
+c        rest frame of p1+p_B (kinematics only, never used for the ME)
+         do i=0,3
+            p(i,1)=eat_pcm(i,1)
+            p(i,2)=eat_pcm(i,2)
+         enddo
+      else if (lpp(1).eq.9.or.lpp(2).eq.9)then
          if (dummy_boostframe())then
             call mom2cx(m(-nbranch),m(1),m(2),1d0,0d0,p(0,1),p(0,2))
          else
@@ -422,13 +489,32 @@ c
 c
 c     Add what I think are the essentials
 c
+         if (jac .gt. 0d0 .and. iatom.gt.0) then
+c           back to the rest frame of the atom, where the matrix element
+c           is defined; the incoming momenta are restored exactly
+            do i=3,nparticles
+               call EATOM_PS_BOOSTV(p(0,i),eat_beta,eat_tmp)
+               do j=0,3
+                  p(j,i)=eat_tmp(j)
+               enddo
+            enddo
+            do i=0,3
+               p(i,1)=eat_plab(i,1)
+               p(i,2)=eat_plab(i,2)
+            enddo
+         endif
          if (jac .gt. 0d0 ) then
+            if (iatom.gt.0) then
+c              1/(4 m_e |p1|) d^3p_B/(2pi)^3 -> ds d|p_B| dphi_B
+               flux = EATOM_PS_FLUXJ(eat_pb)/(2d0*eat_pi)**(3*nfinal-4)
+            else
             if(nincoming.eq.2)then
                flux  = 1d0 /(2.D0*SQRT(LAMBDA(s(-nbranch),m(1)**2,m(2)**2)))
             else ! Decays
                flux = 1d0/(2d0*sqrt(stot))
             endif
             flux  = flux / (2d0*pi)**(3 * nfinal - 4)
+            endif
             pwgt(1)=max(sjac*jac*pswgt*wgt,1d-99)
             wgt = pwgt(1)*flux
             do i=1,nparticles
@@ -648,7 +734,9 @@ c
       integer           Minvar(maxdim,lmaxconfigs)
       common /to_invar/ Minvar
 
-
+      include 'eatom.inc'
+      double precision eat_slo,eat_shi
+      common/to_eatom_ps/eat_slo,eat_shi
 
          do i=1,nexternal
             m(i)=pmass(i)
@@ -674,6 +762,14 @@ c        Set stot
             pi2(0)=ebeam(2)
             pi2(3)=-sqrt(max(ebeam(2)**2-m2**2, 0d0))
             stot=m1**2+m2**2+2*(pi1(0)*pi2(0)-pi1(3)*pi2(3))
+         endif
+         if (iatom.gt.0) then
+c           bound atomic electron: largest reachable s and sampler set-up
+            call EATOM_PS_MG_SETUP(EATOM_A,EATOM_Z,iatom,nexternal,pmass,
+     &           ebeam,lpp,frame_id,eatom_pmax,eatom_ps_mode,stot,
+     &           eat_slo,eat_shi)
+c           shells with small weights must not be dropped as helicities
+            limhel=0d0
          endif
          write(*,'(x,a,f13.2)') 'Set CM energy to ',sqrt(stot)
 c        Start graph mapping
@@ -721,6 +817,7 @@ c     Constants
 c      
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'eatom.inc'
       double precision pi            , one
       parameter       (pi=3.1415926d0, one=1d0)
 c
@@ -808,6 +905,8 @@ c
       do ibranch=3-nincoming,2
          totmassin=totmassin+m(ibranch)
       enddo
+c     eatom: p_B is off shell, only the final-state masses matter
+      if (iatom.gt.0) totmassin=0d0
       totmass=0d0
       do ibranch=3,nbranch+2
          totmass=totmass+m(ibranch)
@@ -1056,7 +1155,9 @@ c     Finally generate the momentum. The call is of the form
 c     pa+pb -> p1+ p2; t=(pa-p1)**2;   pr = pa-p1
 c     gentcms(pa,pb,t,phi,m1,m2,p1,pr) 
 c
-         if (itree(1,ibranch).gt.-ns_channel-1)then
+         if (iatom.gt.0.and.itree(1,ibranch).eq.iatom) then
+            mi2 = dot(p(0,iatom),p(0,iatom))
+         else if (itree(1,ibranch).gt.-ns_channel-1)then
             mi2 = m(itree(1,ibranch))**2
          else
             mi2 = tmass(itree(1,ibranch))
@@ -1134,6 +1235,7 @@ c
       do ibranch=-ns_channel-1,-nbranch+1,-1
          s1  = m(ibranch)**2                        !Total mass available
          ma2 = m(tstrategy)**2
+         if (iatom.gt.0) ma2 = dot(p(0,tstrategy),p(0,tstrategy))
          mb2 = dot(P(0,itree(1,ibranch)),P(0,itree(1,ibranch)))
          m12 = m(itree(2,ibranch))**2
          mn2 = m(ibranch-1)**2
@@ -1273,7 +1375,9 @@ c     pa+pb -> p1+ p2; t=(pa-p1)**2;   pr = pa-p1
 c     gentcms(pa,pb,t,phi,m1,m2,p1,pr) 
 c
 
-         if (itree(1,ibranch).gt.-ns_channel-1)then
+         if (iatom.gt.0.and.itree(1,ibranch).eq.iatom) then
+            mi2 = dot(p(0,iatom),p(0,iatom))
+         else if (itree(1,ibranch).gt.-ns_channel-1)then
             mi2 = m(itree(1,ibranch))**2
          else
             mi2 = tmass(itree(1,ibranch))

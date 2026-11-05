@@ -478,6 +478,8 @@ c     include 'vector.inc' ! defines VECSIZE_MEMMAX
       include 'cluster.inc' ! includes vector.inc that defines VECSIZE_MEMMAX
       include 'run.inc'
       include 'run_config.inc'
+      include 'eatom.inc'
+      double precision eat_v2
 
 
       
@@ -608,6 +610,8 @@ c     write(*,*) 'ihel',jpart(7,1),jpart(7,2)
       do i=1, nexternal
          jpart(7,isym(i, jsym)) = nhel(i)
       enddo
+c     bound atomic electron: its 'helicity' only labels a shell
+      if (iatom.gt.0) jpart(7,isym(iatom, jsym)) = 9
 
       
 c   Fix ordering of ptclus
@@ -620,7 +624,7 @@ c   Fix ordering of ptclus
 
 c     Check if we have flipped particle 1 and 2, and flip back
       flip = .false.
-      if (p(3,1).lt.0) then
+      if (iatom.eq.0.and.p(3,1).lt.0) then
          do j=0,3
             pdum(j)=p(j,1)
             p(j,1)=p(j,2)
@@ -636,7 +640,19 @@ c
       pboost(1)=0d0
       pboost(2)=0d0
       pboost(3)=0d0
-      if (nincoming.eq.2) then
+      if (iatom.gt.0) then
+c        bound atomic electron: momenta are already in the rest frame of
+c        the atom (= lab); the bound electron is written off shell with
+c        mass column sign(p^2) sqrt(|p^2|)
+         do j=1,nexternal
+            do i=0,3
+               pb(i,isym(j,jsym))=p(i,j)
+            enddo
+            pb(4,isym(j,jsym))=pmass(j)
+         enddo
+         eat_v2=p(0,iatom)**2-p(1,iatom)**2-p(2,iatom)**2-p(3,iatom)**2
+         pb(4,isym(iatom,jsym))=sign(sqrt(abs(eat_v2)),eat_v2)
+      elseif (nincoming.eq.2) then
          if (xbk(1) .gt. 0d0 .and. xbk(1) .le. 1d0 .and.
      $       xbk(2) .gt. 0d0 .and. xbk(2) .le. 1d0) then
            if(lpp(2).ne.0.and.(xbk(1).eq.1d0.or.pmass(1).eq.0d0)) then

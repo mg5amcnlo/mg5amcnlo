@@ -41,7 +41,7 @@ $(LIBDIR)libgeneric.$(libext): $(GENERIC)
 $(LIBDIR)libdhelas.$(libext): DHELAS
 	cd DHELAS; make
 $(LIBDIR)libeatom.$(libext): EAtom
-	cd EAtom; make
+	cd EAtom && $(MAKE)
 $(LIBDIR)libpdf.$(libext): PDF
 	cd PDF; make	
 $(LIBDIR)libcernlib.$(libext): CERNLIB

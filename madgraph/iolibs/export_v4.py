@@ -1098,7 +1098,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                         onium = False
                         continue
                 elif l.get('eatom'):
-                    idup.append(str(l.get('eatom').get('id')))
+                    # bound atomic electron: written as an electron in the
+                    # events; the atom itself is the beam (see eatom.inc)
+                    idup.append(str(l.get('id')))
                 else:
                     idup.append(str(l.get('id')))
 
@@ -2623,6 +2625,36 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         else:
             raise MadGraph5Error("LDMEs cannot be added to 'ident_card.dat'")
+
+    @staticmethod
+    def get_eatom_info(matrix_element):
+        """(iatom, A, Z, pdg) of the bound atomic electron of the process,
+        or (0, 0, 0, 0) if there is none"""
+
+        for wf in matrix_element.get_all_wavefunctions():
+            if wf.get('mothers') or not wf.get('eatom'):
+                continue
+            eatom = wf.get('eatom')
+            return (wf.get('number'), eatom.get('A'), eatom.get('Z'),
+                    eatom.get('id'))
+        return (0, 0, 0, 0)
+
+    def write_eatom_include(self, writer, matrix_element):
+        """write eatom.inc (bound atomic electron for madevent)"""
+
+        iatom, A, Z, pdg = self.get_eatom_info(matrix_element)
+        if iatom not in [0, 1, 2]:
+            raise MadGraph5Error("A bound atomic electron must be an incoming particle")
+        lines = ["INTEGER IATOM, EATOM_A, EATOM_Z, EATOM_PDG",
+                 "PARAMETER (IATOM=%d, EATOM_A=%d, EATOM_Z=%d, EATOM_PDG=%d)" % \
+                 (iatom, A, Z, pdg)]
+        writer.writelines(lines)
+        if iatom:
+            self.proc_characteristic['eatom_iatom'] = iatom
+            self.proc_characteristic['eatom_A'] = A
+            self.proc_characteristic['eatom_Z'] = Z
+            self.proc_characteristic['eatom_pdg'] = pdg
+        return iatom
 
     def write_iatom_file(self, writer, iatom):
         """ write iatom.inc """
@@ -5000,6 +5032,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.write_pmass_file(writers.FortranWriter(filename),
                          matrix_element)
 
+        if matrix_element.get_natom() > 0:
+            filename = pjoin(Ppath, 'eatom.inc')
+            self.write_eatom_include(writers.FortranWriter(filename),
+                                     matrix_element)
+
         filename = pjoin(Ppath, 'props.inc')
         self.write_props_file(writers.FortranWriter(filename),
                          matrix_element,
@@ -6902,6 +6939,14 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         matrix_elements = subproc_group.get('matrix_elements')
 
+        if matrix_elements[0].get_natom()>0:
+            self.opt['hel_recycling'] = False
+            eatom_info = [self.get_eatom_info(me) for me in matrix_elements]
+            if any(info != eatom_info[0] for info in eatom_info):
+                raise MadGraph5Error("All grouped processes must have the same "+\
+                       "bound atomic electron in the same position. Use "+\
+                       "'set group_subprocesses False' or separate outputs.")
+
         contains_onia = False
         if matrix_elements[0].get_nonia()>0:
             self.opt['hel_recycling'] = False
@@ -7103,6 +7148,11 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),
                          matrix_element)
+
+        if matrix_element.get_natom() > 0:
+            filename = 'eatom.inc'
+            self.write_eatom_include(writers.FortranWriter(filename),
+                                     matrix_element)
 
         if matrix_element.get_nonia()>0:
             filename = 'onia.inc'

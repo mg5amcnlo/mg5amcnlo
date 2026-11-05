@@ -38,6 +38,7 @@
      %(ebeam2)s     = ebeam2  ! beam 2 total energy in GeV
 $beam_pol
 $frame
+$eatom
 #*********************************************************************
 # PDF CHOICE: this automatically fixes alpha_s and its evol.         *
 # pdlabel: lhapdf=LHAPDF (installation needed) [1412.7420]           *

@@ -53,6 +53,7 @@ c
 c     c
       include 'vector.inc'
       include 'run.inc'
+      include 'eatom.inc'
       
       integer           mincfig, maxcfig
       common/to_configs/mincfig, maxcfig
@@ -183,9 +184,13 @@ c
       ndim = 3*(nexternal-nincoming)-4
       if (nincoming.gt.1.and.abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (nincoming.gt.1.and.abs(lpp(2)) .ge. 1) ndim=ndim+1
+c     bound atomic electron: s, |p_B|, phi_B (see genps.f)
+      if (iatom.gt.0) ndim = 3*(nexternal-nincoming)-1
       ninvar = ndim
       do j=mincfig,maxcfig
-         if (abs(lpp(1)) .ge. 1 .and. abs(lpp(1)) .ge. 1) then
+         if (iatom.gt.0) then
+            continue
+         elseif (abs(lpp(1)) .ge. 1 .and. abs(lpp(1)) .ge. 1) then
             if(ndim.gt.1) minvar(ndim-1,j)=ninvar-1
             minvar(ndim,j) = ninvar
          elseif (abs(lpp(1)) .ge. 1 .or. abs(lpp(1)) .ge. 1) then

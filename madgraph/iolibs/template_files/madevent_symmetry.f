@@ -16,6 +16,8 @@ c
       include 'cuts.inc'
       include '../../Source/vector.inc'
       include '../../Source/run.inc'
+      include 'eatom.inc'
+      double precision eat_slo,eat_shi
       
       double precision ZERO
       parameter       (ZERO = 0d0)
@@ -117,6 +119,10 @@ c     Set stot
          pi2(3)=-sqrt(max(ebeam(2)**2-m2**2,0d0))
          stot=m1**2+m2**2+2*(pi1(0)*pi2(0)-pi1(3)*pi2(3))
       endif
+c     bound atomic electron: largest reachable s (same as in genps.f)
+      if (iatom.gt.0) call EATOM_PS_MG_SETUP(EATOM_A,EATOM_Z,iatom,
+     &     nexternal,pmass,ebeam,lpp,frame_id,eatom_pmax,eatom_ps_mode,
+     &     stot,eat_slo,eat_shi)
 
 c      call printout
       include 'props.inc'

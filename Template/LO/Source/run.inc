@@ -83,6 +83,13 @@ C
       common/to_heavyion_mass/mass_ion
 
 C
+C     bound atomic electron (eatom) phase space, see Source/EAtom/eatom_ps.f90
+C
+      integer eatom_ps_mode, eatom_shell
+      double precision eatom_pmax
+      common/to_eatom_run/eatom_pmax,eatom_ps_mode,eatom_shell
+
+C
 C Controls what are the PDGs included in the CKKWl merging procedure, i.e. what
 C are the PDGs subject to the ktdurham cut
 C

@@ -1757,6 +1757,11 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('ew_sudakov', False)
         self.add_param('hel_recycling', False)  
         self.add_param('single_color', True)
+        # bound atomic electron in the initial state (leg, A, Z, bound-state pdg)
+        self.add_param('eatom_iatom', 0)
+        self.add_param('eatom_A', 0)
+        self.add_param('eatom_Z', 0)
+        self.add_param('eatom_pdg', 0)
         self.add_param('nlo_mixed_expansion', True)    
         self.add_param('gauge', 'U')
     
@@ -3790,6 +3795,12 @@ class RunCard(ConfigFile):
         output["pdfgup2"] = 0
         output["pdfsup1"] = self.get_pdf_id(self["pdlabel"])
         output["pdfsup2"] = self.get_pdf_id(self["pdlabel"])
+        # bound atomic electron: that beam is the atom (ion code 100ZZZAAA0)
+        # at rest, its energy being its mass (A atomic mass units)
+        if 'eatom_iatom' in self and self['eatom_iatom'] in [1, 2]:
+            ib = self['eatom_iatom']
+            output["idbmup%d" % ib] = 1000000000 + 10000*self['eatom_z'] + 10*self['eatom_a']
+            output["ebmup%d" % ib] = self['eatom_a'] * 0.93149410242
         return output
     
     def get_pdf_id(self, pdf):
@@ -3920,6 +3931,25 @@ template_on = \
 """
 template_off = ""
 frame_block = RunBlock('frame', template_on=template_on, template_off=template_off)
+
+# Bound atomic electron ------------------------------------------------------------------------------
+template_on = \
+"""#*********************************************************************
+# Bound atomic electron in the initial state (impulse approximation) *
+# The atom is at rest in the lab frame: only the energy of the other *
+# beam is used, and the matrix element is evaluated in the atom rest *
+# frame. Cross sections are per atom (sum over all bound electrons). *
+#*********************************************************************
+  %(eatom_ps_mode)s = eatom_ps_mode ! |p_B| sampling: 1=electron luminosity, 2=map of the notes, 0=flat
+  %(eatom_pmax)s = eatom_pmax ! largest |p_B| sampled in GeV (-1 = kinematic limit)
+  %(eatom_shell)s = eatom_shell ! 0 = all shells, else one shell sign(kappa)*(100n+|kappa|), e.g. -101 = 1s
+  %(eatom_iatom)s = eatom_iatom ! (set by MG5 from the process) beam carrying the atom
+  %(eatom_a)s = eatom_a ! (set by MG5 from the process) mass number A of the atom
+  %(eatom_z)s = eatom_z ! (set by MG5 from the process) atomic number Z of the atom
+"""
+template_off = ''
+
+eatom_block = RunBlock('eatom', template_on=template_on, template_off=template_off)
 
 
 
@@ -4145,7 +4175,7 @@ class RunCardLO(RunCard):
     
     blocks = [heavy_ion_block, beam_pol_block, syscalc_block, ecut_block,
              frame_block, eva_pdf_block, mlm_block, ckkw_block, psoptim_block,
-              pdlabel_block, fixedfacscale, running_block]
+              pdlabel_block, fixedfacscale, running_block, eatom_block]
 
     dummy_fct_file = {"dummy_cuts": pjoin("SubProcesses","dummy_fct.f"),
                       "get_dummy_x1": pjoin("SubProcesses","dummy_fct.f"),
@@ -4190,6 +4220,16 @@ class RunCardLO(RunCard):
                        comment='For heavy ion physics nb of neutron in the ion (for both beam but if group_subprocess was False)')
         self.add_param('nb_neutron2', 0, hidden=True, allowed=[1,0, 126 , '*'],fortran_name="nb_neutron(2)",
                        comment='For heavy ion physics nb of neutron in the ion (of beam 2 if group_subprocess was False )')        
+        self.add_param('eatom_ps_mode', 1, hidden=True, allowed=[0, 1, 2],
+                       comment='bound atomic electron: |p_B| sampling (1: electron luminosity, 2: map of the notes, 0: flat)')
+        self.add_param('eatom_pmax', -1.0, hidden=True,
+                       comment='bound atomic electron: largest |p_B| (GeV) sampled, -1 for the kinematic limit')
+        self.add_param('eatom_shell', 0, hidden=True,
+                       comment='bound atomic electron: 0 for all shells, else only shell sign(kappa)*(100n+|kappa|)')
+        # set from the process (not for the user): beam carrying the atom and its A, Z
+        self.add_param('eatom_iatom', 0, hidden=True, include=False, allowed=[0, 1, 2])
+        self.add_param('eatom_a', 0, hidden=True, include=False)
+        self.add_param('eatom_z', 0, hidden=True, include=False)
         self.add_param('mass_ion1', -1.0, hidden=True, fortran_name="mass_ion(1)",
                        allowed=[-1,0, 0.938, 207.9766521*0.938, 0.000511, 0.105, '*'],
                        comment='For heavy ion physics mass in GeV of the ion (of beam 1)')
@@ -5015,6 +5055,27 @@ class RunCardLO(RunCard):
                 logger.critical("MLM matching/merging not compatible with the model! You need to use another method to remove the double counting!")
             self['ickkw'] = 0
             
+        # bound atomic electron: free beam on an atom at rest
+        if 'eatom_iatom' in proc_characteristic and proc_characteristic['eatom_iatom']:
+            iatom = proc_characteristic['eatom_iatom']
+            self['eatom_iatom'] = iatom
+            self['eatom_a'] = proc_characteristic['eatom_A']
+            self['eatom_z'] = proc_characteristic['eatom_Z']
+            self.display_block.append('eatom')
+            # collider-type default cuts (pt, eta, dR) make no sense for a
+            # fixed target: start without cuts
+            self.remove_all_cut()
+            self['lpp1'] = 0
+            self['lpp2'] = 0
+            self['ebeam%d' % (3-iatom)] = 100.0
+            self['ebeam%d' % iatom] = 0.0
+            self['use_syst'] = False
+            self['systematics_program'] = 'none'
+            # no beam clustering: scales from the final state only
+            self['fixed_ren_scale'] = True
+            self['fixed_fac_scale'] = True
+            self['dynamical_scale_choice'] = 3
+
         # define class of particles present to hide all the cuts associated to 
         # not present class
         cut_class = collections.defaultdict(int)
