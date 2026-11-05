@@ -385,6 +385,17 @@ StateItem make_state_item(
         ctx.has_same_flavor = true;
     }
 
+    // "The mother repeats a daughter's flavour" compares |pdg|: the external
+    // legs come without their sign (clean_pids in launch.py) while a propagator
+    // keeps the one MG5 gave it, so the t~* of t~* > t~ g is -6 against the t~
+    // leg's 6. For a light quark is_jet_in makes the vertex a jet vertex anyway;
+    // for a top this is the only way it is one, and without it the gluon was
+    // written at sqrt(s) and never counted as a merging jet.
+    bool mother_is_daughter1 =
+        meta_in.pdg_id != 0 && std::abs(meta_in.pdg_id) == std::abs(meta_1.pdg_id);
+    bool mother_is_daughter2 =
+        meta_in.pdg_id != 0 && std::abs(meta_in.pdg_id) == std::abs(meta_2.pdg_id);
+
     return {
         .next_state = next_state,
         .particle1 = particle1,
@@ -402,8 +413,8 @@ StateItem make_state_item(
         .is_colored_in = !ctx.have_pdg_ids || color_in != 1,
         .is_octet_in =
             !ctx.have_pdg_ids || is_octet_pdg(meta_in.pdg_id, ctx.pdg_color_types),
-        .mother_is_daughter1 = meta_in.pdg_id != 0 && meta_in.pdg_id == meta_1.pdg_id,
-        .mother_is_daughter2 = meta_in.pdg_id != 0 && meta_in.pdg_id == meta_2.pdg_id,
+        .mother_is_daughter1 = mother_is_daughter1,
+        .mother_is_daughter2 = mother_is_daughter2,
         .all_colorless =
             ctx.have_pdg_ids && color_in == 1 && color_1 == 1 && color_2 == 1,
         .flavor_class_in =
