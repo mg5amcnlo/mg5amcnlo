@@ -2669,6 +2669,87 @@ def test_the_emission_scheme_still_books_the_radiating_quark():
 
 
 # --------------------------------------------------------------------------
+# a gluon radiated off an antitop
+# --------------------------------------------------------------------------
+
+W_TOP = 1.50833649
+# g g > t t~ g as launch.py hands it over: clean_pids strips the signs
+TTG_PDGS = [21, 21, 6, 6, 21]
+
+
+def ttg_t_channel_diagram():
+    """g g > t t~ g through a t-channel top, the gluon radiated off the
+    outgoing t~ (and, in the second permutation, off the t):
+
+      t~* > t~ g    (final state; the mother repeats the t~, a jet vertex)
+      g t > t*      (beam 0 line, the t-channel top)
+      t* t~* > g    (beam 1)
+
+    MG5 signs a propagator by the particle flowing into the legs it joins, so
+    the t~* is a -6, while the external legs reach the clustering unsigned."""
+    return [
+        {
+            "incoming_masses": [0.0, 0.0],
+            "outgoing_masses": [M_TOP, M_TOP, 0.0],
+            "propagators": [(M_TOP, W_TOP, -6), (M_TOP, 0.0, 6)],
+            "vertices": [["o1", "o2", "p0"], ["o0", "i0", "p1"], ["p0", "p1", "i1"]],
+            "permutations": [[0, 1, 2, 3, 4], [0, 1, 3, 2, 4]],
+        }
+    ]
+
+
+def ttg_t_channel_clustering(**kwargs):
+    diagrams = ttg_t_channel_diagram()
+    return ms.MLMClustering(
+        [
+            ms.Topology(
+                ms.Diagram(
+                    d["incoming_masses"],
+                    d["outgoing_masses"],
+                    [
+                        ms.Propagator(mass=m, width=w, pdg_id=i)
+                        for m, w, i in d["propagators"]
+                    ],
+                    d["vertices"],
+                )
+            )
+            for d in diagrams
+        ],
+        [d["permutations"] for d in diagrams],
+        make_diagram_indices(diagrams),
+        cm_energy=CM_ENERGY,
+        external_pdg_ids=TTG_PDGS,
+        scale_scheme=ms.MLMClustering.ScaleScheme.madevent,
+        clustering_measure=ms.MLMClustering.ClusteringMeasure.madevent,
+        **kwargs,
+    )
+
+
+@pytest.mark.parametrize(
+    "history", [HISTORY.all_diagrams, HISTORY.diagram, HISTORY.madevent]
+)
+def test_a_gluon_radiated_off_an_antitop_keeps_its_clustering_scale(history):
+    """madevent's isjetvx makes t~* > t~ g a jet vertex (the mother repeats a
+    daughter), so the gluon gets the scale of that vertex. Comparing the
+    signed -6 of the propagator with the unsigned 6 of the leg made it a
+    non-jet vertex instead: the gluon was written at sqrt(s), which the
+    shower's MLM matching reads as "never match, never veto", in every
+    history along these diagrams (7-10 % of the g g > t t~ + jets events
+    under clustering_history = madevent)."""
+    momenta = sample_momenta(ttg_t_channel_diagram(), batch_size=500)
+    clustering = ttg_t_channel_clustering(clustering_history=history)
+    if history == HISTORY.all_diagrams:
+        outputs = [run(clustering, momenta)]
+    else:
+        outputs = [along(clustering, momenta, diagram) for diagram in (0, 1)]
+    for out in outputs:
+        scales = out[3]
+        # the tops are never jets
+        np.testing.assert_array_equal(scales[:, :2], CM_ENERGY)
+        assert np.all(scales[:, 2] != CM_ENERGY)
+
+
+# --------------------------------------------------------------------------
 # clusterings that only exist for some flavours of a merged subprocess
 # --------------------------------------------------------------------------
 
