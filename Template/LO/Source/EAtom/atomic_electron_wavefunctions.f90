@@ -1,5 +1,19 @@
 MODULE atomic_electron_wavefunctions
   IMPLICIT NONE
+  ! Tables of the atom currently loaded (see eatom_load). Columns of
+  ! eatom_grid: 2*i-1 = gtilde, 2*i = ftilde of shell i, on eatom_pgrid (GeV).
+  INTEGER,SAVE::eatom_loadedA=-1,eatom_loadedZ=-1
+  INTEGER,SAVE::eatom_NP=0,eatom_NSHELL=0
+  INTEGER,DIMENSION(:),ALLOCATABLE,SAVE::eatom_shells
+  REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE,SAVE::eatom_nume
+  REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE,SAVE::eatom_pgrid
+  REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE,SAVE::eatom_grid
+  ! cubic-spline coefficients of each column, computed once in eatom_load
+  REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE,SAVE::eatom_splb,eatom_splc,eatom_spld
+  ! below eatom_lowp(j) (above eatom_highp(j)) column j is A*p**pow with
+  ! (A,pow)=eatom_lowfit(j,1:2) (eatom_highfit(j,1:2))
+  REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE,SAVE::eatom_lowp,eatom_highp
+  REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE,SAVE::eatom_lowfit,eatom_highfit
 CONTAINS
 
   SUBROUTINE eatom_WF(nuclearA,nuclearZ,HEL,p,wf)
@@ -47,7 +61,7 @@ CONTAINS
 
     ! we have put sqrt(2*E) in with the same dimension as IXXXXX
     pref=(2d0*pipi)**(1.5d0)*(-dcmplx(0d0,1d0))**l*dsqrt(2d0*p(0))
-    
+
     pt=p(1)**2+p(2)**2
     pp=DSQRT(pt+p(3)**2)
     pt=DSQRT(pt)
@@ -55,14 +69,15 @@ CONTAINS
        theta=0d0
        phi=0d0
     ELSE
-       theta=ACOS(p(3)/pp)
+       ! ATAN2 keeps full precision near the poles and the sign of p_y
+       theta=ATAN2(pt,p(3))
        IF(pt.EQ.0d0)THEN
           phi=0d0
        ELSE
-          phi=ACOS(p(1)/pt)
+          phi=ATAN2(p(2),p(1))
        ENDIF
     ENDIF
-    
+
     IF(ABS(m).GE.999d0)THEN
        Y=SpinorSphericalHarmonicY(-1,SIGN(0.5d0,m),theta,phi)
        Y(1:2)=DSQRT(dble(twoj+1)/(2d0))*Y(1:2)
@@ -104,15 +119,131 @@ CONTAINS
           wf(i)=wf(i)*DSQRT(nume)/DSQRT(dble(twoj+1))
        ENDDO
     ENDIF
-    
+
     RETURN
   END SUBROUTINE Atomic_electron_WF
 
-  SUBROUTINE Get_atomic_electron_gftilde(nuclearA,nuclearZ,ishell,p,nume,gtilde,ftilde)
+  SUBROUTINE eatom_load(nuclearA,nuclearZ)
+    ! Load the gtilde/ftilde tables of atom (A,Z) into the module data,
+    ! fit the low- and high-p power laws and compute the spline
+    ! coefficients once. Reloads if a different atom is requested.
     USE C12_gftilde
     USE Pb208_gftilde
     USE W186_gftilde
     USE interpolation
+    IMPLICIT NONE
+    INTEGER,INTENT(IN)::nuclearA,nuclearZ
+    REAL(KIND(1d0)),PARAMETER::alphaEW=0.0072973525205055605d0
+    INTEGER,DIMENSION(:),ALLOCATABLE::i_low_p,i_high_p
+    INTEGER::i,j,k,nlow,nhigh,n,kappa,twoj,l,lp
+    REAL(KIND(1d0))::xpower
+    IF(nuclearA.EQ.eatom_loadedA.AND.nuclearZ.EQ.eatom_loadedZ)RETURN
+    IF(ALLOCATED(eatom_shells))THEN
+       DEALLOCATE(eatom_shells,eatom_nume,eatom_pgrid,eatom_grid)
+       DEALLOCATE(eatom_splb,eatom_splc,eatom_spld)
+       DEALLOCATE(eatom_lowp,eatom_highp,eatom_lowfit,eatom_highfit)
+    ENDIF
+    IF(nuclearA.EQ.12.AND.nuclearZ.EQ.6)THEN
+       eatom_NP=C12_NP
+       eatom_NSHELL=C12_NSHELL
+    ELSEIF(nuclearA.EQ.186.AND.nuclearZ.EQ.74)THEN
+       eatom_NP=W186_NP
+       eatom_NSHELL=W186_NSHELL
+    ELSEIF(nuclearA.EQ.208.AND.nuclearZ.EQ.82)THEN
+       eatom_NP=Pb208_NP
+       eatom_NSHELL=Pb208_NSHELL
+    ELSE
+       WRITE(*,*)"ERROR: Do not known (A,Z)=",nuclearA,nuclearZ
+       STOP
+    ENDIF
+    ALLOCATE(eatom_shells(eatom_NSHELL),eatom_nume(eatom_NSHELL))
+    ALLOCATE(eatom_pgrid(eatom_NP),eatom_grid(eatom_NP,2*eatom_NSHELL))
+    ALLOCATE(eatom_splb(eatom_NP,2*eatom_NSHELL),eatom_splc(eatom_NP,2*eatom_NSHELL))
+    ALLOCATE(eatom_spld(eatom_NP,2*eatom_NSHELL))
+    ALLOCATE(eatom_lowp(2*eatom_NSHELL),eatom_highp(2*eatom_NSHELL))
+    ALLOCATE(eatom_lowfit(2*eatom_NSHELL,2),eatom_highfit(2*eatom_NSHELL,2))
+    ALLOCATE(i_low_p(2*eatom_NSHELL),i_high_p(2*eatom_NSHELL))
+    IF(nuclearA.EQ.12.AND.nuclearZ.EQ.6)THEN
+       eatom_shells=C12_all_shells
+       eatom_nume=C12_nume_shells
+       eatom_lowp=C12_low_p
+       i_low_p=C12_i_low_p
+       eatom_highp=C12_high_p
+       i_high_p=C12_i_high_p
+       eatom_pgrid=C12_P_grid
+       eatom_grid=C12_gftilde_grid
+    ELSEIF(nuclearA.EQ.186.AND.nuclearZ.EQ.74)THEN
+       eatom_shells=W186_all_shells
+       eatom_nume=W186_nume_shells
+       eatom_lowp=W186_low_p
+       i_low_p=W186_i_low_p
+       eatom_highp=W186_high_p
+       i_high_p=W186_i_high_p
+       eatom_pgrid=W186_P_grid
+       eatom_grid=W186_gftilde_grid
+    ELSE
+       eatom_shells=Pb208_all_shells
+       eatom_nume=Pb208_nume_shells
+       eatom_lowp=Pb208_low_p
+       i_low_p=Pb208_i_low_p
+       eatom_highp=Pb208_high_p
+       i_high_p=Pb208_i_high_p
+       eatom_pgrid=Pb208_P_grid
+       eatom_grid=Pb208_gftilde_grid
+    ENDIF
+    ! high p: gtilde~ftilde~p**(-2-sqrt(1-Z**2*alpha**2))
+    IF(1d0-alphaEW**2*nuclearZ**2.GE.0d0)THEN
+       xpower=-2d0-DSQRT(1d0-alphaEW**2*nuclearZ**2)
+    ELSE
+       xpower=-2d0
+    ENDIF
+    DO i=1,eatom_NSHELL
+       CALL GetShellQuantumNumbers(eatom_shells(i),n,kappa,twoj,l,lp)
+       DO k=0,1
+          j=2*i-1+k
+          ! low p: gtilde~p**l, ftilde~p**lp
+          IF(k.EQ.0)THEN
+             eatom_lowfit(j,2)=DBLE(l)
+          ELSE
+             eatom_lowfit(j,2)=DBLE(lp)
+          ENDIF
+          nlow=i_low_p(j)
+          eatom_lowfit(j,1)=Fit_powerlaw_A(nlow,eatom_lowfit(j,2),&
+               eatom_pgrid(1:nlow),eatom_grid(1:nlow,j))
+          nhigh=eatom_NP-i_high_p(j)+1
+          eatom_highfit(j,2)=xpower
+          eatom_highfit(j,1)=Fit_powerlaw_A(nhigh,xpower,&
+               eatom_pgrid(i_high_p(j):eatom_NP),eatom_grid(i_high_p(j):eatom_NP,j))
+          CALL spline(eatom_pgrid,eatom_grid(1:eatom_NP,j),eatom_splb(1:eatom_NP,j),&
+               eatom_splc(1:eatom_NP,j),eatom_spld(1:eatom_NP,j),eatom_NP)
+       ENDDO
+    ENDDO
+    DEALLOCATE(i_low_p,i_high_p)
+    eatom_loadedA=nuclearA
+    eatom_loadedZ=nuclearZ
+    RETURN
+  END SUBROUTINE eatom_load
+
+  FUNCTION eatom_column(j,p)
+    ! gtilde (j odd) or ftilde (j even) of column j at |p| (GeV)
+    USE interpolation
+    IMPLICIT NONE
+    INTEGER,INTENT(IN)::j
+    REAL(KIND(1d0)),INTENT(IN)::p
+    REAL(KIND(1d0))::eatom_column
+    IF(p.LT.eatom_lowp(j))THEN
+       eatom_column=eatom_lowfit(j,1)*p**eatom_lowfit(j,2)
+    ELSEIF(p.GT.eatom_highp(j))THEN
+       eatom_column=eatom_highfit(j,1)*p**eatom_highfit(j,2)
+    ELSE
+       eatom_column=ispline(p,eatom_pgrid,eatom_grid(1:eatom_NP,j),&
+            eatom_splb(1:eatom_NP,j),eatom_splc(1:eatom_NP,j),&
+            eatom_spld(1:eatom_NP,j),eatom_NP)
+    ENDIF
+    RETURN
+  END FUNCTION eatom_column
+
+  SUBROUTINE Get_atomic_electron_gftilde(nuclearA,nuclearZ,ishell,p,nume,gtilde,ftilde)
     IMPLICIT NONE
     INTEGER,INTENT(IN)::nuclearA,nuclearZ
     ! ishell=Sign(kappa)*(100*n+|kappa|)
@@ -124,209 +255,75 @@ CONTAINS
     ! in units of GeV**(-3/2) with normalization
     ! 1=2*Pi**2*Int[(ftilde**2+gtilde**2)/(2*Pi)**3,d3p] with p from 0 to infinity
     REAL(KIND(1d0)),INTENT(OUT)::gtilde,ftilde
-    CHARACTER(len=7)::Aname
-    INTEGER,SAVE::init=0
-    CHARACTER(len=100)::datafile
-    LOGICAL::lexist
-    INTEGER,PARAMETER::iunit=30784
-    INTEGER::Aval,Zval
-    INTEGER,SAVE::NP,NSHELL
-    INTEGER,DIMENSION(:),ALLOCATABLE,SAVE::all_shells
-    REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE,SAVE::nume_shells
-    REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE,SAVE::P_grid
-    REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE,SAVE::gftilde_grid
-    INTEGER::i,j,igt,ift
-    INTEGER,DIMENSION(:),ALLOCATABLE::i_low_p,i_high_p
-    ! where low p fit starts when p<low_p
-    REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE,SAVE::low_p
-    ! where high p fit starts when p>high_p
-    REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE,SAVE::high_p
-    REAL(KIND(1d0)),PARAMETER::alphaEW=0.0072973525205055605d0
-    INTEGER::N_LOW,N_HIGH,n,kappa,twoj,l,lp
-    REAL(KIND(1d0)),DIMENSION(:),ALLOCATABLE::X_LOW,Y_LOW,X_HIGH,Y_HIGH
-    REAL(KIND(1d0))::xpower,xA
-    REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE,SAVE::gtilde_LOW,ftilde_LOW
-    REAL(KIND(1d0)),DIMENSION(:,:),ALLOCATABLE,SAVE::gtilde_HIGH,ftilde_HIGH
-    IF(init.EQ.0)THEN
-       Aval=nuclearA
-       Zval=nuclearZ
-       IF(nuclearA.EQ.12.AND.nuclearZ.EQ.6)THEN
-          ! C12
-          NP=C12_NP
-          NSHELL=C12_NSHELL
-          ALLOCATE(all_shells(NSHELL))
-          all_shells(1:NSHELL)=C12_all_shells(1:NSHELL)
-          ALLOCATE(nume_shells(NSHELL))
-          nume_shells(1:NSHELL)=C12_nume_shells(1:NSHELL)
-          ALLOCATE(low_p(2*NSHELL))
-          ALLOCATE(i_low_p(2*NSHELL))
-          low_p(1:(2*NSHELL))=C12_low_p(1:(2*NSHELL))
-          i_low_p(1:(2*NSHELL))=C12_i_low_p(1:(2*NSHELL))
-          ALLOCATE(high_p(2*NSHELL))
-          ALLOCATE(i_high_p(2*NSHELL))
-          high_p(1:(2*NSHELL))=C12_high_p(1:(2*NSHELL))
-          i_high_p(1:(2*NSHELL))=C12_i_high_p(1:(2*NSHELL))
-          ALLOCATE(P_grid(NP))
-          P_grid(1:NP)=C12_P_grid(1:NP)
-          ALLOCATE(gftilde_grid(NP,2*NSHELL))
-          DO i=1,NP
-             gftilde_grid(i,1:(2*NSHELL))=C12_gftilde_grid(i,1:(2*NSHELL))
-          ENDDO
-       ELSEIF(nuclearA.EQ.186.AND.nuclearZ.EQ.74)THEN
-          ! W186
-          NP=W186_NP
-          NSHELL=W186_NSHELL
-          ALLOCATE(all_shells(NSHELL))
-          all_shells(1:NSHELL)=W186_all_shells(1:NSHELL)
-          ALLOCATE(nume_shells(NSHELL))
-          nume_shells(1:NSHELL)=W186_nume_shells(1:NSHELL)
-          ALLOCATE(low_p(2*NSHELL))
-          ALLOCATE(i_low_p(2*NSHELL))
-          low_p(1:(2*NSHELL))=W186_low_p(1:(2*NSHELL))
-          i_low_p(1:(2*NSHELL))=W186_i_low_p(1:(2*NSHELL))
-          ALLOCATE(high_p(2*NSHELL))
-          ALLOCATE(i_high_p(2*NSHELL))
-          high_p(1:(2*NSHELL))=W186_high_p(1:(2*NSHELL))
-          i_high_p(1:(2*NSHELL))=W186_i_high_p(1:(2*NSHELL))
-          ALLOCATE(P_grid(NP))
-          P_grid(1:NP)=W186_P_grid(1:NP)
-          ALLOCATE(gftilde_grid(NP,2*NSHELL))
-          DO i=1,NP
-             gftilde_grid(i,1:(2*NSHELL))=W186_gftilde_grid(i,1:(2*NSHELL))
-          ENDDO
-       ELSEIF(nuclearA.EQ.208.AND.nuclearZ.EQ.82)THEN
-          ! Pb208
-          NP=Pb208_NP
-          NSHELL=Pb208_NSHELL
-          ALLOCATE(all_shells(NSHELL))
-          all_shells(1:NSHELL)=Pb208_all_shells(1:NSHELL)
-          ALLOCATE(nume_shells(NSHELL))
-          nume_shells(1:NSHELL)=Pb208_nume_shells(1:NSHELL)
-          ALLOCATE(low_p(2*NSHELL))
-          ALLOCATE(i_low_p(2*NSHELL))
-          low_p(1:(2*NSHELL))=Pb208_low_p(1:(2*NSHELL))
-          i_low_p(1:(2*NSHELL))=Pb208_i_low_p(1:(2*NSHELL))
-          ALLOCATE(high_p(2*NSHELL))
-          ALLOCATE(i_high_p(2*NSHELL))
-          high_p(1:(2*NSHELL))=Pb208_high_p(1:(2*NSHELL))
-          i_high_p(1:(2*NSHELL))=Pb208_i_high_p(1:(2*NSHELL))
-          ALLOCATE(P_grid(NP))
-          P_grid(1:NP)=Pb208_P_grid(1:NP)
-          ALLOCATE(gftilde_grid(NP,2*NSHELL))
-          DO i=1,NP
-             gftilde_grid(i,1:(2*NSHELL))=Pb208_gftilde_grid(i,1:(2*NSHELL))
-          ENDDO
-       ELSE
-          WRITE(*,*)"ERROR: Do not known (A,Z)=",nuclearA,nuclearZ
-          STOP
-       ENDIF
-       N_LOW=0
-       N_HIGH=0
-       DO j=1,2*NSHELL
-          IF(NP-i_high_p(j)+1.GT.N_HIGH)N_HIGH=NP-i_high_p(j)+1
-          IF(i_low_p(j).GT.N_LOW)N_LOW=i_low_p(j)
-       ENDDO
-       ALLOCATE(X_LOW(N_LOW))
-       ALLOCATE(Y_LOW(N_LOW))
-       ALLOCATE(X_HIGH(N_HIGH))
-       ALLOCATE(Y_HIGH(N_HIGH))
-       ALLOCATE(gtilde_LOW(NSHELL,2))
-       ALLOCATE(ftilde_LOW(NSHELL,2))
-       ALLOCATE(gtilde_HIGH(NSHELL,2))
-       ALLOCATE(ftilde_HIGH(NSHELL,2))
-       DO i=1,NSHELL
-          CALL GetShellQuantumNumbers(all_shells(i),n,kappa,twoj,l,lp)
-          ! for low p
-          ! gtilde~p**l, ftilde~p**lp
-          xpower=l
-          gtilde_LOW(i,2)=xpower
-          DO j=1,i_low_p(2*i-1)
-             X_LOW(j)=P_grid(j)
-             Y_LOW(j)=gftilde_grid(j,2*i-1)
-          ENDDO
-          xA=Fit_powerlaw_A(i_low_p(2*i-1),xpower,X_LOW(1:i_low_p(2*i-1)),&
-               Y_LOW(1:i_low_p(2*i-1)))
-          gtilde_LOW(i,1)=xA
-          
-          xpower=lp
-          ftilde_LOW(i,2)=xpower
-          DO j=1,i_low_p(2*i)
-             X_LOW(j)=P_grid(j)
-             Y_LOW(j)=gftilde_grid(j,2*i)
-          ENDDO
-          xA=Fit_powerlaw_A(i_low_p(2*i),xpower,X_LOW(1:i_low_p(2*i)),&
-               Y_LOW(1:i_low_p(2*i)))
-          ftilde_LOW(i,1)=xA
-
-          ! for high p
-          ! gtilde~ftilde~p**(-2-sqrt(1-Z**2*alpha**2))
-          IF(1d0-alphaEW**2*nuclearZ**2.GE.0d0)THEN
-             xpower=-2d0-DSQRT(1d0-alphaEW**2*nuclearZ**2)
-          ELSE
-             xpower=-2d0
-          ENDIF
-          gtilde_HIGH(i,2)=xpower
-          ftilde_HIGH(i,2)=xpower
-
-          DO j=1,NP-i_high_p(2*i-1)+1
-             X_HIGH(j)=P_grid(i_high_p(2*i-1)+j-1)
-             Y_HIGH(j)=gftilde_grid(i_high_p(2*i-1)+j-1,2*i-1)
-          ENDDO
-          xA=Fit_powerlaw_A(NP-i_high_p(2*i-1)+1,xpower,&
-               X_HIGH(1:(NP-i_high_p(2*i-1)+1)),&
-               Y_HIGH(1:(NP-i_high_p(2*i-1)+1)))
-          gtilde_HIGH(i,1)=xA
-
-          DO j=1,NP-i_high_p(2*i)+1
-             X_HIGH(j)=P_grid(i_high_p(2*i)+j-1)
-             Y_HIGH(j)=gftilde_grid(i_high_p(2*i)+j-1,2*i)
-          ENDDO
-          xA=Fit_powerlaw_A(NP-i_high_p(2*i)+1,xpower,&
-               X_HIGH(1:(NP-i_high_p(2*i)+1)),&
-               Y_HIGH(1:(NP-i_high_p(2*i)+1)))
-          ftilde_HIGH(i,1)=xA
-       ENDDO
-       init=1
-    ENDIF
-    gtilde=0d0
-    ftilde=0d0
-    ! we first need to decide which shell
-    igt=-1
-    ift=-1
-    DO i=1,NSHELL
-       IF(ishell.EQ.all_shells(i))THEN
-          igt=2*i-1
-          ift=2*i
+    INTEGER::i,ish
+    CALL eatom_load(nuclearA,nuclearZ)
+    ish=-1
+    DO i=1,eatom_NSHELL
+       IF(ishell.EQ.eatom_shells(i))THEN
+          ish=i
           EXIT
        ENDIF
     ENDDO
-    IF(igt.EQ.-1.or.ift.EQ.-1)THEN
+    IF(ish.EQ.-1)THEN
        WRITE(*,*)"ERROR: shell cannot find: ishell=",ishell
        STOP
     ENDIF
-    nume=nume_shells((igt+1)/2)
-    IF(p.LT.low_p(igt))THEN
-       ! we use the low p fit
-       gtilde=gtilde_LOW((igt+1)/2,1)*p**(gtilde_LOW((igt+1)/2,2))
-    ELSEIF(p.GT.high_p(igt))THEN
-       ! we use the high p fit
-       gtilde=gtilde_HIGH((igt+1)/2,1)*p**(gtilde_HIGH((igt+1)/2,2))
-    ELSE
-       ! otherwise, we use the grid to interpolate
-       CALL SPLINE_INTERPOLATE(P_grid,gftilde_grid(1:NP,igt),NP,p,gtilde)
-    ENDIF
-    IF(p.LT.low_p(ift))THEN
-       ! we use the low p fit
-       ftilde=ftilde_LOW((ift+1)/2,1)*p**(ftilde_LOW((ift+1)/2,2))
-    ELSEIF(p.GT.high_p(ift))THEN
-       ! we use the high p fit
-       ftilde=ftilde_HIGH((ift+1)/2,1)*p**(ftilde_HIGH((ift+1)/2,2))
-    ELSE
-       ! otherwise, we use the grid to interpolate
-       CALL SPLINE_INTERPOLATE(P_grid,gftilde_grid(1:NP,ift),NP,p,ftilde)
-    ENDIF
+    nume=eatom_nume(ish)
+    gtilde=eatom_column(2*ish-1,p)
+    ftilde=eatom_column(2*ish,p)
     RETURN
   END SUBROUTINE Get_atomic_electron_gftilde
+
+  SUBROUTINE eatom_get_shells(nuclearA,nuclearZ,maxshell,nshell,shells,nume)
+    ! occupied shells (ishell codes) and their mean electron numbers
+    IMPLICIT NONE
+    INTEGER,INTENT(IN)::nuclearA,nuclearZ,maxshell
+    INTEGER,INTENT(OUT)::nshell
+    INTEGER,DIMENSION(maxshell),INTENT(OUT)::shells
+    REAL(KIND(1d0)),DIMENSION(maxshell),INTENT(OUT)::nume
+    CALL eatom_load(nuclearA,nuclearZ)
+    nshell=eatom_NSHELL
+    IF(nshell.GT.maxshell)THEN
+       WRITE(*,*)"ERROR: eatom_get_shells needs maxshell >=",nshell
+       STOP
+    ENDIF
+    shells(1:nshell)=eatom_shells(1:nshell)
+    nume(1:nshell)=eatom_nume(1:nshell)
+    RETURN
+  END SUBROUTINE eatom_get_shells
+
+  SUBROUTINE eatom_table_range(nuclearA,nuclearZ,pmin,pmax)
+    ! momentum range (GeV) covered by the tables
+    IMPLICIT NONE
+    INTEGER,INTENT(IN)::nuclearA,nuclearZ
+    REAL(KIND(1d0)),INTENT(OUT)::pmin,pmax
+    CALL eatom_load(nuclearA,nuclearZ)
+    pmin=eatom_pgrid(1)
+    pmax=eatom_pgrid(eatom_NP)
+    RETURN
+  END SUBROUTINE eatom_table_range
+
+  FUNCTION eatom_radial_density(nuclearA,nuclearZ,ishell,p)
+    ! radial momentum density n(p) in GeV**(-1):
+    !   n(p) = sum_shells nume_i p**2 (gtilde_i**2+ftilde_i**2)   (ishell=0)
+    !   n(p) = nume_i p**2 (gtilde_i**2+ftilde_i**2)              (one shell)
+    ! with Int_0^infinity n(p) dp = Z (sum) or nume_i (one shell)
+    IMPLICIT NONE
+    INTEGER,INTENT(IN)::nuclearA,nuclearZ,ishell
+    REAL(KIND(1d0)),INTENT(IN)::p
+    REAL(KIND(1d0))::eatom_radial_density
+    INTEGER::i
+    REAL(KIND(1d0))::g,f
+    CALL eatom_load(nuclearA,nuclearZ)
+    eatom_radial_density=0d0
+    DO i=1,eatom_NSHELL
+       IF(ishell.NE.0.AND.ishell.NE.eatom_shells(i))CYCLE
+       g=eatom_column(2*i-1,p)
+       f=eatom_column(2*i,p)
+       eatom_radial_density=eatom_radial_density+eatom_nume(i)*p**2*(g**2+f**2)
+    ENDDO
+    RETURN
+  END FUNCTION eatom_radial_density
 
   ! just fit A in the form of y=A*x**l with l known
   FUNCTION Fit_powerlaw_A(n,l,x,y)

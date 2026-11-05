@@ -226,7 +226,7 @@ C         LOCAL
             ELSE
                PV2MIN=Q-PBEAM
             ENDIF
-            PV2MAX=PBEAM+PV1MIN
+            PV2MAX=PBEAM+Q
             PV2=(PV2MAX-PV2MIN)*R1+PV2MIN
             CT=(2d0*m2*E1+m1**2+m2**2-ETOT2-PV2**2)/(2d0*PBEAM*PV2)            
          ELSE
@@ -238,7 +238,7 @@ C         LOCAL
             ELSE
                PV2MIN=Q-PBEAM
             ENDIF
-            PV2MAX=PBEAM+PV1MIN
+            PV2MAX=PBEAM+Q
             PV2=(PV2MAX-PV2MIN)*R1+PV2MIN
             CT=(2d0*m1*E1+m1**2+m2**2-ETOT2-PV2**2)/(2d0*PBEAM*PV2)
          ENDIF
