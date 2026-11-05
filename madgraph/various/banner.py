@@ -4490,6 +4490,12 @@ class RunCardLO(RunCard):
         if self['nhel'] not in [1,0]:
             raise InvalidRunCard("Parameter nhel can only be '0' or '1', "+\
                                                           "not %s." % self['nhel'])
+        if 'eatom_iatom' in self and self['eatom_iatom'] and self['nhel'] != 0:
+            # the shells of a bound atomic electron are summed through the
+            # helicity index; the MC over helicities prunes rare shells
+            logger.warning("Bound atomic electron: nhel=1 (Monte Carlo over helicities) would "
+                           "drop rarely sampled shells. Using nhel=0.")
+            self['nhel'] = 0
         if int(self['maxjetflavor']) > 6:
             raise InvalidRunCard('maxjetflavor should be lower than 5! (6 is partly supported)')
   
