@@ -186,7 +186,12 @@ class CombineRuns(object):
             for line in fin:
                 # The line immediately after <event> contains the event header and raw weight
                 if pending_event:
-                    data = line.split(None, 5)
+                    # A plain split, not split(None, 5): with a maxsplit the
+                    # last field keeps the trailing newline, and the write
+                    # below adds another one, leaving a blank line after every
+                    # event header. Pythia's LHEF reader rejects such an event
+                    # as corrupt, so the whole file becomes unshowerable.
+                    data = line.split()
                     if len(data) != 6:
                         raise MadGraph5Error("Line after <event> should have 6 entries")
 

@@ -292,10 +292,17 @@ foreach $infile (@infiles) {
       $gzline  =~ s/^\s+//;
       @gzparam = split(/\s+/, $gzline);
       if ($#gzparam != 5) { die "Not right number of param in first line of event"; }
-      # Keep weight sign from original LHE file
-      $signed_uwgt = abs($uwgt);
-      if ($gzparam[2] < 0) {
-	  $signed_uwgt = -1 * $signed_uwgt;
+      if ($infile->[2] != 0) {
+	  # Keep the weight (and its sign) relative to the unit weight (xmaxup)
+	  # of its file: the overweight events of the unweighting carry more
+	  # than one unit weight
+	  $signed_uwgt = sprintf('%0.7E', $gzparam[2] * abs($uwgt) / abs($infile->[2]));
+      } else {
+	  # Keep weight sign from original LHE file
+	  $signed_uwgt = abs($uwgt);
+	  if ($gzparam[2] < 0) {
+	      $signed_uwgt = -1 * $signed_uwgt;
+	  }
       }
       $gzline = " $gzparam[0] $gzparam[1] $signed_uwgt $gzparam[3] $gzparam[4] $gzparam[5]\n";
 
