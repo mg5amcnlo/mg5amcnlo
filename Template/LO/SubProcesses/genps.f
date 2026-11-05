@@ -843,7 +843,7 @@ c
       integer iopposite ! index for t-channel mapping for the part not handle by itree
 c     data nerr/0/
       double precision smin,smax,totmass,totmassin,xa2,xb2,wgt
-      double precision costh,phi,tmin,tmax,t
+      double precision costh,phi,tmin,tmax,t,tpos
       double precision ma2,mb2,m12,mn2,s1, mi2
 c
 c     External
@@ -1127,9 +1127,14 @@ c     $        0d0, -tmin/stot)
 c         t = stot*(-x(-ibranch))
 
 c      else
+c     x = (tpos-t)/stot with tpos = max(tmax,0), i.e. x = -t/stot when
+c     tmax <= 0. The t grid (set_peaks/setgrid) puts all of x < 0 in one
+c     bin reaching down to -1, so t > 0 (e.g. a e- > a e-, tmax = m^4/s)
+c     was almost never sampled; the shift keeps x >= 0.
+         tpos = max(tmax,0d0)
          call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $        -tmax/stot, -tmin/stot)
-         t = stot*(-x(-ibranch))
+     $        (tpos-tmax)/stot, (tpos-tmin)/stot)
+         t = tpos - stot*x(-ibranch)
 c      endif
 
 c      call yminmax(s1,0d0,m12,ma2,mb2,mn2,tmin_temp,tmax_temp)
@@ -1327,9 +1332,11 @@ c            tmin = max(tmin,  -stot)
 c         endif
 
 
+c     x = (tpos-t)/stot, tpos = max(tmax,0): see the branch above
+         tpos = max(tmax,0d0)
          call sample_get_x(wgt,x(-ibranch),-ibranch,iconfig,
-     $        -tmax/stot, -tmin/stot)
-         t = stot*(-x(-ibranch))
+     $        (tpos-tmax)/stot, (tpos-tmin)/stot)
+         t = tpos - stot*x(-ibranch)
          
 
 c         if ((tmax-tmin)/stot.gt.0.1)then
