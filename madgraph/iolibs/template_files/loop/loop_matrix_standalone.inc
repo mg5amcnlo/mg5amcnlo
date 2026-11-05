@@ -482,9 +482,11 @@ OPEN(1, FILE=LoopFilterFN, err=100, status='OLD',           action='READ')
   GOTO 101
 100  CONTINUE
   FOUNDLOOPFILTER=.FALSE.
+C Keep all loop amplitudes for 2>1 and 1>2 processes: this filter
+C stores zeros per helicity, which can depend on the frame too.
   DO J=1,NCOMB
     DO I=NCTAMPS+1,NLOOPAMPS
-	  GOODAMP(I,J)=(.NOT.USELOOPFILTER)
+	  GOODAMP(I,J)=(.NOT.USELOOPFILTER).OR.(NEXTERNAL.LE.3)
 	ENDDO
   ENDDO
 101  CONTINUE
